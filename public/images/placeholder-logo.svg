@@ -1,0 +1,10 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00f2ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bd00ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="400" fill="transparent"/>
+  <text x="400" y="200" font-family="Space Grotesk, sans-serif" font-size="64" font-weight="bold" fill="url(#grad2)" text-anchor="middle">GAME LOGO</text>
+</svg>

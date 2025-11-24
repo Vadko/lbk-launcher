@@ -7,7 +7,12 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm install:*)",
       "Bash(node install.js:*)",
-      "Bash(pnpm dev:*)"
+      "Bash(pnpm dev:*)",
+      "Bash(rm:*)",
+      "Bash(corepack:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm list:*)"
     ],
     "deny": [],
     "ask": []

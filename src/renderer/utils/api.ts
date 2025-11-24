@@ -8,8 +8,8 @@ export async function fetchGames(): Promise<Game[]> {
       return await window.electronAPI.fetchGames();
     }
 
-    // Fallback to direct fetch
-    const response = await fetch(GAMES_JSON_URL);
+    // Fallback to local games.json for development
+    const response = await fetch('/translations/games.json');
 
     if (!response.ok) {
       throw new Error('Failed to fetch games list');

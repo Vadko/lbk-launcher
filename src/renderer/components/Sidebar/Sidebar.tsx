@@ -20,7 +20,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <GlassPanel className="w-[280px] h-screen flex flex-col p-4 gap-4">
+    <GlassPanel className="w-[280px] h-full flex flex-col p-4 gap-4">
       {/* Header */}
       <div className="flex items-center gap-3 pb-3 border-b border-border">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center">
@@ -73,12 +73,22 @@ export const Sidebar: React.FC = () => {
       {/* Footer */}
       <div className="flex gap-2 pt-3 border-t border-border">
         <button
+          onClick={() => {
+            // TODO: Відкрити модальне вікно налаштувань
+            console.log('Налаштування - в розробці');
+            alert('Налаштування будуть додані в наступній версії 🛠️');
+          }}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
           title="Налаштування"
         >
           <Settings size={20} className="mx-auto text-text-muted" />
         </button>
         <button
+          onClick={() => {
+            // TODO: Відкрити модальне вікно профілю
+            console.log('Профіль - в розробці');
+            alert('Little Bit v1.0.0\n\nІнсталятор українських перекладів відеоігор\n\n💙 Дякуємо за підтримку!');
+          }}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
           title="Профіль"
         >

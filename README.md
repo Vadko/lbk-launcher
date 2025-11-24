@@ -34,6 +34,35 @@ pnpm dev
 pnpm electron:build
 ```
 
+## 🗂️ Налаштування репозиторію перекладів
+
+Для публікації перекладів створіть окремий репозиторій. Детальна інструкція: [TRANSLATIONS_REPO_SETUP.md](./TRANSLATIONS_REPO_SETUP.md)
+
+**Швидкий старт:**
+
+```bash
+# 1. Створіть репозиторій
+gh repo create littlebit-translations --public --clone
+
+# 2. Додайте структуру (див. TRANSLATIONS_REPO_SETUP.md)
+cd littlebit-translations
+mkdir -p assets/{banners,logos,thumbnails}
+mkdir -p scripts
+
+# 3. Опублікуйте перший переклад
+gh release create game-v1.0.0 translation.zip \
+  --title "Game Name v1.0.0" \
+  --notes "Опис перекладу"
+```
+
+**Після створення репозиторію:**
+
+Оновіть `src/shared/constants.ts`:
+```typescript
+export const REPO_OWNER = 'ВАШ_USERNAME';
+export const REPO_NAME = 'littlebit-translations';
+```
+
 ## 🚀 Розробка
 
 ```bash
