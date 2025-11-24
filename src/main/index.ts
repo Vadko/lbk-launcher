@@ -1,11 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { fetchGames } from './api';
 import { installTranslation } from './installer';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -19,18 +15,23 @@ const createWindow = () => {
     transparent: true,
     backgroundColor: '#00000000',
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
     },
   });
 
   // Load the app
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+  if (process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
+    mainWindow.loadFile(join(__dirname, '../../out/renderer/index.html'));
+  }
+
+  // Open DevTools in development
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
   }
 
   // Window controls

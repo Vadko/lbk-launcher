@@ -12,7 +12,12 @@
       "Bash(corepack:*)",
       "Bash(pnpm rebuild:*)",
       "Bash(cat:*)",
-      "Bash(pnpm list:*)"
+      "Bash(pnpm list:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pnpm remove:*)",
+      "Read(//private/tmp/**)"
     ],
     "deny": [],
     "ask": []
