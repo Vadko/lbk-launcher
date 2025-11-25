@@ -4,7 +4,10 @@
   "type": "module",
   "description": "Інсталятор українських перекладів відеоігор",
   "main": "out/main/index.js",
-  "author": "Little Bit UA",
+  "author": {
+    "name": "Little Bit UA",
+    "email": "info@littlebit.org.ua"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -28,6 +31,7 @@
   "build": {
     "appId": "com.littlebit.launcher",
     "productName": "Little Bit",
+    "copyright": "Copyright © 2024 Little Bit UA",
     "directories": {
       "output": "release/${version}"
     },
@@ -53,14 +57,17 @@
           "target": "portable",
           "arch": ["x64"]
         }
-      ]
+      ],
+      "publisherName": "Little Bit UA",
+      "verifyUpdateCodeSignature": false
     },
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "maintainer": "Little Bit UA <info@littlebit.org.ua>"
     },
     "nsis": {
       "oneClick": true,
