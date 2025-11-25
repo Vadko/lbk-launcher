@@ -34,6 +34,7 @@
     "files": [
       "out/**/*"
     ],
+    "compression": "normal",
     "publish": {
       "provider": "github",
       "owner": "your-github-username",
@@ -41,8 +42,14 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
       ]
     },
     "linux": {
@@ -51,6 +58,12 @@
         "deb"
       ],
       "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false
     }
   },
   "devDependencies": {
