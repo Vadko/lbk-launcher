@@ -18,7 +18,8 @@
       "Bash(xargs kill:*)",
       "Bash(pnpm remove:*)",
       "Read(//private/tmp/**)",
-      "Bash([ -f README.md ])"
+      "Bash([ -f README.md ])",
+      "Bash([ -d out ])"
     ],
     "deny": [],
     "ask": []
