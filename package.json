@@ -1,6 +1,6 @@
 {
   "name": "little-bit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Інсталятор українських перекладів відеоігор",
   "main": "out/main/index.js",
@@ -40,10 +40,16 @@
       "repo": "littlebit-launcher"
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Utility"
     }
   },
