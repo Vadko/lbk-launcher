@@ -9,6 +9,9 @@
   "license": "MIT",
   "type": "module",
   "main": "out/main/index.js",
+  "engines": {
+    "node": ">=22.20.0"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "preview": "electron-vite preview",
