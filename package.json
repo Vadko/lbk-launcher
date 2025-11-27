@@ -1,6 +1,6 @@
 {
   "name": "little-bit",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "description": "Інсталятор українських перекладів відеоігор",
   "main": "out/main/index.js",
