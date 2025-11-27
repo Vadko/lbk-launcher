@@ -63,6 +63,112 @@ export type Database = {
           },
         ]
       }
+      game_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          archive_path: string | null
+          archive_size: string | null
+          banner_path: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          editing_progress: number
+          game_description: string | null
+          game_id: string
+          id: string
+          install_paths: Json
+          is_active: boolean
+          logo_path: string | null
+          name: string
+          platforms: string[]
+          status: Database["public"]["Enums"]["game_status"]
+          support_url: string | null
+          team: string
+          thumbnail_path: string | null
+          translation_progress: number
+          updated_at: string
+          version: string
+          video_url: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archive_path?: string | null
+          archive_size?: string | null
+          banner_path?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          editing_progress?: number
+          game_description?: string | null
+          game_id: string
+          id?: string
+          install_paths?: Json
+          is_active?: boolean
+          logo_path?: string | null
+          name: string
+          platforms?: string[]
+          status?: Database["public"]["Enums"]["game_status"]
+          support_url?: string | null
+          team: string
+          thumbnail_path?: string | null
+          translation_progress?: number
+          updated_at?: string
+          version: string
+          video_url?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          archive_path?: string | null
+          archive_size?: string | null
+          banner_path?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          editing_progress?: number
+          game_description?: string | null
+          game_id?: string
+          id?: string
+          install_paths?: Json
+          is_active?: boolean
+          logo_path?: string | null
+          name?: string
+          platforms?: string[]
+          status?: Database["public"]["Enums"]["game_status"]
+          support_url?: string | null
+          team?: string
+          thumbnail_path?: string | null
+          translation_progress?: number
+          updated_at?: string
+          version?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_versions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_versions_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       games: {
         Row: {
           approved: boolean
@@ -83,7 +189,7 @@ export type Database = {
           platforms: string[]
           project_id: string | null
           slug: string
-          status: string
+          status: Database["public"]["Enums"]["game_status"]
           support_url: string | null
           team: string
           thumbnail_path: string | null
@@ -111,7 +217,7 @@ export type Database = {
           platforms?: string[]
           project_id?: string | null
           slug: string
-          status?: string
+          status?: Database["public"]["Enums"]["game_status"]
           support_url?: string | null
           team: string
           thumbnail_path?: string | null
@@ -139,7 +245,7 @@ export type Database = {
           platforms?: string[]
           project_id?: string | null
           slug?: string
-          status?: string
+          status?: Database["public"]["Enums"]["game_status"]
           support_url?: string | null
           team?: string
           thumbnail_path?: string | null
@@ -168,6 +274,38 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      install_path_entries: {
+        Row: {
+          created_at: string | null
+          game_id: string
+          id: string
+          path: string
+          platform: string
+        }
+        Insert: {
+          created_at?: string | null
+          game_id: string
+          id?: string
+          path: string
+          platform: string
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: string
+          id?: string
+          path?: string
+          platform?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "install_path_entries_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
             referencedColumns: ["id"]
           },
         ]
@@ -353,13 +491,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      game_install_paths: {
+        Row: {
+          game_id: string | null
+          install_paths: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "install_path_entries_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      game_status: "completed" | "in-progress" | "planned"
+      install_source: "steam" | "gog"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -486,6 +640,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      game_status: ["completed", "in-progress", "planned"],
+      install_source: ["steam", "gog"],
+    },
   },
 } as const

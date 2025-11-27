@@ -6,7 +6,7 @@ export const UpdateNotification = () => {
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [updateInfo, setUpdateInfo] = useState<unknown>(null);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -25,7 +25,7 @@ export const UpdateNotification = () => {
     });
 
     window.electronAPI.onUpdateProgress((progressInfo) => {
-      setProgress(Math.round(progressInfo.percent));
+      setProgress(Math.round(progressInfo.percent || 0));
     });
 
     window.electronAPI.onUpdateError((error) => {
@@ -62,7 +62,7 @@ export const UpdateNotification = () => {
           <p className="text-gray-400 text-sm mb-3">
             {updateDownloaded
               ? 'Оновлення завантажено та готове до встановлення'
-              : `Версія ${updateInfo?.version} доступна для завантаження`}
+              : `Версія ${(updateInfo as { version?: string })?.version || 'нова'} доступна для завантаження`}
           </p>
           {downloading && (
             <div className="mb-3">

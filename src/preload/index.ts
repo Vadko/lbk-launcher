@@ -15,22 +15,22 @@ const electronAPI: ElectronAPI = {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
-  onUpdateAvailable: (callback: (info: any) => void) => {
+  onUpdateAvailable: (callback) => {
     ipcRenderer.on('update-available', (_, info) => callback(info));
   },
-  onUpdateDownloaded: (callback: (info: any) => void) => {
+  onUpdateDownloaded: (callback) => {
     ipcRenderer.on('update-downloaded', (_, info) => callback(info));
   },
-  onUpdateProgress: (callback: (progress: any) => void) => {
+  onUpdateProgress: (callback) => {
     ipcRenderer.on('update-progress', (_, progress) => callback(progress));
   },
-  onUpdateError: (callback: (error: any) => void) => {
+  onUpdateError: (callback) => {
     ipcRenderer.on('update-error', (_, error) => callback(error));
   },
   // Real-time updates
   subscribeGameUpdates: () => ipcRenderer.invoke('subscribe-game-updates'),
   unsubscribeGameUpdates: () => ipcRenderer.invoke('unsubscribe-game-updates'),
-  onGameUpdated: (callback: (game: any) => void) => {
+  onGameUpdated: (callback) => {
     ipcRenderer.on('game-updated', (_, game) => callback(game));
   },
   // Version

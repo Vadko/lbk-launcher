@@ -2,7 +2,16 @@ import { supabase } from './supabase';
 import type { Game } from '../shared/types';
 import type { Database } from './database.types';
 
-type GameRow = Database['public']['Tables']['games']['Row'];
+type InstallSource = Database['public']['Enums']['install_source'];
+
+function parseInstallPaths(paths: unknown): Record<InstallSource, string | undefined> {
+  if (!paths || typeof paths !== 'object') return { steam: undefined, gog: undefined };
+  const obj = paths as Record<string, unknown>;
+  return {
+    steam: typeof obj.steam === 'string' ? obj.steam : undefined,
+    gog: typeof obj.gog === 'string' ? obj.gog : undefined,
+  };
+}
 
 /**
  * Отримати список затверджених перекладів
@@ -19,7 +28,7 @@ export async function getApprovedGames(): Promise<Game[]> {
     return [];
   }
 
-  return (data as GameRow[] || []).map((game): Game => ({
+  return (data || []).map((game): Game => ({
     id: game.id,
     slug: game.slug,
     name: game.name,
@@ -27,9 +36,9 @@ export async function getApprovedGames(): Promise<Game[]> {
     translation_progress: game.translation_progress,
     editing_progress: game.editing_progress,
     team: game.team,
-    status: game.status as 'completed' | 'in-progress' | 'planned',
+    status: game.status,
     platforms: game.platforms,
-    install_paths: game.install_paths as { steam?: string; gog?: string },
+    install_paths: parseInstallPaths(game.install_paths),
     archive_path: game.archive_path || '',
     banner_path: game.banner_path,
     logo_path: game.logo_path,
@@ -78,13 +87,13 @@ export async function checkGameUpdate(currentGameId: string, currentVersion: str
 
   if (error || !data) return false;
 
-  return (data as { version: string }).version !== currentVersion;
+  return data.version !== currentVersion;
 }
 
 /**
  * Підписатися на оновлення ігор (Real-time)
  */
-export function subscribeToGameUpdates(callback: (game: any) => void) {
+export function subscribeToGameUpdates(callback: (game: Game) => void) {
   const channel = supabase
     .channel('game-updates')
     .on(
@@ -97,7 +106,9 @@ export function subscribeToGameUpdates(callback: (game: any) => void) {
       },
       (payload) => {
         console.log('Game updated:', payload.new);
-        callback(payload.new);
+        if (payload.new) {
+          callback(payload.new as Game);
+        }
       }
     )
     .subscribe();

@@ -22,7 +22,7 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "types:generate": "npx supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts"
+    "types:generate": "npx --yes supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",

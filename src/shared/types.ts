@@ -1,3 +1,13 @@
+import type { Database } from '../lib/database.types';
+
+type InstallSource = Database['public']['Enums']['install_source'];
+type GameStatus = Database['public']['Enums']['game_status'];
+
+export interface InstallPath {
+  type: InstallSource;
+  path: string;
+}
+
 export interface Game {
   id: string;
   slug: string;
@@ -6,7 +16,7 @@ export interface Game {
   translation_progress: number;
   editing_progress: number;
   team: string;
-  status: 'completed' | 'in-progress' | 'planned';
+  status: GameStatus;
   platforms: string[];
   install_paths: {
     steam?: string;
@@ -37,13 +47,13 @@ export interface ElectronAPI {
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => void;
   // Auto-updater
-  checkForUpdates: () => Promise<{ available: boolean; updateInfo?: any; message?: string; error?: string }>;
+  checkForUpdates: () => Promise<{ available: boolean; updateInfo?: unknown; message?: string; error?: string }>;
   downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => void;
-  onUpdateAvailable: (callback: (info: any) => void) => void;
-  onUpdateDownloaded: (callback: (info: any) => void) => void;
-  onUpdateProgress: (callback: (progress: any) => void) => void;
-  onUpdateError: (callback: (error: any) => void) => void;
+  onUpdateAvailable: (callback: (info: unknown) => void) => void;
+  onUpdateDownloaded: (callback: (info: unknown) => void) => void;
+  onUpdateProgress: (callback: (progress: { percent?: number; bytesPerSecond?: number; total?: number; transferred?: number }) => void) => void;
+  onUpdateError: (callback: (error: Error) => void) => void;
   // Real-time updates
   subscribeGameUpdates: () => Promise<{ success: boolean }>;
   unsubscribeGameUpdates: () => Promise<{ success: boolean }>;

@@ -129,9 +129,9 @@ function findSteamGame(gameFolderName: string): string | null {
   console.log(`[GameDetector] Searching for Steam game: "${gameFolderName}"`);
 
   // Normalize the folder name - remove steamapps/common/ prefix if present
-  let normalizedFolderName = gameFolderName
-    .replace(/^steamapps[\/\\]common[\/\\]/i, '')
-    .replace(/^common[\/\\]/i, '');
+  const normalizedFolderName = gameFolderName
+    .replace(/^steamapps[/\\]common[/\\]/i, '')
+    .replace(/^common[/\\]/i, '');
 
   if (normalizedFolderName !== gameFolderName) {
     console.log(`[GameDetector] Normalized folder name: "${gameFolderName}" -> "${normalizedFolderName}"`);

@@ -4,8 +4,8 @@ import type { Database } from './database.types';
 // Get Supabase credentials from environment variables
 // electron-vite automatically loads .env files
 // Variables with VITE_ prefix are available in renderer process via import.meta.env
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(

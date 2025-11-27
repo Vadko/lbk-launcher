@@ -40,8 +40,8 @@ export async function installTranslation(
     onProgress?.(10);
 
     // 2. Detect game installation path
-    let gamePath = customGamePath
-      ? { platform: platform as 'steam' | 'gog' | 'epic', path: customGamePath, exists: true }
+    const gamePath = customGamePath
+      ? { platform, path: customGamePath, exists: true }
       : getFirstAvailableGamePath(game.install_paths);
 
     if (!gamePath || !gamePath.exists) {
@@ -166,11 +166,12 @@ export async function downloadFile(
         statusCode === 307 ||
         statusCode === 308
       ) {
-        const redirectUrl = response.headers.location as string;
+        const redirectUrl = response.headers.location;
         if (redirectUrl) {
-          console.log(`Following redirect to: ${redirectUrl}`);
+          const url = typeof redirectUrl === 'string' ? redirectUrl : redirectUrl[0];
+          console.log(`Following redirect to: ${url}`);
           writeStream.close();
-          downloadFile(redirectUrl, outputPath, onProgress).then(resolve).catch(reject);
+          downloadFile(url, outputPath, onProgress).then(resolve).catch(reject);
           return;
         }
       }
@@ -181,7 +182,9 @@ export async function downloadFile(
         return;
       }
 
-      totalBytes = parseInt(response.headers['content-length'] as string, 10) || 0;
+      const contentLength = response.headers['content-length'];
+      const lengthStr = typeof contentLength === 'string' ? contentLength : contentLength?.[0] || '0';
+      totalBytes = parseInt(lengthStr, 10) || 0;
 
       response.on('data', (chunk) => {
         writeStream.write(chunk);
