@@ -141,6 +141,19 @@ ipcMain.handle('select-game-folder', async () => {
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
+// Configure for private repository
+// Users need to set GITHUB_TOKEN environment variable or
+// we can embed it in the app (not recommended for security)
+if (process.env.GH_TOKEN) {
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'Vadko',
+    repo: 'littlebit-launcher',
+    private: true,
+    token: process.env.GH_TOKEN,
+  });
+}
+
 autoUpdater.on('update-available', (info) => {
   console.log('Update available:', info);
   mainWindow?.webContents.send('update-available', info);
