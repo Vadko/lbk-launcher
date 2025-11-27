@@ -6,7 +6,7 @@ import { StatusCard } from './StatusCard';
 import { InfoCard } from './InfoCard';
 import { VideoCard } from './VideoCard';
 import { Button } from '../ui/Button';
-import type { InstallationInfo } from '../../../shared/types';
+import type { InstallationInfo, InstallResult } from '../../../shared/types';
 
 export const MainContent: React.FC = () => {
   const { selectedGame } = useStore();
@@ -65,7 +65,29 @@ export const MainContent: React.FC = () => {
       const platform = selectedGame.platforms[0] || 'steam';
 
       // Start installation
-      await window.electronAPI.installTranslation(selectedGame.id, platform, customGamePath);
+      const result: InstallResult = await window.electronAPI.installTranslation(selectedGame.id, platform, customGamePath);
+
+      // Check if installation failed
+      if (!result.success && result.error) {
+        // Check if this is a "game not found" error that needs manual folder selection
+        if (result.error.needsManualSelection) {
+          const shouldSelectFolder = window.confirm(
+            `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`
+          );
+
+          if (shouldSelectFolder) {
+            const selectedFolder = await window.electronAPI.selectGameFolder();
+            if (selectedFolder) {
+              // Retry installation with custom path
+              await handleInstall(selectedFolder);
+              return;
+            }
+          }
+        } else {
+          alert(`❌ Помилка встановлення: ${result.error.message}`);
+        }
+        return;
+      }
 
       // Refresh installation info
       const newInfo = await window.electronAPI.checkInstallation(selectedGame.id);
@@ -79,23 +101,6 @@ export const MainContent: React.FC = () => {
       setInstallProgress(100);
     } catch (error) {
       console.error('Installation error:', error);
-
-      // Check if this is a "game not found" error that needs manual folder selection
-      if (error instanceof Error && 'needsManualSelection' in error) {
-        const shouldSelectFolder = window.confirm(
-          `${error.message}\n\nБажаєте вибрати папку з грою вручну?`
-        );
-
-        if (shouldSelectFolder) {
-          const selectedFolder = await window.electronAPI.selectGameFolder();
-          if (selectedFolder) {
-            // Retry installation with custom path
-            await handleInstall(selectedFolder);
-            return;
-          }
-        }
-      }
-
       alert(`❌ Помилка встановлення: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
     } finally {
       setIsInstalling(false);
@@ -222,7 +227,7 @@ export const MainContent: React.FC = () => {
           <Button
             variant="primary"
             icon={isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />}
-            onClick={handleInstall}
+            onClick={() => handleInstall()}
             disabled={isInstalling || isCheckingInstallation}
           >
             {isInstalling

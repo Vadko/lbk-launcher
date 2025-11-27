@@ -50,14 +50,13 @@ export async function installTranslation(
                           platform === 'gog' ? game.install_paths.gog : undefined;
 
       // Special error to indicate manual folder selection needed
-      throw Object.assign(
-        new Error(
-          `Гру не знайдено автоматично.\n\n` +
-          `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
-          `Оберіть папку з грою вручну.`
-        ),
-        { needsManualSelection: true }
+      const error: any = new Error(
+        `Гру не знайдено автоматично.\n\n` +
+        `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
+        `Оберіть папку з грою вручну.`
       );
+      error.needsManualSelection = true;
+      throw error;
     }
 
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
@@ -327,6 +326,18 @@ async function saveInstallationInfo(
     const infoPath = path.join(gamePath, INSTALLATION_INFO_FILE);
     await fs.promises.writeFile(infoPath, JSON.stringify(info, null, 2), 'utf-8');
     console.log(`[Installer] Installation info saved to: ${infoPath}`);
+
+    // Also save to cache for future lookups (especially for custom paths)
+    try {
+      const userDataPath = app.getPath('userData');
+      const installInfoDir = path.join(userDataPath, 'installation-cache');
+      await mkdir(installInfoDir, { recursive: true });
+      const cacheInfoPath = path.join(installInfoDir, `${info.gameId}.json`);
+      await fs.promises.writeFile(cacheInfoPath, JSON.stringify(info, null, 2), 'utf-8');
+      console.log(`[Installer] Installation info cached to: ${cacheInfoPath}`);
+    } catch (cacheError) {
+      console.warn('[Installer] Failed to cache installation info:', cacheError);
+    }
   } catch (error) {
     console.warn('[Installer] Failed to save installation info:', error);
     // Don't throw - installation succeeded even if we can't save the info
@@ -349,7 +360,27 @@ export async function checkInstallation(gameId: string): Promise<InstallationInf
       return null;
     }
 
-    // Detect game installation path
+    // First, try to find installation info from previous installations
+    // This helps when game was installed via manual folder selection
+    const previousInstallInfoPath = getPreviousInstallPath(gameId);
+    if (previousInstallInfoPath && fs.existsSync(previousInstallInfoPath)) {
+      try {
+        const infoContent = await fs.promises.readFile(previousInstallInfoPath, 'utf-8');
+        const info: InstallationInfo = JSON.parse(infoContent);
+
+        // Verify the path still exists
+        if (fs.existsSync(info.gamePath)) {
+          console.log(
+            `[Installer] Found previous installation at custom path: ${info.gamePath}`
+          );
+          return info;
+        }
+      } catch (error) {
+        console.warn('[Installer] Failed to read previous installation info:', error);
+      }
+    }
+
+    // Detect game installation path from standard locations
     const gamePath = getFirstAvailableGamePath(game.install_paths);
 
     if (!gamePath || !gamePath.exists) {
@@ -376,6 +407,20 @@ export async function checkInstallation(gameId: string): Promise<InstallationInf
     return info;
   } catch (error) {
     console.error('[Installer] Error checking installation:', error);
+    return null;
+  }
+}
+
+/**
+ * Get path to the installation info file from a previous installation
+ */
+function getPreviousInstallPath(gameId: string): string | null {
+  try {
+    const userDataPath = app.getPath('userData');
+    const installInfoDir = path.join(userDataPath, 'installation-cache');
+    const installInfoPath = path.join(installInfoDir, `${gameId}.json`);
+    return installInfoPath;
+  } catch (error) {
     return null;
   }
 }

@@ -10,9 +10,19 @@ export function setupInstallerHandlers(): void {
         await installTranslation(gameId, platform, (progress) => {
           getMainWindow()?.webContents.send('install-progress', progress);
         }, customGamePath);
+        return { success: true };
       } catch (error) {
         console.error('Error installing translation:', error);
-        throw error;
+        // Return error info instead of throwing to preserve custom properties
+        return {
+          success: false,
+          error: {
+            message: error instanceof Error ? error.message : 'Невідома помилка',
+            needsManualSelection: error && typeof error === 'object' && 'needsManualSelection' in error
+              ? (error as any).needsManualSelection
+              : false,
+          }
+        };
       }
     }
   );

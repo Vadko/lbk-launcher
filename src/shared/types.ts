@@ -39,9 +39,17 @@ export interface InstallationInfo {
   gamePath: string;
 }
 
+export interface InstallResult {
+  success: boolean;
+  error?: {
+    message: string;
+    needsManualSelection?: boolean;
+  };
+}
+
 export interface ElectronAPI {
   fetchGames: () => Promise<Game[]>;
-  installTranslation: (gameId: string, platform: string, customGamePath?: string) => Promise<void>;
+  installTranslation: (gameId: string, platform: string, customGamePath?: string) => Promise<InstallResult>;
   checkInstallation: (gameId: string) => Promise<InstallationInfo | null>;
   openExternal: (url: string) => Promise<void>;
   selectGameFolder: () => Promise<string | null>;
