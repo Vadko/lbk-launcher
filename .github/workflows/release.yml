@@ -55,7 +55,7 @@ jobs:
 
       - name: Build application
         env:
-          VITE_GH_TOKEN: ${{ secrets.VITE_GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: pnpm build
@@ -64,7 +64,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         timeout-minutes: 20
         env:
-          VITE_GH_TOKEN: ${{ secrets.VITE_GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: pnpm dist:win --publish always
@@ -73,7 +73,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         timeout-minutes: 20
         env:
-          VITE_GH_TOKEN: ${{ secrets.VITE_GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: pnpm dist:linux --publish always

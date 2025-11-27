@@ -19,7 +19,8 @@ const INSTALLATION_INFO_FILE = '.littlebit-translation.json';
 export async function installTranslation(
   gameId: string,
   platform: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  customGamePath?: string
 ): Promise<void> {
   try {
     onProgress?.(5);
@@ -39,16 +40,23 @@ export async function installTranslation(
     onProgress?.(10);
 
     // 2. Detect game installation path
-    const gamePath = getFirstAvailableGamePath(game.install_paths);
+    let gamePath = customGamePath
+      ? { platform: platform as 'steam' | 'gog' | 'epic', path: customGamePath, exists: true }
+      : getFirstAvailableGamePath(game.install_paths);
 
     if (!gamePath || !gamePath.exists) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
       const platformPath = platform === 'steam' ? game.install_paths.steam :
                           platform === 'gog' ? game.install_paths.gog : undefined;
-      throw new Error(
-        `Гру не знайдено на вашому комп'ютері.\n\n` +
-          `Переконайтесь, що гра встановлена через ${platform.toUpperCase()}.\n\n` +
-          `Шукали папку: ${platformPath || 'не вказано'}`
+
+      // Special error to indicate manual folder selection needed
+      throw Object.assign(
+        new Error(
+          `Гру не знайдено автоматично.\n\n` +
+          `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
+          `Оберіть папку з грою вручну.`
+        ),
+        { needsManualSelection: true }
       );
     }
 

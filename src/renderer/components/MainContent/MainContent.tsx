@@ -43,7 +43,7 @@ export const MainContent: React.FC = () => {
     selectedGame &&
     installationInfo.version !== selectedGame.version;
 
-  const handleInstall = async () => {
+  const handleInstall = async (customGamePath?: string) => {
     if (!selectedGame || isInstalling) return;
 
     // Check if Electron API is available
@@ -65,7 +65,7 @@ export const MainContent: React.FC = () => {
       const platform = selectedGame.platforms[0] || 'steam';
 
       // Start installation
-      await window.electronAPI.installTranslation(selectedGame.id, platform);
+      await window.electronAPI.installTranslation(selectedGame.id, platform, customGamePath);
 
       // Refresh installation info
       const newInfo = await window.electronAPI.checkInstallation(selectedGame.id);
@@ -79,6 +79,23 @@ export const MainContent: React.FC = () => {
       setInstallProgress(100);
     } catch (error) {
       console.error('Installation error:', error);
+
+      // Check if this is a "game not found" error that needs manual folder selection
+      if (error instanceof Error && 'needsManualSelection' in error) {
+        const shouldSelectFolder = window.confirm(
+          `${error.message}\n\nБажаєте вибрати папку з грою вручну?`
+        );
+
+        if (shouldSelectFolder) {
+          const selectedFolder = await window.electronAPI.selectGameFolder();
+          if (selectedFolder) {
+            // Retry installation with custom path
+            await handleInstall(selectedFolder);
+            return;
+          }
+        }
+      }
+
       alert(`❌ Помилка встановлення: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
     } finally {
       setIsInstalling(false);
