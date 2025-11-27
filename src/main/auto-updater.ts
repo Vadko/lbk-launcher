@@ -24,6 +24,10 @@ export function setupAutoUpdater(): void {
 
 export function checkForUpdates(): void {
   if (app.isPackaged) {
-    setTimeout(() => autoUpdater.checkForUpdates(), 100000);
+    // Initial check after 3 seconds
+    setTimeout(() => autoUpdater.checkForUpdates(), 3000);
+
+    // Check every 30 minutes
+    setInterval(() => autoUpdater.checkForUpdates(), 1800000);
   }
 }
