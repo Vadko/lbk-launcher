@@ -23,6 +23,10 @@ module.exports = {
     repo: 'littlebit-launcher',
   },
 
+  snap: {
+    publish: null,
+  },
+
   win: {
     target: [
       {
@@ -39,7 +43,7 @@ module.exports = {
   },
 
   linux: {
-    target: ['AppImage', 'deb'],
+    target: ['AppImage', 'rpm'],
     category: 'Utility',
     maintainer: 'Little Bit UA <info@littlebit.org.ua>',
   },
