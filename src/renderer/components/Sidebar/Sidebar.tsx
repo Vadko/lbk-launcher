@@ -16,6 +16,7 @@ export const Sidebar: React.FC = () => {
     setSelectedGame,
     setFilter,
     setSearchQuery,
+    gamesWithUpdates,
   } = useStore();
   const filteredGames = useFilteredGames();
 
@@ -74,6 +75,7 @@ export const Sidebar: React.FC = () => {
               game={game}
               isSelected={selectedGame?.id === game.id}
               onClick={() => setSelectedGame(game)}
+              hasUpdate={gamesWithUpdates.has(game.id)}
             />
           ))
         )}

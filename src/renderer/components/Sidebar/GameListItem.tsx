@@ -6,12 +6,14 @@ interface GameListItemProps {
   game: Game;
   isSelected: boolean;
   onClick: () => void;
+  hasUpdate?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = ({
   game,
   isSelected,
   onClick,
+  hasUpdate = false,
 }) => {
   const averageProgress = Math.round(
     (game.translation_progress + game.editing_progress) / 2
@@ -28,17 +30,22 @@ export const GameListItem: React.FC<GameListItemProps> = ({
           : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
       }`}
     >
-      <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden">
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={game.name}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm">
-            {game.name.charAt(0)}
-          </div>
+      <div className="relative w-12 h-12 flex-shrink-0">
+        <div className="w-full h-full rounded-lg overflow-hidden">
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={game.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm">
+              {game.name.charAt(0)}
+            </div>
+          )}
+        </div>
+        {hasUpdate && (
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-neon-blue rounded-full border-2 border-bg-dark animate-pulse z-10" />
         )}
       </div>
       <div className="flex-1 min-w-0">

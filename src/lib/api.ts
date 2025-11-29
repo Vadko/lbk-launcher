@@ -87,19 +87,20 @@ export function subscribeToGameUpdates(callback: (game: Game) => void) {
     .on(
       'postgres_changes',
       {
-        event: '*', // INSERT, UPDATE, DELETE
+        event: '*',
         schema: 'public',
         table: 'games',
         filter: 'approved=eq.true',
       },
       (payload) => {
-        console.log('Game updated:', payload.new);
         if (payload.new) {
           callback(payload.new as Game);
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      console.log('Channel subscription status:', status, err);
+    });
 
   return () => channel.unsubscribe();
 }

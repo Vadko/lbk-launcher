@@ -33,6 +33,10 @@ const electronAPI: ElectronAPI = {
   onGameUpdated: (callback) => {
     ipcRenderer.on('game-updated', (_, game) => callback(game));
   },
+  // Game update notifications
+  showGameUpdateNotification: (gameName: string, version: string, isInitialLoad: boolean) => {
+    ipcRenderer.send('show-game-update-notification', gameName, version, isInitialLoad);
+  },
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
 };
@@ -44,4 +48,9 @@ contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
+});
+
+// Listen for game update notifications and dispatch as custom events
+ipcRenderer.on('game-update-available', (_, updateInfo) => {
+  window.dispatchEvent(new CustomEvent('game-update-available', { detail: updateInfo }));
 });

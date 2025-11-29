@@ -59,6 +59,8 @@ export interface ElectronAPI {
   subscribeGameUpdates: () => Promise<{ success: boolean }>;
   unsubscribeGameUpdates: () => Promise<{ success: boolean }>;
   onGameUpdated: (callback: (game: Game) => void) => void;
+  // Game update notifications
+  showGameUpdateNotification?: (gameName: string, version: string, isInitialLoad: boolean) => void;
   // Version
   getVersion: () => string;
 }

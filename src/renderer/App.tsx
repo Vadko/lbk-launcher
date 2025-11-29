@@ -4,6 +4,7 @@ import { AmbientBackground } from './components/Layout/AmbientBackground';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { MainContent } from './components/MainContent/MainContent';
 import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
+import { GameUpdateNotification } from './components/GameUpdateNotification/GameUpdateNotification';
 import { useStore } from './store/useStore';
 
 declare global {
@@ -17,13 +18,21 @@ declare global {
 }
 
 export const App: React.FC = () => {
-  const { fetchGames, initRealtimeSubscription } = useStore();
+  const { fetchGames, initRealtimeSubscription, loadInstalledGames, setInitialLoadComplete } = useStore();
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
-    fetchGames();
-    // Initialize real-time subscription for game updates
-    initRealtimeSubscription();
+    const init = async () => {
+      await fetchGames();
+      await loadInstalledGames();
+      initRealtimeSubscription();
+      // Mark initial load as complete after 3 seconds to allow system notifications
+      setTimeout(() => {
+        setInitialLoadComplete();
+      }, 3000);
+    };
+
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -96,8 +105,9 @@ export const App: React.FC = () => {
         <MainContent />
       </div>
 
-      {/* Update notification */}
+      {/* Update notifications */}
       <UpdateNotification />
+      <GameUpdateNotification />
     </div>
   );
 };

@@ -11,6 +11,9 @@ interface Store {
   searchQuery: string;
   isLoading: boolean;
   error: string | null;
+  installedGames: Map<string, { version: string }>;
+  gamesWithUpdates: Set<string>;
+  isInitialLoad: boolean;
 
   // Actions
   fetchGames: () => Promise<void>;
@@ -19,15 +22,22 @@ interface Store {
   setSearchQuery: (query: string) => void;
   updateGame: (updatedGame: Game) => void;
   initRealtimeSubscription: () => void;
+  loadInstalledGames: () => Promise<void>;
+  checkForGameUpdate: (gameId: string, newVersion: string) => boolean;
+  markGameAsUpdated: (gameId: string) => void;
+  setInitialLoadComplete: () => void;
 }
 
-export const useStore = create<Store>((set) => ({
+export const useStore = create<Store>((set, get) => ({
   games: [],
   selectedGame: null,
   filter: 'all',
   searchQuery: '',
   isLoading: false,
   error: null,
+  installedGames: new Map(),
+  gamesWithUpdates: new Set(),
+  isInitialLoad: true,
 
   fetchGames: async () => {
     set({ isLoading: true, error: null });
@@ -56,8 +66,67 @@ export const useStore = create<Store>((set) => ({
       const selectedGame =
         state.selectedGame?.id === updatedGame.id ? updatedGame : state.selectedGame;
 
+      // Check if this game has an update available
+      const hasUpdate = get().checkForGameUpdate(updatedGame.id, updatedGame.version);
+      if (hasUpdate) {
+        get().markGameAsUpdated(updatedGame.id);
+      }
+
       return { games, selectedGame };
     }),
+
+  loadInstalledGames: async () => {
+    if (!window.electronAPI) return;
+
+    const games = get().games;
+    const installedGamesMap = new Map<string, { version: string }>();
+    const gamesWithUpdatesSet = new Set<string>();
+
+    for (const game of games) {
+      const installInfo = await window.electronAPI.checkInstallation(game.id);
+      if (installInfo) {
+        installedGamesMap.set(game.id, { version: installInfo.version });
+
+        // Check if installed version differs from current version in DB
+        if (installInfo.version !== game.version) {
+          gamesWithUpdatesSet.add(game.id);
+
+          // Show in-app notification for this game
+          window.electronAPI.showGameUpdateNotification?.(
+            game.name,
+            game.version,
+            true // isInitialLoad - skip system notification
+          );
+        }
+      }
+    }
+
+    set({
+      installedGames: installedGamesMap,
+      gamesWithUpdates: gamesWithUpdatesSet,
+    });
+  },
+
+  checkForGameUpdate: (gameId: string, newVersion: string) => {
+    const state = get();
+    const installedGame = state.installedGames.get(gameId);
+
+    if (!installedGame) return false;
+
+    return installedGame.version !== newVersion;
+  },
+
+  markGameAsUpdated: (gameId: string) => {
+    set((state) => {
+      const newSet = new Set(state.gamesWithUpdates);
+      newSet.add(gameId);
+      return { gamesWithUpdates: newSet };
+    });
+  },
+
+  setInitialLoadComplete: () => {
+    set({ isInitialLoad: false });
+  },
 
   initRealtimeSubscription: () => {
     if (!window.electronAPI) return;
@@ -68,7 +137,22 @@ export const useStore = create<Store>((set) => ({
     // Listen for updates
     window.electronAPI.onGameUpdated((updatedGame) => {
       console.log('Game updated via real-time:', updatedGame);
-      useStore.getState().updateGame(updatedGame);
+      const state = useStore.getState();
+
+      // Check if game is installed and has an update
+      const isInstalled = state.installedGames.has(updatedGame.id);
+      const hasUpdate = state.checkForGameUpdate(updatedGame.id, updatedGame.version);
+
+      if (isInstalled && hasUpdate) {
+        // Send notification request to main process
+        window.electronAPI.showGameUpdateNotification?.(
+          updatedGame.name,
+          updatedGame.version,
+          state.isInitialLoad
+        );
+      }
+
+      state.updateGame(updatedGame);
     });
   },
 }));
