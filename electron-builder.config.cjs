@@ -41,7 +41,6 @@ module.exports = {
         arch: ['x64'],
       },
     ],
-    publisherName: 'Little Bit UA',
     verifyUpdateCodeSignature: false,
   },
 
