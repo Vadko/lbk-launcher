@@ -1,4 +1,4 @@
-import { ipcMain, Tray, Menu, app } from 'electron';
+import { ipcMain, Tray, Menu, app, nativeImage } from 'electron';
 import { getMainWindow } from '../window';
 import { join } from 'path';
 
@@ -7,7 +7,9 @@ let tray: Tray;
 function createTray() {
   const window = getMainWindow();
 
-  const appIcon = new Tray(join(app.getAppPath(), 'resources/icon.png'));
+  const iconPath = join(app.getAppPath(), 'resources/icon.png');
+  const icon = nativeImage.createFromPath(iconPath);
+  const appIcon = new Tray(icon);
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Відкрити',

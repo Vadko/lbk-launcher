@@ -14,6 +14,8 @@ module.exports = {
 
   files: ['out/**/*'],
 
+  icon: 'resources/icon.png',
+
   asarUnpack: ['**/*.node'],
 
   electronLanguages: ['en-US', 'uk'],
@@ -41,6 +43,7 @@ module.exports = {
         arch: ['x64'],
       },
     ],
+    icon: 'resources/icon.ico',
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
   },
@@ -61,6 +64,7 @@ module.exports = {
     allowToChangeInstallationDirectory: false,
     deleteAppDataOnUninstall: false,
     differentialPackage: true,
+    artifactName: "${productName}-${os}-Setup.${ext}",
   },
 
   electronDist: 'node_modules/electron/dist',

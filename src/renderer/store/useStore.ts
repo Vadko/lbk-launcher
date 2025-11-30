@@ -25,6 +25,7 @@ interface Store {
   loadInstalledGames: () => Promise<void>;
   checkForGameUpdate: (gameId: string, newVersion: string) => boolean;
   markGameAsUpdated: (gameId: string) => void;
+  clearGameUpdate: (gameId: string) => void;
   setInitialLoadComplete: () => void;
 }
 
@@ -122,6 +123,14 @@ export const useStore = create<Store>((set, get) => ({
     set((state) => {
       const newSet = new Set(state.gamesWithUpdates);
       newSet.add(gameId);
+      return { gamesWithUpdates: newSet };
+    });
+  },
+
+  clearGameUpdate: (gameId: string) => {
+    set((state) => {
+      const newSet = new Set(state.gamesWithUpdates);
+      newSet.delete(gameId);
       return { gamesWithUpdates: newSet };
     });
   },

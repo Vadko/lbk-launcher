@@ -98,7 +98,6 @@ export const MainContent: React.FC = () => {
       });
 
       window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
-        console.log('[Download Progress]', progress);
         setDownloadProgress(progress);
       });
 
@@ -143,6 +142,9 @@ export const MainContent: React.FC = () => {
       const newInfo = await window.electronAPI.checkInstallation(selectedGame.id);
       setInstallationInfo(newInfo);
 
+      // Clear the update notification since we just installed/updated
+      useStore.getState().clearGameUpdate(selectedGame.id);
+
       const message = isUpdateAvailable
         ? `Переклад ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
         : `Переклад ${selectedGame.name} успішно встановлено!`;
@@ -178,7 +180,8 @@ export const MainContent: React.FC = () => {
 
   // Helper function to format time
   const formatTime = (seconds: number): string => {
-    if (seconds === 0 || !isFinite(seconds)) return '--:--';
+    if (!isFinite(seconds) || seconds < 0) return '--:--';
+    if (seconds < 1) return '< 1с';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;

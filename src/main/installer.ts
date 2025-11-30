@@ -208,10 +208,8 @@ export async function downloadFile(
   console.log(`[Downloader] Starting download: ${url}`);
 
   const writeStream = fs.createWriteStream(outputPath);
-  const speedSamples: number[] = [];
-  const SPEED_SAMPLE_SIZE = 5;
-  let lastProgressTime = Date.now();
-  let lastDownloadedBytes = 0;
+  let startTime = Date.now();
+  let lastUpdateTime = Date.now();
 
   try {
     const downloadStream = got.stream(url, {
@@ -227,34 +225,26 @@ export async function downloadFile(
     downloadStream.on('downloadProgress', (progress) => {
       const { transferred, total, percent } = progress;
 
+      // Throttle updates to every 500ms
+      const now = Date.now();
+      if (now - lastUpdateTime < 500) {
+        return;
+      }
+      lastUpdateTime = now;
+
       if (onProgress && total) {
-        const now = Date.now();
-        const timeDiff = (now - lastProgressTime) / 1000;
+        const elapsedTime = (now - startTime) / 1000; // in seconds
+        const bytesPerSecond = elapsedTime > 0 ? transferred / elapsedTime : 0;
+        const remainingBytes = total - transferred;
+        const timeRemaining = bytesPerSecond > 0 ? remainingBytes / bytesPerSecond : 0;
 
-        if (timeDiff >= 0.1) {
-          const bytesThisPeriod = transferred - lastDownloadedBytes;
-          const currentSpeed = bytesThisPeriod / timeDiff;
-
-          speedSamples.push(currentSpeed);
-          if (speedSamples.length > SPEED_SAMPLE_SIZE) {
-            speedSamples.shift();
-          }
-
-          const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
-          const remainingBytes = total - transferred;
-          const timeRemaining = avgSpeed > 0 ? remainingBytes / avgSpeed : 0;
-
-          onProgress({
-            percent: percent * 100,
-            downloadedBytes: transferred,
-            totalBytes: total,
-            bytesPerSecond: avgSpeed,
-            timeRemaining,
-          });
-
-          lastProgressTime = now;
-          lastDownloadedBytes = transferred;
-        }
+        onProgress({
+          percent: percent * 100,
+          downloadedBytes: transferred,
+          totalBytes: total,
+          bytesPerSecond,
+          timeRemaining,
+        });
       }
     });
 
