@@ -4,7 +4,7 @@
  */
 module.exports = {
   appId: 'com.littlebit.launcher',
-  productName: 'LittleBit',
+  productName: 'Little Bit',
   copyright: 'Copyright © 2025 Little Bit UA',
 
   directories: {
@@ -42,6 +42,11 @@ module.exports = {
       },
     ],
     verifyUpdateCodeSignature: false,
+    forceCodeSigning: false,
+  },
+
+  portable: {
+    artifactName: "${productName}-${os}-Portable.${ext}",
   },
 
   linux: {
