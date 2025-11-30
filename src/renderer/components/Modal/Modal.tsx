@@ -20,11 +20,11 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xl"
       onClick={onClose}
     >
       <div
-        className="bg-glass border border-border rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden"
+        className="bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
