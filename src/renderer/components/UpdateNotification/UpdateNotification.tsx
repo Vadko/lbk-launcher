@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 export const UpdateNotification = () => {
+  const { appUpdateNotificationsEnabled } = useSettingsStore();
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -14,8 +16,10 @@ export const UpdateNotification = () => {
     // Listen for update events
     window.electronAPI.onUpdateAvailable((info) => {
       console.log('Update available:', info);
-      setUpdateAvailable(true);
-      setUpdateInfo(info);
+      if (appUpdateNotificationsEnabled) {
+        setUpdateAvailable(true);
+        setUpdateInfo(info);
+      }
     });
 
     window.electronAPI.onUpdateDownloaded((info) => {
@@ -43,7 +47,7 @@ export const UpdateNotification = () => {
     window.electronAPI.installUpdate();
   };
 
-  if (!updateAvailable && !updateDownloaded) return null;
+  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded)) return null;
 
   return (
     <div className="fixed bottom-4 right-4 bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl max-w-sm">

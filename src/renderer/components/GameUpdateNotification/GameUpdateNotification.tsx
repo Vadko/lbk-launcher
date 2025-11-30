@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface GameUpdateInfo {
   gameName: string;
@@ -7,10 +8,14 @@ interface GameUpdateInfo {
 }
 
 export const GameUpdateNotification: React.FC = () => {
+  const { gameUpdateNotificationsEnabled } = useSettingsStore();
   const [updates, setUpdates] = useState<GameUpdateInfo[]>([]);
 
   useEffect(() => {
     const handleGameUpdate = (updateInfo: GameUpdateInfo) => {
+      // Only show notification if enabled
+      if (!gameUpdateNotificationsEnabled) return;
+
       setUpdates((prev) => {
         // Check if this update is already in the list
         if (prev.some((u) => u.gameName === updateInfo.gameName)) {
@@ -35,13 +40,13 @@ export const GameUpdateNotification: React.FC = () => {
     return () => {
       window.removeEventListener('game-update-available', listener);
     };
-  }, []);
+  }, [gameUpdateNotificationsEnabled]);
 
   const dismissUpdate = (gameName: string) => {
     setUpdates((prev) => prev.filter((u) => u.gameName !== gameName));
   };
 
-  if (updates.length === 0) return null;
+  if (!gameUpdateNotificationsEnabled || updates.length === 0) return null;
 
   return (
     <div className="fixed top-12 right-4 z-50 flex flex-col gap-2">

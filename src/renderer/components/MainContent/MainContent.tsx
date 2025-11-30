@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Download, RefreshCw, Heart, Gamepad2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { useModalStore } from '../../store/useModalStore';
+import { useConfirmStore } from '../../store/useConfirmStore';
 import { GameHero } from './GameHero';
 import { StatusCard } from './StatusCard';
 import { InfoCard } from './InfoCard';
@@ -10,6 +12,8 @@ import type { InstallationInfo, InstallResult } from '../../../shared/types';
 
 export const MainContent: React.FC = () => {
   const { selectedGame } = useStore();
+  const { showModal } = useModalStore();
+  const { showConfirm } = useConfirmStore();
   const [isInstalling, setIsInstalling] = useState(false);
   const [installProgress, setInstallProgress] = useState(0);
   const [installationInfo, setInstallationInfo] = useState<InstallationInfo | null>(null);
@@ -46,7 +50,11 @@ export const MainContent: React.FC = () => {
 
     // Check if Electron API is available
     if (!window.electronAPI) {
-      alert('⚠️ Встановлення доступне тільки в десктопній версії додатку');
+      showModal({
+        title: 'Недоступно',
+        message: 'Встановлення доступне тільки в десктопній версії додатку',
+        type: 'error',
+      });
       return;
     }
 
@@ -73,20 +81,25 @@ export const MainContent: React.FC = () => {
       if (!result.success && result.error) {
         // Check if this is a "game not found" error that needs manual folder selection
         if (result.error.needsManualSelection) {
-          const shouldSelectFolder = window.confirm(
-            `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`
-          );
-
-          if (shouldSelectFolder) {
-            const selectedFolder = await window.electronAPI.selectGameFolder();
-            if (selectedFolder) {
-              // Retry installation with custom path
-              await handleInstall(selectedFolder);
-              return;
-            }
-          }
+          showConfirm({
+            title: 'Гру не знайдено',
+            message: `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`,
+            confirmText: 'Вибрати папку',
+            cancelText: 'Скасувати',
+            onConfirm: async () => {
+              const selectedFolder = await window.electronAPI.selectGameFolder();
+              if (selectedFolder) {
+                // Retry installation with custom path
+                await handleInstall(selectedFolder);
+              }
+            },
+          });
         } else {
-          alert(`❌ Помилка встановлення: ${result.error.message}`);
+          showModal({
+            title: 'Помилка встановлення',
+            message: result.error.message,
+            type: 'error',
+          });
         }
         return;
       }
@@ -96,16 +109,22 @@ export const MainContent: React.FC = () => {
       setInstallationInfo(newInfo);
 
       const message = isUpdateAvailable
-        ? `✅ Переклад ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
-        : `✅ Переклад ${selectedGame.name} успішно встановлено!`;
+        ? `Переклад ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
+        : `Переклад ${selectedGame.name} успішно встановлено!`;
 
-      alert(message);
+      showModal({
+        title: isUpdateAvailable ? 'Переклад оновлено' : 'Переклад встановлено',
+        message,
+        type: 'success',
+      });
       setInstallProgress(100);
     } catch (error) {
       console.error('Installation error:', error);
-      alert(
-        `❌ Помилка встановлення: ${error instanceof Error ? error.message : 'Невідома помилка'}`
-      );
+      showModal({
+        title: 'Помилка встановлення',
+        message: error instanceof Error ? error.message : 'Невідома помилка',
+        type: 'error',
+      });
     } finally {
       setIsInstalling(false);
       setInstallProgress(0);

@@ -5,7 +5,11 @@ import { Sidebar } from './components/Sidebar/Sidebar';
 import { MainContent } from './components/MainContent/MainContent';
 import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
 import { GameUpdateNotification } from './components/GameUpdateNotification/GameUpdateNotification';
+import { GlobalModal } from './components/Modal/GlobalModal';
+import { ConfirmModal } from './components/Modal/ConfirmModal';
+import { SettingsModal } from './components/Settings/SettingsModal';
 import { useStore } from './store/useStore';
+import { useSettingsStore } from './store/useSettingsStore';
 
 declare global {
   interface Window {
@@ -19,6 +23,7 @@ declare global {
 
 export const App: React.FC = () => {
   const { fetchGames, initRealtimeSubscription, loadInstalledGames, setInitialLoadComplete } = useStore();
+  const { animationsEnabled } = useSettingsStore();
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -66,7 +71,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="relative w-screen h-screen bg-bg-dark text-white">
+    <div className={`relative w-screen h-screen bg-bg-dark text-white ${!animationsEnabled ? 'no-animations' : ''}`}>
       <AmbientBackground />
 
       {/* Title bar */}
@@ -108,6 +113,11 @@ export const App: React.FC = () => {
       {/* Update notifications */}
       <UpdateNotification />
       <GameUpdateNotification />
+
+      {/* Global modals */}
+      <GlobalModal />
+      <ConfirmModal />
+      <SettingsModal />
     </div>
   );
 };

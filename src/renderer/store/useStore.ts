@@ -145,6 +145,8 @@ export const useStore = create<Store>((set, get) => ({
 
       if (isInstalled && hasUpdate) {
         // Send notification request to main process
+        // Note: system notifications are controlled in main process based on isInitialLoad
+        // In-app notifications are controlled by gameUpdateNotificationsEnabled in the component
         window.electronAPI.showGameUpdateNotification?.(
           updatedGame.name,
           updatedGame.version,

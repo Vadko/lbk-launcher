@@ -4,6 +4,8 @@ import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
 import { GameListItem } from './GameListItem';
 import { useStore, useFilteredGames } from '../../store/useStore';
+import { useModalStore } from '../../store/useModalStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import logo from '../../../../resources/icon.png';
 
 type FilterType = 'all' | 'in-progress' | 'completed' | 'early-access' | 'funded';
@@ -19,6 +21,8 @@ export const Sidebar: React.FC = () => {
     gamesWithUpdates,
   } = useStore();
   const filteredGames = useFilteredGames();
+  const { showModal } = useModalStore();
+  const { openSettingsModal } = useSettingsStore();
 
   const filters: { label: string; value: FilterType }[] = [
     { label: 'Усі', value: 'all' },
@@ -84,11 +88,7 @@ export const Sidebar: React.FC = () => {
       {/* Footer */}
       <div className="flex gap-2 pt-3 border-t border-border">
         <button
-          onClick={() => {
-            // TODO: Відкрити модальне вікно налаштувань
-            console.log('Налаштування - в розробці');
-            alert('Налаштування будуть додані в наступній версії 🛠️');
-          }}
+          onClick={openSettingsModal}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
           title="Налаштування"
         >
@@ -96,11 +96,11 @@ export const Sidebar: React.FC = () => {
         </button>
         <button
           onClick={() => {
-            // TODO: Відкрити модальне вікно профілю
-            console.log('Профіль - в розробці');
-            alert(
-              'Little Bit v1.0.0\n\nІнсталятор українських перекладів відеоігор\n\n💙 Дякуємо за підтримку!'
-            );
+            showModal({
+              title: 'Про додаток',
+              message: `Little Bit v${window.electronAPI?.getVersion?.() || '1.0.0'}\n\nІнсталятор українських перекладів відеоігор\n\n💙 Дякуємо за підтримку!`,
+              type: 'info',
+            });
           }}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
           title="Профіль"

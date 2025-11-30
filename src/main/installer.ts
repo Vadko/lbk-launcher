@@ -118,23 +118,52 @@ export async function installTranslation(
 
     // Provide more helpful error messages
     if (error instanceof Error) {
+      // Check if it's already a user-friendly error (e.g., from needsManualSelection)
+      if ((error as any).needsManualSelection) {
+        throw error;
+      }
+
+      // Network errors
       if (error.message.includes('ERR_CONNECTION_REFUSED')) {
         throw new Error(
-          'Не вдалося завантажити файл перекладу.\n\n' +
-            'Можливі причини:\n' +
-            '• Сервер недоступний\n' +
-            '• Перевірте підключення до Інтернету\n' +
-            '• URL завантаження може бути неправильним'
-        );
-      } else if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
-        throw new Error(
-          'Не вдалося підключитися до сервера.\n\n' +
-            'Перевірте підключення до Інтернету та спробуйте ще раз.'
+          'Не вдалося завантажити переклад.\n\nПеревірте підключення до Інтернету та спробуйте ще раз.'
         );
       }
+
+      if (error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED')) {
+        throw new Error(
+          'Не вдалося підключитися до сервера.\n\nПеревірте підключення до Інтернету.'
+        );
+      }
+
+      // Permission errors
+      if (error.message.includes('EACCES') || error.message.includes('EPERM')) {
+        throw new Error(
+          'Недостатньо прав для встановлення.\n\nЗапустіть додаток від імені адміністратора.'
+        );
+      }
+
+      // Disk space errors
+      if (error.message.includes('ENOSPC')) {
+        throw new Error(
+          'Недостатньо місця на диску.\n\nЗвільніть місце та спробуйте знову.'
+        );
+      }
+
+      // File not found errors
+      if (error.message.includes('ENOENT')) {
+        throw new Error(
+          'Гру не знайдено на вашому комп\'ютері.\n\nПереконайтеся, що гра встановлена через STEAM.'
+        );
+      }
+
+      // Generic error - make it more user-friendly
+      throw new Error(
+        `Помилка встановлення: ${error.message}\n\nСпробуйте ще раз або зверніться до підтримки.`
+      );
     }
 
-    throw error;
+    throw new Error('Невідома помилка встановлення.\n\nСпробуйте ще раз.');
   }
 }
 
@@ -176,7 +205,7 @@ export async function downloadFile(
 
       if (statusCode !== 200) {
         writeStream.close();
-        reject(new Error(`Failed to download: HTTP ${statusCode}`));
+        reject(new Error(`Не вдалося завантажити файл (код помилки: ${statusCode})`));
         return;
       }
 

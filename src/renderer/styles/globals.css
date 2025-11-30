@@ -182,3 +182,10 @@ body {
 .no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Disable animations */
+.no-animations,
+.no-animations * {
+  animation: none !important;
+  transition: none !important;
+}
