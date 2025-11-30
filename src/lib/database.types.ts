@@ -80,6 +80,8 @@ export type Database = {
           install_paths:
             | Database["public"]["CompositeTypes"]["install_path_entry"][]
             | null
+          installation_file_linux_path: string | null
+          installation_file_windows_path: string | null
           is_active: boolean
           logo_path: string | null
           name: string
@@ -109,6 +111,8 @@ export type Database = {
           install_paths?:
             | Database["public"]["CompositeTypes"]["install_path_entry"][]
             | null
+          installation_file_linux_path?: string | null
+          installation_file_windows_path?: string | null
           is_active?: boolean
           logo_path?: string | null
           name: string
@@ -138,6 +142,8 @@ export type Database = {
           install_paths?:
             | Database["public"]["CompositeTypes"]["install_path_entry"][]
             | null
+          installation_file_linux_path?: string | null
+          installation_file_windows_path?: string | null
           is_active?: boolean
           logo_path?: string | null
           name?: string
@@ -192,6 +198,8 @@ export type Database = {
           install_paths:
             | Database["public"]["CompositeTypes"]["install_path_entry"][]
             | null
+          installation_file_linux_path: string | null
+          installation_file_windows_path: string | null
           logo_path: string | null
           name: string
           platforms: string[]
@@ -222,6 +230,8 @@ export type Database = {
           install_paths?:
             | Database["public"]["CompositeTypes"]["install_path_entry"][]
             | null
+          installation_file_linux_path?: string | null
+          installation_file_windows_path?: string | null
           logo_path?: string | null
           name: string
           platforms?: string[]
@@ -252,6 +262,8 @@ export type Database = {
           install_paths?:
             | Database["public"]["CompositeTypes"]["install_path_entry"][]
             | null
+          installation_file_linux_path?: string | null
+          installation_file_windows_path?: string | null
           logo_path?: string | null
           name?: string
           platforms?: string[]

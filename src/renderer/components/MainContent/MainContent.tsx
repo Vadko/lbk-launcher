@@ -60,6 +60,32 @@ export const MainContent: React.FC = () => {
       return;
     }
 
+    // Check if installer file is present
+    const hasInstaller =
+      (process.platform === 'win32' && selectedGame.installation_file_windows_path) ||
+      (process.platform === 'linux' && selectedGame.installation_file_linux_path);
+
+    // Show warning if installer is present
+    if (hasInstaller) {
+      showConfirm({
+        title: 'Запуск інсталятора',
+        message: 'Після завантаження та розпакування перекладу буде запущено інсталятор.\n\nПродовжити встановлення?',
+        confirmText: 'Продовжити',
+        cancelText: 'Скасувати',
+        onConfirm: async () => {
+          await performInstallation(customGamePath);
+        },
+      });
+      return;
+    }
+
+    // No installer - proceed directly
+    await performInstallation(customGamePath);
+  };
+
+  const performInstallation = async (customGamePath?: string) => {
+    if (!selectedGame) return;
+
     try {
       setIsInstalling(true);
       setInstallProgress(0);
@@ -92,7 +118,7 @@ export const MainContent: React.FC = () => {
               const selectedFolder = await window.electronAPI.selectGameFolder();
               if (selectedFolder) {
                 // Retry installation with custom path
-                await handleInstall(selectedFolder);
+                await performInstallation(selectedFolder);
               }
             },
           });

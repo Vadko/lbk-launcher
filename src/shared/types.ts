@@ -23,6 +23,8 @@ export interface Game {
   description: string | null;
   support_url: string | null;
   video_url: string | null;
+  installation_file_windows_path: string | null;
+  installation_file_linux_path: string | null;
 }
 
 export interface InstallationInfo {

@@ -39,7 +39,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
         <InfoItem
           icon={<Calendar size={18} />}
           label="Версія"
-          value={game.version}
+          value={game.version || 'N/A'}
         />
         <InfoItem icon={<Users size={18} />} label="Команда" value={game.team} />
       </div>

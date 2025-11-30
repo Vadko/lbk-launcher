@@ -67,9 +67,11 @@ export const useStore = create<Store>((set, get) => ({
         state.selectedGame?.id === updatedGame.id ? updatedGame : state.selectedGame;
 
       // Check if this game has an update available
-      const hasUpdate = get().checkForGameUpdate(updatedGame.id, updatedGame.version);
-      if (hasUpdate) {
-        get().markGameAsUpdated(updatedGame.id);
+      if (updatedGame.version) {
+        const hasUpdate = get().checkForGameUpdate(updatedGame.id, updatedGame.version);
+        if (hasUpdate) {
+          get().markGameAsUpdated(updatedGame.id);
+        }
       }
 
       return { games, selectedGame };
@@ -88,7 +90,7 @@ export const useStore = create<Store>((set, get) => ({
         installedGamesMap.set(game.id, { version: installInfo.version });
 
         // Check if installed version differs from current version in DB
-        if (installInfo.version !== game.version) {
+        if (game.version && installInfo.version !== game.version) {
           gamesWithUpdatesSet.add(game.id);
 
           // Show in-app notification for this game
@@ -141,17 +143,20 @@ export const useStore = create<Store>((set, get) => ({
 
       // Check if game is installed and has an update
       const isInstalled = state.installedGames.has(updatedGame.id);
-      const hasUpdate = state.checkForGameUpdate(updatedGame.id, updatedGame.version);
 
-      if (isInstalled && hasUpdate) {
-        // Send notification request to main process
-        // Note: system notifications are controlled in main process based on isInitialLoad
-        // In-app notifications are controlled by gameUpdateNotificationsEnabled in the component
-        window.electronAPI.showGameUpdateNotification?.(
-          updatedGame.name,
-          updatedGame.version,
-          state.isInitialLoad
-        );
+      if (updatedGame.version) {
+        const hasUpdate = state.checkForGameUpdate(updatedGame.id, updatedGame.version);
+
+        if (isInstalled && hasUpdate) {
+          // Send notification request to main process
+          // Note: system notifications are controlled in main process based on isInitialLoad
+          // In-app notifications are controlled by gameUpdateNotificationsEnabled in the component
+          window.electronAPI.showGameUpdateNotification?.(
+            updatedGame.name,
+            updatedGame.version,
+            state.isInitialLoad
+          );
+        }
       }
 
       state.updateGame(updatedGame);

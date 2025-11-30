@@ -1,11 +1,12 @@
-import { app, net } from 'electron';
+import { app, net, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
+import { exec } from 'child_process';
 import AdmZip from 'adm-zip';
 import { fetchGames } from './api';
 import { getFirstAvailableGamePath } from './game-detector';
-import { InstallationInfo } from '../shared/types';
+import { InstallationInfo, Game } from '../shared/types';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -70,6 +71,11 @@ export async function installTranslation(
 
     // Get download URL from Supabase Storage
     const { getArchiveDownloadUrl } = await import('../lib/api');
+
+    if (!game.archive_path) {
+      throw new Error('Архів перекладу не знайдено');
+    }
+
     const downloadUrl = getArchiveDownloadUrl(game.archive_path);
 
     console.log(`[Installer] Downloading from Supabase: ${downloadUrl}`);
@@ -89,7 +95,20 @@ export async function installTranslation(
 
     onProgress?.(80);
 
-    // 5. Copy files to game directory
+    // 5. Check for installer file and run if present
+    const installerFileName = getInstallerFileName(game);
+    if (installerFileName) {
+      console.log(`[Installer] Found installer file: ${installerFileName}`);
+      try {
+        await runInstaller(extractDir, installerFileName);
+        console.log(`[Installer] Installer launched successfully. User needs to complete installation.`);
+      } catch (error) {
+        console.error('[Installer] Failed to launch installer:', error);
+        // Don't fail the whole process if installer fails to launch
+      }
+    }
+
+    // 6. Copy files to game directory
     // installPaths is only used for finding the game
     const fullTargetPath = gamePath.path;
 
@@ -99,15 +118,15 @@ export async function installTranslation(
 
     onProgress?.(95);
 
-    // 6. Cleanup
+    // 7. Cleanup
     await cleanup(archivePath, extractDir);
 
     onProgress?.(100);
 
-    // 7. Save installation info
+    // 8. Save installation info
     await saveInstallationInfo(gamePath.path, {
       gameId: game.id,
-      version: game.version,
+      version: game.version || '1.0.0',
       installedAt: new Date().toISOString(),
       gamePath: gamePath.path,
     });
@@ -341,6 +360,73 @@ async function deleteDirectory(dirPath: string): Promise<void> {
   }
 
   await fs.promises.rmdir(dirPath);
+}
+
+/**
+ * Get installer file name based on platform
+ */
+function getInstallerFileName(game: Game): string | null {
+  const isWindows = process.platform === 'win32';
+  const isLinux = process.platform === 'linux';
+
+  if (isWindows && game.installation_file_windows_path) {
+    return game.installation_file_windows_path;
+  }
+
+  if (isLinux && game.installation_file_linux_path) {
+    return game.installation_file_linux_path;
+  }
+
+  return null;
+}
+
+/**
+ * Run installer file from extracted archive
+ */
+async function runInstaller(extractDir: string, installerFileName: string): Promise<void> {
+  try {
+    const installerPath = path.join(extractDir, installerFileName);
+
+    if (!fs.existsSync(installerPath)) {
+      console.warn(`[Installer] Installer file not found: ${installerPath}`);
+      return;
+    }
+
+    console.log(`[Installer] Running installer: ${installerPath}`);
+
+    // Determine platform and run installer
+    const platform = process.platform;
+
+    if (platform === 'win32') {
+      // Windows - run .exe installer
+      await shell.openPath(installerPath);
+    } else if (platform === 'darwin' || platform === 'linux') {
+      // macOS or Linux - make executable and run
+      await new Promise<void>((resolve, reject) => {
+        exec(`chmod +x "${installerPath}"`, (error) => {
+          if (error) {
+            console.error('[Installer] Failed to make installer executable:', error);
+            reject(error);
+            return;
+          }
+
+          // Open installer
+          shell.openPath(installerPath).then(() => {
+            resolve();
+          }).catch(reject);
+        });
+      });
+    } else {
+      console.warn(`[Installer] Unsupported platform: ${platform}`);
+    }
+
+    console.log('[Installer] Installer launched successfully');
+  } catch (error) {
+    console.error('[Installer] Error running installer:', error);
+    throw new Error(
+      `Не вдалося запустити інсталятор: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }
 
 /**

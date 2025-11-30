@@ -35,6 +35,8 @@ export async function getApprovedGames(): Promise<Game[]> {
     description: game.description,
     support_url: game.support_url,
     video_url: game.video_url,
+    installation_file_windows_path: game.installation_file_windows_path,
+    installation_file_linux_path: game.installation_file_linux_path,
   }));
 }
 
