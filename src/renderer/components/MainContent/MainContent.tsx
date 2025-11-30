@@ -43,7 +43,9 @@ export const MainContent: React.FC = () => {
   }, [selectedGame]);
 
   const isUpdateAvailable =
-    installationInfo && selectedGame && installationInfo.version !== selectedGame.version;
+    installationInfo && selectedGame && selectedGame.version && installationInfo.version !== selectedGame.version;
+
+  const isPlanned = selectedGame?.status === 'planned';
 
   const handleInstall = async (customGamePath?: string) => {
     if (!selectedGame || isInstalling || isCheckingInstallation) return;
@@ -168,17 +170,19 @@ export const MainContent: React.FC = () => {
             variant="primary"
             icon={isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />}
             onClick={() => handleInstall()}
-            disabled={isInstalling}
+            disabled={isInstalling || isPlanned}
           >
-            {isInstalling
-              ? isUpdateAvailable
-                ? 'Оновлення...'
-                : 'Встановлення...'
-              : isUpdateAvailable && !isCheckingInstallation
-                ? `Оновити до v${selectedGame?.version}`
-                : installationInfo
-                  ? `Перевстановити (v${installationInfo.version})`
-                  : 'Встановити переклад'}
+            {isPlanned
+              ? 'Заплановано'
+              : isInstalling
+                ? isUpdateAvailable
+                  ? 'Оновлення...'
+                  : 'Встановлення...'
+                : isUpdateAvailable && !isCheckingInstallation
+                  ? `Оновити до v${selectedGame?.version}`
+                  : installationInfo
+                    ? `Перевстановити (v${installationInfo.version})`
+                    : 'Встановити переклад'}
           </Button>
           <Button variant="secondary" icon={<Heart size={20} />} onClick={handleSupport}>
             Підтримати проєкт

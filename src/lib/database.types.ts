@@ -90,7 +90,7 @@ export type Database = {
           thumbnail_path: string | null
           translation_progress: number
           updated_at: string
-          version: string
+          version: string | null
           video_url: string | null
         }
         Insert: {
@@ -119,7 +119,7 @@ export type Database = {
           thumbnail_path?: string | null
           translation_progress?: number
           updated_at?: string
-          version: string
+          version?: string | null
           video_url?: string | null
         }
         Update: {
@@ -148,7 +148,7 @@ export type Database = {
           thumbnail_path?: string | null
           translation_progress?: number
           updated_at?: string
-          version?: string
+          version?: string | null
           video_url?: string | null
         }
         Relationships: [

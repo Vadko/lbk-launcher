@@ -8,14 +8,14 @@ export interface Game {
   id: string;
   slug: string;
   name: string;
-  version: string;
+  version: string | null;
   translation_progress: number;
   editing_progress: number;
   team: string;
   status: GameStatus;
   platforms: string[];
   install_paths: InstallPath[];
-  archive_path: string;
+  archive_path: string | null;
   banner_path: string | null;
   logo_path: string | null;
   thumbnail_path: string | null;
