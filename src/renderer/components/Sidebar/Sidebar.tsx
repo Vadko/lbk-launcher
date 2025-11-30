@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, User } from 'lucide-react';
+import { Settings, User, MessageCircle } from 'lucide-react';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
 import { GameListItem } from './GameListItem';
@@ -93,6 +93,15 @@ export const Sidebar: React.FC = () => {
           title="Налаштування"
         >
           <Settings size={20} className="mx-auto text-text-muted" />
+        </button>
+        <button
+          onClick={() => {
+            window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
+          }}
+          className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+          title="Зворотній зв'язок"
+        >
+          <MessageCircle size={20} className="mx-auto text-text-muted" />
         </button>
         <button
           onClick={() => {
