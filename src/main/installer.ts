@@ -454,6 +454,34 @@ async function restoreBackup(backupDir: string, targetDir: string): Promise<void
 }
 
 /**
+ * Clean up empty directories recursively
+ */
+async function cleanupEmptyDirectories(dir: string, rootDir: string): Promise<void> {
+  try {
+    if (!fs.existsSync(dir)) return;
+
+    const entries = await readdir(dir, { withFileTypes: true });
+
+    // Recursively clean subdirectories first
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const subDir = path.join(dir, entry.name);
+        await cleanupEmptyDirectories(subDir, rootDir);
+      }
+    }
+
+    // Check if directory is now empty
+    const remainingEntries = await readdir(dir);
+    if (remainingEntries.length === 0 && dir !== rootDir) {
+      await fs.promises.rmdir(dir);
+      console.log(`[Cleanup] Deleted empty directory: ${path.relative(rootDir, dir)}`);
+    }
+  } catch (error) {
+    console.warn(`[Cleanup] Failed to cleanup directory ${dir}:`, error);
+  }
+}
+
+/**
  * Backup files that will be overwritten (only if backup doesn't exist already)
  */
 async function backupFiles(sourceDir: string, targetDir: string): Promise<void> {
@@ -467,6 +495,22 @@ async function backupFiles(sourceDir: string, targetDir: string): Promise<void> 
     }
 
     await mkdir(backupDir, { recursive: true });
+
+    // Make backup directory hidden on Windows
+    if (process.platform === 'win32') {
+      try {
+        await new Promise<void>((resolve) => {
+          exec(`attrib +h "${backupDir}"`, (error) => {
+            if (error) {
+              console.warn('[Backup] Failed to hide backup directory:', error);
+            }
+            resolve(); // Don't fail backup if hiding fails
+          });
+        });
+      } catch (error) {
+        console.warn('[Backup] Failed to set hidden attribute:', error);
+      }
+    }
 
     // Read all files from source directory
     const entries = await readdir(sourceDir, { withFileTypes: true });
@@ -773,6 +817,10 @@ export async function uninstallTranslation(gameId: string): Promise<void> {
         console.warn('[Installer] No backup found, skipping file restoration');
       }
     }
+
+    // Step 3: Clean up empty directories (including .littlebit-backup if empty)
+    console.log('[Installer] Cleaning up empty directories...');
+    await cleanupEmptyDirectories(gamePath, gamePath);
 
     // Delete installation info file
     const infoPath = path.join(gamePath, INSTALLATION_INFO_FILE);
