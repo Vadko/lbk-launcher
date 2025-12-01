@@ -5,12 +5,13 @@ import { getMainWindow } from '../window';
 export function setupInstallerHandlers(): void {
   ipcMain.handle(
     'install-translation',
-    async (_, gameId: string, platform: string, customGamePath?: string) => {
+    async (_, gameId: string, platform: string, customGamePath?: string, createBackup?: boolean) => {
       try {
         await installTranslation(
           gameId,
           platform,
           customGamePath,
+          createBackup,
           (downloadProgress) => {
             getMainWindow()?.webContents.send('download-progress', downloadProgress);
           },

@@ -3,8 +3,8 @@ import { ElectronAPI } from '../shared/types';
 
 const electronAPI: ElectronAPI = {
   fetchGames: () => ipcRenderer.invoke('fetch-games'),
-  installTranslation: (gameId: string, platform: string, customGamePath?: string) =>
-    ipcRenderer.invoke('install-translation', gameId, platform, customGamePath),
+  installTranslation: (gameId: string, platform: string, customGamePath?: string, createBackup?: boolean) =>
+    ipcRenderer.invoke('install-translation', gameId, platform, customGamePath, createBackup),
   uninstallTranslation: (gameId: string) => ipcRenderer.invoke('uninstall-translation', gameId),
   checkInstallation: (gameId: string) => ipcRenderer.invoke('check-installation', gameId),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),

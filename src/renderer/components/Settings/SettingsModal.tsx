@@ -12,6 +12,8 @@ export const SettingsModal: React.FC = () => {
     toggleAppUpdateNotifications,
     gameUpdateNotificationsEnabled,
     toggleGameUpdateNotifications,
+    createBackupBeforeInstall,
+    toggleCreateBackup,
   } = useSettingsStore();
 
   const ToggleSwitch: React.FC<{ enabled: boolean; onClick: () => void }> = ({ enabled, onClick }) => (
@@ -63,6 +65,17 @@ export const SettingsModal: React.FC = () => {
             </p>
           </div>
           <ToggleSwitch enabled={gameUpdateNotificationsEnabled} onClick={toggleGameUpdateNotifications} />
+        </div>
+
+        {/* Create Backup Before Install */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
+          <div className="flex-1 pr-4">
+            <h4 className="text-sm font-semibold text-white mb-1">Створювати резервну копію</h4>
+            <p className="text-xs text-text-muted">
+              Зберігати оригінальні файли гри перед встановленням перекладу
+            </p>
+          </div>
+          <ToggleSwitch enabled={createBackupBeforeInstall} onClick={toggleCreateBackup} />
         </div>
 
         {/* Close button */}

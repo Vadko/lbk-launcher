@@ -34,6 +34,7 @@ export interface InstallationInfo {
   version: string;
   installedAt: string;
   gamePath: string;
+  hasBackup?: boolean;
 }
 
 export interface DownloadProgress {
@@ -58,7 +59,7 @@ export interface InstallResult {
 
 export interface ElectronAPI {
   fetchGames: () => Promise<Game[]>;
-  installTranslation: (gameId: string, platform: string, customGamePath?: string) => Promise<InstallResult>;
+  installTranslation: (gameId: string, platform: string, customGamePath?: string, createBackup?: boolean) => Promise<InstallResult>;
   uninstallTranslation: (gameId: string) => Promise<InstallResult>;
   checkInstallation: (gameId: string) => Promise<InstallationInfo | null>;
   openExternal: (url: string) => Promise<void>;

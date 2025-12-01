@@ -28,6 +28,7 @@ export async function installTranslation(
   gameId: string,
   platform: string,
   customGamePath?: string,
+  createBackup: boolean = true,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
@@ -150,12 +151,16 @@ export async function installTranslation(
     }
 
     // 6. Backup original files and copy translation files
-    onStatus?.({ message: 'Створення резервної копії...' });
     const fullTargetPath = gamePath.path;
     console.log(`[Installer] Installing to: ${fullTargetPath}`);
 
-    // Create backup of files that will be overwritten
-    await backupFiles(extractDir, fullTargetPath);
+    // Create backup of files that will be overwritten (if enabled)
+    if (createBackup) {
+      onStatus?.({ message: 'Створення резервної копії...' });
+      await backupFiles(extractDir, fullTargetPath);
+    } else {
+      console.log('[Installer] Backup creation disabled by user');
+    }
 
     onStatus?.({ message: 'Копіювання файлів перекладу...' });
     await copyDirectory(extractDir, fullTargetPath);
@@ -170,6 +175,7 @@ export async function installTranslation(
       version: game.version || '1.0.0',
       installedAt: new Date().toISOString(),
       gamePath: gamePath.path,
+      hasBackup: createBackup,
     });
 
     console.log(`[Installer] Translation for ${gameId} installed successfully at ${fullTargetPath}`);
@@ -678,8 +684,8 @@ export async function uninstallTranslation(gameId: string): Promise<void> {
     const gamePath = installInfo.gamePath;
     const backupDir = path.join(gamePath, BACKUP_DIR_NAME);
 
-    // Restore files from backup
-    if (fs.existsSync(backupDir)) {
+    // Only restore files from backup if backup was created
+    if (installInfo.hasBackup !== false && fs.existsSync(backupDir)) {
       console.log(`[Installer] Restoring files from backup: ${backupDir}`);
       await restoreBackup(backupDir, gamePath);
 
@@ -687,7 +693,11 @@ export async function uninstallTranslation(gameId: string): Promise<void> {
       await deleteDirectory(backupDir);
       console.log(`[Installer] Deleted backup directory: ${backupDir}`);
     } else {
-      console.warn('[Installer] No backup found, skipping file restoration');
+      if (installInfo.hasBackup === false) {
+        console.warn('[Installer] Backup was disabled during installation, skipping file restoration');
+      } else {
+        console.warn('[Installer] No backup found, skipping file restoration');
+      }
     }
 
     // Delete installation info file

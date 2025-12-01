@@ -7,6 +7,7 @@ type FilterType = 'all' | 'in-progress' | 'completed' | 'early-access' | 'funded
 
 interface InstallationProgress {
   isInstalling: boolean;
+  isUninstalling: boolean;
   progress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
@@ -205,6 +206,7 @@ export const useStore = create<Store>((set, get) => ({
       const newMap = new Map(state.installationProgress);
       const currentProgress = newMap.get(gameId) || {
         isInstalling: false,
+        isUninstalling: false,
         progress: 0,
         downloadProgress: null,
         statusMessage: null,

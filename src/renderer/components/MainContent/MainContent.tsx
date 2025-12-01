@@ -3,6 +3,7 @@ import { Download, RefreshCw, Heart, Gamepad2, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { GameHero } from './GameHero';
 import { StatusCard } from './StatusCard';
 import { InfoCard } from './InfoCard';
@@ -22,10 +23,12 @@ export const MainContent: React.FC = () => {
   } = useStore();
   const { showModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
+  const { createBackupBeforeInstall } = useSettingsStore();
 
   // Get state from store
   const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
+  const isUninstalling = gameProgress?.isUninstalling || false;
   const installProgress = gameProgress?.progress || 0;
   const downloadProgress = gameProgress?.downloadProgress || null;
   const statusMessage = gameProgress?.statusMessage || null;
@@ -112,7 +115,8 @@ export const MainContent: React.FC = () => {
       const result: InstallResult = await window.electronAPI.installTranslation(
         selectedGame.id,
         platform,
-        customGamePath
+        customGamePath,
+        createBackupBeforeInstall
       );
 
       // Check if installation failed
@@ -203,13 +207,23 @@ export const MainContent: React.FC = () => {
   const handleUninstall = async () => {
     if (!selectedGame || !installationInfo) return;
 
+    // Check if backup exists
+    const hasBackup = installationInfo.hasBackup !== false; // true by default for old installations
+    const backupWarning = !hasBackup
+      ? '\n\n⚠️ УВАГА: Резервну копію не було створено при встановленні. Оригінальні файли НЕ будуть відновлені!'
+      : '\n\nОригінальні файли гри будуть відновлені з резервної копії.';
+
     showConfirm({
       title: 'Видалення перекладу',
-      message: `Ви впевнені, що хочете видалити переклад для "${selectedGame.name}"?\n\nОригінальні файли гри будуть відновлені з резервної копії.`,
+      message: `Ви впевнені, що хочете видалити переклад для "${selectedGame.name}"?${backupWarning}`,
       confirmText: 'Видалити',
       cancelText: 'Скасувати',
       onConfirm: async () => {
         try {
+          setInstallationProgress(selectedGame.id, {
+            isUninstalling: true,
+          });
+
           const result: InstallResult = await window.electronAPI.uninstallTranslation(selectedGame.id);
 
           if (!result.success && result.error) {
@@ -236,6 +250,8 @@ export const MainContent: React.FC = () => {
             message: error instanceof Error ? error.message : 'Невідома помилка',
             type: 'error',
           });
+        } finally {
+          clearInstallationProgress(selectedGame.id);
         }
       },
     });
@@ -265,7 +281,7 @@ export const MainContent: React.FC = () => {
             variant="primary"
             icon={isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />}
             onClick={() => handleInstall()}
-            disabled={isInstalling || isPlanned}
+            disabled={isInstalling || isUninstalling || isPlanned}
           >
             {isPlanned
               ? 'Заплановано'
@@ -279,13 +295,14 @@ export const MainContent: React.FC = () => {
                     ? `Перевстановити (v${installationInfo.version})`
                     : 'Встановити переклад'}
           </Button>
-          {installationInfo && !isInstalling && !isUpdateAvailable && (
+          {installationInfo && !isInstalling && !isUpdateAvailable && installationInfo.hasBackup !== false && (
             <Button
               variant="secondary"
               icon={<Trash2 size={20} />}
               onClick={handleUninstall}
+              disabled={isUninstalling}
             >
-              Видалити переклад
+              {isUninstalling ? 'Видалення...' : 'Видалити переклад'}
             </Button>
           )}
           <Button variant="secondary" icon={<Heart size={20} />} onClick={handleSupport}>
@@ -375,6 +392,17 @@ export const MainContent: React.FC = () => {
                 </span>
               </div>
             )}
+          </div>
+        )}
+
+        {isUninstalling && (
+          <div className="glass-card">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-medium text-white">
+                Видалення перекладу та відновлення оригінальних файлів...
+              </span>
+            </div>
           </div>
         )}
       </div>
