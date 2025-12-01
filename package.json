@@ -1,6 +1,6 @@
 {
   "name": "little-bit",
-  "version": "1.10.3",
+  "version": "1.11.0",
   "description": "Інсталятор українських перекладів відеоігор",
   "author": {
     "name": "Little Bit UA",
@@ -19,6 +19,7 @@
     "dist": "electron-builder --config electron-builder.config.cjs",
     "dist:win": "electron-builder --win --config electron-builder.config.cjs",
     "dist:linux": "electron-builder --linux --config electron-builder.config.cjs",
+    "dist:win:local": "env-cmd pnpm build && pnpm dist:win",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
@@ -40,7 +41,6 @@
     "@types/node": "^20.10.5",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
-    "@types/yauzl": "^2.10.3",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vitejs/plugin-react": "^4.2.1",
@@ -48,6 +48,7 @@
     "electron": "39.2.4",
     "electron-builder": "26.0.12",
     "electron-vite": "4.0.1",
+    "env-cmd": "^11.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

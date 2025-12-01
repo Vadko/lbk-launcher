@@ -14,6 +14,13 @@ module.exports = {
 
   files: ['out/**/*'],
 
+  extraResources: [
+    {
+      from: 'resources/icon.png',
+      to: 'icon.png',
+    },
+  ],
+
   icon: 'resources/icon.png',
 
   asarUnpack: ['**/*.node'],
@@ -43,7 +50,7 @@ module.exports = {
         arch: ['x64'],
       },
     ],
-    icon: 'resources/icon.ico',
+    icon: 'resources/icon.png',
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
   },

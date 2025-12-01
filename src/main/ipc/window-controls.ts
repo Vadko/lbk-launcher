@@ -7,7 +7,10 @@ let tray: Tray;
 function createTray() {
   const window = getMainWindow();
 
-  const iconPath = join(app.getAppPath(), 'resources/icon.png');
+  const iconPath = app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(app.getAppPath(), 'resources', 'icon.png');
+
   const icon = nativeImage.createFromPath(iconPath);
   const appIcon = new Tray(icon);
   const contextMenu = Menu.buildFromTemplate([
