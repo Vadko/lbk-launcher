@@ -14,6 +14,8 @@ export const SettingsModal: React.FC = () => {
     toggleGameUpdateNotifications,
     createBackupBeforeInstall,
     toggleCreateBackup,
+    autoDetectInstalledGames,
+    toggleAutoDetectInstalledGames,
   } = useSettingsStore();
 
   const ToggleSwitch: React.FC<{ enabled: boolean; onClick: () => void }> = ({ enabled, onClick }) => (
@@ -76,6 +78,17 @@ export const SettingsModal: React.FC = () => {
             </p>
           </div>
           <ToggleSwitch enabled={createBackupBeforeInstall} onClick={toggleCreateBackup} />
+        </div>
+
+        {/* Auto Detect Installed Games */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
+          <div className="flex-1 pr-4">
+            <h4 className="text-sm font-semibold text-white mb-1">Автоматична перевірка встановлених ігор</h4>
+            <p className="text-xs text-text-muted">
+              Автоматично визначати встановлені ігри на вашому комп'ютері
+            </p>
+          </div>
+          <ToggleSwitch enabled={autoDetectInstalledGames} onClick={toggleAutoDetectInstalledGames} />
         </div>
 
         {/* Close button */}

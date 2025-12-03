@@ -6,6 +6,7 @@ interface SettingsStore {
   appUpdateNotificationsEnabled: boolean;
   gameUpdateNotificationsEnabled: boolean;
   createBackupBeforeInstall: boolean;
+  autoDetectInstalledGames: boolean;
   isSettingsModalOpen: boolean;
   toggleAnimations: () => void;
   setAnimationsEnabled: (enabled: boolean) => void;
@@ -15,6 +16,8 @@ interface SettingsStore {
   setGameUpdateNotificationsEnabled: (enabled: boolean) => void;
   toggleCreateBackup: () => void;
   setCreateBackupBeforeInstall: (enabled: boolean) => void;
+  toggleAutoDetectInstalledGames: () => void;
+  setAutoDetectInstalledGames: (enabled: boolean) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
 }
@@ -26,6 +29,7 @@ export const useSettingsStore = create<SettingsStore>()(
       appUpdateNotificationsEnabled: true,
       gameUpdateNotificationsEnabled: true,
       createBackupBeforeInstall: true,
+      autoDetectInstalledGames: true,
       isSettingsModalOpen: false,
 
       toggleAnimations: () =>
@@ -47,6 +51,11 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({ createBackupBeforeInstall: !state.createBackupBeforeInstall })),
 
       setCreateBackupBeforeInstall: (enabled) => set({ createBackupBeforeInstall: enabled }),
+
+      toggleAutoDetectInstalledGames: () =>
+        set((state) => ({ autoDetectInstalledGames: !state.autoDetectInstalledGames })),
+
+      setAutoDetectInstalledGames: (enabled) => set({ autoDetectInstalledGames: enabled }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
 

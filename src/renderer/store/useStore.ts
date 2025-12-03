@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Game } from '../types/game';
 import { fetchGames } from '../utils/api';
 import type { DownloadProgress, InstallationInfo, DetectedGameInfo, Database } from '../../shared/types';
+import { useSettingsStore } from './useSettingsStore';
 
 type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-games';
 
@@ -32,10 +33,13 @@ interface Store {
   itemsPerPage: number;
   totalGames: number;
   hasMore: boolean;
+  prefetchedGames: Game[];  // Prefetched next page
+  isPrefetching: boolean;
 
   // Actions
   fetchGames: () => Promise<void>;
   loadMoreGames: () => Promise<void>;
+  prefetchNextPage: () => Promise<void>;
   setSelectedGame: (game: Game | null) => void;
   setFilter: (filter: FilterType) => void;
   setSearchQuery: (query: string) => void; // Only updates state, doesn't fetch
@@ -76,9 +80,11 @@ export const useStore = create<Store>((set, get) => ({
   itemsPerPage: 10,
   totalGames: 0,
   hasMore: false,
+  prefetchedGames: [],
+  isPrefetching: false,
 
   fetchGames: async () => {
-    set({ isLoading: true, error: null, currentOffset: 0, paginatedGames: [] });
+    set({ isLoading: true, error: null, currentOffset: 0, paginatedGames: [], prefetchedGames: [] });
     try {
       const { filter, searchQuery, itemsPerPage } = get();
 
@@ -105,8 +111,13 @@ export const useStore = create<Store>((set, get) => ({
             error: null,
           });
 
-          // Detect which games are installed on the system
-          await get().detectInstalledGames();
+          // Detect which games are installed on the system (if enabled)
+          if (useSettingsStore.getState().autoDetectInstalledGames) {
+            await get().detectInstalledGames();
+          }
+
+          // Prefetch next page in background
+          get().prefetchNextPage();
         } catch (error) {
           console.error('[Store] Error fetching installed games:', error);
           set({
@@ -183,8 +194,13 @@ export const useStore = create<Store>((set, get) => ({
         isLoading: false,
       });
 
-      // Detect which games are installed on the system
-      await get().detectInstalledGames();
+      // Detect which games are installed on the system (if enabled)
+      if (useSettingsStore.getState().autoDetectInstalledGames) {
+        await get().detectInstalledGames();
+      }
+
+      // Prefetch next page in background
+      get().prefetchNextPage();
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch games',
@@ -194,11 +210,75 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   loadMoreGames: async () => {
-    const { isLoadingMore, hasMore, currentOffset, itemsPerPage, filter, searchQuery, paginatedGames, installedGamePaths } = get();
+    const { isLoadingMore, hasMore, currentOffset, itemsPerPage, filter, searchQuery, paginatedGames, installedGamePaths, prefetchedGames } = get();
 
     if (isLoadingMore || !hasMore) return;
 
     set({ isLoadingMore: true });
+
+    try {
+      let result;
+
+      // Check if we have prefetched data available
+      if (prefetchedGames.length > 0) {
+        console.log('[Store] Using prefetched games:', prefetchedGames.length);
+        result = {
+          games: prefetchedGames,
+          total: get().totalGames,
+          hasMore: currentOffset + itemsPerPage < get().totalGames,
+        };
+        // Clear prefetched games
+        set({ prefetchedGames: [] });
+      } else {
+        // Server-side pagination for installed-games filter (using cached paths)
+        if (filter === 'installed-games' && installedGamePaths.length > 0) {
+          result = await window.electronAPI.findGamesByInstallPaths(
+            installedGamePaths,
+            currentOffset,
+            itemsPerPage
+          );
+        } else {
+          // Server-side pagination for other filters
+          result = await fetchGames({
+            offset: currentOffset,
+            limit: itemsPerPage,
+            searchQuery,
+            filter,
+          });
+        }
+      }
+
+      // Avoid duplicates when adding more games
+      const existingIds = new Set(paginatedGames.map(g => g.id));
+      const newGames = result.games.filter(g => !existingIds.has(g.id));
+
+      set((state) => ({
+        paginatedGames: [...state.paginatedGames, ...newGames],
+        currentOffset: currentOffset + itemsPerPage,
+        hasMore: result.hasMore,
+        isLoadingMore: false,
+      }));
+
+      // Re-detect games after loading more (if enabled)
+      if (useSettingsStore.getState().autoDetectInstalledGames) {
+        await get().detectInstalledGames();
+      }
+
+      // Prefetch next page in background
+      get().prefetchNextPage();
+    } catch (error) {
+      console.error('Error loading more games:', error);
+      set({ isLoadingMore: false });
+    }
+  },
+
+  prefetchNextPage: async () => {
+    const { isPrefetching, hasMore, currentOffset, itemsPerPage, filter, searchQuery, installedGamePaths } = get();
+
+    // Don't prefetch if already prefetching or no more pages
+    if (isPrefetching || !hasMore) return;
+
+    set({ isPrefetching: true });
 
     try {
       let result;
@@ -220,22 +300,15 @@ export const useStore = create<Store>((set, get) => ({
         });
       }
 
-      // Avoid duplicates when adding more games
-      const existingIds = new Set(paginatedGames.map(g => g.id));
-      const newGames = result.games.filter(g => !existingIds.has(g.id));
+      console.log('[Store] Prefetched', result.games.length, 'games for next page');
 
-      set((state) => ({
-        paginatedGames: [...state.paginatedGames, ...newGames],
-        currentOffset: currentOffset + itemsPerPage,
-        hasMore: result.hasMore,
-        isLoadingMore: false,
-      }));
-
-      // Re-detect games after loading more
-      await get().detectInstalledGames();
+      set({
+        prefetchedGames: result.games,
+        isPrefetching: false,
+      });
     } catch (error) {
-      console.error('Error loading more games:', error);
-      set({ isLoadingMore: false });
+      console.error('[Store] Error prefetching next page:', error);
+      set({ isPrefetching: false });
     }
   },
 
