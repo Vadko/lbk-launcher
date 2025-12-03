@@ -34,7 +34,7 @@ export const GameListItem: React.FC<GameListItemProps> = ({
           : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
       }`}
     >
-      <div className="relative w-12 h-12 flex-shrink-0">
+      <div className="relative w-12 h-12 flex-shrink-0 select-none">
         <div className="w-full h-full rounded-lg overflow-hidden bg-glass">
           {thumbnailUrl && !imageError ? (
             <>
@@ -46,6 +46,7 @@ export const GameListItem: React.FC<GameListItemProps> = ({
               <img
                 src={thumbnailUrl}
                 alt={game.name}
+                draggable={false}
                 className={`w-full h-full object-cover transition-opacity duration-300 ${
                   imageLoading ? 'opacity-0' : 'opacity-100'
                 }`}

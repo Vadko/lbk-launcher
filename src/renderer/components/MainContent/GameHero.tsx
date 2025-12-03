@@ -11,7 +11,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   const logoUrl = getGameImageUrl(game.logo_path);
 
   return (
-    <div className="relative h-[300px] rounded-2xl overflow-hidden mb-6">
+    <div className="relative h-[300px] rounded-2xl overflow-hidden mb-6 select-none">
       {/* Background image */}
       <div
         className="absolute inset-0 overflow-hidden"
@@ -25,6 +25,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             src={bannerUrl}
             alt={game.name}
             className="w-full h-full rounded-2xl object-cover"
+            draggable={false}
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-neon-purple via-neon-blue to-neon-pink" />
@@ -39,6 +40,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             src={logoUrl}
             alt={game.name}
             className="max-h-32 max-w-md object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]"
+            draggable={false}
           />
         ) : (
           <h1 className="text-5xl font-head font-bold text-white drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]">

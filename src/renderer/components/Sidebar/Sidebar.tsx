@@ -80,11 +80,12 @@ export const Sidebar: React.FC = () => {
   return (
     <GlassPanel className="w-[280px] h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b p-4 border-border">
+      <div className="flex items-center gap-3 pb-3 border-b p-4 border-border select-none">
         <img
           src={logo}
           alt="Little Bit logo"
           className="w-12 h-12"
+          draggable={false}
         />
         <div>
           <h1 className="text-lg font-head font-bold text-white">Little Bit</h1>
