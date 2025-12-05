@@ -8,6 +8,7 @@ import StreamZip from 'node-stream-zip';
 import got from 'got';
 import { getFirstAvailableGamePath } from './game-detector';
 import { InstallationInfo, Game } from '../shared/types';
+import { formatBytes } from '../shared/formatters';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -15,6 +16,20 @@ const unlink = promisify(fs.unlink);
 
 const INSTALLATION_INFO_FILE = '.littlebit-translation.json';
 const BACKUP_DIR_NAME = '.littlebit-backup';
+
+// Глобальний AbortController для скасування поточного завантаження
+let currentDownloadAbortController: AbortController | null = null;
+
+/**
+ * Скасувати поточне завантаження
+ */
+export function abortCurrentDownload(): void {
+  if (currentDownloadAbortController) {
+    console.log('[Installer] Aborting current download due to connection loss');
+    currentDownloadAbortController.abort('Завантаження скасовано через відсутність підключення до Інтернету');
+    currentDownloadAbortController = null;
+  }
+}
 
 /**
  * Main installation function
@@ -100,16 +115,26 @@ export async function installTranslation(
     console.log(`[Installer] Downloading from Supabase: ${downloadUrl}`);
     console.log(`[Installer] Saving to: ${archivePath}`);
 
-    await downloadFile(
-      downloadUrl,
-      archivePath,
-      (downloadProgress) => {
-        onDownloadProgress?.(downloadProgress);
-      },
-      (status) => {
-        onStatus?.(status);
-      }
-    );
+    // Створити новий AbortController для цього завантаження
+    currentDownloadAbortController = new AbortController();
+
+    try {
+      await downloadFile(
+        downloadUrl,
+        archivePath,
+        (downloadProgress) => {
+          onDownloadProgress?.(downloadProgress);
+        },
+        (status) => {
+          onStatus?.(status);
+        },
+        3, // maxRetries
+        currentDownloadAbortController.signal
+      );
+    } finally {
+      // Очистити контроллер після завершення
+      currentDownloadAbortController = null;
+    }
 
     // Verify file hash if available
     if (game.archive_hash) {
@@ -252,24 +277,49 @@ export async function downloadFile(
   outputPath: string,
   onProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  signal?: AbortSignal
 ): Promise<void> {
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Перевірити чи не було скасовано
+    if (signal?.aborted) {
+      throw new Error('Завантаження скасовано');
+    }
+
     try {
       if (attempt > 1) {
         console.log(`[Downloader] Retry attempt ${attempt}/${maxRetries}`);
         onStatus?.({ message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.` });
         // Wait before retry (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000)));
+
+        // Перевірити чи не було скасовано під час очікування
+        if (signal?.aborted) {
+          throw new Error('Завантаження скасовано');
+        }
+      } else {
+        onStatus?.({ message: 'Завантаження перекладу...' });
       }
 
-      await downloadFileAttempt(url, outputPath, onProgress, onStatus);
+      await downloadFileAttempt(url, outputPath, onProgress, onStatus, signal);
       return; // Success
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
       console.error(`[Downloader] Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+
+      // Показати користувачу що сталась помилка
+      const isNetworkError = error instanceof Error && (
+        error.message.toLowerCase().includes('network') ||
+        error.message.toLowerCase().includes('enotfound') ||
+        error.message.toLowerCase().includes('etimedout') ||
+        error.message.toLowerCase().includes('econnreset')
+      );
+
+      if (isNetworkError && attempt < maxRetries) {
+        onStatus?.({ message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...` });
+      }
 
       // Clean up partial download
       if (fs.existsSync(outputPath)) {
@@ -285,6 +335,10 @@ export async function downloadFile(
         const message = error.message.toLowerCase();
         if (message.includes('404') || message.includes('not found') || message.includes('forbidden')) {
           throw error; // Don't retry on these errors
+        }
+        // Також не робити retry якщо завантаження скасовано
+        if (message.includes('скасовано') || message.includes('aborted')) {
+          throw error; // Don't retry on abort
         }
       }
     }
@@ -314,13 +368,22 @@ async function downloadFileAttempt(
   url: string,
   outputPath: string,
   onProgress?: (progress: DownloadProgress) => void,
-  onStatus?: (status: InstallationStatus) => void
+  onStatus?: (status: InstallationStatus) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   console.log(`[Downloader] Starting download: ${url}`);
 
   const writeStream = fs.createWriteStream(outputPath);
   const startTime = Date.now();
   let lastUpdateTime = Date.now();
+
+  // Обробник скасування
+  const abortHandler = () => {
+    console.log('[Downloader] Download aborted by signal');
+    writeStream.close();
+  };
+
+  signal?.addEventListener('abort', abortHandler);
 
   try {
     const downloadStream = got.stream(url, {
@@ -332,6 +395,14 @@ async function downloadFileAttempt(
         response: 30000,
       },
     });
+
+    // Якщо вже скасовано - зупинити одразу
+    if (signal?.aborted) {
+      downloadStream.destroy();
+      writeStream.close();
+      const reason = signal?.reason || 'Завантаження скасовано';
+      throw new Error(reason);
+    }
 
     downloadStream.on('downloadProgress', (progress) => {
       const { transferred, total, percent } = progress;
@@ -362,17 +433,32 @@ async function downloadFileAttempt(
     await new Promise<void>((resolve, reject) => {
       downloadStream.pipe(writeStream);
 
+      // Обробка скасування під час завантаження
+      const onAbort = () => {
+        downloadStream.destroy();
+        writeStream.close();
+        const reason = signal?.reason || 'Завантаження скасовано';
+        reject(new Error(reason));
+      };
+
+      signal?.addEventListener('abort', onAbort);
+
       downloadStream.on('error', (error) => {
+        signal?.removeEventListener('abort', onAbort);
         writeStream.close();
         reject(error);
       });
 
       writeStream.on('error', (error) => {
+        signal?.removeEventListener('abort', onAbort);
         downloadStream.destroy();
         reject(error);
       });
 
-      writeStream.on('finish', resolve);
+      writeStream.on('finish', () => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      });
     });
 
     console.log(`[Downloader] Download completed: ${outputPath}`);
@@ -383,6 +469,12 @@ async function downloadFileAttempt(
     // Provide more specific error messages and notify UI
     if (error instanceof Error) {
       const message = error.message.toLowerCase();
+
+      // Перевірка на скасування
+      if (message.includes('скасовано') || message.includes('aborted')) {
+        onStatus?.({ message: `❌ ${error.message}` });
+        throw error;
+      }
 
       if (message.includes('enotfound') || message.includes('getaddrinfo')) {
         onStatus?.({ message: '❌ Відсутнє підключення до Інтернету' });
@@ -407,6 +499,8 @@ async function downloadFileAttempt(
 
     onStatus?.({ message: '❌ Помилка завантаження. Перевірте підключення до Інтернету.' });
     throw new Error(`Помилка завантаження: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
+  } finally {
+    signal?.removeEventListener('abort', abortHandler);
   }
 }
 
@@ -1008,17 +1102,6 @@ function parseSizeToBytes(sizeString: string): number {
   };
 
   return value * (multipliers[unit] || 0);
-}
-
-/**
- * Format bytes to human readable string
- */
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
 /**

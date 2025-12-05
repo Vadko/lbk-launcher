@@ -35,74 +35,60 @@ export const SettingsModal: React.FC = () => {
     </button>
   );
 
+  const SettingItem: React.FC<{ title: string; description: string; enabled: boolean; onClick: () => void }> = ({
+    title,
+    description,
+    enabled,
+    onClick,
+  }) => (
+    <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
+      <div className="flex-1 pr-4">
+        <h4 className="text-sm font-semibold text-white mb-1">{title}</h4>
+        <p className="text-xs text-text-muted">{description}</p>
+      </div>
+      <ToggleSwitch enabled={enabled} onClick={onClick} />
+    </div>
+  );
+
   return (
     <Modal isOpen={isSettingsModalOpen} onClose={closeSettingsModal} title="Налаштування">
       <div className="space-y-4">
-        {/* Animations Toggle */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-          <div className="flex-1 pr-4">
-            <h4 className="text-sm font-semibold text-white mb-1">Анімації</h4>
-            <p className="text-xs text-text-muted">
-              Увімкнути або вимкнути анімації в інтерфейсі
-            </p>
-          </div>
-          <ToggleSwitch enabled={animationsEnabled} onClick={toggleAnimations} />
-        </div>
-
-        {/* App Update Notifications */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-          <div className="flex-1 pr-4">
-            <h4 className="text-sm font-semibold text-white mb-1">Сповіщення про оновлення додатку</h4>
-            <p className="text-xs text-text-muted">
-              Показувати сповіщення про нові версії додатку
-            </p>
-          </div>
-          <ToggleSwitch enabled={appUpdateNotificationsEnabled} onClick={toggleAppUpdateNotifications} />
-        </div>
-
-        {/* Game Update Notifications */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-          <div className="flex-1 pr-4">
-            <h4 className="text-sm font-semibold text-white mb-1">Сповіщення про оновлення ігор</h4>
-            <p className="text-xs text-text-muted">
-              Показувати сповіщення про нові версії перекладів
-            </p>
-          </div>
-          <ToggleSwitch enabled={gameUpdateNotificationsEnabled} onClick={toggleGameUpdateNotifications} />
-        </div>
-
-        {/* Create Backup Before Install */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-          <div className="flex-1 pr-4">
-            <h4 className="text-sm font-semibold text-white mb-1">Створювати резервну копію</h4>
-            <p className="text-xs text-text-muted">
-              Зберігати оригінальні файли гри перед встановленням перекладу
-            </p>
-          </div>
-          <ToggleSwitch enabled={createBackupBeforeInstall} onClick={toggleCreateBackup} />
-        </div>
-
-        {/* Auto Detect Installed Games */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-          <div className="flex-1 pr-4">
-            <h4 className="text-sm font-semibold text-white mb-1">Автоматична перевірка встановлених ігор</h4>
-            <p className="text-xs text-text-muted">
-              Автоматично визначати встановлені ігри на вашому комп'ютері
-            </p>
-          </div>
-          <ToggleSwitch enabled={autoDetectInstalledGames} onClick={toggleAutoDetectInstalledGames} />
-        </div>
-
-        {/* Show Adult Games */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-          <div className="flex-1 pr-4">
-            <h4 className="text-sm font-semibold text-white mb-1">Показувати 18+ ігри</h4>
-            <p className="text-xs text-text-muted">
-              Дозволити відображення ігор з контентом для дорослих
-            </p>
-          </div>
-          <ToggleSwitch enabled={showAdultGames} onClick={toggleShowAdultGames} />
-        </div>
+        <SettingItem
+          title="Анімації"
+          description="Увімкнути або вимкнути анімації в інтерфейсі"
+          enabled={animationsEnabled}
+          onClick={toggleAnimations}
+        />
+        <SettingItem
+          title="Сповіщення про оновлення додатку"
+          description="Показувати сповіщення про нові версії додатку"
+          enabled={appUpdateNotificationsEnabled}
+          onClick={toggleAppUpdateNotifications}
+        />
+        <SettingItem
+          title="Сповіщення про оновлення ігор"
+          description="Показувати сповіщення про нові версії перекладів"
+          enabled={gameUpdateNotificationsEnabled}
+          onClick={toggleGameUpdateNotifications}
+        />
+        <SettingItem
+          title="Створювати резервну копію"
+          description="Зберігати оригінальні файли гри перед встановленням перекладу"
+          enabled={createBackupBeforeInstall}
+          onClick={toggleCreateBackup}
+        />
+        <SettingItem
+          title="Автоматична перевірка встановлених ігор"
+          description="Автоматично визначати встановлені ігри на вашому комп'ютері"
+          enabled={autoDetectInstalledGames}
+          onClick={toggleAutoDetectInstalledGames}
+        />
+        <SettingItem
+          title="Показувати 18+ ігри"
+          description="Дозволити відображення ігор з контентом для дорослих"
+          enabled={showAdultGames}
+          onClick={toggleShowAdultGames}
+        />
 
         {/* Close button */}
         <button

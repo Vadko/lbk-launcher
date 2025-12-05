@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Download, RefreshCw, Heart, Gamepad2, Trash2, Play } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useModalStore } from '../../store/useModalStore';
@@ -9,6 +9,9 @@ import { StatusCard } from './StatusCard';
 import { InfoCard } from './InfoCard';
 import { VideoCard } from './VideoCard';
 import { SocialLinksCard } from './SocialLinksCard';
+import { InstallationStatusBadge } from './InstallationStatusBadge';
+import { DownloadProgressCard } from './DownloadProgressCard';
+import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { Button } from '../ui/Button';
 import type { InstallResult, DownloadProgress, LaunchGameResult } from '../../../shared/types';
 
@@ -27,8 +30,8 @@ export const MainContent: React.FC = () => {
   const { showConfirm } = useConfirmStore();
   const { createBackupBeforeInstall } = useSettingsStore();
   const [isLaunching, setIsLaunching] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Get state from store
   const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
   const isUninstalling = gameProgress?.isUninstalling || false;
@@ -38,9 +41,11 @@ export const MainContent: React.FC = () => {
   const installationInfo = selectedGame ? getInstallationInfo(selectedGame.id) : undefined;
   const isCheckingInstallation = selectedGame ? isCheckingInstallationStatus(selectedGame.id) : false;
 
-  // Check if both game is installed AND translation is installed for THIS specific game
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
   const isTranslationInstalled = installationInfo && installationInfo.gameId === selectedGame?.id;
+  const isUpdateAvailable =
+    installationInfo && selectedGame && selectedGame.version && installationInfo.version !== selectedGame.version;
+  const isPlanned = selectedGame?.status === 'planned';
 
   // Check installation status when game changes
   useEffect(() => {
@@ -49,51 +54,44 @@ export const MainContent: React.FC = () => {
     }
   }, [selectedGame, checkInstallationStatus]);
 
-  const isUpdateAvailable =
-    installationInfo && selectedGame && selectedGame.version && installationInfo.version !== selectedGame.version;
+  // Track online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      console.log('[MainContent] Internet connection restored');
 
-  const isPlanned = selectedGame?.status === 'planned';
+      if (selectedGame && isInstalling) {
+        setInstallationProgress(selectedGame.id, {
+          statusMessage: 'Підключення відновлено. Спроба продовжити...',
+        });
+      }
+    };
 
-  const handleInstall = async (customGamePath?: string) => {
-    if (!selectedGame || isInstalling || isCheckingInstallation) return;
+    const handleOffline = async () => {
+      setIsOnline(false);
+      console.log('[MainContent] Internet connection lost');
 
-    // Check if Electron API is available
-    if (!window.electronAPI) {
-      showModal({
-        title: 'Недоступно',
-        message: 'Встановлення доступне тільки в десктопній версії додатку',
-        type: 'error',
-      });
-      return;
-    }
+      if (selectedGame && isInstalling) {
+        console.log('[MainContent] Aborting download due to connection loss');
+        await window.electronAPI?.abortDownload();
+        setInstallationProgress(selectedGame.id, {
+          statusMessage: '❌ Завантаження скасовано через відсутність підключення до Інтернету',
+        });
+      }
+    };
 
-    // Check if installer file is present (any platform)
-    const hasInstaller =
-      selectedGame.installation_file_windows_path ||
-      selectedGame.installation_file_linux_path;
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
-    // Show warning if installer is present
-    if (hasInstaller) {
-      showConfirm({
-        title: 'Запуск інсталятора',
-        message: 'Після завантаження та розпакування перекладу буде запущено інсталятор.\n\nПродовжити встановлення?',
-        confirmText: 'Продовжити',
-        cancelText: 'Скасувати',
-        onConfirm: async () => {
-          await performInstallation(customGamePath);
-        },
-      });
-      return;
-    }
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [selectedGame, isInstalling, setInstallationProgress]);
 
-    // No installer - proceed directly
-    await performInstallation(customGamePath);
-  };
-
-  const performInstallation = async (customGamePath?: string) => {
+  const performInstallation = useCallback(async (customGamePath?: string) => {
     if (!selectedGame) return;
 
-    // Get the first available platform
     const platform = selectedGame.platforms[0] || 'steam';
 
     // For emulator, always require manual folder selection
@@ -121,7 +119,6 @@ export const MainContent: React.FC = () => {
         statusMessage: null,
       });
 
-      // Setup progress listeners
       window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
         setInstallationProgress(selectedGame.id, {
           progress: progress.percent,
@@ -135,7 +132,6 @@ export const MainContent: React.FC = () => {
         });
       });
 
-      // Start installation
       const result: InstallResult = await window.electronAPI.installTranslation(
         selectedGame,
         platform,
@@ -143,9 +139,7 @@ export const MainContent: React.FC = () => {
         createBackupBeforeInstall
       );
 
-      // Check if installation failed
       if (!result.success && result.error) {
-        // Check if this is a "game not found" error that needs manual folder selection
         if (result.error.needsManualSelection) {
           showConfirm({
             title: 'Гру не знайдено',
@@ -155,7 +149,6 @@ export const MainContent: React.FC = () => {
             onConfirm: async () => {
               const selectedFolder = await window.electronAPI.selectGameFolder();
               if (selectedFolder) {
-                // Retry installation with custom path
                 await performInstallation(selectedFolder);
               }
             },
@@ -170,10 +163,7 @@ export const MainContent: React.FC = () => {
         return;
       }
 
-      // Refresh installation info
       checkInstallationStatus(selectedGame.id, selectedGame);
-
-      // Clear the update notification since we just installed/updated
       useStore.getState().clearGameUpdate(selectedGame.id);
 
       const message = isUpdateAvailable
@@ -195,30 +185,52 @@ export const MainContent: React.FC = () => {
     } finally {
       clearInstallationProgress(selectedGame.id);
     }
-  };
+  }, [selectedGame, isUpdateAvailable, createBackupBeforeInstall, setInstallationProgress, checkInstallationStatus, clearInstallationProgress, showModal, showConfirm]);
 
-  // Helper function to format bytes
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-  };
+  const handleInstall = useCallback(async (customGamePath?: string) => {
+    if (!selectedGame || isInstalling || isCheckingInstallation) return;
 
-  // Helper function to format time
-  const formatTime = (seconds: number): string => {
-    if (!isFinite(seconds) || seconds < 0) return '--:--';
-    if (seconds < 1) return '< 1с';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+    if (!isOnline) {
+      showModal({
+        title: 'Немає підключення',
+        message: 'Перевірте підключення до Інтернету та спробуйте ще раз.',
+        type: 'error',
+      });
+      return;
+    }
 
-  const handleSupport = () => {
+    if (!window.electronAPI) {
+      showModal({
+        title: 'Недоступно',
+        message: 'Встановлення доступне тільки в десктопній версії додатку',
+        type: 'error',
+      });
+      return;
+    }
+
+    const hasInstaller =
+      selectedGame.installation_file_windows_path ||
+      selectedGame.installation_file_linux_path;
+
+    if (hasInstaller) {
+      showConfirm({
+        title: 'Запуск інсталятора',
+        message: 'Після завантаження та розпакування перекладу буде запущено інсталятор.\n\nПродовжити встановлення?',
+        confirmText: 'Продовжити',
+        cancelText: 'Скасувати',
+        onConfirm: async () => {
+          await performInstallation(customGamePath);
+        },
+      });
+      return;
+    }
+
+    await performInstallation(customGamePath);
+  }, [selectedGame, isInstalling, isCheckingInstallation, isOnline, performInstallation, showModal, showConfirm]);
+
+  const handleSupport = useCallback(() => {
     if (!selectedGame) return;
 
-    // Use game-specific support URL or fallback to default
     const supportUrl = selectedGame.support_url || 'https://github.com/LittleBitUA';
 
     if (window.electronAPI) {
@@ -226,9 +238,9 @@ export const MainContent: React.FC = () => {
     } else {
       window.open(supportUrl, '_blank');
     }
-  };
+  }, [selectedGame]);
 
-  const handleLaunchGame = async () => {
+  const handleLaunchGame = useCallback(async () => {
     if (!selectedGame || isLaunching || !isGameInstalledOnSystem || !isTranslationInstalled) return;
 
     setIsLaunching(true);
@@ -253,13 +265,12 @@ export const MainContent: React.FC = () => {
     } finally {
       setIsLaunching(false);
     }
-  };
+  }, [selectedGame, isLaunching, isGameInstalledOnSystem, isTranslationInstalled, showModal]);
 
-  const handleUninstall = async () => {
+  const handleUninstall = useCallback(async () => {
     if (!selectedGame || !installationInfo) return;
 
-    // Check if backup exists
-    const hasBackup = installationInfo.hasBackup !== false; // true by default for old installations
+    const hasBackup = installationInfo.hasBackup !== false;
     const backupWarning = !hasBackup
       ? '\n\n⚠️ УВАГА: Резервну копію не було створено при встановленні. Оригінальні файли НЕ будуть відновлені!'
       : '\n\nОригінальні файли гри будуть відновлені з резервної копії.';
@@ -286,7 +297,6 @@ export const MainContent: React.FC = () => {
             return;
           }
 
-          // Refresh installation info
           checkInstallationStatus(selectedGame.id, selectedGame);
 
           showModal({
@@ -306,6 +316,21 @@ export const MainContent: React.FC = () => {
         }
       },
     });
+  }, [selectedGame, installationInfo, setInstallationProgress, checkInstallationStatus, clearInstallationProgress, showModal, showConfirm]);
+
+  const getInstallButtonText = (): string => {
+    if (!isOnline) return '❌ Немає інтернету';
+    if (isPlanned) return 'Заплановано';
+    if (isInstalling) {
+      return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
+    }
+    if (isUpdateAvailable && !isCheckingInstallation) {
+      return `Оновити до v${selectedGame?.version}`;
+    }
+    if (installationInfo) {
+      return `Перевстановити (v${installationInfo.version})`;
+    }
+    return 'Встановити переклад';
   };
 
   if (!selectedGame) {
@@ -342,19 +367,10 @@ export const MainContent: React.FC = () => {
             variant={isGameInstalledOnSystem && isTranslationInstalled ? "secondary" : "primary"}
             icon={isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />}
             onClick={() => handleInstall()}
-            disabled={isInstalling || isUninstalling || isPlanned}
+            disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
+            title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
           >
-            {isPlanned
-              ? 'Заплановано'
-              : isInstalling
-                ? isUpdateAvailable
-                  ? 'Оновлення...'
-                  : 'Встановлення...'
-                : isUpdateAvailable && !isCheckingInstallation
-                  ? `Оновити до v${selectedGame?.version}`
-                  : installationInfo
-                    ? `Перевстановити (v${installationInfo.version})`
-                    : 'Встановити переклад'}
+            {getInstallButtonText()}
           </Button>
           {installationInfo && !isInstalling && !isUpdateAvailable && installationInfo.hasBackup !== false && (
             <Button
@@ -373,95 +389,25 @@ export const MainContent: React.FC = () => {
       </div>
 
       <div className="space-y-4 mb-6">
-        {/* Installation status badge */}
         {installationInfo && !isCheckingInstallation && !isInstalling && (
-          <div className="glass-card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isUpdateAvailable ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'
-                  }`}
-                />
-                <div>
-                  <div className="text-sm font-medium text-white">
-                    {isUpdateAvailable
-                      ? '⚡ Доступне оновлення'
-                      : '✓ Переклад встановлено'}
-                  </div>
-                  <div className="text-xs text-text-muted mt-0.5">
-                    {isUpdateAvailable ? (
-                      <>
-                        Встановлена версія: v{installationInfo.version} → Нова версія: v
-                        {selectedGame?.version}
-                      </>
-                    ) : (
-                      <>Версія: v{installationInfo.version}</>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <InstallationStatusBadge
+            isUpdateAvailable={!!isUpdateAvailable}
+            installedVersion={installationInfo.version}
+            newVersion={selectedGame?.version}
+          />
         )}
 
         {isInstalling && (
           <div className="glass-card">
             {downloadProgress && downloadProgress.totalBytes > 0 ? (
-              <>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-white">Завантаження файлів...</span>
-                  <span className="text-sm font-bold text-neon-blue">
-                    {Math.round(installProgress)}%
-                  </span>
-                </div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-3">
-                  <div
-                    className="h-full rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-neon-blue to-neon-purple"
-                    style={{
-                      width: `${installProgress}%`,
-                      boxShadow: '0 0 10px rgba(0, 242, 255, 0.5)',
-                    }}
-                  />
-                </div>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Завантажено:</span>
-                    <span className="text-white font-medium">
-                      {formatBytes(downloadProgress.downloadedBytes)} / {formatBytes(downloadProgress.totalBytes)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Швидкість:</span>
-                    <span className="text-neon-blue font-medium">
-                      {formatBytes(downloadProgress.bytesPerSecond)}/с
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Залишилось часу:</span>
-                    <span className="text-neon-purple font-medium">
-                      {formatTime(downloadProgress.timeRemaining)}
-                    </span>
-                  </div>
-                </div>
-              </>
+              <DownloadProgressCard progress={installProgress} downloadProgress={downloadProgress} />
             ) : (
-              <div className="flex items-center gap-3">
-                {statusMessage?.startsWith('❌') ? (
-                  <div className="w-5 h-5 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                  </div>
-                ) : statusMessage?.includes('Спроба') ? (
-                  <div className="w-5 h-5 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                  </div>
-                ) : (
-                  <div className="w-5 h-5 border-2 border-neon-blue border-t-transparent rounded-full animate-spin" />
-                )}
-                <span className={`text-sm font-medium ${statusMessage?.startsWith('❌') ? 'text-red-400' : statusMessage?.includes('Спроба') ? 'text-yellow-400' : 'text-white'}`}>
-                  {statusMessage || (isUpdateAvailable ? 'Оновлення перекладу...' : 'Встановлення перекладу...')}
-                </span>
-              </div>
+              <InstallationStatusMessage
+                statusMessage={statusMessage}
+                isUpdateAvailable={!!isUpdateAvailable}
+                isOnline={isOnline}
+                isInstalling={isInstalling}
+              />
             )}
           </div>
         )}

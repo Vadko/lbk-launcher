@@ -25,10 +25,9 @@ export const Sidebar: React.FC = React.memo(() => {
     gamesWithUpdates,
     isGameDetected,
     loadInstalledGames,
-    detectInstalledGames,
   } = useStore();
   const { showModal } = useModalStore();
-  const { openSettingsModal, autoDetectInstalledGames } = useSettingsStore();
+  const { openSettingsModal } = useSettingsStore();
 
   const itemsPerPage = 10;
 

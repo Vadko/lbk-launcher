@@ -10,6 +10,7 @@ const electronAPI: ElectronAPI = {
   installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean) =>
     ipcRenderer.invoke('install-translation', game, platform, customGamePath, createBackup),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
+  abortDownload: () => ipcRenderer.invoke('abort-download'),
   checkInstallation: (game: Game) => ipcRenderer.invoke('check-installation', game),
   getAllInstalledGameIds: () => ipcRenderer.invoke('get-all-installed-game-ids'),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),

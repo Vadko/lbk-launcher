@@ -7,6 +7,7 @@ interface ButtonProps {
   className?: string;
   disabled?: boolean;
   icon?: React.ReactNode;
+  title?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -16,6 +17,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   disabled = false,
   icon,
+  title,
 }) => {
   const baseStyles = 'px-8 py-3.5 rounded-xl font-semibold text-base flex items-center gap-3 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed';
 
@@ -30,6 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       onClick={onClick}
       disabled={disabled}
+      title={title}
       className={`${baseStyles} ${variants[variant]} ${className}`}
     >
       {icon && <span>{icon}</span>}

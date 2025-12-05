@@ -65,6 +65,7 @@ export interface ElectronAPI {
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) => Promise<GetGamesResult>;
   installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
+  abortDownload: () => Promise<{ success: boolean }>;
   checkInstallation: (game: Game) => Promise<InstallationInfo | null>;
   getAllInstalledGameIds: () => Promise<string[]>;
   openExternal: (url: string) => Promise<void>;

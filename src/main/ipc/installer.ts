@@ -87,4 +87,15 @@ export function setupInstallerHandlers(): void {
       };
     }
   });
+
+  ipcMain.handle('abort-download', async () => {
+    try {
+      const { abortCurrentDownload } = await import('../installer');
+      abortCurrentDownload();
+      return { success: true };
+    } catch (error) {
+      console.error('Error aborting download:', error);
+      return { success: false };
+    }
+  });
 }

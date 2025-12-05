@@ -1,6 +1,6 @@
-import { app, BrowserWindow, session } from 'electron';
+import { app, session } from 'electron';
 import { createMainWindow, getMainWindow } from './window';
-import { setupWindowControls } from './ipc/window-controls';
+import { setupWindowControls, initTray } from './ipc/window-controls';
 import { setupGamesHandlers, cleanupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupAutoUpdater, checkForUpdates } from './auto-updater';
@@ -14,9 +14,11 @@ if (!gotTheLock) {
 } else {
   app.on('second-instance', () => {
     // When someone tries to run a second instance, focus our window instead
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      const mainWindow = windows[0];
+    const mainWindow = getMainWindow();
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) {
+        mainWindow.show();
+      }
       if (mainWindow.isMinimized()) {
         mainWindow.restore();
       }
@@ -41,6 +43,7 @@ if (!gotTheLock) {
     });
 
     createMainWindow();
+    initTray(); // Створити tray одразу при запуску
     checkForUpdates();
 
     // Start watching Steam library for changes (after a short delay to ensure window is ready)
@@ -49,7 +52,14 @@ if (!gotTheLock) {
     }, 1000);
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
+      // macOS: показати вікно якщо воно заховане або створити нове якщо немає
+      const mainWindow = getMainWindow();
+      if (mainWindow) {
+        if (!mainWindow.isVisible()) {
+          mainWindow.show();
+        }
+        mainWindow.focus();
+      } else {
         createMainWindow();
       }
     });

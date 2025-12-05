@@ -2,51 +2,71 @@ import { ipcMain, Tray, Menu, app, nativeImage } from 'electron';
 import { getMainWindow } from '../window';
 import { join } from 'path';
 
-let tray: Tray;
+let tray: Tray | null = null;
 
 function createTray() {
-  const window = getMainWindow();
+  if (tray) return tray; // Якщо вже існує, повернути існуючий
 
   const iconPath = app.isPackaged
     ? join(process.resourcesPath, 'icon.png')
     : join(app.getAppPath(), 'resources', 'icon.png');
 
   const icon = nativeImage.createFromPath(iconPath);
-  const appIcon = new Tray(icon);
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Відкрити',
-      click: function () {
-        window?.show();
-      },
-    },
-    {
-      label: 'Вийти',
-      click: function () {
-        app.quit();
-      },
-    },
-  ]);
+  tray = new Tray(icon);
 
-  appIcon.on('double-click', () => {
-    window?.show();
+  const updateContextMenu = () => {
+    const window = getMainWindow();
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Відкрити',
+        click: function () {
+          if (window) {
+            window.show();
+            if (window.isMinimized()) {
+              window.restore();
+            }
+            window.focus();
+          }
+        },
+      },
+      {
+        label: 'Вийти',
+        click: function () {
+          app.quit();
+        },
+      },
+    ]);
+    tray?.setContextMenu(contextMenu);
+  };
+
+  tray.on('double-click', () => {
+    const window = getMainWindow();
+    if (window) {
+      window.show();
+      if (window.isMinimized()) {
+        window.restore();
+      }
+      window.focus();
+    }
   });
-  appIcon.setContextMenu(contextMenu);
-  return appIcon;
+
+  updateContextMenu();
+  return tray;
+}
+
+export function initTray(): void {
+  createTray();
 }
 
 export function setupWindowControls(): void {
   ipcMain.on('window:minimize', () => {
     const window = getMainWindow();
     window?.hide();
-    tray = createTray();
   });
 
   ipcMain.on('windows: restore', () => {
     const window = getMainWindow();
-
     window?.show();
-    tray?.destroy();
   });
 
   ipcMain.on('window:maximize', () => {
