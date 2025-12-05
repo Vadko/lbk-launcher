@@ -1,42 +1,8 @@
 import type { Database } from '../lib/database.types';
 
-type GameStatus = Database['public']['Enums']['game_status'];
-
 export type { Database };
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
-
-export interface Game {
-  id: string;
-  slug: string;
-  name: string;
-  version: string | null;
-  translation_progress: number;
-  editing_progress: number;
-  fonts_progress: number | null;
-  textures_progress: number | null;
-  voice_progress: number | null;
-  team: string;
-  status: GameStatus;
-  platforms: string[];
-  install_paths: InstallPath[];
-  archive_path: string | null;
-  archive_hash: string | null;
-  archive_size: string | null;
-  banner_path: string | null;
-  logo_path: string | null;
-  thumbnail_path: string | null;
-  game_description: string | null;
-  description: string | null;
-  support_url: string | null;
-  video_url: string | null;
-  website: string | null;
-  telegram: string | null;
-  twitter: string | null;
-  youtube: string | null;
-  installation_file_windows_path: string | null;
-  installation_file_linux_path: string | null;
-  is_adult: boolean;
-}
+export type Game = Database['public']['Tables']['games']['Row'];
 
 export interface InstallationInfo {
   gameId: string;
@@ -123,6 +89,7 @@ export interface ElectronAPI {
   // Game detection
   detectGame: (game: Game) => Promise<DetectedGameInfo | null>;
   detectGames: (games: Game[]) => Promise<Record<string, DetectedGameInfo>>;
+  onSteamLibraryChanged?: (callback: () => void) => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Version

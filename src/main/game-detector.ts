@@ -27,7 +27,7 @@ function isValidSteamPath(steamPath: string): boolean {
 /**
  * Detect Steam installation path
  */
-function getSteamPath(): string | null {
+export function getSteamPath(): string | null {
   console.log('[GameDetector] Platform:', process.platform);
   try {
     if (process.platform === 'win32') {

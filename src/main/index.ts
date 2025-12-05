@@ -1,9 +1,10 @@
 import { app, BrowserWindow, session } from 'electron';
-import { createMainWindow } from './window';
+import { createMainWindow, getMainWindow } from './window';
 import { setupWindowControls } from './ipc/window-controls';
 import { setupGamesHandlers, cleanupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupAutoUpdater, checkForUpdates } from './auto-updater';
+import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 
 // Single instance lock - prevent multiple instances of the app
 const gotTheLock = app.requestSingleInstanceLock();
@@ -42,6 +43,11 @@ if (!gotTheLock) {
     createMainWindow();
     checkForUpdates();
 
+    // Start watching Steam library for changes (after a short delay to ensure window is ready)
+    setTimeout(() => {
+      startSteamWatcher(getMainWindow());
+    }, 1000);
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createMainWindow();
@@ -51,6 +57,7 @@ if (!gotTheLock) {
 
   app.on('window-all-closed', () => {
     cleanupGamesHandlers();
+    stopSteamWatcher();
 
     if (process.platform !== 'darwin') {
       app.quit();

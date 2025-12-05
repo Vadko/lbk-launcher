@@ -11,7 +11,7 @@ interface GameListItemProps {
   isGameDetected?: boolean;
 }
 
-export const GameListItem: React.FC<GameListItemProps> = ({
+export const GameListItem: React.FC<GameListItemProps> = React.memo(({
   game,
   isSelected,
   onClick,
@@ -85,4 +85,4 @@ export const GameListItem: React.FC<GameListItemProps> = ({
       </div>
     </div>
   );
-};
+});

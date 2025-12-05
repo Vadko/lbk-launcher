@@ -39,11 +39,11 @@ export async function installTranslation(
     // 2. Detect game installation path
     const gamePath = customGamePath
       ? { platform, path: customGamePath, exists: true }
-      : getFirstAvailableGamePath(game.install_paths);
+      : getFirstAvailableGamePath(game.install_paths || []);
 
     if (!gamePath || !gamePath.exists) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
-      const platformPath = game.install_paths.find(p => p.type === platform)?.path;
+      const platformPath = (game.install_paths || []).find(p => p.type === platform)?.path;
 
       // Special error to indicate manual folder selection needed
       const error: any = new Error(
@@ -897,7 +897,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
     }
 
     // Detect game installation path from standard locations
-    const gamePath = getFirstAvailableGamePath(game.install_paths);
+    const gamePath = getFirstAvailableGamePath(game.install_paths || []);
 
     if (!gamePath || !gamePath.exists) {
       console.log(`[Installer] Game not installed on this computer`);

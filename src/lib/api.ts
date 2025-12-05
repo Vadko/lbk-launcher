@@ -56,39 +56,7 @@ export async function getApprovedGames(params: GetGamesParams = {}): Promise<Get
     return { games: [], total: 0, hasMore: false };
   }
 
-  const games = (data || []).map((game): Game => ({
-    id: game.id,
-    slug: game.slug,
-    name: game.name,
-    version: game.version,
-    translation_progress: game.translation_progress,
-    editing_progress: game.editing_progress,
-    fonts_progress: game.fonts_progress,
-    textures_progress: game.textures_progress,
-    voice_progress: game.voice_progress,
-    team: game.team,
-    status: game.status,
-    platforms: game.platforms,
-    install_paths: game.install_paths || [],
-    archive_path: game.archive_path || '',
-    archive_hash: game.archive_hash,
-    archive_size: game.archive_size,
-    banner_path: game.banner_path,
-    logo_path: game.logo_path,
-    thumbnail_path: game.thumbnail_path,
-    game_description: game.game_description,
-    description: game.description,
-    support_url: game.support_url,
-    video_url: game.video_url,
-    website: game.website,
-    telegram: game.telegram,
-    twitter: game.twitter,
-    youtube: game.youtube,
-    installation_file_windows_path: game.installation_file_windows_path,
-    installation_file_linux_path: game.installation_file_linux_path,
-    is_adult: game.is_adult,
-  }));
-
+  const games = data || [];
   const total = count || 0;
   const hasMore = offset + limit < total;
 
@@ -113,38 +81,7 @@ export async function getGamesByIds(gameIds: string[]): Promise<Game[]> {
     return [];
   }
 
-  return (data || []).map((game): Game => ({
-    id: game.id,
-    slug: game.slug,
-    name: game.name,
-    version: game.version,
-    translation_progress: game.translation_progress,
-    editing_progress: game.editing_progress,
-    fonts_progress: game.fonts_progress,
-    textures_progress: game.textures_progress,
-    voice_progress: game.voice_progress,
-    team: game.team,
-    status: game.status,
-    platforms: game.platforms,
-    install_paths: game.install_paths || [],
-    archive_path: game.archive_path || '',
-    archive_hash: game.archive_hash,
-    archive_size: game.archive_size,
-    banner_path: game.banner_path,
-    logo_path: game.logo_path,
-    thumbnail_path: game.thumbnail_path,
-    game_description: game.game_description,
-    description: game.description,
-    support_url: game.support_url,
-    video_url: game.video_url,
-    website: game.website,
-    telegram: game.telegram,
-    twitter: game.twitter,
-    youtube: game.youtube,
-    installation_file_windows_path: game.installation_file_windows_path,
-    installation_file_linux_path: game.installation_file_linux_path,
-    is_adult: game.is_adult,
-  }));
+  return data || [];
 }
 
 /**
@@ -212,40 +149,7 @@ export async function findGamesByInstallPaths(
 
     console.log(`[API] Returning ${paginatedGames.length} games (page ${Math.floor(offset / limit) + 1})`);
 
-    const games = paginatedGames.map((game): Game => ({
-      id: game.id,
-      slug: game.slug,
-      name: game.name,
-      version: game.version,
-      translation_progress: game.translation_progress,
-      editing_progress: game.editing_progress,
-      fonts_progress: game.fonts_progress,
-      textures_progress: game.textures_progress,
-      voice_progress: game.voice_progress,
-      team: game.team,
-      status: game.status,
-      platforms: game.platforms,
-      install_paths: game.install_paths || [],
-      archive_path: game.archive_path || '',
-      archive_hash: game.archive_hash,
-      archive_size: game.archive_size,
-      banner_path: game.banner_path,
-      logo_path: game.logo_path,
-      thumbnail_path: game.thumbnail_path,
-      game_description: game.game_description,
-      description: game.description,
-      support_url: game.support_url,
-      video_url: game.video_url,
-      website: game.website,
-      telegram: game.telegram,
-      twitter: game.twitter,
-      youtube: game.youtube,
-      installation_file_windows_path: game.installation_file_windows_path,
-      installation_file_linux_path: game.installation_file_linux_path,
-      is_adult: game.is_adult,
-    }));
-
-    return { games, total, hasMore };
+    return { games: paginatedGames, total, hasMore };
   } catch (error) {
     console.error('[API] Exception in findGamesByInstallPaths:', error);
     return { games: [], total: 0, hasMore: false };

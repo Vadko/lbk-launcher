@@ -24,8 +24,8 @@ declare global {
 }
 
 export const App: React.FC = () => {
-  const { fetchGames, initRealtimeSubscription, loadInstalledGames, setInitialLoadComplete } = useStore();
-  const { animationsEnabled } = useSettingsStore();
+  const { fetchGames, initRealtimeSubscription, loadInstalledGames, setInitialLoadComplete, detectInstalledGames } = useStore();
+  const { animationsEnabled, autoDetectInstalledGames } = useSettingsStore();
   const [online, setOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -33,10 +33,20 @@ export const App: React.FC = () => {
       await fetchGames();
       await loadInstalledGames();
       initRealtimeSubscription();
+
       // Mark initial load as complete after 3 seconds to allow system notifications
       setTimeout(() => {
         setInitialLoadComplete();
       }, 3000);
+
+      // Detect installed games after app has fully loaded (non-blocking)
+      if (autoDetectInstalledGames) {
+        setTimeout(() => {
+          detectInstalledGames().catch(err =>
+            console.error('[App] Error detecting installed games:', err)
+          );
+        }, 4000);
+      }
     };
 
     init();
@@ -54,11 +64,23 @@ export const App: React.FC = () => {
     window.addEventListener('online', handleOnlineEvent);
     window.addEventListener('offline', handleOfflineEvent);
 
+    // Listen for Steam library changes
+    if (window.electronAPI?.onSteamLibraryChanged) {
+      window.electronAPI.onSteamLibraryChanged(() => {
+        console.log('[App] Steam library changed, re-detecting games');
+        if (autoDetectInstalledGames) {
+          detectInstalledGames().catch(err =>
+            console.error('[App] Error re-detecting games after Steam library change:', err)
+          );
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener('online', handleOnlineEvent);
       window.removeEventListener('offline', handleOfflineEvent);
     };
-  }, []);
+  }, [autoDetectInstalledGames, detectInstalledGames]);
 
   const handleMinimize = () => {
     window.windowControls?.minimize();

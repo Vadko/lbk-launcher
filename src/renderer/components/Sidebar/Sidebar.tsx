@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { Settings, User, MessageCircle } from 'lucide-react';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
@@ -12,7 +12,7 @@ import type { Database } from '../../../lib/database.types';
 
 type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-games';
 
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC = React.memo(() => {
   const {
     selectedGame,
     filter,
@@ -72,13 +72,25 @@ export const Sidebar: React.FC = () => {
     };
   }, [hasMore, handleLoadMore]);
 
-  const filters: { label: string; value: FilterType }[] = [
+  const filters = useMemo<{ label: string; value: FilterType }[]>(() => [
     { label: 'Усі', value: 'all' },
     { label: 'Заплановано', value: 'planned' },
     { label: 'Ранній доступ', value: 'in-progress' },
     { label: 'Готово', value: 'completed' },
     { label: 'Встановлені', value: 'installed-games' },
-  ];
+  ], []);
+
+  const handleOpenTelegram = useCallback(() => {
+    window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
+  }, []);
+
+  const handleShowAbout = useCallback(() => {
+    showModal({
+      title: 'Про додаток',
+      message: `LB Launcher v${window.electronAPI?.getVersion?.() || '1.0.0'}\n\nІнсталятор українських перекладів відеоігор\n\n💙 Дякуємо за підтримку!`,
+      type: 'info',
+    });
+  }, [showModal]);
 
   return (
     <GlassPanel className="w-[280px] h-full flex flex-col">
@@ -160,22 +172,14 @@ export const Sidebar: React.FC = () => {
           <Settings size={20} className="mx-auto text-text-muted" />
         </button>
         <button
-          onClick={() => {
-            window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
-          }}
+          onClick={handleOpenTelegram}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
           title="Зворотній зв'язок"
         >
           <MessageCircle size={20} className="mx-auto text-text-muted" />
         </button>
         <button
-          onClick={() => {
-            showModal({
-              title: 'Про додаток',
-              message: `LB Launcher v${window.electronAPI?.getVersion?.() || '1.0.0'}\n\nІнсталятор українських перекладів відеоігор\n\n💙 Дякуємо за підтримку!`,
-              type: 'info',
-            });
-          }}
+          onClick={handleShowAbout}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
           title="Профіль"
         >
@@ -184,4 +188,4 @@ export const Sidebar: React.FC = () => {
       </div>
     </GlassPanel>
   );
-};
+});

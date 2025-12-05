@@ -98,7 +98,7 @@ export function setupGamesHandlers(): void {
   // Detect if game is installed on system
   ipcMain.handle('detect-game', async (_, game: Game) => {
     try {
-      const gamePath = getFirstAvailableGamePath(game.install_paths);
+      const gamePath = getFirstAvailableGamePath(game.install_paths || []);
       return gamePath;
     } catch (error) {
       console.error('Error detecting game:', error);
@@ -111,7 +111,7 @@ export function setupGamesHandlers(): void {
     try {
       const results = new Map<string, any>();
       for (const game of games) {
-        const gamePath = getFirstAvailableGamePath(game.install_paths);
+        const gamePath = getFirstAvailableGamePath(game.install_paths || []);
         if (gamePath) {
           results.set(game.id, gamePath);
         }
@@ -129,7 +129,7 @@ export function setupGamesHandlers(): void {
       console.log('[LaunchGame] Request to launch game:', game.name, '(', game.id, ')');
       console.log('[LaunchGame] Game install paths:', JSON.stringify(game.install_paths, null, 2));
 
-      const gamePath = getFirstAvailableGamePath(game.install_paths);
+      const gamePath = getFirstAvailableGamePath(game.install_paths || []);
 
       if (!gamePath || !gamePath.exists) {
         console.error('[LaunchGame] Game not found on system');

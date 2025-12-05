@@ -52,6 +52,9 @@ const electronAPI: ElectronAPI = {
   // Game detection
   detectGame: (game: Game) => ipcRenderer.invoke('detect-game', game),
   detectGames: (games: Game[]) => ipcRenderer.invoke('detect-games', games),
+  onSteamLibraryChanged: (callback: () => void) => {
+    ipcRenderer.on('steam-library-changed', callback);
+  },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
   // Version
