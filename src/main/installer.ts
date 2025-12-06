@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
@@ -778,23 +778,8 @@ async function runInstaller(extractDir: string, installerFileName: string): Prom
     // Determine platform and run installer
     const platform = process.platform;
 
-    if (platform === 'win32') {
-      // Windows - use child_process to run .exe installer
-      await new Promise<void>((resolve) => {
-        exec(`"${installerPath}"`, (error, stdout, stderr) => {
-          if (error) {
-            console.error('[Installer] Failed to launch installer:', error);
-            console.error('[Installer] stderr:', stderr);
-            // Don't reject - installer may have launched successfully despite error code
-            resolve();
-            return;
-          }
-          console.log('[Installer] stdout:', stdout);
-          resolve();
-        });
-      });
-    } else if (platform === 'darwin' || platform === 'linux') {
-      // macOS or Linux - make executable and run
+    if (platform === 'darwin' || platform === 'linux') {
+      // macOS or Linux - make executable first
       await new Promise<void>((resolve, reject) => {
         exec(`chmod +x "${installerPath}"`, (error) => {
           if (error) {
@@ -802,23 +787,18 @@ async function runInstaller(extractDir: string, installerFileName: string): Prom
             reject(error);
             return;
           }
-
-          // Run installer
-          exec(`"${installerPath}"`, (execError, stdout, stderr) => {
-            if (execError) {
-              console.error('[Installer] Failed to launch installer:', execError);
-              console.error('[Installer] stderr:', stderr);
-              // Don't reject - installer may have launched successfully despite error code
-              resolve();
-              return;
-            }
-            console.log('[Installer] stdout:', stdout);
-            resolve();
-          });
+          resolve();
         });
       });
-    } else {
-      console.warn(`[Installer] Unsupported platform: ${platform}`);
+    }
+
+    // Use Electron's shell.openPath for all platforms
+    const result = await shell.openPath(installerPath);
+
+    if (result) {
+      // result is an error string if something went wrong
+      console.error('[Installer] Failed to launch installer:', result);
+      throw new Error(result);
     }
 
     console.log('[Installer] Installer launched successfully');
