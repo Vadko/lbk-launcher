@@ -54,7 +54,6 @@ module.exports = {
     icon: 'resources/icon.png',
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
-    publisherName: 'LB UA',
     legalTrademarks: '© 2025 LB UA',
   },
 
