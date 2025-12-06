@@ -39,7 +39,9 @@ function createTray() {
     tray?.setContextMenu(contextMenu);
   };
 
-  tray.on('double-click', () => {
+  const trayClickEvent = process.platform === 'linux' ? 'click' : 'double-click';
+
+  tray.on(trayClickEvent, () => {
     const window = getMainWindow();
     if (window) {
       window.show();
