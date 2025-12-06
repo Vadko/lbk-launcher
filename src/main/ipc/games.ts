@@ -3,7 +3,7 @@ import { fetchGames, fetchGamesByIds, findGamesByInstallPaths } from '../api';
 import { subscribeToGameUpdates } from '../../lib/api';
 import { getMainWindow } from '../window';
 import { GetGamesParams, Game } from '../../shared/types';
-import { getFirstAvailableGamePath, getAllInstalledGamePaths } from '../game-detector';
+import { getFirstAvailableGamePath, getAllInstalledGamePaths, getAllInstalledSteamGames } from '../game-detector';
 
 let unsubscribeRealtime: (() => void) | null = null;
 
@@ -40,6 +40,18 @@ export function setupGamesHandlers(): void {
     } catch (error) {
       console.error('Error getting installed game paths:', error);
       return [];
+    }
+  });
+
+  // Get all installed Steam games
+  ipcMain.handle('get-all-installed-steam-games', async () => {
+    try {
+      const steamGames = getAllInstalledSteamGames();
+      // Convert Map to Object for IPC
+      return Object.fromEntries(steamGames);
+    } catch (error) {
+      console.error('Error getting installed Steam games:', error);
+      return {};
     }
   });
 
@@ -93,34 +105,6 @@ export function setupGamesHandlers(): void {
       gameName,
       version,
     });
-  });
-
-  // Detect if game is installed on system
-  ipcMain.handle('detect-game', async (_, game: Game) => {
-    try {
-      const gamePath = getFirstAvailableGamePath(game.install_paths || []);
-      return gamePath;
-    } catch (error) {
-      console.error('Error detecting game:', error);
-      return null;
-    }
-  });
-
-  // Detect multiple games at once
-  ipcMain.handle('detect-games', async (_, games: Game[]) => {
-    try {
-      const results = new Map<string, any>();
-      for (const game of games) {
-        const gamePath = getFirstAvailableGamePath(game.install_paths || []);
-        if (gamePath) {
-          results.set(game.id, gamePath);
-        }
-      }
-      return Object.fromEntries(results);
-    } catch (error) {
-      console.error('Error detecting games:', error);
-      return {};
-    }
   });
 
   // Launch game

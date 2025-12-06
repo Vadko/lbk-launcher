@@ -62,6 +62,7 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchGamesByIds: (gameIds: string[]) => Promise<Game[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
+  getAllInstalledSteamGames: () => Promise<Record<string, string>>;
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) => Promise<GetGamesResult>;
   installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
@@ -88,9 +89,8 @@ export interface ElectronAPI {
   // Game update notifications
   showGameUpdateNotification?: (gameName: string, version: string, isInitialLoad: boolean) => void;
   // Game detection
-  detectGame: (game: Game) => Promise<DetectedGameInfo | null>;
-  detectGames: (games: Game[]) => Promise<Record<string, DetectedGameInfo>>;
   onSteamLibraryChanged?: (callback: () => void) => void;
+  onInstalledGamesChanged?: (callback: () => void) => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Version

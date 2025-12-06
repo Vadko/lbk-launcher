@@ -19,6 +19,9 @@ interface Store {
   searchQuery: string;
   isInitialLoad: boolean;
 
+  // Steam State
+  steamGames: Map<string, string>; // installdir (lowercase) -> full path
+
   // Installation State
   installedGames: Map<string, InstallationInfo>; // Metadata про встановлені переклади
   detectedGames: Map<string, DetectedGameInfo>; // Ігри знайдені на системі
@@ -32,8 +35,13 @@ interface Store {
   setSearchQuery: (query: string) => void;
   setInitialLoadComplete: () => void;
 
+  // Steam Actions
+  loadSteamGames: () => Promise<void>;
+  clearSteamGamesCache: () => void;
+
   // Installation Actions
   loadInstalledGames: (games: Game[]) => Promise<void>;
+  clearInstalledGamesCache: () => void;
   checkInstallationStatus: (gameId: string, game: Game) => Promise<void>;
   checkForGameUpdate: (gameId: string, newVersion: string) => boolean;
   markGameAsUpdated: (gameId: string) => void;
@@ -45,6 +53,7 @@ interface Store {
   isCheckingInstallationStatus: (gameId: string) => boolean;
 
   // Game Detection Actions
+  clearDetectedGamesCache: () => void;
   detectInstalledGames: (games: Game[]) => Promise<void>;
   getDetectedGameInfo: (gameId: string) => DetectedGameInfo | undefined;
   isGameDetected: (gameId: string) => boolean;
@@ -71,6 +80,9 @@ export const useStore = create<Store>((set, get) => ({
   searchQuery: '',
   isInitialLoad: true,
 
+  // Steam State
+  steamGames: new Map(),
+
   // Installation State
   installedGames: new Map(),
   detectedGames: loadCachedDetectedGames(),
@@ -87,6 +99,23 @@ export const useStore = create<Store>((set, get) => ({
 
   setInitialLoadComplete: () => set({ isInitialLoad: false }),
 
+  // Steam Actions
+  loadSteamGames: async () => {
+    if (!window.electronAPI) return;
+
+    console.log('[Store] Loading Steam games...');
+    const steamGamesObj = await window.electronAPI.getAllInstalledSteamGames();
+    const steamGamesMap = new Map(Object.entries(steamGamesObj));
+
+    console.log(`[Store] Loaded ${steamGamesMap.size} Steam games`);
+    set({ steamGames: steamGamesMap });
+  },
+
+  clearSteamGamesCache: () => {
+    console.log('[Store] Clearing Steam games cache');
+    set({ steamGames: new Map() });
+  },
+
   // Installation Actions
   loadInstalledGames: async (games: Game[]) => {
     if (!window.electronAPI) return;
@@ -95,7 +124,17 @@ export const useStore = create<Store>((set, get) => ({
     const installedGamesMap = new Map(state.installedGames); // Мержимо з існуючими
     const gamesWithUpdatesSet = new Set(state.gamesWithUpdates); // Мержимо з існуючими
 
-    for (const game of games) {
+    // Фільтруємо тільки нові ігри, які ще не перевірені
+    const gamesToCheck = games.filter(game => !installedGamesMap.has(game.id));
+
+    if (gamesToCheck.length === 0) {
+      // Всі ігри вже перевірені, нічого не робимо
+      return;
+    }
+
+    console.log(`[Store] Checking installation for ${gamesToCheck.length} new games`);
+
+    for (const game of gamesToCheck) {
       const installInfo = await window.electronAPI.checkInstallation(game);
       if (installInfo) {
         installedGamesMap.set(game.id, installInfo);
@@ -111,16 +150,19 @@ export const useStore = create<Store>((set, get) => ({
             true // isInitialLoad - skip system notification
           );
         }
-      } else {
-        // Якщо гра більше не встановлена, видаляємо її
-        installedGamesMap.delete(game.id);
-        gamesWithUpdatesSet.delete(game.id);
       }
     }
 
     set({
       installedGames: installedGamesMap,
       gamesWithUpdates: gamesWithUpdatesSet,
+    });
+  },
+
+  clearInstalledGamesCache: () => {
+    console.log('[Store] Clearing installed games cache');
+    set({
+      installedGames: new Map(),
     });
   },
 
@@ -223,16 +265,52 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   // Game Detection Actions
+  clearDetectedGamesCache: () => {
+    console.log('[Store] Clearing detected games cache');
+    set({ detectedGames: new Map() });
+    localStorage.removeItem('lb-detected-games');
+  },
+
   detectInstalledGames: async (games: Game[]) => {
     if (!window.electronAPI) return;
 
     try {
-      const detectedGamesMap = await window.electronAPI.detectGames(games);
       const state = get();
       const newDetectedGames = new Map(state.detectedGames); // Мержимо з існуючими
+      const steamGames = state.steamGames;
 
-      for (const [gameId, gameInfo] of Object.entries(detectedGamesMap)) {
-        newDetectedGames.set(gameId, gameInfo);
+      console.log(`[Store] Detecting ${games.length} games using cached Steam data (${steamGames.size} Steam games)`);
+
+      // Перевіряємо кожну гру використовуючи закешовані Steam дані
+      for (const game of games) {
+        // Пропускаємо якщо гра вже детектована
+        if (newDetectedGames.has(game.id)) {
+          continue;
+        }
+
+        // Перевіряємо чи є гра в Steam
+        if (game.install_paths && game.install_paths.length > 0) {
+          for (const installPath of game.install_paths) {
+            if (installPath.type === 'steam' && installPath.path) {
+              // Normalize the folder name
+              const normalizedFolderName = installPath.path
+                .replace(/^steamapps[/\\]common[/\\]/i, '')
+                .replace(/^common[/\\]/i, '');
+
+              const steamPath = steamGames.get(normalizedFolderName.toLowerCase());
+
+              if (steamPath) {
+                newDetectedGames.set(game.id, {
+                  platform: 'steam',
+                  path: steamPath,
+                  exists: true,
+                });
+                console.log(`[Store] Detected ${game.name} at ${steamPath}`);
+                break;
+              }
+            }
+          }
+        }
       }
 
       console.log('[Store] Detected games on system:', newDetectedGames.size);

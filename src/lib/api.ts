@@ -211,9 +211,8 @@ export function subscribeToGameUpdates(callback: (game: Game) => void) {
         filter: 'approved=eq.true',
       },
       (payload) => {
-        console.log('[Realtime] Game update received:', payload.eventType, payload.new?.name || payload.new?.id);
+        console.log('[Realtime] Game update received:', payload.eventType, (payload.new as Game)?.name || (payload.new as Game)?.id);
         if (payload.new) {
-          console.log('[Realtime] Downloads count:', payload.new.downloads);
           callback(payload.new as Game);
         }
       }

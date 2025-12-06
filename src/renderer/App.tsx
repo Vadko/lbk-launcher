@@ -13,6 +13,7 @@ import { useSettingsStore } from './store/useSettingsStore';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useQueryClient } from '@tanstack/react-query';
 import { GAMES_QUERY_KEY } from './hooks/useGamesQuery';
+import type { Game } from '../shared/types';
 
 declare global {
   interface Window {
@@ -25,7 +26,7 @@ declare global {
 }
 
 export const App: React.FC = () => {
-  const { setInitialLoadComplete, detectInstalledGames } = useStore();
+  const { setInitialLoadComplete, detectInstalledGames, loadSteamGames, clearSteamGamesCache, clearInstalledGamesCache, clearDetectedGamesCache } = useStore();
   const { animationsEnabled, autoDetectInstalledGames } = useSettingsStore();
   const [online, setOnline] = useState(navigator.onLine);
   const queryClient = useQueryClient();
@@ -42,10 +43,21 @@ export const App: React.FC = () => {
 
   // Допоміжна функція для отримання всіх ігор з кешу
   const getCachedGames = () => {
-    const cachedData = queryClient.getQueryData<{ pages: { games: any[] }[] }>([GAMES_QUERY_KEY]);
+    const cachedData = queryClient.getQueryData<{ pages: { games: Game[] }[] }>([GAMES_QUERY_KEY]);
     if (!cachedData) return [];
     return cachedData.pages.flatMap(page => page.games);
   };
+
+  // Завантажити Steam ігри при старті
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const timer = setTimeout(async () => {
+      await loadSteamGames();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [loadSteamGames]);
 
   // Детекція встановлених ігор на початку (якщо увімкнено)
   useEffect(() => {
@@ -67,18 +79,47 @@ export const App: React.FC = () => {
 
   // Слухати зміни Steam бібліотеки
   useEffect(() => {
-    if (!autoDetectInstalledGames || !window.electronAPI) return;
+    if (!window.electronAPI) return;
 
     const handleSteamLibraryChange = async () => {
-      console.log('[App] Steam library changed, re-running game detection');
-      const allGames = getCachedGames();
-      if (allGames.length > 0) {
-        await detectInstalledGames(allGames);
+      console.log('[App] Steam library changed, clearing cache and reloading');
+
+      // Очистити кеші
+      clearSteamGamesCache();
+      clearInstalledGamesCache();
+      clearDetectedGamesCache();
+
+      // Перезавантажити Steam ігри
+      await loadSteamGames();
+
+      // Якщо увімкнено автодетекцію - перезапустити її
+      if (autoDetectInstalledGames) {
+        const allGames = getCachedGames();
+        if (allGames.length > 0) {
+          await detectInstalledGames(allGames);
+        }
       }
     };
 
     window.electronAPI.onSteamLibraryChanged?.(handleSteamLibraryChange);
-  }, [autoDetectInstalledGames, detectInstalledGames, queryClient]);
+  }, [autoDetectInstalledGames, detectInstalledGames, queryClient, loadSteamGames, clearSteamGamesCache, clearInstalledGamesCache, clearDetectedGamesCache]);
+
+  // Слухати зміни встановлених перекладів
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleInstalledGamesChange = () => {
+      console.log('[App] Installed games cache changed, clearing cache and invalidating queries');
+
+      // Очистити кеш встановлених ігор в store
+      clearInstalledGamesCache();
+
+      // Інвалідувати тільки запити зі списком встановлених ігор
+      queryClient.invalidateQueries({ queryKey: [GAMES_QUERY_KEY, { filter: 'installed-games' }] });
+    };
+
+    window.electronAPI.onInstalledGamesChanged?.(handleInstalledGamesChange);
+  }, [queryClient, clearInstalledGamesCache]);
 
   const handleOnlineEvent = () => {
     setOnline(true);

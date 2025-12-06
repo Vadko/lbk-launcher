@@ -24,10 +24,18 @@ function isValidSteamPath(steamPath: string): boolean {
   }
 }
 
+// Cache for Steam path
+let steamPathCache: string | null | undefined = undefined;
+
 /**
- * Detect Steam installation path
+ * Detect Steam installation path (with caching)
  */
 export function getSteamPath(): string | null {
+  // Return cached value if already checked
+  if (steamPathCache !== undefined) {
+    return steamPathCache;
+  }
+
   console.log('[GameDetector] Platform:', process.platform);
   try {
     if (process.platform === 'win32') {
@@ -45,6 +53,7 @@ export function getSteamPath(): string | null {
           const steamPath = match[1].trim();
           if (isValidSteamPath(steamPath)) {
             console.log('[GameDetector] Steam found at:', steamPath);
+            steamPathCache = steamPath;
             return steamPath;
           }
         }
@@ -61,6 +70,7 @@ export function getSteamPath(): string | null {
             const steamPath = match[1].trim();
             if (isValidSteamPath(steamPath)) {
               console.log('[GameDetector] Steam found at (32-bit):', steamPath);
+              steamPathCache = steamPath;
               return steamPath;
             }
           }
@@ -80,6 +90,7 @@ export function getSteamPath(): string | null {
       for (const defaultPath of defaultPaths) {
         if (fs.existsSync(defaultPath) && isValidSteamPath(defaultPath)) {
           console.log('[GameDetector] Steam found at default location:', defaultPath);
+          steamPathCache = defaultPath;
           return defaultPath;
         }
       }
@@ -93,6 +104,7 @@ export function getSteamPath(): string | null {
       for (const macPath of macPaths) {
         if (fs.existsSync(macPath) && isValidSteamPath(macPath)) {
           console.log('[GameDetector] Steam found at:', macPath);
+          steamPathCache = macPath;
           return macPath;
         }
       }
@@ -112,6 +124,7 @@ export function getSteamPath(): string | null {
       for (const linuxPath of linuxPaths) {
         if (fs.existsSync(linuxPath) && isValidSteamPath(linuxPath)) {
           console.log('[GameDetector] Steam found at:', linuxPath);
+          steamPathCache = linuxPath;
           return linuxPath;
         }
       }
@@ -120,13 +133,31 @@ export function getSteamPath(): string | null {
     console.error('[GameDetector] Error detecting Steam path:', error);
   }
   console.warn('[GameDetector] Steam not found on this system');
+  steamPathCache = null;
   return null;
 }
 
 /**
- * Parse Steam library folders
+ * Invalidate Steam path cache
+ */
+export function invalidateSteamPathCache(): void {
+  console.log('[GameDetector] Invalidating Steam path cache');
+  steamPathCache = undefined;
+  steamLibraryFoldersCache = null;
+}
+
+// Cache for Steam library folders
+let steamLibraryFoldersCache: { steamPath: string; folders: string[] } | null = null;
+
+/**
+ * Parse Steam library folders (with caching)
  */
 function getSteamLibraryFolders(steamPath: string): string[] {
+  // Return cached value if already loaded for this Steam path
+  if (steamLibraryFoldersCache && steamLibraryFoldersCache.steamPath === steamPath) {
+    return steamLibraryFoldersCache.folders;
+  }
+
   const folders: string[] = [path.join(steamPath, 'steamapps')];
   console.log('[GameDetector] Default Steam library:', folders[0]);
 
@@ -151,13 +182,34 @@ function getSteamLibraryFolders(steamPath: string): string[] {
   }
 
   console.log(`[GameDetector] Total Steam libraries found: ${folders.length}`);
+
+  // Cache the result
+  steamLibraryFoldersCache = { steamPath, folders };
   return folders;
 }
 
+// Cache for Steam games
+let steamGamesCache: Map<string, string> | null = null;
+
 /**
- * Get all installed games from appmanifest files
+ * Invalidate the Steam games cache
+ */
+export function invalidateSteamGamesCache(): void {
+  console.log('[GameDetector] Invalidating Steam games cache');
+  steamGamesCache = null;
+}
+
+/**
+ * Get all installed games from appmanifest files (with caching)
  */
 function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
+  // Return cached value if available
+  if (steamGamesCache !== null) {
+    console.log(`[GameDetector] Using cached Steam games (${steamGamesCache.size} games)`);
+    return steamGamesCache;
+  }
+
+  console.log('[GameDetector] Scanning Steam libraries for installed games...');
   const games = new Map<string, string>(); // installdir -> full path
 
   for (const folder of libraryFolders) {
@@ -187,6 +239,8 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
     }
   }
 
+  // Cache the result
+  steamGamesCache = games;
   return games;
 }
 
@@ -342,6 +396,21 @@ export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
 export function getFirstAvailableGamePath(installPaths: InstallPath[]): GamePath | null {
   const paths = detectGamePaths(installPaths);
   return paths.find(p => p.exists) || null;
+}
+
+/**
+ * Get all installed Steam games as a Map (installdir -> full path)
+ * Returns the cached result or scans if cache is empty
+ */
+export function getAllInstalledSteamGames(): Map<string, string> {
+  const steamPath = getSteamPath();
+  if (!steamPath) {
+    console.log('[GameDetector] Steam not found');
+    return new Map();
+  }
+
+  const libraryFolders = getSteamLibraryFolders(steamPath);
+  return getAllSteamGames(libraryFolders);
 }
 
 /**

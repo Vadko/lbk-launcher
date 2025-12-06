@@ -1016,15 +1016,30 @@ function getPreviousInstallPath(gameId: string): string | null {
 }
 
 /**
- * Get all installed game IDs from installation cache
+ * Invalidate the installed game IDs cache
+ */
+export function invalidateInstalledGameIdsCache(): void {
+  console.log('[Installer] Invalidating installed game IDs cache');
+  installedGameIdsCache = null;
+}
+
+/**
+ * Get all installed game IDs from installation cache (with caching)
  */
 export async function getAllInstalledGameIds(): Promise<string[]> {
+  // Return cached value if available
+  if (installedGameIdsCache !== null) {
+    console.log(`[Installer] Using cached installed games (${installedGameIdsCache.length} games)`);
+    return installedGameIdsCache;
+  }
+
   try {
     const userDataPath = app.getPath('userData');
     const installInfoDir = path.join(userDataPath, 'installation-cache');
 
     // Check if directory exists
     if (!fs.existsSync(installInfoDir)) {
+      installedGameIdsCache = [];
       return [];
     }
 
@@ -1037,12 +1052,19 @@ export async function getAllInstalledGameIds(): Promise<string[]> {
       .map(file => file.replace('.json', ''));
 
     console.log(`[Installer] Found ${gameIds.length} installed games:`, gameIds);
+
+    // Cache the result
+    installedGameIdsCache = gameIds;
     return gameIds;
   } catch (error) {
     console.error('[Installer] Error getting installed game IDs:', error);
+    installedGameIdsCache = [];
     return [];
   }
 }
+
+// Cache for installed game IDs
+let installedGameIdsCache: string[] | null = null;
 
 /**
  * Verify file hash (SHA-256)

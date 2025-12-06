@@ -5,6 +5,7 @@ const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchGamesByIds: (gameIds: string[]) => ipcRenderer.invoke('fetch-games-by-ids', gameIds),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
+  getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) =>
     ipcRenderer.invoke('find-games-by-install-paths', installPaths, offset, limit),
   installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean) =>
@@ -51,10 +52,11 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send('show-game-update-notification', gameName, version, isInitialLoad);
   },
   // Game detection
-  detectGame: (game: Game) => ipcRenderer.invoke('detect-game', game),
-  detectGames: (games: Game[]) => ipcRenderer.invoke('detect-games', games),
   onSteamLibraryChanged: (callback: () => void) => {
     ipcRenderer.on('steam-library-changed', callback);
+  },
+  onInstalledGamesChanged: (callback: () => void) => {
+    ipcRenderer.on('installed-games-changed', callback);
   },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),

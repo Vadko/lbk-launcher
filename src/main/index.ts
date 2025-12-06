@@ -5,6 +5,7 @@ import { setupGamesHandlers, cleanupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupAutoUpdater, checkForUpdates } from './auto-updater';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
+import { startInstallationWatcher, stopInstallationWatcher } from './installation-watcher';
 
 // Single instance lock - prevent multiple instances of the app
 const gotTheLock = app.requestSingleInstanceLock();
@@ -49,6 +50,7 @@ if (!gotTheLock) {
     // Start watching Steam library for changes (after a short delay to ensure window is ready)
     setTimeout(() => {
       startSteamWatcher(getMainWindow());
+      startInstallationWatcher(getMainWindow());
     }, 1000);
 
     app.on('activate', () => {
@@ -68,6 +70,7 @@ if (!gotTheLock) {
   app.on('window-all-closed', () => {
     cleanupGamesHandlers();
     stopSteamWatcher();
+    stopInstallationWatcher();
 
     if (process.platform !== 'darwin') {
       app.quit();
