@@ -373,7 +373,7 @@ export const MainContent: React.FC = () => {
           >
             {getInstallButtonText()}
           </Button>
-          {installationInfo && !isInstalling && !isUpdateAvailable && installationInfo.hasBackup !== false && (
+          {installationInfo && !isInstalling && (
             <Button
               variant="secondary"
               icon={<Trash2 size={20} />}

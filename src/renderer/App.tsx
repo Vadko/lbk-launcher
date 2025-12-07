@@ -21,6 +21,7 @@ declare global {
       minimize: () => void;
       maximize: () => void;
       close: () => void;
+      onMaximizedChange: (callback: (isMaximized: boolean) => void) => void;
     };
   }
 }
@@ -141,6 +142,17 @@ export const App: React.FC = () => {
       window.removeEventListener('online', handleOnlineEvent);
       window.removeEventListener('offline', handleOfflineEvent);
     };
+  }, []);
+
+  // Слухати зміни стану maximize для прибирання border-radius
+  useEffect(() => {
+    window.windowControls?.onMaximizedChange((isMaximized) => {
+      if (isMaximized) {
+        document.documentElement.classList.add('maximized');
+      } else {
+        document.documentElement.classList.remove('maximized');
+      }
+    });
   }, []);
 
   return (

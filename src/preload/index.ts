@@ -71,6 +71,9 @@ contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
+  onMaximizedChange: (callback: (isMaximized: boolean) => void) => {
+    ipcRenderer.on('window:maximized', (_, isMaximized) => callback(isMaximized));
+  },
 });
 
 // Listen for game update notifications and dispatch as custom events

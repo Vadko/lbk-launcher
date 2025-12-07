@@ -958,12 +958,21 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
         const infoContent = await fs.promises.readFile(previousInstallInfoPath, 'utf-8');
         const info: InstallationInfo = JSON.parse(infoContent);
 
-        // Verify the path still exists
-        if (fs.existsSync(info.gamePath)) {
+        // Verify the path still exists AND the installation info file exists in game folder
+        const gameInfoPath = path.join(info.gamePath, INSTALLATION_INFO_FILE);
+        if (fs.existsSync(info.gamePath) && fs.existsSync(gameInfoPath)) {
           console.log(
             `[Installer] Found previous installation at custom path: ${info.gamePath}`
           );
           return info;
+        } else {
+          // Cache is stale - game folder or translation was removed
+          console.log('[Installer] Cache is stale, removing cached installation info');
+          try {
+            await unlink(previousInstallInfoPath);
+          } catch {
+            // Ignore deletion errors
+          }
         }
       } catch (error) {
         console.warn('[Installer] Failed to read previous installation info:', error);

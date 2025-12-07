@@ -38,6 +38,15 @@ export function createMainWindow(): BrowserWindow {
     mainWindow = null;
   });
 
+  // Відправляти стан maximize в renderer
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window:maximized', true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window:maximized', false);
+  });
+
   return mainWindow;
 }
 

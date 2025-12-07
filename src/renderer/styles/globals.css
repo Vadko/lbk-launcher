@@ -56,6 +56,11 @@ body {
   border-radius: 12px;
 }
 
+/* Прибрати скруглення в повноекранному режимі */
+html.maximized #root {
+  border-radius: 0;
+}
+
 /* Glassmorphism components */
 .glass-panel {
   background: rgba(255, 255, 255, 0.03);
