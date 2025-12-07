@@ -1013,6 +1013,23 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
       `[Installer] Translation installed: version ${info.version}, installed at ${info.installedAt}`
     );
 
+    // Save to cache if not already cached (auto-discovery of installed translations)
+    const userDataPath = app.getPath('userData');
+    const installInfoDir = path.join(userDataPath, 'installation-cache');
+    const cacheInfoPath = path.join(installInfoDir, `${game.id}.json`);
+    
+    if (!fs.existsSync(cacheInfoPath)) {
+      try {
+        await mkdir(installInfoDir, { recursive: true });
+        await fs.promises.writeFile(cacheInfoPath, JSON.stringify(info, null, 2), 'utf-8');
+        console.log(`[Installer] Auto-cached installation info to: ${cacheInfoPath}`);
+        // Invalidate cache so next query will pick up new entry
+        invalidateInstalledGameIdsCache();
+      } catch (cacheError) {
+        console.warn('[Installer] Failed to auto-cache installation info:', cacheError);
+      }
+    }
+
     return info;
   } catch (error) {
     console.error('[Installer] Error checking installation:', error);
