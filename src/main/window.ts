@@ -4,7 +4,7 @@ import { applyLiquidGlass, removeLiquidGlass, isLiquidGlassSupported } from './l
 import { supportsMacOSLiquidGlass } from './utils/platform';
 
 let mainWindow: BrowserWindow | null = null;
-let liquidGlassId: string | null = null;
+let liquidGlassId: number | null = null;
 
 export async function createMainWindow(): Promise<BrowserWindow> {
   // Check if liquid glass is supported and get user preference
@@ -17,8 +17,10 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     minHeight: 700,
     resizable: true,
     frame: false,
+    show: false, // Don't show until liquid glass is applied
     transparent: isSupported, // Enable transparency for liquid glass on macOS 26+
     backgroundColor: isSupported ? undefined : '#050b14', // No background color when transparent
+    vibrancy: undefined, // Must be undefined for liquid glass
     icon: join(app.getAppPath(), 'resources/icon.png'),
     webPreferences: {
       preload: join(app.getAppPath(), 'out/preload/index.js'),
@@ -27,6 +29,11 @@ export async function createMainWindow(): Promise<BrowserWindow> {
       sandbox: false,
     },
   });
+
+  // Show window buttons on macOS for liquid glass
+  if (isSupported) {
+    mainWindow.setWindowButtonVisibility(true);
+  }
 
   // Load the app
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -58,21 +65,16 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     mainWindow?.webContents.send('window:maximized', false);
   });
 
-  // Apply liquid glass after the window content is loaded (if supported and enabled)
-  mainWindow.webContents.once('did-finish-load', async () => {
+  // Apply liquid glass immediately after window is ready (if supported)
+  mainWindow.once('ready-to-show', async () => {
     if (isSupported) {
-      // Get user preference from the renderer process
-      const userPreference = await new Promise<boolean>((resolve) => {
-        ipcMain.once('liquid-glass:get-preference-response', (_event, enabled) => {
-          resolve(enabled);
-        });
-        mainWindow?.webContents.send('liquid-glass:get-preference');
-      });
-
-      if (userPreference) {
-        liquidGlassId = await applyLiquidGlass(mainWindow!, userPreference);
-      }
+      console.log('[Window] Applying liquid glass on ready-to-show');
+      // Apply with default enabled state - user can toggle it later in settings
+      liquidGlassId = await applyLiquidGlass(mainWindow!, true);
+      console.log('[Window] Liquid glass applied with ID:', liquidGlassId);
     }
+    // Show window after liquid glass is applied (or immediately if not supported)
+    mainWindow?.show();
   });
 
   return mainWindow;

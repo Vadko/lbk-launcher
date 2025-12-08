@@ -25,7 +25,7 @@ export const Modal: React.FC<ModalProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
           {/* Backdrop with blur */}
           <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+            className="absolute inset-0 bg-black/60 backdrop-blur-xl modal-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -34,7 +34,7 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Modal content */}
           <motion.div
-            className="relative bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl"
+            className="relative bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content"
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

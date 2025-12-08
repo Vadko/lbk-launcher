@@ -1,8 +1,8 @@
 import { BrowserWindow } from 'electron';
 import { supportsMacOSLiquidGlass, shouldEnableLiquidGlass } from './utils/platform';
+import liquidGlassModule from 'electron-liquid-glass';
 
-// Lazy load the liquid glass module only when needed
-let liquidGlass: any = null;
+const liquidGlass = liquidGlassModule;
 
 /**
  * Initialize liquid glass for a window
@@ -13,7 +13,7 @@ let liquidGlass: any = null;
 export async function applyLiquidGlass(
   window: BrowserWindow,
   userPreference: boolean = true
-): Promise<string | null> {
+): Promise<number | null> {
   try {
     // Check if we should enable liquid glass
     if (!shouldEnableLiquidGlass(userPreference)) {
@@ -21,15 +21,6 @@ export async function applyLiquidGlass(
       return null;
     }
 
-    // Lazy load the liquid glass module
-    if (!liquidGlass) {
-      try {
-        liquidGlass = await import('electron-liquid-glass');
-      } catch (error) {
-        console.warn('[LiquidGlass] Failed to load electron-liquid-glass module:', error);
-        return null;
-      }
-    }
 
     // Get the native window handle
     const handle = window.getNativeWindowHandle();
@@ -39,12 +30,22 @@ export async function applyLiquidGlass(
     }
 
     // Apply liquid glass effect
-    const glassId = liquidGlass.default.addView(handle, {
-      cornerRadius: 16,
-      tintColor: '#050b1410', // Semi-transparent dark tint matching our theme
+    const glassId = liquidGlass.addView(handle, {
+      cornerRadius: 12,
+      tintColor: '#00000015', // Very subtle dark tint for glossy look
+      opaque: false, // Ensure transparency
     });
 
     console.log('[LiquidGlass] Successfully applied liquid glass effect, ID:', glassId);
+
+    // Try setting glass material variant to 'regular' for standard glossy appearance
+    try {
+      liquidGlass.unstable_setVariant(glassId, liquidGlass.GlassMaterialVariant.regular);
+      console.log('[LiquidGlass] Set variant to regular');
+    } catch (error) {
+      console.warn('[LiquidGlass] Could not set variant:', error);
+    }
+
     return glassId;
   } catch (error) {
     console.error('[LiquidGlass] Error applying liquid glass:', error);
@@ -54,17 +55,14 @@ export async function applyLiquidGlass(
 
 /**
  * Remove liquid glass effect from a window
+ * Note: The electron-liquid-glass library does not provide a removeView method.
+ * Glass effects are automatically cleaned up when the window is destroyed.
  * @param glassId The glass ID returned from applyLiquidGlass
  */
-export async function removeLiquidGlass(glassId: string): Promise<void> {
-  try {
-    if (!liquidGlass || !glassId) return;
-
-    liquidGlass.default.removeView(glassId);
-    console.log('[LiquidGlass] Removed liquid glass effect, ID:', glassId);
-  } catch (error) {
-    console.error('[LiquidGlass] Error removing liquid glass:', error);
-  }
+export async function removeLiquidGlass(glassId: number | null): Promise<void> {
+  // Note: electron-liquid-glass does not provide a removeView API
+  // The glass effect is automatically cleaned up when the window is destroyed
+  console.log('[LiquidGlass] Glass effect will be cleaned up when window closes, ID:', glassId);
 }
 
 /**

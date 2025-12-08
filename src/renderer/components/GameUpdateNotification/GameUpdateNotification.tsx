@@ -53,7 +53,7 @@ export const GameUpdateNotification: React.FC = () => {
       {updates.map((update) => (
         <div
           key={update.gameName}
-          className="bg-glass border border-neon-blue backdrop-blur-xl rounded-xl p-4 shadow-lg min-w-[320px] animate-in slide-in-from-right"
+          className="bg-glass border border-neon-blue backdrop-blur-xl rounded-xl p-4 shadow-lg min-w-[320px] animate-in slide-in-from-right notification-toast"
         >
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center flex-shrink-0">

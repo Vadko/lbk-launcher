@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   1. BASE STYLES & RESET
+   ========================================================================== */
+
 * {
   margin: 0;
   padding: 0;
@@ -16,6 +20,10 @@ img {
   user-select: none;
 }
 
+/* ==========================================================================
+   2. CSS VARIABLES - THEMES
+   ========================================================================== */
+
 :root {
   /* Fonts */
   --font-head: 'Space Grotesk', 'Segoe UI', sans-serif;
@@ -25,45 +33,39 @@ img {
 /* Dark theme (default) */
 :root,
 :root[data-theme='dark'] {
-  /* Colors */
   --bg-dark: #050b14;
   --glass: rgba(255, 255, 255, 0.03);
   --glass-hover: rgba(255, 255, 255, 0.1);
   --border: rgba(255, 255, 255, 0.1);
   --border-hover: rgba(255, 255, 255, 0.3);
-
-  /* Neon accents */
   --neon-blue: #00f2ff;
   --neon-purple: #bd00ff;
   --neon-pink: #ff0055;
   --neon-orange: #ff9e00;
   --neon-green: #10b981;
-
-  /* Text */
   --text-main: #ffffff;
   --text-muted: #94a3b8;
 }
 
 /* Light theme */
 :root[data-theme='light'] {
-  /* Colors */
   --bg-dark: #f1f5f9;
   --glass: rgba(255, 255, 255, 0.8);
   --glass-hover: rgba(255, 255, 255, 0.95);
   --border: rgba(0, 0, 0, 0.08);
   --border-hover: rgba(0, 0, 0, 0.2);
-
-  /* Neon accents - lighter versions for light theme */
   --neon-blue: #38bdf8;
   --neon-purple: #c084fc;
   --neon-pink: #f472b6;
   --neon-orange: #fbbf24;
   --neon-green: #34d399;
-
-  /* Text */
   --text-main: #0f172a;
   --text-muted: #334155;
 }
+
+/* ==========================================================================
+   3. BODY & ROOT STYLES
+   ========================================================================== */
 
 body {
   font-family: var(--font-body);
@@ -74,20 +76,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Liquid Glass mode - transparent background for macOS 26+ */
-body.liquid-glass-enabled {
-  background: transparent;
-}
-
-body.liquid-glass-enabled #root {
-  background: rgba(5, 11, 20, 0.85); /* Semi-transparent dark background */
-}
-
-/* Make text-white use CSS variable for theming */
-.text-white {
-  color: var(--text-main) !important;
-}
-
 #root {
   width: 100vw;
   height: 100vh;
@@ -95,12 +83,18 @@ body.liquid-glass-enabled #root {
   border-radius: 12px;
 }
 
-/* Прибрати скруглення в повноекранному режимі */
 html.maximized #root {
   border-radius: 0;
 }
 
-/* Glassmorphism components */
+.text-white {
+  color: var(--text-main) !important;
+}
+
+/* ==========================================================================
+   4. GLASSMORPHISM COMPONENTS
+   ========================================================================== */
+
 .glass-panel {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(15px);
@@ -125,101 +119,6 @@ html.maximized #root {
   transform: translateY(-2px);
 }
 
-/* Light theme specific styles for cards */
-:root[data-theme='light'] .glass-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-:root[data-theme='light'] .glass-card:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(0, 0, 0, 0.15);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
-}
-
-:root[data-theme='light'] .glass-panel {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Fix border-transparent in light theme for game list items */
-:root[data-theme='light'] .border-transparent {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Progress bars in light theme */
-:root[data-theme='light'] .progress-track {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-:root[data-theme='light'] .bg-glass-hover {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-:root[data-theme='light'] .bg-white\/10 {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Buttons in light theme */
-:root[data-theme='light'] .glass-button {
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  color: var(--text-main);
-}
-
-:root[data-theme='light'] .glass-button:hover {
-  background: rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.25);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Modal backdrop and content in light theme */
-:root[data-theme='light'] .bg-black\/60 {
-  background-color: rgba(0, 0, 0, 0.4) !important;
-}
-
-:root[data-theme='light'] .bg-\[rgba\(10\2c 20\2c 30\2c 0\.95\)\] {
-  background: rgba(255, 255, 255, 0.98) !important;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
-
-/* Filter dropdown in light theme */
-:root[data-theme='light'] .filter-dropdown {
-  background: rgba(255, 255, 255, 0.98) !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-:root[data-theme='light'] .filter-dropdown button {
-  color: var(--text-muted);
-}
-
-:root[data-theme='light'] .filter-dropdown button:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--text-main);
-}
-
-:root[data-theme='light'] .filter-dropdown button.bg-glass-hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: var(--text-main);
-}
-
-/* Gamepad focus styles for dropdown items */
-.filter-dropdown button:focus-visible,
-.filter-dropdown button.gamepad-focus {
-  background: rgba(0, 242, 255, 0.15);
-  outline: 2px solid var(--neon-blue);
-  outline-offset: -2px;
-}
-
-:root[data-theme='light'] .filter-dropdown button:focus-visible,
-:root[data-theme='light'] .filter-dropdown button.gamepad-focus {
-  background: rgba(2, 132, 199, 0.1);
-  outline: 2px solid #0284c7;
-}
-
 .glass-button {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -242,7 +141,306 @@ html.maximized #root {
   transform: translateY(0);
 }
 
-/* Progress bars */
+/* ==========================================================================
+   5. LIQUID GLASS MODE (macOS 26+)
+   ========================================================================== */
+
+/* --- 5.1 Base transparent backgrounds --- */
+body.liquid-glass-enabled {
+  background: transparent !important;
+}
+
+body.liquid-glass-enabled #root,
+body.liquid-glass-enabled #root > div {
+  background: transparent !important;
+}
+
+/* --- 5.2 Disable CSS backdrop filters (native blur handles it) --- */
+body.liquid-glass-enabled .glass-panel,
+body.liquid-glass-enabled .glass-card,
+body.liquid-glass-enabled .glass-button,
+body.liquid-glass-enabled [class*="backdrop-blur"],
+body.liquid-glass-enabled .backdrop-blur-sm,
+body.liquid-glass-enabled .backdrop-blur-md,
+body.liquid-glass-enabled .backdrop-blur-lg,
+body.liquid-glass-enabled .backdrop-blur-xl,
+body.liquid-glass-enabled .backdrop-blur-2xl,
+body.liquid-glass-enabled .backdrop-blur-3xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* --- 5.3 Dark theme backgrounds for liquid glass --- */
+body.liquid-glass-enabled .bg-glass,
+body.liquid-glass-enabled [class*="bg-glass"]:not([class*="hover"]) {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+body.liquid-glass-enabled .bg-bg-dark,
+body.liquid-glass-enabled [class*="bg-bg-dark"],
+body.liquid-glass-enabled .bg-dark {
+  background: transparent !important;
+}
+
+body.liquid-glass-enabled .bg-bg-card,
+body.liquid-glass-enabled [class*="bg-bg-card"] {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+body.liquid-glass-enabled [class*="bg-gradient"] {
+  opacity: 0.7 !important;
+}
+
+body.liquid-glass-enabled .glass-panel {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.liquid-glass-enabled .glass-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* --- 5.4 Dark theme UI elements for liquid glass --- */
+body.liquid-glass-enabled .modal-backdrop {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.liquid-glass-enabled .modal-content {
+  background: rgba(10, 15, 25, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.liquid-glass-enabled .modal-content .bg-glass {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+body.liquid-glass-enabled .notification-toast {
+  background: rgba(10, 15, 25, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.liquid-glass-enabled .filter-dropdown {
+  background: rgba(10, 15, 25, 0.95) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.liquid-glass-enabled .glass-input {
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.liquid-glass-enabled .glass-input:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* --- 5.5 Light theme + Liquid Glass --- */
+:root[data-theme='light'] body.liquid-glass-enabled {
+  background: transparent !important;
+  --text-main: #0a0f1a !important;
+  --text-muted: #334155 !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled #root,
+:root[data-theme='light'] body.liquid-glass-enabled #root > div {
+  background: transparent !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .glass-panel,
+:root[data-theme='light'] body.liquid-glass-enabled .glass-card {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .glass-card:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .bg-glass,
+:root[data-theme='light'] body.liquid-glass-enabled [class*="bg-glass"]:not([class*="hover"]) {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .bg-glass-hover,
+:root[data-theme='light'] body.liquid-glass-enabled .hover\:bg-glass-hover:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .bg-bg-dark,
+:root[data-theme='light'] body.liquid-glass-enabled [class*="bg-bg-dark"] {
+  background: transparent !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .modal-backdrop {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .modal-content {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .modal-content .bg-glass {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .notification-toast {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .filter-dropdown {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .glass-input {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .glass-input:focus {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .glass-button {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .glass-button:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ==========================================================================
+   6. LIGHT THEME OVERRIDES (non-liquid glass)
+   ========================================================================== */
+
+:root[data-theme='light'] .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme='light'] .glass-card:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='light'] .glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='light'] .glass-button {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  color: var(--text-main);
+}
+
+:root[data-theme='light'] .glass-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme='light'] .border-transparent {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root[data-theme='light'] .progress-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme='light'] .bg-glass-hover {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+:root[data-theme='light'] .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+:root[data-theme='light'] .bg-\[rgba\(10\2c 20\2c 30\2c 0\.95\)\] {
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme='light'] .filter-dropdown {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme='light'] .filter-dropdown button {
+  color: var(--text-muted);
+}
+
+:root[data-theme='light'] .filter-dropdown button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-main);
+}
+
+:root[data-theme='light'] .filter-dropdown button.bg-glass-hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-main);
+}
+
+:root[data-theme='light'] .hover\:text-white:hover {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme='light'] .hover\:bg-glass-hover:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+:root[data-theme='light'] .titlebar-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  color: var(--text-main) !important;
+}
+
+:root[data-theme='light'] .titlebar-close-btn:hover {
+  color: white !important;
+}
+
+:root[data-theme='light'] .bg-neon-blue,
+:root[data-theme='light'] .bg-neon-purple,
+:root[data-theme='light'] .bg-neon-pink,
+:root[data-theme='light'] .bg-neon-orange,
+:root[data-theme='light'] .bg-neon-green,
+:root[data-theme='light'] .bg-gradient-to-r {
+  color: white !important;
+}
+
+:root[data-theme='light'] .bg-neon-blue *,
+:root[data-theme='light'] .bg-neon-purple *,
+:root[data-theme='light'] .bg-neon-pink *,
+:root[data-theme='light'] .bg-neon-orange *,
+:root[data-theme='light'] .bg-neon-green *,
+:root[data-theme='light'] .bg-gradient-to-r * {
+  color: white !important;
+}
+
+:root[data-theme='light'] ::selection {
+  background: rgba(14, 165, 233, 0.25);
+  color: var(--text-main);
+}
+
+/* ==========================================================================
+   7. PROGRESS BARS
+   ========================================================================== */
+
 .progress-wrapper {
   margin-bottom: 20px;
 }
@@ -279,7 +477,10 @@ html.maximized #root {
   animation: progressGlow 2s ease-in-out infinite;
 }
 
-/* Scrollbar */
+/* ==========================================================================
+   8. SCROLLBARS
+   ========================================================================== */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -300,7 +501,6 @@ html.maximized #root {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Custom scrollbar with top padding */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -322,57 +522,10 @@ html.maximized #root {
   box-shadow: 0 0 12px rgba(0, 242, 255, 0.5);
 }
 
-/* Text selection */
-::selection {
-  background: rgba(0, 242, 255, 0.3);
-  color: white;
-}
+/* ==========================================================================
+   9. UTILITIES
+   ========================================================================== */
 
-/* Light theme text selection */
-:root[data-theme='light'] ::selection {
-  background: rgba(14, 165, 233, 0.25);
-  color: var(--text-main);
-}
-
-/* White text on colored buttons in light theme */
-:root[data-theme='light'] .bg-neon-blue,
-:root[data-theme='light'] .bg-neon-purple,
-:root[data-theme='light'] .bg-neon-pink,
-:root[data-theme='light'] .bg-neon-orange,
-:root[data-theme='light'] .bg-neon-green,
-:root[data-theme='light'] .bg-gradient-to-r {
-  color: white !important;
-}
-
-:root[data-theme='light'] .bg-neon-blue *,
-:root[data-theme='light'] .bg-neon-purple *,
-:root[data-theme='light'] .bg-neon-pink *,
-:root[data-theme='light'] .bg-neon-orange *,
-:root[data-theme='light'] .bg-neon-green *,
-:root[data-theme='light'] .bg-gradient-to-r * {
-  color: white !important;
-}
-
-/* Fix hover effects in light theme for filters */
-:root[data-theme='light'] .hover\:text-white:hover {
-  color: var(--text-main) !important;
-}
-
-:root[data-theme='light'] .hover\:bg-glass-hover:hover {
-  background-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Title bar buttons in light theme */
-:root[data-theme='light'] .titlebar-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-  color: var(--text-main) !important;
-}
-
-:root[data-theme='light'] .titlebar-close-btn:hover {
-  color: white !important;
-}
-
-/* Utility classes */
 .text-gradient {
   background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
   -webkit-background-clip: text;
@@ -395,14 +548,21 @@ html.maximized #root {
   -webkit-app-region: no-drag;
 }
 
-/* Disable animations */
 .no-animations,
 .no-animations * {
   animation: none !important;
   transition: none !important;
 }
 
-/* Gamepad / Steam Deck focus styles */
+::selection {
+  background: rgba(0, 242, 255, 0.3);
+  color: white;
+}
+
+/* ==========================================================================
+   10. FOCUS STYLES (Gamepad / Steam Deck support)
+   ========================================================================== */
+
 button:focus-visible,
 a:focus-visible,
 [tabindex]:focus-visible,
@@ -412,14 +572,19 @@ a:focus-visible,
   box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.2);
 }
 
-/* Special focus style for game list items */
 .game-list-item:focus-visible {
   outline: 2px solid var(--neon-blue);
   outline-offset: -2px;
   background: rgba(0, 242, 255, 0.1) !important;
 }
 
-/* Light theme focus styles */
+.filter-dropdown button:focus-visible,
+.filter-dropdown button.gamepad-focus {
+  background: rgba(0, 242, 255, 0.15);
+  outline: 2px solid var(--neon-blue);
+  outline-offset: -2px;
+}
+
 :root[data-theme='light'] button:focus-visible,
 :root[data-theme='light'] a:focus-visible,
 :root[data-theme='light'] [tabindex]:focus-visible,
@@ -431,4 +596,10 @@ a:focus-visible,
 :root[data-theme='light'] .game-list-item:focus-visible {
   outline: 2px solid #0284c7;
   background: rgba(2, 132, 199, 0.1) !important;
+}
+
+:root[data-theme='light'] .filter-dropdown button:focus-visible,
+:root[data-theme='light'] .filter-dropdown button.gamepad-focus {
+  background: rgba(2, 132, 199, 0.1);
+  outline: 2px solid #0284c7;
 }

@@ -19,6 +19,7 @@ export const App: React.FC = () => {
   const { setInitialLoadComplete, detectInstalledGames, loadSteamGames, clearSteamGamesCache, clearInstalledGamesCache, clearDetectedGamesCache } = useStore();
   const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } = useSettingsStore();
   const [online, setOnline] = useState(navigator.onLine);
+  const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
 
   // Підписка на real-time оновлення ігор
@@ -32,11 +33,17 @@ export const App: React.FC = () => {
     const checkAndApplyLiquidGlass = async () => {
       if (window.liquidGlassAPI) {
         const isSupported = await window.liquidGlassAPI.isSupported();
+        setLiquidGlassSupported(isSupported);
+        console.log('[LiquidGlass] Support check:', { isSupported, liquidGlassEnabled });
         if (isSupported && liquidGlassEnabled) {
+          console.log('[LiquidGlass] Adding liquid-glass-enabled class to body');
           document.body.classList.add('liquid-glass-enabled');
         } else {
+          console.log('[LiquidGlass] Removing liquid-glass-enabled class from body');
           document.body.classList.remove('liquid-glass-enabled');
         }
+      } else {
+        console.warn('[LiquidGlass] liquidGlassAPI not available');
       }
     };
 
@@ -178,9 +185,13 @@ export const App: React.FC = () => {
     });
   }, []);
 
+  // Check if liquid glass mode is active (supported AND enabled)
+  const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
+
   return (
-    <div className={`relative w-screen h-screen bg-bg-dark text-white ${!animationsEnabled ? 'no-animations' : ''}`}>
-      <AmbientBackground />
+    <div className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}>
+      {/* Only show ambient background when liquid glass is not active */}
+      {!isLiquidGlassActive && <AmbientBackground />}
       <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
 
       {/* Main layout */}

@@ -22,9 +22,11 @@ export function getPlatform(): 'macos' | 'windows' | 'linux' | 'unknown' {
 export function getMacOSVersion(): number {
   if (!isMacOS()) return 0;
 
-  // Parse macOS version from os.release()
-  // Example: "24.6.0" corresponds to macOS 15 (Sonoma)
-  // macOS 26 would be "26.x.x"
+  // Parse Darwin kernel version from os.release()
+  // Darwin kernel version is typically one less than macOS marketing version:
+  // Darwin 23.x = macOS 14 (Sonoma)
+  // Darwin 24.x = macOS 15 (Sequoia)
+  // Darwin 25.x = macOS 26 (Tahoe)
   const releaseVersion = release();
   const majorVersion = parseInt(releaseVersion.split('.')[0], 10);
 
@@ -35,8 +37,8 @@ export function supportsMacOSLiquidGlass(): boolean {
   if (!isMacOS()) return false;
 
   const macOSVersion = getMacOSVersion();
-  // macOS 26 (Tahoe) or later supports liquid glass
-  return macOSVersion >= 26;
+  // macOS 26 (Darwin 25.x) or later supports liquid glass
+  return macOSVersion >= 25;
 }
 
 export function shouldEnableLiquidGlass(userPreference: boolean = true): boolean {
