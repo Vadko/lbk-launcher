@@ -325,9 +325,19 @@ function getGOGPath(): string | null {
         }
       }
     } else if (process.platform === 'darwin') {
-      const defaultPath = '/Applications/GOG Galaxy.app';
-      if (fs.existsSync(defaultPath)) {
-        return path.join(os.homedir(), 'Applications/GOG Galaxy');
+      // Check for GOG Galaxy app
+      const gogAppPath = '/Applications/GOG Galaxy.app';
+      if (fs.existsSync(gogAppPath)) {
+        // GOG Galaxy games are typically stored in user's Library
+        const gamesPath = path.join(os.homedir(), 'Library/Application Support/GOG.com/Galaxy/Storage/galaxy-2.0/installed');
+        if (fs.existsSync(gamesPath)) {
+          return gamesPath;
+        }
+        // Fallback to common location
+        const fallbackPath = path.join(os.homedir(), 'GOG Games');
+        if (fs.existsSync(fallbackPath)) {
+          return fallbackPath;
+        }
       }
     }
   } catch (error) {

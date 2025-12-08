@@ -84,4 +84,45 @@ module.exports = {
     runAfterFinish: true,
     menuCategory: false,
   },
+
+  mac: {
+    target: [
+      {
+        target: 'dmg',
+        arch: ['x64', 'arm64'],
+      },
+    ],
+    category: 'public.app-category.utilities',
+    icon: 'resources/icon.icns',
+    hardenedRuntime: false,  // Вимкнено без сертифіката
+    gatekeeperAssess: false,
+    darkModeSupport: true,
+    minimumSystemVersion: '10.13.0',
+    artifactName: '${productName}-${version}-${arch}.${ext}',
+    identity: null, 
+    notarize: false, // Вимкнути нотаризацію
+  },
+
+  dmg: {
+    contents: [
+      {
+        x: 410,
+        y: 150,
+        type: 'link',
+        path: '/Applications',
+      },
+      {
+        x: 130,
+        y: 150,
+        type: 'file',
+      },
+    ],
+    window: {
+      width: 540,
+      height: 380,
+    },
+    icon: 'resources/icon.icns',
+    backgroundColor: '#323232',
+    artifactName: '${productName}-${version}-${arch}.${ext}',
+  },
 };

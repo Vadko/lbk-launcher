@@ -74,12 +74,13 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
   try {
     console.log('[GameLauncher] Looking for executable in:', gamePath);
 
-    // Common executable patterns
-    const executablePatterns = [
-      /\.exe$/i, // Windows
-      /\.app$/i, // macOS
-      /^[^.]+$/, // Linux (no extension)
+    // Common executable patterns for Windows
+    const windowsExecutablePatterns = [
+      /\.exe$/i, // Windows executables
     ];
+
+    // macOS app bundles
+    const macAppPattern = /\.app$/i;
 
     // Find all potential executables
     const files = fs.readdirSync(gamePath);
@@ -89,14 +90,39 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
       const filePath = path.join(gamePath, file);
       const stats = fs.statSync(filePath);
 
-      // Check if it matches executable patterns
       if (stats.isFile()) {
-        for (const pattern of executablePatterns) {
-          if (pattern.test(file)) {
-            executables.push(filePath);
-            break;
+        // Windows: check by extension
+        if (process.platform === 'win32') {
+          for (const pattern of windowsExecutablePatterns) {
+            if (pattern.test(file)) {
+              executables.push(filePath);
+              break;
+            }
           }
         }
+        // macOS/Linux: check executable permission or .app bundle
+        else {
+          // Check for .app bundles on macOS
+          if (process.platform === 'darwin' && macAppPattern.test(file)) {
+            executables.push(filePath);
+          }
+          // Check for executable permission on Unix-like systems
+          else {
+            try {
+              fs.accessSync(filePath, fs.constants.X_OK);
+              // Additional check: skip common non-executable files
+              if (!file.includes('.') || file.endsWith('.sh') || file.endsWith('.command')) {
+                executables.push(filePath);
+              }
+            } catch {
+              // Not executable, skip
+            }
+          }
+        }
+      }
+      // Also check directories for .app bundles on macOS
+      else if (stats.isDirectory() && process.platform === 'darwin' && macAppPattern.test(file)) {
+        executables.push(filePath);
       }
     }
 
