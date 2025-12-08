@@ -176,24 +176,35 @@ export class GamesRepository {
     const rows = stmt.all() as Record<string, unknown>[];
     const allGames = rows.map(row => this.rowToGame(row));
 
+    // Нормалізуємо всі шляхи до простих назв папок
+    const normalizedDetectedPaths = installPaths.map(path => {
+      const p = path.toLowerCase();
+      // Витягуємо назву папки з шляху
+      // "steamapps/common/GameName" -> "gamename"
+      // "GameName" -> "gamename"
+      if (p.includes('steamapps/common/')) {
+        return p.split('steamapps/common/')[1];
+      } else if (p.includes('steamapps\\common\\')) {
+        return p.split('steamapps\\common\\')[1];
+      } else if (p.includes('common/')) {
+        return p.split('common/')[1];
+      } else if (p.includes('common\\')) {
+        return p.split('common\\')[1];
+      }
+      return p;
+    });
+
     const matchedGames = allGames.filter((game) => {
       if (!game.install_paths || !Array.isArray(game.install_paths)) return false;
 
       return game.install_paths.some((installPath) => {
         if (!installPath || !installPath.path) return false;
 
+        // В БД тепер зберігаються тільки назви папок
         const dbPath = installPath.path.toLowerCase();
 
-        return installPaths.some((detectedPath) => {
-          const detected = detectedPath.toLowerCase();
-          return (
-            detected === dbPath ||
-            detected.endsWith(`/${dbPath}`) ||
-            detected.endsWith(`\\${dbPath}`) ||
-            dbPath.endsWith(`/${detected}`) ||
-            dbPath.endsWith(`\\${detected}`)
-          );
-        });
+        // Просте порівняння
+        return normalizedDetectedPaths.includes(dbPath);
       });
     });
 
