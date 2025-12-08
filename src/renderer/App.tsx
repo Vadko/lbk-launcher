@@ -8,6 +8,7 @@ import { GameUpdateNotification } from './components/GameUpdateNotification/Game
 import { GlobalModal } from './components/Modal/GlobalModal';
 import { ConfirmModal } from './components/Modal/ConfirmModal';
 import { SettingsModal } from './components/Settings/SettingsModal';
+import { NotificationModal } from './components/Notifications/NotificationModal';
 import { useStore } from './store/useStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
@@ -18,6 +19,7 @@ export const App: React.FC = () => {
   const { setInitialLoadComplete, detectInstalledGames, loadSteamGames, clearSteamGamesCache, clearInstalledGamesCache, clearDetectedGamesCache } = useStore();
   const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } = useSettingsStore();
   const [online, setOnline] = useState(navigator.onLine);
+  const [showNotificationHistory, setShowNotificationHistory] = useState(false);
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
@@ -183,7 +185,7 @@ export const App: React.FC = () => {
 
       {/* Main layout */}
       <div className="flex h-full pt-8 px-2 pb-2 gap-2">
-        <Sidebar />
+        <Sidebar onOpenHistory={() => setShowNotificationHistory(true)} />
         <MainContent />
       </div>
 
@@ -195,6 +197,10 @@ export const App: React.FC = () => {
       <GlobalModal />
       <ConfirmModal />
       <SettingsModal />
+      <NotificationModal
+        isOpen={showNotificationHistory}
+        onClose={() => setShowNotificationHistory(false)}
+      />
     </div>
   );
 };

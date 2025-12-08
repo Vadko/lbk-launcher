@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Game, GetGamesParams } from '../types/game';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 
 interface UseGamesParams {
   filter: string;
@@ -122,23 +123,60 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
     const handleGameUpdate = (updatedGame: Game) => {
       console.log('[useGames] Game updated via realtime:', updatedGame.name);
 
-      // Перевірити чи гра відповідає поточному фільтру пошуку
-      const matchesSearch = !searchQuery ||
-        updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Перевірити чи гра відповідає поточному фільтру статусу
-      const matchesFilter = filter === 'all' ||
-        (filter === 'completed' && updatedGame.status === 'completed') ||
-        (filter === 'in-progress' && updatedGame.status === 'in-progress') ||
-        (filter === 'planned' && updatedGame.status === 'planned');
-
-      // Перевірити adult фільтр
-      const matchesAdult = showAdultGames || !updatedGame.is_adult;
-
-      const shouldBeInList = matchesSearch && matchesFilter && matchesAdult && updatedGame.approved;
+      // Перевірити зміну статусу/версії для історії
+      const { isSubscribed, addNotification, addVersionUpdateNotification } = useSubscriptionsStore.getState();
 
       setGames((prevGames) => {
         const index = prevGames.findIndex(g => g.id === updatedGame.id);
+        const oldGame = index !== -1 ? prevGames[index] : null;
+
+        if (oldGame) {
+          // Перевірити зміну статусу для підписаних користувачів
+          if (isSubscribed(updatedGame.id) &&
+              oldGame.status === 'planned' &&
+              updatedGame.status !== 'planned') {
+
+            const statusText = updatedGame.status === 'completed'
+              ? 'Завершено'
+              : updatedGame.status === 'in-progress'
+                ? 'Ранній доступ'
+                : updatedGame.status;
+
+            addNotification({
+              type: 'status-change',
+              gameId: updatedGame.id,
+              gameName: updatedGame.name,
+              oldValue: 'Заплановано',
+              newValue: statusText,
+            });
+          }
+
+          // Перевірити оновлення версії (для всіх ігор, не тільки підписаних)
+          if (oldGame.version && updatedGame.version &&
+              oldGame.version !== updatedGame.version) {
+            addVersionUpdateNotification(
+              updatedGame.id,
+              updatedGame.name,
+              oldGame.version,
+              updatedGame.version
+            );
+          }
+        }
+
+        // Перевірити чи гра відповідає поточному фільтру пошуку
+        const matchesSearch = !searchQuery ||
+          updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // Перевірити чи гра відповідає поточному фільтру статусу
+        const matchesFilter = filter === 'all' ||
+          (filter === 'completed' && updatedGame.status === 'completed') ||
+          (filter === 'in-progress' && updatedGame.status === 'in-progress') ||
+          (filter === 'planned' && updatedGame.status === 'planned');
+
+        // Перевірити adult фільтр
+        const matchesAdult = showAdultGames || !updatedGame.is_adult;
+
+        const shouldBeInList = matchesSearch && matchesFilter && matchesAdult && updatedGame.approved;
 
         if (index === -1) {
           // Гра не в списку

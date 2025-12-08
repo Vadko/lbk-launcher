@@ -1,7 +1,7 @@
 import { ipcMain, Tray, Menu, app, nativeImage } from 'electron';
 import { getMainWindow } from '../window';
 import { join } from 'path';
-import { isLinux } from '../utils/platform';
+import { isLinux, isMacOS } from '../utils/platform';
 
 let tray: Tray | null = null;
 
@@ -22,11 +22,28 @@ function showAndFocusWindow(): void {
 function createTray() {
   if (tray) return tray;
 
-  const iconPath = app.isPackaged
-    ? join(process.resourcesPath, 'icon.png')
-    : join(app.getAppPath(), 'resources', 'icon.png');
+  let iconPath: string;
+
+  if (isMacOS()) {
+    // На macOS використовуємо Template іконку для автоматичної адаптації до теми
+    const iconName = 'trayIconTemplate.png';
+    iconPath = app.isPackaged
+      ? join(process.resourcesPath, iconName)
+      : join(app.getAppPath(), 'resources', iconName);
+  } else {
+    // Для інших платформ використовуємо звичайну іконку
+    iconPath = app.isPackaged
+      ? join(process.resourcesPath, 'icon.png')
+      : join(app.getAppPath(), 'resources', 'icon.png');
+  }
 
   const icon = nativeImage.createFromPath(iconPath);
+
+  // На macOS потрібно встановити що це Template іконка
+  if (isMacOS()) {
+    icon.setTemplateImage(true);
+  }
+
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, User, MessageCircle, ListFilter, Check } from 'lucide-react';
+import { Settings, User, MessageCircle, ListFilter, Check, History } from 'lucide-react';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
 import { GameListItem } from './GameListItem';
@@ -8,6 +8,7 @@ import { Loader } from '../ui/Loader';
 import { useStore } from '../../store/useStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { useGames } from '../../hooks/useGames';
 import { useDebounce } from '../../hooks/useDebounce';
 import logo from '../../../../resources/icon.png';
@@ -15,7 +16,11 @@ import type { Database } from '../../../lib/database.types';
 
 type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-translations' | 'installed-games';
 
-export const Sidebar: React.FC = React.memo(() => {
+interface SidebarProps {
+  onOpenHistory: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) => {
   const {
     selectedGame,
     filter,
@@ -29,6 +34,7 @@ export const Sidebar: React.FC = React.memo(() => {
   } = useStore();
   const { showModal } = useModalStore();
   const { openSettingsModal } = useSettingsStore();
+  const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
 
   // Debounce search query - 500ms delay
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
@@ -249,6 +255,18 @@ export const Sidebar: React.FC = React.memo(() => {
 
       {/* Footer */}
       <div className="flex gap-2 pt-3 border-t border-border p-4">
+        <button
+          onClick={onOpenHistory}
+          className="relative flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+          title="Історія оновлень"
+        >
+          <History size={20} className="mx-auto text-text-muted" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-neon-blue text-bg-dark text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
         <button
           onClick={openSettingsModal}
           className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"

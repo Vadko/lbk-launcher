@@ -15,6 +15,7 @@ import { DownloadProgressCard } from './DownloadProgressCard';
 import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Button } from '../ui/Button';
+import { SubscribeButton } from '../ui/SubscribeButton';
 import type { InstallResult, DownloadProgress, LaunchGameResult } from '../../../shared/types';
 
 export const MainContent: React.FC = () => {
@@ -444,6 +445,13 @@ export const MainContent: React.FC = () => {
           >
             {getInstallButtonText()}
           </Button>
+          {isPlanned && (
+            <SubscribeButton
+              gameId={selectedGame.id}
+              gameName={selectedGame.name}
+              variant="secondary"
+            />
+          )}
           {installationInfo && !isInstalling && (
             <Button
               variant="secondary"
