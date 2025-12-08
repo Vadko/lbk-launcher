@@ -28,6 +28,7 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "@node-steam/vdf": "^2.2.0",
     "@supabase/supabase-js": "2.86.0",
     "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.5.0",

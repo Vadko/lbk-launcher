@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@node-steam/vdf':
+        specifier: ^2.2.0
+        version: 2.2.0
       '@supabase/supabase-js':
         specifier: 2.86.0
         version: 2.86.0
@@ -629,6 +632,10 @@ packages:
   '@malept/flatpak-bundler@0.4.0':
     resolution: {integrity: sha512-9QOtNffcOF/c1seMCDnjckb3R9WHcG34tky+FHpNKKCW0wc/scYLwMtO+ptyGUfMW0/b/n4qRiALlaFHc9Oj7Q==}
     engines: {node: '>= 10.0.0'}
+
+  '@node-steam/vdf@2.2.0':
+    resolution: {integrity: sha512-YCfIPsIpyrtOP5AdsarjPqjTElVFrXJlWedWNzjCaIeam06v9ebYgApRAcw9b93awNDboTEiHFMnCvlJJHqKcA==}
+    engines: {node: '>=8.0.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -3815,6 +3822,8 @@ snapshots:
       tmp-promise: 3.0.3
     transitivePeerDependencies:
       - supports-color
+
+  '@node-steam/vdf@2.2.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
