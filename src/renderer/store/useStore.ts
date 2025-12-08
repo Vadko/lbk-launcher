@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Game } from '../types/game';
 import type { DownloadProgress, InstallationInfo, DetectedGameInfo, Database } from '../../shared/types';
 
-type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-games';
+type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-translations' | 'installed-games';
 
 interface InstallationProgress {
   isInstalling: boolean;

@@ -168,7 +168,7 @@ export const Sidebar: React.FC = React.memo(() => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="absolute top-full left-4 right-4 mt-1 py-1 bg-[#0a141e] border border-border rounded-lg shadow-xl z-50 overflow-hidden"
+              className="absolute top-full left-4 right-4 -mt-2 py-1 bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-hidden filter-dropdown"
             >
               {allFilters.map((f, index) => (
                 <React.Fragment key={f.value}>

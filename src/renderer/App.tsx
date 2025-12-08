@@ -11,6 +11,7 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { useStore } from './store/useStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
+import { useGamepadNavigation } from './hooks/useGamepadNavigation';
 
 declare global {
   interface Window {
@@ -30,6 +31,9 @@ export const App: React.FC = () => {
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
+
+  // Підтримка навігації геймпадом (для Steam Deck та інших контролерів)
+  useGamepadNavigation(true);
 
   // Apply theme
   useEffect(() => {

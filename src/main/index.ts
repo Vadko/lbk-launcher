@@ -1,4 +1,13 @@
 import { app, session } from 'electron';
+
+// Steam Deck / Gaming Mode support
+// Disable GPU sandbox to prevent issues with Gamescope
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('disable-gpu-sandbox');
+  app.commandLine.appendSwitch('no-sandbox');
+  // Enable gamepad support
+  app.commandLine.appendSwitch('enable-gamepad-extensions');
+}
 import { createMainWindow, getMainWindow } from './window';
 import { setupWindowControls, initTray } from './ipc/window-controls';
 import { setupGamesHandlers } from './ipc/games';

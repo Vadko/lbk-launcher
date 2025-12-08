@@ -65,6 +65,8 @@ module.exports = {
     target: ['AppImage', 'rpm'],
     category: 'Utility',
     maintainer: 'LB UA <info@littlebit.org.ua>',
+    // Steam Deck compatibility
+    executableArgs: ['--no-sandbox', '--disable-gpu-sandbox'],
   },
 
   nsis: {

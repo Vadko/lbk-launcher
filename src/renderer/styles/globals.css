@@ -176,6 +176,27 @@ html.maximized #root {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
+/* Filter dropdown in light theme */
+:root[data-theme='light'] .filter-dropdown {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme='light'] .filter-dropdown button {
+  color: var(--text-muted);
+}
+
+:root[data-theme='light'] .filter-dropdown button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-main);
+}
+
+:root[data-theme='light'] .filter-dropdown button.bg-glass-hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-main);
+}
+
 .glass-button {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -356,4 +377,35 @@ html.maximized #root {
 .no-animations * {
   animation: none !important;
   transition: none !important;
+}
+
+/* Gamepad / Steam Deck focus styles */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+[data-focusable="true"]:focus-visible {
+  outline: 2px solid var(--neon-blue);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.2);
+}
+
+/* Special focus style for game list items */
+.game-list-item:focus-visible {
+  outline: 2px solid var(--neon-blue);
+  outline-offset: -2px;
+  background: rgba(0, 242, 255, 0.1) !important;
+}
+
+/* Light theme focus styles */
+:root[data-theme='light'] button:focus-visible,
+:root[data-theme='light'] a:focus-visible,
+:root[data-theme='light'] [tabindex]:focus-visible,
+:root[data-theme='light'] [data-focusable="true"]:focus-visible {
+  outline: 2px solid #0284c7;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.2);
+}
+
+:root[data-theme='light'] .game-list-item:focus-visible {
+  outline: 2px solid #0284c7;
+  background: rgba(2, 132, 199, 0.1) !important;
 }

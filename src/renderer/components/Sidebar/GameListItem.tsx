@@ -27,10 +27,20 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(({
 
   const thumbnailUrl = getGameImageUrl(game.thumbnail_path);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className={`flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
+      onKeyDown={handleKeyDown}
+      className={`game-list-item flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
         isSelected
           ? 'bg-[rgba(0,242,255,0.1)] border border-[rgba(0,242,255,0.5)] shadow-[0_0_20px_rgba(0,242,255,0.2)]'
           : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'

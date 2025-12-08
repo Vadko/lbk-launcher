@@ -4,8 +4,22 @@ import { join } from 'path';
 
 let tray: Tray | null = null;
 
+/**
+ * Show and focus the main window
+ */
+function showAndFocusWindow(): void {
+  const window = getMainWindow();
+  if (window) {
+    window.show();
+    if (window.isMinimized()) {
+      window.restore();
+    }
+    window.focus();
+  }
+}
+
 function createTray() {
-  if (tray) return tray; // Якщо вже існує, повернути існуючий
+  if (tray) return tray;
 
   const iconPath = app.isPackaged
     ? join(process.resourcesPath, 'icon.png')
@@ -14,45 +28,19 @@ function createTray() {
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon);
 
-  const updateContextMenu = () => {
-    const window = getMainWindow();
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: 'Відкрити',
-        click: function () {
-          if (window) {
-            window.show();
-            if (window.isMinimized()) {
-              window.restore();
-            }
-            window.focus();
-          }
-        },
-      },
-      {
-        label: 'Вийти',
-        click: function () {
-          app.quit();
-        },
-      },
-    ]);
-    tray?.setContextMenu(contextMenu);
-  };
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Відкрити', click: showAndFocusWindow },
+    { label: 'Вийти', click: () => app.quit() },
+  ]);
+  tray.setContextMenu(contextMenu);
 
-  const trayClickEvent = process.platform === 'linux' ? 'click' : 'double-click';
+  // Linux (including Steam Deck) uses single click, others use double-click
+  if (process.platform === 'linux') {
+    tray.on('click', showAndFocusWindow);
+  } else {
+    tray.on('double-click', showAndFocusWindow);
+  }
 
-  tray.on(trayClickEvent, () => {
-    const window = getMainWindow();
-    if (window) {
-      window.show();
-      if (window.isMinimized()) {
-        window.restore();
-      }
-      window.focus();
-    }
-  });
-
-  updateContextMenu();
   return tray;
 }
 
