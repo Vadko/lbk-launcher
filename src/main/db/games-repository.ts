@@ -107,7 +107,8 @@ export class GamesRepository {
    * Оскільки це local-first додаток, повертаємо всі ігри одразу
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
-    const { searchQuery = '', filter = 'all', showAdultGames = false } = params;
+    const { searchQuery = '', filter = 'all' } = params;
+    // Note: showAdultGames is now handled in UI (blur effect) instead of filtering here
 
     const whereConditions: string[] = ['approved = 1'];
     const queryParams: (string | number)[] = [];
@@ -122,9 +123,7 @@ export class GamesRepository {
       queryParams.push(`%${searchQuery}%`);
     }
 
-    if (!showAdultGames) {
-      whereConditions.push('is_adult = 0');
-    }
+    // Adult games are always returned, UI will show blur overlay when setting is off
 
     const whereClause = whereConditions.join(' AND ');
 

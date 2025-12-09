@@ -72,6 +72,9 @@ contextBridge.exposeInMainWorld('windowControls', {
   onMaximizedChange: (callback: (isMaximized: boolean) => void) => {
     ipcRenderer.on('window:maximized', (_, isMaximized) => callback(isMaximized));
   },
+  isVisible: () => ipcRenderer.invoke('window:is-visible'),
+  showSystemNotification: (options: { title: string; body: string }) =>
+    ipcRenderer.invoke('show-system-notification', options),
 });
 
 // Liquid Glass API

@@ -7,7 +7,7 @@ interface SubscribeButtonProps {
   gameId: string;
   gameName: string;
   gameStatus: string;
-  variant?: 'primary' | 'secondary' | 'glass';
+  variant?: 'primary' | 'secondary' | 'glass' | 'amber';
   className?: string;
 }
 
@@ -31,24 +31,24 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
 
   return (
     <Button
-      variant={subscribed ? 'primary' : variant}
+      variant={subscribed ? 'amber' : variant}
       onClick={handleToggle}
       className={`flex items-center gap-2 ${className}`}
       title={
         subscribed
-          ? `Ви підписані на оновлення статусу "${gameName}"`
-          : `Підписатися на оновлення статусу "${gameName}"`
+          ? `Ви отримуєте сповіщення про "${gameName}"`
+          : `Отримувати сповіщення про "${gameName}"`
       }
     >
       {subscribed ? (
         <>
           <BellOff className="w-4 h-4" />
-          <span>Відписатися</span>
+          <span>Вимкнути сповіщення</span>
         </>
       ) : (
         <>
           <Bell className="w-4 h-4" />
-          <span>Підписатися</span>
+          <span>Отримувати сповіщення</span>
         </>
       )}
     </Button>

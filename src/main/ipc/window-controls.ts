@@ -1,7 +1,18 @@
-import { ipcMain, Tray, Menu, app, nativeImage } from 'electron';
+import { ipcMain, Tray, Menu, app, nativeImage, Notification } from 'electron';
 import { getMainWindow } from '../window';
 import { join } from 'path';
 import { isLinux, isMacOS } from '../utils/platform';
+
+// Get the app icon path for notifications
+function getNotificationIcon(): string | undefined {
+  if (isMacOS()) {
+    // macOS uses the app icon automatically
+    return undefined;
+  }
+  return app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(app.getAppPath(), 'resources', 'icon.png');
+}
 
 let tray: Tray | null = null;
 
@@ -88,5 +99,35 @@ export function setupWindowControls(): void {
 
   ipcMain.on('window:close', () => {
     getMainWindow()?.close();
+  });
+
+  // Check if window is visible (not minimized to tray)
+  ipcMain.handle('window:is-visible', () => {
+    const window = getMainWindow();
+    return window?.isVisible() ?? false;
+  });
+
+  // Show system notification (used when app is in tray)
+  ipcMain.handle('show-system-notification', (_, options: { title: string; body: string }) => {
+    if (!Notification.isSupported()) {
+      console.log('[Notification] System notifications not supported');
+      return false;
+    }
+
+    const iconPath = getNotificationIcon();
+    const notification = new Notification({
+      title: options.title,
+      body: options.body,
+      icon: iconPath,
+      silent: false,
+    });
+
+    // Click on notification opens the app
+    notification.on('click', () => {
+      showAndFocusWindow();
+    });
+
+    notification.show();
+    return true;
   });
 }

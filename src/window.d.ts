@@ -11,5 +11,7 @@ interface Window {
     maximize: () => void;
     close: () => void;
     onMaximizedChange: (callback: (isMaximized: boolean) => void) => void;
+    isVisible: () => Promise<boolean>;
+    showSystemNotification: (options: { title: string; body: string }) => Promise<boolean>;
   };
 }

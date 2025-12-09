@@ -48,6 +48,22 @@ interface SubscriptionsStore {
 
 const TOAST_DURATION = 8000; // 8 seconds
 
+// Helper to show system notification when window is hidden (in tray)
+async function showSystemNotificationIfHidden(title: string, body: string): Promise<void> {
+  if (!window.windowControls?.isVisible || !window.windowControls?.showSystemNotification) {
+    return;
+  }
+
+  try {
+    const isVisible = await window.windowControls.isVisible();
+    if (!isVisible) {
+      await window.windowControls.showSystemNotification({ title, body });
+    }
+  } catch (error) {
+    console.error('[Notification] Failed to show system notification:', error);
+  }
+}
+
 export const useSubscriptionsStore = create<SubscriptionsStore>()(
   persist(
     (set, get) => ({
@@ -109,11 +125,12 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
         // Show toast if enabled
         if (showToast) {
+          const message = getNotificationMessage(notification);
           const toast: ToastNotification = {
             id,
             type: notification.type,
             gameName: notification.gameName,
-            message: getNotificationMessage(notification),
+            message,
             timestamp: Date.now(),
           };
 
@@ -125,6 +142,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           setTimeout(() => {
             get().dismissToast(id);
           }, TOAST_DURATION);
+
+          // Show system notification if window is hidden (in tray)
+          showSystemNotificationIfHidden(notification.gameName, message);
         }
       },
 
@@ -147,11 +167,12 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }));
 
         if (showToast) {
+          const message = `Доступна версія ${newVersion}`;
           const toast: ToastNotification = {
             id,
             type: 'version-update',
             gameName,
-            message: `Доступна версія ${newVersion}`,
+            message,
             timestamp: Date.now(),
           };
 
@@ -162,6 +183,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           setTimeout(() => {
             get().dismissToast(id);
           }, TOAST_DURATION);
+
+          // Show system notification if window is hidden (in tray)
+          showSystemNotificationIfHidden(gameName, message);
         }
       },
 
@@ -184,11 +208,12 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }));
 
         if (showToast) {
+          const message = `Доступна версія ${newVersion}`;
           const toast: ToastNotification = {
             id,
             type: 'app-update',
             gameName: 'LB Launcher',
-            message: `Доступна версія ${newVersion}`,
+            message,
             timestamp: Date.now(),
           };
 
@@ -199,6 +224,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           setTimeout(() => {
             get().dismissToast(id);
           }, TOAST_DURATION);
+
+          // Show system notification if window is hidden (in tray)
+          showSystemNotificationIfHidden('LB Launcher', message);
         }
       },
 

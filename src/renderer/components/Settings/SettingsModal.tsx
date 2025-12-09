@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Switch } from '../ui/Switch';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -54,6 +55,10 @@ export const SettingsModal: React.FC = () => {
     await window.liquidGlassAPI?.toggle(newValue);
   };
 
+  const handleOpenFeedback = useCallback(() => {
+    window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
+  }, []);
+
   return (
     <Modal
       isOpen={isSettingsModalOpen}
@@ -69,6 +74,20 @@ export const SettingsModal: React.FC = () => {
       }
     >
       <div className="space-y-4">
+        {/* Feedback link */}
+        <button
+          onClick={handleOpenFeedback}
+          className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+        >
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
+            <MessageCircle size={20} className="text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <h4 className="text-sm font-semibold text-white">Зворотній зв'язок</h4>
+            <p className="text-xs text-text-muted">Написати нам у Telegram</p>
+          </div>
+        </button>
+
         {/* Theme selector */}
         <div className="p-4 rounded-xl bg-glass border border-border">
           <h4 className="text-sm font-semibold text-white mb-3">Тема</h4>

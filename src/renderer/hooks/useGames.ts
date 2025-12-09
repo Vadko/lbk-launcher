@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Game, GetGamesParams } from '../types/game';
-import { useSettingsStore } from '../store/useSettingsStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { useStore } from '../store/useStore';
 
@@ -21,7 +20,7 @@ interface UseGamesResult {
  * Оскільки це local-first додаток, завантажуємо всі ігри одразу
  */
 export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResult {
-  const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+  // Note: showAdultGames is handled in UI (blur effect), not filtering here
   const checkSubscribedGamesStatus = useStore((state) => state.checkSubscribedGamesStatus);
 
   const [games, setGames] = useState<Game[]>([]);
@@ -89,10 +88,11 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
       }
 
       // Для інших фільтрів - завантажити всі ігри одразу
+      // Note: showAdultGames is no longer passed - adult games are always loaded
+      // and shown with blur effect in UI when setting is off
       const params: GetGamesParams = {
         searchQuery,
         filter,
-        showAdultGames,
       };
 
       const result = await window.electronAPI.fetchGames(params);
@@ -105,7 +105,7 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
     } finally {
       setIsLoading(false);
     }
-  }, [filter, searchQuery, showAdultGames]);
+  }, [filter, searchQuery]);
 
   /**
    * Перезавантажити
@@ -179,10 +179,8 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
           (filter === 'in-progress' && updatedGame.status === 'in-progress') ||
           (filter === 'planned' && updatedGame.status === 'planned');
 
-        // Перевірити adult фільтр
-        const matchesAdult = showAdultGames || !updatedGame.is_adult;
-
-        const shouldBeInList = matchesSearch && matchesFilter && matchesAdult && updatedGame.approved;
+        // Adult games are always shown in list (with blur overlay in UI)
+        const shouldBeInList = matchesSearch && matchesFilter && updatedGame.approved;
 
         if (index === -1) {
           // Гра не в списку
@@ -211,7 +209,7 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
     };
 
     window.electronAPI.onGameUpdated(handleGameUpdate);
-  }, [searchQuery, filter, showAdultGames]);
+  }, [searchQuery, filter]);
 
   // Слухати realtime видалення ігор
   useEffect(() => {

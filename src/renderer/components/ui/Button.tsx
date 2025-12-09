@@ -2,7 +2,7 @@ import React from 'react';
 
 interface ButtonProps {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'glass' | 'green';
+  variant?: 'primary' | 'secondary' | 'glass' | 'green' | 'amber' | 'pink';
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
@@ -26,6 +26,8 @@ export const Button: React.FC<ButtonProps> = ({
     secondary: 'glass-button text-white',
     glass: 'glass-button text-white',
     green: 'bg-gradient-to-r from-[#00ff88] to-[#00cc44] text-white shadow-[0_4px_15px_rgba(0,255,136,0.4)] hover:shadow-[0_8px_25px_rgba(0,255,136,0.6)] hover:brightness-110 hover:-translate-y-0.5',
+    amber: 'bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white shadow-[0_4px_15px_rgba(245,158,11,0.4)] hover:shadow-[0_8px_25px_rgba(245,158,11,0.6)] hover:brightness-110 hover:-translate-y-0.5',
+    pink: 'bg-gradient-to-r from-[#ec4899] to-[#db2777] text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] hover:shadow-[0_8px_25px_rgba(236,72,153,0.6)] hover:brightness-110 hover:-translate-y-0.5',
   };
 
   return (

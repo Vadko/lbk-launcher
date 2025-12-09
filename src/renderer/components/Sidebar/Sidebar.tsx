@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, MessageCircle, ListFilter, Check, Bell } from 'lucide-react';
+import { Settings, ListFilter, Check, Bell } from 'lucide-react';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
 import { GameListItem } from './GameListItem';
@@ -99,10 +99,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isFilterMenuOpen]);
-
-  const handleOpenTelegram = useCallback(() => {
-    window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
-  }, []);
 
   return (
     <GlassPanel className="w-[320px] h-full flex flex-col">
@@ -263,13 +259,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
           title="Налаштування"
         >
           <Settings size={20} className="mx-auto text-text-muted" />
-        </button>
-        <button
-          onClick={handleOpenTelegram}
-          className="flex-1 p-3 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-          title="Зворотній зв'язок"
-        >
-          <MessageCircle size={20} className="mx-auto text-text-muted" />
         </button>
       </div>
     </GlassPanel>

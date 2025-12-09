@@ -193,8 +193,9 @@ body.liquid-glass-enabled [class*="bg-bg-card"] {
   background: rgba(255, 255, 255, 0.03) !important;
 }
 
+/* Gradient buttons in liquid glass mode - keep text crisp */
 body.liquid-glass-enabled [class*="bg-gradient"] {
-  opacity: 0.7 !important;
+  /* Don't reduce opacity - it makes text hard to read */
 }
 
 body.liquid-glass-enabled .glass-panel {

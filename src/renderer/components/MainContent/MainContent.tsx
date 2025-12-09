@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Download, RefreshCw, Heart, Gamepad2, Trash2, Play } from 'lucide-react';
+import { Download, RefreshCw, Heart, Gamepad2, Trash2, Play, EyeOff, Settings } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -31,7 +31,7 @@ export const MainContent: React.FC = () => {
   } = useStore();
   const { showModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
-  const { createBackupBeforeInstall } = useSettingsStore();
+  const { createBackupBeforeInstall, showAdultGames, openSettingsModal } = useSettingsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showInstallOptions, setShowInstallOptions] = useState(false);
@@ -52,6 +52,7 @@ export const MainContent: React.FC = () => {
   const isUpdateAvailable =
     installationInfo && selectedGame && selectedGame.version && installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
+  const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
 
   // Check installation status when game changes
   useEffect(() => {
@@ -410,6 +411,32 @@ export const MainContent: React.FC = () => {
     );
   }
 
+  // Adult content overlay - show when adult game is selected but setting is off
+  if (isAdultBlurred) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+        <div className="glass-card max-w-md p-8">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
+            <EyeOff size={40} className="text-red-400" />
+          </div>
+          <h2 className="text-xl font-head font-semibold text-white mb-3">
+            Контент для дорослих
+          </h2>
+          <p className="text-text-muted mb-6">
+            Ця гра містить контент для дорослих (18+). Щоб переглянути цю гру, увімкніть відповідне налаштування.
+          </p>
+          <button
+            onClick={openSettingsModal}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+          >
+            <Settings size={20} />
+            Відкрити налаштування
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Install Options Dialog for games with voice archive */}
@@ -426,8 +453,10 @@ export const MainContent: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
         <GameHero game={selectedGame} />
 
+      {/* Actions block */}
       <div className="glass-card mb-6">
-        <div className="flex gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Primary actions */}
           {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
             <Button
               variant="green"
@@ -447,14 +476,6 @@ export const MainContent: React.FC = () => {
           >
             {getInstallButtonText()}
           </Button>
-          {isPlanned && (
-            <SubscribeButton
-              gameId={selectedGame.id}
-              gameName={selectedGame.name}
-              gameStatus={selectedGame.status}
-              variant="secondary"
-            />
-          )}
           {installationInfo && !isInstalling && (
             <Button
               variant="secondary"
@@ -462,11 +483,24 @@ export const MainContent: React.FC = () => {
               onClick={handleUninstall}
               disabled={isUninstalling}
             >
-              {isUninstalling ? 'Видалення...' : 'Видалити українізатор'}
+              {isUninstalling ? 'Видалення...' : 'Видалити'}
             </Button>
           )}
-          <Button variant="secondary" icon={<Heart size={20} />} onClick={handleSupport}>
-            Підтримати проєкт
+
+          {/* Separator */}
+          <div className="hidden sm:block w-px h-10 bg-white/20 mx-2" />
+
+          {/* Secondary actions */}
+          {isPlanned && (
+            <SubscribeButton
+              gameId={selectedGame.id}
+              gameName={selectedGame.name}
+              gameStatus={selectedGame.status}
+              variant="amber"
+            />
+          )}
+          <Button variant="pink" icon={<Heart size={20} />} onClick={handleSupport}>
+            Підтримати
           </Button>
         </div>
       </div>
