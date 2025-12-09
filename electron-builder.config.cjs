@@ -73,7 +73,7 @@ module.exports = {
     oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: true,
-    allowElevation: true,
+    allowElevation: false,
     deleteAppDataOnUninstall: false,
     differentialPackage: true,
     artifactName: "${productName}-${os}-Setup.${ext}",
