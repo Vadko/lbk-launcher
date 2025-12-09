@@ -1,6 +1,15 @@
 ; Custom NSIS installer script for Ukrainian localization (Assisted installer)
 ; Forces Ukrainian as the primary language
 
+; Override Multi-User page strings BEFORE pages are inserted
+; These LangStrings override the electron-builder multiUser template
+LangString multiUserInstallMode_AllUsers ${LANG_UKRAINIAN} "Встановити для всіх користувачів"
+LangString multiUserInstallMode_CurrentUser ${LANG_UKRAINIAN} "Встановити тільки для мене"
+LangString multiUserInstallMode_AllUsersDescription ${LANG_UKRAINIAN} "Встановити для всіх користувачів цього комп'ютера (потрібні права адміністратора)"
+LangString multiUserInstallMode_CurrentUserDescription ${LANG_UKRAINIAN} "Встановити тільки для поточного користувача"
+LangString multiUserInstallModePageTitle ${LANG_UKRAINIAN} "Виберіть режим встановлення"
+LangString multiUserInstallModePageSubTitle ${LANG_UKRAINIAN} "Виберіть, для кого встановити $(^Name)."
+
 ; This macro runs before anything else
 !macro preInit
   ; Set Ukrainian language early
@@ -21,17 +30,9 @@
   StrCpy $LANGUAGE 1058
 !macroend
 
-; Override Multi-User page strings (the first "Install for current user / all users" page)
+; Custom install mode
 !macro customInstallMode
-  ; Ukrainian translations for Multi-User plugin
-  !define MULTIUSER_INSTALLMODE_DISPLAYNAME "$(^Name)"
-
-  ; Override the install mode page strings
-  !define MUI_PAGE_HEADER_TEXT "Виберіть режим встановлення"
-  !define MUI_PAGE_HEADER_SUBTEXT "Виберіть, чи встановлювати $(^Name) для поточного користувача або для всіх користувачів."
-  !define MUI_INNERTEXT_INSTALLMODE_TOP "Виберіть, як встановити $(^Name):"
-  !define MUI_INNERTEXT_INSTALLMODE_ALLUSERS "Встановити для всіх користувачів"
-  !define MUI_INNERTEXT_INSTALLMODE_CURRENTUSER "Встановити тільки для мене"
+  ; Nothing needed here - LangStrings above handle translation
 !macroend
 
 ; Custom welcome page finish text (optional)
