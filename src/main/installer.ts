@@ -53,14 +53,16 @@ export async function installTranslation(
   customGamePath?: string,
   createBackup: boolean = true,
   installVoice: boolean = false,
+  installAchievements: boolean = false,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
   try {
     console.log(`[Installer] ========== INSTALLATION START ==========`);
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
-    console.log(`[Installer] Parameters: createBackup=${createBackup}, installVoice=${installVoice}`);
+    console.log(`[Installer] Parameters: createBackup=${createBackup}, installVoice=${installVoice}, installAchievements=${installAchievements}`);
     console.log(`[Installer] Game voice_archive_path: ${game.voice_archive_path}`);
+    console.log(`[Installer] Game achievements_archive_path: ${game.achievements_archive_path}`);
     console.log(`[Installer] Game archive_path: ${game.archive_path}`);
     console.log(`[Installer] Install paths config:`, JSON.stringify(game.install_paths, null, 2));
     console.log(`[Installer] Requested platform: ${platform}`);
@@ -84,13 +86,16 @@ export async function installTranslation(
 
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
 
-    // 3. Check available disk space (for text + voice if installing voice)
+    // 3. Check available disk space (for text + voice + achievements if installing)
     let requiredSpace = 0;
     if (game.archive_size) {
       requiredSpace += parseSizeToBytes(game.archive_size);
     }
     if (installVoice && game.voice_archive_size) {
       requiredSpace += parseSizeToBytes(game.voice_archive_size);
+    }
+    if (installAchievements && game.achievements_archive_size) {
+      requiredSpace += parseSizeToBytes(game.achievements_archive_size);
     }
 
     if (requiredSpace > 0) {
@@ -243,6 +248,80 @@ export async function installTranslation(
       await cleanup(voiceArchivePath, voiceExtractDir);
     }
 
+    // 4.6 Download and extract achievements archive if requested (Steam only)
+    let achievementsFiles: string[] = [];
+    let achievementsInstallPath: string | null = null;
+    console.log(`[Installer] Achievements install requested: ${installAchievements}, achievements_archive_path: ${game.achievements_archive_path}`);
+    if (installAchievements && game.achievements_archive_path && platform === 'steam') {
+      const achievementsArchivePath = path.join(downloadDir, `${game.id}_achievements.zip`);
+      const achievementsDownloadUrl = getArchiveDownloadUrl(game.achievements_archive_path);
+
+      console.log(`[Installer] Downloading achievements archive from Supabase: ${achievementsDownloadUrl}`);
+      onStatus?.({ message: 'Завантаження перекладу ачівок...' });
+
+      // Create new AbortController for achievements download
+      currentDownloadAbortController = new AbortController();
+
+      try {
+        await downloadFile(
+          achievementsDownloadUrl,
+          achievementsArchivePath,
+          (downloadProgress) => {
+            onDownloadProgress?.(downloadProgress);
+          },
+          (status) => {
+            onStatus?.(status);
+          },
+          3,
+          currentDownloadAbortController.signal
+        );
+      } finally {
+        currentDownloadAbortController = null;
+      }
+
+      // Verify achievements file hash if available
+      if (game.achievements_archive_hash) {
+        onStatus?.({ message: 'Перевірка цілісності ачівок...' });
+        console.log(`[Installer] Verifying achievements file hash...`);
+        const isValid = await verifyFileHash(achievementsArchivePath, game.achievements_archive_hash);
+
+        if (!isValid) {
+          if (fs.existsSync(achievementsArchivePath)) {
+            await unlink(achievementsArchivePath);
+          }
+          throw new Error(
+            'Файл перекладу ачівок пошкоджено або змінено.\n\n' +
+            'Спробуйте завантажити ще раз або зверніться до підтримки.'
+          );
+        }
+        console.log(`[Installer] ✓ Achievements file hash verified successfully`);
+      }
+
+      // Extract achievements archive to temp directory
+      onStatus?.({ message: 'Розпакування ачівок...' });
+      const achievementsExtractDir = path.join(downloadDir, `${game.id}_achievements_extract`);
+      await extractArchive(achievementsArchivePath, achievementsExtractDir);
+
+      // Get list of achievements files
+      achievementsFiles = await getAllFiles(achievementsExtractDir);
+      console.log(`[Installer] Achievements archive has ${achievementsFiles.length} files`);
+
+      // Determine Steam path for achievements (Steam/appcache/stats)
+      achievementsInstallPath = await getSteamAchievementsPath(gamePath.path);
+
+      if (achievementsInstallPath) {
+        console.log(`[Installer] Installing achievements to: ${achievementsInstallPath}`);
+        onStatus?.({ message: 'Копіювання перекладу ачівок...' });
+        await mkdir(achievementsInstallPath, { recursive: true });
+        await copyDirectory(achievementsExtractDir, achievementsInstallPath);
+      } else {
+        console.warn('[Installer] Could not determine Steam achievements path, skipping achievements installation');
+      }
+
+      // Cleanup achievements temp files
+      await cleanup(achievementsArchivePath, achievementsExtractDir);
+    }
+
     // 5. Check for installer file and run if present
     const installerFileName = getInstallerFileName(game);
     if (installerFileName) {
@@ -296,6 +375,12 @@ export async function installTranslation(
           voice: {
             installed: true,
             files: voiceFiles,
+          },
+        } : {}),
+        ...(installAchievements && achievementsFiles.length > 0 && achievementsInstallPath ? {
+          achievements: {
+            installed: true,
+            files: achievementsFiles.map(f => path.join(achievementsInstallPath!, f)),
           },
         } : {}),
       },
@@ -957,6 +1042,20 @@ export async function uninstallTranslation(game: Game): Promise<void> {
         allFilesToDelete.push(...installInfo.components.voice.files);
         console.log(`[Installer] Voice component: ${installInfo.components.voice.files.length} files`);
       }
+      // Delete achievements files (they are stored with full paths)
+      if (installInfo.components.achievements?.installed) {
+        console.log(`[Installer] Achievements component: ${installInfo.components.achievements.files.length} files`);
+        for (const achievementFile of installInfo.components.achievements.files) {
+          try {
+            if (fs.existsSync(achievementFile)) {
+              await unlink(achievementFile);
+              console.log(`[Installer] Deleted achievement file: ${achievementFile}`);
+            }
+          } catch (error) {
+            console.warn(`[Installer] Failed to delete achievement file ${achievementFile}:`, error);
+          }
+        }
+      }
     } else if (installInfo.installedFiles && installInfo.installedFiles.length > 0) {
       // Legacy format: use installedFiles
       allFilesToDelete = installInfo.installedFiles;
@@ -1244,6 +1343,38 @@ async function verifyFileHash(filePath: string, expectedHash: string): Promise<b
   } catch (error) {
     console.error('[Hash] Error verifying file hash:', error);
     return false;
+  }
+}
+
+/**
+ * Get Steam achievements path (Steam/appcache/stats)
+ * Try to determine from game path (which should be in Steam/steamapps/common/...)
+ */
+async function getSteamAchievementsPath(gamePath: string): Promise<string | null> {
+  try {
+    // Game path is typically: Steam/steamapps/common/GameName
+    // We need: Steam/appcache/stats
+    const normalizedPath = gamePath.replace(/\\/g, '/');
+    const steamappsIndex = normalizedPath.toLowerCase().indexOf('/steamapps/common/');
+
+    if (steamappsIndex === -1) {
+      console.warn('[Installer] Could not find steamapps/common in game path');
+      return null;
+    }
+
+    const steamPath = normalizedPath.substring(0, steamappsIndex);
+    const achievementsPath = path.join(steamPath, 'appcache', 'stats');
+
+    // Verify Steam path exists
+    if (fs.existsSync(steamPath)) {
+      console.log(`[Installer] Found Steam path: ${steamPath}`);
+      return achievementsPath;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Installer] Error getting Steam achievements path:', error);
+    return null;
   }
 }
 

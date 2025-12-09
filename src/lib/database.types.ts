@@ -63,6 +63,9 @@ export type Database = {
       }
       game_versions: {
         Row: {
+          achievements_archive_hash: string | null
+          achievements_archive_path: string | null
+          achievements_archive_size: string | null
           approved_at: string | null
           approved_by: string | null
           archive_hash: string | null
@@ -109,6 +112,9 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          achievements_archive_hash?: string | null
+          achievements_archive_path?: string | null
+          achievements_archive_size?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archive_hash?: string | null
@@ -155,6 +161,9 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          achievements_archive_hash?: string | null
+          achievements_archive_path?: string | null
+          achievements_archive_size?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archive_hash?: string | null
@@ -226,6 +235,9 @@ export type Database = {
       }
       games: {
         Row: {
+          achievements_archive_hash: string | null
+          achievements_archive_path: string | null
+          achievements_archive_size: string | null
           approved: boolean
           approved_at: string | null
           approved_by: string | null
@@ -274,6 +286,9 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          achievements_archive_hash?: string | null
+          achievements_archive_path?: string | null
+          achievements_archive_size?: string | null
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -322,6 +337,9 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          achievements_archive_hash?: string | null
+          achievements_archive_path?: string | null
+          achievements_archive_size?: string | null
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null

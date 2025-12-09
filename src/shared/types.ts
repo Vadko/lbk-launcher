@@ -19,6 +19,7 @@ export interface InstallationInfo {
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;
+    achievements?: InstallationComponent;
   };
 }
 
@@ -70,7 +71,7 @@ export interface ElectronAPI {
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) => Promise<GetGamesResult>;
-  installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean) => Promise<InstallResult>;
+  installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean, installAchievements?: boolean) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   abortDownload: () => Promise<{ success: boolean }>;
   checkInstallation: (game: Game) => Promise<InstallationInfo | null>;

@@ -7,7 +7,7 @@ import { machineIdSync } from 'node-machine-id';
 export function setupInstallerHandlers(): void {
   ipcMain.handle(
     'install-translation',
-    async (_, game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean) => {
+    async (_, game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean, installAchievements?: boolean) => {
       try {
         await installTranslation(
           game,
@@ -15,6 +15,7 @@ export function setupInstallerHandlers(): void {
           customGamePath,
           createBackup ?? true,
           installVoice ?? false,
+          installAchievements ?? false,
           (downloadProgress) => {
             getMainWindow()?.webContents.send('download-progress', downloadProgress);
           },

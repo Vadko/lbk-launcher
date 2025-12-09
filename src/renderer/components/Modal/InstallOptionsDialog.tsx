@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
-import { Volume2, Archive, Shield } from 'lucide-react';
+import { Volume2, Archive, Shield, Trophy } from 'lucide-react';
 import type { Game } from '../../../shared/types';
 
 interface InstallOptionsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (options: { createBackup: boolean; installVoice: boolean }) => void;
+  onConfirm: (options: { createBackup: boolean; installVoice: boolean; installAchievements: boolean }) => void;
   game: Game;
   defaultCreateBackup: boolean;
 }
@@ -20,9 +20,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 }) => {
   const [createBackup, setCreateBackup] = useState(defaultCreateBackup);
   const [installVoice, setInstallVoice] = useState(true);
+  const [installAchievements, setInstallAchievements] = useState(true);
+
+  // Перевіряємо чи гра для Steam
+  const isSteamGame = game.platforms?.includes('steam');
+  const hasAchievements = isSteamGame && game.achievements_archive_path;
 
   const handleConfirm = () => {
-    onConfirm({ createBackup, installVoice });
+    onConfirm({ createBackup, installVoice, installAchievements: hasAchievements ? installAchievements : false });
     onClose();
   };
 
@@ -107,13 +112,59 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
         </label>
 
+        {/* Achievements archive option - Steam only */}
+        {hasAchievements && (
+          <label className="flex items-start gap-4 cursor-pointer group">
+            <div className="relative flex items-center justify-center mt-0.5">
+              <input
+                type="checkbox"
+                checked={installAchievements}
+                onChange={(e) => setInstallAchievements(e.target.checked)}
+                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer"
+              />
+              <svg
+                className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+                  installAchievements ? 'opacity-100' : 'opacity-0'
+                }`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Trophy size={18} className="text-green-400" />
+                <span className="font-medium text-white group-hover:text-green-400 transition-colors">
+                  Встановити ачівки
+                </span>
+              </div>
+              <div className="text-sm text-text-muted mt-1">
+                <p>Додати переклад досягнень Steam.</p>
+                {game.achievements_archive_size && (
+                  <p className="flex items-center gap-1 mt-1 text-green-400">
+                    <Archive size={14} />
+                    <span>Розмір: {game.achievements_archive_size}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </label>
+        )}
+
         {/* Total size info */}
         <div className="bg-glass rounded-xl p-4 border border-border">
           <div className="flex items-center gap-2 text-sm">
             <Archive size={16} className="text-text-muted" />
             <span className="text-text-muted">Буде завантажено:</span>
             <span className="text-white font-medium">
-              {calculateTotalSize(game.archive_size, installVoice ? game.voice_archive_size : null)}
+              {calculateTotalSize(
+                game.archive_size,
+                installVoice ? game.voice_archive_size : null,
+                hasAchievements && installAchievements ? game.achievements_archive_size : null
+              )}
             </span>
           </div>
         </div>
@@ -141,10 +192,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 /**
  * Calculate total size from size strings like "150.00 MB" and "50.00 MB"
  */
-function calculateTotalSize(textSize: string | null, voiceSize: string | null): string {
-  if (!textSize && !voiceSize) return 'N/A';
-  if (!textSize) return voiceSize || 'N/A';
-  if (!voiceSize) return textSize;
+function calculateTotalSize(
+  textSize: string | null,
+  voiceSize: string | null,
+  achievementsSize: string | null
+): string {
+  const sizes = [textSize, voiceSize, achievementsSize].filter(Boolean) as string[];
+  if (sizes.length === 0) return 'N/A';
+  if (sizes.length === 1) return sizes[0];
 
   const parseSize = (sizeStr: string): number => {
     const match = sizeStr.trim().match(/([\d.]+)\s*(B|KB|MB|GB)/i);
@@ -170,9 +225,6 @@ function calculateTotalSize(textSize: string | null, voiceSize: string | null): 
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
-  const textBytes = parseSize(textSize);
-  const voiceBytes = parseSize(voiceSize);
-  const totalBytes = textBytes + voiceBytes;
-
+  const totalBytes = sizes.reduce((sum, size) => sum + parseSize(size), 0);
   return formatSize(totalBytes);
 }

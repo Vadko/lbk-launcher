@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { runMigrations } from './migrations';
 
 /**
  * Database Manager - клас для управління локальною базою даних
@@ -40,28 +41,8 @@ export class DatabaseManager {
         console.log('[Database] Tables created successfully');
       } else {
         // Run migrations for existing databases
-        this.runMigrations();
+        runMigrations(this.db);
       }
-    }
-  }
-
-  /**
-   * Міграції для існуючих баз даних
-   */
-  private runMigrations(): void {
-    // Migration: Add voice_archive columns if they don't exist
-    const hasVoiceArchivePath = this.db.prepare(
-      "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='voice_archive_path'"
-    ).get() as { count: number };
-
-    if (hasVoiceArchivePath.count === 0) {
-      console.log('[Database] Running migration: adding voice_archive columns');
-      this.db.exec(`
-        ALTER TABLE games ADD COLUMN voice_archive_hash TEXT;
-        ALTER TABLE games ADD COLUMN voice_archive_path TEXT;
-        ALTER TABLE games ADD COLUMN voice_archive_size TEXT;
-      `);
-      console.log('[Database] Migration completed: voice_archive columns added');
     }
   }
 
@@ -130,6 +111,9 @@ export class DatabaseManager {
         voice_archive_path TEXT,
         voice_archive_size TEXT,
         voice_progress INTEGER,
+        achievements_archive_hash TEXT,
+        achievements_archive_path TEXT,
+        achievements_archive_size TEXT,
         website TEXT,
         youtube TEXT
       );

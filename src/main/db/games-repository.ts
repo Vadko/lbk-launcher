@@ -94,6 +94,9 @@ export class GamesRepository {
       voice_archive_path: game.voice_archive_path ?? null,
       voice_archive_size: game.voice_archive_size ?? null,
       voice_progress: game.voice_progress ?? null,
+      achievements_archive_hash: game.achievements_archive_hash ?? null,
+      achievements_archive_path: game.achievements_archive_path ?? null,
+      achievements_archive_size: game.achievements_archive_size ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
     };
@@ -228,7 +231,8 @@ export class GamesRepository {
         name, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
         thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
         voice_archive_hash, voice_archive_path, voice_archive_size,
-        voice_progress, website, youtube
+        voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
+        website, youtube
       ) VALUES (
         @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
         @banner_path, @created_at, @created_by, @description, @discord, @downloads, @editing_progress,
@@ -237,7 +241,8 @@ export class GamesRepository {
         @name, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
         @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
         @voice_archive_hash, @voice_archive_path, @voice_archive_size,
-        @voice_progress, @website, @youtube
+        @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
+        @website, @youtube
       )
     `);
 
@@ -258,7 +263,8 @@ export class GamesRepository {
           name, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
           thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
           voice_archive_hash, voice_archive_path, voice_archive_size,
-          voice_progress, website, youtube
+          voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
+          website, youtube
         ) VALUES (
           @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
           @banner_path, @created_at, @created_by, @description, @discord, @downloads, @editing_progress,
@@ -267,7 +273,8 @@ export class GamesRepository {
           @name, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
           @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
           @voice_archive_hash, @voice_archive_path, @voice_archive_size,
-          @voice_progress, @website, @youtube
+          @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
+          @website, @youtube
         )
       `);
 

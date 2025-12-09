@@ -36,7 +36,7 @@ export const MainContent: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showInstallOptions, setShowInstallOptions] = useState(false);
   const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>(undefined);
-  const [pendingInstallOptions, setPendingInstallOptions] = useState<{ createBackup: boolean; installVoice: boolean } | undefined>(undefined);
+  const [pendingInstallOptions, setPendingInstallOptions] = useState<{ createBackup: boolean; installVoice: boolean; installAchievements: boolean } | undefined>(undefined);
 
   const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
@@ -97,7 +97,7 @@ export const MainContent: React.FC = () => {
 
   const performInstallation = useCallback(async (
     customGamePath?: string,
-    options?: { createBackup: boolean; installVoice: boolean }
+    options?: { createBackup: boolean; installVoice: boolean; installAchievements: boolean }
   ) => {
     if (!selectedGame) return;
 
@@ -106,6 +106,7 @@ export const MainContent: React.FC = () => {
     const effectiveOptions = options ?? pendingInstallOptions;
     const createBackup = effectiveOptions?.createBackup ?? createBackupBeforeInstall;
     const installVoice = effectiveOptions?.installVoice ?? false;
+    const installAchievements = effectiveOptions?.installAchievements ?? false;
 
     // Save options BEFORE API call for potential retry with manual folder selection
     // This ensures options are preserved even if game detection fails
@@ -114,7 +115,7 @@ export const MainContent: React.FC = () => {
     }
 
     // Store current options in ref for closure safety
-    const currentOptions = { createBackup, installVoice };
+    const currentOptions = { createBackup, installVoice, installAchievements };
 
     // For emulator, always require manual folder selection
     if (platform === 'emulator' && !customGamePath) {
@@ -161,7 +162,8 @@ export const MainContent: React.FC = () => {
         platform,
         customGamePath,
         createBackup,
-        installVoice
+        installVoice,
+        installAchievements
       );
 
       if (!result.success && result.error) {
@@ -243,8 +245,8 @@ export const MainContent: React.FC = () => {
       selectedGame.installation_file_windows_path ||
       selectedGame.installation_file_linux_path;
 
-    // Show install options dialog if game has voice archive
-    if (selectedGame.voice_archive_path) {
+    // Show install options dialog if game has voice archive or achievements archive
+    if (selectedGame.voice_archive_path || selectedGame.achievements_archive_path) {
       setPendingInstallPath(customGamePath);
       setShowInstallOptions(true);
       return;
@@ -266,7 +268,7 @@ export const MainContent: React.FC = () => {
     await performInstallation(customGamePath);
   }, [selectedGame, isInstalling, isCheckingInstallation, isOnline, performInstallation, showModal, showConfirm]);
 
-  const handleInstallOptionsConfirm = useCallback(async (options: { createBackup: boolean; installVoice: boolean }) => {
+  const handleInstallOptionsConfirm = useCallback(async (options: { createBackup: boolean; installVoice: boolean; installAchievements: boolean }) => {
     if (!selectedGame) return;
 
     const hasInstaller =
