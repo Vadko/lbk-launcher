@@ -9,6 +9,13 @@ let watcher: fs.FSWatcher | null = null;
  * Start watching installation-cache directory for changes
  */
 export function startInstallationWatcher(mainWindow: BrowserWindow | null): void {
+  // Close any existing watcher first to prevent EMFILE errors
+  if (watcher) {
+    console.log('[InstallationWatcher] Closing existing watcher before starting new one');
+    watcher.close();
+    watcher = null;
+  }
+
   const userDataPath = app.getPath('userData');
   const installInfoDir = path.join(userDataPath, 'installation-cache');
 

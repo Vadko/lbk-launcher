@@ -9,6 +9,13 @@ let watcher: fs.FSWatcher | null = null;
  * Start watching Steam libraryfolders.vdf for changes
  */
 export function startSteamWatcher(mainWindow: BrowserWindow | null): void {
+  // Close any existing watcher first to prevent EMFILE errors
+  if (watcher) {
+    console.log('[SteamWatcher] Closing existing watcher before starting new one');
+    watcher.close();
+    watcher = null;
+  }
+
   const steamPath = getSteamPath();
   if (!steamPath) {
     console.log('[SteamWatcher] Steam not found, watcher not started');
