@@ -8,10 +8,63 @@
 
 ## ⬇️ Завантаження
 
-[![Windows](https://img.shields.io/badge/Windows-завантажити-00f2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest)
-[![macOS](https://img.shields.io/badge/macOS-завантажити-a855f7?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest)
-[![Linux](https://img.shields.io/badge/Linux-завантажити-10b981?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest)
+### Windows
+[![Windows Setup](https://img.shields.io/badge/Setup-завантажити-00f2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-win-Setup.exe)
+[![Windows Portable](https://img.shields.io/badge/Portable-завантажити-00a2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-win-Portable.exe)
+
+### macOS
+[![macOS Apple Silicon](https://img.shields.io/badge/Apple_Silicon-завантажити-a855f7?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-1.19.4-arm64.dmg)
+[![macOS Intel](https://img.shields.io/badge/Intel-завантажити-9333ea?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-1.19.4-x64.dmg)
+
+### Linux
+[![Linux AppImage](https://img.shields.io/badge/AppImage-завантажити-10b981?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-linux.AppImage)
+[![Linux RPM](https://img.shields.io/badge/RPM-завантажити-059669?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-linux.rpm)
+
 [![Downloads](https://img.shields.io/github/downloads/Vadko/littlebit-launcher/total?color=bd00ff&logo=github&logoColor=white&label=Downloads)](https://github.com/Vadko/littlebit-launcher/releases/)
+
+---
+
+## 📸 Скріншоти
+
+<p align="center">
+  <img src="docs/screenshots/2.jpg" alt="LB Launcher" width="800" />
+</p>
+
+<details>
+<summary>Переглянути більше скріншотів</summary>
+
+<br>
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/1.jpg" alt="Світла тема" />
+      <p align="center"><em>Світла тема — сторінка гри</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/2.jpg" alt="Темна тема" />
+      <p align="center"><em>Темна тема — сторінка гри</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/3.jpg" alt="Налаштування" />
+      <p align="center"><em>Налаштування додатку</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/4.jpg" alt="Сповіщення" />
+      <p align="center"><em>Центр сповіщень</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <img src="docs/screenshots/5.jpg" alt="Встановлена локалізація" />
+      <p align="center"><em>Встановлена локалізація</em></p>
+    </td>
+  </tr>
+</table>
+
+</details>
 
 ---
 
