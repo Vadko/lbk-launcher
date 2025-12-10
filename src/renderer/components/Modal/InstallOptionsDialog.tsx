@@ -22,12 +22,17 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const [installVoice, setInstallVoice] = useState(true);
   const [installAchievements, setInstallAchievements] = useState(true);
 
-  // Перевіряємо чи гра для Steam
+  // Перевіряємо чи гра для Steam та наявність архівів
   const isSteamGame = game.platforms?.includes('steam');
-  const hasAchievements = isSteamGame && game.achievements_archive_path;
+  const hasAchievements = !!(isSteamGame && game.achievements_archive_path);
+  const hasVoice = !!game.voice_archive_path;
 
   const handleConfirm = () => {
-    onConfirm({ createBackup, installVoice, installAchievements: hasAchievements ? installAchievements : false });
+    onConfirm({
+      createBackup,
+      installVoice: hasVoice ? installVoice : false,
+      installAchievements: hasAchievements ? installAchievements : false
+    });
     onClose();
   };
 
@@ -73,17 +78,18 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         </label>
 
         {/* Voice archive option */}
-        <label className="flex items-start gap-4 cursor-pointer group">
+        <label className={`flex items-start gap-4 group ${hasVoice ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
           <div className="relative flex items-center justify-center mt-0.5">
             <input
               type="checkbox"
-              checked={installVoice}
+              checked={hasVoice && installVoice}
               onChange={(e) => setInstallVoice(e.target.checked)}
-              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer"
+              disabled={!hasVoice}
+              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors ${hasVoice ? 'cursor-pointer' : 'cursor-not-allowed'}`}
             />
             <svg
               className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
-                installVoice ? 'opacity-100' : 'opacity-0'
+                hasVoice && installVoice ? 'opacity-100' : 'opacity-0'
               }`}
               viewBox="0 0 24 24"
               fill="none"
@@ -95,10 +101,11 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Volume2 size={18} className="text-purple-400" />
-              <span className="font-medium text-white group-hover:text-purple-400 transition-colors">
+              <Volume2 size={18} className={hasVoice ? 'text-purple-400' : 'text-text-muted'} />
+              <span className={`font-medium transition-colors ${hasVoice ? 'text-white group-hover:text-purple-400' : 'text-text-muted'}`}>
                 Встановити озвучку
               </span>
+              {!hasVoice && <span className="text-xs text-text-muted">(недоступно)</span>}
             </div>
             <div className="text-sm text-text-muted mt-1">
               <p>Додати українську озвучку до українізатора.</p>
@@ -113,18 +120,19 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         </label>
 
         {/* Achievements archive option - Steam only */}
-        {hasAchievements && (
-          <label className="flex items-start gap-4 cursor-pointer group">
+        {isSteamGame && (
+          <label className={`flex items-start gap-4 group ${hasAchievements ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
             <div className="relative flex items-center justify-center mt-0.5">
               <input
                 type="checkbox"
-                checked={installAchievements}
+                checked={hasAchievements && installAchievements}
                 onChange={(e) => setInstallAchievements(e.target.checked)}
-                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer"
+                disabled={!hasAchievements}
+                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors ${hasAchievements ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               />
               <svg
                 className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
-                  installAchievements ? 'opacity-100' : 'opacity-0'
+                  hasAchievements && installAchievements ? 'opacity-100' : 'opacity-0'
                 }`}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -136,10 +144,11 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Trophy size={18} className="text-green-400" />
-                <span className="font-medium text-white group-hover:text-green-400 transition-colors">
-                  Встановити ачівки
+                <Trophy size={18} className={hasAchievements ? 'text-green-400' : 'text-text-muted'} />
+                <span className={`font-medium transition-colors ${hasAchievements ? 'text-white group-hover:text-green-400' : 'text-text-muted'}`}>
+                  Встановити досягнення
                 </span>
+                {!hasAchievements && <span className="text-xs text-text-muted">(недоступно)</span>}
               </div>
               <div className="text-sm text-text-muted mt-1">
                 <p>Додати переклад досягнень Steam.</p>
@@ -162,7 +171,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <span className="text-white font-medium">
               {calculateTotalSize(
                 game.archive_size,
-                installVoice ? game.voice_archive_size : null,
+                hasVoice && installVoice ? game.voice_archive_size : null,
                 hasAchievements && installAchievements ? game.achievements_archive_size : null
               )}
             </span>

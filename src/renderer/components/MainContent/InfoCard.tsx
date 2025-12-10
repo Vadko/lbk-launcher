@@ -65,7 +65,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
         {game.achievements_archive_size && (
           <InfoItem
             icon={<Trophy size={18} />}
-            label="Ачівки"
+            label="Досягнення"
             value={game.achievements_archive_size}
           />
         )}
