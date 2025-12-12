@@ -111,8 +111,10 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
           else {
             try {
               fs.accessSync(filePath, fs.constants.X_OK);
-              // Additional check: skip common non-executable files
-              if (!file.includes('.') || file.endsWith('.sh') || file.endsWith('.command')) {
+              // Skip common non-executable file types
+              const skipExtensions = ['.txt', '.md', '.json', '.xml', '.cfg', '.ini', '.log', '.png', '.jpg', '.ico', '.dll', '.so', '.dylib'];
+              const ext = path.extname(file).toLowerCase();
+              if (!skipExtensions.includes(ext)) {
                 executables.push(filePath);
               }
             } catch {
@@ -165,12 +167,26 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
         }).unref();
       }
     } else {
-      // On Linux
-      spawn(selectedExecutable, [], {
-        detached: true,
-        stdio: 'ignore',
-        cwd: path.dirname(selectedExecutable),
-      }).unref();
+      // On Linux - try multiple methods
+      const cwd = path.dirname(selectedExecutable);
+
+      // First, try to run with shell (handles scripts and binaries)
+      try {
+        spawn(selectedExecutable, [], {
+          detached: true,
+          stdio: 'ignore',
+          cwd,
+          shell: true,
+        }).unref();
+      } catch (shellError) {
+        console.warn('[GameLauncher] Shell spawn failed, trying direct spawn:', shellError);
+        // Fallback to direct spawn
+        spawn(selectedExecutable, [], {
+          detached: true,
+          stdio: 'ignore',
+          cwd,
+        }).unref();
+      }
     }
 
     console.log('[GameLauncher] Game launched successfully');
