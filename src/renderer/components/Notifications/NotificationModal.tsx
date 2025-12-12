@@ -246,8 +246,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                         key={notification.id}
                         className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
                           notification.read
-                            ? 'bg-[rgba(0,0,0,0.4)] border-border opacity-70 hover:opacity-100'
-                            : 'bg-[rgba(0,0,0,0.5)] border-[rgba(0,242,255,0.3)] hover:bg-[rgba(0,0,0,0.6)]'
+                            ? 'notification-item bg-glass border-border opacity-70 hover:opacity-100'
+                            : 'notification-item-unread bg-glass-hover border-neon-blue/30 hover:bg-glass'
                         }`}
                         onClick={() => handleNotificationClick(notification)}
                       >
