@@ -576,6 +576,23 @@ export function useGamepadNavigation(enabled: boolean = true): void {
       }
     };
 
+    // Hide indicator when user starts using mouse
+    const handleMouseMove = () => {
+      if (gamepadConnectedRef.current) {
+        gamepadConnectedRef.current = false;
+        const indicator = document.getElementById('gamepad-focus-indicator');
+        if (indicator) {
+          indicator.style.opacity = '0';
+        }
+        // Remove gamepad-focus class from any element
+        const focused = document.querySelector(`.${FOCUS_CLASS}`);
+        if (focused) {
+          focused.classList.remove(FOCUS_CLASS);
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);
 
@@ -667,6 +684,7 @@ export function useGamepadNavigation(enabled: boolean = true): void {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('gamepadconnected', handleConnect);
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
+      document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
 
