@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { ElectronAPI, Game } from '../shared/types';
+import { ElectronAPI, Game, InstallOptions } from '../shared/types';
 
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
@@ -8,8 +8,8 @@ const electronAPI: ElectronAPI = {
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) =>
     ipcRenderer.invoke('find-games-by-install-paths', installPaths, offset, limit),
-  installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean, installAchievements?: boolean) =>
-    ipcRenderer.invoke('install-translation', game, platform, customGamePath, createBackup, installVoice, installAchievements),
+  installTranslation: (game: Game, platform: string, options: InstallOptions, customGamePath?: string) =>
+    ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
   abortDownload: () => ipcRenderer.invoke('abort-download'),
   checkInstallation: (game: Game) => ipcRenderer.invoke('check-installation', game),

@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal } from './Modal';
-import { Volume2, Archive, Shield, Trophy, Check, Trash2 } from 'lucide-react';
-import type { Game, InstallationInfo } from '../../../shared/types';
+import { Volume2, Archive, Shield, Trophy, Check, Trash2, FileText } from 'lucide-react';
+import type { Game, InstallationInfo, InstallOptions } from '../../../shared/types';
 
 interface InstallOptionsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (options: {
-    createBackup: boolean;
-    installVoice: boolean;
-    installAchievements: boolean;
-    removeVoice: boolean;
-    removeAchievements: boolean;
-  }) => void;
+  onConfirm: (
+    installOptions: InstallOptions,
+    removeOptions: { removeVoice: boolean; removeAchievements: boolean }
+  ) => void;
   game: Game;
   defaultCreateBackup: boolean;
   installationInfo?: InstallationInfo;
@@ -40,6 +37,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 
   // State for checkboxes - initialize based on what's installed or defaults
   const [createBackup, setCreateBackup] = useState(defaultCreateBackup);
+  const [installText, setInstallText] = useState(true);
   const [installVoice, setInstallVoice] = useState(true);
   const [installAchievements, setInstallAchievements] = useState(true);
 
@@ -47,6 +45,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCreateBackup(defaultCreateBackup);
+      // For reinstall, text is checked by default (to reinstall/update)
+      setInstallText(true);
       // Set defaults based on what's already installed
       setInstallVoice(isVoiceInstalled || !isReinstall);
       setInstallAchievements(isAchievementsInstalled || !isReinstall);
@@ -60,13 +60,18 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const willRemoveAchievements = hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
 
   const handleConfirm = () => {
-    onConfirm({
-      createBackup,
-      installVoice: hasVoiceArchive ? installVoice : false,
-      installAchievements: hasAchievementsArchive ? installAchievements : false,
-      removeVoice: willRemoveVoice,
-      removeAchievements: willRemoveAchievements,
-    });
+    onConfirm(
+      {
+        createBackup,
+        installText: isReinstall ? installText : true,
+        installVoice: hasVoiceArchive ? installVoice : false,
+        installAchievements: hasAchievementsArchive ? installAchievements : false,
+      },
+      {
+        removeVoice: willRemoveVoice,
+        removeAchievements: willRemoveAchievements,
+      }
+    );
     onClose();
   };
 
@@ -74,8 +79,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const totalDownloadSize = useMemo(() => {
     const sizes: (string | null)[] = [];
 
-    // Always downloading text if not a reinstall, or if it's an update
-    if (!isReinstall) {
+    // Always downloading text if not a reinstall, or if installText is checked
+    if (!isReinstall || installText) {
       sizes.push(game.archive_size);
     }
 
@@ -88,7 +93,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     }
 
     return calculateTotalSize(sizes.filter(Boolean) as string[]);
-  }, [game, isReinstall, willDownloadVoice, willDownloadAchievements]);
+  }, [game, isReinstall, installText, willDownloadVoice, willDownloadAchievements]);
 
   // Compute approximate backup size (same as what will be installed)
   const backupSize = useMemo(() => {
@@ -108,7 +113,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     return result !== 'N/A' ? result : null;
   }, [game, isReinstall, installVoice, installAchievements, hasVoiceArchive, hasAchievementsArchive]);
 
-  const hasChanges = willDownloadVoice || willDownloadAchievements || willRemoveVoice || willRemoveAchievements || !isReinstall;
+  const hasChanges = installText || willDownloadVoice || willDownloadAchievements || willRemoveVoice || willRemoveAchievements || !isReinstall;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isReinstall ? "Керування компонентами" : "Опції встановлення"}>
@@ -158,6 +163,58 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                   <span>Орієнтовний розмір: {backupSize}</span>
                 </p>
               )}
+            </div>
+          </label>
+        )}
+
+        {/* Text localization - can be reinstalled in reinstall mode */}
+        {isReinstall && (
+          <label className="flex items-start gap-4 cursor-pointer group">
+            <div className="relative flex items-center justify-center mt-0.5">
+              <input
+                type="checkbox"
+                checked={installText}
+                onChange={(e) => setInstallText(e.target.checked)}
+                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer"
+              />
+              <svg
+                className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+                  installText ? 'opacity-100' : 'opacity-0'
+                }`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <FileText size={18} className="text-neon-blue" />
+                <span className="font-medium text-white group-hover:text-neon-blue transition-colors">
+                  Текстова локалізація
+                </span>
+                <span className="flex items-center gap-1 text-xs text-green-400">
+                  <Check size={12} />
+                  встановлено
+                </span>
+              </div>
+              <div className="text-sm text-text-muted mt-1">
+                <p>Переклад текстів гри українською.</p>
+                {game.archive_size && (
+                  <p className="flex items-center gap-1 mt-1 text-neon-blue">
+                    <Archive size={14} />
+                    <span>Розмір: {game.archive_size}</span>
+                  </p>
+                )}
+                {installText && (
+                  <p className="flex items-center gap-1 mt-1 text-green-400">
+                    <Archive size={14} />
+                    <span>Буде перевстановлено</span>
+                  </p>
+                )}
+              </div>
             </div>
           </label>
         )}

@@ -1,21 +1,18 @@
 import { ipcMain, dialog, shell } from 'electron';
-import { installTranslation, checkInstallation, uninstallTranslation, getAllInstalledGameIds, ManualSelectionError, abortCurrentDownload, removeOrphanedInstallationMetadata, removeComponents } from '../installer';
+import { installTranslation, checkInstallation, uninstallTranslation, getAllInstalledGameIds, ManualSelectionError, RateLimitError, abortCurrentDownload, removeOrphanedInstallationMetadata, removeComponents } from '../installer';
 import { getMainWindow } from '../window';
-import type { Game } from '../../shared/types';
-import { trackDownload } from '../tracking';
+import type { Game, InstallOptions } from '../../shared/types';
 
 export function setupInstallerHandlers(): void {
   ipcMain.handle(
     'install-translation',
-    async (_, game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean, installAchievements?: boolean) => {
+    async (_, game: Game, platform: string, options: InstallOptions, customGamePath?: string) => {
       try {
         await installTranslation(
           game,
           platform,
+          options,
           customGamePath,
-          createBackup ?? true,
-          installVoice ?? false,
-          installAchievements ?? false,
           (downloadProgress) => {
             getMainWindow()?.webContents.send('download-progress', downloadProgress);
           },
@@ -26,11 +23,7 @@ export function setupInstallerHandlers(): void {
 
         // Note: cache invalidation та installed-games-changed event
         // автоматично відбуваються через InstallationWatcher при зміні файлів
-
-        // Track successful download (non-blocking)
-        trackDownload(game.id).catch(() => {
-          // Помилки трекінгу вже логуються в tracking.ts
-        });
+        // Download tracking тепер відбувається в Edge Function при генерації signed URL
 
         return { success: true };
       } catch (error) {
@@ -41,6 +34,7 @@ export function setupInstallerHandlers(): void {
           error: {
             message: error instanceof Error ? error.message : 'Невідома помилка',
             needsManualSelection: error instanceof ManualSelectionError,
+            isRateLimit: error instanceof RateLimitError,
           }
         };
       }

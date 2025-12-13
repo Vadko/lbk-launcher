@@ -16,7 +16,7 @@ import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
-import type { InstallResult, DownloadProgress, LaunchGameResult } from '../../../shared/types';
+import type { InstallResult, DownloadProgress, LaunchGameResult, InstallOptions } from '../../../shared/types';
 
 export const MainContent: React.FC = () => {
   const {
@@ -36,7 +36,7 @@ export const MainContent: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showInstallOptions, setShowInstallOptions] = useState(false);
   const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>(undefined);
-  const [pendingInstallOptions, setPendingInstallOptions] = useState<{ createBackup: boolean; installVoice: boolean; installAchievements: boolean } | undefined>(undefined);
+  const [pendingInstallOptions, setPendingInstallOptions] = useState<InstallOptions | undefined>(undefined);
 
   const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
@@ -98,16 +98,18 @@ export const MainContent: React.FC = () => {
 
   const performInstallation = useCallback(async (
     customGamePath?: string,
-    options?: { createBackup: boolean; installVoice: boolean; installAchievements: boolean }
+    options?: InstallOptions
   ) => {
     if (!selectedGame) return;
 
     const platform = selectedGame.platforms[0] || 'steam';
     // Use provided options, or pending options (from dialog), or defaults
-    const effectiveOptions = options ?? pendingInstallOptions;
-    const createBackup = effectiveOptions?.createBackup ?? createBackupBeforeInstall;
-    const installVoice = effectiveOptions?.installVoice ?? false;
-    const installAchievements = effectiveOptions?.installAchievements ?? false;
+    const effectiveOptions: InstallOptions = options ?? pendingInstallOptions ?? {
+      createBackup: createBackupBeforeInstall,
+      installText: true,
+      installVoice: false,
+      installAchievements: false,
+    };
 
     // Save options BEFORE API call for potential retry with manual folder selection
     // This ensures options are preserved even if game detection fails
@@ -115,13 +117,8 @@ export const MainContent: React.FC = () => {
       setPendingInstallOptions(options);
     }
 
-    // Store current options in ref for closure safety
-    const currentOptions = { createBackup, installVoice, installAchievements };
-
     // For emulator, always require manual folder selection
     if (platform === 'emulator' && !customGamePath) {
-      // Capture current options for the callback closure
-      const optionsForEmulator = currentOptions;
       showConfirm({
         title: 'Виберіть папку з грою',
         message: 'Для емуляторів потрібно вручну вказати папку з грою.\n\nВиберіть папку з грою?',
@@ -130,7 +127,7 @@ export const MainContent: React.FC = () => {
         onConfirm: async () => {
           const selectedFolder = await window.electronAPI.selectGameFolder();
           if (selectedFolder) {
-            await performInstallation(selectedFolder, optionsForEmulator);
+            await performInstallation(selectedFolder, effectiveOptions);
           }
         },
       });
@@ -161,16 +158,12 @@ export const MainContent: React.FC = () => {
       const result: InstallResult = await window.electronAPI.installTranslation(
         selectedGame,
         platform,
-        customGamePath,
-        createBackup,
-        installVoice,
-        installAchievements
+        effectiveOptions,
+        customGamePath
       );
 
       if (!result.success && result.error) {
         if (result.error.needsManualSelection) {
-          // Capture current options for the callback closure
-          const optionsForRetry = currentOptions;
           showConfirm({
             title: 'Гру не знайдено',
             message: `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`,
@@ -179,10 +172,15 @@ export const MainContent: React.FC = () => {
             onConfirm: async () => {
               const selectedFolder = await window.electronAPI.selectGameFolder();
               if (selectedFolder) {
-                // Pass captured options directly to avoid closure issues
-                await performInstallation(selectedFolder, optionsForRetry);
+                await performInstallation(selectedFolder, effectiveOptions);
               }
             },
+          });
+        } else if (result.error.isRateLimit) {
+          showModal({
+            title: 'Ліміт завантажень',
+            message: result.error.message,
+            type: 'info',
           });
         } else {
           showModal({
@@ -206,7 +204,7 @@ export const MainContent: React.FC = () => {
         : `Українізатор ${selectedGame.name} успішно встановлено!`;
 
       // Add Steam restart notice if achievements were installed
-      if (installAchievements) {
+      if (effectiveOptions.installAchievements) {
         message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
       }
 
@@ -253,17 +251,14 @@ export const MainContent: React.FC = () => {
     setShowInstallOptions(true);
   }, [selectedGame, isInstalling, isCheckingInstallation, isOnline, showModal]);
 
-  const handleInstallOptionsConfirm = useCallback(async (options: {
-    createBackup: boolean;
-    installVoice: boolean;
-    installAchievements: boolean;
-    removeVoice: boolean;
-    removeAchievements: boolean;
-  }) => {
+  const handleInstallOptionsConfirm = useCallback(async (
+    installOptions: InstallOptions,
+    removeOptions: { removeVoice: boolean; removeAchievements: boolean }
+  ) => {
     if (!selectedGame) return;
 
     // First, remove components if requested
-    if (options.removeVoice || options.removeAchievements) {
+    if (removeOptions.removeVoice || removeOptions.removeAchievements) {
       try {
         setInstallationProgress(selectedGame.id, {
           isInstalling: true,
@@ -271,8 +266,8 @@ export const MainContent: React.FC = () => {
         });
 
         const result = await window.electronAPI.removeComponents(selectedGame, {
-          voice: options.removeVoice,
-          achievements: options.removeAchievements,
+          voice: removeOptions.removeVoice,
+          achievements: removeOptions.removeAchievements,
         });
 
         if (!result.success) {
@@ -300,9 +295,12 @@ export const MainContent: React.FC = () => {
     }
 
     // If only removing components (no new downloads needed), we're done
-    const needsDownload = !installationInfo || options.installVoice && !installationInfo?.components?.voice?.installed || options.installAchievements && !installationInfo?.components?.achievements?.installed;
+    const needsDownload = !installationInfo
+      || installOptions.installText
+      || (installOptions.installVoice && !installationInfo?.components?.voice?.installed)
+      || (installOptions.installAchievements && !installationInfo?.components?.achievements?.installed);
 
-    if (!needsDownload && (options.removeVoice || options.removeAchievements)) {
+    if (!needsDownload && (removeOptions.removeVoice || removeOptions.removeAchievements)) {
       clearInstallationProgress(selectedGame.id);
       showModal({
         title: 'Компоненти видалено',
@@ -324,21 +322,13 @@ export const MainContent: React.FC = () => {
         confirmText: 'Продовжити',
         cancelText: 'Скасувати',
         onConfirm: async () => {
-          await performInstallation(pendingInstallPath, {
-            createBackup: options.createBackup,
-            installVoice: options.installVoice,
-            installAchievements: options.installAchievements,
-          });
+          await performInstallation(pendingInstallPath, installOptions);
         },
       });
       return;
     }
 
-    await performInstallation(pendingInstallPath, {
-      createBackup: options.createBackup,
-      installVoice: options.installVoice,
-      installAchievements: options.installAchievements,
-    });
+    await performInstallation(pendingInstallPath, installOptions);
   }, [selectedGame, pendingInstallPath, performInstallation, showConfirm, showModal, installationInfo, setInstallationProgress, clearInstallationProgress, checkInstallationStatus]);
 
   const handleSupport = useCallback(() => {

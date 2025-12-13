@@ -11,7 +11,7 @@ import { path7z as originalPath7z } from '7zip-bin-full';
 // Fix for ASAR: replace .asar with .asar.unpacked for spawnable binaries
 const path7z = originalPath7z.replace('app.asar', 'app.asar.unpacked');
 import { getFirstAvailableGamePath } from './game-detector';
-import type { InstallationInfo, Game, DownloadProgress, InstallationStatus } from '../shared/types';
+import type { InstallationInfo, Game, DownloadProgress, InstallationStatus, InstallOptions } from '../shared/types';
 import { formatBytes } from '../shared/formatters';
 import { isWindows, isLinux, getPlatform } from './utils/platform';
 
@@ -35,6 +35,34 @@ export class ManualSelectionError extends Error {
   }
 }
 
+/**
+ * Помилка rate-limit для завантажень
+ */
+export class RateLimitError extends Error {
+  public readonly isRateLimit = true;
+  public readonly nextAvailableAt: string | null;
+  public readonly downloadsToday: number;
+  public readonly maxAllowed: number;
+
+  constructor(nextAvailableAt: string | null, downloadsToday: number, maxAllowed: number) {
+    const nextTime = nextAvailableAt ? new Date(nextAvailableAt) : null;
+    const timeStr = nextTime
+      ? nextTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+      : 'невідомо';
+
+    super(
+      `Перевищено ліміт завантажень.\n\n` +
+      `Ви вже завантажили цю гру ${downloadsToday} раз(и) за останні 24 години.\n` +
+      `Максимум дозволено: ${maxAllowed} завантаження на добу для великих ігор.\n\n` +
+      `Спробуйте знову після ${timeStr}.`
+    );
+    this.name = 'RateLimitError';
+    this.nextAvailableAt = nextAvailableAt;
+    this.downloadsToday = downloadsToday;
+    this.maxAllowed = maxAllowed;
+  }
+}
+
 // Глобальний AbortController для скасування поточного завантаження
 let currentDownloadAbortController: AbortController | null = null;
 
@@ -55,17 +83,17 @@ export function abortCurrentDownload(): void {
 export async function installTranslation(
   game: Game,
   platform: string,
+  options: InstallOptions,
   customGamePath?: string,
-  createBackup: boolean = true,
-  installVoice: boolean = false,
-  installAchievements: boolean = false,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
+  const { createBackup, installText, installVoice, installAchievements } = options;
+
   try {
     console.log(`[Installer] ========== INSTALLATION START ==========`);
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
-    console.log(`[Installer] Parameters: createBackup=${createBackup}, installVoice=${installVoice}, installAchievements=${installAchievements}`);
+    console.log(`[Installer] Options:`, JSON.stringify(options));
     console.log(`[Installer] Game voice_archive_path: ${game.voice_archive_path}`);
     console.log(`[Installer] Game achievements_archive_path: ${game.achievements_archive_path}`);
     console.log(`[Installer] Game archive_path: ${game.archive_path}`);
@@ -77,7 +105,7 @@ export async function installTranslation(
       ? { platform, path: customGamePath, exists: true }
       : getFirstAvailableGamePath(game.install_paths || []);
 
-    if (!gamePath || !gamePath.exists) {
+    if (!gamePath || !gamePath.exists || !gamePath.path) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
       const platformPath = (game.install_paths || []).find(p => p.type === platform)?.path;
 
@@ -93,7 +121,7 @@ export async function installTranslation(
 
     // 3. Check available disk space (for text + voice + achievements if installing)
     let requiredSpace = 0;
-    if (game.archive_size) {
+    if (installText && game.archive_size) {
       requiredSpace += parseSizeToBytes(game.archive_size);
     }
     if (installVoice && game.voice_archive_size) {
@@ -126,76 +154,103 @@ export async function installTranslation(
     const downloadDir = path.join(tempDir, 'little-bit-downloads');
     await mkdir(downloadDir, { recursive: true });
 
-    const archivePath = path.join(downloadDir, `${game.id}_translation.zip`);
+    // Get signed download URL from Edge Function (includes rate-limit check)
+    const { getSignedDownloadUrl } = await import('./tracking');
 
-    // Get download URL from Supabase Storage
-    const { getArchiveDownloadUrl } = await import('../lib/api');
-
-    if (!game.archive_path) {
-      throw new Error('Архів українізатора не знайдено');
-    }
-
-    const downloadUrl = getArchiveDownloadUrl(game.archive_path);
-
-    console.log(`[Installer] Downloading from Supabase: ${downloadUrl}`);
-    console.log(`[Installer] Saving to: ${archivePath}`);
-
-    // Створити новий AbortController для цього завантаження
-    currentDownloadAbortController = new AbortController();
-
-    try {
-      await downloadFile(
-        downloadUrl,
-        archivePath,
-        (downloadProgress) => {
-          onDownloadProgress?.(downloadProgress);
-        },
-        (status) => {
-          onStatus?.(status);
-        },
-        3, // maxRetries
-        currentDownloadAbortController.signal
-      );
-    } finally {
-      // Очистити контроллер після завершення
-      currentDownloadAbortController = null;
-    }
-
-    // Verify file hash if available
-    if (game.archive_hash) {
-      onStatus?.({ message: 'Перевірка цілісності файлу...' });
-      console.log(`[Installer] Verifying file hash...`);
-      const isValid = await verifyFileHash(archivePath, game.archive_hash);
-
-      if (!isValid) {
-        // Delete corrupted file
-        if (fs.existsSync(archivePath)) {
-          await unlink(archivePath);
-        }
-        throw new Error(
-          'Файл українізатора пошкоджено або змінено.\n\n' +
-          'Спробуйте завантажити ще раз або зверніться до підтримки.'
-        );
-      }
-      console.log(`[Installer] ✓ File hash verified successfully`);
-    }
-
-    // 4. Extract archive
+    // 4.1 Download text archive if requested
+    let textFiles: string[] = [];
     const extractDir = path.join(downloadDir, `${game.id}_extract`);
-    await extractArchive(archivePath, extractDir, onStatus);
 
-    // Get list of text archive files
-    const textFiles = await getAllFiles(extractDir);
-    console.log(`[Installer] Text archive has ${textFiles.length} files`);
+    if (installText) {
+      const archivePath = path.join(downloadDir, `${game.id}_translation.zip`);
 
-    // 4.5 Download and extract voice archive if requested
+      if (!game.archive_path) {
+        throw new Error('Архів українізатора не знайдено');
+      }
+
+      onStatus?.({ message: 'Отримання посилання для завантаження...' });
+      const urlResult = await getSignedDownloadUrl(game.id, game.archive_path, 'text');
+
+      if (!urlResult.success) {
+        if (urlResult.error === 'rate_limit_exceeded' && 'nextAvailableAt' in urlResult) {
+          throw new RateLimitError(
+            urlResult.nextAvailableAt,
+            urlResult.downloadsToday,
+            urlResult.maxAllowed
+          );
+        }
+        throw new Error(`Не вдалося отримати посилання для завантаження: ${urlResult.error}`);
+      }
+
+      const downloadUrl = urlResult.downloadUrl;
+
+      console.log(`[Installer] Downloading text archive from Supabase (signed URL)`);
+      console.log(`[Installer] Saving to: ${archivePath}`);
+
+      // Створити новий AbortController для цього завантаження
+      currentDownloadAbortController = new AbortController();
+
+      try {
+        await downloadFile(
+          downloadUrl,
+          archivePath,
+          (downloadProgress) => {
+            onDownloadProgress?.(downloadProgress);
+          },
+          (status) => {
+            onStatus?.(status);
+          },
+          3, // maxRetries
+          currentDownloadAbortController.signal
+        );
+      } finally {
+        // Очистити контроллер після завершення
+        currentDownloadAbortController = null;
+      }
+
+      // Verify file hash if available
+      if (game.archive_hash) {
+        onStatus?.({ message: 'Перевірка цілісності файлу...' });
+        console.log(`[Installer] Verifying file hash...`);
+        const isValid = await verifyFileHash(archivePath, game.archive_hash);
+
+        if (!isValid) {
+          // Delete corrupted file
+          if (fs.existsSync(archivePath)) {
+            await unlink(archivePath);
+          }
+          throw new Error(
+            'Файл українізатора пошкоджено або змінено.\n\n' +
+            'Спробуйте завантажити ще раз або зверніться до підтримки.'
+          );
+        }
+        console.log(`[Installer] ✓ File hash verified successfully`);
+      }
+
+      // Extract text archive
+      await extractArchive(archivePath, extractDir, onStatus);
+
+      // Get list of text archive files
+      textFiles = await getAllFiles(extractDir);
+      console.log(`[Installer] Text archive has ${textFiles.length} files`);
+    }
+
+    // 4.2 Download and extract voice archive if requested
     let voiceFiles: string[] = [];
     console.log(`[Installer] Voice install requested: ${installVoice}, voice_archive_path: ${game.voice_archive_path}`);
     if (installVoice && game.voice_archive_path) {
       const voiceArchivePath = path.join(downloadDir, `${game.id}_voice.zip`);
-      const voiceDownloadUrl = getArchiveDownloadUrl(game.voice_archive_path);
 
-      console.log(`[Installer] Downloading voice archive from Supabase: ${voiceDownloadUrl}`);
+      onStatus?.({ message: 'Отримання посилання для озвучки...' });
+      const voiceUrlResult = await getSignedDownloadUrl(game.id, game.voice_archive_path, 'voice');
+
+      if (!voiceUrlResult.success) {
+        throw new Error(`Не вдалося отримати посилання для озвучки: ${voiceUrlResult.error}`);
+      }
+
+      const voiceDownloadUrl = voiceUrlResult.downloadUrl;
+
+      console.log(`[Installer] Downloading voice archive from Supabase (signed URL)`);
       onStatus?.({ message: 'Завантаження озвучки...' });
 
       // Create new AbortController for voice download
@@ -248,9 +303,6 @@ export async function installTranslation(
 
       // Copy voice files to main extract directory (they will be installed together)
       await copyDirectory(voiceExtractDir, extractDir);
-
-      // Cleanup voice temp files
-      await cleanup(voiceArchivePath, voiceExtractDir);
     }
 
     // 4.6 Download and extract achievements archive if requested (Steam only)
@@ -259,9 +311,17 @@ export async function installTranslation(
     console.log(`[Installer] Achievements install requested: ${installAchievements}, achievements_archive_path: ${game.achievements_archive_path}`);
     if (installAchievements && game.achievements_archive_path && platform === 'steam') {
       const achievementsArchivePath = path.join(downloadDir, `${game.id}_achievements.zip`);
-      const achievementsDownloadUrl = getArchiveDownloadUrl(game.achievements_archive_path);
 
-      console.log(`[Installer] Downloading achievements archive from Supabase: ${achievementsDownloadUrl}`);
+      onStatus?.({ message: 'Отримання посилання для ачівок...' });
+      const achievementsUrlResult = await getSignedDownloadUrl(game.id, game.achievements_archive_path, 'achievements');
+
+      if (!achievementsUrlResult.success) {
+        throw new Error(`Не вдалося отримати посилання для ачівок: ${achievementsUrlResult.error}`);
+      }
+
+      const achievementsDownloadUrl = achievementsUrlResult.downloadUrl;
+
+      console.log(`[Installer] Downloading achievements archive from Supabase (signed URL)`);
       onStatus?.({ message: 'Завантаження перекладу ачівок...' });
 
       // Create new AbortController for achievements download
@@ -329,9 +389,6 @@ export async function installTranslation(
       } else {
         console.warn('[Installer] Could not determine Steam achievements path, skipping achievements installation');
       }
-
-      // Cleanup achievements temp files
-      await cleanup(achievementsArchivePath, achievementsExtractDir);
     }
 
     // 5. Check for executable installer file and run if present
@@ -354,7 +411,7 @@ export async function installTranslation(
 
       // Cleanup temp files
       onStatus?.({ message: 'Очищення тимчасових файлів...' });
-      await cleanup(archivePath, extractDir);
+      await cleanupDownloadDir(downloadDir);
 
       // Save minimal installation info (no file tracking since installer handles it)
       const installationInfo: InstallationInfo = {
@@ -399,7 +456,7 @@ export async function installTranslation(
 
     // 7. Cleanup
     onStatus?.({ message: 'Очищення тимчасових файлів...' });
-    await cleanup(archivePath, extractDir);
+    await cleanupDownloadDir(downloadDir);
 
     // 8. Save installation info with components structure
     const installationInfo: InstallationInfo = {
@@ -977,16 +1034,11 @@ async function copyDirectory(source: string, destination: string): Promise<void>
 /**
  * Cleanup temporary files
  */
-async function cleanup(archivePath: string, extractDir: string): Promise<void> {
+async function cleanupDownloadDir(downloadDir: string): Promise<void> {
   try {
-    // Delete archive
-    if (fs.existsSync(archivePath)) {
-      await unlink(archivePath);
-    }
-
-    // Delete extracted files
-    if (fs.existsSync(extractDir)) {
-      await deleteDirectory(extractDir);
+    // Delete entire download directory with all archives and extracted files
+    if (fs.existsSync(downloadDir)) {
+      await deleteDirectory(downloadDir);
     }
 
     console.log('Cleanup completed');
@@ -1743,6 +1795,10 @@ function parseSizeToBytes(sizeString: string): number {
  */
 async function checkDiskSpace(targetPath: string): Promise<number> {
   try {
+    if (!targetPath) {
+      console.warn('[DiskSpace] No target path provided, skipping disk space check');
+      return Number.MAX_SAFE_INTEGER;
+    }
     const stats = await fs.promises.statfs(targetPath);
     // Available space = block size * available blocks
     return stats.bavail * stats.bsize;

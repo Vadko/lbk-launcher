@@ -42,7 +42,15 @@ export interface InstallResult {
   error?: {
     message: string;
     needsManualSelection?: boolean;
+    isRateLimit?: boolean;
   };
+}
+
+export interface InstallOptions {
+  createBackup: boolean;
+  installText: boolean;
+  installVoice: boolean;
+  installAchievements: boolean;
 }
 
 export interface GetGamesParams {
@@ -73,7 +81,7 @@ export interface ElectronAPI {
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) => Promise<GetGamesResult>;
-  installTranslation: (game: Game, platform: string, customGamePath?: string, createBackup?: boolean, installVoice?: boolean, installAchievements?: boolean) => Promise<InstallResult>;
+  installTranslation: (game: Game, platform: string, options: InstallOptions, customGamePath?: string) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   abortDownload: () => Promise<{ success: boolean }>;
   checkInstallation: (game: Game) => Promise<InstallationInfo | null>;
