@@ -29,10 +29,16 @@ export const SettingsModal: React.FC = () => {
   const setTheme = useSettingsStore((state) => state.setTheme);
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const toggleAnimations = useSettingsStore((state) => state.toggleAnimations);
-  const createBackupBeforeInstall = useSettingsStore((state) => state.createBackupBeforeInstall);
+  const createBackupBeforeInstall = useSettingsStore(
+    (state) => state.createBackupBeforeInstall
+  );
   const toggleCreateBackup = useSettingsStore((state) => state.toggleCreateBackup);
-  const autoDetectInstalledGames = useSettingsStore((state) => state.autoDetectInstalledGames);
-  const toggleAutoDetectInstalledGames = useSettingsStore((state) => state.toggleAutoDetectInstalledGames);
+  const autoDetectInstalledGames = useSettingsStore(
+    (state) => state.autoDetectInstalledGames
+  );
+  const toggleAutoDetectInstalledGames = useSettingsStore(
+    (state) => state.toggleAutoDetectInstalledGames
+  );
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
   const toggleShowAdultGames = useSettingsStore((state) => state.toggleShowAdultGames);
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
@@ -198,8 +204,12 @@ export const SettingsModal: React.FC = () => {
             <RefreshCw size={20} className="text-white" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-sm font-semibold text-white">Очистити кеш і перезапустити</h4>
-            <p className="text-xs text-text-muted">Видалити тимчасові дані та перезавантажити додаток</p>
+            <h4 className="text-sm font-semibold text-white">
+              Очистити кеш і перезапустити
+            </h4>
+            <p className="text-xs text-text-muted">
+              Видалити тимчасові дані та перезавантажити додаток
+            </p>
           </div>
         </button>
 
@@ -220,7 +230,9 @@ export const SettingsModal: React.FC = () => {
               <FolderOpen size={20} className="text-white" />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-white">Відкрити папку з логами</h4>
+              <h4 className="text-sm font-semibold text-white">
+                Відкрити папку з логами
+              </h4>
               <p className="text-xs text-text-muted">Переглянути збережені файли логів</p>
             </div>
           </button>

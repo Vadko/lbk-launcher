@@ -27,11 +27,12 @@ export const UpdateNotification = () => {
         if (newVersion && notifiedVersionRef.current !== newVersion) {
           notifiedVersionRef.current = newVersion;
           const currentVersion = await window.electronAPI.getVersion();
-          const { addAppUpdateNotification, notifications } = useSubscriptionsStore.getState();
+          const { addAppUpdateNotification, notifications } =
+            useSubscriptionsStore.getState();
 
           // Перевірити чи вже є таке сповіщення
           const hasExisting = notifications.some(
-            n => n.type === 'app-update' && n.newValue === newVersion
+            (n) => n.type === 'app-update' && n.newValue === newVersion
           );
 
           if (!hasExisting) {
@@ -66,7 +67,8 @@ export const UpdateNotification = () => {
     window.electronAPI.installUpdate();
   };
 
-  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded)) return null;
+  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded))
+    return null;
 
   return (
     <div className="fixed bottom-4 right-4 glass-panel border border-neon-blue rounded-xl p-4 shadow-xl max-w-sm z-50">

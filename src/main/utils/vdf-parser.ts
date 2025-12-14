@@ -19,7 +19,12 @@ export function parseLibraryFolders(content: string): string[] {
   // Iterate through numbered entries
   for (const key in libraryFolders) {
     const entry = libraryFolders[key];
-    if (entry && typeof entry === 'object' && 'path' in entry && typeof entry.path === 'string') {
+    if (
+      entry &&
+      typeof entry === 'object' &&
+      'path' in entry &&
+      typeof entry.path === 'string'
+    ) {
       libraries.push(entry.path);
     }
   }
@@ -30,7 +35,7 @@ export function parseLibraryFolders(content: string): string[] {
 /**
  * Parse Steam appmanifest file
  */
-export interface AppManifest {
+interface AppManifest {
   appid: string;
   name: string;
   installdir: string;

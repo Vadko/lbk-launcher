@@ -1,10 +1,19 @@
 import { create } from 'zustand';
 import { Game } from '../types/game';
-import type { DownloadProgress, InstallationInfo, DetectedGameInfo, Database } from '../../shared/types';
+import type {
+  DownloadProgress,
+  InstallationInfo,
+  DetectedGameInfo,
+  Database,
+} from '../../shared/types';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 import { useSettingsStore } from './useSettingsStore';
 
-type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-translations' | 'installed-games';
+type FilterType =
+  | 'all'
+  | Database['public']['Enums']['game_status']
+  | 'installed-translations'
+  | 'installed-games';
 
 interface InstallationProgress {
   isInstalling: boolean;
@@ -46,7 +55,10 @@ interface Store {
   clearInstalledGamesCache: () => void;
   checkInstallationStatus: (gameId: string, game: Game) => Promise<void>;
   clearGameUpdate: (gameId: string) => void;
-  setInstallationProgress: (gameId: string, progress: Partial<InstallationProgress>) => void;
+  setInstallationProgress: (
+    gameId: string,
+    progress: Partial<InstallationProgress>
+  ) => void;
   clearInstallationProgress: (gameId: string) => void;
   getInstallationProgress: (gameId: string) => InstallationProgress | undefined;
   getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
@@ -116,7 +128,9 @@ export const useStore = create<Store>((set, get) => ({
     try {
       // 1. Отримати ID всіх ігор з встановленими українізаторами з installation-cache/
       const installedGameIds = await window.electronAPI.getAllInstalledGameIds();
-      console.log(`[Store] Found ${installedGameIds.length} games with installed translations`);
+      console.log(
+        `[Store] Found ${installedGameIds.length} games with installed translations`
+      );
 
       if (installedGameIds.length === 0) {
         console.log('[Store] No installed translations found');
@@ -156,14 +170,16 @@ export const useStore = create<Store>((set, get) => ({
 
             // Додати нотифікацію в store (з перевіркою налаштувань та дублікатів)
             const { gameUpdateNotificationsEnabled } = useSettingsStore.getState();
-            const { notifications, addVersionUpdateNotification } = useSubscriptionsStore.getState();
+            const { notifications, addVersionUpdateNotification } =
+              useSubscriptionsStore.getState();
 
             if (gameUpdateNotificationsEnabled) {
               // Перевірити чи вже є така нотифікація
               const hasExistingNotification = notifications.some(
-                n => n.type === 'version-update' &&
-                     n.gameId === game.id &&
-                     n.newValue === game.version
+                (n) =>
+                  n.type === 'version-update' &&
+                  n.gameId === game.id &&
+                  n.newValue === game.version
               );
 
               if (!hasExistingNotification) {
@@ -180,13 +196,17 @@ export const useStore = create<Store>((set, get) => ({
           // Гра була встановлена раніше але зараз не існує (видалена через Steam/GOG/Epic)
           // Треба видалити метадані з installation-cache/
           orphanedGameIds.push(game.id);
-          console.log(`[Store] Game ${game.name} no longer exists on disk, will clean up metadata`);
+          console.log(
+            `[Store] Game ${game.name} no longer exists on disk, will clean up metadata`
+          );
         }
       }
 
       // Видалити orphaned метадані
       if (orphanedGameIds.length > 0) {
-        console.log(`[Store] Cleaning up ${orphanedGameIds.length} orphaned game metadata`);
+        console.log(
+          `[Store] Cleaning up ${orphanedGameIds.length} orphaned game metadata`
+        );
         await window.electronAPI.removeOrphanedMetadata(orphanedGameIds);
       }
 
@@ -303,7 +323,9 @@ export const useStore = create<Store>((set, get) => ({
       const newDetectedGames = new Map(state.detectedGames); // Мержимо з існуючими
       const steamGames = state.steamGames;
 
-      console.log(`[Store] Detecting ${games.length} games using cached Steam data (${steamGames.size} Steam games)`);
+      console.log(
+        `[Store] Detecting ${games.length} games using cached Steam data (${steamGames.size} Steam games)`
+      );
 
       // Перевіряємо кожну гру використовуючи закешовані Steam дані
       for (const game of games) {
@@ -358,11 +380,11 @@ export const useStore = create<Store>((set, get) => ({
       updateSubscribedProgress,
       addNotification,
       addProgressChangeNotification,
-      notifications
+      notifications,
     } = useSubscriptionsStore.getState();
 
     // Create a map of games for quick lookup
-    const gamesMap = new Map(games.map(g => [g.id, g]));
+    const gamesMap = new Map(games.map((g) => [g.id, g]));
 
     // Progress type labels
     const progressLabels: Record<string, string> = {
@@ -383,20 +405,22 @@ export const useStore = create<Store>((set, get) => ({
 
       // Check status change (from planned to something else)
       if (savedStatus === 'planned' && game.status !== 'planned') {
-        const statusText = game.status === 'completed'
-          ? 'Завершено'
-          : game.status === 'in-progress'
-            ? 'Ранній доступ'
-            : game.status;
+        const statusText =
+          game.status === 'completed'
+            ? 'Завершено'
+            : game.status === 'in-progress'
+              ? 'Ранній доступ'
+              : game.status;
 
         const hasExistingNotification = notifications.some(
-          n => n.type === 'status-change' &&
-               n.gameId === gameId &&
-               n.newValue === statusText
+          (n) =>
+            n.type === 'status-change' && n.gameId === gameId && n.newValue === statusText
         );
 
         if (!hasExistingNotification) {
-          console.log(`[Store] Status changed for subscribed game ${game.name}: ${savedStatus} -> ${game.status}`);
+          console.log(
+            `[Store] Status changed for subscribed game ${game.name}: ${savedStatus} -> ${game.status}`
+          );
 
           addNotification({
             type: 'status-change',
@@ -409,7 +433,9 @@ export const useStore = create<Store>((set, get) => ({
 
         // Unsubscribe since the game is no longer planned
         useSubscriptionsStore.getState().unsubscribe(gameId);
-        console.log(`[Store] Auto-unsubscribed from ${game.name} (status changed from planned)`);
+        console.log(
+          `[Store] Auto-unsubscribed from ${game.name} (status changed from planned)`
+        );
         return; // Skip progress check since we unsubscribed
       } else if (!savedStatus) {
         updateSubscribedStatus(gameId, game.status);
@@ -426,23 +452,31 @@ export const useStore = create<Store>((set, get) => ({
 
       if (savedProgress) {
         // Check each progress type for changes
-        (Object.keys(progressLabels) as Array<keyof typeof currentProgress>).forEach((key) => {
-          const oldVal = savedProgress[key];
-          const newVal = currentProgress[key];
+        (Object.keys(progressLabels) as Array<keyof typeof currentProgress>).forEach(
+          (key) => {
+            const oldVal = savedProgress[key];
+            const newVal = currentProgress[key];
 
-          // Only notify if both values are numbers and new value is higher
-          if (typeof oldVal === 'number' && typeof newVal === 'number' && newVal > oldVal) {
-            console.log(`[Store] Progress changed for ${game.name}: ${key} ${oldVal}% -> ${newVal}%`);
+            // Only notify if both values are numbers and new value is higher
+            if (
+              typeof oldVal === 'number' &&
+              typeof newVal === 'number' &&
+              newVal > oldVal
+            ) {
+              console.log(
+                `[Store] Progress changed for ${game.name}: ${key} ${oldVal}% -> ${newVal}%`
+              );
 
-            addProgressChangeNotification(
-              game.id,
-              game.name,
-              progressLabels[key],
-              oldVal,
-              newVal
-            );
+              addProgressChangeNotification(
+                game.id,
+                game.name,
+                progressLabels[key],
+                oldVal,
+                newVal
+              );
+            }
           }
-        });
+        );
       }
 
       // Update saved progress

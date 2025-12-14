@@ -28,16 +28,22 @@ function getLogFilePath(): string {
 
 function formatLogMessage(level: string, message: string, ...args: unknown[]): string {
   const timestamp = new Date().toISOString();
-  const formattedArgs = args.length > 0 ? ' ' + args.map(arg => {
-    if (typeof arg === 'object') {
-      try {
-        return JSON.stringify(arg);
-      } catch {
-        return String(arg);
-      }
-    }
-    return String(arg);
-  }).join(' ') : '';
+  const formattedArgs =
+    args.length > 0
+      ? ' ' +
+        args
+          .map((arg) => {
+            if (typeof arg === 'object') {
+              try {
+                return JSON.stringify(arg);
+              } catch {
+                return String(arg);
+              }
+            }
+            return String(arg);
+          })
+          .join(' ')
+      : '';
   return `[${timestamp}] [${level}] ${message}${formattedArgs}\n`;
 }
 
@@ -97,7 +103,7 @@ function writeToFile(logMessage: string): void {
 /**
  * Синхронний flush при закритті додатку
  */
-export function flushLogsSync(): void {
+function flushLogsSync(): void {
   if (logBuffer.length === 0) return;
 
   try {
@@ -117,7 +123,10 @@ export function setSaveLogsEnabled(enabled: boolean): void {
     // Write header to log file when logging is enabled
     const filePath = getLogFilePath();
     if (!existsSync(filePath)) {
-      writeFileSync(filePath, `=== LittleBit Launcher Logs ===\nStarted: ${new Date().toISOString()}\n\n`);
+      writeFileSync(
+        filePath,
+        `=== LittleBit Launcher Logs ===\nStarted: ${new Date().toISOString()}\n\n`
+      );
     }
   } else {
     // Flush буфер перед вимкненням

@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bell, Trash2, CheckCircle, RefreshCw, Languages, Settings, Download, ChevronLeft, TrendingUp } from 'lucide-react';
+import {
+  X,
+  Bell,
+  Trash2,
+  CheckCircle,
+  RefreshCw,
+  Languages,
+  Settings,
+  Download,
+  ChevronLeft,
+  TrendingUp,
+} from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
@@ -13,7 +24,10 @@ interface NotificationModalProps {
   onClose: () => void;
 }
 
-export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose }) => {
+export const NotificationModal: React.FC<NotificationModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [showSettings, setShowSettings] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
@@ -27,10 +41,18 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
 
   const { setSelectedGame } = useStore();
 
-  const appUpdateNotificationsEnabled = useSettingsStore((state) => state.appUpdateNotificationsEnabled);
-  const toggleAppUpdateNotifications = useSettingsStore((state) => state.toggleAppUpdateNotifications);
-  const gameUpdateNotificationsEnabled = useSettingsStore((state) => state.gameUpdateNotificationsEnabled);
-  const toggleGameUpdateNotifications = useSettingsStore((state) => state.toggleGameUpdateNotifications);
+  const appUpdateNotificationsEnabled = useSettingsStore(
+    (state) => state.appUpdateNotificationsEnabled
+  );
+  const toggleAppUpdateNotifications = useSettingsStore(
+    (state) => state.toggleAppUpdateNotifications
+  );
+  const gameUpdateNotificationsEnabled = useSettingsStore(
+    (state) => state.gameUpdateNotificationsEnabled
+  );
+  const toggleGameUpdateNotifications = useSettingsStore(
+    (state) => state.toggleGameUpdateNotifications
+  );
 
   const handleNotificationClick = async (notification: Notification) => {
     // Позначити як прочитане
@@ -103,9 +125,17 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
   const getNotificationText = (notification: Notification) => {
     switch (notification.type) {
       case 'status-change':
-        return <>Статус змінено з "{notification.oldValue}" на "{notification.newValue}"</>;
+        return (
+          <>
+            Статус змінено з "{notification.oldValue}" на "{notification.newValue}"
+          </>
+        );
       case 'version-update':
-        return <>Оновлення версії з {notification.oldValue} до {notification.newValue}</>;
+        return (
+          <>
+            Оновлення версії з {notification.oldValue} до {notification.newValue}
+          </>
+        );
       case 'app-update':
         return <>Доступна нова версія додатку: {notification.newValue}</>;
       case 'progress-change':
@@ -133,9 +163,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
             <h2 className="text-2xl font-bold text-white">
               {showSettings ? 'Налаштування сповіщень' : 'Сповіщення'}
             </h2>
-            {!showSettings && notifications.filter(n => !n.read).length > 0 && (
+            {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
               <span className="px-2 py-1 bg-neon-blue text-bg-dark text-xs font-bold rounded-full">
-                {notifications.filter(n => !n.read).length}
+                {notifications.filter((n) => !n.read).length}
               </span>
             )}
           </div>
@@ -170,8 +200,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
             >
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
-                  <h4 className="text-sm font-semibold text-white mb-1">Оновлення додатку</h4>
-                  <p className="text-xs text-text-muted">Сповіщення про нові версії LB Launcher</p>
+                  <h4 className="text-sm font-semibold text-white mb-1">
+                    Оновлення додатку
+                  </h4>
+                  <p className="text-xs text-text-muted">
+                    Сповіщення про нові версії LB Launcher
+                  </p>
                 </div>
                 <Switch
                   id="switch-app-updates"
@@ -182,8 +216,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
-                  <h4 className="text-sm font-semibold text-white mb-1">Оновлення українізаторів</h4>
-                  <p className="text-xs text-text-muted">Сповіщення про нові версії встановлених українізаторів</p>
+                  <h4 className="text-sm font-semibold text-white mb-1">
+                    Оновлення українізаторів
+                  </h4>
+                  <p className="text-xs text-text-muted">
+                    Сповіщення про нові версії встановлених українізаторів
+                  </p>
                 </div>
                 <Switch
                   id="switch-game-updates"
@@ -191,7 +229,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                   onCheckedChange={toggleGameUpdateNotifications}
                 />
               </div>
-
             </motion.div>
           ) : (
             <motion.div
@@ -207,7 +244,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                   <Bell className="w-16 h-16 text-text-muted mx-auto mb-4 opacity-30" />
                   <p className="text-text-muted">Сповіщень немає</p>
                   <p className="text-sm text-text-muted mt-2">
-                    Підпишіться на українізатори зі статусом "Заплановано",<br />
+                    Підпишіться на українізатори зі статусом "Заплановано",
+                    <br />
                     щоб отримувати сповіщення про зміни статусу
                   </p>
                 </div>
@@ -217,7 +255,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                     <Button
                       variant="glass"
                       onClick={markAllNotificationsAsRead}
-                      disabled={notifications.filter(n => !n.read).length === 0}
+                      disabled={notifications.filter((n) => !n.read).length === 0}
                       className="text-sm px-4 py-2"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
@@ -245,7 +283,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                         onClick={() => handleNotificationClick(notification)}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg flex-shrink-0 ${getNotificationIconBg(notification.type)}`}>
+                          <div
+                            className={`p-2 rounded-lg flex-shrink-0 ${getNotificationIconBg(notification.type)}`}
+                          >
                             {getNotificationIcon(notification.type)}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -304,7 +344,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                   <div className="p-2 rounded-lg bg-red-500/20">
                     <Trash2 className="w-5 h-5 text-red-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">Видалити всі сповіщення?</h3>
+                  <h3 className="text-lg font-semibold text-white">
+                    Видалити всі сповіщення?
+                  </h3>
                 </div>
                 <p className="text-sm text-text-muted mb-6">
                   Цю дію неможливо скасувати. Всі сповіщення будуть видалені назавжди.

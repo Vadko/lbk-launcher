@@ -9,8 +9,5 @@
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": [
     "src/lib/database.types.ts"
-  ],
-  "ignoreDependencies": [
-    "@types/*"
   ]
 }

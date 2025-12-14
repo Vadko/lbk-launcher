@@ -7,7 +7,7 @@ import type { Database } from '../lib/database.types';
 import { parseLibraryFolders, parseAppManifest } from './utils/vdf-parser';
 import { isWindows, isMacOS, isLinux, getPlatform } from './utils/platform';
 
-export interface GamePath {
+interface GamePath {
   platform: Database['public']['Enums']['install_source'];
   path: string;
   exists: boolean;
@@ -19,7 +19,7 @@ export interface GamePath {
 function isValidSteamPath(steamPath: string): boolean {
   try {
     const requiredDirs = ['steamapps', 'appcache', 'config'];
-    return requiredDirs.every(dir => fs.existsSync(path.join(steamPath, dir)));
+    return requiredDirs.every((dir) => fs.existsSync(path.join(steamPath, dir)));
   } catch {
     return false;
   }
@@ -41,7 +41,11 @@ export function getSteamPath(): string | null {
   try {
     if (isWindows()) {
       // Windows: Read from registry using full path to reg.exe
-      const regPath = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'reg.exe');
+      const regPath = path.join(
+        process.env.SystemRoot || 'C:\\Windows',
+        'System32',
+        'reg.exe'
+      );
       console.log('[GameDetector] Using reg.exe at:', regPath);
 
       try {
@@ -206,7 +210,9 @@ export function invalidateSteamGamesCache(): void {
 function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
   // Return cached value if available
   if (steamGamesCache !== null) {
-    console.log(`[GameDetector] Using cached Steam games (${steamGamesCache.size} games)`);
+    console.log(
+      `[GameDetector] Using cached Steam games (${steamGamesCache.size} games)`
+    );
     return steamGamesCache;
   }
 
@@ -216,7 +222,9 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
   for (const folder of libraryFolders) {
     try {
       const files = fs.readdirSync(folder);
-      const manifestFiles = files.filter(f => f.startsWith('appmanifest_') && f.endsWith('.acf'));
+      const manifestFiles = files.filter(
+        (f) => f.startsWith('appmanifest_') && f.endsWith('.acf')
+      );
 
       for (const manifestFile of manifestFiles) {
         const manifestPath = path.join(folder, manifestFile);
@@ -228,7 +236,9 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
             const gamePath = path.join(folder, 'common', manifest.installdir);
             if (fs.existsSync(gamePath)) {
               games.set(manifest.installdir.toLowerCase(), gamePath);
-              console.log(`[GameDetector] Found game: ${manifest.name} (${manifest.installdir})`);
+              console.log(
+                `[GameDetector] Found game: ${manifest.name} (${manifest.installdir})`
+              );
             }
           }
         } catch (err) {
@@ -245,7 +255,6 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
   return games;
 }
 
-
 /**
  * Find Steam game by folder name
  */
@@ -258,7 +267,9 @@ function findSteamGame(gameFolderName: string): string | null {
     .replace(/^common[/\\]/i, '');
 
   if (normalizedFolderName !== gameFolderName) {
-    console.log(`[GameDetector] Normalized folder name: "${gameFolderName}" -> "${normalizedFolderName}"`);
+    console.log(
+      `[GameDetector] Normalized folder name: "${gameFolderName}" -> "${normalizedFolderName}"`
+    );
   }
 
   const steamPath = getSteamPath();
@@ -293,13 +304,20 @@ function findSteamGame(gameFolderName: string): string | null {
       console.log(`[GameDetector] ✓ Game found via appmanifest: ${gamePath}`);
       return gamePath;
     } else {
-      console.log(`[GameDetector] Path found but basename mismatch: expected "${normalizedFolderName}", got "${actualBasename}"`);
+      console.log(
+        `[GameDetector] Path found but basename mismatch: expected "${normalizedFolderName}", got "${actualBasename}"`
+      );
     }
   }
 
   // List available games for debugging
-  console.log(`[GameDetector] Available games (${installedGames.size}):`, Array.from(installedGames.keys()).slice(0, 20));
-  console.warn(`[GameDetector] ✗ Game "${gameFolderName}" not found in any Steam library`);
+  console.log(
+    `[GameDetector] Available games (${installedGames.size}):`,
+    Array.from(installedGames.keys()).slice(0, 20)
+  );
+  console.warn(
+    `[GameDetector] ✗ Game "${gameFolderName}" not found in any Steam library`
+  );
   return null;
 }
 
@@ -330,7 +348,10 @@ function getGOGPath(): string | null {
       const gogAppPath = '/Applications/GOG Galaxy.app';
       if (fs.existsSync(gogAppPath)) {
         // GOG Galaxy games are typically stored in user's Library
-        const gamesPath = path.join(os.homedir(), 'Library/Application Support/GOG.com/Galaxy/Storage/galaxy-2.0/installed');
+        const gamesPath = path.join(
+          os.homedir(),
+          'Library/Application Support/GOG.com/Galaxy/Storage/galaxy-2.0/installed'
+        );
         if (fs.existsSync(gamesPath)) {
           return gamesPath;
         }
@@ -361,7 +382,10 @@ function getEpicPath(): string | null {
       }
     } else if (isMacOS()) {
       // macOS: Epic Games manifests
-      const manifestPath = path.join(os.homedir(), 'Library/Application Support/Epic/EpicGamesLauncher/Data/Manifests');
+      const manifestPath = path.join(
+        os.homedir(),
+        'Library/Application Support/Epic/EpicGamesLauncher/Data/Manifests'
+      );
       if (fs.existsSync(manifestPath)) {
         console.log('[GameDetector] Epic Games manifests found at:', manifestPath);
         return manifestPath;
@@ -392,7 +416,9 @@ function findGOGGame(gameFolderName: string): string | null {
 /**
  * Parse Epic Games manifest file to get installation path
  */
-function parseEpicManifest(manifestPath: string): { installLocation: string; displayName: string } | null {
+function parseEpicManifest(
+  manifestPath: string
+): { installLocation: string; displayName: string } | null {
   try {
     const content = fs.readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(content);
@@ -422,7 +448,9 @@ function findEpicGame(gameFolderName: string): string | null {
   }
 
   try {
-    const manifestFiles = fs.readdirSync(epicManifestPath).filter(f => f.endsWith('.item'));
+    const manifestFiles = fs
+      .readdirSync(epicManifestPath)
+      .filter((f) => f.endsWith('.item'));
 
     for (const manifestFile of manifestFiles) {
       const manifestFullPath = path.join(epicManifestPath, manifestFile);
@@ -434,7 +462,9 @@ function findEpicGame(gameFolderName: string): string | null {
         // Try to match by folder name (case-insensitive)
         if (installDirName.toLowerCase() === gameFolderName.toLowerCase()) {
           if (fs.existsSync(manifest.installLocation)) {
-            console.log(`[GameDetector] ✓ Epic game found: ${manifest.displayName} at ${manifest.installLocation}`);
+            console.log(
+              `[GameDetector] ✓ Epic game found: ${manifest.displayName} at ${manifest.installLocation}`
+            );
             return manifest.installLocation;
           }
         }
@@ -457,17 +487,27 @@ function getRockstarPath(): string | null {
   try {
     if (isWindows()) {
       // Rockstar Games Launcher stores settings in LocalAppData
-      const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-      const launcherSettingsPath = path.join(localAppData, 'Rockstar Games', 'Launcher', 'settings_user.dat');
+      const localAppData =
+        process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+      const launcherSettingsPath = path.join(
+        localAppData,
+        'Rockstar Games',
+        'Launcher',
+        'settings_user.dat'
+      );
 
       if (fs.existsSync(launcherSettingsPath)) {
-        console.log('[GameDetector] Rockstar Games Launcher settings found at:', launcherSettingsPath);
+        console.log(
+          '[GameDetector] Rockstar Games Launcher settings found at:',
+          launcherSettingsPath
+        );
         return path.dirname(launcherSettingsPath);
       }
 
       // Alternative: check for launcher in Program Files
       const programFiles = process.env['PROGRAMFILES'] || 'C:\\Program Files';
-      const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+      const programFilesX86 =
+        process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
 
       const launcherPaths = [
         path.join(programFiles, 'Rockstar Games', 'Launcher'),
@@ -482,7 +522,12 @@ function getRockstarPath(): string | null {
       }
     } else if (isMacOS()) {
       // macOS: Rockstar Games Launcher (if available)
-      const macPath = path.join(os.homedir(), 'Library', 'Application Support', 'Rockstar Games');
+      const macPath = path.join(
+        os.homedir(),
+        'Library',
+        'Application Support',
+        'Rockstar Games'
+      );
       if (fs.existsSync(macPath)) {
         console.log('[GameDetector] Rockstar Games found at:', macPath);
         return macPath;
@@ -506,7 +551,11 @@ function getRockstarGamePaths(): Map<string, string> {
   }
 
   try {
-    const regPath = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'reg.exe');
+    const regPath = path.join(
+      process.env.SystemRoot || 'C:\\Windows',
+      'System32',
+      'reg.exe'
+    );
 
     // Known Rockstar game registry keys
     const rockstarGames = [
@@ -531,7 +580,9 @@ function getRockstarGamePaths(): Map<string, string> {
           if (fs.existsSync(installPath)) {
             const folderName = path.basename(installPath);
             games.set(folderName.toLowerCase(), installPath);
-            console.log(`[GameDetector] Rockstar game found: ${game.key} at ${installPath}`);
+            console.log(
+              `[GameDetector] Rockstar game found: ${game.key} at ${installPath}`
+            );
           }
         }
       } catch {
@@ -547,7 +598,9 @@ function getRockstarGamePaths(): Map<string, string> {
             if (fs.existsSync(installPath)) {
               const folderName = path.basename(installPath);
               games.set(folderName.toLowerCase(), installPath);
-              console.log(`[GameDetector] Rockstar game found (32-bit): ${game.key} at ${installPath}`);
+              console.log(
+                `[GameDetector] Rockstar game found (32-bit): ${game.key} at ${installPath}`
+              );
             }
           }
         } catch {
@@ -561,7 +614,10 @@ function getRockstarGamePaths(): Map<string, string> {
       'C:\\Program Files\\Rockstar Games',
       'C:\\Program Files (x86)\\Rockstar Games',
       path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Rockstar Games'),
-      path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Rockstar Games'),
+      path.join(
+        process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)',
+        'Rockstar Games'
+      ),
     ];
 
     for (const basePath of defaultPaths) {
@@ -569,12 +625,18 @@ function getRockstarGamePaths(): Map<string, string> {
         try {
           const entries = fs.readdirSync(basePath, { withFileTypes: true });
           for (const entry of entries) {
-            if (entry.isDirectory() && entry.name !== 'Launcher' && entry.name !== 'Social Club') {
+            if (
+              entry.isDirectory() &&
+              entry.name !== 'Launcher' &&
+              entry.name !== 'Social Club'
+            ) {
               const gamePath = path.join(basePath, entry.name);
               // Only add if not already in map
               if (!games.has(entry.name.toLowerCase())) {
                 games.set(entry.name.toLowerCase(), gamePath);
-                console.log(`[GameDetector] Rockstar game found in folder: ${entry.name} at ${gamePath}`);
+                console.log(
+                  `[GameDetector] Rockstar game found in folder: ${entry.name} at ${gamePath}`
+                );
               }
             }
           }
@@ -598,7 +660,9 @@ function findRockstarGame(gameFolderName: string): string | null {
 
   const rockstarPath = getRockstarPath();
   if (!rockstarPath) {
-    console.warn('[GameDetector] Cannot search for game - Rockstar Games Launcher not found');
+    console.warn(
+      '[GameDetector] Cannot search for game - Rockstar Games Launcher not found'
+    );
     // Still try to find via registry
   }
 
@@ -614,17 +678,24 @@ function findRockstarGame(gameFolderName: string): string | null {
 
   // Try partial match
   for (const [folderName, fullPath] of rockstarGames.entries()) {
-    if (folderName.includes(gameFolderName.toLowerCase()) ||
-        gameFolderName.toLowerCase().includes(folderName)) {
+    if (
+      folderName.includes(gameFolderName.toLowerCase()) ||
+      gameFolderName.toLowerCase().includes(folderName)
+    ) {
       if (fs.existsSync(fullPath)) {
-        console.log(`[GameDetector] ✓ Rockstar game found (partial match): ${gameFolderName} -> ${fullPath}`);
+        console.log(
+          `[GameDetector] ✓ Rockstar game found (partial match): ${gameFolderName} -> ${fullPath}`
+        );
         return fullPath;
       }
     }
   }
 
   // List available games for debugging
-  console.log(`[GameDetector] Available Rockstar games (${rockstarGames.size}):`, Array.from(rockstarGames.keys()));
+  console.log(
+    `[GameDetector] Available Rockstar games (${rockstarGames.size}):`,
+    Array.from(rockstarGames.keys())
+  );
   console.warn(`[GameDetector] ✗ Rockstar game "${gameFolderName}" not found`);
   return null;
 }
@@ -687,7 +758,7 @@ function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
  */
 export function getFirstAvailableGamePath(installPaths: InstallPath[]): GamePath | null {
   const paths = detectGamePaths(installPaths);
-  return paths.find(p => p.exists) || null;
+  return paths.find((p) => p.exists) || null;
 }
 
 /**
@@ -750,7 +821,9 @@ export function getAllInstalledGamePaths(): string[] {
   try {
     const epicManifestPath = getEpicPath();
     if (epicManifestPath && fs.existsSync(epicManifestPath)) {
-      const manifestFiles = fs.readdirSync(epicManifestPath).filter(f => f.endsWith('.item'));
+      const manifestFiles = fs
+        .readdirSync(epicManifestPath)
+        .filter((f) => f.endsWith('.item'));
 
       for (const manifestFile of manifestFiles) {
         const manifestFullPath = path.join(epicManifestPath, manifestFile);
@@ -776,6 +849,8 @@ export function getAllInstalledGamePaths(): string[] {
     console.error('[GameDetector] Error getting Rockstar games:', error);
   }
 
-  console.log(`[GameDetector] Found ${installedPaths.length} installed game paths on system`);
+  console.log(
+    `[GameDetector] Found ${installedPaths.length} installed game paths on system`
+  );
   return installedPaths;
 }

@@ -5,7 +5,10 @@ interface DiscordIconProps {
   className?: string;
 }
 
-export const DiscordIcon: React.FC<DiscordIconProps> = ({ size = 18, className = '' }) => {
+export const DiscordIcon: React.FC<DiscordIconProps> = ({
+  size = 18,
+  className = '',
+}) => {
   return (
     <svg
       width={size}

@@ -13,7 +13,11 @@ import { useDebounce } from '../../hooks/useDebounce';
 import logo from '../../../../resources/icon.png';
 import type { Database } from '../../../lib/database.types';
 
-type FilterType = 'all' | Database['public']['Enums']['game_status'] | 'installed-translations' | 'installed-games';
+type FilterType =
+  | 'all'
+  | Database['public']['Enums']['game_status']
+  | 'installed-translations'
+  | 'installed-games';
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -47,7 +51,14 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
     searchQuery: debouncedSearchQuery,
   });
 
-  console.log('[Sidebar] Render with games:', visibleGames.length, 'filter:', filter, 'search:', debouncedSearchQuery);
+  console.log(
+    '[Sidebar] Render with games:',
+    visibleGames.length,
+    'filter:',
+    filter,
+    'search:',
+    debouncedSearchQuery
+  );
 
   const hasLoadedRef = useRef(false);
 
@@ -72,23 +83,33 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
-  const allFilters = useMemo<{ label: string; value: FilterType; group?: string }[]>(() => [
-    { label: 'Усі ігри', value: 'all' },
-    { label: 'Заплановано', value: 'planned' },
-    { label: 'Ранній доступ', value: 'in-progress' },
-    { label: 'Готово', value: 'completed' },
-    { label: 'Встановлені українізатори', value: 'installed-translations', group: 'installed' },
-    { label: 'Встановлені ігри', value: 'installed-games', group: 'installed' },
-  ], []);
+  const allFilters = useMemo<{ label: string; value: FilterType; group?: string }[]>(
+    () => [
+      { label: 'Усі ігри', value: 'all' },
+      { label: 'Заплановано', value: 'planned' },
+      { label: 'Ранній доступ', value: 'in-progress' },
+      { label: 'Готово', value: 'completed' },
+      {
+        label: 'Встановлені українізатори',
+        value: 'installed-translations',
+        group: 'installed',
+      },
+      { label: 'Встановлені ігри', value: 'installed-games', group: 'installed' },
+    ],
+    []
+  );
 
   const currentFilterLabel = useMemo(() => {
-    return allFilters.find(f => f.value === filter)?.label || 'Усі ігри';
+    return allFilters.find((f) => f.value === filter)?.label || 'Усі ігри';
   }, [filter, allFilters]);
 
   // Закрити меню при кліку поза ним
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+      if (
+        filterMenuRef.current &&
+        !filterMenuRef.current.contains(event.target as Node)
+      ) {
         setIsFilterMenuOpen(false);
       }
     };
@@ -106,12 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
     <GlassPanel className="w-[320px] h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 pb-3 border-b p-4 border-border select-none">
-        <img
-          src={logo}
-          alt="LB logo"
-          className="w-12 h-12"
-          draggable={false}
-        />
+        <img src={logo} alt="LB logo" className="w-12 h-12" draggable={false} />
         <div>
           <h1 className="text-lg font-head font-bold text-white">LB</h1>
           <p className="text-xs text-text-muted">Українізатори ігор</p>
@@ -143,7 +159,12 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
 
@@ -158,9 +179,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
             >
               {allFilters.map((f, index) => (
                 <React.Fragment key={f.value}>
-                  {f.group === 'installed' && index > 0 && allFilters[index - 1]?.group !== 'installed' && (
-                    <div className="border-t border-border my-1" />
-                  )}
+                  {f.group === 'installed' &&
+                    index > 0 &&
+                    allFilters[index - 1]?.group !== 'installed' && (
+                      <div className="border-t border-border my-1" />
+                    )}
                   <button
                     onClick={() => {
                       setFilter(f.value);
@@ -224,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({ onOpenHistory }) =>
                   transition={{
                     duration: 0.4,
                     delay: Math.min(index * 0.03, 0.5),
-                    ease: [0.25, 0.46, 0.45, 0.94]
+                    ease: [0.25, 0.46, 0.45, 0.94],
                   }}
                 >
                   <GameListItem

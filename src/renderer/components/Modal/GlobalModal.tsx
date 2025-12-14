@@ -26,7 +26,9 @@ export const GlobalModal: React.FC = () => {
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-glass">
           {getIcon()}
         </div>
-        <p className="text-text-muted whitespace-pre-line break-words">{config.message}</p>
+        <p className="text-text-muted whitespace-pre-line break-words">
+          {config.message}
+        </p>
         <button
           onClick={closeModal}
           className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"

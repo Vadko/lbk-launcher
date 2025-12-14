@@ -14,10 +14,16 @@ import { useSettingsStore } from './store/useSettingsStore';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadNavigation } from './hooks/useGamepadNavigation';
 
-
 export const App: React.FC = () => {
-  const { setInitialLoadComplete, detectInstalledGames, loadSteamGames, clearSteamGamesCache, clearDetectedGamesCache } = useStore();
-  const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } = useSettingsStore();
+  const {
+    setInitialLoadComplete,
+    detectInstalledGames,
+    loadSteamGames,
+    clearSteamGamesCache,
+    clearDetectedGamesCache,
+  } = useStore();
+  const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
+    useSettingsStore();
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
@@ -106,7 +112,11 @@ export const App: React.FC = () => {
         console.log('[App] No games in database yet, skipping initial detection');
         return;
       }
-      console.log('[App] Running initial game detection for', result.games.length, 'games');
+      console.log(
+        '[App] Running initial game detection for',
+        result.games.length,
+        'games'
+      );
       await detectInstalledGames(result.games);
     };
 
@@ -137,9 +147,17 @@ export const App: React.FC = () => {
       }
     };
 
-    const unsubscribe = window.electronAPI.onSteamLibraryChanged?.(handleSteamLibraryChange);
+    const unsubscribe = window.electronAPI.onSteamLibraryChanged?.(
+      handleSteamLibraryChange
+    );
     return unsubscribe;
-  }, [autoDetectInstalledGames, detectInstalledGames, loadSteamGames, clearSteamGamesCache, clearDetectedGamesCache]);
+  }, [
+    autoDetectInstalledGames,
+    detectInstalledGames,
+    loadSteamGames,
+    clearSteamGamesCache,
+    clearDetectedGamesCache,
+  ]);
 
   // Слухати зміни встановлених українізаторів
   // Цей listener потрібен для всіх змін: інсталяція, деінсталяція, зовнішні зміни
@@ -152,7 +170,9 @@ export const App: React.FC = () => {
       useStore.getState().loadInstalledGamesFromSystem();
     };
 
-    const unsubscribe = window.electronAPI.onInstalledGamesChanged(handleInstalledGamesChanged);
+    const unsubscribe = window.electronAPI.onInstalledGamesChanged(
+      handleInstalledGamesChanged
+    );
     return unsubscribe;
   }, []);
 
@@ -191,7 +211,9 @@ export const App: React.FC = () => {
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
   return (
-    <div className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}>
+    <div
+      className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
+    >
       {/* Only show ambient background when liquid glass is not active */}
       {!isLiquidGlassActive && <AmbientBackground />}
       <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />

@@ -36,11 +36,11 @@ async function supabaseRequest<T>(
 
   const response = await fetch(url.toString(), {
     headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': 'return=representation'
-    }
+      Prefer: 'return=representation',
+    },
   });
 
   if (!response.ok) {
@@ -61,10 +61,10 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
 
   while (hasMore) {
     const data = await supabaseRequest<Game>('games', {
-      'approved': 'eq.true',
-      'order': 'name.asc',
-      'offset': offset.toString(),
-      'limit': pageSize.toString()
+      approved: 'eq.true',
+      order: 'name.asc',
+      offset: offset.toString(),
+      limit: pageSize.toString(),
     });
 
     if (data && data.length > 0) {
@@ -95,11 +95,11 @@ export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game
 
   while (hasMore) {
     const data = await supabaseRequest<Game>('games', {
-      'approved': 'eq.true',
-      'updated_at': `gt.${since}`,
-      'order': 'updated_at.asc',
-      'offset': offset.toString(),
-      'limit': pageSize.toString()
+      approved: 'eq.true',
+      updated_at: `gt.${since}`,
+      order: 'updated_at.asc',
+      offset: offset.toString(),
+      limit: pageSize.toString(),
     });
 
     if (data && data.length > 0) {
@@ -122,11 +122,11 @@ export async function fetchDeletedGameIdsFromSupabase(since: string): Promise<st
   console.log(`[SupabaseSync] Fetching deleted games since ${since}`);
 
   const data = await supabaseRequest<{ game_id: string }>('deleted_games', {
-    'deleted_at': `gt.${since}`,
-    'select': 'game_id'
+    deleted_at: `gt.${since}`,
+    select: 'game_id',
   });
 
-  const deletedIds = data.map(row => row.game_id);
+  const deletedIds = data.map((row) => row.game_id);
   console.log(`[SupabaseSync] Fetched ${deletedIds.length} deleted game IDs`);
   return deletedIds;
 }

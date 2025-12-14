@@ -1,5 +1,5 @@
-import * as React from "react";
-import { motion } from "framer-motion";
+import * as React from 'react';
+import { motion } from 'framer-motion';
 
 interface SwitchProps {
   checked: boolean;
@@ -38,10 +38,10 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           }}
           transition={{
             duration: 0.3,
-            ease: 'easeInOut'
+            ease: 'easeInOut',
           }}
           style={{
-            filter: checked ? 'drop-shadow(0 0 12px rgba(0, 242, 255, 0.4))' : 'none'
+            filter: checked ? 'drop-shadow(0 0 12px rgba(0, 242, 255, 0.4))' : 'none',
           }}
         />
 
@@ -51,11 +51,11 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           initial={false}
           animate={{
             opacity: checked ? 0 : 1,
-            backgroundColor: isHovered ? '#9ca3af' : '#d1d5db'
+            backgroundColor: isHovered ? '#9ca3af' : '#d1d5db',
           }}
           transition={{
             duration: 0.3,
-            ease: 'easeInOut'
+            ease: 'easeInOut',
           }}
         />
 
@@ -70,7 +70,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           transition={{
             type: 'spring',
             stiffness: 500,
-            damping: 30
+            damping: 30,
           }}
         />
       </button>

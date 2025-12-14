@@ -31,7 +31,9 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => {
       className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-300"
       title={label}
     >
-      <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>{icon}</div>
+      <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>
+        {icon}
+      </div>
       <span className="text-sm text-white font-medium">{label}</span>
     </button>
   );
@@ -53,7 +55,10 @@ const SteamStoreButton: React.FC<{ steamAppId: number }> = ({ steamAppId }) => {
       className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#1b2838] to-[#2a475e] hover:from-[#2a475e] hover:to-[#3d6a8a] border border-[#66c0f4]/30 hover:border-[#66c0f4]/60 transition-all duration-300"
       title="Відкрити в Steam Store"
     >
-      <SteamIcon size={18} className="text-[#66c0f4] group-hover:text-white transition-colors duration-300" />
+      <SteamIcon
+        size={18}
+        className="text-[#66c0f4] group-hover:text-white transition-colors duration-300"
+      />
       <span className="text-sm text-white font-medium">Steam Store</span>
     </button>
   );
@@ -61,11 +66,36 @@ const SteamStoreButton: React.FC<{ steamAppId: number }> = ({ steamAppId }) => {
 
 export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   const links = [
-    game.website && { icon: <Globe size={18} />, label: 'Вебсайт', url: game.website, color: 'text-neon-blue' },
-    game.telegram && { icon: <Send size={18} />, label: 'Telegram', url: game.telegram, color: 'text-[#0088cc]' },
-    game.discord && { icon: <DiscordIcon size={18} />, label: 'Discord', url: game.discord, color: 'text-[#5865F2]' },
-    game.twitter && { icon: <XIcon size={18} />, label: 'X', url: game.twitter, color: 'text-black' },
-    game.youtube && { icon: <Youtube size={18} />, label: 'YouTube', url: game.youtube, color: 'text-[#FF0000]' },
+    game.website && {
+      icon: <Globe size={18} />,
+      label: 'Вебсайт',
+      url: game.website,
+      color: 'text-neon-blue',
+    },
+    game.telegram && {
+      icon: <Send size={18} />,
+      label: 'Telegram',
+      url: game.telegram,
+      color: 'text-[#0088cc]',
+    },
+    game.discord && {
+      icon: <DiscordIcon size={18} />,
+      label: 'Discord',
+      url: game.discord,
+      color: 'text-[#5865F2]',
+    },
+    game.twitter && {
+      icon: <XIcon size={18} />,
+      label: 'X',
+      url: game.twitter,
+      color: 'text-black',
+    },
+    game.youtube && {
+      icon: <Youtube size={18} />,
+      label: 'YouTube',
+      url: game.youtube,
+      color: 'text-[#FF0000]',
+    },
   ].filter(Boolean) as SocialLinkProps[];
 
   if (links.length === 0 && !game.steam_app_id) {
@@ -74,9 +104,7 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-head font-semibold text-white mb-4">
-        Посилання
-      </h3>
+      <h3 className="text-lg font-head font-semibold text-white mb-4">Посилання</h3>
       <div className="flex flex-wrap items-center gap-3">
         {game.steam_app_id && <SteamStoreButton steamAppId={game.steam_app_id} />}
         {links.length > 0 && game.steam_app_id && (

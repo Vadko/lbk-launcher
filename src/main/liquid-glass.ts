@@ -2,9 +2,8 @@ import { BrowserWindow } from 'electron';
 import { supportsMacOSLiquidGlass, shouldEnableLiquidGlass } from './utils/platform';
 
 // Conditionally import based on platform
-const liquidGlass = process.platform === 'darwin'
-  ? require('electron-liquid-glass')
-  : null;
+const liquidGlass =
+  process.platform === 'darwin' ? require('electron-liquid-glass') : null;
 
 /**
  * Initialize liquid glass for a window
@@ -19,7 +18,9 @@ export async function applyLiquidGlass(
   try {
     // Check if we should enable liquid glass
     if (!shouldEnableLiquidGlass(userPreference)) {
-      console.log('[LiquidGlass] Not applying - either not supported or disabled by user');
+      console.log(
+        '[LiquidGlass] Not applying - either not supported or disabled by user'
+      );
       return null;
     }
 
@@ -69,7 +70,10 @@ export async function applyLiquidGlass(
 export async function removeLiquidGlass(glassId: number | null): Promise<void> {
   // Note: electron-liquid-glass does not provide a removeView API
   // The glass effect is automatically cleaned up when the window is destroyed
-  console.log('[LiquidGlass] Glass effect will be cleaned up when window closes, ID:', glassId);
+  console.log(
+    '[LiquidGlass] Glass effect will be cleaned up when window closes, ID:',
+    glassId
+  );
 }
 
 /**

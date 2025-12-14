@@ -16,9 +16,11 @@ const migrations: Migration[] = [
   {
     name: 'add_voice_archive_columns',
     up: (db) => {
-      const hasColumn = db.prepare(
-        "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='voice_archive_path'"
-      ).get() as { count: number };
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='voice_archive_path'"
+        )
+        .get() as { count: number };
 
       if (hasColumn.count === 0) {
         console.log('[Migrations] Running: add_voice_archive_columns');
@@ -34,9 +36,11 @@ const migrations: Migration[] = [
   {
     name: 'add_achievements_archive_columns',
     up: (db) => {
-      const hasColumn = db.prepare(
-        "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='achievements_archive_path'"
-      ).get() as { count: number };
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='achievements_archive_path'"
+        )
+        .get() as { count: number };
 
       if (hasColumn.count === 0) {
         console.log('[Migrations] Running: add_achievements_archive_columns');
@@ -52,9 +56,11 @@ const migrations: Migration[] = [
   {
     name: 'add_subscriptions_column',
     up: (db) => {
-      const hasColumn = db.prepare(
-        "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='subscriptions'"
-      ).get() as { count: number };
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='subscriptions'"
+        )
+        .get() as { count: number };
 
       if (hasColumn.count === 0) {
         console.log('[Migrations] Running: add_subscriptions_column');
@@ -67,9 +73,11 @@ const migrations: Migration[] = [
     name: 'fix_archive_size_nan_values',
     up: (db) => {
       // Check if this migration was already run by looking for marker in sync_metadata
-      const migrationDone = db.prepare(
-        "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_fix_archive_size_done'"
-      ).get() as { count: number };
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_fix_archive_size_done'"
+        )
+        .get() as { count: number };
 
       if (migrationDone.count > 0) {
         return; // Already done
@@ -89,15 +97,19 @@ const migrations: Migration[] = [
         VALUES ('migration_fix_archive_size_done', '1', datetime('now'))
       `);
 
-      console.log('[Migrations] Completed: fix_archive_size_nan_values - will resync on next startup');
+      console.log(
+        '[Migrations] Completed: fix_archive_size_nan_values - will resync on next startup'
+      );
     },
   },
   {
     name: 'add_steam_app_id_column',
     up: (db) => {
-      const hasColumn = db.prepare(
-        "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_app_id'"
-      ).get() as { count: number };
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_app_id'"
+        )
+        .get() as { count: number };
 
       if (hasColumn.count === 0) {
         console.log('[Migrations] Running: add_steam_app_id_column');
@@ -109,9 +121,11 @@ const migrations: Migration[] = [
   {
     name: 'resync_for_steam_app_id',
     up: (db) => {
-      const migrationDone = db.prepare(
-        "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_app_id_done'"
-      ).get() as { count: number };
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_app_id_done'"
+        )
+        .get() as { count: number };
 
       if (migrationDone.count > 0) {
         return;
@@ -123,7 +137,9 @@ const migrations: Migration[] = [
         INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
         VALUES ('migration_resync_steam_app_id_done', '1', datetime('now'))
       `);
-      console.log('[Migrations] Completed: resync_for_steam_app_id - will resync on next startup');
+      console.log(
+        '[Migrations] Completed: resync_for_steam_app_id - will resync on next startup'
+      );
     },
   },
 ];

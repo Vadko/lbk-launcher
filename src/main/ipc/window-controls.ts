@@ -1,9 +1,22 @@
-import { ipcMain, Tray, Menu, app, nativeImage, Notification, session, shell } from 'electron';
+import {
+  ipcMain,
+  Tray,
+  Menu,
+  app,
+  nativeImage,
+  Notification,
+  session,
+  shell,
+} from 'electron';
 import { getMainWindow } from '../window';
 import { join } from 'path';
 import { isLinux, isMacOS } from '../utils/platform';
 import { closeDatabase } from '../db/database';
-import { setSaveLogsEnabled, isSaveLogsEnabled, getLogFileDirectory } from '../utils/logger';
+import {
+  setSaveLogsEnabled,
+  isSaveLogsEnabled,
+  getLogFileDirectory,
+} from '../utils/logger';
 
 // Get the app icon path for notifications
 function getNotificationIcon(): string | undefined {
@@ -110,28 +123,31 @@ export function setupWindowControls(): void {
   });
 
   // Show system notification (used when app is in tray)
-  ipcMain.handle('show-system-notification', (_, options: { title: string; body: string }) => {
-    if (!Notification.isSupported()) {
-      console.log('[Notification] System notifications not supported');
-      return false;
+  ipcMain.handle(
+    'show-system-notification',
+    (_, options: { title: string; body: string }) => {
+      if (!Notification.isSupported()) {
+        console.log('[Notification] System notifications not supported');
+        return false;
+      }
+
+      const iconPath = getNotificationIcon();
+      const notification = new Notification({
+        title: options.title,
+        body: options.body,
+        icon: iconPath,
+        silent: false,
+      });
+
+      // Click on notification opens the app
+      notification.on('click', () => {
+        showAndFocusWindow();
+      });
+
+      notification.show();
+      return true;
     }
-
-    const iconPath = getNotificationIcon();
-    const notification = new Notification({
-      title: options.title,
-      body: options.body,
-      icon: iconPath,
-      silent: false,
-    });
-
-    // Click on notification opens the app
-    notification.on('click', () => {
-      showAndFocusWindow();
-    });
-
-    notification.show();
-    return true;
-  });
+  );
 
   // Clear cache and restart
   ipcMain.handle('clear-cache-and-restart', async () => {
@@ -141,7 +157,16 @@ export function setupWindowControls(): void {
       // Clear all session data (cache, storage, cookies, etc.)
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
-        storages: ['cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage'],
+        storages: [
+          'cookies',
+          'filesystem',
+          'indexdb',
+          'localstorage',
+          'shadercache',
+          'websql',
+          'serviceworkers',
+          'cachestorage',
+        ],
       });
 
       // Close database before restart

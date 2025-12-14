@@ -32,7 +32,9 @@ export function findGamesByInstallPaths(installPaths: string[]): GetGamesResult 
   try {
     console.log('[API] Finding games by install paths:', installPaths.length, 'paths');
     const result = gamesRepo.findGamesByInstallPaths(installPaths);
-    console.log(`[API] Found ${result.games.length} games matching install paths, total: ${result.total}`);
+    console.log(
+      `[API] Found ${result.games.length} games matching install paths, total: ${result.total}`
+    );
     return result;
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);

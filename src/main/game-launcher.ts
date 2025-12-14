@@ -42,7 +42,9 @@ export async function findSteamAppId(gamePath: string): Promise<string | null> {
 
     // Look for appmanifest files in steamapps
     const files = fs.readdirSync(steamappsPath);
-    const manifestFiles = files.filter(f => f.startsWith('appmanifest_') && f.endsWith('.acf'));
+    const manifestFiles = files.filter(
+      (f) => f.startsWith('appmanifest_') && f.endsWith('.acf')
+    );
 
     for (const manifestFile of manifestFiles) {
       const manifestPath = path.join(steamappsPath, manifestFile);
@@ -52,15 +54,23 @@ export async function findSteamAppId(gamePath: string): Promise<string | null> {
       const { parseAppManifest } = await import('./utils/vdf-parser');
       const manifest = parseAppManifest(content);
 
-      if (manifest && manifest.installdir.toLowerCase() === gameFolderName.toLowerCase()) {
+      if (
+        manifest &&
+        manifest.installdir.toLowerCase() === gameFolderName.toLowerCase()
+      ) {
         // Extract app ID from filename (appmanifest_APPID.acf)
         const appId = manifestFile.replace('appmanifest_', '').replace('.acf', '');
-        console.log(`[GameLauncher] ✓ Found Steam App ID: ${appId} for ${gameFolderName} (manifest: ${manifest.name})`);
+        console.log(
+          `[GameLauncher] ✓ Found Steam App ID: ${appId} for ${gameFolderName} (manifest: ${manifest.name})`
+        );
         return appId;
       }
     }
 
-    console.warn('[GameLauncher] ✗ Could not find Steam App ID for game folder:', gameFolderName);
+    console.warn(
+      '[GameLauncher] ✗ Could not find Steam App ID for game folder:',
+      gameFolderName
+    );
     return null;
   } catch (error) {
     console.error('[GameLauncher] Error finding Steam App ID:', error);
@@ -112,7 +122,21 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
             try {
               fs.accessSync(filePath, fs.constants.X_OK);
               // Skip common non-executable file types
-              const skipExtensions = ['.txt', '.md', '.json', '.xml', '.cfg', '.ini', '.log', '.png', '.jpg', '.ico', '.dll', '.so', '.dylib'];
+              const skipExtensions = [
+                '.txt',
+                '.md',
+                '.json',
+                '.xml',
+                '.cfg',
+                '.ini',
+                '.log',
+                '.png',
+                '.jpg',
+                '.ico',
+                '.dll',
+                '.so',
+                '.dylib',
+              ];
               const ext = path.extname(file).toLowerCase();
               if (!skipExtensions.includes(ext)) {
                 executables.push(filePath);
@@ -139,7 +163,7 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
 
     for (const exe of executables) {
       const baseName = path.basename(exe, path.extname(exe)).toLowerCase();
-      if (preferredNames.some(name => baseName.includes(name))) {
+      if (preferredNames.some((name) => baseName.includes(name))) {
         selectedExecutable = exe;
         break;
       }
@@ -179,7 +203,10 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
           shell: true,
         }).unref();
       } catch (shellError) {
-        console.warn('[GameLauncher] Shell spawn failed, trying direct spawn:', shellError);
+        console.warn(
+          '[GameLauncher] Shell spawn failed, trying direct spawn:',
+          shellError
+        );
         // Fallback to direct spawn
         spawn(selectedExecutable, [], {
           detached: true,

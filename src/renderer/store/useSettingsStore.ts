@@ -47,10 +47,14 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({ animationsEnabled: !state.animationsEnabled })),
 
       toggleAppUpdateNotifications: () =>
-        set((state) => ({ appUpdateNotificationsEnabled: !state.appUpdateNotificationsEnabled })),
+        set((state) => ({
+          appUpdateNotificationsEnabled: !state.appUpdateNotificationsEnabled,
+        })),
 
       toggleGameUpdateNotifications: () =>
-        set((state) => ({ gameUpdateNotificationsEnabled: !state.gameUpdateNotificationsEnabled })),
+        set((state) => ({
+          gameUpdateNotificationsEnabled: !state.gameUpdateNotificationsEnabled,
+        })),
 
       toggleCreateBackup: () =>
         set((state) => ({ createBackupBeforeInstall: !state.createBackupBeforeInstall })),

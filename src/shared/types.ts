@@ -4,7 +4,7 @@ export type { Database };
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 
-export interface InstallationComponent {
+interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
 }
@@ -80,26 +80,50 @@ export interface ElectronAPI {
   fetchGamesByIds: (gameIds: string[]) => Promise<Game[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
-  findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) => Promise<GetGamesResult>;
-  installTranslation: (game: Game, platform: string, options: InstallOptions, customGamePath?: string) => Promise<InstallResult>;
+  findGamesByInstallPaths: (
+    installPaths: string[],
+    offset?: number,
+    limit?: number
+  ) => Promise<GetGamesResult>;
+  installTranslation: (
+    game: Game,
+    platform: string,
+    options: InstallOptions,
+    customGamePath?: string
+  ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   abortDownload: () => Promise<{ success: boolean }>;
   checkInstallation: (game: Game) => Promise<InstallationInfo | null>;
   getAllInstalledGameIds: () => Promise<string[]>;
   removeOrphanedMetadata: (gameIds: string[]) => Promise<{ success: boolean }>;
-  removeComponents: (game: Game, componentsToRemove: { voice?: boolean; achievements?: boolean }) => Promise<InstallResult>;
+  removeComponents: (
+    game: Game,
+    componentsToRemove: { voice?: boolean; achievements?: boolean }
+  ) => Promise<InstallResult>;
   openExternal: (url: string) => Promise<void>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;
   onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void;
   onInstallationStatus: (callback: (status: InstallationStatus) => void) => () => void;
   // Auto-updater
-  checkForUpdates: () => Promise<{ available: boolean; updateInfo?: unknown; message?: string; error?: string }>;
+  checkForUpdates: () => Promise<{
+    available: boolean;
+    updateInfo?: unknown;
+    message?: string;
+    error?: string;
+  }>;
   downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => void;
   onUpdateAvailable: (callback: (info: unknown) => void) => () => void;
   onUpdateDownloaded: (callback: (info: unknown) => void) => () => void;
-  onUpdateProgress: (callback: (progress: { percent?: number; bytesPerSecond?: number; total?: number; transferred?: number }) => void) => () => void;
+  onUpdateProgress: (
+    callback: (progress: {
+      percent?: number;
+      bytesPerSecond?: number;
+      total?: number;
+      transferred?: number;
+    }) => void
+  ) => () => void;
   onUpdateError: (callback: (error: Error) => void) => () => void;
   // Real-time updates (автоматично керуються в main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
@@ -114,7 +138,10 @@ export interface ElectronAPI {
   // Machine ID - for subscription tracking
   getMachineId: () => Promise<string | null>;
   // Track subscription events
-  trackSubscription: (gameId: string, action: 'subscribe' | 'unsubscribe') => Promise<{ success: boolean; error?: string }>;
+  trackSubscription: (
+    gameId: string,
+    action: 'subscribe' | 'unsubscribe'
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 declare global {

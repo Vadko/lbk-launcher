@@ -1,7 +1,10 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw, Languages, Download, TrendingUp } from 'lucide-react';
-import { useSubscriptionsStore, ToastNotification } from '../../store/useSubscriptionsStore';
+import {
+  useSubscriptionsStore,
+  ToastNotification,
+} from '../../store/useSubscriptionsStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {
@@ -82,7 +85,9 @@ export const ToastNotifications: React.FC = () => {
             className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto`}
           >
             <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getToastGradient(toast.type)} flex items-center justify-center flex-shrink-0`}>
+              <div
+                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getToastGradient(toast.type)} flex items-center justify-center flex-shrink-0`}
+              >
                 {getToastIcon(toast.type)}
               </div>
               <div className="flex-1 min-w-0">

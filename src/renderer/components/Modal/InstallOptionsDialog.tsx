@@ -28,11 +28,16 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   // Check what's available and what's already installed
   const isSteamGame = game.platforms?.includes('steam');
   // Achievements only available for Steam games installed in Steam folder (not custom path)
-  const hasAchievementsArchive = !!(isSteamGame && game.achievements_archive_path && !isCustomPath);
+  const hasAchievementsArchive = !!(
+    isSteamGame &&
+    game.achievements_archive_path &&
+    !isCustomPath
+  );
   const hasVoiceArchive = !!game.voice_archive_path;
 
   const isVoiceInstalled = installationInfo?.components?.voice?.installed ?? false;
-  const isAchievementsInstalled = installationInfo?.components?.achievements?.installed ?? false;
+  const isAchievementsInstalled =
+    installationInfo?.components?.achievements?.installed ?? false;
   const isReinstall = !!installationInfo;
 
   // State for checkboxes - initialize based on what's installed or defaults
@@ -51,13 +56,21 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       setInstallVoice(isVoiceInstalled || !isReinstall);
       setInstallAchievements(isAchievementsInstalled || !isReinstall);
     }
-  }, [isOpen, defaultCreateBackup, isVoiceInstalled, isAchievementsInstalled, isReinstall]);
+  }, [
+    isOpen,
+    defaultCreateBackup,
+    isVoiceInstalled,
+    isAchievementsInstalled,
+    isReinstall,
+  ]);
 
   // Calculate what will be downloaded/removed
   const willDownloadVoice = hasVoiceArchive && installVoice && !isVoiceInstalled;
-  const willDownloadAchievements = hasAchievementsArchive && installAchievements && !isAchievementsInstalled;
+  const willDownloadAchievements =
+    hasAchievementsArchive && installAchievements && !isAchievementsInstalled;
   const willRemoveVoice = hasVoiceArchive && !installVoice && isVoiceInstalled;
-  const willRemoveAchievements = hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
+  const willRemoveAchievements =
+    hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
 
   const handleConfirm = () => {
     onConfirm(
@@ -111,22 +124,38 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 
     const result = calculateTotalSize(sizes.filter(Boolean) as string[]);
     return result !== 'N/A' ? result : null;
-  }, [game, isReinstall, installVoice, installAchievements, hasVoiceArchive, hasAchievementsArchive]);
+  }, [
+    game,
+    isReinstall,
+    installVoice,
+    installAchievements,
+    hasVoiceArchive,
+    hasAchievementsArchive,
+  ]);
 
   // При новому встановленні - хоча б один компонент має бути вибраний
   // При перевстановленні - будь-яка зміна
   const hasChanges = isReinstall
-    ? (installText || willDownloadVoice || willDownloadAchievements || willRemoveVoice || willRemoveAchievements)
-    : (installText || (hasVoiceArchive && installVoice) || (hasAchievementsArchive && installAchievements));
+    ? installText ||
+      willDownloadVoice ||
+      willDownloadAchievements ||
+      willRemoveVoice ||
+      willRemoveAchievements
+    : installText ||
+      (hasVoiceArchive && installVoice) ||
+      (hasAchievementsArchive && installAchievements);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isReinstall ? "Керування компонентами" : "Опції встановлення"}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isReinstall ? 'Керування компонентами' : 'Опції встановлення'}
+    >
       <div className="flex flex-col gap-6">
         <p className="text-text-muted">
           {isReinstall
             ? `Оберіть компоненти для "${game.name}":`
-            : `Виберіть опції для встановлення українізатора "${game.name}":`
-          }
+            : `Виберіть опції для встановлення українізатора "${game.name}":`}
         </p>
 
         {/* Backup option - only show for new installs */}
@@ -230,7 +259,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         </label>
 
         {/* Voice archive option */}
-        <label className={`flex items-start gap-4 group ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+        <label
+          className={`flex items-start gap-4 group ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+        >
           <div className="relative flex items-center justify-center mt-0.5">
             <input
               type="checkbox"
@@ -253,11 +284,18 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Volume2 size={18} className={hasVoiceArchive ? 'text-purple-400' : 'text-text-muted'} />
-              <span className={`font-medium transition-colors ${hasVoiceArchive ? 'text-white group-hover:text-purple-400' : 'text-text-muted'}`}>
+              <Volume2
+                size={18}
+                className={hasVoiceArchive ? 'text-purple-400' : 'text-text-muted'}
+              />
+              <span
+                className={`font-medium transition-colors ${hasVoiceArchive ? 'text-white group-hover:text-purple-400' : 'text-text-muted'}`}
+              >
                 Озвучка
               </span>
-              {!hasVoiceArchive && <span className="text-xs text-text-muted">(недоступно)</span>}
+              {!hasVoiceArchive && (
+                <span className="text-xs text-text-muted">(недоступно)</span>
+              )}
               {isVoiceInstalled && (
                 <span className="flex items-center gap-1 text-xs text-green-400">
                   <Check size={12} />
@@ -291,7 +329,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 
         {/* Achievements archive option - Steam only */}
         {isSteamGame && (
-          <label className={`flex items-start gap-4 group ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+          <label
+            className={`flex items-start gap-4 group ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+          >
             <div className="relative flex items-center justify-center mt-0.5">
               <input
                 type="checkbox"
@@ -302,7 +342,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               />
               <svg
                 className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
-                  hasAchievementsArchive && installAchievements ? 'opacity-100' : 'opacity-0'
+                  hasAchievementsArchive && installAchievements
+                    ? 'opacity-100'
+                    : 'opacity-0'
                 }`}
                 viewBox="0 0 24 24"
                 fill="none"
@@ -314,11 +356,20 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Trophy size={18} className={hasAchievementsArchive ? 'text-green-400' : 'text-text-muted'} />
-                <span className={`font-medium transition-colors ${hasAchievementsArchive ? 'text-white group-hover:text-green-400' : 'text-text-muted'}`}>
+                <Trophy
+                  size={18}
+                  className={
+                    hasAchievementsArchive ? 'text-green-400' : 'text-text-muted'
+                  }
+                />
+                <span
+                  className={`font-medium transition-colors ${hasAchievementsArchive ? 'text-white group-hover:text-green-400' : 'text-text-muted'}`}
+                >
                   Досягнення Steam
                 </span>
-                {!hasAchievementsArchive && <span className="text-xs text-text-muted">(недоступно)</span>}
+                {!hasAchievementsArchive && (
+                  <span className="text-xs text-text-muted">(недоступно)</span>
+                )}
                 {isAchievementsInstalled && (
                   <span className="flex items-center gap-1 text-xs text-green-400">
                     <Check size={12} />
@@ -338,7 +389,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                   <p className="flex items-center gap-1 mt-1 text-red-400">
                     <Trash2 size={14} />
                     <span>Буде видалено</span>
-                </p>
+                  </p>
                 )}
                 {willDownloadAchievements && (
                   <p className="flex items-center gap-1 mt-1 text-green-400">
@@ -365,7 +416,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <div className="flex items-center gap-2 text-sm">
                 <Trash2 size={16} className="text-red-400" />
                 <span className="text-red-400">
-                  Буде видалено: {[willRemoveVoice && 'озвучка', willRemoveAchievements && 'досягнення'].filter(Boolean).join(', ')}
+                  Буде видалено:{' '}
+                  {[willRemoveVoice && 'озвучка', willRemoveAchievements && 'досягнення']
+                    .filter(Boolean)
+                    .join(', ')}
                 </span>
               </div>
             )}
@@ -412,10 +466,10 @@ function calculateTotalSize(sizes: string[]): string {
     const unit = match[2].toUpperCase();
 
     const multipliers: Record<string, number> = {
-      'B': 1,
-      'KB': 1024,
-      'MB': 1024 * 1024,
-      'GB': 1024 * 1024 * 1024,
+      B: 1,
+      KB: 1024,
+      MB: 1024 * 1024,
+      GB: 1024 * 1024 * 1024,
     };
 
     return value * (multipliers[unit] || 0);

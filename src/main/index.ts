@@ -16,10 +16,17 @@ import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupAutoUpdater, checkForUpdates } from './auto-updater';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
-import { startInstallationWatcher, stopInstallationWatcher } from './installation-watcher';
+import {
+  startInstallationWatcher,
+  stopInstallationWatcher,
+} from './installation-watcher';
 import { initDatabase, closeDatabase } from './db/database';
 import { SyncManager } from './db/sync-manager';
-import { fetchAllGamesFromSupabase, fetchUpdatedGamesFromSupabase, fetchDeletedGameIdsFromSupabase } from './db/supabase-sync-api';
+import {
+  fetchAllGamesFromSupabase,
+  fetchUpdatedGamesFromSupabase,
+  fetchDeletedGameIdsFromSupabase,
+} from './db/supabase-sync-api';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 
 // Глобальні менеджери
@@ -92,7 +99,10 @@ if (!gotTheLock) {
 
     // Fix YouTube error 153 by setting Referer header for YouTube requests
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      if (details.url.includes('youtube.com') || details.url.includes('youtube-nocookie.com')) {
+      if (
+        details.url.includes('youtube.com') ||
+        details.url.includes('youtube-nocookie.com')
+      ) {
         details.requestHeaders['Referer'] = 'https://littlebitua.github.io/';
       }
       callback({ requestHeaders: details.requestHeaders });

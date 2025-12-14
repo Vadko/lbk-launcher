@@ -1,6 +1,10 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
-import { applyLiquidGlass, removeLiquidGlass, isLiquidGlassSupported } from './liquid-glass';
+import {
+  applyLiquidGlass,
+  removeLiquidGlass,
+  isLiquidGlassSupported,
+} from './liquid-glass';
 import { supportsMacOSLiquidGlass } from './utils/platform';
 
 let mainWindow: BrowserWindow | null = null;
@@ -27,6 +31,8 @@ export async function createMainWindow(): Promise<BrowserWindow> {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false,
+      // Disable web security in dev mode to allow cross-origin requests (R2 images)
+      webSecurity: app.isPackaged,
     },
   });
 

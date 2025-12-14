@@ -104,7 +104,9 @@ export class SyncManager {
       console.log(`[SyncManager] Starting delta sync from ${lastSync}...`);
 
       const updatedGames = await fetchUpdatedGames(lastSync);
-      console.log(`[SyncManager] Fetched ${updatedGames.length} updated games from Supabase`);
+      console.log(
+        `[SyncManager] Fetched ${updatedGames.length} updated games from Supabase`
+      );
 
       if (updatedGames.length > 0) {
         this.gamesRepo.upsertGames(updatedGames);
@@ -115,7 +117,9 @@ export class SyncManager {
       if (fetchDeletedGameIds) {
         const deletedIds = await fetchDeletedGameIds(lastSync);
         if (deletedIds.length > 0) {
-          console.log(`[SyncManager] Deleting ${deletedIds.length} games removed from server`);
+          console.log(
+            `[SyncManager] Deleting ${deletedIds.length} games removed from server`
+          );
           for (const gameId of deletedIds) {
             this.gamesRepo.deleteGame(gameId);
           }
@@ -162,7 +166,9 @@ export class SyncManager {
    * Обробити realtime update
    */
   handleRealtimeUpdate(game: Game): void {
-    console.log(`[SyncManager] Handling realtime update for game: ${game.name} (${game.id})`);
+    console.log(
+      `[SyncManager] Handling realtime update for game: ${game.name} (${game.id})`
+    );
     this.gamesRepo.upsertGame(game);
   }
 

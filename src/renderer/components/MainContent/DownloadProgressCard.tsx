@@ -30,7 +30,8 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         <div className="flex justify-between">
           <span className="text-text-muted">Завантажено:</span>
           <span className="text-white font-medium">
-            {formatBytes(downloadProgress.downloadedBytes)} / {formatBytes(downloadProgress.totalBytes)}
+            {formatBytes(downloadProgress.downloadedBytes)} /{' '}
+            {formatBytes(downloadProgress.totalBytes)}
           </span>
         </div>
         <div className="flex justify-between">

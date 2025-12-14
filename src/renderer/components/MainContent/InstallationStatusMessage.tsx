@@ -7,7 +7,9 @@ interface InstallationStatusMessageProps {
   isInstalling: boolean;
 }
 
-const getStatusIconAndColor = (message: string | null): { icon: React.ReactNode; colorClass: string } => {
+const getStatusIconAndColor = (
+  message: string | null
+): { icon: React.ReactNode; colorClass: string } => {
   if (message?.startsWith('❌')) {
     return {
       icon: (
@@ -29,7 +31,9 @@ const getStatusIconAndColor = (message: string | null): { icon: React.ReactNode;
     };
   }
   return {
-    icon: <div className="w-5 h-5 border-2 border-neon-blue border-t-transparent rounded-full animate-spin" />,
+    icon: (
+      <div className="w-5 h-5 border-2 border-neon-blue border-t-transparent rounded-full animate-spin" />
+    ),
     colorClass: 'text-white',
   };
 };
@@ -47,7 +51,10 @@ export const InstallationStatusMessage: React.FC<InstallationStatusMessageProps>
       <div className="flex items-center gap-3">
         {icon}
         <span className={`text-sm font-medium ${colorClass}`}>
-          {statusMessage || (isUpdateAvailable ? 'Оновлення українізатора...' : 'Встановлення українізатора...')}
+          {statusMessage ||
+            (isUpdateAvailable
+              ? 'Оновлення українізатора...'
+              : 'Встановлення українізатора...')}
         </span>
       </div>
       {!isOnline && isInstalling && (

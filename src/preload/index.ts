@@ -3,20 +3,28 @@ import { ElectronAPI, Game, InstallOptions } from '../shared/types';
 
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
-  fetchGamesByIds: (gameIds: string[]) => ipcRenderer.invoke('fetch-games-by-ids', gameIds),
+  fetchGamesByIds: (gameIds: string[]) =>
+    ipcRenderer.invoke('fetch-games-by-ids', gameIds),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
   findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) =>
     ipcRenderer.invoke('find-games-by-install-paths', installPaths, offset, limit),
-  installTranslation: (game: Game, platform: string, options: InstallOptions, customGamePath?: string) =>
-    ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
+  installTranslation: (
+    game: Game,
+    platform: string,
+    options: InstallOptions,
+    customGamePath?: string
+  ) => ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
   abortDownload: () => ipcRenderer.invoke('abort-download'),
   checkInstallation: (game: Game) => ipcRenderer.invoke('check-installation', game),
   getAllInstalledGameIds: () => ipcRenderer.invoke('get-all-installed-game-ids'),
-  removeOrphanedMetadata: (gameIds: string[]) => ipcRenderer.invoke('remove-orphaned-metadata', gameIds),
-  removeComponents: (game: Game, componentsToRemove: { voice?: boolean; achievements?: boolean }) =>
-    ipcRenderer.invoke('remove-components', game, componentsToRemove),
+  removeOrphanedMetadata: (gameIds: string[]) =>
+    ipcRenderer.invoke('remove-orphaned-metadata', gameIds),
+  removeComponents: (
+    game: Game,
+    componentsToRemove: { voice?: boolean; achievements?: boolean }
+  ) => ipcRenderer.invoke('remove-components', game, componentsToRemove),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   selectGameFolder: () => ipcRenderer.invoke('select-game-folder'),
   onInstallProgress: (callback: (progress: number) => void) => {
@@ -25,12 +33,14 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('install-progress', handler);
   },
   onDownloadProgress: (callback) => {
-    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) => callback(progress);
+    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) =>
+      callback(progress);
     ipcRenderer.on('download-progress', handler);
     return () => ipcRenderer.removeListener('download-progress', handler);
   },
   onInstallationStatus: (callback) => {
-    const handler = (_: unknown, status: Parameters<typeof callback>[0]) => callback(status);
+    const handler = (_: unknown, status: Parameters<typeof callback>[0]) =>
+      callback(status);
     ipcRenderer.on('installation-status', handler);
     return () => ipcRenderer.removeListener('installation-status', handler);
   },
@@ -49,12 +59,14 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
   onUpdateProgress: (callback) => {
-    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) => callback(progress);
+    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) =>
+      callback(progress);
     ipcRenderer.on('update-progress', handler);
     return () => ipcRenderer.removeListener('update-progress', handler);
   },
   onUpdateError: (callback) => {
-    const handler = (_: unknown, error: Parameters<typeof callback>[0]) => callback(error);
+    const handler = (_: unknown, error: Parameters<typeof callback>[0]) =>
+      callback(error);
     ipcRenderer.on('update-error', handler);
     return () => ipcRenderer.removeListener('update-error', handler);
   },
@@ -120,7 +132,8 @@ contextBridge.exposeInMainWorld('loggerAPI', {
   setEnabled: (enabled: boolean) => ipcRenderer.invoke('logger:set-enabled', enabled),
   isEnabled: () => ipcRenderer.invoke('logger:is-enabled'),
   openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
-  log: (level: string, message: string, ...args: unknown[]) => ipcRenderer.send('logger:log', level, message, args),
+  log: (level: string, message: string, ...args: unknown[]) =>
+    ipcRenderer.send('logger:log', level, message, args),
 });
 
 // Handle liquid glass preference request from main process

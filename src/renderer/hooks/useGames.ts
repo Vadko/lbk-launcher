@@ -22,7 +22,9 @@ interface UseGamesResult {
  */
 export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResult {
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
-  const checkSubscribedGamesStatus = useStore((state) => state.checkSubscribedGamesStatus);
+  const checkSubscribedGamesStatus = useStore(
+    (state) => state.checkSubscribedGamesStatus
+  );
 
   const [games, setGames] = useState<Game[]>([]);
   const [total, setTotal] = useState(0);
@@ -47,7 +49,9 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
     try {
       // Спеціальна обробка для встановлених українізаторів
       if (filter === 'installed-translations') {
-        const installedGameIds = [...new Set(await window.electronAPI.getAllInstalledGameIds())];
+        const installedGameIds = [
+          ...new Set(await window.electronAPI.getAllInstalledGameIds()),
+        ];
 
         // Перевірити чи запит ще актуальний
         if (signal.aborted) return;
@@ -124,7 +128,12 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
       // Перевірити чи запит ще актуальний
       if (signal.aborted) return;
 
-      console.log('[useGames] Setting games:', result.games.length, 'total:', result.total);
+      console.log(
+        '[useGames] Setting games:',
+        result.games.length,
+        'total:',
+        result.total
+      );
       setGames(result.games);
       setTotal(result.total);
     } catch (error) {
@@ -132,7 +141,8 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
       if (signal.aborted) return;
 
       console.error('[useGames] Error loading games:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Помилка завантаження ігор';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Помилка завантаження ігор';
       setError(errorMessage);
       setGames([]);
       setTotal(0);
@@ -172,27 +182,32 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
       console.log('[useGames] Game updated via realtime:', updatedGame.name);
 
       // Перевірити зміну статусу/версії для історії
-      const { addVersionUpdateNotification, notifications } = useSubscriptionsStore.getState();
+      const { addVersionUpdateNotification, notifications } =
+        useSubscriptionsStore.getState();
       const { installedGames, checkSubscribedGamesStatus } = useStore.getState();
 
       // Перевірити статус підписаних ігор (централізована обробка)
       checkSubscribedGamesStatus([updatedGame]);
 
       setGames((prevGames) => {
-        const index = prevGames.findIndex(g => g.id === updatedGame.id);
+        const index = prevGames.findIndex((g) => g.id === updatedGame.id);
         const oldGame = index !== -1 ? prevGames[index] : null;
 
         if (oldGame) {
           // Перевірити оновлення версії (тільки для встановлених українізаторів)
           const isInstalled = installedGames.has(updatedGame.id);
-          if (isInstalled && oldGame.version && updatedGame.version &&
-              oldGame.version !== updatedGame.version) {
-
+          if (
+            isInstalled &&
+            oldGame.version &&
+            updatedGame.version &&
+            oldGame.version !== updatedGame.version
+          ) {
             // Перевірити чи вже є така нотифікація (уникнення дублікатів)
             const hasExistingVersionNotification = notifications.some(
-              n => n.type === 'version-update' &&
-                   n.gameId === updatedGame.id &&
-                   n.newValue === updatedGame.version
+              (n) =>
+                n.type === 'version-update' &&
+                n.gameId === updatedGame.id &&
+                n.newValue === updatedGame.version
             );
 
             if (!hasExistingVersionNotification) {
@@ -220,11 +235,13 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
         }
 
         // Перевірити чи гра відповідає поточному фільтру пошуку
-        const matchesSearch = !searchQuery ||
+        const matchesSearch =
+          !searchQuery ||
           updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
 
         // Перевірити чи гра відповідає поточному фільтру статусу
-        const matchesFilter = filter === 'all' ||
+        const matchesFilter =
+          filter === 'all' ||
           (filter === 'completed' && updatedGame.status === 'completed') ||
           (filter === 'in-progress' && updatedGame.status === 'in-progress') ||
           (filter === 'planned' && updatedGame.status === 'planned');
@@ -239,14 +256,14 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
           // Додати гру і відсортувати за алфавітом
           const newGames = [...prevGames, updatedGame];
           newGames.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
-          setTotal(prev => prev + 1);
+          setTotal((prev) => prev + 1);
           return newGames;
         } else {
           // Гра є в списку
           if (!shouldBeInList) {
             // Видалити гру, якщо вона більше не відповідає фільтрам
-            setTotal(prev => prev - 1);
-            return prevGames.filter(g => g.id !== updatedGame.id);
+            setTotal((prev) => prev - 1);
+            return prevGames.filter((g) => g.id !== updatedGame.id);
           }
 
           // Оновити гру і пересортувати
@@ -271,9 +288,9 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
 
       // Видалити гру зі списку, якщо вона там є
       setGames((prevGames) => {
-        const filtered = prevGames.filter(g => g.id !== gameId);
+        const filtered = prevGames.filter((g) => g.id !== gameId);
         if (filtered.length !== prevGames.length) {
-          setTotal(prev => prev - 1);
+          setTotal((prev) => prev - 1);
         }
         return filtered;
       });
@@ -295,7 +312,9 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
       loadGames();
     };
 
-    const unsubscribe = window.electronAPI.onInstalledGamesChanged(handleInstalledGamesChanged);
+    const unsubscribe = window.electronAPI.onInstalledGamesChanged(
+      handleInstalledGamesChanged
+    );
     return unsubscribe;
   }, [filter, loadGames]);
 
@@ -311,7 +330,9 @@ export function useGames({ filter, searchQuery }: UseGamesParams): UseGamesResul
       loadGames();
     };
 
-    const unsubscribe = window.electronAPI.onSteamLibraryChanged(handleSteamLibraryChanged);
+    const unsubscribe = window.electronAPI.onSteamLibraryChanged(
+      handleSteamLibraryChanged
+    );
     return unsubscribe;
   }, [filter, loadGames]);
 

@@ -42,7 +42,10 @@ export function startInstallationWatcher(mainWindow: BrowserWindow | null): void
       // Debounce: wait 100ms before processing to batch multiple rapid changes
       debounceTimer = setTimeout(() => {
         if (pendingChanges.size > 0) {
-          console.log('[InstallationWatcher] Installation cache changed:', [...pendingChanges].join(', '));
+          console.log(
+            '[InstallationWatcher] Installation cache changed:',
+            [...pendingChanges].join(', ')
+          );
           pendingChanges.clear();
 
           // Invalidate the installed game IDs cache

@@ -70,14 +70,16 @@ export async function getSignedDownloadUrl(
   const machineId = getMachineId();
 
   try {
-    console.log(`[Tracking] Requesting signed URL for game: ${gameId}, type: ${archiveType}`);
+    console.log(
+      `[Tracking] Requesting signed URL for game: ${gameId}, type: ${archiveType}`
+    );
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/get-download-url`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/get-download-url-r2`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         gameId,
@@ -114,7 +116,10 @@ export async function getSignedDownloadUrl(
     };
   } catch (error) {
     console.error('[Tracking] Error getting signed URL:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
   }
 }
 
@@ -146,7 +151,7 @@ export async function trackSubscription(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
+        apikey: SUPABASE_ANON_KEY,
       },
       body: JSON.stringify({
         type: 'subscription',
@@ -156,7 +161,7 @@ export async function trackSubscription(
       }),
     });
 
-    const result = await response.json() as TrackingResponse;
+    const result = (await response.json()) as TrackingResponse;
     console.log('[Tracking] Subscription tracking response:', result);
 
     return result;

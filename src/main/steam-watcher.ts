@@ -1,7 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { BrowserWindow } from 'electron';
-import { getSteamPath, invalidateSteamGamesCache, invalidateSteamPathCache } from './game-detector';
+import {
+  getSteamPath,
+  invalidateSteamGamesCache,
+  invalidateSteamPathCache,
+} from './game-detector';
 
 let watcher: fs.FSWatcher | null = null;
 
@@ -33,7 +37,9 @@ export function startSteamWatcher(mainWindow: BrowserWindow | null): void {
   // Watch for file changes
   watcher = fs.watch(libraryFoldersPath, (eventType) => {
     if (eventType === 'change') {
-      console.log('[SteamWatcher] libraryfolders.vdf changed, invalidating cache and notifying renderer');
+      console.log(
+        '[SteamWatcher] libraryfolders.vdf changed, invalidating cache and notifying renderer'
+      );
 
       // Invalidate all Steam-related caches
       invalidateSteamPathCache();

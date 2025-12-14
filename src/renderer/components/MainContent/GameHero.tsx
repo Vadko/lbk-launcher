@@ -14,7 +14,14 @@ interface GameHeroProps {
  */
 function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
   try {
-    console.log('[GameHero] Checking transparency for:', img.src, 'size:', img.naturalWidth, 'x', img.naturalHeight);
+    console.log(
+      '[GameHero] Checking transparency for:',
+      img.src,
+      'size:',
+      img.naturalWidth,
+      'x',
+      img.naturalHeight
+    );
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -34,12 +41,11 @@ function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
     };
 
     // Перевіряємо кути
-    const result = (
+    const result =
       checkPixel(0, 0) ||
       checkPixel(canvas.width - 1, 0) ||
       checkPixel(0, canvas.height - 1) ||
-      checkPixel(canvas.width - 1, canvas.height - 1)
-    );
+      checkPixel(canvas.width - 1, canvas.height - 1);
 
     console.log('[GameHero] Has transparency:', result);
     return result;
@@ -93,7 +99,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{
               duration: 0.2,
-              ease: [0.25, 0.46, 0.45, 0.94]
+              ease: [0.25, 0.46, 0.45, 0.94],
             }}
           >
             <LazyLoadImage
@@ -124,7 +130,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               transition={{
                 duration: 0.2,
                 delay: 0.05,
-                ease: [0.25, 0.46, 0.45, 0.94]
+                ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
               <img
@@ -147,7 +153,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               transition={{
                 duration: 0.2,
                 delay: 0.05,
-                ease: [0.25, 0.46, 0.45, 0.94]
+                ease: [0.25, 0.46, 0.45, 0.94],
               }}
             >
               {game.name}

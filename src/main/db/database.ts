@@ -35,7 +35,9 @@ export class DatabaseManager {
       console.log('[Database] Database created successfully');
     } else {
       // Перевірити чи таблиці існують, якщо ні - створити
-      const tablesExist = this.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='games'").get();
+      const tablesExist = this.db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='games'")
+        .get();
       if (!tablesExist) {
         this.createTables();
         console.log('[Database] Tables created successfully');

@@ -1,12 +1,28 @@
 import { ipcMain, dialog, shell } from 'electron';
-import { installTranslation, checkInstallation, uninstallTranslation, getAllInstalledGameIds, ManualSelectionError, RateLimitError, abortCurrentDownload, removeOrphanedInstallationMetadata, removeComponents } from '../installer';
+import {
+  installTranslation,
+  checkInstallation,
+  uninstallTranslation,
+  getAllInstalledGameIds,
+  ManualSelectionError,
+  RateLimitError,
+  abortCurrentDownload,
+  removeOrphanedInstallationMetadata,
+  removeComponents,
+} from '../installer';
 import { getMainWindow } from '../window';
 import type { Game, InstallOptions } from '../../shared/types';
 
 export function setupInstallerHandlers(): void {
   ipcMain.handle(
     'install-translation',
-    async (_, game: Game, platform: string, options: InstallOptions, customGamePath?: string) => {
+    async (
+      _,
+      game: Game,
+      platform: string,
+      options: InstallOptions,
+      customGamePath?: string
+    ) => {
       try {
         await installTranslation(
           game,
@@ -35,7 +51,7 @@ export function setupInstallerHandlers(): void {
             message: error instanceof Error ? error.message : 'Невідома помилка',
             needsManualSelection: error instanceof ManualSelectionError,
             isRateLimit: error instanceof RateLimitError,
-          }
+          },
         };
       }
     }
@@ -116,18 +132,25 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('remove-components', async (_, game: Game, componentsToRemove: { voice?: boolean; achievements?: boolean }) => {
-    try {
-      await removeComponents(game, componentsToRemove);
-      return { success: true };
-    } catch (error) {
-      console.error('Error removing components:', error);
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : 'Невідома помилка',
-        },
-      };
+  ipcMain.handle(
+    'remove-components',
+    async (
+      _,
+      game: Game,
+      componentsToRemove: { voice?: boolean; achievements?: boolean }
+    ) => {
+      try {
+        await removeComponents(game, componentsToRemove);
+        return { success: true };
+      } catch (error) {
+        console.error('Error removing components:', error);
+        return {
+          success: false,
+          error: {
+            message: error instanceof Error ? error.message : 'Невідома помилка',
+          },
+        };
+      }
     }
-  });
+  );
 }

@@ -1,5 +1,10 @@
 import type Database from 'better-sqlite3';
-import type { Game, GetGamesParams, GetGamesResult, Database as SupabaseDatabase } from '../../shared/types';
+import type {
+  Game,
+  GetGamesParams,
+  GetGamesResult,
+  Database as SupabaseDatabase,
+} from '../../shared/types';
 import { getDatabase } from './database';
 
 /**
@@ -9,11 +14,13 @@ import { getDatabase } from './database';
  * - arrays/objects -> JSON string
  */
 type GameInsertParams = {
-  [K in keyof SupabaseDatabase['public']['Tables']['games']['Row']]: K extends 'approved' | 'is_adult'
+  [K in keyof SupabaseDatabase['public']['Tables']['games']['Row']]: K extends
+    | 'approved'
+    | 'is_adult'
     ? number // boolean перетворюється на 0/1 для SQLite
     : K extends 'platforms' | 'install_paths'
-    ? string | null // JSON.stringify для SQLite
-    : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+      ? string | null // JSON.stringify для SQLite
+      : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 };
 
 /**
@@ -31,10 +38,12 @@ export class GamesRepository {
    * Тільки для полів platforms та install_paths потрібен JSON.parse
    */
   private rowToGame(row: Record<string, unknown>): Game {
-    const platforms = typeof row.platforms === 'string' ? JSON.parse(row.platforms) : row.platforms;
-    const install_paths = typeof row.install_paths === 'string' && row.install_paths !== null
-      ? JSON.parse(row.install_paths)
-      : row.install_paths;
+    const platforms =
+      typeof row.platforms === 'string' ? JSON.parse(row.platforms) : row.platforms;
+    const install_paths =
+      typeof row.install_paths === 'string' && row.install_paths !== null
+        ? JSON.parse(row.install_paths)
+        : row.install_paths;
 
     return {
       ...row,
@@ -135,7 +144,7 @@ export class GamesRepository {
     `);
 
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
-    const games = rows.map(row => this.rowToGame(row));
+    const games = rows.map((row) => this.rowToGame(row));
     const total = games.length;
 
     return { games, total };
@@ -157,7 +166,7 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all(...gameIds) as Record<string, unknown>[];
-    return rows.map(row => this.rowToGame(row));
+    return rows.map((row) => this.rowToGame(row));
   }
 
   /**
@@ -176,10 +185,10 @@ export class GamesRepository {
     `);
 
     const rows = stmt.all() as Record<string, unknown>[];
-    const allGames = rows.map(row => this.rowToGame(row));
+    const allGames = rows.map((row) => this.rowToGame(row));
 
     // Нормалізуємо всі шляхи до простих назв папок
-    const normalizedDetectedPaths = installPaths.map(path => {
+    const normalizedDetectedPaths = installPaths.map((path) => {
       const p = path.toLowerCase();
       // Витягуємо назву папки з шляху
       // "steamapps/common/GameName" -> "gamename"

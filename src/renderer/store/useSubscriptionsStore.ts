@@ -20,7 +20,8 @@ export interface ToastNotification extends BaseNotification {
   message: string;
 }
 
-export type GameProgress = Pick<Game,
+type GameProgress = Pick<
+  Game,
   | 'translation_progress'
   | 'editing_progress'
   | 'voice_progress'
@@ -47,10 +48,30 @@ interface SubscriptionsStore {
   getSubscribedProgress: (gameId: string) => GameProgress | undefined;
   updateSubscribedStatus: (gameId: string, status: string) => void;
   updateSubscribedProgress: (gameId: string, progress: GameProgress) => void;
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>, showToast?: boolean) => void;
-  addVersionUpdateNotification: (gameId: string, gameName: string, oldVersion: string, newVersion: string, showToast?: boolean) => void;
-  addProgressChangeNotification: (gameId: string, gameName: string, progressType: string, oldValue: number, newValue: number, showToast?: boolean) => void;
-  addAppUpdateNotification: (oldVersion: string, newVersion: string, showToast?: boolean) => void;
+  addNotification: (
+    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
+    showToast?: boolean
+  ) => void;
+  addVersionUpdateNotification: (
+    gameId: string,
+    gameName: string,
+    oldVersion: string,
+    newVersion: string,
+    showToast?: boolean
+  ) => void;
+  addProgressChangeNotification: (
+    gameId: string,
+    gameName: string,
+    progressType: string,
+    oldValue: number,
+    newValue: number,
+    showToast?: boolean
+  ) => void;
+  addAppUpdateNotification: (
+    oldVersion: string,
+    newVersion: string,
+    showToast?: boolean
+  ) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   clearNotification: (notificationId: string) => void;
@@ -68,7 +89,8 @@ interface SerializedSet {
   data: string[];
 }
 
-type PersistedSubscriptionsState = Pick<SubscriptionsStore,
+type PersistedSubscriptionsState = Pick<
+  SubscriptionsStore,
   | 'subscribedGames'
   | 'subscribedGameStatuses'
   | 'subscribedGameProgress'
@@ -104,7 +126,10 @@ const customStorage = createJSONStorage<PersistedSubscriptionsState>(() => local
 const TOAST_DURATION = 8000; // 8 seconds
 
 // Helper to track subscription via IPC (main process handles the API call)
-async function trackSubscription(gameId: string, action: 'subscribe' | 'unsubscribe'): Promise<void> {
+async function trackSubscription(
+  gameId: string,
+  action: 'subscribe' | 'unsubscribe'
+): Promise<void> {
   try {
     await window.electronAPI?.trackSubscription(gameId, action);
   } catch (error) {
@@ -113,8 +138,14 @@ async function trackSubscription(gameId: string, action: 'subscribe' | 'unsubscr
 }
 
 // Helper to show system notification when window is hidden (in tray)
-async function showSystemNotificationIfHidden(title: string, body: string): Promise<void> {
-  if (!window.windowControls?.isVisible || !window.windowControls?.showSystemNotification) {
+async function showSystemNotificationIfHidden(
+  title: string,
+  body: string
+): Promise<void> {
+  if (
+    !window.windowControls?.isVisible ||
+    !window.windowControls?.showSystemNotification
+  ) {
     return;
   }
 
@@ -148,7 +179,11 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           if (progress) {
             newProgress.set(gameId, progress);
           }
-          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
+          return {
+            subscribedGames: newSubscribed,
+            subscribedGameStatuses: newStatuses,
+            subscribedGameProgress: newProgress,
+          };
         });
         // Track subscription via API (non-blocking)
         trackSubscription(gameId, 'subscribe');
@@ -162,7 +197,11 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           newStatuses.delete(gameId);
           const newProgress = new Map(state.subscribedGameProgress);
           newProgress.delete(gameId);
-          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
+          return {
+            subscribedGames: newSubscribed,
+            subscribedGameStatuses: newStatuses,
+            subscribedGameProgress: newProgress,
+          };
         });
         // Track unsubscription via API (non-blocking)
         trackSubscription(gameId, 'unsubscribe');
@@ -235,7 +274,13 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }
       },
 
-      addVersionUpdateNotification: (gameId, gameName, oldVersion, newVersion, showToast = true) => {
+      addVersionUpdateNotification: (
+        gameId,
+        gameName,
+        oldVersion,
+        newVersion,
+        showToast = true
+      ) => {
         const id = `${gameId}-version-${Date.now()}`;
         const newNotification: Notification = {
           id,
@@ -276,7 +321,14 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }
       },
 
-      addProgressChangeNotification: (gameId, gameName, progressType, oldValue, newValue, showToast = true) => {
+      addProgressChangeNotification: (
+        gameId,
+        gameName,
+        progressType,
+        oldValue,
+        newValue,
+        showToast = true
+      ) => {
         const id = `${gameId}-progress-${Date.now()}`;
         const newNotification: Notification = {
           id,
@@ -377,7 +429,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       clearNotification: (notificationId) => {
         set((state) => {
-          const notifications = state.notifications.filter((n) => n.id !== notificationId);
+          const notifications = state.notifications.filter(
+            (n) => n.id !== notificationId
+          );
           const unreadCount = notifications.filter((n) => !n.read).length;
           return { notifications, unreadCount };
         });
@@ -415,7 +469,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 );
 
 // Helper function to generate notification message
-function getNotificationMessage(notification: Omit<Notification, 'id' | 'timestamp' | 'read'>): string {
+function getNotificationMessage(
+  notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+): string {
   switch (notification.type) {
     case 'status-change':
       return `Статус змінено на "${notification.newValue}"`;

@@ -22,7 +22,10 @@ function getSystem7zPath(): string | null {
     // Try common 7z command names
     for (const cmd of ['7zz', '7z', '7za']) {
       try {
-        const result = execSync(`which ${cmd}`, { encoding: 'utf-8', timeout: 5000 }).trim();
+        const result = execSync(`which ${cmd}`, {
+          encoding: 'utf-8',
+          timeout: 5000,
+        }).trim();
         if (result) {
           console.log(`[7z] Found system 7z: ${result}`);
           return result;
@@ -63,7 +66,13 @@ function get7zPath(): string {
 
 const path7z = get7zPath();
 import { getFirstAvailableGamePath, getSteamPath } from './game-detector';
-import type { InstallationInfo, Game, DownloadProgress, InstallationStatus, InstallOptions } from '../shared/types';
+import type {
+  InstallationInfo,
+  Game,
+  DownloadProgress,
+  InstallationStatus,
+  InstallOptions,
+} from '../shared/types';
 import { formatBytes } from '../shared/formatters';
 import { isWindows, isLinux, getPlatform } from './utils/platform';
 
@@ -96,7 +105,11 @@ export class RateLimitError extends Error {
   public readonly downloadsToday: number;
   public readonly maxAllowed: number;
 
-  constructor(nextAvailableAt: string | null, downloadsToday: number, maxAllowed: number) {
+  constructor(
+    nextAvailableAt: string | null,
+    downloadsToday: number,
+    maxAllowed: number
+  ) {
     const nextTime = nextAvailableAt ? new Date(nextAvailableAt) : null;
     const timeStr = nextTime
       ? nextTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
@@ -104,9 +117,9 @@ export class RateLimitError extends Error {
 
     super(
       `Перевищено ліміт завантажень.\n\n` +
-      `Ви вже завантажили цю гру ${downloadsToday} раз(и) за останні 24 години.\n` +
-      `Максимум дозволено: ${maxAllowed} завантаження на добу для великих ігор.\n\n` +
-      `Спробуйте знову після ${timeStr}.`
+        `Ви вже завантажили цю гру ${downloadsToday} раз(и) за останні 24 години.\n` +
+        `Максимум дозволено: ${maxAllowed} завантаження на добу для великих ігор.\n\n` +
+        `Спробуйте знову після ${timeStr}.`
     );
     this.name = 'RateLimitError';
     this.nextAvailableAt = nextAvailableAt;
@@ -124,7 +137,9 @@ let currentDownloadAbortController: AbortController | null = null;
 export function abortCurrentDownload(): void {
   if (currentDownloadAbortController) {
     console.log('[Installer] Aborting current download due to connection loss');
-    currentDownloadAbortController.abort('Завантаження скасовано через відсутність підключення до Інтернету');
+    currentDownloadAbortController.abort(
+      'Завантаження скасовано через відсутність підключення до Інтернету'
+    );
     currentDownloadAbortController = null;
   }
 }
@@ -147,9 +162,14 @@ export async function installTranslation(
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
     console.log(`[Installer] Options:`, JSON.stringify(options));
     console.log(`[Installer] Game voice_archive_path: ${game.voice_archive_path}`);
-    console.log(`[Installer] Game achievements_archive_path: ${game.achievements_archive_path}`);
+    console.log(
+      `[Installer] Game achievements_archive_path: ${game.achievements_archive_path}`
+    );
     console.log(`[Installer] Game archive_path: ${game.archive_path}`);
-    console.log(`[Installer] Install paths config:`, JSON.stringify(game.install_paths, null, 2));
+    console.log(
+      `[Installer] Install paths config:`,
+      JSON.stringify(game.install_paths, null, 2)
+    );
     console.log(`[Installer] Requested platform: ${platform}`);
 
     // 2. Detect game installation path
@@ -159,13 +179,15 @@ export async function installTranslation(
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
-      const platformPath = (game.install_paths || []).find(p => p.type === platform)?.path;
+      const platformPath = (game.install_paths || []).find(
+        (p) => p.type === platform
+      )?.path;
 
       // Special error to indicate manual folder selection needed
       throw new ManualSelectionError(
         `Гру не знайдено автоматично.\n\n` +
-        `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
-        `Виберіть папку з грою вручну.`
+          `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
+          `Виберіть папку з грою вручну.`
       );
     }
 
@@ -192,13 +214,15 @@ export async function installTranslation(
       if (diskSpace < neededSpace) {
         throw new Error(
           `Недостатньо місця на диску.\n\n` +
-          `Необхідно: ${formatBytes(neededSpace)}\n` +
-          `Доступно: ${formatBytes(diskSpace)}\n\n` +
-          `Звільніть місце та спробуйте знову.`
+            `Необхідно: ${formatBytes(neededSpace)}\n` +
+            `Доступно: ${formatBytes(diskSpace)}\n\n` +
+            `Звільніть місце та спробуйте знову.`
         );
       }
 
-      console.log(`[Installer] ✓ Disk space check passed (available: ${formatBytes(diskSpace)}, needed: ${formatBytes(neededSpace)})`);
+      console.log(
+        `[Installer] ✓ Disk space check passed (available: ${formatBytes(diskSpace)}, needed: ${formatBytes(neededSpace)})`
+      );
     }
 
     // 4. Download translation archive from Supabase Storage
@@ -231,7 +255,9 @@ export async function installTranslation(
             urlResult.maxAllowed
           );
         }
-        throw new Error(`Не вдалося отримати посилання для завантаження: ${urlResult.error}`);
+        throw new Error(
+          `Не вдалося отримати посилання для завантаження: ${urlResult.error}`
+        );
       }
 
       const downloadUrl = urlResult.downloadUrl;
@@ -273,7 +299,7 @@ export async function installTranslation(
           }
           throw new Error(
             'Файл українізатора пошкоджено або змінено.\n\n' +
-            'Спробуйте завантажити ще раз або зверніться до підтримки.'
+              'Спробуйте завантажити ще раз або зверніться до підтримки.'
           );
         }
         console.log(`[Installer] ✓ File hash verified successfully`);
@@ -289,15 +315,23 @@ export async function installTranslation(
 
     // 4.2 Download and extract voice archive if requested
     let voiceFiles: string[] = [];
-    console.log(`[Installer] Voice install requested: ${installVoice}, voice_archive_path: ${game.voice_archive_path}`);
+    console.log(
+      `[Installer] Voice install requested: ${installVoice}, voice_archive_path: ${game.voice_archive_path}`
+    );
     if (installVoice && game.voice_archive_path) {
       const voiceArchivePath = path.join(downloadDir, `${game.id}_voice.zip`);
 
       onStatus?.({ message: 'Отримання посилання для озвучки...' });
-      const voiceUrlResult = await getSignedDownloadUrl(game.id, game.voice_archive_path, 'voice');
+      const voiceUrlResult = await getSignedDownloadUrl(
+        game.id,
+        game.voice_archive_path,
+        'voice'
+      );
 
       if (!voiceUrlResult.success) {
-        throw new Error(`Не вдалося отримати посилання для озвучки: ${voiceUrlResult.error}`);
+        throw new Error(
+          `Не вдалося отримати посилання для озвучки: ${voiceUrlResult.error}`
+        );
       }
 
       const voiceDownloadUrl = voiceUrlResult.downloadUrl;
@@ -337,7 +371,7 @@ export async function installTranslation(
           }
           throw new Error(
             'Файл озвучки пошкоджено або змінено.\n\n' +
-            'Спробуйте завантажити ще раз або зверніться до підтримки.'
+              'Спробуйте завантажити ще раз або зверніться до підтримки.'
           );
         }
         console.log(`[Installer] ✓ Voice file hash verified successfully`);
@@ -346,7 +380,10 @@ export async function installTranslation(
       // Extract voice archive to the same directory
       const voiceExtractDir = path.join(downloadDir, `${game.id}_voice_extract`);
       await extractArchive(voiceArchivePath, voiceExtractDir, (status) => {
-        onStatus?.({ message: `Розпакування озвучки... ${status.progress ? status.progress + '%' : ''}`.trim() });
+        onStatus?.({
+          message:
+            `Розпакування озвучки... ${status.progress ? status.progress + '%' : ''}`.trim(),
+        });
       });
 
       // Get list of voice files
@@ -360,20 +397,33 @@ export async function installTranslation(
     // 4.6 Download and extract achievements archive if requested (Steam only)
     let achievementsFiles: string[] = [];
     let achievementsInstallPath: string | null = null;
-    console.log(`[Installer] Achievements install requested: ${installAchievements}, achievements_archive_path: ${game.achievements_archive_path}`);
+    console.log(
+      `[Installer] Achievements install requested: ${installAchievements}, achievements_archive_path: ${game.achievements_archive_path}`
+    );
     if (installAchievements && game.achievements_archive_path && platform === 'steam') {
-      const achievementsArchivePath = path.join(downloadDir, `${game.id}_achievements.zip`);
+      const achievementsArchivePath = path.join(
+        downloadDir,
+        `${game.id}_achievements.zip`
+      );
 
       onStatus?.({ message: 'Отримання посилання для ачівок...' });
-      const achievementsUrlResult = await getSignedDownloadUrl(game.id, game.achievements_archive_path, 'achievements');
+      const achievementsUrlResult = await getSignedDownloadUrl(
+        game.id,
+        game.achievements_archive_path,
+        'achievements'
+      );
 
       if (!achievementsUrlResult.success) {
-        throw new Error(`Не вдалося отримати посилання для ачівок: ${achievementsUrlResult.error}`);
+        throw new Error(
+          `Не вдалося отримати посилання для ачівок: ${achievementsUrlResult.error}`
+        );
       }
 
       const achievementsDownloadUrl = achievementsUrlResult.downloadUrl;
 
-      console.log(`[Installer] Downloading achievements archive from Supabase (signed URL)`);
+      console.log(
+        `[Installer] Downloading achievements archive from Supabase (signed URL)`
+      );
       onStatus?.({ message: 'Завантаження перекладу ачівок...' });
 
       // Create new AbortController for achievements download
@@ -400,7 +450,10 @@ export async function installTranslation(
       if (game.achievements_archive_hash) {
         onStatus?.({ message: 'Перевірка цілісності ачівок...' });
         console.log(`[Installer] Verifying achievements file hash...`);
-        const isValid = await verifyFileHash(achievementsArchivePath, game.achievements_archive_hash);
+        const isValid = await verifyFileHash(
+          achievementsArchivePath,
+          game.achievements_archive_hash
+        );
 
         if (!isValid) {
           if (fs.existsSync(achievementsArchivePath)) {
@@ -408,21 +461,29 @@ export async function installTranslation(
           }
           throw new Error(
             'Файл перекладу ачівок пошкоджено або змінено.\n\n' +
-            'Спробуйте завантажити ще раз або зверніться до підтримки.'
+              'Спробуйте завантажити ще раз або зверніться до підтримки.'
           );
         }
         console.log(`[Installer] ✓ Achievements file hash verified successfully`);
       }
 
       // Extract achievements archive to temp directory
-      const achievementsExtractDir = path.join(downloadDir, `${game.id}_achievements_extract`);
+      const achievementsExtractDir = path.join(
+        downloadDir,
+        `${game.id}_achievements_extract`
+      );
       await extractArchive(achievementsArchivePath, achievementsExtractDir, (status) => {
-        onStatus?.({ message: `Розпакування ачівок... ${status.progress ? status.progress + '%' : ''}`.trim() });
+        onStatus?.({
+          message:
+            `Розпакування ачівок... ${status.progress ? status.progress + '%' : ''}`.trim(),
+        });
       });
 
       // Get list of achievements files
       achievementsFiles = await getAllFiles(achievementsExtractDir);
-      console.log(`[Installer] Achievements archive has ${achievementsFiles.length} files`);
+      console.log(
+        `[Installer] Achievements archive has ${achievementsFiles.length} files`
+      );
 
       // Determine Steam path for achievements (Steam/appcache/stats)
       // Always uses main Steam installation, not the game's library folder
@@ -440,7 +501,9 @@ export async function installTranslation(
 
         await copyDirectory(achievementsExtractDir, achievementsInstallPath);
       } else {
-        console.warn('[Installer] Could not determine Steam achievements path, skipping achievements installation');
+        console.warn(
+          '[Installer] Could not determine Steam achievements path, skipping achievements installation'
+        );
       }
     }
 
@@ -452,11 +515,15 @@ export async function installTranslation(
       // Game has its own executable installer - let it handle the installation
       // We don't copy files or create backups since the installer manages everything
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
-      console.log(`[Installer] Skipping backup and file copy - installer will handle installation`);
+      console.log(
+        `[Installer] Skipping backup and file copy - installer will handle installation`
+      );
 
       try {
         await runInstaller(extractDir, installerFileName);
-        console.log(`[Installer] Installer launched successfully. User needs to complete installation.`);
+        console.log(
+          `[Installer] Installer launched successfully. User needs to complete installation.`
+        );
       } catch (error) {
         console.error('[Installer] Failed to launch installer:', error);
         throw new Error('Не вдалося запустити інсталятор українізатора');
@@ -484,7 +551,9 @@ export async function installTranslation(
       };
       await saveInstallationInfo(gamePath.path, installationInfo);
 
-      console.log(`[Installer] Translation installer launched for ${game.id}. User must complete installation manually.`);
+      console.log(
+        `[Installer] Translation installer launched for ${game.id}. User must complete installation manually.`
+      );
       return;
     }
 
@@ -525,23 +594,31 @@ export async function installTranslation(
           installed: true,
           files: textFiles,
         },
-        ...(installVoice && voiceFiles.length > 0 ? {
-          voice: {
-            installed: true,
-            files: voiceFiles,
-          },
-        } : {}),
-        ...(installAchievements && achievementsFiles.length > 0 && achievementsInstallPath ? {
-          achievements: {
-            installed: true,
-            files: achievementsFiles.map(f => path.join(achievementsInstallPath!, f)),
-          },
-        } : {}),
+        ...(installVoice && voiceFiles.length > 0
+          ? {
+              voice: {
+                installed: true,
+                files: voiceFiles,
+              },
+            }
+          : {}),
+        ...(installAchievements && achievementsFiles.length > 0 && achievementsInstallPath
+          ? {
+              achievements: {
+                installed: true,
+                files: achievementsFiles.map((f) =>
+                  path.join(achievementsInstallPath!, f)
+                ),
+              },
+            }
+          : {}),
       },
     };
     await saveInstallationInfo(gamePath.path, installationInfo);
 
-    console.log(`[Installer] Translation for ${game.id} installed successfully at ${fullTargetPath}`);
+    console.log(
+      `[Installer] Translation for ${game.id} installed successfully at ${fullTargetPath}`
+    );
   } catch (error) {
     console.error('[Installer] Installation error:', error);
 
@@ -618,9 +695,13 @@ async function downloadFile(
     try {
       if (attempt > 1) {
         console.log(`[Downloader] Retry attempt ${attempt}/${maxRetries}`);
-        onStatus?.({ message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.` });
+        onStatus?.({
+          message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.`,
+        });
         // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000))
+        );
 
         // Перевірити чи не було скасовано під час очікування
         if (signal?.aborted) {
@@ -634,15 +715,18 @@ async function downloadFile(
       return; // Success
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('Unknown error');
-      console.error(`[Downloader] Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+      console.error(
+        `[Downloader] Attempt ${attempt}/${maxRetries} failed:`,
+        lastError.message
+      );
 
       // Показати користувачу що сталась помилка
-      const isNetworkError = error instanceof Error && (
-        error.message.toLowerCase().includes('network') ||
-        error.message.toLowerCase().includes('enotfound') ||
-        error.message.toLowerCase().includes('etimedout') ||
-        error.message.toLowerCase().includes('econnreset')
-      );
+      const isNetworkError =
+        error instanceof Error &&
+        (error.message.toLowerCase().includes('network') ||
+          error.message.toLowerCase().includes('enotfound') ||
+          error.message.toLowerCase().includes('etimedout') ||
+          error.message.toLowerCase().includes('econnreset'));
 
       if (isNetworkError && attempt < maxRetries) {
         onStatus?.({ message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...` });
@@ -660,7 +744,11 @@ async function downloadFile(
       // Don't retry on certain errors
       if (error instanceof Error) {
         const message = error.message.toLowerCase();
-        if (message.includes('404') || message.includes('not found') || message.includes('forbidden')) {
+        if (
+          message.includes('404') ||
+          message.includes('not found') ||
+          message.includes('forbidden')
+        ) {
           throw error; // Don't retry on these errors
         }
         // Також не робити retry якщо завантаження скасовано
@@ -683,8 +771,8 @@ async function downloadFile(
 
   throw new Error(
     `Не вдалося завантажити файл після ${maxRetries} спроб.\n\n` +
-    `Остання помилка: ${lastError?.message || 'Невідома помилка'}\n\n` +
-    'Перевірте підключення до Інтернету та спробуйте ще раз.'
+      `Остання помилка: ${lastError?.message || 'Невідома помилка'}\n\n` +
+      'Перевірте підключення до Інтернету та спробуйте ще раз.'
   );
 }
 
@@ -805,17 +893,23 @@ async function downloadFileAttempt(
 
       if (message.includes('enotfound') || message.includes('getaddrinfo')) {
         onStatus?.({ message: '❌ Відсутнє підключення до Інтернету' });
-        throw new Error('Не вдалося підключитися до сервера. Перевірте підключення до Інтернету.');
+        throw new Error(
+          'Не вдалося підключитися до сервера. Перевірте підключення до Інтернету.'
+        );
       }
 
       if (message.includes('etimedout') || message.includes('timeout')) {
-        onStatus?.({ message: '❌ Час очікування вичерпано. Перевірте підключення до Інтернету.' });
+        onStatus?.({
+          message: '❌ Час очікування вичерпано. Перевірте підключення до Інтернету.',
+        });
         throw new Error('Час очікування вичерпано. Перевірте підключення до Інтернету.');
       }
 
       if (message.includes('econnreset') || message.includes('socket hang up')) {
-        onStatus?.({ message: '❌ З\'єднання розірвано. Перевірте підключення до Інтернету.' });
-        throw new Error('З\'єднання розірвано. Перевірте підключення до Інтернету.');
+        onStatus?.({
+          message: "❌ З'єднання розірвано. Перевірте підключення до Інтернету.",
+        });
+        throw new Error("З'єднання розірвано. Перевірте підключення до Інтернету.");
       }
 
       if (message.includes('econnrefused')) {
@@ -824,8 +918,12 @@ async function downloadFileAttempt(
       }
     }
 
-    onStatus?.({ message: '❌ Помилка завантаження. Перевірте підключення до Інтернету.' });
-    throw new Error(`Помилка завантаження: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
+    onStatus?.({
+      message: '❌ Помилка завантаження. Перевірте підключення до Інтернету.',
+    });
+    throw new Error(
+      `Помилка завантаження: ${error instanceof Error ? error.message : 'Невідома помилка'}`
+    );
   } finally {
     signal?.removeEventListener('abort', abortHandler);
   }
@@ -869,7 +967,7 @@ async function extractArchive(
         console.log(`[Installer] Extraction progress: ${percent}%`);
         onStatus?.({
           message: `Розпакування файлів... ${percent}%`,
-          progress: percent
+          progress: percent,
         });
       }
     });
@@ -884,7 +982,7 @@ async function extractArchive(
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error(`[Installer] extractArchive failed:`, {
         message: errorMessage,
-        archivePath
+        archivePath,
       });
       reject(new Error(`Помилка розпакування архіву: ${errorMessage}`));
     });
@@ -925,7 +1023,10 @@ async function restoreBackupLegacy(backupDir: string, targetDir: string): Promis
  * Restore files from new backup format (file.upk_backup -> file.upk)
  * Searches for *_backup files and restores them
  */
-async function restoreBackupNew(targetDir: string, installedFiles: string[]): Promise<void> {
+async function restoreBackupNew(
+  targetDir: string,
+  installedFiles: string[]
+): Promise<void> {
   try {
     let restoredCount = 0;
 
@@ -938,13 +1039,17 @@ async function restoreBackupNew(targetDir: string, installedFiles: string[]): Pr
         await fs.promises.copyFile(backupPath, targetPath);
         // Delete the backup file
         await unlink(backupPath);
-        console.log(`[Restore] Restored: ${path.basename(targetPath)} from ${path.basename(backupPath)}`);
+        console.log(
+          `[Restore] Restored: ${path.basename(targetPath)} from ${path.basename(backupPath)}`
+        );
         restoredCount++;
       }
     }
 
     if (restoredCount > 0) {
-      console.log(`[Restore] New format restore completed: ${restoredCount} files restored`);
+      console.log(
+        `[Restore] New format restore completed: ${restoredCount} files restored`
+      );
     }
   } catch (error) {
     console.error('[Restore] Error restoring backup (new format):', error);
@@ -1008,10 +1113,14 @@ async function backupFiles(sourceDir: string, targetDir: string): Promise<void> 
           // Only create backup if it doesn't exist (preserve original files)
           if (!fs.existsSync(backupPath)) {
             await fs.promises.copyFile(targetPath, backupPath);
-            console.log(`[Backup] Backed up: ${entry.name} -> ${entry.name}${BACKUP_SUFFIX}`);
+            console.log(
+              `[Backup] Backed up: ${entry.name} -> ${entry.name}${BACKUP_SUFFIX}`
+            );
             backedUpCount++;
           } else {
-            console.log(`[Backup] Backup already exists, skipping: ${entry.name}${BACKUP_SUFFIX}`);
+            console.log(
+              `[Backup] Backup already exists, skipping: ${entry.name}${BACKUP_SUFFIX}`
+            );
           }
         }
       }
@@ -1126,9 +1235,18 @@ async function deleteDirectory(dirPath: string): Promise<void> {
  * Check if file is an executable installer
  */
 function isExecutableInstaller(fileName: string): boolean {
-  const executableExtensions = ['.exe', '.msi', '.bat', '.cmd', '.sh', '.run', '.bin', '.appimage'];
+  const executableExtensions = [
+    '.exe',
+    '.msi',
+    '.bat',
+    '.cmd',
+    '.sh',
+    '.run',
+    '.bin',
+    '.appimage',
+  ];
   const lowerName = fileName.toLowerCase();
-  return executableExtensions.some(ext => lowerName.endsWith(ext));
+  return executableExtensions.some((ext) => lowerName.endsWith(ext));
 }
 
 /**
@@ -1161,7 +1279,10 @@ function hasExecutableInstaller(game: Game): boolean {
 /**
  * Run installer file from extracted archive
  */
-async function runInstaller(extractDir: string, installerFileName: string): Promise<void> {
+async function runInstaller(
+  extractDir: string,
+  installerFileName: string
+): Promise<void> {
   try {
     const installerPath = path.join(extractDir, installerFileName);
 
@@ -1260,15 +1381,21 @@ export async function uninstallTranslation(game: Game): Promise<void> {
       // New format: use components structure
       if (installInfo.components.text?.installed) {
         allFilesToDelete.push(...installInfo.components.text.files);
-        console.log(`[Installer] Text component: ${installInfo.components.text.files.length} files`);
+        console.log(
+          `[Installer] Text component: ${installInfo.components.text.files.length} files`
+        );
       }
       if (installInfo.components.voice?.installed) {
         allFilesToDelete.push(...installInfo.components.voice.files);
-        console.log(`[Installer] Voice component: ${installInfo.components.voice.files.length} files`);
+        console.log(
+          `[Installer] Voice component: ${installInfo.components.voice.files.length} files`
+        );
       }
       // Delete/restore achievements files (they are stored with full paths)
       if (installInfo.components.achievements?.installed) {
-        console.log(`[Installer] Achievements component: ${installInfo.components.achievements.files.length} files`);
+        console.log(
+          `[Installer] Achievements component: ${installInfo.components.achievements.files.length} files`
+        );
         for (const achievementFile of installInfo.components.achievements.files) {
           const backupPath = achievementFile + BACKUP_SUFFIX;
           try {
@@ -1278,21 +1405,28 @@ export async function uninstallTranslation(game: Game): Promise<void> {
                 await unlink(achievementFile);
               }
               await fs.promises.rename(backupPath, achievementFile);
-              console.log(`[Installer] Restored achievement file from backup: ${achievementFile}`);
+              console.log(
+                `[Installer] Restored achievement file from backup: ${achievementFile}`
+              );
             } else if (fs.existsSync(achievementFile)) {
               // No backup - just delete
               await unlink(achievementFile);
               console.log(`[Installer] Deleted achievement file: ${achievementFile}`);
             }
           } catch (error) {
-            console.warn(`[Installer] Failed to restore/delete achievement file ${achievementFile}:`, error);
+            console.warn(
+              `[Installer] Failed to restore/delete achievement file ${achievementFile}:`,
+              error
+            );
           }
         }
       }
     } else if (installInfo.installedFiles && installInfo.installedFiles.length > 0) {
       // Legacy format: use installedFiles
       allFilesToDelete = installInfo.installedFiles;
-      console.log(`[Installer] Legacy format: ${installInfo.installedFiles.length} files`);
+      console.log(
+        `[Installer] Legacy format: ${installInfo.installedFiles.length} files`
+      );
     }
 
     // Delete all files
@@ -1315,7 +1449,9 @@ export async function uninstallTranslation(game: Game): Promise<void> {
                 if (entries.length === 0) {
                   await fs.promises.rmdir(dirPath);
                   directoriesDeleted.add(dirPath);
-                  console.log(`[Installer] Deleted empty directory: ${path.relative(gamePath, dirPath)}`);
+                  console.log(
+                    `[Installer] Deleted empty directory: ${path.relative(gamePath, dirPath)}`
+                  );
                   dirPath = path.dirname(dirPath);
                 } else {
                   break; // Directory not empty, stop
@@ -1348,11 +1484,15 @@ export async function uninstallTranslation(game: Game): Promise<void> {
         console.log(`[Installer] Deleted backup directory: ${backupDir}`);
       } else {
         // New format: restore from *_backup files
-        console.log(`[Installer] Restoring files from new backup format (${BACKUP_SUFFIX} files)`);
+        console.log(
+          `[Installer] Restoring files from new backup format (${BACKUP_SUFFIX} files)`
+        );
         await restoreBackupNew(gamePath, allFilesToDelete);
       }
     } else {
-      console.warn('[Installer] Backup was disabled during installation, skipping file restoration');
+      console.warn(
+        '[Installer] Backup was disabled during installation, skipping file restoration'
+      );
     }
 
     // Step 3: Clean up empty directories (including .littlebit-backup if empty)
@@ -1409,7 +1549,9 @@ export async function removeComponents(
 
     // Remove voice component
     if (componentsToRemove.voice && installInfo.components?.voice?.installed) {
-      console.log(`[Installer] Removing voice component: ${installInfo.components.voice.files.length} files`);
+      console.log(
+        `[Installer] Removing voice component: ${installInfo.components.voice.files.length} files`
+      );
 
       for (const relativePath of installInfo.components.voice.files) {
         const filePath = path.join(gamePath, relativePath);
@@ -1431,7 +1573,10 @@ export async function removeComponents(
             console.log(`[Installer] Deleted voice file (no backup): ${relativePath}`);
           }
         } catch (error) {
-          console.warn(`[Installer] Failed to restore/delete voice file ${relativePath}:`, error);
+          console.warn(
+            `[Installer] Failed to restore/delete voice file ${relativePath}:`,
+            error
+          );
         }
       }
 
@@ -1440,8 +1585,13 @@ export async function removeComponents(
     }
 
     // Remove achievements component
-    if (componentsToRemove.achievements && installInfo.components?.achievements?.installed) {
-      console.log(`[Installer] Removing achievements component: ${installInfo.components.achievements.files.length} files`);
+    if (
+      componentsToRemove.achievements &&
+      installInfo.components?.achievements?.installed
+    ) {
+      console.log(
+        `[Installer] Removing achievements component: ${installInfo.components.achievements.files.length} files`
+      );
 
       // Achievements files are stored with full paths
       for (const achievementFile of installInfo.components.achievements.files) {
@@ -1456,14 +1606,21 @@ export async function removeComponents(
             }
             // Restore from backup
             await fs.promises.rename(backupPath, achievementFile);
-            console.log(`[Installer] Restored achievement file from backup: ${achievementFile}`);
+            console.log(
+              `[Installer] Restored achievement file from backup: ${achievementFile}`
+            );
           } else if (fs.existsSync(achievementFile)) {
             // No backup - just delete (file was added, not replaced)
             await unlink(achievementFile);
-            console.log(`[Installer] Deleted achievement file (no backup): ${achievementFile}`);
+            console.log(
+              `[Installer] Deleted achievement file (no backup): ${achievementFile}`
+            );
           }
         } catch (error) {
-          console.warn(`[Installer] Failed to restore/delete achievement file ${achievementFile}:`, error);
+          console.warn(
+            `[Installer] Failed to restore/delete achievement file ${achievementFile}:`,
+            error
+          );
         }
       }
 
@@ -1508,7 +1665,9 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
         console.log(
           `[Installer] Translation found in library path: ${gamePath.path}, version ${info.version}`
         );
-        console.log(`[Installer] Components: voice=${info.components?.voice?.installed}, achievements=${info.components?.achievements?.installed}`);
+        console.log(
+          `[Installer] Components: voice=${info.components?.voice?.installed}, achievements=${info.components?.achievements?.installed}`
+        );
 
         // Update cache to point to library path (only if changed to avoid triggering watcher loop)
         const userDataPath = app.getPath('userData');
@@ -1526,13 +1685,17 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
               const existingInfo = JSON.parse(existingContent);
               // Compare key fields and components to avoid unnecessary writes
               const sameComponents =
-                existingInfo.components?.voice?.installed === info.components?.voice?.installed &&
-                existingInfo.components?.achievements?.installed === info.components?.achievements?.installed;
+                existingInfo.components?.voice?.installed ===
+                  info.components?.voice?.installed &&
+                existingInfo.components?.achievements?.installed ===
+                  info.components?.achievements?.installed;
 
-              if (existingInfo.gamePath === info.gamePath &&
-                  existingInfo.version === info.version &&
-                  existingInfo.gameId === info.gameId &&
-                  sameComponents) {
+              if (
+                existingInfo.gamePath === info.gamePath &&
+                existingInfo.version === info.version &&
+                existingInfo.gameId === info.gameId &&
+                sameComponents
+              ) {
                 needsUpdate = false;
               }
             } catch {
@@ -1541,7 +1704,11 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
           }
 
           if (needsUpdate) {
-            await fs.promises.writeFile(cacheInfoPath, JSON.stringify(info, null, 2), 'utf-8');
+            await fs.promises.writeFile(
+              cacheInfoPath,
+              JSON.stringify(info, null, 2),
+              'utf-8'
+            );
             console.log(`[Installer] Updated cache with library path: ${cacheInfoPath}`);
           }
         } catch (cacheError) {
@@ -1622,10 +1789,14 @@ export function invalidateInstalledGameIdsCache(): void {
 /**
  * Remove orphaned installation metadata (games that no longer exist on disk)
  */
-export async function removeOrphanedInstallationMetadata(gameIds: string[]): Promise<void> {
+export async function removeOrphanedInstallationMetadata(
+  gameIds: string[]
+): Promise<void> {
   if (gameIds.length === 0) return;
 
-  console.log(`[Installer] Removing ${gameIds.length} orphaned installation metadata files`);
+  console.log(
+    `[Installer] Removing ${gameIds.length} orphaned installation metadata files`
+  );
 
   const userDataPath = app.getPath('userData');
   const installInfoDir = path.join(userDataPath, 'installation-cache');
@@ -1653,7 +1824,9 @@ export async function removeOrphanedInstallationMetadata(gameIds: string[]): Pro
 export async function getAllInstalledGameIds(): Promise<string[]> {
   // Return cached value if available
   if (installedGameIdsCache !== null) {
-    console.log(`[Installer] Using cached installed games (${installedGameIdsCache.length} games)`);
+    console.log(
+      `[Installer] Using cached installed games (${installedGameIdsCache.length} games)`
+    );
     return installedGameIdsCache;
   }
 
@@ -1672,8 +1845,8 @@ export async function getAllInstalledGameIds(): Promise<string[]> {
 
     // Extract game IDs from filenames (remove .json extension)
     const gameIds = files
-      .filter(file => file.endsWith('.json'))
-      .map(file => file.replace('.json', ''));
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => file.replace('.json', ''));
 
     console.log(`[Installer] Found ${gameIds.length} installed games:`, gameIds);
 
@@ -1705,7 +1878,9 @@ async function verifyFileHash(filePath: string, expectedHash: string): Promise<b
 
     // Small files - always use full SHA-256
     if (fileSize <= FULL_HASH_LIMIT) {
-      console.log(`[Hash] Small file (${(fileSize / 1024 / 1024).toFixed(1)}MB), using full SHA-256`);
+      console.log(
+        `[Hash] Small file (${(fileSize / 1024 / 1024).toFixed(1)}MB), using full SHA-256`
+      );
       const actualHash = await calculateFullHash(filePath);
       console.log(`[Hash] Expected: ${expectedHash}`);
       console.log(`[Hash] Actual:   ${actualHash}`);
@@ -1716,7 +1891,11 @@ async function verifyFileHash(filePath: string, expectedHash: string): Promise<b
     console.log(
       `[Hash] Large file (${(fileSize / 1024 / 1024).toFixed(1)}MB), trying fingerprint hash first`
     );
-    const fingerprintHash = await calculateFingerprintHash(filePath, fileSize, CHUNK_SIZE);
+    const fingerprintHash = await calculateFingerprintHash(
+      filePath,
+      fileSize,
+      CHUNK_SIZE
+    );
     console.log(`[Hash] Expected:    ${expectedHash}`);
     console.log(`[Hash] Fingerprint: ${fingerprintHash}`);
 
@@ -1826,10 +2005,10 @@ function parseSizeToBytes(sizeString: string): number {
   const unit = match[2].toUpperCase();
 
   const multipliers: Record<string, number> = {
-    'B': 1,
-    'KB': 1024,
-    'MB': 1024 * 1024,
-    'GB': 1024 * 1024 * 1024,
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
   };
 
   return value * (multipliers[unit] || 0);

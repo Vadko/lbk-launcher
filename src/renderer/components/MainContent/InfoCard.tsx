@@ -1,6 +1,14 @@
 import React from 'react';
 import { Game } from '../../types/game';
-import { Gamepad2, Calendar, Users, HardDrive, Download, Volume2, Trophy } from 'lucide-react';
+import {
+  Gamepad2,
+  Calendar,
+  Users,
+  HardDrive,
+  Download,
+  Volume2,
+  Trophy,
+} from 'lucide-react';
 
 interface InfoCardProps {
   game: Game;
@@ -29,21 +37,11 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-head font-semibold text-white mb-4">
-        Інформація
-      </h3>
+      <h3 className="text-lg font-head font-semibold text-white mb-4">Інформація</h3>
       <div className="grid grid-cols-2 gap-4">
-        <InfoItem
-          icon={<Gamepad2 size={18} />}
-          label="Платформи"
-          value={platformsText}
-        />
+        <InfoItem icon={<Gamepad2 size={18} />} label="Платформи" value={platformsText} />
         {game.version && (
-          <InfoItem
-            icon={<Calendar size={18} />}
-            label="Версія"
-            value={game.version}
-          />
+          <InfoItem icon={<Calendar size={18} />} label="Версія" value={game.version} />
         )}
         {game.team && (
           <InfoItem icon={<Users size={18} />} label="Команда" value={game.team} />

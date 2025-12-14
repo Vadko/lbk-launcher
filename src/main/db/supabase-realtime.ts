@@ -51,7 +51,9 @@ export class SupabaseRealtimeManager {
     }
 
     const delay = this.getRetryDelay();
-    console.log(`[SupabaseRealtime] Scheduling retry #${this.retryCount + 1} in ${Math.round(delay)}ms`);
+    console.log(
+      `[SupabaseRealtime] Scheduling retry #${this.retryCount + 1} in ${Math.round(delay)}ms`
+    );
 
     this.retryTimeout = setTimeout(() => {
       this.retryCount++;
@@ -94,7 +96,10 @@ export class SupabaseRealtimeManager {
   /**
    * Внутрішній метод підписки
    */
-  private subscribeInternal(onUpdate: (game: Game) => void, onDelete: (gameId: string) => void): void {
+  private subscribeInternal(
+    onUpdate: (game: Game) => void,
+    onDelete: (gameId: string) => void
+  ): void {
     if (this.channel) {
       console.log('[SupabaseRealtime] Already subscribed, skipping');
       return;
@@ -111,7 +116,7 @@ export class SupabaseRealtimeManager {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'games'
+          table: 'games',
         },
         (payload) => {
           console.log('[SupabaseRealtime] Game updated:', payload);
@@ -119,7 +124,10 @@ export class SupabaseRealtimeManager {
 
           // Якщо гра більше не approved, видалити з локальної БД
           if (!updatedGame.approved) {
-            console.log('[SupabaseRealtime] Game unapproved, removing from local DB:', updatedGame.name);
+            console.log(
+              '[SupabaseRealtime] Game unapproved, removing from local DB:',
+              updatedGame.name
+            );
             onDelete(updatedGame.id);
 
             // Відправити game-removed в renderer
@@ -148,7 +156,7 @@ export class SupabaseRealtimeManager {
         {
           event: 'DELETE',
           schema: 'public',
-          table: 'games'
+          table: 'games',
         },
         (payload) => {
           console.log('[SupabaseRealtime] Game deleted:', payload);
@@ -161,7 +169,10 @@ export class SupabaseRealtimeManager {
           const mainWindow = getMainWindow();
           if (mainWindow) {
             mainWindow.webContents.send('game-removed', deletedGameId);
-            console.log('[SupabaseRealtime] Sent game-removed to renderer:', deletedGameId);
+            console.log(
+              '[SupabaseRealtime] Sent game-removed to renderer:',
+              deletedGameId
+            );
           }
         }
       )

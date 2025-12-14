@@ -1,7 +1,11 @@
 import { app, ipcMain } from 'electron';
 import { fetchGames, fetchGamesByIds, findGamesByInstallPaths } from '../api';
 import { GetGamesParams, Game } from '../../shared/types';
-import { getFirstAvailableGamePath, getAllInstalledGamePaths, getAllInstalledSteamGames } from '../game-detector';
+import {
+  getFirstAvailableGamePath,
+  getAllInstalledGamePaths,
+  getAllInstalledSteamGames,
+} from '../game-detector';
 import { getMachineId, trackSubscription } from '../tracking';
 
 export function setupGamesHandlers(): void {
@@ -16,9 +20,12 @@ export function setupGamesHandlers(): void {
   });
 
   // Track subscription (subscribe/unsubscribe) from renderer
-  ipcMain.handle('track-subscription', async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => {
-    return trackSubscription(gameId, action);
-  });
+  ipcMain.handle(
+    'track-subscription',
+    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => {
+      return trackSubscription(gameId, action);
+    }
+  );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
   ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {
@@ -76,7 +83,10 @@ export function setupGamesHandlers(): void {
   ipcMain.handle('launch-game', async (_, game: Game) => {
     try {
       console.log('[LaunchGame] Request to launch game:', game.name, '(', game.id, ')');
-      console.log('[LaunchGame] Game install paths:', JSON.stringify(game.install_paths, null, 2));
+      console.log(
+        '[LaunchGame] Game install paths:',
+        JSON.stringify(game.install_paths, null, 2)
+      );
 
       const gamePath = getFirstAvailableGamePath(game.install_paths || []);
 
@@ -84,11 +94,18 @@ export function setupGamesHandlers(): void {
         console.error('[LaunchGame] Game not found on system');
         return {
           success: false,
-          error: 'Гру не знайдено на вашому комп\'ютері',
+          error: "Гру не знайдено на вашому комп'ютері",
         };
       }
 
-      console.log('[LaunchGame] Launching game:', game.name, 'at', gamePath.path, 'platform:', gamePath.platform);
+      console.log(
+        '[LaunchGame] Launching game:',
+        game.name,
+        'at',
+        gamePath.path,
+        'platform:',
+        gamePath.platform
+      );
 
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
@@ -194,4 +211,3 @@ export function setupGamesHandlers(): void {
     }
   });
 }
-

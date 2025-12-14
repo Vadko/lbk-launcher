@@ -155,11 +155,13 @@ function isInsidePopup(element: HTMLElement): boolean {
   let parent: HTMLElement | null = element;
   while (parent) {
     // Check for common popup indicators
-    if (parent.classList.contains('filter-dropdown') ||
-        parent.getAttribute('role') === 'menu' ||
-        parent.getAttribute('role') === 'dialog' ||
-        parent.classList.contains('modal') ||
-        parent.hasAttribute('data-popup')) {
+    if (
+      parent.classList.contains('filter-dropdown') ||
+      parent.getAttribute('role') === 'menu' ||
+      parent.getAttribute('role') === 'dialog' ||
+      parent.classList.contains('modal') ||
+      parent.hasAttribute('data-popup')
+    ) {
       return true;
     }
     parent = parent.parentElement;
@@ -213,7 +215,7 @@ function getFocusableElements(): HTMLElement[] {
     '[data-focusable]',
   ].join(', ');
 
-  return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter(el => {
+  return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter((el) => {
     const rect = el.getBoundingClientRect();
     const style = window.getComputedStyle(el);
     return (
@@ -279,7 +281,7 @@ function getDirectionalScore(
 
   // For horizontal navigation (left/right), be more lenient with vertical offset
   // This helps navigate between sidebar and main content
-  const secondaryWeight = (direction === 'left' || direction === 'right') ? 1.5 : 2.5;
+  const secondaryWeight = direction === 'left' || direction === 'right' ? 1.5 : 2.5;
 
   // Weighted score: primary direction matters more
   return primaryDistance + secondaryDistance * secondaryWeight;
@@ -295,9 +297,13 @@ function findScrollableContainer(element: HTMLElement): HTMLElement | null {
     const overflowY = style.overflowY;
     const hasScroll = parent.scrollHeight > parent.clientHeight;
 
-    if ((overflowY === 'auto' || overflowY === 'scroll' ||
+    if (
+      (overflowY === 'auto' ||
+        overflowY === 'scroll' ||
         parent.classList.contains('custom-scrollbar') ||
-        parent.classList.contains('overflow-y-auto')) && hasScroll) {
+        parent.classList.contains('overflow-y-auto')) &&
+      hasScroll
+    ) {
       return parent;
     }
     parent = parent.parentElement;
@@ -379,7 +385,7 @@ function navigateDirection(direction: Direction): void {
     if (currentContainer && canScrollInDirection(currentContainer, direction)) {
       currentContainer.scrollBy({
         top: direction === 'up' ? -150 : 150,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
       // Update indicator position after scroll
       setTimeout(() => updateFocusIndicator(current), 250);
@@ -405,9 +411,13 @@ function scrollIntoViewIfNeeded(element: HTMLElement): void {
     const overflowY = style.overflowY;
     const hasScroll = scrollParent.scrollHeight > scrollParent.clientHeight;
 
-    if ((overflowY === 'auto' || overflowY === 'scroll' ||
+    if (
+      (overflowY === 'auto' ||
+        overflowY === 'scroll' ||
         scrollParent.classList.contains('custom-scrollbar') ||
-        scrollParent.classList.contains('overflow-y-auto')) && hasScroll) {
+        scrollParent.classList.contains('overflow-y-auto')) &&
+      hasScroll
+    ) {
       break;
     }
     scrollParent = scrollParent.parentElement;
@@ -461,14 +471,13 @@ function focusElement(element: HTMLElement): void {
   playNavigateSound();
 
   // Trigger a subtle haptic-like visual feedback
-  element.animate([
-    { transform: 'scale(1)' },
-    { transform: 'scale(1.02)' },
-    { transform: 'scale(1)' },
-  ], {
-    duration: 150,
-    easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  });
+  element.animate(
+    [{ transform: 'scale(1)' }, { transform: 'scale(1.02)' }, { transform: 'scale(1)' }],
+    {
+      duration: 150,
+      easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    }
+  );
 }
 
 /**
@@ -501,14 +510,17 @@ export function useGamepadNavigation(enabled: boolean = true): void {
       playConfirmSound();
 
       // Visual feedback for click
-      active.animate([
-        { transform: 'scale(1)' },
-        { transform: 'scale(0.95)' },
-        { transform: 'scale(1)' },
-      ], {
-        duration: 100,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-      });
+      active.animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(0.95)' },
+          { transform: 'scale(1)' },
+        ],
+        {
+          duration: 100,
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        }
+      );
       active.click();
     }
   }, []);
@@ -525,7 +537,9 @@ export function useGamepadNavigation(enabled: boolean = true): void {
       closeBtn.click();
       return;
     }
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    );
   }, []);
 
   const handleScroll = useCallback((direction: 'up' | 'down') => {
@@ -537,8 +551,10 @@ export function useGamepadNavigation(enabled: boolean = true): void {
       // Walk up the DOM tree to find the nearest scrollable parent
       let parent = focused.parentElement;
       while (parent) {
-        if (parent.classList.contains('custom-scrollbar') ||
-            parent.classList.contains('overflow-y-auto')) {
+        if (
+          parent.classList.contains('custom-scrollbar') ||
+          parent.classList.contains('overflow-y-auto')
+        ) {
           scrollable = parent;
           break;
         }
@@ -554,7 +570,7 @@ export function useGamepadNavigation(enabled: boolean = true): void {
     if (scrollable) {
       scrollable.scrollBy({
         top: direction === 'up' ? -200 : 200,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
     }
   }, []);

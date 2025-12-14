@@ -20,7 +20,10 @@ interface Window {
     close: () => void;
     onMaximizedChange: (callback: (isMaximized: boolean) => void) => void;
     isVisible: () => Promise<boolean>;
-    showSystemNotification: (options: { title: string; body: string }) => Promise<boolean>;
+    showSystemNotification: (options: {
+      title: string;
+      body: string;
+    }) => Promise<boolean>;
     clearCacheAndRestart: () => Promise<{ success: boolean; error?: string }>;
   };
 }

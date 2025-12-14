@@ -8,7 +8,12 @@ export const ConfirmModal: React.FC = () => {
   if (!config) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={closeConfirm} title={config.title} showCloseButton={false}>
+    <Modal
+      isOpen={isOpen}
+      onClose={closeConfirm}
+      title={config.title}
+      showCloseButton={false}
+    >
       <div className="flex flex-col gap-6">
         <p className="text-white whitespace-pre-line">{config.message}</p>
         <div className="flex gap-3">

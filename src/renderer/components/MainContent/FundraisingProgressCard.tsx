@@ -6,7 +6,10 @@ interface FundraisingProgressCardProps {
   goal: number;
 }
 
-export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = ({ current, goal }) => {
+export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = ({
+  current,
+  goal,
+}) => {
   const percentage = goal > 0 ? Math.min(Math.round((current / goal) * 100), 100) : 0;
 
   const formatAmount = (amount: number): string => {
@@ -22,9 +25,7 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
     <div className="glass-card">
       <div className="flex items-center gap-2 mb-4">
         <DollarSign size={20} className="text-neon-green" />
-        <h3 className="text-lg font-head font-semibold text-white">
-          Збір коштів
-        </h3>
+        <h3 className="text-lg font-head font-semibold text-white">Збір коштів</h3>
       </div>
 
       <div className="space-y-3">

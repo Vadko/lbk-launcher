@@ -22,7 +22,10 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={onClose}
+        >
           {/* Backdrop with blur */}
           <motion.div
             className="absolute inset-0 bg-black/60 backdrop-blur-xl modal-backdrop"
@@ -41,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{
               duration: 0.2,
-              ease: [0.23, 1, 0.32, 1]
+              ease: [0.23, 1, 0.32, 1],
             }}
           >
             {/* Header */}
@@ -64,9 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
 
             {/* Footer */}
             {footer && (
-              <div className="p-6 border-t border-border flex-shrink-0">
-                {footer}
-              </div>
+              <div className="p-6 border-t border-border flex-shrink-0">{footer}</div>
             )}
           </motion.div>
         </div>

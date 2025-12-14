@@ -16,8 +16,8 @@ export function useImagePreload(
     const element = elementRef.current;
     if (!element || hasPreloaded.current) return;
 
-    const validUrls = urls.filter((url): url is string =>
-      url !== null && !preloadedUrls.has(url)
+    const validUrls = urls.filter(
+      (url): url is string => url !== null && !preloadedUrls.has(url)
     );
 
     if (validUrls.length === 0) {
