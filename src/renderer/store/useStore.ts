@@ -348,21 +348,30 @@ export const useStore = create<Store>((set, get) => ({
     return get().detectedGames.has(gameId);
   },
 
-  // Check subscribed games for status changes on app startup
+  // Check subscribed games for status and progress changes on app startup
   checkSubscribedGamesStatus: (games: Game[]) => {
-    const { statusChangeNotificationsEnabled } = useSettingsStore.getState();
-    if (!statusChangeNotificationsEnabled) return;
-
     const {
       subscribedGames,
       getSubscribedStatus,
+      getSubscribedProgress,
       updateSubscribedStatus,
+      updateSubscribedProgress,
       addNotification,
+      addProgressChangeNotification,
       notifications
     } = useSubscriptionsStore.getState();
 
     // Create a map of games for quick lookup
     const gamesMap = new Map(games.map(g => [g.id, g]));
+
+    // Progress type labels
+    const progressLabels: Record<string, string> = {
+      translation_progress: 'Переклад',
+      editing_progress: 'Редагування',
+      voice_progress: 'Озвучення',
+      textures_progress: 'Текстури',
+      fonts_progress: 'Шрифти',
+    };
 
     // Check each subscribed game
     subscribedGames.forEach((gameId) => {
@@ -370,10 +379,10 @@ export const useStore = create<Store>((set, get) => ({
       if (!game) return;
 
       const savedStatus = getSubscribedStatus(gameId);
+      const savedProgress = getSubscribedProgress(gameId);
 
-      // If we have a saved status and it was 'planned' but now it's different
+      // Check status change (from planned to something else)
       if (savedStatus === 'planned' && game.status !== 'planned') {
-        // Check if we already have this notification
         const statusText = game.status === 'completed'
           ? 'Завершено'
           : game.status === 'in-progress'
@@ -398,12 +407,46 @@ export const useStore = create<Store>((set, get) => ({
           });
         }
 
-        // Update saved status
-        updateSubscribedStatus(gameId, game.status);
+        // Unsubscribe since the game is no longer planned
+        useSubscriptionsStore.getState().unsubscribe(gameId);
+        console.log(`[Store] Auto-unsubscribed from ${game.name} (status changed from planned)`);
+        return; // Skip progress check since we unsubscribed
       } else if (!savedStatus) {
-        // If no saved status, save current one (for legacy subscriptions)
         updateSubscribedStatus(gameId, game.status);
       }
+
+      // Check progress changes
+      const currentProgress = {
+        translation_progress: game.translation_progress,
+        editing_progress: game.editing_progress,
+        voice_progress: game.voice_progress,
+        textures_progress: game.textures_progress,
+        fonts_progress: game.fonts_progress,
+      };
+
+      if (savedProgress) {
+        // Check each progress type for changes
+        (Object.keys(progressLabels) as Array<keyof typeof currentProgress>).forEach((key) => {
+          const oldVal = savedProgress[key];
+          const newVal = currentProgress[key];
+
+          // Only notify if both values are numbers and new value is higher
+          if (typeof oldVal === 'number' && typeof newVal === 'number' && newVal > oldVal) {
+            console.log(`[Store] Progress changed for ${game.name}: ${key} ${oldVal}% -> ${newVal}%`);
+
+            addProgressChangeNotification(
+              game.id,
+              game.name,
+              progressLabels[key],
+              oldVal,
+              newVal
+            );
+          }
+        });
+      }
+
+      // Update saved progress
+      updateSubscribedProgress(gameId, currentProgress);
     });
   },
 }));

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RefreshCw, Languages, Download } from 'lucide-react';
+import { X, RefreshCw, Languages, Download, TrendingUp } from 'lucide-react';
 import { useSubscriptionsStore, ToastNotification } from '../../store/useSubscriptionsStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
@@ -11,6 +11,8 @@ const getToastIcon = (type: ToastNotification['type']) => {
       return <RefreshCw size={20} className="text-white" />;
     case 'app-update':
       return <Download size={20} className="text-white" />;
+    case 'progress-change':
+      return <TrendingUp size={20} className="text-white" />;
     default:
       return <RefreshCw size={20} className="text-white" />;
   }
@@ -24,6 +26,8 @@ const getToastGradient = (type: ToastNotification['type']) => {
       return 'from-neon-blue to-neon-purple';
     case 'app-update':
       return 'from-neon-purple to-pink-500';
+    case 'progress-change':
+      return 'from-amber-500 to-orange-500';
     default:
       return 'from-neon-blue to-neon-purple';
   }
@@ -37,6 +41,8 @@ const getToastBorder = (type: ToastNotification['type']) => {
       return 'border-neon-blue';
     case 'app-update':
       return 'border-neon-purple';
+    case 'progress-change':
+      return 'border-amber-500';
     default:
       return 'border-neon-blue';
   }
@@ -50,6 +56,8 @@ const getToastTitle = (type: ToastNotification['type']) => {
       return 'Доступне оновлення';
     case 'app-update':
       return 'Оновлення додатку';
+    case 'progress-change':
+      return 'Оновлення прогресу';
     default:
       return 'Сповіщення';
   }

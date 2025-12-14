@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bell, Trash2, CheckCircle, RefreshCw, Languages, Settings, Download, ChevronLeft } from 'lucide-react';
+import { X, Bell, Trash2, CheckCircle, RefreshCw, Languages, Settings, Download, ChevronLeft, TrendingUp } from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
-import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore, Notification } from '../../store/useSubscriptionsStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 
@@ -31,10 +31,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
   const toggleAppUpdateNotifications = useSettingsStore((state) => state.toggleAppUpdateNotifications);
   const gameUpdateNotificationsEnabled = useSettingsStore((state) => state.gameUpdateNotificationsEnabled);
   const toggleGameUpdateNotifications = useSettingsStore((state) => state.toggleGameUpdateNotifications);
-  const statusChangeNotificationsEnabled = useSettingsStore((state) => state.statusChangeNotificationsEnabled);
-  const toggleStatusChangeNotifications = useSettingsStore((state) => state.toggleStatusChangeNotifications);
 
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification: Notification) => {
     // Позначити як прочитане
     markNotificationAsRead(notification.id);
 
@@ -72,7 +70,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
     return date.toLocaleDateString('uk-UA');
   };
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
       case 'status-change':
         return <Languages className="w-4 h-4 text-green-400" />;
@@ -80,12 +78,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
         return <RefreshCw className="w-4 h-4 text-neon-blue" />;
       case 'app-update':
         return <Download className="w-4 h-4 text-neon-purple" />;
+      case 'progress-change':
+        return <TrendingUp className="w-4 h-4 text-amber-400" />;
       default:
         return <Bell className="w-4 h-4 text-neon-blue" />;
     }
   };
 
-  const getNotificationIconBg = (type: string) => {
+  const getNotificationIconBg = (type: Notification['type']) => {
     switch (type) {
       case 'status-change':
         return 'bg-green-500/20';
@@ -93,12 +93,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
         return 'bg-neon-blue/20';
       case 'app-update':
         return 'bg-neon-purple/20';
+      case 'progress-change':
+        return 'bg-amber-500/20';
       default:
         return 'bg-neon-blue/20';
     }
   };
 
-  const getNotificationText = (notification: any) => {
+  const getNotificationText = (notification: Notification) => {
     switch (notification.type) {
       case 'status-change':
         return <>Статус змінено з "{notification.oldValue}" на "{notification.newValue}"</>;
@@ -106,6 +108,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
         return <>Оновлення версії з {notification.oldValue} до {notification.newValue}</>;
       case 'app-update':
         return <>Доступна нова версія додатку: {notification.newValue}</>;
+      case 'progress-change':
+        return <>{notification.newValue}</>;
       default:
         return <>Нове сповіщення</>;
     }
@@ -188,17 +192,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, on
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
-                <div className="flex-1 pr-4">
-                  <h4 className="text-sm font-semibold text-white mb-1">Зміна статусу українізаторів</h4>
-                  <p className="text-xs text-text-muted">Сповіщення коли українізатор виходить зі статусу "Заплановано"</p>
-                </div>
-                <Switch
-                  id="switch-status-change"
-                  checked={statusChangeNotificationsEnabled}
-                  onCheckedChange={toggleStatusChangeNotifications}
-                />
-              </div>
             </motion.div>
           ) : (
             <motion.div

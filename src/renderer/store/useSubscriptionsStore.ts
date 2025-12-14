@@ -1,29 +1,38 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { Game } from '../../shared/types';
 
-export interface Notification {
+interface BaseNotification {
   id: string;
-  type: 'status-change' | 'version-update' | 'app-update';
-  gameId: string;
+  type: 'status-change' | 'version-update' | 'app-update' | 'progress-change';
   gameName: string;
+  timestamp: number;
+}
+
+export interface Notification extends BaseNotification {
   oldValue?: string;
   newValue?: string;
-  timestamp: number;
+  gameId: string;
   read: boolean;
 }
 
-export interface ToastNotification {
-  id: string;
-  type: 'status-change' | 'version-update' | 'app-update';
-  gameName: string;
+export interface ToastNotification extends BaseNotification {
   message: string;
-  timestamp: number;
 }
+
+export type GameProgress = Pick<Game,
+  | 'translation_progress'
+  | 'editing_progress'
+  | 'voice_progress'
+  | 'textures_progress'
+  | 'fonts_progress'
+>;
 
 interface SubscriptionsStore {
   // Subscriptions
   subscribedGames: Set<string>;
   subscribedGameStatuses: Map<string, string>;
+  subscribedGameProgress: Map<string, GameProgress>;
   notifications: Notification[];
   unreadCount: number;
 
@@ -31,13 +40,16 @@ interface SubscriptionsStore {
   toasts: ToastNotification[];
 
   // Actions
-  subscribe: (gameId: string, status: string) => void;
+  subscribe: (gameId: string, status: string, progress?: GameProgress) => void;
   unsubscribe: (gameId: string) => void;
   isSubscribed: (gameId: string) => boolean;
   getSubscribedStatus: (gameId: string) => string | undefined;
+  getSubscribedProgress: (gameId: string) => GameProgress | undefined;
   updateSubscribedStatus: (gameId: string, status: string) => void;
+  updateSubscribedProgress: (gameId: string, progress: GameProgress) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>, showToast?: boolean) => void;
   addVersionUpdateNotification: (gameId: string, gameName: string, oldVersion: string, newVersion: string, showToast?: boolean) => void;
+  addProgressChangeNotification: (gameId: string, gameName: string, progressType: string, oldValue: number, newValue: number, showToast?: boolean) => void;
   addAppUpdateNotification: (oldVersion: string, newVersion: string, showToast?: boolean) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
@@ -45,6 +57,49 @@ interface SubscriptionsStore {
   clearAllNotifications: () => void;
   dismissToast: (toastId: string) => void;
 }
+
+interface SerializedMap {
+  __type: 'Map';
+  data: [string, unknown][];
+}
+
+interface SerializedSet {
+  __type: 'Set';
+  data: string[];
+}
+
+type PersistedSubscriptionsState = Pick<SubscriptionsStore,
+  | 'subscribedGames'
+  | 'subscribedGameStatuses'
+  | 'subscribedGameProgress'
+  | 'notifications'
+  | 'unreadCount'
+>;
+
+// Custom storage with Map/Set serialization
+const customStorage = createJSONStorage<PersistedSubscriptionsState>(() => localStorage, {
+  reviver: (_key, value: unknown) => {
+    if (value && typeof value === 'object' && '__type' in value) {
+      const typed = value as SerializedMap | SerializedSet;
+      if (typed.__type === 'Map') {
+        return new Map(typed.data);
+      }
+      if (typed.__type === 'Set') {
+        return new Set(typed.data);
+      }
+    }
+    return value;
+  },
+  replacer: (_key, value: unknown) => {
+    if (value instanceof Map) {
+      return { __type: 'Map', data: Array.from(value.entries()) } as SerializedMap;
+    }
+    if (value instanceof Set) {
+      return { __type: 'Set', data: Array.from(value) } as SerializedSet;
+    }
+    return value;
+  },
+});
 
 const TOAST_DURATION = 8000; // 8 seconds
 
@@ -78,17 +133,22 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
     (set, get) => ({
       subscribedGames: new Set<string>(),
       subscribedGameStatuses: new Map<string, string>(),
+      subscribedGameProgress: new Map<string, GameProgress>(),
       notifications: [],
       unreadCount: 0,
       toasts: [],
 
-      subscribe: (gameId, status) => {
+      subscribe: (gameId, status, progress) => {
         set((state) => {
           const newSubscribed = new Set(state.subscribedGames);
           newSubscribed.add(gameId);
           const newStatuses = new Map(state.subscribedGameStatuses);
           newStatuses.set(gameId, status);
-          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses };
+          const newProgress = new Map(state.subscribedGameProgress);
+          if (progress) {
+            newProgress.set(gameId, progress);
+          }
+          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
         });
         // Track subscription via API (non-blocking)
         trackSubscription(gameId, 'subscribe');
@@ -100,7 +160,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           newSubscribed.delete(gameId);
           const newStatuses = new Map(state.subscribedGameStatuses);
           newStatuses.delete(gameId);
-          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses };
+          const newProgress = new Map(state.subscribedGameProgress);
+          newProgress.delete(gameId);
+          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
         });
         // Track unsubscription via API (non-blocking)
         trackSubscription(gameId, 'unsubscribe');
@@ -114,11 +176,23 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         return get().subscribedGameStatuses.get(gameId);
       },
 
+      getSubscribedProgress: (gameId) => {
+        return get().subscribedGameProgress.get(gameId);
+      },
+
       updateSubscribedStatus: (gameId, status) => {
         set((state) => {
           const newStatuses = new Map(state.subscribedGameStatuses);
           newStatuses.set(gameId, status);
           return { subscribedGameStatuses: newStatuses };
+        });
+      },
+
+      updateSubscribedProgress: (gameId, progress) => {
+        set((state) => {
+          const newProgress = new Map(state.subscribedGameProgress);
+          newProgress.set(gameId, progress);
+          return { subscribedGameProgress: newProgress };
         });
       },
 
@@ -184,6 +258,47 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           const toast: ToastNotification = {
             id,
             type: 'version-update',
+            gameName,
+            message,
+            timestamp: Date.now(),
+          };
+
+          set((state) => ({
+            toasts: [...state.toasts, toast],
+          }));
+
+          setTimeout(() => {
+            get().dismissToast(id);
+          }, TOAST_DURATION);
+
+          // Show system notification if window is hidden (in tray)
+          showSystemNotificationIfHidden(gameName, message);
+        }
+      },
+
+      addProgressChangeNotification: (gameId, gameName, progressType, oldValue, newValue, showToast = true) => {
+        const id = `${gameId}-progress-${Date.now()}`;
+        const newNotification: Notification = {
+          id,
+          type: 'progress-change',
+          gameId,
+          gameName,
+          oldValue: `${progressType}: ${oldValue}%`,
+          newValue: `${progressType}: ${newValue}%`,
+          timestamp: Date.now(),
+          read: false,
+        };
+
+        set((state) => ({
+          notifications: [newNotification, ...state.notifications],
+          unreadCount: state.unreadCount + 1,
+        }));
+
+        if (showToast) {
+          const message = `${progressType}: ${oldValue}% → ${newValue}%`;
+          const toast: ToastNotification = {
+            id,
+            type: 'progress-change',
             gameName,
             message,
             timestamp: Date.now(),
@@ -280,23 +395,17 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
     }),
     {
       name: 'subscriptions-storage',
+      storage: customStorage,
       partialize: (state) => ({
-        subscribedGames: Array.from(state.subscribedGames),
-        subscribedGameStatuses: Array.from(state.subscribedGameStatuses.entries()),
+        subscribedGames: state.subscribedGames,
+        subscribedGameStatuses: state.subscribedGameStatuses,
+        subscribedGameProgress: state.subscribedGameProgress,
         notifications: state.notifications,
         unreadCount: state.unreadCount,
         // toasts are NOT persisted - they are temporary
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          if (state.subscribedGames) {
-            state.subscribedGames = new Set(state.subscribedGames as any);
-          }
-          if (state.subscribedGameStatuses) {
-            state.subscribedGameStatuses = new Map(state.subscribedGameStatuses as any);
-          } else {
-            state.subscribedGameStatuses = new Map();
-          }
           // Initialize toasts as empty on rehydration
           state.toasts = [];
         }
@@ -314,6 +423,8 @@ function getNotificationMessage(notification: Omit<Notification, 'id' | 'timesta
       return `Доступна версія ${notification.newValue}`;
     case 'app-update':
       return `Доступна версія ${notification.newValue}`;
+    case 'progress-change':
+      return `Прогрес оновлено: ${notification.newValue}`;
     default:
       return 'Нове сповіщення';
   }

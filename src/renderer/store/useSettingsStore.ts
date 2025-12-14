@@ -8,7 +8,6 @@ interface SettingsStore {
   animationsEnabled: boolean;
   appUpdateNotificationsEnabled: boolean;
   gameUpdateNotificationsEnabled: boolean;
-  statusChangeNotificationsEnabled: boolean;
   createBackupBeforeInstall: boolean;
   autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
@@ -19,7 +18,6 @@ interface SettingsStore {
   toggleAnimations: () => void;
   toggleAppUpdateNotifications: () => void;
   toggleGameUpdateNotifications: () => void;
-  toggleStatusChangeNotifications: () => void;
   toggleCreateBackup: () => void;
   toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
@@ -36,7 +34,6 @@ export const useSettingsStore = create<SettingsStore>()(
       animationsEnabled: true,
       appUpdateNotificationsEnabled: true,
       gameUpdateNotificationsEnabled: true,
-      statusChangeNotificationsEnabled: true,
       createBackupBeforeInstall: true,
       autoDetectInstalledGames: true,
       showAdultGames: false,
@@ -54,9 +51,6 @@ export const useSettingsStore = create<SettingsStore>()(
 
       toggleGameUpdateNotifications: () =>
         set((state) => ({ gameUpdateNotificationsEnabled: !state.gameUpdateNotificationsEnabled })),
-
-      toggleStatusChangeNotifications: () =>
-        set((state) => ({ statusChangeNotificationsEnabled: !state.statusChangeNotificationsEnabled })),
 
       toggleCreateBackup: () =>
         set((state) => ({ createBackupBeforeInstall: !state.createBackupBeforeInstall })),
