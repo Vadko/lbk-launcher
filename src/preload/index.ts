@@ -136,6 +136,15 @@ contextBridge.exposeInMainWorld('loggerAPI', {
     ipcRenderer.send('logger:log', level, message, args),
 });
 
+// Error handling API
+contextBridge.exposeInMainWorld('api', {
+  logError: (message: string, stack: string) => ipcRenderer.send('logger:log', 'error', message, [stack]),
+  clearCacheOnly: () => ipcRenderer.invoke('clear-cache-only'),
+  clearAllData: () => ipcRenderer.invoke('clear-all-data-and-restart'),
+  // Legacy - kept for backwards compatibility
+  clearCache: () => ipcRenderer.invoke('clear-all-data-and-restart'),
+});
+
 // Handle liquid glass preference request from main process
 ipcRenderer.on('liquid-glass:get-preference', () => {
   // Get the preference from localStorage (settings store)

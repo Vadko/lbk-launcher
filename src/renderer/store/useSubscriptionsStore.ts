@@ -125,6 +125,70 @@ const customStorage = createJSONStorage<PersistedSubscriptionsState>(() => local
 
 const TOAST_DURATION = 8000; // 8 seconds
 
+// Type guards
+function isValidSet<T>(value: unknown): value is Set<T> {
+  return value instanceof Set;
+}
+
+function isValidMap<K, V>(value: unknown): value is Map<K, V> {
+  return value instanceof Map;
+}
+
+// Helper functions to safely get or create Set/Map instances
+function ensureSet<T>(value: unknown): Set<T> {
+  if (isValidSet<T>(value)) {
+    return new Set(value);
+  }
+  console.warn('[SubscriptionsStore] Converting invalid Set to new Set');
+  return new Set(Array.isArray(value) ? value : []);
+}
+
+function ensureMap<K, V>(value: unknown): Map<K, V> {
+  if (isValidMap<K, V>(value)) {
+    return new Map(value);
+  }
+  console.warn('[SubscriptionsStore] Converting invalid Map to new Map');
+  // Handle both array format and object format
+  if (Array.isArray(value)) {
+    return new Map(value as [K, V][]);
+  }
+  if (value && typeof value === 'object') {
+    return new Map(Object.entries(value) as [K, V][]);
+  }
+  return new Map();
+}
+
+// Migration helper
+function migrateStoreData(state: Partial<SubscriptionsStore>): void {
+  let migrated = false;
+
+  if (!isValidSet(state.subscribedGames)) {
+    console.warn('[SubscriptionsStore] Migrating subscribedGames to Set');
+    state.subscribedGames = ensureSet<string>(state.subscribedGames);
+    migrated = true;
+  }
+
+  if (!isValidMap(state.subscribedGameStatuses)) {
+    console.warn('[SubscriptionsStore] Migrating subscribedGameStatuses to Map');
+    state.subscribedGameStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
+    migrated = true;
+  }
+
+  if (!isValidMap(state.subscribedGameProgress)) {
+    console.warn('[SubscriptionsStore] Migrating subscribedGameProgress to Map');
+    state.subscribedGameProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
+    migrated = true;
+  }
+
+  if (migrated) {
+    console.log('[SubscriptionsStore] Migration completed', {
+      subscribedGamesCount: state.subscribedGames?.size ?? 0,
+      subscribedGameStatusesCount: state.subscribedGameStatuses?.size ?? 0,
+      subscribedGameProgressCount: state.subscribedGameProgress?.size ?? 0,
+    });
+  }
+}
+
 // Helper to track subscription via IPC (main process handles the API call)
 async function trackSubscription(
   gameId: string,
@@ -171,57 +235,68 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       subscribe: (gameId, status, progress) => {
         set((state) => {
-          const newSubscribed = new Set(state.subscribedGames);
+          const newSubscribed = ensureSet<string>(state.subscribedGames);
           newSubscribed.add(gameId);
-          const newStatuses = new Map(state.subscribedGameStatuses);
+
+          const newStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
           newStatuses.set(gameId, status);
-          const newProgress = new Map(state.subscribedGameProgress);
+
+          const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
           if (progress) {
             newProgress.set(gameId, progress);
           }
-          return {
-            subscribedGames: newSubscribed,
-            subscribedGameStatuses: newStatuses,
-            subscribedGameProgress: newProgress,
-          };
+
+          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
         });
-        // Track subscription via API (non-blocking)
         trackSubscription(gameId, 'subscribe');
       },
 
       unsubscribe: (gameId) => {
         set((state) => {
-          const newSubscribed = new Set(state.subscribedGames);
+          const newSubscribed = ensureSet<string>(state.subscribedGames);
           newSubscribed.delete(gameId);
-          const newStatuses = new Map(state.subscribedGameStatuses);
+
+          const newStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
           newStatuses.delete(gameId);
-          const newProgress = new Map(state.subscribedGameProgress);
+
+          const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
           newProgress.delete(gameId);
-          return {
-            subscribedGames: newSubscribed,
-            subscribedGameStatuses: newStatuses,
-            subscribedGameProgress: newProgress,
-          };
+
+          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
         });
-        // Track unsubscription via API (non-blocking)
         trackSubscription(gameId, 'unsubscribe');
       },
 
       isSubscribed: (gameId) => {
-        return get().subscribedGames.has(gameId);
+        const subscribedGames = get().subscribedGames;
+        if (!isValidSet<string>(subscribedGames)) {
+          console.error('[SubscriptionsStore] subscribedGames is not a Set');
+          return false;
+        }
+        return subscribedGames.has(gameId);
       },
 
       getSubscribedStatus: (gameId) => {
-        return get().subscribedGameStatuses.get(gameId);
+        const subscribedGameStatuses = get().subscribedGameStatuses;
+        if (!isValidMap<string, string>(subscribedGameStatuses)) {
+          console.error('[SubscriptionsStore] subscribedGameStatuses is not a Map');
+          return undefined;
+        }
+        return subscribedGameStatuses.get(gameId);
       },
 
       getSubscribedProgress: (gameId) => {
-        return get().subscribedGameProgress.get(gameId);
+        const subscribedGameProgress = get().subscribedGameProgress;
+        if (!isValidMap<string, GameProgress>(subscribedGameProgress)) {
+          console.error('[SubscriptionsStore] subscribedGameProgress is not a Map');
+          return undefined;
+        }
+        return subscribedGameProgress.get(gameId);
       },
 
       updateSubscribedStatus: (gameId, status) => {
         set((state) => {
-          const newStatuses = new Map(state.subscribedGameStatuses);
+          const newStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
           newStatuses.set(gameId, status);
           return { subscribedGameStatuses: newStatuses };
         });
@@ -229,7 +304,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       updateSubscribedProgress: (gameId, progress) => {
         set((state) => {
-          const newProgress = new Map(state.subscribedGameProgress);
+          const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
           newProgress.set(gameId, progress);
           return { subscribedGameProgress: newProgress };
         });
@@ -462,6 +537,16 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         if (state) {
           // Initialize toasts as empty on rehydration
           state.toasts = [];
+
+          // Migrate old data formats to new Set/Map structures
+          migrateStoreData(state);
+
+          console.log('[SubscriptionsStore] Store rehydrated successfully', {
+            subscribedGamesCount: state.subscribedGames?.size ?? 0,
+            subscribedGameStatusesCount: state.subscribedGameStatuses?.size ?? 0,
+            subscribedGameProgressCount: state.subscribedGameProgress?.size ?? 0,
+            notificationsCount: state.notifications?.length ?? 0,
+          });
         }
       },
     }

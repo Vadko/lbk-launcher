@@ -11,9 +11,17 @@ interface LoggerAPI {
   log: (level: string, message: string, ...args: unknown[]) => void;
 }
 
+interface API {
+  logError: (message: string, stack: string) => void;
+  clearCacheOnly: () => Promise<{ success: boolean; error?: string }>;
+  clearAllData: () => Promise<{ success: boolean; error?: string }>;
+  clearCache: () => Promise<{ success: boolean; error?: string }>; // Legacy
+}
+
 interface Window {
   liquidGlassAPI: LiquidGlassAPI;
   loggerAPI: LoggerAPI;
+  api: API;
   windowControls: {
     minimize: () => void;
     maximize: () => void;
