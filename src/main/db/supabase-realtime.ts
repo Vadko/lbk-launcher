@@ -72,10 +72,17 @@ export class SupabaseRealtimeManager {
 
     console.log('[SupabaseRealtime] Attempting to reconnect...');
 
-    // Очистити попереднє підключення
+    // Очистити попереднє підключення та клієнт
     if (this.channel) {
       this.channel.unsubscribe();
       this.channel = null;
+    }
+
+    // Закрити старий Supabase client перед створенням нового
+    if (this.supabase) {
+      console.log('[SupabaseRealtime] Closing old Supabase client');
+      this.supabase.removeAllChannels();
+      this.supabase = null;
     }
 
     // Створити нове підключення
@@ -205,14 +212,19 @@ export class SupabaseRealtimeManager {
       this.retryTimeout = null;
     }
 
-    if (!this.channel) {
-      console.log('[SupabaseRealtime] No active subscription');
-      return;
+    if (this.channel) {
+      console.log('[SupabaseRealtime] Unsubscribing from games table changes...');
+      this.channel.unsubscribe();
+      this.channel = null;
     }
 
-    console.log('[SupabaseRealtime] Unsubscribing from games table changes...');
-    this.channel.unsubscribe();
-    this.channel = null;
+    // Закрити Supabase client щоб звільнити WebSocket підключення
+    if (this.supabase) {
+      console.log('[SupabaseRealtime] Closing Supabase client');
+      this.supabase.removeAllChannels();
+      this.supabase = null;
+    }
+
     this.onUpdateCallback = null;
     this.onDeleteCallback = null;
     this.retryCount = 0;
