@@ -81,6 +81,7 @@ export class SupabaseRealtimeManager {
     // Закрити старий Supabase client перед створенням нового
     if (this.supabase) {
       console.log('[SupabaseRealtime] Closing old Supabase client');
+      this.supabase.realtime.disconnect();
       this.supabase.removeAllChannels();
       this.supabase = null;
     }
@@ -252,6 +253,7 @@ export class SupabaseRealtimeManager {
     // Закрити Supabase client щоб звільнити WebSocket підключення
     if (this.supabase) {
       console.log('[SupabaseRealtime] Closing Supabase client');
+      this.supabase.realtime.disconnect();
       this.supabase.removeAllChannels();
       this.supabase = null;
     }
