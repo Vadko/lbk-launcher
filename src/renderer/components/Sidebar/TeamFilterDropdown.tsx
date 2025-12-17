@@ -103,6 +103,7 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
               className="absolute top-full right-0 mt-1 w-[calc(200%+0.5rem)] bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-hidden filter-dropdown"
+              data-gamepad-dropdown
             >
               {/* Search input */}
               <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
@@ -137,11 +138,12 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
                     {!search && (
                       <button
                         onClick={() => handleSelect(null)}
+                        data-gamepad-dropdown-item
                         className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
                           value === null
                             ? 'bg-glass-hover text-white'
                             : 'text-text-muted hover:bg-glass hover:text-white'
-                        }`}
+                        } focus:outline-none focus:bg-glass-hover focus:text-white`}
                       >
                         Усі автори
                         {value === null && <Check size={14} />}
@@ -157,11 +159,12 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
                         <button
                           key={team}
                           onClick={() => handleSelect(team)}
+                          data-gamepad-dropdown-item
                           className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
                             value === team
                               ? 'bg-glass-hover text-white'
                               : 'text-text-muted hover:bg-glass hover:text-white'
-                          }`}
+                          } focus:outline-none focus:bg-glass-hover focus:text-white`}
                         >
                           <span className="truncate">{team}</span>
                           {value === team && <Check size={14} />}

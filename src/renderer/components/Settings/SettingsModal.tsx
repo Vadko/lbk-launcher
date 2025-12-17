@@ -97,6 +97,7 @@ export const SettingsModal: React.FC = () => {
       footer={
         <button
           onClick={closeSettingsModal}
+          data-gamepad-cancel
           className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
         >
           Закрити

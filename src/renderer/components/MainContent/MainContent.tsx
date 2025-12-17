@@ -579,7 +579,7 @@ export const MainContent: React.FC = () => {
         />
       )}
 
-      <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+      <div data-gamepad-main-content className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
         <GameHero game={selectedGame} />
 
         {/* Actions block */}
@@ -592,6 +592,7 @@ export const MainContent: React.FC = () => {
                 icon={<Play size={20} />}
                 onClick={handleLaunchGame}
                 disabled={isLaunching || isInstalling || isUninstalling}
+                data-gamepad-action
               >
                 {isLaunching ? 'Запуск...' : 'Грати'}
               </Button>
@@ -606,6 +607,8 @@ export const MainContent: React.FC = () => {
               onClick={() => handleInstall()}
               disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
               title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
+              data-gamepad-primary-action
+              data-gamepad-action
             >
               {getInstallButtonText()}
             </Button>
@@ -615,6 +618,7 @@ export const MainContent: React.FC = () => {
                 icon={<Trash2 size={20} />}
                 onClick={handleUninstall}
                 disabled={isUninstalling}
+                data-gamepad-action
               >
                 {isUninstalling ? 'Видалення...' : 'Видалити'}
               </Button>
@@ -630,9 +634,10 @@ export const MainContent: React.FC = () => {
                 gameName={selectedGame.name}
                 gameStatus={selectedGame.status}
                 variant="amber"
+                data-gamepad-action
               />
             )}
-            <Button variant="pink" icon={<Heart size={20} />} onClick={handleSupport}>
+            <Button variant="pink" icon={<Heart size={20} />} onClick={handleSupport} data-gamepad-action>
               Підтримати
             </Button>
           </div>

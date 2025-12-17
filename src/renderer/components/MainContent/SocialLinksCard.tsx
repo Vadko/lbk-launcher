@@ -28,6 +28,7 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => {
   return (
     <button
       onClick={handleClick}
+      data-nav-group="main-links"
       className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-300"
       title={label}
     >
@@ -52,6 +53,7 @@ const SteamStoreButton: React.FC<{ steamAppId: number }> = ({ steamAppId }) => {
   return (
     <button
       onClick={handleClick}
+      data-nav-group="main-links"
       className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#1b2838] to-[#2a475e] hover:from-[#2a475e] hover:to-[#3d6a8a] border border-[#66c0f4]/30 hover:border-[#66c0f4]/60 transition-all duration-300"
       title="Відкрити в Steam Store"
     >

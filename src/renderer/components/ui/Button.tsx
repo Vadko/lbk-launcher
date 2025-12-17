@@ -1,26 +1,20 @@
 import React from 'react';
 
-interface ButtonProps {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'glass' | 'green' | 'amber' | 'pink';
-  onClick?: () => void;
-  className?: string;
-  disabled?: boolean;
   icon?: React.ReactNode;
-  title?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
-  onClick,
   className = '',
-  disabled = false,
   icon,
-  title,
+  ...props
 }) => {
   const baseStyles =
-    'px-8 py-3.5 rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed';
+    'px-8 py-3.5 rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-neon-blue focus:ring-offset-2 focus:ring-offset-transparent';
 
   const variants = {
     primary:
@@ -36,9 +30,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
+      {...props}
       className={`${baseStyles} ${variants[variant]} ${className}`}
     >
       {icon && <span>{icon}</span>}

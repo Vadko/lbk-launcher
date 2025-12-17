@@ -3,7 +3,7 @@ import { Bell, BellOff } from 'lucide-react';
 import { Button } from './Button';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 
-interface SubscribeButtonProps {
+interface SubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   gameId: string;
   gameName: string;
   gameStatus: string;
@@ -17,6 +17,7 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
   gameStatus,
   variant = 'secondary',
   className = '',
+  ...rest
 }) => {
   const { isSubscribed, subscribe, unsubscribe } = useSubscriptionsStore();
   const subscribed = isSubscribed(gameId);
@@ -39,6 +40,7 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
           ? `Ви отримуєте сповіщення про "${gameName}"`
           : `Отримувати сповіщення про "${gameName}"`
       }
+      {...rest}
     >
       {subscribed ? (
         <>

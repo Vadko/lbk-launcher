@@ -3,6 +3,8 @@ import { Game } from '../../types/game';
 import {
   Gamepad2,
   Calendar,
+  CalendarPlus,
+  CalendarClock,
   Users,
   HardDrive,
   Download,
@@ -29,6 +31,15 @@ const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value }) => (
     </div>
   </div>
 );
+
+const formatDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('uk-UA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
 
 export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   const platformsText = game.platforms.join(', ').toUpperCase();
@@ -72,6 +83,20 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             icon={<Download size={18} />}
             label="Завантажень"
             value={downloadsText}
+          />
+        )}
+        {game.created_at && (
+          <InfoItem
+            icon={<CalendarPlus size={18} />}
+            label="Створено"
+            value={formatDate(game.created_at)}
+          />
+        )}
+        {game.updated_at && (
+          <InfoItem
+            icon={<CalendarClock size={18} />}
+            label="Оновлено"
+            value={formatDate(game.updated_at)}
           />
         )}
       </div>

@@ -29,7 +29,7 @@ export const Input: React.FC<InputProps> = ({
         placeholder={placeholder}
         className={`w-full px-4 py-3 ${
           icon ? 'pl-12' : ''
-        } bg-glass border border-border rounded-xl text-text-main placeholder:text-text-muted outline-none transition-all duration-300 focus:border-border-hover focus:bg-glass-hover backdrop-blur-lg relative z-0 glass-input`}
+        } bg-glass border border-border rounded-xl text-text-main placeholder:text-text-muted outline-none transition-all duration-300 backdrop-blur-lg relative z-0 glass-input focus:ring-2 focus:ring-neon-blue focus:border-neon-blue`}
       />
     </div>
   );

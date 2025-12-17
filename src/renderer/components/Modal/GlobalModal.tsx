@@ -31,7 +31,8 @@ export const GlobalModal: React.FC = () => {
         </p>
         <button
           onClick={closeModal}
-          className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+          data-gamepad-confirm
+          className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-neon-blue"
         >
           Зрозуміло
         </button>

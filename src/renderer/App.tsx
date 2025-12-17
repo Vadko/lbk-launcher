@@ -9,10 +9,12 @@ import { GlobalModal } from './components/Modal/GlobalModal';
 import { ConfirmModal } from './components/Modal/ConfirmModal';
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { NotificationModal } from './components/Notifications/NotificationModal';
+import { GamepadHints } from './components/GamepadHints/GamepadHints';
 import { useStore } from './store/useStore';
 import { useSettingsStore } from './store/useSettingsStore';
+import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
-import { useGamepadNavigation } from './hooks/useGamepadNavigation';
+import { useGamepadModeNavigation } from './hooks/useGamepadModeNavigation';
 
 export const App: React.FC = () => {
   const {
@@ -24,6 +26,7 @@ export const App: React.FC = () => {
   } = useStore();
   const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
     useSettingsStore();
+  const { isGamepadMode, setGamepadMode, navigationArea, userDisabledGamepadMode, setUserDisabledGamepadMode } = useGamepadModeStore();
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
@@ -31,8 +34,41 @@ export const App: React.FC = () => {
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
 
-  // Підтримка навігації геймпадом (для Steam Deck та інших контролерів)
-  useGamepadNavigation(true);
+  // Простий скрол геймпадом (тільки в геймпад-режимі)
+  useGamepadModeNavigation(isGamepadMode);
+
+  
+  // Auto-enable gamepad mode when gamepad is connected
+  useEffect(() => {
+    const handleGamepadConnected = () => {
+      console.log('[App] Gamepad connected');
+      if (!isGamepadMode && !userDisabledGamepadMode) {
+        setGamepadMode(true);
+      }
+    };
+
+    const handleGamepadDisconnected = () => {
+      console.log('[App] Gamepad disconnected');
+      const gamepads = navigator.getGamepads();
+      const stillConnected = !!(gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3]);
+
+      if (!stillConnected) {
+        if (isGamepadMode) {
+          setGamepadMode(false);
+        }
+        // Reset user preference when gamepad disconnected
+        setUserDisabledGamepadMode(false);
+      }
+    };
+
+    window.addEventListener('gamepadconnected', handleGamepadConnected);
+    window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
+
+    return () => {
+      window.removeEventListener('gamepadconnected', handleGamepadConnected);
+      window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
+    };
+  }, [setGamepadMode, isGamepadMode, userDisabledGamepadMode, setUserDisabledGamepadMode]);
 
   // Apply liquid glass effect
   useEffect(() => {
@@ -213,16 +249,43 @@ export const App: React.FC = () => {
   return (
     <div
       className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
+      data-gamepad-mode={isGamepadMode || undefined}
     >
       {/* Only show ambient background when liquid glass is not active */}
       {!isLiquidGlassActive && <AmbientBackground />}
       <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
 
-      {/* Main layout */}
-      <div className="flex h-full pt-8 px-2 pb-2 gap-2">
-        <Sidebar onOpenHistory={() => setShowNotificationHistory(true)} />
-        <MainContent />
-      </div>
+      {/* Main layout - changes based on gamepad mode */}
+      {isGamepadMode ? (
+        /* Gamepad layout: Header + Games strip on top, MainContent below */
+        <div className="flex flex-col h-full pt-8">
+          {/* Sidebar - hides when in main-content mode */}
+          <div
+            className={`transition-all duration-300 ease-in-out relative z-20 ${
+              navigationArea === 'main-content'
+                ? 'max-h-0 opacity-0 overflow-hidden'
+                : 'max-h-[300px] opacity-100'
+            }`}
+          >
+            <Sidebar
+              onOpenHistory={() => setShowNotificationHistory(true)}
+              isHorizontal={true}
+            />
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <MainContent />
+          </div>
+        </div>
+      ) : (
+        /* Normal layout: Vertical sidebar on left, MainContent on right */
+        <div className="flex h-full pt-8 px-2 pb-2 gap-2">
+          <Sidebar
+            onOpenHistory={() => setShowNotificationHistory(true)}
+            isHorizontal={false}
+          />
+          <MainContent />
+        </div>
+      )}
 
       {/* Update notifications */}
       <UpdateNotification />
@@ -236,6 +299,9 @@ export const App: React.FC = () => {
         isOpen={showNotificationHistory}
         onClose={() => setShowNotificationHistory(false)}
       />
+
+      {/* Gamepad hints */}
+      <GamepadHints />
     </div>
   );
 };

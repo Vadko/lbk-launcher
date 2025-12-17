@@ -166,7 +166,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 type="checkbox"
                 checked={createBackup}
                 onChange={(e) => setCreateBackup(e.target.checked)}
-                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer"
+                data-gamepad-modal-item
+                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-neon-blue focus:ring-offset-2 focus:ring-offset-transparent"
               />
               <svg
                 className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
@@ -207,7 +208,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               type="checkbox"
               checked={installText}
               onChange={(e) => setInstallText(e.target.checked)}
-              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer"
+              data-gamepad-modal-item
+              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-neon-blue focus:ring-offset-2 focus:ring-offset-transparent"
             />
             <svg
               className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
@@ -268,7 +270,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               checked={hasVoiceArchive && installVoice}
               onChange={(e) => setInstallVoice(e.target.checked)}
               disabled={!hasVoiceArchive}
-              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+              data-gamepad-modal-item
+              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors focus:outline-none focus:ring-2 focus:ring-neon-blue focus:ring-offset-2 focus:ring-offset-transparent ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
             />
             <svg
               className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
@@ -338,7 +341,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 checked={hasAchievementsArchive && installAchievements}
                 onChange={(e) => setInstallAchievements(e.target.checked)}
                 disabled={!hasAchievementsArchive}
-                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                data-gamepad-modal-item
+                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors focus:outline-none focus:ring-2 focus:ring-neon-blue focus:ring-offset-2 focus:ring-offset-transparent ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               />
               <svg
                 className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
@@ -430,14 +434,18 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-white font-semibold hover:bg-glass-hover transition-colors"
+            data-gamepad-cancel
+            data-gamepad-modal-item
+            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-white font-semibold hover:bg-glass-hover transition-colors focus:outline-none focus:ring-2 focus:ring-neon-blue"
           >
             Скасувати
           </button>
           <button
             onClick={handleConfirm}
             disabled={!hasChanges}
-            className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity ${
+            data-gamepad-confirm
+            data-gamepad-modal-item
+            className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity focus:outline-none focus:ring-2 focus:ring-neon-blue ${
               !hasChanges
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-neon-blue to-neon-purple text-white hover:opacity-90'

@@ -72,6 +72,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = React.memo(
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
               className="absolute top-full left-0 mt-1 py-1 w-[calc(200%+0.5rem)] bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-hidden filter-dropdown"
+              data-gamepad-dropdown
             >
               {FILTER_OPTIONS.map((f, index) => (
                 <React.Fragment key={f.value}>
@@ -85,11 +86,12 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = React.memo(
                       onChange(f.value);
                       setIsOpen(false);
                     }}
+                    data-gamepad-dropdown-item
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
                       value === f.value
                         ? 'bg-glass-hover text-white'
                         : 'text-text-muted hover:bg-glass hover:text-white'
-                    }`}
+                    } focus:outline-none focus:bg-glass-hover focus:text-white`}
                   >
                     {f.label}
                     {value === f.value && <Check size={14} />}

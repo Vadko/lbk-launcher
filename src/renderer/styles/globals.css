@@ -43,6 +43,7 @@ img {
   --neon-pink: #ff0055;
   --neon-orange: #ff9e00;
   --neon-green: #10b981;
+  --gamepad-focus: #fbbf24;
   --text-main: #ffffff;
   --text-muted: #94a3b8;
 }
@@ -59,6 +60,7 @@ img {
   --neon-pink: #f472b6;
   --neon-orange: #fbbf24;
   --neon-green: #34d399;
+  --gamepad-focus: #f59e0b;
   --text-main: #0f172a;
   --text-muted: #334155;
 }
@@ -595,45 +597,73 @@ body.liquid-glass-enabled .glass-input:focus {
 
 /* ==========================================================================
    10. FOCUS STYLES (Gamepad / Steam Deck support)
+   Only active when gamepad mode is enabled via data-gamepad-mode attribute
+   Uses --gamepad-focus (yellow/gold) to differentiate from selection (neon-blue)
    ========================================================================== */
 
-button:focus-visible,
-a:focus-visible,
-[tabindex]:focus-visible,
-[data-focusable='true']:focus-visible {
-  outline: 2px solid var(--neon-blue);
+/* Gamepad mode focus styles - uses yellow/gold for clear visibility */
+[data-gamepad-mode] button:focus,
+[data-gamepad-mode] a:focus,
+[data-gamepad-mode] input:focus,
+[data-gamepad-mode] [tabindex]:focus,
+[data-gamepad-mode] [data-focusable='true']:focus,
+[data-gamepad-mode] button:focus-visible,
+[data-gamepad-mode] a:focus-visible,
+[data-gamepad-mode] input:focus-visible,
+[data-gamepad-mode] [tabindex]:focus-visible,
+[data-gamepad-mode] [data-focusable='true']:focus-visible {
+  outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.2);
+  box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.4) !important;
 }
 
-.game-list-item:focus-visible {
-  outline: 2px solid var(--neon-blue);
+[data-gamepad-mode] .game-list-item:focus,
+[data-gamepad-mode] .game-list-item:focus-visible {
+  outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: -2px;
-  background: rgba(0, 242, 255, 0.1) !important;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.5) !important;
 }
 
-.filter-dropdown button:focus-visible,
-.filter-dropdown button.gamepad-focus {
-  background: rgba(0, 242, 255, 0.15);
-  outline: 2px solid var(--neon-blue);
+[data-gamepad-mode] .filter-dropdown button:focus,
+[data-gamepad-mode] .filter-dropdown button:focus-visible,
+[data-gamepad-mode] .filter-dropdown button.gamepad-focus {
+  background: rgba(251, 191, 36, 0.2) !important;
+  outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: -2px;
 }
 
-:root[data-theme='light'] button:focus-visible,
-:root[data-theme='light'] a:focus-visible,
-:root[data-theme='light'] [tabindex]:focus-visible,
-:root[data-theme='light'] [data-focusable='true']:focus-visible {
-  outline: 2px solid #0284c7;
-  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.2);
+/* Gamepad card focus */
+[data-gamepad-mode] [data-gamepad-card]:focus,
+[data-gamepad-mode] [data-gamepad-card]:focus-visible {
+  outline: 3px solid var(--gamepad-focus) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.5) !important;
 }
 
-:root[data-theme='light'] .game-list-item:focus-visible {
-  outline: 2px solid #0284c7;
-  background: rgba(2, 132, 199, 0.1) !important;
+/* Light theme + Gamepad mode */
+:root[data-theme='light'] [data-gamepad-mode] button:focus,
+:root[data-theme='light'] [data-gamepad-mode] a:focus,
+:root[data-theme='light'] [data-gamepad-mode] input:focus,
+:root[data-theme='light'] [data-gamepad-mode] [tabindex]:focus,
+:root[data-theme='light'] [data-gamepad-mode] [data-focusable='true']:focus,
+:root[data-theme='light'] [data-gamepad-mode] button:focus-visible,
+:root[data-theme='light'] [data-gamepad-mode] a:focus-visible,
+:root[data-theme='light'] [data-gamepad-mode] input:focus-visible,
+:root[data-theme='light'] [data-gamepad-mode] [tabindex]:focus-visible,
+:root[data-theme='light'] [data-gamepad-mode] [data-focusable='true']:focus-visible {
+  outline: 3px solid var(--gamepad-focus) !important;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.4) !important;
 }
 
-:root[data-theme='light'] .filter-dropdown button:focus-visible,
-:root[data-theme='light'] .filter-dropdown button.gamepad-focus {
-  background: rgba(2, 132, 199, 0.1);
-  outline: 2px solid #0284c7;
+:root[data-theme='light'] [data-gamepad-mode] .game-list-item:focus,
+:root[data-theme='light'] [data-gamepad-mode] .game-list-item:focus-visible {
+  outline: 3px solid var(--gamepad-focus) !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.5) !important;
+}
+
+:root[data-theme='light'] [data-gamepad-mode] .filter-dropdown button:focus,
+:root[data-theme='light'] [data-gamepad-mode] .filter-dropdown button:focus-visible,
+:root[data-theme='light'] [data-gamepad-mode] .filter-dropdown button.gamepad-focus {
+  background: rgba(245, 158, 11, 0.15) !important;
+  outline: 3px solid var(--gamepad-focus) !important;
 }

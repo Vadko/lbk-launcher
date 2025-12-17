@@ -56,8 +56,8 @@ function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
 }
 
 export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
-  const bannerUrl = getGameImageUrl(game.banner_path);
-  const logoUrl = getGameImageUrl(game.logo_path);
+  const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
+  const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
   const [bannerError, setBannerError] = useState(false);
   const [logoError, setLogoError] = useState(false);
