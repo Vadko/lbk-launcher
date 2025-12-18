@@ -8,6 +8,8 @@ import {
   Play,
   EyeOff,
   Settings,
+  Users,
+  Star,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useModalStore } from '../../store/useModalStore';
@@ -25,6 +27,8 @@ import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
+import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
+import { isSpecialTranslator } from '../../constants/specialTranslators';
 import type {
   InstallResult,
   DownloadProgress,
@@ -625,7 +629,7 @@ export const MainContent: React.FC = () => {
             )}
 
             {/* Separator */}
-            <div className="hidden sm:block w-px h-10 bg-white/20 mx-2" />
+            <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2" />
 
             {/* Secondary actions */}
             {isPlanned && (
@@ -686,6 +690,27 @@ export const MainContent: React.FC = () => {
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
         </div>
+
+        {/* Author card */}
+        {selectedGame.team && (
+          <div className="glass-card mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-neon-blue/20'}`}>
+                  <Users size={20} className={isSpecialTranslator(selectedGame.team) ? 'text-yellow-400' : 'text-neon-blue'} />
+                </div>
+                <div>
+                  <div className="text-xs text-text-muted">Автор локалізації</div>
+                  <div className={`font-medium ${isSpecialTranslator(selectedGame.team) ? 'text-yellow-400' : 'text-white'}`}>
+                    {selectedGame.team}
+                    {isSpecialTranslator(selectedGame.team) && <Star size={12} className="inline ml-1 fill-yellow-400" />}
+                  </div>
+                </div>
+              </div>
+              <TeamSubscribeButton teamName={selectedGame.team} />
+            </div>
+          </div>
+        )}
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />

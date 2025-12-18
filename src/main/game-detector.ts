@@ -257,6 +257,8 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
 
 /**
  * Find Steam game by folder name
+ * IMPORTANT: Prioritizes appmanifest files over folder existence to handle
+ * cases where game was moved between Steam libraries but old folder remains
  */
 function findSteamGame(gameFolderName: string): string | null {
   console.log(`[GameDetector] Searching for Steam game: "${gameFolderName}"`);
@@ -280,33 +282,43 @@ function findSteamGame(gameFolderName: string): string | null {
 
   const libraryFolders = getSteamLibraryFolders(steamPath);
 
-  // First, try exact path matching (case-sensitive for accuracy)
+  // FIRST: Check appmanifest files - this is the authoritative source
+  // Steam removes appmanifest when game is uninstalled, but folder may remain
+  console.log('[GameDetector] Checking appmanifest files (authoritative source)...');
+  const installedGames = getAllSteamGames(libraryFolders);
+
+  // Try EXACT match via appmanifest
+  const gamePathFromManifest = installedGames.get(normalizedFolderName.toLowerCase());
+  if (gamePathFromManifest) {
+    // Verify the path basename matches exactly (case-insensitive)
+    const actualBasename = path.basename(gamePathFromManifest).toLowerCase();
+    if (actualBasename === normalizedFolderName.toLowerCase()) {
+      // Also verify the path actually exists
+      if (fs.existsSync(gamePathFromManifest)) {
+        console.log(`[GameDetector] ✓ Game found via appmanifest: ${gamePathFromManifest}`);
+        return gamePathFromManifest;
+      } else {
+        console.log(
+          `[GameDetector] Appmanifest points to ${gamePathFromManifest} but path doesn't exist`
+        );
+      }
+    } else {
+      console.log(
+        `[GameDetector] Path found but basename mismatch: expected "${normalizedFolderName}", got "${actualBasename}"`
+      );
+    }
+  }
+
+  // FALLBACK: If not found via appmanifest, try exact path matching
+  // This handles edge cases where appmanifest might be missing/corrupted
+  console.log('[GameDetector] Not found via appmanifest, checking folders as fallback...');
   for (const folder of libraryFolders) {
     const commonPath = path.join(folder, 'common', normalizedFolderName);
     console.log(`[GameDetector] Checking path: ${commonPath}`);
 
     if (fs.existsSync(commonPath)) {
-      console.log(`[GameDetector] ✓ Game found at: ${commonPath}`);
+      console.log(`[GameDetector] ✓ Game found at (fallback): ${commonPath}`);
       return commonPath;
-    }
-  }
-
-  // If not found, try parsing appmanifest files for more accurate detection
-  console.log('[GameDetector] Exact match not found, scanning appmanifest files...');
-  const installedGames = getAllSteamGames(libraryFolders);
-
-  // Try EXACT match only (no fuzzy matching to avoid confusion)
-  const gamePath = installedGames.get(normalizedFolderName.toLowerCase());
-  if (gamePath) {
-    // Verify the path basename matches exactly (case-insensitive)
-    const actualBasename = path.basename(gamePath).toLowerCase();
-    if (actualBasename === normalizedFolderName.toLowerCase()) {
-      console.log(`[GameDetector] ✓ Game found via appmanifest: ${gamePath}`);
-      return gamePath;
-    } else {
-      console.log(
-        `[GameDetector] Path found but basename mismatch: expected "${normalizedFolderName}", got "${actualBasename}"`
-      );
     }
   }
 

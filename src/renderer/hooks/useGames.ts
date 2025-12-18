@@ -183,10 +183,11 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
     const handleGameUpdate = (updatedGame: Game) => {
       console.log('[useGames] Game updated via realtime:', updatedGame.name);
 
-      // Перевірити зміну статусу/версії для історії
+      // Перевірити зміну версії для історії
       const { addVersionUpdateNotification, notifications } =
         useSubscriptionsStore.getState();
-      const { installedGames, checkSubscribedGamesStatus } = useStore.getState();
+      const { installedGames, checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
+        useStore.getState();
 
       // Перевірити статус підписаних ігор (централізована обробка)
       checkSubscribedGamesStatus([updatedGame]);
@@ -194,6 +195,9 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
       setGames((prevGames) => {
         const index = prevGames.findIndex((g) => g.id === updatedGame.id);
         const oldGame = index !== -1 ? prevGames[index] : null;
+
+        // Перевірити підписки на команди (централізована обробка)
+        checkSubscribedTeamUpdate(updatedGame, oldGame);
 
         if (oldGame) {
           // Перевірити оновлення версії (тільки для встановлених українізаторів)

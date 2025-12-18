@@ -11,7 +11,9 @@ import {
   Volume2,
   Trophy,
   Bell,
+  Star,
 } from 'lucide-react';
+import { isSpecialTranslator } from '../../constants/specialTranslators';
 
 interface InfoCardProps {
   game: Game;
@@ -21,14 +23,18 @@ interface InfoItemProps {
   icon: React.ReactNode;
   label: string;
   value: string;
+  isHighlighted?: boolean;
 }
 
-const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value }) => (
+const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value, isHighlighted }) => (
   <div className="flex items-start gap-3">
-    <div className="text-neon-blue mt-0.5">{icon}</div>
+    <div className={isHighlighted ? 'text-yellow-400 mt-0.5' : 'text-neon-blue mt-0.5'}>{icon}</div>
     <div>
       <div className="text-xs text-text-muted mb-1">{label}</div>
-      <div className="text-sm text-white font-medium">{value}</div>
+      <div className={`text-sm font-medium ${isHighlighted ? 'text-yellow-400' : 'text-white'}`}>
+        {value}
+        {isHighlighted && <Star size={12} className="inline ml-1 fill-yellow-400" />}
+      </div>
     </div>
   </div>
 );
@@ -57,7 +63,12 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <InfoItem icon={<Calendar size={18} />} label="Версія" value={game.version} />
         )}
         {game.team && (
-          <InfoItem icon={<Users size={18} />} label="Команда" value={game.team} />
+          <InfoItem
+            icon={<Users size={18} />}
+            label="Команда"
+            value={game.team}
+            isHighlighted={isSpecialTranslator(game.team)}
+          />
         )}
         {game.archive_size && (
           <InfoItem

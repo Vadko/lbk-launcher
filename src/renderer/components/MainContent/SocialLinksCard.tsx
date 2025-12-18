@@ -35,7 +35,7 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => {
       <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>
         {icon}
       </div>
-      <span className="text-sm text-white font-medium">{label}</span>
+      <span className="text-sm text-text-main font-medium">{label}</span>
     </button>
   );
 };
@@ -54,14 +54,14 @@ const SteamStoreButton: React.FC<{ steamAppId: number }> = ({ steamAppId }) => {
     <button
       onClick={handleClick}
       data-nav-group="main-links"
-      className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1b2838] hover:bg-[#2a475e] border border-[#66c0f4]/30 hover:border-[#66c0f4]/60 hover:shadow-lg hover:shadow-[#66c0f4]/20 transform hover:scale-[1.02] transition-all duration-200 ease-out"
+      className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-[#66c0f4]/60 hover:shadow-lg hover:shadow-[#66c0f4]/20 transform hover:scale-[1.02] transition-all duration-200 ease-out"
       title="Відкрити в Steam Store"
     >
       <SteamIcon
         size={18}
-        className="text-[#66c0f4] group-hover:text-white transition-colors duration-200 ease-out"
+        className="text-[#66c0f4] group-hover:brightness-125 transition-all duration-200 ease-out"
       />
-      <span className="text-sm text-white font-medium">Магазин Steam</span>
+      <span className="text-sm text-text-main font-medium">Магазин Steam</span>
     </button>
   );
 };
@@ -106,11 +106,11 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-head font-semibold text-white mb-4">Посилання</h3>
+      <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
       <div className="flex flex-wrap items-center gap-3">
         {game.steam_app_id && <SteamStoreButton steamAppId={game.steam_app_id} />}
         {links.length > 0 && game.steam_app_id && (
-          <div className="hidden sm:block w-px h-10 bg-white/20" />
+          <div className="hidden sm:block w-0 h-10 border-l border-border-hover" />
         )}
         {links.map((link, index) => (
           <SocialLink key={index} {...link} />

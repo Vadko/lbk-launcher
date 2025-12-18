@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageCircle, RefreshCw, FolderOpen, Trash2 } from 'lucide-react';
+import { MessageCircle, RefreshCw, FolderOpen, Trash2, Heart } from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Switch } from '../ui/Switch';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 
 const SettingItem = React.memo<{
   id: string;
@@ -115,7 +116,7 @@ export const SettingsModal: React.FC = () => {
           className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
         >
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
-            <MessageCircle size={20} className="text-white" />
+            <MessageCircle size={20} color="#ffffff" />
           </div>
           <div className="flex-1 text-left">
             <h4 className="text-sm font-semibold text-white">Зворотній зв'язок</h4>
@@ -258,6 +259,30 @@ export const SettingsModal: React.FC = () => {
             </div>
           </button>
         )}
+
+        {/* Credits section */}
+        <div className="p-4 rounded-xl bg-glass border border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <Heart size={18} className="text-pink-500" />
+            <h4 className="text-sm font-semibold text-white">Подяки</h4>
+          </div>
+          <p className="text-xs text-text-muted mb-3">
+            Особлива подяка перекладачам, які долучились до тестування з перших днів і допомогають робити цей лаунчер таким, яким він є:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SPECIAL_TRANSLATORS.map((translator) => (
+              <span
+                key={translator.name}
+                className="px-3 py-1.5 text-xs font-medium rounded-full bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white border border-neon-purple/30"
+              >
+                {translator.name}
+                {translator.team && (
+                  <span className="text-text-muted ml-1">({translator.team})</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </Modal>
   );

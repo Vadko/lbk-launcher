@@ -7,6 +7,10 @@ interface GamepadModeStore {
   isGamepadMode: boolean;
   setGamepadMode: (enabled: boolean) => void;
 
+  // Track last input method to show/hide gamepad focus styles
+  lastInputMethod: 'gamepad' | 'keyboard' | 'mouse';
+  setLastInputMethod: (method: 'gamepad' | 'keyboard' | 'mouse') => void;
+
   // Track if user manually disabled gamepad mode (to prevent auto-enable)
   userDisabledGamepadMode: boolean;
   setUserDisabledGamepadMode: (disabled: boolean) => void;
@@ -31,7 +35,11 @@ export const useGamepadModeStore = create<GamepadModeStore>((set) => ({
       // Reset navigation state when mode changes
       focusedGameIndex: enabled ? 0 : state.focusedGameIndex,
       navigationArea: enabled ? 'games' : state.navigationArea,
+      lastInputMethod: enabled ? 'gamepad' : state.lastInputMethod,
     })),
+
+  lastInputMethod: 'mouse',
+  setLastInputMethod: (method) => set({ lastInputMethod: method }),
 
   userDisabledGamepadMode: false,
   setUserDisabledGamepadMode: (disabled) => set({ userDisabledGamepadMode: disabled }),

@@ -73,6 +73,7 @@ interface Store {
 
   // Subscription Status Check
   checkSubscribedGamesStatus: (games: Game[]) => void;
+  checkSubscribedTeamUpdate: (updatedGame: Game, oldGame: Game | null) => void;
 }
 
 // detectedGames більше не персіститься - має перевірятися при кожному запуску
@@ -487,5 +488,72 @@ export const useStore = create<Store>((set, get) => ({
       // Update saved progress
       updateSubscribedProgress(gameId, currentProgress);
     });
+  },
+
+  // Check if updated game triggers team subscription notifications
+  checkSubscribedTeamUpdate: (updatedGame: Game, oldGame: Game | null) => {
+    const {
+      isSubscribedToTeam,
+      subscribedGames,
+      addTeamNewGameNotification,
+      addTeamStatusChangeNotification,
+      notifications,
+    } = useSubscriptionsStore.getState();
+
+    if (!updatedGame.team || !isSubscribedToTeam(updatedGame.team)) return;
+
+    // Skip if user is also subscribed to this specific game (to avoid duplicate notifications)
+    const isAlsoSubscribedToGame = subscribedGames.has(updatedGame.id);
+
+    const statusLabels: Record<string, string> = {
+      planned: 'Заплановано',
+      'in-progress': 'Ранній доступ',
+      completed: 'Завершено',
+    };
+
+    if (oldGame) {
+      // Existing game - check for status change from "planned"
+      // Skip if user is subscribed to the game itself (checkSubscribedGamesStatus handles it)
+      if (
+        !isAlsoSubscribedToGame &&
+        oldGame.status === 'planned' &&
+        updatedGame.status !== 'planned'
+      ) {
+        const oldStatusText = statusLabels[oldGame.status] || oldGame.status;
+        const newStatusText = statusLabels[updatedGame.status] || updatedGame.status;
+
+        const hasExisting = notifications.some(
+          (n) =>
+            n.type === 'team-status-change' &&
+            n.gameId === updatedGame.id &&
+            n.newValue === updatedGame.status
+        );
+
+        if (!hasExisting) {
+          console.log(
+            `[Store] Status change for subscribed team "${updatedGame.team}": ${updatedGame.name} is now ${newStatusText}`
+          );
+          addTeamStatusChangeNotification(
+            updatedGame.id,
+            updatedGame.name,
+            updatedGame.team,
+            oldStatusText,
+            newStatusText
+          );
+        }
+      }
+    } else {
+      // New game from subscribed team
+      const hasExisting = notifications.some(
+        (n) => n.type === 'team-new-game' && n.gameId === updatedGame.id
+      );
+
+      if (!hasExisting) {
+        console.log(
+          `[Store] New game from subscribed team "${updatedGame.team}": ${updatedGame.name}`
+        );
+        addTeamNewGameNotification(updatedGame.id, updatedGame.name, updatedGame.team);
+      }
+    }
   },
 }));

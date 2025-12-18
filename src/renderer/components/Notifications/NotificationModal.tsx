@@ -11,6 +11,8 @@ import {
   Download,
   ChevronLeft,
   TrendingUp,
+  Users,
+  Sparkles,
 } from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Button } from '../ui/Button';
@@ -102,6 +104,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return <Download className="w-4 h-4 text-neon-purple" />;
       case 'progress-change':
         return <TrendingUp className="w-4 h-4 text-amber-400" />;
+      case 'team-new-game':
+        return <Sparkles className="w-4 h-4 text-yellow-400" />;
+      case 'team-status-change':
+        return <Users className="w-4 h-4 text-cyan-400" />;
       default:
         return <Bell className="w-4 h-4 text-neon-blue" />;
     }
@@ -117,6 +123,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return 'bg-neon-purple/20';
       case 'progress-change':
         return 'bg-amber-500/20';
+      case 'team-new-game':
+        return 'bg-yellow-500/20';
+      case 'team-status-change':
+        return 'bg-cyan-500/20';
       default:
         return 'bg-neon-blue/20';
     }
@@ -140,6 +150,18 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return <>Доступна нова версія додатку: {notification.newValue}</>;
       case 'progress-change':
         return <>{notification.newValue}</>;
+      case 'team-new-game':
+        return (
+          <>
+            Нова локалізація від <span className="text-yellow-400">{notification.teamName}</span>
+          </>
+        );
+      case 'team-status-change':
+        return (
+          <>
+            <span className="text-cyan-400">{notification.teamName}</span>: статус змінено на "{notification.newValue}"
+          </>
+        );
       default:
         return <>Нове сповіщення</>;
     }
@@ -339,7 +361,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="bg-bg-dark border border-border rounded-xl p-6 mx-4 max-w-sm w-full"
+                className="modal-content border border-border rounded-xl p-6 mx-4 max-w-sm w-full"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 rounded-lg bg-red-500/20">

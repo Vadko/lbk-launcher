@@ -25,13 +25,13 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
     <div className="glass-card">
       <div className="flex items-center gap-2 mb-4">
         <DollarSign size={20} className="text-neon-green" />
-        <h3 className="text-lg font-head font-semibold text-white">Збір коштів</h3>
+        <h3 className="text-lg font-head font-semibold text-text-main">Збір коштів</h3>
       </div>
 
       <div className="space-y-3">
         <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-300">Зібрано</span>
-          <span className="text-white font-semibold">{formatAmount(current)}</span>
+          <span className="text-text-muted">Зібрано</span>
+          <span className="text-text-main font-semibold">{formatAmount(current)}</span>
         </div>
 
         <div className="w-full bg-glass rounded-full h-4 border border-border overflow-hidden">
@@ -42,8 +42,8 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
         </div>
 
         <div className="flex justify-between items-center text-sm">
-          <span className="text-gray-400">Ціль</span>
-          <span className="text-gray-300">{formatAmount(goal)}</span>
+          <span className="text-text-muted">Ціль</span>
+          <span className="text-text-muted">{formatAmount(goal)}</span>
         </div>
 
         <div className="text-center pt-2 border-t border-border">
