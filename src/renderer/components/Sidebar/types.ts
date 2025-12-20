@@ -7,27 +7,31 @@ export interface GameGroup {
   translations: Game[];
 }
 
-export type FilterType =
-  | 'all'
-  | Database['public']['Enums']['game_status']
-  | 'installed-translations'
-  | 'installed-games';
+// Status type for multi-select filter
+export type StatusType = Database['public']['Enums']['game_status'];
 
-interface FilterOption {
+// Special filters that are single-select
+export type SpecialFilterType = 'installed-translations' | 'installed-games';
+
+export interface StatusFilterOption {
   label: string;
-  value: FilterType;
-  group?: string;
+  value: StatusType;
 }
 
-export const FILTER_OPTIONS: FilterOption[] = [
-  { label: 'Усі ігри', value: 'all' },
+export interface SpecialFilterOption {
+  label: string;
+  value: SpecialFilterType;
+}
+
+// Status options for multi-select
+export const STATUS_OPTIONS: StatusFilterOption[] = [
   { label: 'Заплановано', value: 'planned' },
   { label: 'Ранній доступ', value: 'in-progress' },
   { label: 'Готово', value: 'completed' },
-  {
-    label: 'Встановлені українізатори',
-    value: 'installed-translations',
-    group: 'installed',
-  },
-  { label: 'Встановлені ігри', value: 'installed-games', group: 'installed' },
+];
+
+// Special filter options (single-select, separate from statuses)
+export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
+  { label: 'Встановлені українізатори', value: 'installed-translations' },
+  { label: 'Встановлені ігри', value: 'installed-games' },
 ];

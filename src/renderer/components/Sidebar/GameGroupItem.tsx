@@ -127,7 +127,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
 
           {/* Content */}
           <div className={`flex-1 min-w-0 ${isAdultBlurred ? 'blur-md' : ''}`}>
-            <h4 className="font-semibold text-sm text-white mb-1 truncate">
+            <h4 className="font-semibold text-sm text-text-main mb-1 truncate">
               {group.name}
             </h4>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">

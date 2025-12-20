@@ -184,7 +184,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <Shield size={18} className="text-neon-blue" />
-                <span className="font-medium text-white group-hover:text-neon-blue transition-colors">
+                <span className="font-medium text-text-main group-hover:text-neon-blue transition-colors">
                   Створити резервну копію
                 </span>
               </div>
@@ -226,7 +226,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <FileText size={18} className="text-neon-blue" />
-              <span className="font-medium text-white group-hover:text-neon-blue transition-colors">
+              <span className="font-medium text-text-main group-hover:text-neon-blue transition-colors">
                 Текстова локалізація
               </span>
               {isReinstall && (
@@ -292,7 +292,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 className={hasVoiceArchive ? 'text-purple-400' : 'text-text-muted'}
               />
               <span
-                className={`font-medium transition-colors ${hasVoiceArchive ? 'text-white group-hover:text-purple-400' : 'text-text-muted'}`}
+                className={`font-medium transition-colors ${hasVoiceArchive ? 'text-text-main group-hover:text-purple-400' : 'text-text-muted'}`}
               >
                 Озвучка
               </span>
@@ -367,7 +367,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                   }
                 />
                 <span
-                  className={`font-medium transition-colors ${hasAchievementsArchive ? 'text-white group-hover:text-green-400' : 'text-text-muted'}`}
+                  className={`font-medium transition-colors ${hasAchievementsArchive ? 'text-text-main group-hover:text-green-400' : 'text-text-muted'}`}
                 >
                   Досягнення Steam
                 </span>
@@ -413,7 +413,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <div className="flex items-center gap-2 text-sm">
                 <Archive size={16} className="text-text-muted" />
                 <span className="text-text-muted">Буде завантажено:</span>
-                <span className="text-white font-medium">{totalDownloadSize}</span>
+                <span className="text-text-main font-medium">{totalDownloadSize}</span>
               </div>
             )}
             {(willRemoveVoice || willRemoveAchievements) && (
@@ -436,7 +436,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             onClick={onClose}
             data-gamepad-cancel
             data-gamepad-modal-item
-            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-white font-semibold hover:bg-glass-hover transition-colors"
+            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
           >
             Скасувати
           </button>

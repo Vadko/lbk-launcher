@@ -182,7 +182,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             ) : (
               <Bell className="w-6 h-6 text-neon-blue" />
             )}
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-2xl font-bold text-text-main">
               {showSettings ? 'Налаштування сповіщень' : 'Сповіщення'}
             </h2>
             {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
@@ -223,7 +223,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             >
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
-                  <h4 className="text-sm font-semibold text-white mb-1">
+                  <h4 className="text-sm font-semibold text-text-main mb-1">
                     Оновлення додатку
                   </h4>
                   <p className="text-xs text-text-muted">
@@ -239,7 +239,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
-                  <h4 className="text-sm font-semibold text-white mb-1">
+                  <h4 className="text-sm font-semibold text-text-main mb-1">
                     Оновлення українізаторів
                   </h4>
                   <p className="text-xs text-text-muted">
@@ -316,7 +316,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                               {!notification.read && (
                                 <span className="w-2 h-2 bg-neon-blue rounded-full animate-pulse flex-shrink-0" />
                               )}
-                              <h3 className="font-semibold text-white truncate">
+                              <h3 className="font-semibold text-text-main truncate">
                                 {notification.gameName}
                               </h3>
                             </div>
@@ -361,13 +361,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="modal-content border border-border rounded-xl p-6 mx-4 max-w-sm w-full"
+                className="bg-bg-dark border border-border rounded-xl p-6 mx-4 max-w-sm w-full"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 rounded-lg bg-red-500/20">
                     <Trash2 className="w-5 h-5 text-red-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-lg font-semibold text-text-main">
                     Видалити всі сповіщення?
                   </h3>
                 </div>

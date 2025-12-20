@@ -9,7 +9,7 @@ interface StatusCardProps {
 export const StatusCard: React.FC<StatusCardProps> = ({ game }) => {
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-head font-semibold text-white mb-4">
+      <h3 className="text-lg font-head font-semibold text-text-main mb-4">
         Прогрес перекладу
       </h3>
       <div>

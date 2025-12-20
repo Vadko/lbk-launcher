@@ -20,7 +20,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
       />
       {!isCompact && (
         <div>
-          <h1 className="text-lg font-head font-bold text-white">LB</h1>
+          <h1 className="text-lg font-head font-bold text-text-main">LB</h1>
           <p className="text-xs text-text-muted">Українізатори ігор</p>
         </div>
       )}

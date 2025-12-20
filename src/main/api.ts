@@ -44,12 +44,12 @@ export function findGamesByInstallPaths(installPaths: string[]): GetGamesResult 
 
 export function fetchTeams(): string[] {
   try {
-    console.log('[API] Fetching unique teams from local database');
-    const teams = gamesRepo.getUniqueTeams();
-    console.log(`[API] Fetched ${teams.length} unique teams`);
-    return teams;
+    console.log('[API] Fetching unique authors from local database');
+    const authors = gamesRepo.getUniqueAuthors();
+    console.log(`[API] Fetched ${authors.length} unique authors`);
+    return authors;
   } catch (error) {
-    console.error('[API] Error fetching teams:', error);
+    console.error('[API] Error fetching authors:', error);
     return [];
   }
 }

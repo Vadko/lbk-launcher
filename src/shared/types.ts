@@ -55,8 +55,8 @@ export interface InstallOptions {
 
 export interface GetGamesParams {
   searchQuery?: string;
-  filter?: string;
-  team?: string;
+  statuses?: string[];
+  authors?: string[];
   showAdultGames?: boolean;
 }
 

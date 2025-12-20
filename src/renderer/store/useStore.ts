@@ -4,16 +4,10 @@ import type {
   DownloadProgress,
   InstallationInfo,
   DetectedGameInfo,
-  Database,
 } from '../../shared/types';
+import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 import { useSettingsStore } from './useSettingsStore';
-
-type FilterType =
-  | 'all'
-  | Database['public']['Enums']['game_status']
-  | 'installed-translations'
-  | 'installed-games';
 
 interface InstallationProgress {
   isInstalling: boolean;
@@ -26,8 +20,9 @@ interface InstallationProgress {
 interface Store {
   // UI State
   selectedGame: Game | null;
-  filter: FilterType;
-  teamFilter: string | null;
+  selectedStatuses: string[];
+  selectedAuthors: string[];
+  specialFilter: SpecialFilterType | null;
   searchQuery: string;
   isInitialLoad: boolean;
 
@@ -43,8 +38,9 @@ interface Store {
 
   // UI Actions
   setSelectedGame: (game: Game | null) => void;
-  setFilter: (filter: FilterType) => void;
-  setTeamFilter: (team: string | null) => void;
+  setSelectedStatuses: (statuses: string[]) => void;
+  setSelectedAuthors: (authors: string[]) => void;
+  setSpecialFilter: (filter: SpecialFilterType | null) => void;
   setSearchQuery: (query: string) => void;
   setInitialLoadComplete: () => void;
 
@@ -82,8 +78,9 @@ interface Store {
 export const useStore = create<Store>((set, get) => ({
   // UI State
   selectedGame: null,
-  filter: 'all',
-  teamFilter: null,
+  selectedStatuses: [],
+  selectedAuthors: [],
+  specialFilter: null,
   searchQuery: '',
   isInitialLoad: true,
 
@@ -100,9 +97,12 @@ export const useStore = create<Store>((set, get) => ({
   // UI Actions
   setSelectedGame: (game) => set({ selectedGame: game }),
 
-  setFilter: (filter) => set({ filter }),
+  setSelectedStatuses: (selectedStatuses) => set({ selectedStatuses, specialFilter: null }),
 
-  setTeamFilter: (teamFilter) => set({ teamFilter }),
+  setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
+
+  setSpecialFilter: (specialFilter) =>
+    set({ specialFilter, selectedStatuses: [], selectedAuthors: [] }),
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 

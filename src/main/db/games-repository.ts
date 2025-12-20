@@ -105,6 +105,9 @@ export class GamesRepository {
       achievements_archive_hash: game.achievements_archive_hash ?? null,
       achievements_archive_path: game.achievements_archive_path ?? null,
       achievements_archive_size: game.achievements_archive_size ?? null,
+      achievements_archive_file_list: game.achievements_archive_file_list ?? null,
+      archive_file_list: game.archive_file_list ?? null,
+      voice_archive_file_list: game.voice_archive_file_list ?? null,
       steam_app_id: game.steam_app_id ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
@@ -116,26 +119,22 @@ export class GamesRepository {
    * Оскільки це local-first додаток, повертаємо всі ігри одразу
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
-    const { searchQuery = '', filter = 'all', team } = params;
+    const { searchQuery = '', statuses = [], authors = [] } = params;
     // Note: showAdultGames is now handled in UI (blur effect) instead of filtering here
 
     const whereConditions: string[] = ['approved = 1'];
     const queryParams: (string | number)[] = [];
 
-    if (filter !== 'all') {
-      whereConditions.push('status = ?');
-      queryParams.push(filter);
+    // Filter by statuses (multi-select)
+    if (statuses.length > 0) {
+      const placeholders = statuses.map(() => '?').join(', ');
+      whereConditions.push(`status IN (${placeholders})`);
+      queryParams.push(...statuses);
     }
 
     if (searchQuery) {
       whereConditions.push('name LIKE ?');
       queryParams.push(`%${searchQuery}%`);
-    }
-
-    if (team) {
-      // Partial match - "Team A" matches "Team A & Team B"
-      whereConditions.push('team LIKE ?');
-      queryParams.push(`%${team}%`);
     }
 
     // Adult games are always returned, UI will show blur overlay when setting is off
@@ -150,25 +149,49 @@ export class GamesRepository {
     `);
 
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
-    const games = rows.map((row) => this.rowToGame(row));
+    let games = rows.map((row) => this.rowToGame(row));
+
+    // Filter by authors (multi-select) - post-process since team is comma-separated
+    if (authors.length > 0) {
+      games = games.filter((game) => {
+        if (!game.team) return false;
+        // Check if any of the selected authors is in the game's team field
+        return authors.some((author) => game.team?.includes(author));
+      });
+    }
+
     const total = games.length;
 
     return { games, total };
   }
 
   /**
-   * Отримати унікальні команди (автори)
+   * Отримати унікальних авторів
+   * Парсить comma-separated team поле і повертає унікальних авторів
    */
-  getUniqueTeams(): string[] {
+  getUniqueAuthors(): string[] {
     const stmt = this.db.prepare(`
-      SELECT DISTINCT team
+      SELECT team
       FROM games
       WHERE approved = 1 AND team IS NOT NULL AND team != ''
-      ORDER BY team ASC
     `);
 
     const rows = stmt.all() as { team: string }[];
-    return rows.map((row) => row.team);
+
+    // Parse comma-separated teams into individual authors
+    const allAuthors = rows
+      .flatMap((row) => {
+        if (!row.team) return [];
+        return row.team.split(',').map((author) => author.trim());
+      })
+      .filter((author) => author.length > 0);
+
+    // Get unique authors and sort alphabetically
+    const uniqueAuthors = [...new Set(allAuthors)].sort((a, b) =>
+      a.localeCompare(b, 'uk')
+    );
+
+    return uniqueAuthors;
   }
 
   /**

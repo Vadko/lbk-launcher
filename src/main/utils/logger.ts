@@ -1,7 +1,9 @@
 import { app } from 'electron';
-import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
 import { appendFile } from 'fs/promises';
 import { join } from 'path';
+
+const LOG_RETENTION_DAYS = 7;
 
 let saveLogsEnabled = false;
 let logFilePath: string | null = null;
@@ -145,6 +147,9 @@ const originalConsoleWarn = console.warn.bind(console);
 const originalConsoleInfo = console.info.bind(console);
 
 export function initLogger(): void {
+  // Clean up old logs on startup
+  cleanupOldLogs();
+
   console.log = (message: string, ...args: unknown[]) => {
     originalConsoleLog(message, ...args);
     writeToFile(formatLogMessage('LOG', message, ...args));
@@ -177,4 +182,37 @@ export function initLogger(): void {
 
 export function getLogFileDirectory(): string {
   return join(app.getPath('userData'), 'logs');
+}
+
+/**
+ * Clean up old log files (older than LOG_RETENTION_DAYS)
+ */
+function cleanupOldLogs(): void {
+  try {
+    const logsDir = getLogFileDirectory();
+    if (!existsSync(logsDir)) return;
+
+    const files = readdirSync(logsDir);
+    const now = Date.now();
+    const maxAge = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+    for (const file of files) {
+      if (!file.startsWith('littlebit-') || !file.endsWith('.log')) continue;
+
+      const filePath = join(logsDir, file);
+      try {
+        const stats = statSync(filePath);
+        const fileAge = now - stats.mtimeMs;
+
+        if (fileAge > maxAge) {
+          unlinkSync(filePath);
+          originalConsoleLog(`[Logger] Deleted old log file: ${file}`);
+        }
+      } catch {
+        // Ignore errors for individual files
+      }
+    }
+  } catch (error) {
+    originalConsoleError('[Logger] Failed to cleanup old logs:', error);
+  }
 }

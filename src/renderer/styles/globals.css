@@ -25,7 +25,6 @@ img {
    ========================================================================== */
 
 :root {
-  /* Fonts */
   --font-head: 'Space Grotesk', 'Segoe UI', sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 }
@@ -87,10 +86,6 @@ body {
 
 html.maximized #root {
   border-radius: 0;
-}
-
-.text-white {
-  color: var(--text-main) !important;
 }
 
 /* ==========================================================================
@@ -155,7 +150,6 @@ html.maximized #root {
    5. LIQUID GLASS MODE (macOS 26+)
    ========================================================================== */
 
-/* --- 5.1 Base transparent backgrounds --- */
 body.liquid-glass-enabled {
   background: transparent !important;
 }
@@ -165,41 +159,22 @@ body.liquid-glass-enabled #root > div {
   background: transparent !important;
 }
 
-/* --- 5.2 Disable CSS backdrop filters (native blur handles it) --- */
 body.liquid-glass-enabled .glass-panel,
 body.liquid-glass-enabled .glass-card,
 body.liquid-glass-enabled .glass-button,
-body.liquid-glass-enabled [class*='backdrop-blur'],
-body.liquid-glass-enabled .backdrop-blur-sm,
-body.liquid-glass-enabled .backdrop-blur-md,
-body.liquid-glass-enabled .backdrop-blur-lg,
-body.liquid-glass-enabled .backdrop-blur-xl,
-body.liquid-glass-enabled .backdrop-blur-2xl,
-body.liquid-glass-enabled .backdrop-blur-3xl {
+body.liquid-glass-enabled [class*='backdrop-blur'] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* --- 5.3 Dark theme backgrounds for liquid glass --- */
 body.liquid-glass-enabled .bg-glass,
 body.liquid-glass-enabled [class*='bg-glass']:not([class*='hover']) {
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
 body.liquid-glass-enabled .bg-bg-dark,
-body.liquid-glass-enabled [class*='bg-bg-dark'],
-body.liquid-glass-enabled .bg-dark {
+body.liquid-glass-enabled [class*='bg-bg-dark'] {
   background: transparent !important;
-}
-
-body.liquid-glass-enabled .bg-bg-card,
-body.liquid-glass-enabled [class*='bg-bg-card'] {
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
-/* Gradient buttons in liquid glass mode - keep text crisp */
-body.liquid-glass-enabled [class*='bg-gradient'] {
-  /* Don't reduce opacity - it makes text hard to read */
 }
 
 body.liquid-glass-enabled .glass-panel {
@@ -212,7 +187,6 @@ body.liquid-glass-enabled .glass-card {
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* --- 5.4 Dark theme UI elements for liquid glass --- */
 body.liquid-glass-enabled .modal-backdrop {
   background: rgba(0, 0, 0, 0.6) !important;
   backdrop-filter: none !important;
@@ -251,11 +225,9 @@ body.liquid-glass-enabled .glass-input:focus {
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* --- 5.5 Light theme + Liquid Glass --- */
+/* Light theme + Liquid Glass */
 :root[data-theme='light'] body.liquid-glass-enabled {
   background: transparent !important;
-  --text-main: #0a0f1a !important;
-  --text-muted: #334155 !important;
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled #root,
@@ -274,9 +246,7 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled .bg-glass,
-:root[data-theme='light']
-  body.liquid-glass-enabled
-  [class*='bg-glass']:not([class*='hover']) {
+:root[data-theme='light'] body.liquid-glass-enabled [class*='bg-glass']:not([class*='hover']) {
   background: rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -332,7 +302,7 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 /* ==========================================================================
-   6. LIGHT THEME OVERRIDES (non-liquid glass)
+   6. LIGHT THEME OVERRIDES
    ========================================================================== */
 
 :root[data-theme='light'] .glass-card {
@@ -369,34 +339,30 @@ body.liquid-glass-enabled .glass-input:focus {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-:root[data-theme='light'] .border-transparent {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
 :root[data-theme='light'] .progress-track {
   background: rgba(0, 0, 0, 0.1);
 }
 
 :root[data-theme='light'] .bg-glass-hover {
-  background-color: rgba(0, 0, 0, 0.1) !important;
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 :root[data-theme='light'] .bg-white\/10 {
-  background-color: rgba(0, 0, 0, 0.1) !important;
+  background-color: rgba(0, 0, 0, 0.1);
 }
 
 :root[data-theme='light'] .bg-black\/60 {
-  background-color: rgba(0, 0, 0, 0.4) !important;
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
 :root[data-theme='light'] .bg-\[rgba\(10\2c 20\2c 30\2c 0\.95\)\] {
-  background: rgba(255, 255, 255, 0.98) !important;
+  background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 :root[data-theme='light'] .filter-dropdown {
-  background: rgba(255, 255, 255, 0.98) !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.1);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
@@ -414,39 +380,22 @@ body.liquid-glass-enabled .glass-input:focus {
   color: var(--text-main);
 }
 
-:root[data-theme='light'] .hover\:text-white:hover {
-  color: var(--text-main) !important;
+:root[data-theme='light'] .filter-dropdown .bg-neon-blue svg {
+  color: white;
+  stroke: white;
 }
 
 :root[data-theme='light'] .hover\:bg-glass-hover:hover {
-  background-color: rgba(0, 0, 0, 0.08) !important;
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 :root[data-theme='light'] .titlebar-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1) !important;
-  color: var(--text-main) !important;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: var(--text-main);
 }
 
 :root[data-theme='light'] .titlebar-close-btn:hover {
-  color: white !important;
-}
-
-:root[data-theme='light'] .bg-neon-blue,
-:root[data-theme='light'] .bg-neon-purple,
-:root[data-theme='light'] .bg-neon-pink,
-:root[data-theme='light'] .bg-neon-orange,
-:root[data-theme='light'] .bg-neon-green,
-:root[data-theme='light'] .bg-gradient-to-r {
-  color: white !important;
-}
-
-:root[data-theme='light'] .bg-neon-blue *,
-:root[data-theme='light'] .bg-neon-purple *,
-:root[data-theme='light'] .bg-neon-pink *,
-:root[data-theme='light'] .bg-neon-orange *,
-:root[data-theme='light'] .bg-neon-green *,
-:root[data-theme='light'] .bg-gradient-to-r * {
-  color: white !important;
+  color: white;
 }
 
 :root[data-theme='light'] ::selection {
@@ -456,21 +405,39 @@ body.liquid-glass-enabled .glass-input:focus {
 
 /* Notification items in light theme */
 :root[data-theme='light'] .notification-item {
-  background: rgba(0, 0, 0, 0.03) !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 :root[data-theme='light'] .notification-item:hover {
-  background: rgba(0, 0, 0, 0.06) !important;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 :root[data-theme='light'] .notification-item-unread {
-  background: rgba(56, 189, 248, 0.08) !important;
-  border-color: rgba(56, 189, 248, 0.3) !important;
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.3);
 }
 
 :root[data-theme='light'] .notification-item-unread:hover {
-  background: rgba(56, 189, 248, 0.12) !important;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+/* Credits section - light theme */
+:root[data-theme='light'] .credits-section {
+  background: linear-gradient(to right, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15));
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+:root[data-theme='light'] .credits-section .text-pink-500 {
+  color: #db2777;
+}
+
+:root[data-theme='light'] .credits-section .text-purple-400 {
+  color: #7c3aed;
+}
+
+:root[data-theme='light'] .credits-section .text-purple-300 {
+  color: #8b5cf6;
 }
 
 /* ==========================================================================
@@ -596,12 +563,9 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 /* ==========================================================================
-   10. FOCUS STYLES (Gamepad / Steam Deck support)
-   Only active when gamepad mode is enabled via data-gamepad-mode attribute
-   Uses --gamepad-focus (yellow/gold) to differentiate from selection (neon-blue)
+   10. GAMEPAD FOCUS STYLES
    ========================================================================== */
 
-/* Gamepad mode focus styles - uses yellow/gold for clear visibility */
 [data-gamepad-mode] button:focus,
 [data-gamepad-mode] a:focus,
 [data-gamepad-mode] input:focus,
@@ -632,7 +596,6 @@ body.liquid-glass-enabled .glass-input:focus {
   outline-offset: -2px;
 }
 
-/* Gamepad card focus */
 [data-gamepad-mode] [data-gamepad-card]:focus,
 [data-gamepad-mode] [data-gamepad-card]:focus-visible {
   outline: 3px solid var(--gamepad-focus) !important;
@@ -640,7 +603,6 @@ body.liquid-glass-enabled .glass-input:focus {
   box-shadow: 0 0 20px rgba(251, 191, 36, 0.5) !important;
 }
 
-/* Light theme + Gamepad mode */
 :root[data-theme='light'] [data-gamepad-mode] button:focus,
 :root[data-theme='light'] [data-gamepad-mode] a:focus,
 :root[data-theme='light'] [data-gamepad-mode] input:focus,

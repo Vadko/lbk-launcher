@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      authors: {
+        Row: {
+          created_at: string | null
+          games_count: number | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          games_count?: number | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          games_count?: number | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       deleted_games: {
         Row: {
           deleted_at: string
@@ -31,6 +55,45 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      game_authors: {
+        Row: {
+          author_id: string
+          created_at: string | null
+          game_id: string
+          id: string
+          is_primary: boolean | null
+        }
+        Insert: {
+          author_id: string
+          created_at?: string | null
+          game_id: string
+          id?: string
+          is_primary?: boolean | null
+        }
+        Update: {
+          author_id?: string
+          created_at?: string | null
+          game_id?: string
+          id?: string
+          is_primary?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_authors_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "authors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_authors_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_downloads: {
         Row: {
@@ -93,13 +156,54 @@ export type Database = {
           },
         ]
       }
+      game_version_authors: {
+        Row: {
+          author_id: string
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          version_id: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          version_id: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_version_authors_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "authors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_version_authors_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "game_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_versions: {
         Row: {
+          achievements_archive_file_list: Json | null
           achievements_archive_hash: string | null
           achievements_archive_path: string | null
           achievements_archive_size: string | null
           approved_at: string | null
           approved_by: string | null
+          archive_file_list: Json | null
           archive_hash: string | null
           archive_path: string | null
           archive_size: string | null
@@ -137,6 +241,7 @@ export type Database = {
           updated_at: string
           version: string | null
           video_url: string | null
+          voice_archive_file_list: Json | null
           voice_archive_hash: string | null
           voice_archive_path: string | null
           voice_archive_size: string | null
@@ -145,11 +250,13 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          achievements_archive_file_list?: Json | null
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          archive_file_list?: Json | null
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
@@ -187,6 +294,7 @@ export type Database = {
           updated_at?: string
           version?: string | null
           video_url?: string | null
+          voice_archive_file_list?: Json | null
           voice_archive_hash?: string | null
           voice_archive_path?: string | null
           voice_archive_size?: string | null
@@ -195,11 +303,13 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          achievements_archive_file_list?: Json | null
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          archive_file_list?: Json | null
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
@@ -237,6 +347,7 @@ export type Database = {
           updated_at?: string
           version?: string | null
           video_url?: string | null
+          voice_archive_file_list?: Json | null
           voice_archive_hash?: string | null
           voice_archive_path?: string | null
           voice_archive_size?: string | null
@@ -270,12 +381,14 @@ export type Database = {
       }
       games: {
         Row: {
+          achievements_archive_file_list: Json | null
           achievements_archive_hash: string | null
           achievements_archive_path: string | null
           achievements_archive_size: string | null
           approved: boolean
           approved_at: string | null
           approved_by: string | null
+          archive_file_list: Json | null
           archive_hash: string | null
           archive_path: string | null
           archive_size: string | null
@@ -315,6 +428,7 @@ export type Database = {
           updated_at: string
           version: string | null
           video_url: string | null
+          voice_archive_file_list: Json | null
           voice_archive_hash: string | null
           voice_archive_path: string | null
           voice_archive_size: string | null
@@ -323,12 +437,14 @@ export type Database = {
           youtube: string | null
         }
         Insert: {
+          achievements_archive_file_list?: Json | null
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          archive_file_list?: Json | null
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
@@ -368,6 +484,7 @@ export type Database = {
           updated_at?: string
           version?: string | null
           video_url?: string | null
+          voice_archive_file_list?: Json | null
           voice_archive_hash?: string | null
           voice_archive_path?: string | null
           voice_archive_size?: string | null
@@ -376,12 +493,14 @@ export type Database = {
           youtube?: string | null
         }
         Update: {
+          achievements_archive_file_list?: Json | null
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
+          archive_file_list?: Json | null
           archive_hash?: string | null
           archive_path?: string | null
           archive_size?: string | null
@@ -421,6 +540,7 @@ export type Database = {
           updated_at?: string
           version?: string | null
           video_url?: string | null
+          voice_archive_file_list?: Json | null
           voice_archive_hash?: string | null
           voice_archive_path?: string | null
           voice_archive_size?: string | null
@@ -521,10 +641,12 @@ export type Database = {
           approved_by: string | null
           created_at: string
           email: string
+          email_notifications: boolean
           full_name: string | null
           id: string
           password_hash: string
-          role: string
+          role: Database["public"]["Enums"]["user_role"]
+          unsubscribe_token: string
           updated_at: string
           verified_user: boolean
         }
@@ -534,10 +656,12 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           email: string
+          email_notifications?: boolean
           full_name?: string | null
           id?: string
           password_hash: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
         }
@@ -547,10 +671,12 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           email?: string
+          email_notifications?: boolean
           full_name?: string | null
           id?: string
           password_hash?: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
         }
@@ -592,6 +718,7 @@ export type Database = {
           next_available_at: string
         }[]
       }
+      generate_author_slug: { Args: { author_name: string }; Returns: string }
       increment_game_downloads:
         | {
             Args: { p_game_id: string; p_user_identifier: string }
@@ -606,6 +733,8 @@ export type Database = {
             Returns: undefined
           }
       is_admin: { Args: never; Returns: boolean }
+      is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
       remove_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
@@ -627,6 +756,7 @@ export type Database = {
     Enums: {
       game_status: "completed" | "in-progress" | "planned"
       install_source: "steam" | "gog" | "emulator" | "epic" | "rockstar"
+      user_role: "admin" | "moderator" | "translator" | "user"
     }
     CompositeTypes: {
       install_path_entry: {
@@ -759,6 +889,7 @@ export const Constants = {
     Enums: {
       game_status: ["completed", "in-progress", "planned"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar"],
+      user_role: ["admin", "moderator", "translator", "user"],
     },
   },
 } as const

@@ -21,7 +21,7 @@ export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = (
             }`}
           />
           <div>
-            <div className="text-sm font-medium text-white">
+            <div className="text-sm font-medium text-text-main">
               {isUpdateAvailable ? '⚡ Доступне оновлення' : '✓ Українізатор встановлено'}
             </div>
             <div className="text-xs text-text-muted mt-0.5">

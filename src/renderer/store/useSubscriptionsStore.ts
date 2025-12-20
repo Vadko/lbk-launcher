@@ -1,47 +1,27 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Game } from '../../shared/types';
+import { persist } from 'zustand/middleware';
+import type { Notification, ToastNotification, GameProgress, PersistedSubscriptionsState } from './subscriptions/types';
+import {
+  getNotificationMessage,
+  createNotification,
+  createToast,
+  showSystemNotificationIfHidden,
+  scheduleToastDismissal,
+  trackSubscription,
+} from './subscriptions/notificationHelpers';
+import {
+  customStorage,
+  isValidSet,
+  isValidMap,
+  ensureSet,
+  ensureMap,
+  migrateStoreData,
+} from './subscriptions/storageHelpers';
 
-interface BaseNotification {
-  id: string;
-  type: 'status-change' | 'version-update' | 'app-update' | 'progress-change' | 'team-new-game' | 'team-status-change';
-  gameName: string;
-  timestamp: number;
-}
+// Re-export types for external use
+export type { Notification, ToastNotification, GameProgress } from './subscriptions/types';
 
-export interface Notification extends BaseNotification {
-  oldValue?: string;
-  newValue?: string;
-  gameId: string;
-  teamName?: string;
-  read: boolean;
-}
-
-export interface ToastNotification extends BaseNotification {
-  message: string;
-}
-
-type GameProgress = Pick<
-  Game,
-  | 'translation_progress'
-  | 'editing_progress'
-  | 'voice_progress'
-  | 'textures_progress'
-  | 'fonts_progress'
->;
-
-interface SubscriptionsStore {
-  // Game Subscriptions
-  subscribedGames: Set<string>;
-  subscribedGameStatuses: Map<string, string>;
-  subscribedGameProgress: Map<string, GameProgress>;
-
-  // Team/Author Subscriptions
-  subscribedTeams: Set<string>;
-
-  notifications: Notification[];
-  unreadCount: number;
-
+interface SubscriptionsStore extends PersistedSubscriptionsState {
   // Toast notifications (non-persisted, auto-dismiss)
   toasts: ToastNotification[];
 
@@ -59,6 +39,12 @@ interface SubscriptionsStore {
   unsubscribeFromTeam: (teamName: string) => void;
   isSubscribedToTeam: (teamName: string) => boolean;
   getSubscribedTeams: () => string[];
+
+  // Prompted Games Actions
+  markGameAsPrompted: (gameId: string) => void;
+  isGamePrompted: (gameId: string) => boolean;
+
+  // Notification Actions
   addNotification: (
     notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
     showToast?: boolean
@@ -104,172 +90,20 @@ interface SubscriptionsStore {
   dismissToast: (toastId: string) => void;
 }
 
-interface SerializedMap {
-  __type: 'Map';
-  data: [string, unknown][];
-}
-
-interface SerializedSet {
-  __type: 'Set';
-  data: string[];
-}
-
-type PersistedSubscriptionsState = Pick<
-  SubscriptionsStore,
-  | 'subscribedGames'
-  | 'subscribedGameStatuses'
-  | 'subscribedGameProgress'
-  | 'subscribedTeams'
-  | 'notifications'
-  | 'unreadCount'
->;
-
-// Custom storage with Map/Set serialization
-const customStorage = createJSONStorage<PersistedSubscriptionsState>(() => localStorage, {
-  reviver: (_key, value: unknown) => {
-    if (value && typeof value === 'object' && '__type' in value) {
-      const typed = value as SerializedMap | SerializedSet;
-      if (typed.__type === 'Map') {
-        return new Map(typed.data);
-      }
-      if (typed.__type === 'Set') {
-        return new Set(typed.data);
-      }
-    }
-    return value;
-  },
-  replacer: (_key, value: unknown) => {
-    if (value instanceof Map) {
-      return { __type: 'Map', data: Array.from(value.entries()) } as SerializedMap;
-    }
-    if (value instanceof Set) {
-      return { __type: 'Set', data: Array.from(value) } as SerializedSet;
-    }
-    return value;
-  },
-});
-
-const TOAST_DURATION = 8000; // 8 seconds
-
-// Type guards
-function isValidSet<T>(value: unknown): value is Set<T> {
-  return value instanceof Set;
-}
-
-function isValidMap<K, V>(value: unknown): value is Map<K, V> {
-  return value instanceof Map;
-}
-
-// Helper functions to safely get or create Set/Map instances
-function ensureSet<T>(value: unknown): Set<T> {
-  if (isValidSet<T>(value)) {
-    return new Set(value);
-  }
-  console.warn('[SubscriptionsStore] Converting invalid Set to new Set');
-  return new Set(Array.isArray(value) ? value : []);
-}
-
-function ensureMap<K, V>(value: unknown): Map<K, V> {
-  if (isValidMap<K, V>(value)) {
-    return new Map(value);
-  }
-  console.warn('[SubscriptionsStore] Converting invalid Map to new Map');
-  // Handle both array format and object format
-  if (Array.isArray(value)) {
-    return new Map(value as [K, V][]);
-  }
-  if (value && typeof value === 'object') {
-    return new Map(Object.entries(value) as [K, V][]);
-  }
-  return new Map();
-}
-
-// Migration helper
-function migrateStoreData(state: Partial<SubscriptionsStore>): void {
-  let migrated = false;
-
-  if (!isValidSet(state.subscribedGames)) {
-    console.warn('[SubscriptionsStore] Migrating subscribedGames to Set');
-    state.subscribedGames = ensureSet<string>(state.subscribedGames);
-    migrated = true;
-  }
-
-  if (!isValidSet(state.subscribedTeams)) {
-    console.warn('[SubscriptionsStore] Migrating subscribedTeams to Set');
-    state.subscribedTeams = ensureSet<string>(state.subscribedTeams);
-    migrated = true;
-  }
-
-  if (!isValidMap(state.subscribedGameStatuses)) {
-    console.warn('[SubscriptionsStore] Migrating subscribedGameStatuses to Map');
-    state.subscribedGameStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
-    migrated = true;
-  }
-
-  if (!isValidMap(state.subscribedGameProgress)) {
-    console.warn('[SubscriptionsStore] Migrating subscribedGameProgress to Map');
-    state.subscribedGameProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
-    migrated = true;
-  }
-
-  if (migrated) {
-    console.log('[SubscriptionsStore] Migration completed', {
-      subscribedGamesCount: state.subscribedGames?.size ?? 0,
-      subscribedTeamsCount: state.subscribedTeams?.size ?? 0,
-      subscribedGameStatusesCount: state.subscribedGameStatuses?.size ?? 0,
-      subscribedGameProgressCount: state.subscribedGameProgress?.size ?? 0,
-    });
-  }
-}
-
-// Helper to track subscription via IPC (main process handles the API call)
-async function trackSubscription(
-  gameId: string,
-  action: 'subscribe' | 'unsubscribe'
-): Promise<void> {
-  try {
-    await window.electronAPI?.trackSubscription(gameId, action);
-  } catch (error) {
-    console.error('[Subscription] Failed to track subscription:', error);
-  }
-}
-
-// Team subscriptions are stored locally only (no server tracking)
-// This is intentional - we don't need server-side tracking for team subscriptions
-
-// Helper to show system notification when window is hidden (in tray)
-async function showSystemNotificationIfHidden(
-  title: string,
-  body: string
-): Promise<void> {
-  if (
-    !window.windowControls?.isVisible ||
-    !window.windowControls?.showSystemNotification
-  ) {
-    return;
-  }
-
-  try {
-    const isVisible = await window.windowControls.isVisible();
-    if (!isVisible) {
-      await window.windowControls.showSystemNotification({ title, body });
-    }
-  } catch (error) {
-    console.error('[Notification] Failed to show system notification:', error);
-  }
-}
-
 export const useSubscriptionsStore = create<SubscriptionsStore>()(
   persist(
     (set, get) => ({
+      // Initial state
       subscribedGames: new Set<string>(),
       subscribedGameStatuses: new Map<string, string>(),
       subscribedGameProgress: new Map<string, GameProgress>(),
       subscribedTeams: new Set<string>(),
+      promptedGamesForSubscription: new Set<string>(),
       notifications: [],
       unreadCount: 0,
       toasts: [],
 
+      // Game subscription methods
       subscribe: (gameId, status, progress) => {
         set((state) => {
           const newSubscribed = ensureSet<string>(state.subscribedGames);
@@ -283,7 +117,11 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
             newProgress.set(gameId, progress);
           }
 
-          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
+          return {
+            subscribedGames: newSubscribed,
+            subscribedGameStatuses: newStatuses,
+            subscribedGameProgress: newProgress,
+          };
         });
         trackSubscription(gameId, 'subscribe');
       },
@@ -299,36 +137,32 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
           newProgress.delete(gameId);
 
-          return { subscribedGames: newSubscribed, subscribedGameStatuses: newStatuses, subscribedGameProgress: newProgress };
+          return {
+            subscribedGames: newSubscribed,
+            subscribedGameStatuses: newStatuses,
+            subscribedGameProgress: newProgress,
+          };
         });
         trackSubscription(gameId, 'unsubscribe');
       },
 
       isSubscribed: (gameId) => {
-        const subscribedGames = get().subscribedGames;
-        if (!isValidSet<string>(subscribedGames)) {
-          console.error('[SubscriptionsStore] subscribedGames is not a Set');
-          return false;
-        }
-        return subscribedGames.has(gameId);
+        const { subscribedGames } = get();
+        return isValidSet<string>(subscribedGames) && subscribedGames.has(gameId);
       },
 
       getSubscribedStatus: (gameId) => {
-        const subscribedGameStatuses = get().subscribedGameStatuses;
-        if (!isValidMap<string, string>(subscribedGameStatuses)) {
-          console.error('[SubscriptionsStore] subscribedGameStatuses is not a Map');
-          return undefined;
-        }
-        return subscribedGameStatuses.get(gameId);
+        const { subscribedGameStatuses } = get();
+        return isValidMap<string, string>(subscribedGameStatuses)
+          ? subscribedGameStatuses.get(gameId)
+          : undefined;
       },
 
       getSubscribedProgress: (gameId) => {
-        const subscribedGameProgress = get().subscribedGameProgress;
-        if (!isValidMap<string, GameProgress>(subscribedGameProgress)) {
-          console.error('[SubscriptionsStore] subscribedGameProgress is not a Map');
-          return undefined;
-        }
-        return subscribedGameProgress.get(gameId);
+        const { subscribedGameProgress } = get();
+        return isValidMap<string, GameProgress>(subscribedGameProgress)
+          ? subscribedGameProgress.get(gameId)
+          : undefined;
       },
 
       updateSubscribedStatus: (gameId, status) => {
@@ -367,286 +201,189 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       },
 
       isSubscribedToTeam: (teamName) => {
-        const subscribedTeams = get().subscribedTeams;
-        if (!isValidSet<string>(subscribedTeams)) {
-          console.error('[SubscriptionsStore] subscribedTeams is not a Set');
-          return false;
-        }
-        return subscribedTeams.has(teamName);
+        const { subscribedTeams } = get();
+        return isValidSet<string>(subscribedTeams) && subscribedTeams.has(teamName);
       },
 
       getSubscribedTeams: () => {
-        const subscribedTeams = get().subscribedTeams;
-        if (!isValidSet<string>(subscribedTeams)) {
-          return [];
-        }
-        return Array.from(subscribedTeams);
+        const { subscribedTeams } = get();
+        return isValidSet<string>(subscribedTeams) ? Array.from(subscribedTeams) : [];
       },
 
-      addNotification: (notification, showToast = true) => {
-        const id = `${notification.gameId}-${Date.now()}`;
-        const newNotification: Notification = {
-          ...notification,
-          id,
-          timestamp: Date.now(),
-          read: false,
-        };
+      // Prompted games methods (for author subscription modal)
+      markGameAsPrompted: (gameId) => {
+        set((state) => {
+          const newPromptedGames = ensureSet<string>(state.promptedGamesForSubscription);
+          newPromptedGames.add(gameId);
+          return { promptedGamesForSubscription: newPromptedGames };
+        });
+        console.log(`[Subscription] Marked game as prompted: ${gameId}`);
+      },
+
+      isGamePrompted: (gameId) => {
+        const { promptedGamesForSubscription } = get();
+        return isValidSet<string>(promptedGamesForSubscription) && promptedGamesForSubscription.has(gameId);
+      },
+
+      // Notification methods
+      addNotification: (notificationParams, showToast = true) => {
+        const notification = createNotification(notificationParams);
 
         set((state) => ({
-          notifications: [newNotification, ...state.notifications],
+          notifications: [notification, ...state.notifications],
           unreadCount: state.unreadCount + 1,
         }));
 
-        // Show toast if enabled
         if (showToast) {
-          const message = getNotificationMessage(notification);
-          const toast: ToastNotification = {
-            id,
-            type: notification.type,
-            gameName: notification.gameName,
-            message,
-            timestamp: Date.now(),
-          };
+          const message = getNotificationMessage(notificationParams);
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
           }));
 
-          // Auto-dismiss toast
-          setTimeout(() => {
-            get().dismissToast(id);
-          }, TOAST_DURATION);
-
-          // Show system notification if window is hidden (in tray)
-          showSystemNotificationIfHidden(notification.gameName, message);
+          scheduleToastDismissal(notification.id, get().dismissToast);
+          showSystemNotificationIfHidden(notificationParams.gameName, message);
         }
       },
 
-      addVersionUpdateNotification: (
-        gameId,
-        gameName,
-        oldVersion,
-        newVersion,
-        showToast = true
-      ) => {
-        const id = `${gameId}-version-${Date.now()}`;
-        const newNotification: Notification = {
-          id,
+      addVersionUpdateNotification: (gameId, gameName, oldVersion, newVersion, showToast = true) => {
+        const notification = createNotification({
           type: 'version-update',
           gameId,
           gameName,
           oldValue: oldVersion,
           newValue: newVersion,
-          timestamp: Date.now(),
-          read: false,
-        };
+          idPrefix: `${gameId}-version`,
+        });
 
         set((state) => ({
-          notifications: [newNotification, ...state.notifications],
+          notifications: [notification, ...state.notifications],
           unreadCount: state.unreadCount + 1,
         }));
 
         if (showToast) {
           const message = `Доступна версія ${newVersion}`;
-          const toast: ToastNotification = {
-            id,
-            type: 'version-update',
-            gameName,
-            message,
-            timestamp: Date.now(),
-          };
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
           }));
 
-          setTimeout(() => {
-            get().dismissToast(id);
-          }, TOAST_DURATION);
-
-          // Show system notification if window is hidden (in tray)
+          scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(gameName, message);
         }
       },
 
-      addProgressChangeNotification: (
-        gameId,
-        gameName,
-        progressType,
-        oldValue,
-        newValue,
-        showToast = true
-      ) => {
-        const id = `${gameId}-progress-${Date.now()}`;
-        const newNotification: Notification = {
-          id,
+      addProgressChangeNotification: (gameId, gameName, progressType, oldValue, newValue, showToast = true) => {
+        const notification = createNotification({
           type: 'progress-change',
           gameId,
           gameName,
           oldValue: `${progressType}: ${oldValue}%`,
           newValue: `${progressType}: ${newValue}%`,
-          timestamp: Date.now(),
-          read: false,
-        };
+          idPrefix: `${gameId}-progress`,
+        });
 
         set((state) => ({
-          notifications: [newNotification, ...state.notifications],
+          notifications: [notification, ...state.notifications],
           unreadCount: state.unreadCount + 1,
         }));
 
         if (showToast) {
           const message = `${progressType}: ${oldValue}% → ${newValue}%`;
-          const toast: ToastNotification = {
-            id,
-            type: 'progress-change',
-            gameName,
-            message,
-            timestamp: Date.now(),
-          };
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
           }));
 
-          setTimeout(() => {
-            get().dismissToast(id);
-          }, TOAST_DURATION);
-
-          // Show system notification if window is hidden (in tray)
+          scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(gameName, message);
         }
       },
 
       addAppUpdateNotification: (oldVersion, newVersion, showToast = true) => {
-        const id = `app-update-${Date.now()}`;
-        const newNotification: Notification = {
-          id,
+        const notification = createNotification({
           type: 'app-update',
           gameId: 'app',
           gameName: 'LB Launcher',
           oldValue: oldVersion,
           newValue: newVersion,
-          timestamp: Date.now(),
-          read: false,
-        };
+          idPrefix: 'app-update',
+        });
 
         set((state) => ({
-          notifications: [newNotification, ...state.notifications],
+          notifications: [notification, ...state.notifications],
           unreadCount: state.unreadCount + 1,
         }));
 
         if (showToast) {
           const message = `Доступна версія ${newVersion}`;
-          const toast: ToastNotification = {
-            id,
-            type: 'app-update',
-            gameName: 'LB Launcher',
-            message,
-            timestamp: Date.now(),
-          };
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
           }));
 
-          setTimeout(() => {
-            get().dismissToast(id);
-          }, TOAST_DURATION);
-
-          // Show system notification if window is hidden (in tray)
+          scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden('LB Launcher', message);
         }
       },
 
-      addTeamNewGameNotification: (
-        gameId,
-        gameName,
-        teamName,
-        showToast = true
-      ) => {
-        const id = `team-new-game-${gameId}-${Date.now()}`;
-        const newNotification: Notification = {
-          id,
+      addTeamNewGameNotification: (gameId, gameName, teamName, showToast = true) => {
+        const notification = createNotification({
           type: 'team-new-game',
           gameId,
           gameName,
           teamName,
           newValue: teamName,
-          timestamp: Date.now(),
-          read: false,
-        };
+          idPrefix: `team-new-game-${gameId}`,
+        });
 
         set((state) => ({
-          notifications: [newNotification, ...state.notifications],
+          notifications: [notification, ...state.notifications],
           unreadCount: state.unreadCount + 1,
         }));
 
         if (showToast) {
           const message = `Нова локалізація від ${teamName}`;
-          const toast: ToastNotification = {
-            id,
-            type: 'team-new-game',
-            gameName,
-            message,
-            timestamp: Date.now(),
-          };
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
           }));
 
-          setTimeout(() => {
-            get().dismissToast(id);
-          }, TOAST_DURATION);
-
+          scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(gameName, message);
         }
       },
 
-      addTeamStatusChangeNotification: (
-        gameId,
-        gameName,
-        teamName,
-        oldStatus,
-        newStatus,
-        showToast = true
-      ) => {
-        const id = `team-status-${gameId}-${Date.now()}`;
-        const newNotification: Notification = {
-          id,
+      addTeamStatusChangeNotification: (gameId, gameName, teamName, oldStatus, newStatus, showToast = true) => {
+        const notification = createNotification({
           type: 'team-status-change',
           gameId,
           gameName,
           teamName,
           oldValue: oldStatus,
           newValue: newStatus,
-          timestamp: Date.now(),
-          read: false,
-        };
+          idPrefix: `team-status-${gameId}`,
+        });
 
         set((state) => ({
-          notifications: [newNotification, ...state.notifications],
+          notifications: [notification, ...state.notifications],
           unreadCount: state.unreadCount + 1,
         }));
 
         if (showToast) {
           const message = `${teamName}: статус змінено на "${newStatus}"`;
-          const toast: ToastNotification = {
-            id,
-            type: 'team-status-change',
-            gameName,
-            message,
-            timestamp: Date.now(),
-          };
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
           }));
 
-          setTimeout(() => {
-            get().dismissToast(id);
-          }, TOAST_DURATION);
-
+          scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(gameName, message);
         }
       },
@@ -670,9 +407,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       clearNotification: (notificationId) => {
         set((state) => {
-          const notifications = state.notifications.filter(
-            (n) => n.id !== notificationId
-          );
+          const notifications = state.notifications.filter((n) => n.id !== notificationId);
           const unreadCount = notifications.filter((n) => !n.read).length;
           return { notifications, unreadCount };
         });
@@ -696,6 +431,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         subscribedGameStatuses: state.subscribedGameStatuses,
         subscribedGameProgress: state.subscribedGameProgress,
         subscribedTeams: state.subscribedTeams,
+        promptedGamesForSubscription: state.promptedGamesForSubscription,
         notifications: state.notifications,
         unreadCount: state.unreadCount,
         // toasts are NOT persisted - they are temporary
@@ -704,13 +440,13 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         if (state) {
           // Initialize toasts as empty on rehydration
           state.toasts = [];
-
           // Migrate old data formats to new Set/Map structures
           migrateStoreData(state);
 
           console.log('[SubscriptionsStore] Store rehydrated successfully', {
             subscribedGamesCount: state.subscribedGames?.size ?? 0,
             subscribedTeamsCount: state.subscribedTeams?.size ?? 0,
+            promptedGamesCount: state.promptedGamesForSubscription?.size ?? 0,
             subscribedGameStatusesCount: state.subscribedGameStatuses?.size ?? 0,
             subscribedGameProgressCount: state.subscribedGameProgress?.size ?? 0,
             notificationsCount: state.notifications?.length ?? 0,
@@ -720,25 +456,3 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
     }
   )
 );
-
-// Helper function to generate notification message
-function getNotificationMessage(
-  notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
-): string {
-  switch (notification.type) {
-    case 'status-change':
-      return `Статус змінено на "${notification.newValue}"`;
-    case 'version-update':
-      return `Доступна версія ${notification.newValue}`;
-    case 'app-update':
-      return `Доступна версія ${notification.newValue}`;
-    case 'progress-change':
-      return `Прогрес оновлено: ${notification.newValue}`;
-    case 'team-new-game':
-      return `Нова локалізація від ${notification.teamName}`;
-    case 'team-status-change':
-      return `${notification.teamName}: статус змінено на "${notification.newValue}"`;
-    default:
-      return 'Нове сповіщення';
-  }
-}

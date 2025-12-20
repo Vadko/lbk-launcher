@@ -15,12 +15,12 @@ export const ConfirmModal: React.FC = () => {
       showCloseButton={false}
     >
       <div className="flex flex-col gap-6">
-        <p className="text-white whitespace-pre-line">{config.message}</p>
+        <p className="text-text-main whitespace-pre-line">{config.message}</p>
         <div className="flex gap-3">
           <button
             onClick={closeConfirm}
             data-gamepad-cancel
-            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-white font-semibold hover:bg-glass-hover transition-colors"
+            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
           >
             {config.cancelText || 'Скасувати'}
           </button>

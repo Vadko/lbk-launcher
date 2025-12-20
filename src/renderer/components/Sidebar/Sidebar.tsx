@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
 import { GameListItem } from './GameListItem';
-import { FilterDropdown } from './FilterDropdown';
-import { TeamFilterDropdown } from './TeamFilterDropdown';
+import { StatusFilterDropdown } from './StatusFilterDropdown';
+import { AuthorsFilterDropdown } from './AuthorsFilterDropdown';
 import { SidebarHeader } from './SidebarHeader';
 import { SidebarFooter } from './SidebarFooter';
 import { GameGroupItem } from './GameGroupItem';
@@ -29,12 +29,14 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
 }) => {
   const {
     selectedGame,
-    filter,
-    teamFilter,
+    selectedStatuses,
+    selectedAuthors,
+    specialFilter,
     searchQuery,
     setSelectedGame,
-    setFilter,
-    setTeamFilter,
+    setSelectedStatuses,
+    setSelectedAuthors,
+    setSpecialFilter,
     setSearchQuery,
     gamesWithUpdates,
     isGameDetected,
@@ -46,22 +48,22 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // Fetch teams list
-  const [teams, setTeams] = useState<string[]>([]);
-  const [teamsLoading, setTeamsLoading] = useState(true);
+  // Fetch authors list
+  const [authors, setAuthors] = useState<string[]>([]);
+  const [authorsLoading, setAuthorsLoading] = useState(true);
 
   useEffect(() => {
-    const loadTeams = async () => {
+    const loadAuthors = async () => {
       try {
-        const fetchedTeams = await window.electronAPI.fetchTeams();
-        setTeams(fetchedTeams);
+        const fetchedAuthors = await window.electronAPI.fetchTeams();
+        setAuthors(fetchedAuthors);
       } catch (error) {
-        console.error('[Sidebar] Error fetching teams:', error);
+        console.error('[Sidebar] Error fetching authors:', error);
       } finally {
-        setTeamsLoading(false);
+        setAuthorsLoading(false);
       }
     };
-    loadTeams();
+    loadAuthors();
   }, []);
 
   const {
@@ -69,9 +71,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
     total: totalGames,
     isLoading,
   } = useGames({
-    filter,
+    selectedStatuses,
+    selectedAuthors,
+    specialFilter,
     searchQuery: debouncedSearchQuery,
-    team: teamFilter,
   });
 
   // Group games by slug
@@ -143,14 +146,19 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
 
           {/* Filters */}
           <div className="flex-1 min-w-0 max-w-[200px]" data-gamepad-header-item>
-            <FilterDropdown value={filter} onChange={setFilter} />
+            <StatusFilterDropdown
+              selectedStatuses={selectedStatuses}
+              onStatusesChange={setSelectedStatuses}
+              specialFilter={specialFilter}
+              onSpecialFilterChange={setSpecialFilter}
+            />
           </div>
           <div className="flex-1 min-w-0 max-w-[220px]" data-gamepad-header-item>
-            <TeamFilterDropdown
-              value={teamFilter}
-              onChange={setTeamFilter}
-              teams={teams}
-              isLoading={teamsLoading}
+            <AuthorsFilterDropdown
+              selectedAuthors={selectedAuthors}
+              onAuthorsChange={setSelectedAuthors}
+              authors={authors}
+              isLoading={authorsLoading}
             />
           </div>
 
@@ -223,12 +231,17 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
 
       {/* Filters row */}
       <div className="flex gap-2 px-4 pb-4">
-        <FilterDropdown value={filter} onChange={setFilter} />
-        <TeamFilterDropdown
-          value={teamFilter}
-          onChange={setTeamFilter}
-          teams={teams}
-          isLoading={teamsLoading}
+        <StatusFilterDropdown
+          selectedStatuses={selectedStatuses}
+          onStatusesChange={setSelectedStatuses}
+          specialFilter={specialFilter}
+          onSpecialFilterChange={setSpecialFilter}
+        />
+        <AuthorsFilterDropdown
+          selectedAuthors={selectedAuthors}
+          onAuthorsChange={setSelectedAuthors}
+          authors={authors}
+          isLoading={authorsLoading}
         />
       </div>
 
@@ -259,7 +272,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
             </motion.div>
           ) : (
             <motion.div
-              key={`games-${filter}-${debouncedSearchQuery}`}
+              key={`games-${specialFilter}-${selectedStatuses.join(',')}-${selectedAuthors.join(',')}-${debouncedSearchQuery}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

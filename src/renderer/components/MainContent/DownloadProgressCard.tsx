@@ -14,7 +14,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
   return (
     <>
       <div className="flex justify-between items-center mb-2">
-        <span className="text-sm font-medium text-white">Завантаження файлів...</span>
+        <span className="text-sm font-medium text-text-main">Завантаження файлів...</span>
         <span className="text-sm font-bold text-neon-blue">{Math.round(progress)}%</span>
       </div>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-3">
@@ -29,7 +29,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       <div className="space-y-1.5 text-xs">
         <div className="flex justify-between">
           <span className="text-text-muted">Завантажено:</span>
-          <span className="text-white font-medium">
+          <span className="text-text-main font-medium">
             {formatBytes(downloadProgress.downloadedBytes)} /{' '}
             {formatBytes(downloadProgress.totalBytes)}
           </span>

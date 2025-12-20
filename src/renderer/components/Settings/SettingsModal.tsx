@@ -14,7 +14,7 @@ const SettingItem = React.memo<{
 }>(({ id, title, description, enabled, onChange }) => (
   <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
     <div className="flex-1 pr-4">
-      <h4 className="text-sm font-semibold text-white mb-1">{title}</h4>
+      <h4 className="text-sm font-semibold text-text-main mb-1">{title}</h4>
       <p className="text-xs text-text-muted">{description}</p>
     </div>
     <Switch id={`switch-${id}`} checked={enabled} onCheckedChange={onChange} />
@@ -119,14 +119,14 @@ export const SettingsModal: React.FC = () => {
             <MessageCircle size={20} color="#ffffff" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-sm font-semibold text-white">Зворотній зв'язок</h4>
+            <h4 className="text-sm font-semibold text-text-main">Зворотній зв'язок</h4>
             <p className="text-xs text-text-muted">Написати нам у Telegram</p>
           </div>
         </button>
 
         {/* Theme selector */}
         <div className="p-4 rounded-xl bg-glass border border-border">
-          <h4 className="text-sm font-semibold text-white mb-3">Тема</h4>
+          <h4 className="text-sm font-semibold text-text-main mb-3">Тема</h4>
           <div className="flex gap-2">
             <button
               onClick={() => setTheme('light')}
@@ -210,7 +210,7 @@ export const SettingsModal: React.FC = () => {
             <RefreshCw size={20} className="text-white" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-sm font-semibold text-white">Очистити кеш</h4>
+            <h4 className="text-sm font-semibold text-text-main">Очистити кеш</h4>
             <p className="text-xs text-text-muted">
               Видалити тимчасові файли (зберігає налаштування)
             </p>
@@ -226,7 +226,7 @@ export const SettingsModal: React.FC = () => {
             <Trash2 size={20} className="text-white" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-sm font-semibold text-white">
+            <h4 className="text-sm font-semibold text-text-main">
               Очистити всі дані
             </h4>
             <p className="text-xs text-text-muted">
@@ -252,7 +252,7 @@ export const SettingsModal: React.FC = () => {
               <FolderOpen size={20} className="text-white" />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-white">
+              <h4 className="text-sm font-semibold text-text-main">
                 Відкрити папку з логами
               </h4>
               <p className="text-xs text-text-muted">Переглянути збережені файли логів</p>
@@ -261,10 +261,10 @@ export const SettingsModal: React.FC = () => {
         )}
 
         {/* Credits section */}
-        <div className="p-4 rounded-xl bg-glass border border-border">
+        <div className="p-4 rounded-xl border credits-section" style={{ background: 'linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2))', borderColor: 'rgba(236, 72, 153, 0.5)' }}>
           <div className="flex items-center gap-2 mb-3">
             <Heart size={18} className="text-pink-500" />
-            <h4 className="text-sm font-semibold text-white">Подяки</h4>
+            <h4 className="text-sm font-semibold text-pink-500">Подяки</h4>
           </div>
           <p className="text-xs text-text-muted mb-3">
             Особлива подяка перекладачам, які долучились до тестування з перших днів і допомогають робити цей лаунчер таким, яким він є:
@@ -273,11 +273,12 @@ export const SettingsModal: React.FC = () => {
             {SPECIAL_TRANSLATORS.map((translator) => (
               <span
                 key={translator.name}
-                className="px-3 py-1.5 text-xs font-medium rounded-full bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white border border-neon-purple/30"
+                className="px-3 py-1.5 text-xs font-medium rounded-full border text-purple-400 border-purple-500/50"
+                style={{ background: 'rgba(168, 85, 247, 0.25)' }}
               >
                 {translator.name}
                 {translator.team && (
-                  <span className="text-text-muted ml-1">({translator.team})</span>
+                  <span className="text-purple-300 ml-1">({translator.team})</span>
                 )}
               </span>
             ))}

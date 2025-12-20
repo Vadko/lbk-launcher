@@ -13,8 +13,10 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useModalStore } from '../../store/useModalStore';
-import { useConfirmStore } from '../../store/useConfirmStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { useInstallation } from '../../hooks/useInstallation';
+import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { GameHero } from './GameHero';
 import { StatusCard } from './StatusCard';
 import { InfoCard } from './InfoCard';
@@ -29,46 +31,24 @@ import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
-import type {
-  InstallResult,
-  DownloadProgress,
-  LaunchGameResult,
-  InstallOptions,
-} from '../../../shared/types';
+import type { LaunchGameResult } from '../../../shared/types';
 
 export const MainContent: React.FC = () => {
   const {
     selectedGame,
-    getInstallationProgress,
-    setInstallationProgress,
-    clearInstallationProgress,
     checkInstallationStatus,
     isCheckingInstallationStatus,
     isGameDetected,
     installedGames,
+    setInstallationProgress,
   } = useStore();
   const { showModal } = useModalStore();
-  const { showConfirm } = useConfirmStore();
-  const { createBackupBeforeInstall, showAdultGames, openSettingsModal } =
-    useSettingsStore();
+  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } = useSettingsStore();
+  const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showInstallOptions, setShowInstallOptions] = useState(false);
-  const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>(
-    undefined
-  );
-  const [pendingInstallOptions, setPendingInstallOptions] = useState<
-    InstallOptions | undefined
-  >(undefined);
+  const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
 
-  const gameProgress = selectedGame
-    ? getInstallationProgress(selectedGame.id)
-    : undefined;
-  const isInstalling = gameProgress?.isInstalling || false;
-  const isUninstalling = gameProgress?.isUninstalling || false;
-  const installProgress = gameProgress?.progress || 0;
-  const downloadProgress = gameProgress?.downloadProgress || null;
-  const statusMessage = gameProgress?.statusMessage || null;
   const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
   const isCheckingInstallation = selectedGame
     ? isCheckingInstallationStatus(selectedGame.id)
@@ -84,6 +64,43 @@ export const MainContent: React.FC = () => {
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
+
+  // Callback for first install - show subscription modal
+  const handleFirstInstallComplete = useCallback(() => {
+    if (selectedGame?.team && selectedGame?.id && !isGamePrompted(selectedGame.id)) {
+      setShowAuthorSubscriptionModal(true);
+    }
+  }, [selectedGame?.team, selectedGame?.id, isGamePrompted]);
+
+  const handleCloseAuthorSubscriptionModal = useCallback(() => {
+    setShowAuthorSubscriptionModal(false);
+    if (selectedGame?.id) {
+      markGameAsPrompted(selectedGame.id);
+    }
+  }, [selectedGame?.id, markGameAsPrompted]);
+
+  // Use installation hook
+  const {
+    isInstalling,
+    isUninstalling,
+    installProgress,
+    downloadProgress,
+    statusMessage,
+    handleInstall,
+    handleInstallOptionsConfirm,
+    handleUninstall,
+    getInstallButtonText,
+    showInstallOptions,
+    setShowInstallOptions,
+    pendingInstallPath,
+  } = useInstallation({
+    selectedGame,
+    isUpdateAvailable: !!isUpdateAvailable,
+    installationInfo,
+    isOnline,
+    isCheckingInstallation,
+    onFirstInstallComplete: handleFirstInstallComplete,
+  });
 
   // Check installation status when game changes
   useEffect(() => {
@@ -127,275 +144,6 @@ export const MainContent: React.FC = () => {
       window.removeEventListener('offline', handleOffline);
     };
   }, [selectedGame, isInstalling, setInstallationProgress]);
-
-  const performInstallation = useCallback(
-    async (customGamePath?: string, options?: InstallOptions) => {
-      if (!selectedGame) return;
-
-      const platform = selectedGame.platforms[0] || 'steam';
-      // Use provided options, or pending options (from dialog), or defaults
-      const effectiveOptions: InstallOptions = options ??
-        pendingInstallOptions ?? {
-          createBackup: createBackupBeforeInstall,
-          installText: true,
-          installVoice: false,
-          installAchievements: false,
-        };
-
-      // Save options BEFORE API call for potential retry with manual folder selection
-      // This ensures options are preserved even if game detection fails
-      if (options) {
-        setPendingInstallOptions(options);
-      }
-
-      // For emulator, always require manual folder selection
-      if (platform === 'emulator' && !customGamePath) {
-        showConfirm({
-          title: 'Виберіть папку з грою',
-          message:
-            'Для емуляторів потрібно вручну вказати папку з грою.\n\nВиберіть папку з грою?',
-          confirmText: 'Вибрати папку',
-          cancelText: 'Скасувати',
-          onConfirm: async () => {
-            const selectedFolder = await window.electronAPI.selectGameFolder();
-            if (selectedFolder) {
-              await performInstallation(selectedFolder, effectiveOptions);
-            }
-          },
-        });
-        return;
-      }
-
-      try {
-        setInstallationProgress(selectedGame.id, {
-          isInstalling: true,
-          progress: 0,
-          downloadProgress: null,
-          statusMessage: null,
-        });
-
-        window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
-          setInstallationProgress(selectedGame.id, {
-            progress: progress.percent,
-            downloadProgress: progress,
-          });
-        });
-
-        window.electronAPI.onInstallationStatus?.((status) => {
-          setInstallationProgress(selectedGame.id, {
-            statusMessage: status.message,
-          });
-        });
-
-        const result: InstallResult = await window.electronAPI.installTranslation(
-          selectedGame,
-          platform,
-          effectiveOptions,
-          customGamePath
-        );
-
-        if (!result.success && result.error) {
-          if (result.error.needsManualSelection) {
-            showConfirm({
-              title: 'Гру не знайдено',
-              message: `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`,
-              confirmText: 'Вибрати папку',
-              cancelText: 'Скасувати',
-              onConfirm: async () => {
-                const selectedFolder = await window.electronAPI.selectGameFolder();
-                if (selectedFolder) {
-                  await performInstallation(selectedFolder, effectiveOptions);
-                }
-              },
-            });
-          } else if (result.error.isRateLimit) {
-            showModal({
-              title: 'Ліміт завантажень',
-              message: result.error.message,
-              type: 'info',
-            });
-          } else {
-            showModal({
-              title: 'Помилка встановлення',
-              message: result.error.message,
-              type: 'error',
-            });
-          }
-          return;
-        }
-
-        // Clear pending options on success
-        setPendingInstallOptions(undefined);
-
-        // Note: checkInstallationStatus is called automatically via InstallationWatcher
-        // when the installation cache file changes, so no need to call it manually
-        useStore.getState().clearGameUpdate(selectedGame.id);
-
-        let message = isUpdateAvailable
-          ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
-          : `Українізатор ${selectedGame.name} успішно встановлено!`;
-
-        // Add Steam restart notice if achievements were installed
-        if (effectiveOptions.installAchievements) {
-          message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
-        }
-
-        showModal({
-          title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
-          message,
-          type: 'success',
-        });
-      } catch (error) {
-        console.error('Installation error:', error);
-        showModal({
-          title: 'Помилка встановлення',
-          message: error instanceof Error ? error.message : 'Невідома помилка',
-          type: 'error',
-        });
-      } finally {
-        clearInstallationProgress(selectedGame.id);
-      }
-    },
-    [
-      selectedGame,
-      isUpdateAvailable,
-      createBackupBeforeInstall,
-      pendingInstallOptions,
-      setInstallationProgress,
-      clearInstallationProgress,
-      showModal,
-      showConfirm,
-    ]
-  );
-
-  const handleInstall = useCallback(
-    async (customGamePath?: string) => {
-      if (!selectedGame || isInstalling || isCheckingInstallation) return;
-
-      if (!isOnline) {
-        showModal({
-          title: 'Немає підключення',
-          message: 'Перевірте підключення до Інтернету та спробуйте ще раз.',
-          type: 'error',
-        });
-        return;
-      }
-
-      if (!window.electronAPI) {
-        showModal({
-          title: 'Недоступно',
-          message: 'Встановлення доступне тільки в десктопній версії додатку',
-          type: 'error',
-        });
-        return;
-      }
-
-      // Always show install options dialog
-      setPendingInstallPath(customGamePath);
-      setShowInstallOptions(true);
-    },
-    [selectedGame, isInstalling, isCheckingInstallation, isOnline, showModal]
-  );
-
-  const handleInstallOptionsConfirm = useCallback(
-    async (
-      installOptions: InstallOptions,
-      removeOptions: { removeVoice: boolean; removeAchievements: boolean }
-    ) => {
-      if (!selectedGame) return;
-
-      // First, remove components if requested
-      if (removeOptions.removeVoice || removeOptions.removeAchievements) {
-        try {
-          setInstallationProgress(selectedGame.id, {
-            isInstalling: true,
-            statusMessage: 'Видалення компонентів...',
-          });
-
-          const result = await window.electronAPI.removeComponents(selectedGame, {
-            voice: removeOptions.removeVoice,
-            achievements: removeOptions.removeAchievements,
-          });
-
-          if (!result.success) {
-            showModal({
-              title: 'Помилка видалення',
-              message: result.error?.message || 'Не вдалося видалити компоненти',
-              type: 'error',
-            });
-            clearInstallationProgress(selectedGame.id);
-            return;
-          }
-
-          // Refresh installation info after removal
-          await checkInstallationStatus(selectedGame.id, selectedGame);
-        } catch (error) {
-          console.error('Error removing components:', error);
-          showModal({
-            title: 'Помилка видалення',
-            message: error instanceof Error ? error.message : 'Невідома помилка',
-            type: 'error',
-          });
-          clearInstallationProgress(selectedGame.id);
-          return;
-        }
-      }
-
-      // If only removing components (no new downloads needed), we're done
-      const needsDownload =
-        !installationInfo ||
-        installOptions.installText ||
-        (installOptions.installVoice &&
-          !installationInfo?.components?.voice?.installed) ||
-        (installOptions.installAchievements &&
-          !installationInfo?.components?.achievements?.installed);
-
-      if (
-        !needsDownload &&
-        (removeOptions.removeVoice || removeOptions.removeAchievements)
-      ) {
-        clearInstallationProgress(selectedGame.id);
-        showModal({
-          title: 'Компоненти видалено',
-          message: 'Вибрані компоненти успішно видалено.',
-          type: 'success',
-        });
-        return;
-      }
-
-      // Proceed with installation if needed
-      const hasInstaller =
-        selectedGame.installation_file_windows_path ||
-        selectedGame.installation_file_linux_path;
-
-      if (hasInstaller) {
-        showConfirm({
-          title: 'Запуск інсталятора',
-          message:
-            'Після завантаження та розпакування українізатора буде запущено інсталятор.\n\nПродовжити встановлення?',
-          confirmText: 'Продовжити',
-          cancelText: 'Скасувати',
-          onConfirm: async () => {
-            await performInstallation(pendingInstallPath, installOptions);
-          },
-        });
-        return;
-      }
-
-      await performInstallation(pendingInstallPath, installOptions);
-    },
-    [
-      selectedGame,
-      pendingInstallPath,
-      performInstallation,
-      showConfirm,
-      showModal,
-      installationInfo,
-      setInstallationProgress,
-      clearInstallationProgress,
-      checkInstallationStatus,
-    ]
-  );
 
   const handleSupport = useCallback(() => {
     if (!selectedGame) return;
@@ -448,86 +196,11 @@ export const MainContent: React.FC = () => {
     showModal,
   ]);
 
-  const handleUninstall = useCallback(async () => {
-    if (!selectedGame || !installationInfo) return;
-
-    const hasBackup = installationInfo.hasBackup !== false;
-    const backupWarning = !hasBackup
-      ? '\n\n⚠️ УВАГА: Резервну копію не було створено при встановленні. Оригінальні файли НЕ будуть відновлені!'
-      : '\n\nОригінальні файли гри будуть відновлені з резервної копії.';
-
-    showConfirm({
-      title: 'Видалення українізатора',
-      message: `Ви впевнені, що хочете видалити українізатор для "${selectedGame.name}"?${backupWarning}`,
-      confirmText: 'Видалити',
-      cancelText: 'Скасувати',
-      onConfirm: async () => {
-        try {
-          setInstallationProgress(selectedGame.id, {
-            isUninstalling: true,
-          });
-
-          const result: InstallResult =
-            await window.electronAPI.uninstallTranslation(selectedGame);
-
-          if (!result.success && result.error) {
-            showModal({
-              title: 'Помилка видалення',
-              message: result.error.message,
-              type: 'error',
-            });
-            return;
-          }
-
-          // Note: checkInstallationStatus is called automatically via InstallationWatcher
-          // when the installation cache file changes, so no need to call it manually
-
-          showModal({
-            title: 'Українізатор видалено',
-            message: `Українізатор "${selectedGame.name}" успішно видалено!`,
-            type: 'success',
-          });
-        } catch (error) {
-          console.error('Uninstall error:', error);
-          showModal({
-            title: 'Помилка видалення',
-            message: error instanceof Error ? error.message : 'Невідома помилка',
-            type: 'error',
-          });
-        } finally {
-          clearInstallationProgress(selectedGame.id);
-        }
-      },
-    });
-  }, [
-    selectedGame,
-    installationInfo,
-    setInstallationProgress,
-    clearInstallationProgress,
-    showModal,
-    showConfirm,
-  ]);
-
-  const getInstallButtonText = (): string => {
-    if (!isOnline) return '❌ Немає інтернету';
-    if (isPlanned) return 'Заплановано';
-    if (isInstalling) {
-      return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
-    }
-    if (isUpdateAvailable && !isCheckingInstallation) {
-      return `Оновити до v${selectedGame?.version}`;
-    }
-    if (installationInfo) {
-      return `Перевстановити (v${installationInfo.version})`;
-    }
-    return 'Встановити українізатор';
-  };
-
   if (!selectedGame) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
         <Gamepad2 size={64} className="text-text-muted mb-4 opacity-50" />
-        <h2 className="text-2xl font-head font-semibold text-white mb-2">
+        <h2 className="text-2xl font-head font-semibold text-text-main mb-2">
           Виберіть гру зі списку
         </h2>
         <p className="text-text-muted max-w-md">
@@ -545,7 +218,7 @@ export const MainContent: React.FC = () => {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
             <EyeOff size={40} className="text-red-400" />
           </div>
-          <h2 className="text-xl font-head font-semibold text-white mb-3">
+          <h2 className="text-xl font-head font-semibold text-text-main mb-3">
             Контент для дорослих
           </h2>
           <p className="text-text-muted mb-6">
@@ -580,6 +253,16 @@ export const MainContent: React.FC = () => {
             installationInfo?.isCustomPath ||
             !isGameInstalledOnSystem
           }
+        />
+      )}
+
+      {/* Author Subscription Modal - shows after first installation */}
+      {selectedGame && selectedGame.team && (
+        <AuthorSubscriptionModal
+          isOpen={showAuthorSubscriptionModal}
+          onClose={handleCloseAuthorSubscriptionModal}
+          gameName={selectedGame.name}
+          team={selectedGame.team}
         />
       )}
 
@@ -678,17 +361,12 @@ export const MainContent: React.FC = () => {
             <div className="glass-card">
               <div className="flex items-center gap-3">
                 <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm font-medium text-white">
+                <span className="text-sm font-medium text-text-main">
                   Видалення українізатора та відновлення оригінальних файлів...
                 </span>
               </div>
             </div>
           )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <StatusCard game={selectedGame} />
-          <InfoCard game={selectedGame} />
         </div>
 
         {/* Author card */}
@@ -701,7 +379,7 @@ export const MainContent: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xs text-text-muted">Автор локалізації</div>
-                  <div className={`font-medium ${isSpecialTranslator(selectedGame.team) ? 'text-yellow-400' : 'text-white'}`}>
+                  <div className={`font-medium ${isSpecialTranslator(selectedGame.team) ? 'text-yellow-400' : 'text-text-main'}`}>
                     {selectedGame.team}
                     {isSpecialTranslator(selectedGame.team) && <Star size={12} className="inline ml-1 fill-yellow-400" />}
                   </div>
@@ -711,6 +389,11 @@ export const MainContent: React.FC = () => {
             </div>
           </div>
         )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <StatusCard game={selectedGame} />
+          <InfoCard game={selectedGame} />
+        </div>
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />
@@ -732,7 +415,7 @@ export const MainContent: React.FC = () => {
         )}
 
         <div className="glass-card mb-6">
-          <h3 className="text-lg font-head font-semibold text-white mb-3">
+          <h3 className="text-lg font-head font-semibold text-text-main mb-3">
             Про українізатор
           </h3>
           <p className="text-text-muted leading-relaxed whitespace-pre-line">
@@ -742,7 +425,7 @@ export const MainContent: React.FC = () => {
 
         {selectedGame.game_description && (
           <div className="glass-card mb-6">
-            <h3 className="text-lg font-head font-semibold text-white mb-3">Про гру</h3>
+            <h3 className="text-lg font-head font-semibold text-text-main mb-3">Про гру</h3>
             <p className="text-text-muted leading-relaxed whitespace-pre-line">
               {selectedGame.game_description}
             </p>

@@ -109,7 +109,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
           {/* Info */}
           <div className={`p-3 bg-glass-hover rounded-b-xl ${isAdultBlurred ? 'blur-md' : ''}`}>
-            <h4 className="font-medium text-sm text-white mb-2 truncate">
+            <h4 className="font-medium text-sm text-text-main mb-2 truncate">
               {game.name}
             </h4>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
@@ -187,7 +187,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           )}
         </div>
         <div className={`flex-1 min-w-0 ${isAdultBlurred ? 'blur-md' : ''}`}>
-          <h4 className="font-semibold text-sm text-white mb-1 truncate">
+          <h4 className="font-semibold text-sm text-text-main mb-1 truncate">
             {showTeamName ? game.team : game.name}
           </h4>
           {showTeamName && (

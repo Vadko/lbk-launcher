@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Game, GetGamesParams } from '../types/game';
+import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { useStore } from '../store/useStore';
 
 interface UseGamesParams {
-  filter: string;
+  selectedStatuses: string[];
+  selectedAuthors: string[];
+  specialFilter: SpecialFilterType | null;
   searchQuery: string;
-  team?: string | null;
 }
 
 interface UseGamesResult {
@@ -21,7 +23,12 @@ interface UseGamesResult {
  * Хук для отримання ігор з локальної бази даних
  * Оскільки це local-first додаток, завантажуємо всі ігри одразу
  */
-export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGamesResult {
+export function useGames({
+  selectedStatuses,
+  selectedAuthors,
+  specialFilter,
+  searchQuery,
+}: UseGamesParams): UseGamesResult {
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
   const checkSubscribedGamesStatus = useStore(
     (state) => state.checkSubscribedGamesStatus
@@ -49,7 +56,7 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
 
     try {
       // Спеціальна обробка для встановлених українізаторів
-      if (filter === 'installed-translations') {
+      if (specialFilter === 'installed-translations') {
         const installedGameIds = [
           ...new Set(await window.electronAPI.getAllInstalledGameIds()),
         ];
@@ -84,7 +91,7 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
       }
 
       // Спеціальна обробка для встановлених ігор (на комп'ютері)
-      if (filter === 'installed-games') {
+      if (specialFilter === 'installed-games') {
         const installPaths = await window.electronAPI.getAllInstalledGamePaths();
 
         // Перевірити чи запит ще актуальний
@@ -121,8 +128,8 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
       // and shown with blur effect in UI when setting is off
       const params: GetGamesParams = {
         searchQuery,
-        filter,
-        team: team || undefined,
+        statuses: selectedStatuses,
+        authors: selectedAuthors,
       };
 
       const result = await window.electronAPI.fetchGames(params);
@@ -154,7 +161,7 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
         setIsLoading(false);
       }
     }
-  }, [filter, searchQuery, team]);
+  }, [specialFilter, searchQuery, selectedStatuses, selectedAuthors]);
 
   /**
    * Перезавантажити
@@ -229,7 +236,7 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
 
         // Для спеціальних фільтрів (installed-games, installed-translations)
         // просто оновлюємо дані гри якщо вона вже в списку, не додаємо/видаляємо
-        if (filter === 'installed-games' || filter === 'installed-translations') {
+        if (specialFilter === 'installed-games' || specialFilter === 'installed-translations') {
           if (index !== -1) {
             // Гра є в списку - оновити дані
             const newGames = [...prevGames];
@@ -245,18 +252,18 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
           !searchQuery ||
           updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-        // Перевірити чи гра відповідає поточному фільтру статусу
-        const matchesFilter =
-          filter === 'all' ||
-          (filter === 'completed' && updatedGame.status === 'completed') ||
-          (filter === 'in-progress' && updatedGame.status === 'in-progress') ||
-          (filter === 'planned' && updatedGame.status === 'planned');
+        // Перевірити чи гра відповідає поточному фільтру статусу (multi-select)
+        const matchesStatus =
+          selectedStatuses.length === 0 ||
+          selectedStatuses.includes(updatedGame.status);
 
-        // Перевірити чи гра відповідає фільтру команди
-        const matchesTeam = !team || updatedGame.team === team;
+        // Перевірити чи гра відповідає фільтру авторів (multi-select)
+        const matchesAuthors =
+          selectedAuthors.length === 0 ||
+          selectedAuthors.some((author) => updatedGame.team?.includes(author));
 
         // Adult games are always shown in list (with blur overlay in UI)
-        const shouldBeInList = matchesSearch && matchesFilter && matchesTeam && updatedGame.approved;
+        const shouldBeInList = matchesSearch && matchesStatus && matchesAuthors && updatedGame.approved;
 
         if (index === -1) {
           // Гра не в списку
@@ -286,7 +293,7 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
 
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
     return unsubscribe;
-  }, [searchQuery, filter, team]);
+  }, [searchQuery, specialFilter, selectedStatuses, selectedAuthors]);
 
   // Слухати realtime видалення ігор
   useEffect(() => {
@@ -310,11 +317,11 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
   }, []);
 
   // Слухати зміни у встановлених українізаторах (install/uninstall)
-  // Перереєструємо listener при зміні filter для коректної роботи closure
+  // Перереєструємо listener при зміні specialFilter для коректної роботи closure
   useEffect(() => {
     if (!window.electronAPI?.onInstalledGamesChanged) return;
     // Підписуємось тільки якщо активний відповідний фільтр
-    if (filter !== 'installed-translations') return;
+    if (specialFilter !== 'installed-translations') return;
 
     const handleInstalledGamesChanged = () => {
       console.log('[useGames] Installed translations changed, reloading list');
@@ -325,14 +332,14 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
       handleInstalledGamesChanged
     );
     return unsubscribe;
-  }, [filter, loadGames]);
+  }, [specialFilter, loadGames]);
 
   // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор)
-  // Перереєструємо listener при зміні filter для коректної роботи closure
+  // Перереєструємо listener при зміні specialFilter для коректної роботи closure
   useEffect(() => {
     if (!window.electronAPI?.onSteamLibraryChanged) return;
     // Підписуємось тільки якщо активний відповідний фільтр
-    if (filter !== 'installed-games') return;
+    if (specialFilter !== 'installed-games') return;
 
     const handleSteamLibraryChanged = () => {
       console.log('[useGames] Steam library changed, reloading installed games list');
@@ -343,7 +350,7 @@ export function useGames({ filter, searchQuery, team }: UseGamesParams): UseGame
       handleSteamLibraryChanged
     );
     return unsubscribe;
-  }, [filter, loadGames]);
+  }, [specialFilter, loadGames]);
 
   // Cleanup abort controller при unmount
   useEffect(() => {

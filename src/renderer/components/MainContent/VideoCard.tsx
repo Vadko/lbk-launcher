@@ -32,7 +32,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
     // If not a YouTube URL or can't extract ID, show a button to open link
     return (
       <div className="glass-card">
-        <h3 className="text-lg font-head font-semibold text-white mb-3">Відео</h3>
+        <h3 className="text-lg font-head font-semibold text-text-main mb-3">Відео</h3>
         <a
           href={videoUrl}
           target="_blank"
@@ -51,7 +51,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-head font-semibold text-white mb-3">
+      <h3 className="text-lg font-head font-semibold text-text-main mb-3">
         Трейлер українізації
       </h3>
       <div className="max-w-3xl mx-auto">

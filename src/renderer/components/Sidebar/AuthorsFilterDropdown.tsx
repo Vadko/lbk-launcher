@@ -2,28 +2,35 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Check, Search, X } from 'lucide-react';
 
-interface TeamFilterDropdownProps {
-  value: string | null;
-  onChange: (value: string | null) => void;
-  teams: string[];
+interface AuthorsFilterDropdownProps {
+  selectedAuthors: string[];
+  onAuthorsChange: (authors: string[]) => void;
+  authors: string[];
   isLoading?: boolean;
 }
 
-export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
-  ({ value, onChange, teams, isLoading }) => {
+export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React.memo(
+  ({ selectedAuthors, onAuthorsChange, authors, isLoading }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const menuRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    const currentLabel = value || 'Усі автори';
+    // Determine current label
+    const currentLabel = useMemo(() => {
+      if (selectedAuthors.length === 0) return 'Усі автори';
+      if (selectedAuthors.length === 1) return selectedAuthors[0];
+      return `${selectedAuthors.length} авторів`;
+    }, [selectedAuthors]);
 
-    // Filter teams based on search
-    const filteredTeams = useMemo(() => {
-      if (!search.trim()) return teams;
+    const hasActiveFilter = selectedAuthors.length > 0;
+
+    // Filter authors based on search
+    const filteredAuthors = useMemo(() => {
+      if (!search.trim()) return authors;
       const searchLower = search.toLowerCase();
-      return teams.filter((team) => team.toLowerCase().includes(searchLower));
-    }, [teams, search]);
+      return authors.filter((author) => author.toLowerCase().includes(searchLower));
+    }, [authors, search]);
 
     // Close menu on outside click
     useEffect(() => {
@@ -50,14 +57,22 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
       }
     }, [isOpen]);
 
-    const handleSelect = useCallback(
-      (team: string | null) => {
-        onChange(team);
-        setIsOpen(false);
-        setSearch('');
+    // Toggle author selection
+    const handleAuthorToggle = useCallback(
+      (author: string) => {
+        if (selectedAuthors.includes(author)) {
+          onAuthorsChange(selectedAuthors.filter((a) => a !== author));
+        } else {
+          onAuthorsChange([...selectedAuthors, author]);
+        }
       },
-      [onChange]
+      [selectedAuthors, onAuthorsChange]
     );
+
+    // Clear all selected authors
+    const handleClearAll = useCallback(() => {
+      onAuthorsChange([]);
+    }, [onAuthorsChange]);
 
     const handleToggle = useCallback(() => {
       if (isOpen) {
@@ -71,9 +86,9 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
         <button
           onClick={handleToggle}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            value !== null
-              ? 'bg-glass-hover text-white border border-border-hover'
-              : 'bg-glass text-text-muted border border-transparent hover:bg-glass-hover hover:text-white'
+            hasActiveFilter
+              ? 'bg-glass-hover text-text-main border border-border-hover'
+              : 'bg-glass text-text-muted border border-transparent hover:bg-glass-hover hover:text-text-main'
           }`}
         >
           <span className="flex items-center gap-2 truncate">
@@ -114,19 +129,19 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Пошук автора..."
-                  className="flex-1 bg-transparent text-sm text-white placeholder-text-muted outline-none"
+                  className="flex-1 bg-transparent text-sm text-text-main placeholder-text-muted outline-none"
                 />
                 {search && (
                   <button
                     onClick={() => setSearch('')}
-                    className="text-text-muted hover:text-white transition-colors"
+                    className="text-text-muted hover:text-text-main transition-colors"
                   >
                     <X size={14} />
                   </button>
                 )}
               </div>
 
-              {/* Teams list */}
+              {/* Authors list */}
               <div className="max-h-[240px] overflow-y-auto custom-scrollbar py-1">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-4">
@@ -134,51 +149,61 @@ export const TeamFilterDropdown: React.FC<TeamFilterDropdownProps> = React.memo(
                   </div>
                 ) : (
                   <>
-                    {/* "All teams" option - only show when not searching */}
-                    {!search && (
-                      <button
-                        onClick={() => handleSelect(null)}
-                        data-gamepad-dropdown-item
-                        className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                          value === null
-                            ? 'bg-glass-hover text-white'
-                            : 'text-text-muted hover:bg-glass hover:text-white'
-                        }`}
-                      >
-                        Усі автори
-                        {value === null && <Check size={14} />}
-                      </button>
+                    {/* Clear filter button - only show when not searching */}
+                    {!search && hasActiveFilter && (
+                      <>
+                        <button
+                          onClick={handleClearAll}
+                          data-gamepad-dropdown-item
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-muted hover:bg-glass hover:text-text-main transition-colors"
+                        >
+                          <X size={14} />
+                          <span>Очистити фільтр ({selectedAuthors.length})</span>
+                        </button>
+                        <div className="border-t border-border my-1" />
+                      </>
                     )}
 
-                    {filteredTeams.length === 0 ? (
+                    {filteredAuthors.length === 0 ? (
                       <div className="text-center text-text-muted py-4 text-sm">
                         Автора не знайдено
                       </div>
                     ) : (
-                      filteredTeams.map((team) => (
-                        <button
-                          key={team}
-                          onClick={() => handleSelect(team)}
-                          data-gamepad-dropdown-item
-                          className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                            value === team
-                              ? 'bg-glass-hover text-white'
-                              : 'text-text-muted hover:bg-glass hover:text-white'
-                          }`}
-                        >
-                          <span className="truncate">{team}</span>
-                          {value === team && <Check size={14} />}
-                        </button>
-                      ))
+                      filteredAuthors.map((author) => {
+                        const isSelected = selectedAuthors.includes(author);
+                        return (
+                          <button
+                            key={author}
+                            onClick={() => handleAuthorToggle(author)}
+                            data-gamepad-dropdown-item
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                              isSelected
+                                ? 'bg-glass-hover text-text-main'
+                                : 'text-text-muted hover:bg-glass hover:text-text-main'
+                            }`}
+                          >
+                            <span
+                              className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
+                                isSelected
+                                  ? 'bg-neon-blue border-neon-blue'
+                                  : 'border-text-muted'
+                              }`}
+                            >
+                              {isSelected && <Check size={12} className="text-white" />}
+                            </span>
+                            <span className="truncate">{author}</span>
+                          </button>
+                        );
+                      })
                     )}
                   </>
                 )}
               </div>
 
               {/* Footer with count */}
-              {!isLoading && teams.length > 0 && (
+              {!isLoading && authors.length > 0 && (
                 <div className="px-3 py-2 border-t border-border text-xs text-text-muted text-center">
-                  {search ? `Знайдено: ${filteredTeams.length}` : `Всього: ${teams.length}`}
+                  {search ? `Знайдено: ${filteredAuthors.length}` : `Всього: ${authors.length}`}
                 </div>
               )}
             </motion.div>

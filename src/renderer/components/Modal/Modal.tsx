@@ -53,7 +53,7 @@ export const Modal: React.FC<ModalProps> = ({
             {/* Header */}
             {(title || showCloseButton) && (
               <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
-                <h3 id="modal-title" className="text-lg font-semibold text-white break-words">
+                <h3 id="modal-title" className="text-lg font-semibold text-text-main break-words">
                   {title}
                 </h3>
                 {showCloseButton && (
