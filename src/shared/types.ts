@@ -39,6 +39,7 @@ export interface InstallationStatus {
 
 export interface InstallResult {
   success: boolean;
+  paused?: boolean;
   error?: {
     message: string;
     needsManualSelection?: boolean;
@@ -51,6 +52,18 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+}
+
+export interface PausedDownloadState {
+  gameId: string;
+  url: string;
+  outputPath: string;
+  downloadedBytes: number;
+  totalBytes: number;
+  pausedAt: string;
+  options: InstallOptions;
+  platform: string;
+  customGamePath?: string;
 }
 
 export interface GetGamesParams {
@@ -95,6 +108,10 @@ export interface ElectronAPI {
   ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   abortDownload: () => Promise<{ success: boolean }>;
+  pauseDownload: (gameId: string) => Promise<{ success: boolean; state?: PausedDownloadState; error?: string }>;
+  resumeDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  getPausedDownload: (gameId: string) => Promise<PausedDownloadState | null>;
+  cancelPausedDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   checkInstallation: (game: Game) => Promise<InstallationInfo | null>;
   getAllInstalledGameIds: () => Promise<string[]>;
   removeOrphanedMetadata: (gameIds: string[]) => Promise<{ success: boolean }>;

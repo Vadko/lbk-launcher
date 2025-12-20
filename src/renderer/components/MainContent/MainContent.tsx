@@ -83,12 +83,16 @@ export const MainContent: React.FC = () => {
   const {
     isInstalling,
     isUninstalling,
+    isPaused,
     installProgress,
     downloadProgress,
     statusMessage,
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handlePauseDownload,
+    handleResumeDownload,
+    handleCancelDownload,
     getInstallButtonText,
     showInstallOptions,
     setShowInstallOptions,
@@ -126,7 +130,8 @@ export const MainContent: React.FC = () => {
       setIsOnline(false);
       console.log('[MainContent] Internet connection lost');
 
-      if (selectedGame && isInstalling) {
+      // Don't abort if paused - download is already stopped
+      if (selectedGame && isInstalling && !isPaused) {
         console.log('[MainContent] Aborting download due to connection loss');
         await window.electronAPI?.abortDownload();
         setInstallationProgress(selectedGame.id, {
@@ -143,7 +148,7 @@ export const MainContent: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [selectedGame, isInstalling, setInstallationProgress]);
+  }, [selectedGame, isInstalling, isPaused, setInstallationProgress]);
 
   const handleSupport = useCallback(() => {
     if (!selectedGame) return;
@@ -339,12 +344,16 @@ export const MainContent: React.FC = () => {
             />
           )}
 
-          {isInstalling && (
+          {(isInstalling || isPaused) && (
             <div className="glass-card">
               {downloadProgress && downloadProgress.totalBytes > 0 ? (
                 <DownloadProgressCard
                   progress={installProgress}
                   downloadProgress={downloadProgress}
+                  isPaused={isPaused}
+                  onPause={handlePauseDownload}
+                  onResume={handleResumeDownload}
+                  onCancel={handleCancelDownload}
                 />
               ) : (
                 <InstallationStatusMessage

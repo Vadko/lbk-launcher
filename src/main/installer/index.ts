@@ -1,6 +1,18 @@
 // Re-export all installer utilities
-export { ManualSelectionError, RateLimitError } from './errors';
-export { abortCurrentDownload, downloadFile, setDownloadAbortController, getDownloadAbortController } from './download';
+export { ManualSelectionError, RateLimitError, PausedSignal } from './errors';
+export {
+  abortCurrentDownload,
+  downloadFile,
+  setDownloadAbortController,
+  getDownloadAbortController,
+  setCurrentDownloadState,
+  updateCurrentDownloadedBytes,
+  pauseCurrentDownload,
+  getPausedDownloadState,
+  savePausedDownloadState,
+  clearPausedDownloadState,
+  getPartialFilePath,
+} from './download';
 export { extractArchive } from './archive';
 export { backupFiles, restoreBackupLegacy, restoreBackupNew, cleanupEmptyDirectories, BACKUP_SUFFIX } from './backup';
 export { getAllFiles, copyDirectory, cleanupDownloadDir, deleteDirectory } from './files';

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { SearchBar } from './SearchBar';
@@ -19,6 +19,9 @@ import { useGames } from '../../hooks/useGames';
 import { useDebounce } from '../../hooks/useDebounce';
 import type { GameGroup } from './types';
 import type { Game } from '../../types/game';
+
+const MIN_SIDEBAR_WIDTH = 280;
+const MAX_SIDEBAR_WIDTH = 500;
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -44,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
     isGameDetected,
     loadInstalledGamesFromSystem,
   } = useStore();
-  const { openSettingsModal } = useSettingsStore();
+  const { openSettingsModal, sidebarWidth, setSidebarWidth } = useSettingsStore();
   const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
   const { setGamepadMode, setUserDisabledGamepadMode } = useGamepadModeStore();
 
@@ -118,6 +121,51 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   }, [visibleGames]);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Resize state
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(sidebarWidth);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = sidebarWidth;
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    // Set cursor on body to maintain it when mouse leaves the handle
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - resizeStartX.current;
+      const newWidth = Math.min(
+        MAX_SIDEBAR_WIDTH,
+        Math.max(MIN_SIDEBAR_WIDTH, resizeStartWidth.current + delta)
+      );
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, setSidebarWidth]);
 
   const toggleGroupExpanded = (slug: string) => {
     setExpandedGroups((prev) => {
@@ -253,7 +301,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
 
   // Vertical layout (default)
   return (
-    <GlassPanel className="w-[320px] h-full flex flex-col">
+    <GlassPanel
+      className="h-full flex flex-col relative"
+      style={{ width: sidebarWidth }}
+    >
       <SidebarHeader />
 
       <div className="p-4">
@@ -357,6 +408,16 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
         onOpenSettings={openSettingsModal}
         unreadCount={unreadCount}
       />
+
+      {/* Resize handle */}
+      <div
+        className={`absolute top-0 right-0 w-1 h-full cursor-col-resize group hover:bg-primary/50 transition-colors ${
+          isResizing ? 'bg-primary/50' : 'bg-transparent'
+        }`}
+        onMouseDown={handleResizeStart}
+      >
+        <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-12 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
     </GlassPanel>
   );
 });

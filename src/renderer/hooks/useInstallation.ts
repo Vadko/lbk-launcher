@@ -23,6 +23,7 @@ interface UseInstallationParams {
 interface UseInstallationResult {
   isInstalling: boolean;
   isUninstalling: boolean;
+  isPaused: boolean;
   installProgress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
@@ -32,6 +33,9 @@ interface UseInstallationResult {
     removeOptions: { removeVoice: boolean; removeAchievements: boolean }
   ) => Promise<void>;
   handleUninstall: () => Promise<void>;
+  handlePauseDownload: () => Promise<void>;
+  handleResumeDownload: () => Promise<void>;
+  handleCancelDownload: () => Promise<void>;
   getInstallButtonText: () => string;
   showInstallOptions: boolean;
   setShowInstallOptions: (show: boolean) => void;
@@ -63,6 +67,7 @@ export function useInstallation({
   const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
   const isUninstalling = gameProgress?.isUninstalling || false;
+  const isPaused = gameProgress?.isPaused || false;
   const installProgress = gameProgress?.progress || 0;
   const downloadProgress = gameProgress?.downloadProgress || null;
   const statusMessage = gameProgress?.statusMessage || null;
@@ -132,6 +137,12 @@ export function useInstallation({
           customGamePath
         );
 
+        // Handle pause - not an error, just stop without clearing progress
+        if (result.paused) {
+          // Don't clear progress - keep the paused state visible
+          return;
+        }
+
         if (!result.success && result.error) {
           if (result.error.needsManualSelection) {
             showConfirm({
@@ -159,6 +170,7 @@ export function useInstallation({
               type: 'error',
             });
           }
+          clearInstallationProgress(selectedGame.id);
           return;
         }
 
@@ -183,6 +195,8 @@ export function useInstallation({
         if (!isUpdateAvailable && onFirstInstallComplete) {
           onFirstInstallComplete();
         }
+
+        clearInstallationProgress(selectedGame.id);
       } catch (error) {
         console.error('Installation error:', error);
         showModal({
@@ -190,7 +204,6 @@ export function useInstallation({
           message: error instanceof Error ? error.message : 'Невідома помилка',
           type: 'error',
         });
-      } finally {
         clearInstallationProgress(selectedGame.id);
       }
     },
@@ -391,9 +404,87 @@ export function useInstallation({
     showConfirm,
   ]);
 
+  const handlePauseDownload = useCallback(async () => {
+    if (!selectedGame || !isInstalling || isPaused) return;
+
+    if (!window.electronAPI?.pauseDownload) {
+      console.warn('[useInstallation] pauseDownload not available');
+      return;
+    }
+
+    const result = await window.electronAPI.pauseDownload(selectedGame.id);
+    if (result.success) {
+      setInstallationProgress(selectedGame.id, {
+        isPaused: true,
+        statusMessage: 'Завантаження призупинено',
+      });
+    } else {
+      showModal({
+        title: 'Помилка',
+        message: result.error || 'Не вдалося призупинити завантаження',
+        type: 'error',
+      });
+    }
+  }, [selectedGame, isInstalling, isPaused, setInstallationProgress, showModal]);
+
+  const handleResumeDownload = useCallback(async () => {
+    if (!selectedGame || !isPaused) return;
+
+    if (!window.electronAPI?.resumeDownload) {
+      console.warn('[useInstallation] resumeDownload not available');
+      return;
+    }
+
+    setInstallationProgress(selectedGame.id, {
+      isPaused: false,
+      statusMessage: 'Продовження завантаження...',
+    });
+
+    // Set up progress listeners again
+    window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
+      setInstallationProgress(selectedGame.id, {
+        progress: progress.percent,
+        downloadProgress: progress,
+      });
+    });
+
+    window.electronAPI.onInstallationStatus?.((status) => {
+      setInstallationProgress(selectedGame.id, {
+        statusMessage: status.message,
+      });
+    });
+
+    const result = await window.electronAPI.resumeDownload(selectedGame.id);
+    if (!result.success) {
+      showModal({
+        title: 'Помилка',
+        message: result.error || 'Не вдалося продовжити завантаження',
+        type: 'error',
+      });
+      clearInstallationProgress(selectedGame.id);
+    }
+  }, [selectedGame, isPaused, setInstallationProgress, clearInstallationProgress, showModal]);
+
+  const handleCancelDownload = useCallback(async () => {
+    if (!selectedGame) return;
+
+    if (isPaused) {
+      // Cancel paused download
+      await window.electronAPI.cancelPausedDownload(selectedGame.id);
+    } else if (isInstalling) {
+      // Abort active download
+      await window.electronAPI.abortDownload();
+    }
+
+    clearInstallationProgress(selectedGame.id);
+  }, [selectedGame, isPaused, isInstalling, clearInstallationProgress]);
+
   const getInstallButtonText = useCallback((): string => {
     if (!isOnline) return '❌ Немає інтернету';
     if (isPlanned) return 'Заплановано';
+    if (isPaused) {
+      return 'Призупинено';
+    }
     if (isInstalling) {
       return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
     }
@@ -407,6 +498,7 @@ export function useInstallation({
   }, [
     isOnline,
     isPlanned,
+    isPaused,
     isInstalling,
     isUpdateAvailable,
     isCheckingInstallation,
@@ -417,12 +509,16 @@ export function useInstallation({
   return {
     isInstalling,
     isUninstalling,
+    isPaused,
     installProgress,
     downloadProgress,
     statusMessage,
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handlePauseDownload,
+    handleResumeDownload,
+    handleCancelDownload,
     getInstallButtonText,
     showInstallOptions,
     setShowInstallOptions,

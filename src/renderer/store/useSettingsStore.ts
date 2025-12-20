@@ -14,6 +14,7 @@ interface SettingsStore {
   liquidGlassEnabled: boolean;
   isSettingsModalOpen: boolean;
   saveLogsToFile: boolean;
+  sidebarWidth: number;
   setTheme: (theme: ThemeMode) => void;
   toggleAnimations: () => void;
   toggleAppUpdateNotifications: () => void;
@@ -23,6 +24,7 @@ interface SettingsStore {
   toggleShowAdultGames: () => void;
   toggleLiquidGlass: () => void;
   toggleSaveLogsToFile: () => void;
+  setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
 }
@@ -40,6 +42,7 @@ export const useSettingsStore = create<SettingsStore>()(
       liquidGlassEnabled: true,
       isSettingsModalOpen: false,
       saveLogsToFile: false,
+      sidebarWidth: 320,
 
       setTheme: (theme) => set({ theme }),
 
@@ -70,6 +73,8 @@ export const useSettingsStore = create<SettingsStore>()(
 
       toggleSaveLogsToFile: () =>
         set((state) => ({ saveLogsToFile: !state.saveLogsToFile })),
+
+      setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
 

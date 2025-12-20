@@ -12,6 +12,7 @@ import { useSettingsStore } from './useSettingsStore';
 interface InstallationProgress {
   isInstalling: boolean;
   isUninstalling: boolean;
+  isPaused: boolean;
   progress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
@@ -286,6 +287,7 @@ export const useStore = create<Store>((set, get) => ({
       const currentProgress = newMap.get(gameId) || {
         isInstalling: false,
         isUninstalling: false,
+        isPaused: false,
         progress: 0,
         downloadProgress: null,
         statusMessage: null,

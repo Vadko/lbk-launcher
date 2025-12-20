@@ -6,11 +6,20 @@ import {
   getAllInstalledGameIds,
   ManualSelectionError,
   RateLimitError,
+  PausedSignal,
   abortCurrentDownload,
   removeOrphanedInstallationMetadata,
   removeComponents,
   checkPlatformCompatibility,
+  resumeDownload,
 } from '../installer';
+import {
+  pauseCurrentDownload,
+  getPausedDownloadState,
+  clearPausedDownloadState,
+  getPartialFilePath,
+} from '../installer/download';
+import fs from 'fs';
 import { getMainWindow } from '../window';
 import type { Game, InstallOptions } from '../../shared/types';
 
@@ -44,6 +53,10 @@ export function setupInstallerHandlers(): void {
 
         return { success: true };
       } catch (error) {
+        // Handle pause - not an error, just a state
+        if (error instanceof PausedSignal) {
+          return { success: false, paused: true };
+        }
         console.error('Error installing translation:', error);
         // Return error info instead of throwing to preserve custom properties
         return {
@@ -120,6 +133,76 @@ export function setupInstallerHandlers(): void {
     } catch (error) {
       console.error('Error aborting download:', error);
       return { success: false };
+    }
+  });
+
+  ipcMain.handle('pause-download', async (_, gameId: string) => {
+    try {
+      const state = pauseCurrentDownload(gameId);
+      if (state) {
+        return { success: true, state };
+      }
+      return { success: false, error: 'Немає активного завантаження для призупинення' };
+    } catch (error) {
+      console.error('Error pausing download:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Невідома помилка' };
+    }
+  });
+
+  ipcMain.handle('resume-download', async (_, gameId: string) => {
+    try {
+      const state = getPausedDownloadState(gameId);
+      if (!state) {
+        return { success: false, error: 'Немає призупиненого завантаження' };
+      }
+
+      // Resume download in background
+      resumeDownload(
+        state,
+        (downloadProgress) => {
+          getMainWindow()?.webContents.send('download-progress', downloadProgress);
+        },
+        (status) => {
+          getMainWindow()?.webContents.send('installation-status', status);
+        }
+      ).catch((error) => {
+        console.error('Error during resumed download:', error);
+        getMainWindow()?.webContents.send('installation-status', {
+          message: `❌ ${error instanceof Error ? error.message : 'Помилка завантаження'}`,
+        });
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error resuming download:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Невідома помилка' };
+    }
+  });
+
+  ipcMain.handle('get-paused-download', async (_, gameId: string) => {
+    try {
+      return getPausedDownloadState(gameId);
+    } catch (error) {
+      console.error('Error getting paused download:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('cancel-paused-download', async (_, gameId: string) => {
+    try {
+      const state = getPausedDownloadState(gameId);
+      if (state) {
+        // Clean up partial file
+        const partialPath = getPartialFilePath(state.outputPath);
+        if (fs.existsSync(partialPath)) {
+          fs.unlinkSync(partialPath);
+        }
+      }
+      clearPausedDownloadState(gameId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error cancelling paused download:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Невідома помилка' };
     }
   });
 

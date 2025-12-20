@@ -11,6 +11,20 @@ export class ManualSelectionError extends Error {
 }
 
 /**
+ * Signal indicating download was paused by user.
+ * Not a real error - just a way to propagate pause state through the async call stack
+ * since AbortController.abort() always throws.
+ */
+export class PausedSignal extends Error {
+  public readonly isPaused = true;
+
+  constructor() {
+    super('Download paused');
+    this.name = 'PausedSignal';
+  }
+}
+
+/**
  * Rate-limit error for downloads
  */
 export class RateLimitError extends Error {

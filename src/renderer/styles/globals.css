@@ -194,13 +194,22 @@ body.liquid-glass-enabled .modal-backdrop {
 }
 
 body.liquid-glass-enabled .modal-content {
-  background: rgba(10, 15, 25, 0.95) !important;
+  background: rgba(10, 15, 25, 0.97) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
 body.liquid-glass-enabled .modal-content .bg-glass {
   background: rgba(255, 255, 255, 0.06) !important;
+}
+
+body.liquid-glass-enabled .modal-content .bg-bg-dark {
+  background: rgba(10, 15, 25, 0.98) !important;
+}
+
+body.liquid-glass-enabled .modal-content .bg-black\/50 {
+  background: rgba(0, 0, 0, 0.7) !important;
 }
 
 body.liquid-glass-enabled .notification-toast {
@@ -228,6 +237,16 @@ body.liquid-glass-enabled .glass-input:focus {
 /* Light theme + Liquid Glass */
 :root[data-theme='light'] body.liquid-glass-enabled {
   background: transparent !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .text-text-main,
+:root[data-theme='light'] body.liquid-glass-enabled [class*='text-text-main'] {
+  color: rgba(0, 0, 0, 0.9) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .text-text-muted,
+:root[data-theme='light'] body.liquid-glass-enabled [class*='text-text-muted'] {
+  color: rgba(0, 0, 0, 0.65) !important;
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled #root,
@@ -265,12 +284,20 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled .modal-content {
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(255, 255, 255, 0.97) !important;
   border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled .modal-content .bg-glass {
   background: rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .modal-content .bg-bg-dark {
+  background: rgba(255, 255, 255, 0.98) !important;
+}
+
+:root[data-theme='light'] body.liquid-glass-enabled .modal-content .bg-black\/50 {
+  background: rgba(0, 0, 0, 0.5) !important;
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled .notification-toast {

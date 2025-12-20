@@ -9,6 +9,7 @@ import type {
   DownloadProgress,
   InstallationStatus,
   InstallOptions,
+  PausedDownloadState,
 } from '../shared/types';
 import { formatBytes } from '../shared/formatters';
 
@@ -16,9 +17,12 @@ import { formatBytes } from '../shared/formatters';
 import {
   ManualSelectionError,
   RateLimitError,
+  PausedSignal,
   abortCurrentDownload,
   downloadFile,
   setDownloadAbortController,
+  setCurrentDownloadState,
+  clearPausedDownloadState,
   extractArchive,
   backupFiles,
   restoreBackupLegacy,
@@ -56,6 +60,7 @@ const BACKUP_DIR_NAME = '.littlebit-backup';
 export {
   ManualSelectionError,
   RateLimitError,
+  PausedSignal,
   abortCurrentDownload,
   checkPlatformCompatibility,
   checkInstallation,
@@ -63,6 +68,93 @@ export {
   removeOrphanedInstallationMetadata,
   getAllInstalledGameIds,
 };
+
+/**
+ * Resume a paused download
+ */
+export async function resumeDownload(
+  state: PausedDownloadState,
+  onDownloadProgress?: (progress: DownloadProgress) => void,
+  onStatus?: (status: InstallationStatus) => void
+): Promise<void> {
+  console.log(`[Installer] Resuming download for game: ${state.gameId}`);
+
+  const { getSignedDownloadUrl } = await import('./tracking');
+
+  // Check if URL might be expired (> 55 minutes since pause - signed URLs expire in 1 hour)
+  const pausedTime = new Date(state.pausedAt).getTime();
+  const now = Date.now();
+  const fiftyFiveMinutes = 55 * 60 * 1000;
+
+  let downloadUrl = state.url;
+  if (now - pausedTime > fiftyFiveMinutes) {
+    onStatus?.({ message: 'Оновлення посилання на завантаження...' });
+    console.log('[Installer] Signed URL might be expired, getting new one...');
+
+    // Extract archive path from the original URL or use a fallback approach
+    // Since we don't store the archive path in PausedDownloadState, we'll need to refresh via game data
+    // For now, we'll try with the old URL and if it fails, the error will be handled
+    try {
+      // Try to get a fresh URL using the archive path pattern
+      const archivePathMatch = state.url.match(/\/([^/]+\.zip)/);
+      if (archivePathMatch) {
+        const urlResult = await getSignedDownloadUrl(state.gameId, archivePathMatch[1]);
+        if (urlResult.success) {
+          downloadUrl = urlResult.downloadUrl;
+          console.log('[Installer] Got fresh signed URL');
+        }
+      }
+    } catch (error) {
+      console.warn('[Installer] Failed to refresh URL, will try with old one:', error);
+    }
+  }
+
+  // Set up download state tracking
+  setCurrentDownloadState({
+    gameId: state.gameId,
+    url: downloadUrl,
+    outputPath: state.outputPath,
+    downloadedBytes: state.downloadedBytes,
+    totalBytes: state.totalBytes,
+    options: state.options,
+    platform: state.platform,
+    customGamePath: state.customGamePath,
+  });
+
+  // Create AbortController for this download
+  const abortController = new AbortController();
+  setDownloadAbortController(abortController);
+
+  try {
+    onStatus?.({ message: 'Продовження завантаження...' });
+
+    await downloadFile(
+      downloadUrl,
+      state.outputPath,
+      onDownloadProgress,
+      onStatus,
+      3,
+      abortController.signal,
+      state.downloadedBytes
+    );
+
+    // Download complete - clear paused state
+    clearPausedDownloadState(state.gameId);
+
+    onStatus?.({ message: 'Завантаження завершено!' });
+    console.log('[Installer] Resume download completed successfully');
+  } catch (error) {
+    // If paused again, don't treat as error
+    if (error instanceof Error && error.message === 'PAUSED') {
+      console.log('[Installer] Download paused again');
+      return;
+    }
+    throw error;
+  } finally {
+    setDownloadAbortController(null);
+    setCurrentDownloadState(null);
+  }
+}
 
 /**
  * Main installation function
@@ -173,7 +265,8 @@ export async function installTranslation(
         extractDir,
         getSignedDownloadUrl,
         onDownloadProgress,
-        onStatus
+        onStatus,
+        { options, platform: gamePath.platform, customGamePath }
       );
     }
 
@@ -305,12 +398,23 @@ export async function installTranslation(
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
   } catch (error) {
+    // Handle pause specially - throw PausedSignal for IPC handler
+    if (error instanceof Error && error.message === 'PAUSED') {
+      console.log('[Installer] Installation paused by user');
+      throw new PausedSignal();
+    }
     console.error('[Installer] Installation error:', error);
     handleInstallationError(error);
   }
 }
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
+
+interface DownloadContext {
+  options: InstallOptions;
+  platform: string;
+  customGamePath?: string;
+}
 
 /**
  * Download and extract an archive
@@ -324,7 +428,8 @@ async function downloadAndExtractArchive(
   extractDir: string,
   getSignedDownloadUrl: (gameId: string, path: string, type?: ArchiveType) => Promise<any>,
   onDownloadProgress?: (progress: DownloadProgress) => void,
-  onStatus?: (status: InstallationStatus) => void
+  onStatus?: (status: InstallationStatus) => void,
+  downloadContext?: DownloadContext
 ): Promise<string[]> {
   if (!archivePath) {
     throw new Error(`Архів ${type} не знайдено`);
@@ -350,6 +455,20 @@ async function downloadAndExtractArchive(
   const abortController = new AbortController();
   setDownloadAbortController(abortController);
 
+  // Set download state for pause functionality (only for text archive - main download)
+  if (downloadContext && type === 'text') {
+    setCurrentDownloadState({
+      gameId: game.id,
+      url: urlResult.downloadUrl,
+      outputPath: archiveFilePath,
+      downloadedBytes: 0,
+      totalBytes: 0,
+      options: downloadContext.options,
+      platform: downloadContext.platform,
+      customGamePath: downloadContext.customGamePath,
+    });
+  }
+
   try {
     await downloadFile(
       urlResult.downloadUrl,
@@ -361,6 +480,9 @@ async function downloadAndExtractArchive(
     );
   } finally {
     setDownloadAbortController(null);
+    if (downloadContext && type === 'text') {
+      setCurrentDownloadState(null);
+    }
   }
 
   // Verify hash if available
