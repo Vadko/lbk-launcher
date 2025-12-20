@@ -106,6 +106,10 @@ export class GamesRepository {
       achievements_archive_path: game.achievements_archive_path ?? null,
       achievements_archive_size: game.achievements_archive_size ?? null,
       achievements_archive_file_list: game.achievements_archive_file_list ?? null,
+      epic_archive_hash: game.epic_archive_hash ?? null,
+      epic_archive_path: game.epic_archive_path ?? null,
+      epic_archive_size: game.epic_archive_size ?? null,
+      epic_archive_file_list: game.epic_archive_file_list ?? null,
       archive_file_list: game.archive_file_list ?? null,
       voice_archive_file_list: game.voice_archive_file_list ?? null,
       steam_app_id: game.steam_app_id ?? null,
@@ -284,6 +288,7 @@ export class GamesRepository {
         thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
         voice_archive_hash, voice_archive_path, voice_archive_size,
         voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
+        epic_archive_hash, epic_archive_path, epic_archive_size, epic_archive_file_list,
         steam_app_id, website, youtube
       ) VALUES (
         @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -294,6 +299,7 @@ export class GamesRepository {
         @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
         @voice_archive_hash, @voice_archive_path, @voice_archive_size,
         @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
+        @epic_archive_hash, @epic_archive_path, @epic_archive_size, @epic_archive_file_list,
         @steam_app_id, @website, @youtube
       )
     `);
@@ -316,6 +322,7 @@ export class GamesRepository {
           thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
           voice_archive_hash, voice_archive_path, voice_archive_size,
           voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
+          epic_archive_hash, epic_archive_path, epic_archive_size, epic_archive_file_list,
           steam_app_id, website, youtube
         ) VALUES (
           @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -326,6 +333,7 @@ export class GamesRepository {
           @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
           @voice_archive_hash, @voice_archive_path, @voice_archive_size,
           @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
+          @epic_archive_hash, @epic_archive_path, @epic_archive_size, @epic_archive_file_list,
           @steam_app_id, @website, @youtube
         )
       `);

@@ -142,6 +142,51 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_epic_archive_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='epic_archive_path'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_epic_archive_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN epic_archive_hash TEXT;
+          ALTER TABLE games ADD COLUMN epic_archive_path TEXT;
+          ALTER TABLE games ADD COLUMN epic_archive_size TEXT;
+          ALTER TABLE games ADD COLUMN epic_archive_file_list TEXT;
+        `);
+        console.log('[Migrations] Completed: add_epic_archive_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_epic_archive',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_epic_archive_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_epic_archive');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_epic_archive_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_epic_archive - will resync on next startup'
+      );
+    },
+  },
 ];
 
 /**

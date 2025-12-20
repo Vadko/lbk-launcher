@@ -213,6 +213,10 @@ export type Database = {
           description: string | null
           discord: string | null
           editing_progress: number
+          epic_archive_file_list: Json | null
+          epic_archive_hash: string | null
+          epic_archive_path: string | null
+          epic_archive_size: string | null
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -266,6 +270,10 @@ export type Database = {
           description?: string | null
           discord?: string | null
           editing_progress?: number
+          epic_archive_file_list?: Json | null
+          epic_archive_hash?: string | null
+          epic_archive_path?: string | null
+          epic_archive_size?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -319,6 +327,10 @@ export type Database = {
           description?: string | null
           discord?: string | null
           editing_progress?: number
+          epic_archive_file_list?: Json | null
+          epic_archive_hash?: string | null
+          epic_archive_path?: string | null
+          epic_archive_size?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -399,6 +411,10 @@ export type Database = {
           discord: string | null
           downloads: number | null
           editing_progress: number
+          epic_archive_file_list: Json | null
+          epic_archive_hash: string | null
+          epic_archive_path: string | null
+          epic_archive_size: string | null
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -455,6 +471,10 @@ export type Database = {
           discord?: string | null
           downloads?: number | null
           editing_progress?: number
+          epic_archive_file_list?: Json | null
+          epic_archive_hash?: string | null
+          epic_archive_path?: string | null
+          epic_archive_size?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -511,6 +531,10 @@ export type Database = {
           discord?: string | null
           downloads?: number | null
           editing_progress?: number
+          epic_archive_file_list?: Json | null
+          epic_archive_hash?: string | null
+          epic_archive_path?: string | null
+          epic_archive_size?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null

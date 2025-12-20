@@ -112,8 +112,15 @@ export async function installTranslation(
 
     // 3. Check available disk space
     let requiredSpace = 0;
-    if (installText && game.archive_size) {
-      requiredSpace += parseSizeToBytes(game.archive_size);
+    if (installText) {
+      // Use epic_archive_size if platform is 'epic' and epic_archive is available
+      const textArchiveSize =
+        gamePath.platform === 'epic' && game.epic_archive_size
+          ? game.epic_archive_size
+          : game.archive_size;
+      if (textArchiveSize) {
+        requiredSpace += parseSizeToBytes(textArchiveSize);
+      }
     }
     if (installVoice && game.voice_archive_size) {
       requiredSpace += parseSizeToBytes(game.voice_archive_size);
@@ -148,11 +155,20 @@ export async function installTranslation(
     // 4.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
+      // Use epic_archive if platform is 'epic' and epic_archive is available
+      const useEpicArchive = gamePath.platform === 'epic' && game.epic_archive_path;
+      const archivePath = useEpicArchive ? game.epic_archive_path : game.archive_path;
+      const archiveHash = useEpicArchive ? game.epic_archive_hash : game.archive_hash;
+
+      if (useEpicArchive) {
+        console.log('[Installer] Using Epic-specific archive');
+      }
+
       textFiles = await downloadAndExtractArchive(
         game,
         'text',
-        game.archive_path,
-        game.archive_hash,
+        archivePath,
+        archiveHash,
         downloadDir,
         extractDir,
         getSignedDownloadUrl,
