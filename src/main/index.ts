@@ -1,6 +1,60 @@
 import { app, session } from 'electron';
-import { isLinux, isMacOS } from './utils/platform';
+import { isLinux, isMacOS, isWindows } from './utils/platform';
 import { initLogger } from './utils/logger';
+
+// Deep link handling
+const PROTOCOL = 'littlebit';
+let pendingDeepLink: string | null = null;
+
+// Parse deep link URL: littlebit://games/{slug}/{team}
+function parseDeepLink(url: string): { slug: string; team: string } | null {
+  try {
+    // URL format: littlebit://games/{slug}/{team}
+    const urlObj = new URL(url);
+    if (urlObj.protocol !== `${PROTOCOL}:`) return null;
+
+    const pathParts = urlObj.pathname.replace(/^\/+/, '').split('/');
+    // pathParts: ['games', 'slug', 'team'] or hostname might be 'games'
+
+    // Handle both littlebit://games/slug/team and littlebit:///games/slug/team
+    let parts: string[];
+    if (urlObj.hostname === 'games') {
+      // littlebit://games/slug/team -> hostname='games', pathname='/slug/team'
+      parts = ['games', ...pathParts];
+    } else if (pathParts[0] === 'games') {
+      // littlebit:///games/slug/team -> pathname='/games/slug/team'
+      parts = pathParts;
+    } else {
+      return null;
+    }
+
+    if (parts.length >= 3 && parts[0] === 'games') {
+      return {
+        slug: decodeURIComponent(parts[1]),
+        team: decodeURIComponent(parts[2]),
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('[DeepLink] Failed to parse URL:', url, error);
+    return null;
+  }
+}
+
+function handleDeepLink(url: string) {
+  console.log('[DeepLink] Received URL:', url);
+  const parsed = parseDeepLink(url);
+  if (parsed) {
+    console.log('[DeepLink] Parsed:', parsed);
+    const mainWindow = getMainWindow();
+    if (mainWindow) {
+      mainWindow.webContents.send('deep-link', parsed);
+    } else {
+      // Window not ready yet, save for later
+      pendingDeepLink = url;
+    }
+  }
+}
 
 // Steam Deck / Gaming Mode support
 // Disable GPU sandbox to prevent issues with Gamescope
@@ -42,7 +96,23 @@ if (!gotTheLock) {
   // Initialize logger early to capture all logs
   initLogger();
 
-  app.on('second-instance', () => {
+  // Register protocol handler (for development, include the path to electron)
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [process.argv[1]]);
+    }
+  } else {
+    app.setAsDefaultProtocolClient(PROTOCOL);
+  }
+
+  // macOS: Handle open-url event
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleDeepLink(url);
+  });
+
+  // Windows/Linux: Handle second-instance with deep link URL in argv
+  app.on('second-instance', (_event, argv) => {
     // When someone tries to run a second instance, focus our window instead
     const mainWindow = getMainWindow();
     if (mainWindow) {
@@ -53,6 +123,14 @@ if (!gotTheLock) {
         mainWindow.restore();
       }
       mainWindow.focus();
+    }
+
+    // On Windows/Linux, the deep link URL is passed as the last argument
+    if (isWindows() || isLinux()) {
+      const deepLinkUrl = argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+      if (deepLinkUrl) {
+        handleDeepLink(deepLinkUrl);
+      }
     }
   });
 
@@ -111,6 +189,21 @@ if (!gotTheLock) {
     await createMainWindow();
     initTray(); // Створити tray одразу при запуску
     checkForUpdates();
+
+    // Handle pending deep link if app was opened via protocol
+    if (pendingDeepLink) {
+      handleDeepLink(pendingDeepLink);
+      pendingDeepLink = null;
+    }
+
+    // Check for deep link in process args (Windows/Linux cold start)
+    if (isWindows() || isLinux()) {
+      const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+      if (deepLinkUrl) {
+        // Small delay to ensure renderer is ready
+        setTimeout(() => handleDeepLink(deepLinkUrl), 500);
+      }
+    }
 
     // Start watching Steam library for changes (after a short delay to ensure window is ready)
     setTimeout(() => {

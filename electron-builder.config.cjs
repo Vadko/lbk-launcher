@@ -40,6 +40,13 @@ module.exports = {
     },
   ],
 
+  protocols: [
+    {
+      name: 'LB Launcher Protocol',
+      schemes: ['littlebit'],
+    },
+  ],
+
   win: {
     target: [
       {

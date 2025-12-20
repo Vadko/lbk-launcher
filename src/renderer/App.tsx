@@ -15,6 +15,7 @@ import { useSettingsStore } from './store/useSettingsStore';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadModeNavigation } from './hooks/useGamepadModeNavigation';
+import { useDeepLink } from './hooks/useDeepLink';
 
 export const App: React.FC = () => {
   const {
@@ -33,6 +34,9 @@ export const App: React.FC = () => {
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
+
+  // Обробка deep link для навігації до перекладу
+  useDeepLink();
 
   // Простий скрол геймпадом (тільки в геймпад-режимі)
   useGamepadModeNavigation(isGamepadMode);
