@@ -129,6 +129,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
   const prevNavigationAreaRef = useRef<string | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const wasModalOpenRef = useRef<boolean>(false);
+  const prevButtonStatesRef = useRef<boolean[]>([]);
 
   // Subscribe to gamepad state
   useGamepads((pads) => setGamepads(pads));
@@ -140,6 +141,18 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
     if (now - lastTime < INPUT_DELAY) return false;
     lastInputRef.current[key] = now;
     return true;
+  }, []);
+
+  // Check if button was just pressed (transition from unpressed to pressed)
+  const isButtonJustPressed = useCallback((gp: Gamepad, buttonIndex: number): boolean => {
+    const currentPressed = gp.buttons[buttonIndex]?.pressed ?? false;
+    const prevPressed = prevButtonStatesRef.current[buttonIndex] ?? false;
+    return currentPressed && !prevPressed;
+  }, []);
+
+  // Update previous button states (call at end of each frame)
+  const updatePrevButtonStates = useCallback((gp: Gamepad) => {
+    prevButtonStatesRef.current = gp.buttons.map(b => b?.pressed ?? false);
   }, []);
 
   // Get game cards from DOM
@@ -194,8 +207,14 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
     if (card) {
       playConfirmSound();
       card.click();
-      // Switch to main content area
-      setNavigationArea('main-content');
+      // Switch to main content area only if no modal opened
+      // (modal check happens in the main polling effect)
+      setTimeout(() => {
+        const modalOpen = !!document.querySelector('[role="dialog"]');
+        if (!modalOpen) {
+          setNavigationArea('main-content');
+        }
+      }, 50);
     }
   }, [getGameCards, focusedGameIndex, setNavigationArea]);
 
@@ -313,8 +332,8 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
         playNavigateSound();
       }
 
-      // A button - confirm/click
-      if (gp.buttons[BUTTON.A]?.pressed && canInput('button-a')) {
+      // A button - confirm/click (only on button press, not hold)
+      if (isButtonJustPressed(gp, BUTTON.A) && canInput('modal-button-a')) {
         const focused = document.activeElement as HTMLElement;
         if (focused && focusableElements.includes(focused)) {
           playConfirmSound();
@@ -322,8 +341,8 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
         }
       }
 
-      // B button - cancel/close
-      if (gp.buttons[BUTTON.B]?.pressed && canInput('button-b')) {
+      // B button - cancel/close (only on button press, not hold)
+      if (isButtonJustPressed(gp, BUTTON.B) && canInput('modal-button-b')) {
         // Find cancel button by data attribute
         const cancelButton =
           modal.querySelector<HTMLButtonElement>('[data-gamepad-cancel]');
@@ -333,7 +352,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
         }
       }
     },
-    [canInput]
+    [canInput, isButtonJustPressed]
   );
 
   // Get action buttons from MainContent
@@ -702,6 +721,8 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
 
     if (modalOpen) {
       handleModalNavigation(gp);
+      // Update button states at end of frame
+      updatePrevButtonStates(gp);
       return;
     }
 
@@ -716,6 +737,9 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
 
     // Track previous area for "just entered" detection
     prevNavigationAreaRef.current = navigationArea;
+
+    // Update button states at end of frame
+    updatePrevButtonStates(gp);
   }, [
     enabled,
     gamepads,
@@ -724,6 +748,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
     handleGamesNavigation,
     handleMainContentNavigation,
     handleModalNavigation,
+    updatePrevButtonStates,
   ]);
 
   // Initial focus on first game card when entering gamepad mode

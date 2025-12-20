@@ -10,6 +10,7 @@ import { SidebarFooter } from './SidebarFooter';
 import { GameGroupItem } from './GameGroupItem';
 import { GamepadCard } from './GamepadCard';
 import { Loader } from '../ui/Loader';
+import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
 import { useStore } from '../../store/useStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
@@ -17,6 +18,7 @@ import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useGames } from '../../hooks/useGames';
 import { useDebounce } from '../../hooks/useDebounce';
 import type { GameGroup } from './types';
+import type { Game } from '../../types/game';
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -47,6 +49,17 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   const { setGamepadMode, setUserDisabledGamepadMode } = useGamepadModeStore();
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Translation picker modal state
+  const [pickerModalOpen, setPickerModalOpen] = useState(false);
+  const [pickerTranslations, setPickerTranslations] = useState<Game[]>([]);
+  const [pickerGameName, setPickerGameName] = useState('');
+
+  const openTranslationPicker = (translations: Game[], gameName: string) => {
+    setPickerTranslations(translations);
+    setPickerGameName(gameName);
+    setPickerModalOpen(true);
+  };
 
   // Fetch authors list
   const [authors, setAuthors] = useState<string[]>([]);
@@ -202,20 +215,38 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                   isGameDetected(t.id)
                 );
 
+                const handleClick = () => {
+                  if (group.translations.length > 1) {
+                    openTranslationPicker(group.translations, group.name);
+                  } else {
+                    setSelectedGame(primaryGame);
+                  }
+                };
+
                 return (
                   <GamepadCard
                     key={group.slug}
                     game={primaryGame}
+                    translations={group.translations}
+                    translationIndex={0}
                     isSelected={isSelected}
                     hasUpdate={hasUpdate}
                     isDetected={detected}
-                    onClick={() => setSelectedGame(primaryGame)}
+                    onClick={handleClick}
                   />
                 );
               })}
             </div>
           )}
         </div>
+
+        {/* Translation picker modal */}
+        <TranslationPickerModal
+          isOpen={pickerModalOpen}
+          onClose={() => setPickerModalOpen(false)}
+          translations={pickerTranslations}
+          gameName={pickerGameName}
+        />
       </div>
     );
   }

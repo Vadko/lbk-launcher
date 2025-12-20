@@ -7,6 +7,8 @@ import type { Game } from '../../types/game';
 
 interface GamepadCardProps {
   game: Game;
+  translations: Game[];
+  translationIndex?: number;
   isSelected: boolean;
   hasUpdate: boolean;
   isDetected: boolean;
@@ -15,11 +17,13 @@ interface GamepadCardProps {
 
 export const GamepadCard: React.FC<GamepadCardProps> = ({
   game,
+  translations,
   isSelected,
   hasUpdate,
   isDetected,
   onClick,
 }) => {
+  const hasMultipleTranslations = translations.length > 1;
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
@@ -91,15 +95,29 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
         {/* Gradient overlay at bottom */}
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 to-transparent" />
 
-        {/* Game name */}
+        {/* Game name and team */}
         <div className="absolute inset-x-0 bottom-0 p-2">
-          <p className={`text-xs font-medium text-white line-clamp-2 ${isAdultBlurred ? 'blur-sm' : ''}`}>
+          <p className={`text-xs font-medium text-white line-clamp-1 ${isAdultBlurred ? 'blur-sm' : ''}`}>
             {game.name}
           </p>
+          {hasMultipleTranslations && (
+            <p className={`text-[10px] text-neon-blue truncate ${isAdultBlurred ? 'blur-sm' : ''}`}>
+              {game.team}
+            </p>
+          )}
         </div>
 
+        {/* Translations count badge */}
+        {hasMultipleTranslations && !isAdultBlurred && (
+          <div className="absolute top-2 right-2 min-w-[20px] h-5 px-1.5 bg-neon-purple/90 rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(189,0,255,0.6)]">
+            <span className="text-[10px] font-bold text-white">
+              {translations.length}
+            </span>
+          </div>
+        )}
+
         {/* Update indicator */}
-        {hasUpdate && !isAdultBlurred && (
+        {hasUpdate && !isAdultBlurred && !hasMultipleTranslations && (
           <div className="absolute top-2 right-2 w-3 h-3 bg-neon-blue rounded-full animate-pulse shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
         )}
 
