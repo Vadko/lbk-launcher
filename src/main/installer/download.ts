@@ -207,13 +207,11 @@ export async function downloadFile(
         if (signal?.aborted) {
           throw new Error('Завантаження скасовано');
         }
-      } else {
-        if (currentStartByte > 0) {
+      } else if (currentStartByte > 0) {
           onStatus?.({ message: 'Продовження завантаження...' });
         } else {
           onStatus?.({ message: 'Завантаження українізатора...' });
         }
-      }
 
       await downloadFileAttempt(url, partialPath, onProgress, onStatus, signal, currentStartByte);
 

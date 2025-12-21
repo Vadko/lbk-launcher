@@ -222,8 +222,7 @@ export function useInstallation({
   );
 
   const handleConflictingTranslation = useCallback(
-    async (conflict: ConflictingTranslation): Promise<boolean> => {
-      return new Promise((resolve) => {
+    async (conflict: ConflictingTranslation): Promise<boolean> => new Promise((resolve) => {
         const teamInfo = conflict.team ? ` (${conflict.team})` : '';
         showConfirm({
           title: 'Інша локалізація вже встановлена',
@@ -279,8 +278,7 @@ export function useInstallation({
             resolve(false);
           },
         });
-      });
-    },
+      }),
     [showConfirm, showModal]
   );
 

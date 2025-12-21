@@ -27,7 +27,8 @@
     "find-unused": "knip",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "types:generate": "npx --yes supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "generate:icns": "bash scripts/generate-icns.sh"
   },
   "dependencies": {
     "7zip-bin-full": "^25.1.2",
@@ -44,6 +45,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-lazy-load-image-component": "^1.6.3",
+    "react-snowfall": "^2.4.0",
     "react-ts-gamepads": "^1.0.8",
     "zustand": "^4.4.7"
   },

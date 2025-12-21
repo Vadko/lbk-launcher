@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Game } from '../types/game';
+import type { Game } from '../types/game';
 import type {
   DownloadProgress,
   InstallationInfo,
@@ -305,17 +305,11 @@ export const useStore = create<Store>((set, get) => ({
     });
   },
 
-  getInstallationProgress: (gameId: string) => {
-    return get().installationProgress.get(gameId);
-  },
+  getInstallationProgress: (gameId: string) => get().installationProgress.get(gameId),
 
-  getInstallationInfo: (gameId: string) => {
-    return get().installedGames.get(gameId);
-  },
+  getInstallationInfo: (gameId: string) => get().installedGames.get(gameId),
 
-  isCheckingInstallationStatus: (gameId: string) => {
-    return get().isCheckingInstallation.get(gameId) || false;
-  },
+  isCheckingInstallationStatus: (gameId: string) => get().isCheckingInstallation.get(gameId) || false,
 
   // Game Detection Actions
   clearDetectedGamesCache: () => {
@@ -374,9 +368,7 @@ export const useStore = create<Store>((set, get) => ({
     }
   },
 
-  isGameDetected: (gameId: string) => {
-    return get().detectedGames.has(gameId);
-  },
+  isGameDetected: (gameId: string) => get().detectedGames.has(gameId),
 
   // Check subscribed games for status and progress changes on app startup
   checkSubscribedGamesStatus: (games: Game[]) => {
@@ -445,7 +437,7 @@ export const useStore = create<Store>((set, get) => ({
           `[Store] Auto-unsubscribed from ${game.name} (status changed from planned)`
         );
         return; // Skip progress check since we unsubscribed
-      } else if (!savedStatus) {
+      } if (!savedStatus) {
         updateSubscribedStatus(gameId, game.status);
       }
 

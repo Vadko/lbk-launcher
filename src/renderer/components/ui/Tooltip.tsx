@@ -12,6 +12,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, className =
   const tooltipRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLSpanElement>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional position calculation after visibility change */
   useEffect(() => {
     if (isVisible && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -23,6 +24,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ content, children, className =
       }
     }
   }, [isVisible]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <span

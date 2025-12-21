@@ -1,13 +1,12 @@
 import React from 'react';
-import { Game } from '../../types/game';
+import type { Game } from '../../types/game';
 import { ProgressBar } from './ProgressBar';
 
 interface StatusCardProps {
   game: Game;
 }
 
-export const StatusCard: React.FC<StatusCardProps> = ({ game }) => {
-  return (
+export const StatusCard: React.FC<StatusCardProps> = ({ game }) => (
     <div className="glass-card">
       <h3 className="text-lg font-head font-semibold text-text-main mb-4">
         Прогрес перекладу
@@ -27,4 +26,3 @@ export const StatusCard: React.FC<StatusCardProps> = ({ game }) => {
       </div>
     </div>
   );
-};

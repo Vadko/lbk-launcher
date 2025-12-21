@@ -274,7 +274,7 @@ export function useGames({
           newGames.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
           setTotal((prev) => prev + 1);
           return newGames;
-        } else {
+        } 
           // Гра є в списку
           if (!shouldBeInList) {
             // Видалити гру, якщо вона більше не відповідає фільтрам
@@ -287,7 +287,7 @@ export function useGames({
           newGames[index] = updatedGame;
           newGames.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
           return newGames;
-        }
+        
       });
     };
 
@@ -353,13 +353,11 @@ export function useGames({
   }, [specialFilter, loadGames]);
 
   // Cleanup abort controller при unmount
-  useEffect(() => {
-    return () => {
+  useEffect(() => () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
-    };
-  }, []);
+    }, []);
 
   return {
     games,

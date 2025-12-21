@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
 import { supportsMacOSLiquidGlass, shouldEnableLiquidGlass } from './utils/platform';
 
 // Conditionally import based on platform

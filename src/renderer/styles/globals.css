@@ -656,3 +656,42 @@ body.liquid-glass-enabled .glass-input:focus {
   background: rgba(245, 158, 11, 0.15) !important;
   outline: 3px solid var(--gamepad-focus) !important;
 }
+
+/* ==========================================================================
+   11. LIGHT THEME - SIDEBAR & DROPDOWN BORDERS
+   ========================================================================== */
+
+:root[data-theme='light'] .bg-glass {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme='light'] .border-border {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme='light'] .border-border-hover {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+/* Dropdown trigger buttons in light theme */
+:root[data-theme='light'] button.bg-glass {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme='light'] button.bg-glass:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme='light'] button.bg-glass-hover {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* TitleBar version text in light theme */
+:root[data-theme='light'] .drag-region .text-text-muted\/70 {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+

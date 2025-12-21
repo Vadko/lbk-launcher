@@ -1,4 +1,4 @@
-import { Game, GetGamesParams, GetGamesResult } from '../shared/types';
+import type { Game, GetGamesParams, GetGamesResult } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
 
 // Використовуємо локальну базу даних замість Supabase

@@ -1,10 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw, Languages, Download, TrendingUp } from 'lucide-react';
-import {
-  useSubscriptionsStore,
-  ToastNotification,
-} from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore, type ToastNotification } from '../../store/useSubscriptionsStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {

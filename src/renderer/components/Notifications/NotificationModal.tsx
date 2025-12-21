@@ -17,7 +17,7 @@ import {
 import { Modal } from '../Modal/Modal';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
-import { useSubscriptionsStore, Notification } from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore, type Notification } from '../../store/useSubscriptionsStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 

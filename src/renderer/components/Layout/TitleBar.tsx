@@ -40,7 +40,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
       {!isMacOS26Plus && <div className="text-xs text-text-muted font-medium">LB</div>}
       {isMacOS26Plus && <div />}
 
-      <div className="text-[10px] text-text-muted/50 absolute left-1/2 -translate-x-1/2">
+      <div className="text-[10px] text-text-muted/70 absolute left-1/2 -translate-x-1/2">
         {`v${version}${online ? '' : ' · ви оффлайн'}`}
       </div>
 

@@ -6,6 +6,4 @@ interface GlassPanelProps {
   style?: React.CSSProperties;
 }
 
-export const GlassPanel: React.FC<GlassPanelProps> = ({ children, className = '', style }) => {
-  return <div className={`glass-panel ${className}`} style={style}>{children}</div>;
-};
+export const GlassPanel: React.FC<GlassPanelProps> = ({ children, className = '', style }) => <div className={`glass-panel ${className}`} style={style}>{children}</div>;

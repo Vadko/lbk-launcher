@@ -248,7 +248,5 @@ export function setupInstallerHandlers(): void {
     }
   );
 
-  ipcMain.handle('check-platform-compatibility', async (_, game: Game) => {
-    return checkPlatformCompatibility(game);
-  });
+  ipcMain.handle('check-platform-compatibility', async (_, game: Game) => checkPlatformCompatibility(game));
 }

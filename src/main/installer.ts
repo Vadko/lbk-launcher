@@ -314,10 +314,37 @@ export async function installTranslation(
         onStatus?.({ message: 'Копіювання перекладу ачівок...' });
         await mkdir(achievementsInstallPath, { recursive: true });
 
-        if (createBackup) {
-          await backupFiles(achievementsExtractDir, achievementsInstallPath);
+        // Find all achievement files (ignore folder structure from archive)
+        const allExtractedFiles = await getAllFiles(achievementsExtractDir);
+        const achievementFilesToCopy: { src: string; dest: string }[] = [];
+
+        for (const relativePath of allExtractedFiles) {
+          const fileName = path.basename(relativePath);
+          const srcPath = path.join(achievementsExtractDir, relativePath);
+          const destPath = path.join(achievementsInstallPath, fileName);
+          achievementFilesToCopy.push({ src: srcPath, dest: destPath });
         }
-        await copyDirectory(achievementsExtractDir, achievementsInstallPath);
+
+        // Backup original files (not already installed translations)
+        if (createBackup) {
+          for (const { dest } of achievementFilesToCopy) {
+            const backupPath = dest + BACKUP_SUFFIX;
+            // Only backup if original exists and backup doesn't exist yet
+            if (fs.existsSync(dest) && !fs.existsSync(backupPath)) {
+              await fs.promises.copyFile(dest, backupPath);
+              console.log(`[Installer] Backed up: ${path.basename(dest)}`);
+            }
+          }
+        }
+
+        // Copy files directly to achievements folder (flatten structure)
+        for (const { src, dest } of achievementFilesToCopy) {
+          await fs.promises.copyFile(src, dest);
+          console.log(`[Installer] Copied achievement file: ${path.basename(dest)}`);
+        }
+
+        // Update achievementsFiles to contain only filenames (for installation info)
+        achievementsFiles = achievementFilesToCopy.map(({ dest }) => path.basename(dest));
       }
     }
 

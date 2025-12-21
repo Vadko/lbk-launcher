@@ -152,14 +152,12 @@ export const MainContent: React.FC = () => {
   }, [selectedGame, isInstalling, isPaused, setInstallationProgress]);
 
   const handleSupport = useCallback(() => {
-    if (!selectedGame) return;
-
-    const supportUrl = selectedGame.support_url || 'https://github.com/LittleBitUA';
+    if (!selectedGame?.support_url) return;
 
     if (window.electronAPI) {
-      window.electronAPI.openExternal(supportUrl);
+      window.electronAPI.openExternal(selectedGame.support_url);
     } else {
-      window.open(supportUrl, '_blank');
+      window.open(selectedGame.support_url, '_blank');
     }
   }, [selectedGame]);
 
@@ -330,9 +328,11 @@ export const MainContent: React.FC = () => {
                 data-gamepad-action
               />
             )}
-            <Button variant="pink" icon={<Heart size={20} />} onClick={handleSupport} data-gamepad-action>
-              Підтримати переклад
-            </Button>
+            {selectedGame.support_url && (
+              <Button variant="pink" icon={<Heart size={20} />} onClick={handleSupport} data-gamepad-action>
+                Підтримати переклад
+              </Button>
+            )}
           </div>
         </div>
 
@@ -443,14 +443,16 @@ export const MainContent: React.FC = () => {
           </div>
         )}
 
-        <div className="glass-card mb-6">
-          <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-            Про українізатор
-          </h3>
-          <p className="text-text-muted leading-relaxed whitespace-pre-line">
-            {selectedGame.description}
-          </p>
-        </div>
+        {selectedGame.description && (
+          <div className="glass-card mb-6">
+            <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+              Про українізатор
+            </h3>
+            <p className="text-text-muted leading-relaxed whitespace-pre-line">
+              {selectedGame.description}
+            </p>
+          </div>
+        )}
 
         {selectedGame.game_description && (
           <div className="glass-card mb-6">

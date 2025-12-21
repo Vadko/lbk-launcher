@@ -10,8 +10,7 @@ export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = (
   isUpdateAvailable,
   installedVersion,
   newVersion,
-}) => {
-  return (
+}) => (
     <div className="glass-card">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -38,4 +37,3 @@ export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = (
       </div>
     </div>
   );
-};

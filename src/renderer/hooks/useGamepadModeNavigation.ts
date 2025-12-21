@@ -113,7 +113,7 @@ function playBackSound(): void {
  * - A: Select game / Confirm in modal
  * - B: Back / Cancel in modal
  */
-export function useGamepadModeNavigation(enabled: boolean = true) {
+export function useGamepadModeNavigation(enabled = true) {
   const lastInputRef = useRef<Record<string, number>>({});
   const gameCardsRef = useRef<HTMLElement[]>([]);
   const [gamepads, setGamepads] = useState<Record<number, Gamepad>>({});
@@ -271,7 +271,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
       if (focusableElements.length === 0) return;
 
       const currentFocused = document.activeElement as HTMLElement;
-      let currentIndex = focusableElements.indexOf(currentFocused);
+      const currentIndex = focusableElements.indexOf(currentFocused);
 
       // If nothing focused in modal, focus first element
       if (currentIndex === -1) {
@@ -471,9 +471,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
   }, []);
 
   // Check if dropdown is open
-  const isDropdownOpen = useCallback((): boolean => {
-    return !!document.querySelector('[data-gamepad-dropdown]');
-  }, []);
+  const isDropdownOpen = useCallback((): boolean => !!document.querySelector('[data-gamepad-dropdown]'), []);
 
   // Handle header navigation
   const handleHeaderNavigation = useCallback(
@@ -484,7 +482,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
         if (dropdownItems.length === 0) return;
 
         const currentFocused = document.activeElement as HTMLElement;
-        let currentIndex = dropdownItems.indexOf(currentFocused);
+        const currentIndex = dropdownItems.indexOf(currentFocused);
 
         // If nothing focused in dropdown, focus first item
         if (currentIndex === -1) {
@@ -542,7 +540,7 @@ export function useGamepadModeNavigation(enabled: boolean = true) {
 
       // Find currently focused item
       const currentFocused = document.activeElement as HTMLElement;
-      let currentIndex = items.findIndex(
+      const currentIndex = items.findIndex(
         (item) => item.contains(currentFocused) || item === currentFocused
       );
 

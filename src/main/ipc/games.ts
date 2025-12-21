@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron';
 import { fetchGames, fetchGamesByIds, findGamesByInstallPaths, fetchTeams } from '../api';
-import { GetGamesParams, Game } from '../../shared/types';
+import type { GetGamesParams, Game } from '../../shared/types';
 import {
   getFirstAvailableGamePath,
   getAllInstalledGamePaths,
@@ -15,16 +15,12 @@ export function setupGamesHandlers(): void {
   });
 
   // Machine ID - for subscription tracking
-  ipcMain.handle('get-machine-id', () => {
-    return getMachineId();
-  });
+  ipcMain.handle('get-machine-id', () => getMachineId());
 
   // Track subscription (subscribe/unsubscribe) from renderer
   ipcMain.handle(
     'track-subscription',
-    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => {
-      return trackSubscription(gameId, action);
-    }
+    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => trackSubscription(gameId, action)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД

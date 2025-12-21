@@ -12,6 +12,7 @@ interface SettingsStore {
   autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
   liquidGlassEnabled: boolean;
+  christmasEffectsEnabled: boolean;
   isSettingsModalOpen: boolean;
   saveLogsToFile: boolean;
   sidebarWidth: number;
@@ -23,6 +24,7 @@ interface SettingsStore {
   toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
   toggleLiquidGlass: () => void;
+  toggleChristmasEffects: () => void;
   toggleSaveLogsToFile: () => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
@@ -40,6 +42,7 @@ export const useSettingsStore = create<SettingsStore>()(
       autoDetectInstalledGames: true,
       showAdultGames: false,
       liquidGlassEnabled: true,
+      christmasEffectsEnabled: true,
       isSettingsModalOpen: false,
       saveLogsToFile: false,
       sidebarWidth: 320,
@@ -70,6 +73,9 @@ export const useSettingsStore = create<SettingsStore>()(
 
       toggleLiquidGlass: () =>
         set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled })),
+
+      toggleChristmasEffects: () =>
+        set((state) => ({ christmasEffectsEnabled: !state.christmasEffectsEnabled })),
 
       toggleSaveLogsToFile: () =>
         set((state) => ({ saveLogsToFile: !state.saveLogsToFile })),

@@ -19,8 +19,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
   onPause,
   onResume,
   onCancel,
-}) => {
-  return (
+}) => (
     <>
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium text-text-main">
@@ -99,4 +98,3 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       </div>
     </>
   );
-};

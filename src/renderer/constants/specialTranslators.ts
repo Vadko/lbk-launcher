@@ -8,7 +8,7 @@ export interface SpecialTranslator {
 const SPECIAL_DESCRIPTION = 'Допомагає розвивати LB Launcher з перших днів';
 
 export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
-  { name: 'Владислав', team: 'Sent_Dez', description: SPECIAL_DESCRIPTION },
+  { name: 'Владислав', team: 'Sent_DeZ', description: SPECIAL_DESCRIPTION },
   { name: 'Вена', team: 'Ліниві ШІ', description: SPECIAL_DESCRIPTION },
   { name: 'Віталій', team: 'GameGlobe Localization', description: SPECIAL_DESCRIPTION },
   { name: 'Євгеній', description: SPECIAL_DESCRIPTION },
@@ -42,6 +42,4 @@ export const getSpecialTranslatorInfo = (authorName: string): SpecialTranslator 
 };
 
 // Check if a single author name is a special translator
-export const isAuthorSpecial = (authorName: string): boolean => {
-  return getSpecialTranslatorInfo(authorName) !== null;
-};
+export const isAuthorSpecial = (authorName: string): boolean => getSpecialTranslatorInfo(authorName) !== null;

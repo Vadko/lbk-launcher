@@ -18,8 +18,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   showCloseButton = true,
-}) => {
-  return (
+}) => (
     <AnimatePresence>
       {isOpen && (
         <div
@@ -80,4 +79,3 @@ export const Modal: React.FC<ModalProps> = ({
       )}
     </AnimatePresence>
   );
-};

@@ -170,7 +170,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
             `[Installer] Found previous installation at custom path: ${info.gamePath}`
           );
           return info;
-        } else {
+        } 
           // Cache is stale - game folder or translation was removed
           console.log('[Installer] Cache is stale, removing cached installation info');
           try {
@@ -178,7 +178,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
           } catch {
             // Ignore deletion errors
           }
-        }
+        
       } catch (error) {
         console.warn('[Installer] Failed to read previous installation info:', error);
       }

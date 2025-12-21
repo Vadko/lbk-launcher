@@ -10,6 +10,7 @@ import { ConfirmModal } from './components/Modal/ConfirmModal';
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { NotificationModal } from './components/Notifications/NotificationModal';
 import { GamepadHints } from './components/GamepadHints/GamepadHints';
+import { ChristmasEffects } from './components/ChristmasEffects/ChristmasEffects';
 import { useStore } from './store/useStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
@@ -117,10 +118,10 @@ export const App: React.FC = () => {
 
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
-    } else {
+    } 
       root.setAttribute('data-theme', theme);
       console.log('[Theme] Applied theme:', theme);
-    }
+    
   }, [theme]);
 
   useEffect(() => {
@@ -258,6 +259,7 @@ export const App: React.FC = () => {
       {/* Only show ambient background when liquid glass is not active */}
       {!isLiquidGlassActive && <AmbientBackground />}
       <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
+      <ChristmasEffects />
 
       {/* Main layout - changes based on gamepad mode */}
       {isGamepadMode ? (

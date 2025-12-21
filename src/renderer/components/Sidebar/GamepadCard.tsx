@@ -37,13 +37,16 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Reset state when game changes
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
   useEffect(() => {
     setImageLoading(true);
     setImageError(false);
     setUseBanner(false);
   }, [game.id]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Check if image is already cached/loaded
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional check after render */
   useEffect(() => {
     const img = imgRef.current;
     if (img && img.complete && img.naturalWidth > 0) {
@@ -55,6 +58,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       }
     }
   }, [imageUrl, useBanner, bannerUrl]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;

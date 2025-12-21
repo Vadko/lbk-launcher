@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
 import {
   getSteamPath,
   invalidateSteamGamesCache,

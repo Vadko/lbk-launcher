@@ -249,9 +249,7 @@ export function setupWindowControls(): void {
     return { success: true };
   });
 
-  ipcMain.handle('logger:is-enabled', () => {
-    return isSaveLogsEnabled();
-  });
+  ipcMain.handle('logger:is-enabled', () => isSaveLogsEnabled());
 
   ipcMain.handle('logger:open-logs-folder', async () => {
     try {

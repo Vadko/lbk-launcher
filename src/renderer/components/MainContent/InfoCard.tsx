@@ -1,5 +1,5 @@
 import React from 'react';
-import { Game } from '../../types/game';
+import type { Game } from '../../types/game';
 import {
   Gamepad2,
   Calendar,

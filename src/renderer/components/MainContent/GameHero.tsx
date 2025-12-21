@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { Game } from '../../types/game';
+import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 
 interface GameHeroProps {
@@ -64,11 +64,13 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   const [shouldRoundLogo, setShouldRoundLogo] = useState(false);
 
   // Reset state when game changes
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
   useEffect(() => {
     setBannerError(false);
     setLogoError(false);
     setShouldRoundLogo(false);
   }, [game.id]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Перевірити прозорість при завантаженні лого
   const handleLogoLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {

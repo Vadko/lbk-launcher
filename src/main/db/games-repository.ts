@@ -8,15 +8,26 @@ import type {
 import { getDatabase } from './database';
 
 /**
+ * Поля, які не зберігаються в локальній БД
+ */
+type ExcludedLocalFields =
+  | 'archive_file_list'
+  | 'voice_archive_file_list'
+  | 'achievements_archive_file_list'
+  | 'epic_archive_file_list';
+
+/**
  * Параметри для вставки гри в БД (локальну SQLite)
  * Mapped type на основі Supabase Database типів, але з перетвореннями для SQLite:
  * - boolean -> number (0/1)
  * - arrays/objects -> JSON string
+ * - Виключені поля file_list (окрім epic_archive_file_list)
  */
 type GameInsertParams = {
-  [K in keyof SupabaseDatabase['public']['Tables']['games']['Row']]: K extends
-    | 'approved'
-    | 'is_adult'
+  [K in keyof Omit<
+    SupabaseDatabase['public']['Tables']['games']['Row'],
+    ExcludedLocalFields
+  >]: K extends 'approved' | 'is_adult'
     ? number // boolean перетворюється на 0/1 для SQLite
     : K extends 'platforms' | 'install_paths'
       ? string | null // JSON.stringify для SQLite
@@ -105,13 +116,9 @@ export class GamesRepository {
       achievements_archive_hash: game.achievements_archive_hash ?? null,
       achievements_archive_path: game.achievements_archive_path ?? null,
       achievements_archive_size: game.achievements_archive_size ?? null,
-      achievements_archive_file_list: game.achievements_archive_file_list ?? null,
       epic_archive_hash: game.epic_archive_hash ?? null,
       epic_archive_path: game.epic_archive_path ?? null,
       epic_archive_size: game.epic_archive_size ?? null,
-      epic_archive_file_list: game.epic_archive_file_list ?? null,
-      archive_file_list: game.archive_file_list ?? null,
-      voice_archive_file_list: game.voice_archive_file_list ?? null,
       steam_app_id: game.steam_app_id ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
@@ -243,11 +250,11 @@ export class GamesRepository {
       // "GameName" -> "gamename"
       if (p.includes('steamapps/common/')) {
         return p.split('steamapps/common/')[1];
-      } else if (p.includes('steamapps\\common\\')) {
+      } if (p.includes('steamapps\\common\\')) {
         return p.split('steamapps\\common\\')[1];
-      } else if (p.includes('common/')) {
+      } if (p.includes('common/')) {
         return p.split('common/')[1];
-      } else if (p.includes('common\\')) {
+      } if (p.includes('common\\')) {
         return p.split('common\\')[1];
       }
       return p;
@@ -288,7 +295,7 @@ export class GamesRepository {
         thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
         voice_archive_hash, voice_archive_path, voice_archive_size,
         voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
-        epic_archive_hash, epic_archive_path, epic_archive_size, epic_archive_file_list,
+        epic_archive_hash, epic_archive_path, epic_archive_size,
         steam_app_id, website, youtube
       ) VALUES (
         @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -299,7 +306,7 @@ export class GamesRepository {
         @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
         @voice_archive_hash, @voice_archive_path, @voice_archive_size,
         @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
-        @epic_archive_hash, @epic_archive_path, @epic_archive_size, @epic_archive_file_list,
+        @epic_archive_hash, @epic_archive_path, @epic_archive_size,
         @steam_app_id, @website, @youtube
       )
     `);
@@ -322,7 +329,7 @@ export class GamesRepository {
           thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
           voice_archive_hash, voice_archive_path, voice_archive_size,
           voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
-          epic_archive_hash, epic_archive_path, epic_archive_size, epic_archive_file_list,
+          epic_archive_hash, epic_archive_path, epic_archive_size,
           steam_app_id, website, youtube
         ) VALUES (
           @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -333,7 +340,7 @@ export class GamesRepository {
           @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
           @voice_archive_hash, @voice_archive_path, @voice_archive_size,
           @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
-          @epic_archive_hash, @epic_archive_path, @epic_archive_size, @epic_archive_file_list,
+          @epic_archive_hash, @epic_archive_path, @epic_archive_size,
           @steam_app_id, @website, @youtube
         )
       `);

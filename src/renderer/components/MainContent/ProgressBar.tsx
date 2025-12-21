@@ -6,8 +6,7 @@ interface ProgressBarProps {
   color: string;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ label, value, color }) => {
-  return (
+export const ProgressBar: React.FC<ProgressBarProps> = ({ label, value, color }) => (
     <div className="mb-4 last:mb-0">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium text-text-muted">{label}</span>
@@ -25,4 +24,3 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ label, value, color })
       </div>
     </div>
   );
-};

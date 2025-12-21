@@ -157,7 +157,6 @@ const migrations: Migration[] = [
           ALTER TABLE games ADD COLUMN epic_archive_hash TEXT;
           ALTER TABLE games ADD COLUMN epic_archive_path TEXT;
           ALTER TABLE games ADD COLUMN epic_archive_size TEXT;
-          ALTER TABLE games ADD COLUMN epic_archive_file_list TEXT;
         `);
         console.log('[Migrations] Completed: add_epic_archive_columns');
       }

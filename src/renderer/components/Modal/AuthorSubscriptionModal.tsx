@@ -37,6 +37,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   const [selectedAuthors, setSelectedAuthors] = useState<Set<string>>(new Set());
 
   // Initialize selection when modal opens
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
   useEffect(() => {
     if (isOpen && authors.length > 0) {
       // Select all authors that user is not already subscribed to
@@ -46,11 +47,10 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
       setSelectedAuthors(initialSelection);
     }
   }, [isOpen, authors, isSubscribedToTeam]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Count how many authors are not yet subscribed
-  const unsubscribedCount = useMemo(() => {
-    return authors.filter((author) => !isSubscribedToTeam(author)).length;
-  }, [authors, isSubscribedToTeam]);
+  const unsubscribedCount = useMemo(() => authors.filter((author) => !isSubscribedToTeam(author)).length, [authors, isSubscribedToTeam]);
 
   const toggleAuthor = (author: string) => {
     setSelectedAuthors((prev) => {

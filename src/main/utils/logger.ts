@@ -32,7 +32,7 @@ function formatLogMessage(level: string, message: string, ...args: unknown[]): s
   const timestamp = new Date().toISOString();
   const formattedArgs =
     args.length > 0
-      ? ' ' +
+      ? ` ${ 
         args
           .map((arg) => {
             if (typeof arg === 'object') {
@@ -44,7 +44,7 @@ function formatLogMessage(level: string, message: string, ...args: unknown[]): s
             }
             return String(arg);
           })
-          .join(' ')
+          .join(' ')}`
       : '';
   return `[${timestamp}] [${level}] ${message}${formattedArgs}\n`;
 }

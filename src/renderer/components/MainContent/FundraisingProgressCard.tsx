@@ -12,14 +12,12 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
 }) => {
   const percentage = goal > 0 ? Math.min(Math.round((current / goal) * 100), 100) : 0;
 
-  const formatAmount = (amount: number): string => {
-    return new Intl.NumberFormat('uk-UA', {
+  const formatAmount = (amount: number): string => new Intl.NumberFormat('uk-UA', {
       style: 'currency',
       currency: 'UAH',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
-  };
 
   return (
     <div className="glass-card">

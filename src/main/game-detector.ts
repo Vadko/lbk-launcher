@@ -297,11 +297,11 @@ function findSteamGame(gameFolderName: string): string | null {
       if (fs.existsSync(gamePathFromManifest)) {
         console.log(`[GameDetector] ✓ Game found via appmanifest: ${gamePathFromManifest}`);
         return gamePathFromManifest;
-      } else {
+      } 
         console.log(
           `[GameDetector] Appmanifest points to ${gamePathFromManifest} but path doesn't exist`
         );
-      }
+      
     } else {
       console.log(
         `[GameDetector] Path found but basename mismatch: expected "${normalizedFolderName}", got "${actualBasename}"`

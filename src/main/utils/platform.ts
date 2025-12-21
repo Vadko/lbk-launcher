@@ -41,6 +41,6 @@ export function supportsMacOSLiquidGlass(): boolean {
   return macOSVersion >= 25;
 }
 
-export function shouldEnableLiquidGlass(userPreference: boolean = true): boolean {
+export function shouldEnableLiquidGlass(userPreference = true): boolean {
   return supportsMacOSLiquidGlass() && userPreference;
 }

@@ -7,8 +7,7 @@ interface SearchBarProps {
   onChange: (value: string) => void;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => {
-  return (
+export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => (
     <Input
       value={value}
       onChange={onChange}
@@ -16,4 +15,3 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => {
       icon={<Search size={18} className="text-text-muted" />}
     />
   );
-};

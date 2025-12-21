@@ -47,6 +47,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const [installAchievements, setInstallAchievements] = useState(true);
 
   // Reset state when dialog opens
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
   useEffect(() => {
     if (isOpen) {
       setCreateBackup(defaultCreateBackup);
@@ -63,11 +64,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     isAchievementsInstalled,
     isReinstall,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Calculate what will be downloaded/removed
   const willDownloadVoice = hasVoiceArchive && installVoice && !isVoiceInstalled;
   const willDownloadAchievements =
     hasAchievementsArchive && installAchievements && !isAchievementsInstalled;
+  const willReinstallAchievements =
+    hasAchievementsArchive && installAchievements && isAchievementsInstalled && isReinstall;
   const willRemoveVoice = hasVoiceArchive && !installVoice && isVoiceInstalled;
   const willRemoveAchievements =
     hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
@@ -101,12 +105,12 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       sizes.push(game.voice_archive_size ?? null);
     }
 
-    if (willDownloadAchievements) {
+    if (willDownloadAchievements || willReinstallAchievements) {
       sizes.push(game.achievements_archive_size ?? null);
     }
 
     return calculateTotalSize(sizes.filter(Boolean) as string[]);
-  }, [game, isReinstall, installText, willDownloadVoice, willDownloadAchievements]);
+  }, [game, isReinstall, installText, willDownloadVoice, willDownloadAchievements, willReinstallAchievements]);
 
   // Compute approximate backup size (same as what will be installed)
   const backupSize = useMemo(() => {
@@ -139,6 +143,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     ? installText ||
       willDownloadVoice ||
       willDownloadAchievements ||
+      willReinstallAchievements ||
       willRemoveVoice ||
       willRemoveAchievements
     : installText ||
@@ -399,6 +404,12 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                   <p className="flex items-center gap-1 mt-1 text-green-400">
                     <Archive size={14} />
                     <span>Буде завантажено</span>
+                  </p>
+                )}
+                {willReinstallAchievements && (
+                  <p className="flex items-center gap-1 mt-1 text-green-400">
+                    <Archive size={14} />
+                    <span>Буде перевстановлено</span>
                   </p>
                 )}
               </div>

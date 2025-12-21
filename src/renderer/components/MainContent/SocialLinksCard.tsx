@@ -1,5 +1,5 @@
 import React from 'react';
-import { Game } from '../../types/game';
+import type { Game } from '../../types/game';
 import { Globe, Send, Youtube } from 'lucide-react';
 import { XIcon } from '../Icons/XIcon';
 import { DiscordIcon } from '../Icons/DiscordIcon';

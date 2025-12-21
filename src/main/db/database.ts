@@ -119,7 +119,10 @@ export class DatabaseManager {
         achievements_archive_size TEXT,
         steam_app_id INTEGER,
         website TEXT,
-        youtube TEXT
+        youtube TEXT,
+        epic_archive_hash TEXT,
+        epic_archive_path TEXT,
+        epic_archive_size TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);

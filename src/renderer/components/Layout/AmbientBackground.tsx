@@ -1,7 +1,6 @@
 import React from 'react';
 
-export const AmbientBackground: React.FC = () => {
-  return (
+export const AmbientBackground: React.FC = () => (
     <div className="fixed inset-0 z-[-1] overflow-hidden">
       {/* Gradient blobs */}
       <div
@@ -34,4 +33,3 @@ export const AmbientBackground: React.FC = () => {
       />
     </div>
   );
-};

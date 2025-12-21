@@ -1,11 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { app, BrowserWindow } from 'electron';
+import { app, type BrowserWindow } from 'electron';
 import { invalidateInstalledGameIdsCache } from './installer';
 
 let watcher: fs.FSWatcher | null = null;
 let debounceTimer: NodeJS.Timeout | null = null;
-let pendingChanges = new Set<string>();
+const pendingChanges = new Set<string>();
 
 /**
  * Start watching installation-cache directory for changes

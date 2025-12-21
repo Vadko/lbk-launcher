@@ -162,6 +162,4 @@ ipcMain.handle('liquid-glass:toggle', async (_event, enabled: boolean) => {
 });
 
 // IPC handler to check if liquid glass is supported
-ipcMain.handle('liquid-glass:is-supported', () => {
-  return isLiquidGlassSupported();
-});
+ipcMain.handle('liquid-glass:is-supported', () => isLiquidGlassSupported());

@@ -14,8 +14,7 @@ export const Input: React.FC<InputProps> = ({
   placeholder,
   icon,
   className = '',
-}) => {
-  return (
+}) => (
     <div className={`relative ${className}`}>
       {icon && (
         <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
@@ -33,4 +32,3 @@ export const Input: React.FC<InputProps> = ({
       />
     </div>
   );
-};
