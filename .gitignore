@@ -14,6 +14,12 @@ build/
 .env
 .env.local
 
+# Apple certificates
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+
 # IDE
 .vscode/
 .idea/

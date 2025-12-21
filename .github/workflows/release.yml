@@ -121,12 +121,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm dist:linux --publish always
 
+      - name: Setup Apple API Key for notarization
+        if: matrix.os == 'macos-latest'
+        run: |
+          set +x
+          echo "${{ secrets.APPLE_API_KEY }}" > /tmp/apple-api-key.p8
+          chmod 600 /tmp/apple-api-key.p8
+
       - name: Build and publish (macOS)
         if: matrix.os == 'macos-latest'
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_R2_IMAGES_URL: ${{ secrets.VITE_R2_IMAGES_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code Signing
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # Notarization (API Key)
+          APPLE_API_KEY: /tmp/apple-api-key.p8
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: pnpm dist:mac --publish always

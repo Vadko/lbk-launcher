@@ -100,13 +100,15 @@ module.exports = {
     ],
     category: 'public.app-category.utilities',
     icon: 'resources/icon.icns',
-    hardenedRuntime: false,  // Вимкнено без сертифіката
+    hardenedRuntime: true,
     gatekeeperAssess: false,
     darkModeSupport: true,
     minimumSystemVersion: '10.13.0',
     artifactName: '${productName}-${version}-${arch}.${ext}',
-    identity: null, 
-    notarize: false, // Вимкнути нотаризацію
+    // Підписування: використовує CSC_LINK та CSC_KEY_PASSWORD з env
+    entitlements: 'resources/entitlements.mac.plist',
+    entitlementsInherit: 'resources/entitlements.mac.plist',
+    notarize: true,
   },
 
   dmg: {
