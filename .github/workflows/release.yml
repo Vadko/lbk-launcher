@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Generate release notes from commits
-  release-notes:
+  # Generate changelog and create release
+  create-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,98 +23,56 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate release notes
+      - name: Build changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          mode: "COMMIT"
+          configurationJson: |
+            {
+              "template": "## Що нового у версії #{{TO_TAG}}\n\n#{{CHANGELOG}}",
+              "pr_template": "- #{{TITLE}}",
+              "categories": [
+                {
+                  "title": "### ✨ Нові можливості",
+                  "labels": ["feat"]
+                },
+                {
+                  "title": "### 🐛 Виправлення",
+                  "labels": ["fix"]
+                },
+                {
+                  "title": "### 🔧 Інші зміни",
+                  "labels": ["refactor", "perf", "docs", "style", "test"]
+                }
+              ],
+              "label_extractor": [
+                {
+                  "pattern": "^(feat|fix|refactor|perf|docs|style|test|chore|ci|build)(\\(.+\\))?:",
+                  "target": "$1"
+                }
+              ],
+              "ignore_labels": ["chore", "ci", "build"],
+              "empty_template": "Немає змін"
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get current and previous tags
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${CURRENT_TAG}^ 2>/dev/null || echo "")
 
-          echo "Current tag: $CURRENT_TAG"
-          echo "Previous tag: $PREVIOUS_TAG"
-
-          # Generate changelog from commits with full body
-          if [ -n "$PREVIOUS_TAG" ]; then
-            RANGE="${PREVIOUS_TAG}..${CURRENT_TAG}"
-          else
-            RANGE="${CURRENT_TAG}"
-          fi
-
-          # Collect features, fixes, and other changes
-          FEATURES=""
-          FIXES=""
-          OTHER=""
-
-          while IFS= read -r line; do
-            if [[ "$line" == "---COMMIT---" ]]; then
-              CURRENT_TITLE=""
-              CURRENT_BODY=""
-              IN_BODY=false
-            elif [[ "$line" == "---BODY---" ]]; then
-              IN_BODY=true
-            elif [[ "$line" == "---END---" ]]; then
-              # Process the commit
-              if [[ -n "$CURRENT_TITLE" ]]; then
-                # Clean title from conventional commit prefix
-                CLEAN_TITLE=$(echo "$CURRENT_TITLE" | sed -E 's/^(feat|fix|chore|docs|style|refactor|perf|test)(\(.+\))?:\s*//')
-
-                # Format body as sub-items if exists
-                BODY_ITEMS=""
-                if [[ -n "$CURRENT_BODY" ]]; then
-                  while IFS= read -r body_line; do
-                    # Skip empty lines and lines starting with emoji (already formatted)
-                    if [[ -n "$body_line" && ! "$body_line" =~ ^[[:space:]]*$ ]]; then
-                      # Remove leading "- " if present
-                      body_line=$(echo "$body_line" | sed 's/^- //')
-                      BODY_ITEMS="${BODY_ITEMS}  - ${body_line}"$'\n'
-                    fi
-                  done <<< "$CURRENT_BODY"
-                fi
-
-                # Categorize by type
-                if [[ "$CURRENT_TITLE" =~ ^feat ]]; then
-                  FEATURES="${FEATURES}• ${CLEAN_TITLE}"$'\n'"${BODY_ITEMS}"
-                elif [[ "$CURRENT_TITLE" =~ ^fix ]]; then
-                  FIXES="${FIXES}• ${CLEAN_TITLE}"$'\n'"${BODY_ITEMS}"
-                else
-                  OTHER="${OTHER}• ${CLEAN_TITLE}"$'\n'"${BODY_ITEMS}"
-                fi
-              fi
-            elif [[ "$IN_BODY" == true ]]; then
-              CURRENT_BODY="${CURRENT_BODY}${line}"$'\n'
-            else
-              CURRENT_TITLE="$line"
-            fi
-          done < <(git log ${RANGE} --pretty=format:"---COMMIT---%n%s%n---BODY---%n%b%n---END---" --no-merges)
-
-          # Build release notes
-          NOTES="## Що нового у версії ${CURRENT_TAG#v}"$'\n\n'
-
-          if [[ -n "$FEATURES" ]]; then
-            NOTES="${NOTES}### ✨ Нові можливості"$'\n\n'"${FEATURES}"$'\n'
-          fi
-
-          if [[ -n "$FIXES" ]]; then
-            NOTES="${NOTES}### 🐛 Виправлення"$'\n\n'"${FIXES}"$'\n'
-          fi
-
-          if [[ -n "$OTHER" ]]; then
-            NOTES="${NOTES}### 🔧 Інші зміни"$'\n\n'"${OTHER}"$'\n'
-          fi
-
-          echo "Release notes:"
-          echo "$NOTES"
-
-          # Update release with notes
-          gh release edit "$CURRENT_TAG" --notes "$NOTES" 2>/dev/null || \
-            gh release create "$CURRENT_TAG" --notes "$NOTES" --draft
+          # Create release with generated changelog
+          gh release create "$CURRENT_TAG" --notes "${{ steps.changelog.outputs.changelog }}" --draft 2>/dev/null || \
+            gh release edit "$CURRENT_TAG" --notes "${{ steps.changelog.outputs.changelog }}"
 
   release:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     environment: production
-    needs: release-notes
+    needs: create-release
 
     strategy:
       fail-fast: false
