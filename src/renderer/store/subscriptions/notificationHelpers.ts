@@ -1,6 +1,18 @@
 import type { Notification, ToastNotification } from './types';
+import { playNotificationSound } from '../../utils/notificationSounds';
+import { useSettingsStore } from '../useSettingsStore';
 
 const TOAST_DURATION = 8000; // 8 seconds
+
+/**
+ * Play notification sound if enabled in settings
+ */
+export function playNotificationSoundIfEnabled(type: ToastNotification['type']): void {
+  const { notificationSoundsEnabled } = useSettingsStore.getState();
+  if (notificationSoundsEnabled) {
+    playNotificationSound(type);
+  }
+}
 
 /**
  * Generate notification message based on type
@@ -51,6 +63,7 @@ export function createToast(
   return {
     id: notification.id,
     type: notification.type,
+    gameId: notification.gameId,
     gameName: notification.gameName,
     message,
     timestamp: Date.now(),
@@ -62,7 +75,8 @@ export function createToast(
  */
 export async function showSystemNotificationIfHidden(
   title: string,
-  body: string
+  body: string,
+  gameId?: string
 ): Promise<void> {
   if (
     !window.windowControls?.isVisible ||
@@ -74,7 +88,7 @@ export async function showSystemNotificationIfHidden(
   try {
     const isVisible = await window.windowControls.isVisible();
     if (!isVisible) {
-      await window.windowControls.showSystemNotification({ title, body });
+      await window.windowControls.showSystemNotification({ title, body, gameId });
     }
   } catch (error) {
     console.error('[Notification] Failed to show system notification:', error);

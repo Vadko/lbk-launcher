@@ -17,6 +17,7 @@ export interface Notification extends BaseNotification {
 
 export interface ToastNotification extends BaseNotification {
   message: string;
+  gameId: string;
 }
 
 export type GameProgress = Pick<

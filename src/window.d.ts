@@ -31,7 +31,9 @@ interface Window {
     showSystemNotification: (options: {
       title: string;
       body: string;
+      gameId?: string;
     }) => Promise<boolean>;
+    onNavigateToGame: (callback: (gameId: string) => void) => () => void;
     clearCacheAndRestart: () => Promise<{ success: boolean; error?: string }>;
   };
 }

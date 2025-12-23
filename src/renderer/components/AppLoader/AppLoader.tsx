@@ -23,14 +23,14 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="fixed inset-0 bg-[#0a0a0f] flex flex-col items-center justify-center z-[9999] overflow-hidden"
+      className="fixed inset-0 bg-bg-dark flex flex-col items-center justify-center z-[9999] overflow-hidden"
     >
       {/* Subtle gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-blue-950/20" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neon-blue/10" />
 
       {/* Animated glow behind logo */}
       <motion.div
-        className="absolute w-64 h-64 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-3xl"
+        className="absolute w-64 h-64 rounded-full bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 blur-3xl"
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.3, 0.5, 0.3],
@@ -63,9 +63,9 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2"
+          className="text-3xl font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent mb-2"
         >
-          LittleBit
+          Little Bit
         </motion.h1>
 
         {/* Tagline */}
@@ -73,7 +73,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.6 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="text-white/60 text-sm mb-12"
+          className="text-text-muted text-sm mb-12"
         >
           Українізатор ігор
         </motion.p>
@@ -92,7 +92,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"
+                    className="w-2 h-2 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple"
                     animate={{
                       scale: [1, 1.3, 1],
                       opacity: [0.5, 1, 0.5],
@@ -107,7 +107,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
                 ))}
               </div>
               {/* Status text */}
-              <span className="text-white/40 text-xs tracking-wider uppercase">
+              <span className="text-text-muted/70 text-xs tracking-wider uppercase">
                 {getStatusText()}
               </span>
             </>
@@ -129,10 +129,10 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
                   />
                 </svg>
               </div>
-              <span className="text-red-400/80 text-xs tracking-wider uppercase">
+              <span className="text-red-400 text-xs tracking-wider uppercase">
                 {getStatusText()}
               </span>
-              <span className="text-white/30 text-xs mt-1">
+              <span className="text-text-muted/50 text-xs mt-1">
                 Перезапустіть застосунок
               </span>
             </>
@@ -142,10 +142,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
 
       {/* Bottom decoration line */}
       <motion.div
-        className="absolute bottom-0 left-0 right-0 h-px"
-        style={{
-          background: 'linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3), transparent)',
-        }}
+        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-blue/30 to-transparent"
         animate={{
           opacity: [0.3, 0.6, 0.3],
         }}

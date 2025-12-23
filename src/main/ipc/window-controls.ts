@@ -126,7 +126,7 @@ export function setupWindowControls(): void {
   // Show system notification (used when app is in tray)
   ipcMain.handle(
     'show-system-notification',
-    (_, options: { title: string; body: string }) => {
+    (_, options: { title: string; body: string; gameId?: string }) => {
       if (!Notification.isSupported()) {
         console.log('[Notification] System notifications not supported');
         return false;
@@ -140,9 +140,16 @@ export function setupWindowControls(): void {
         silent: false,
       });
 
-      // Click on notification opens the app
+      // Click on notification opens the app and navigates to game
       notification.on('click', () => {
         showAndFocusWindow();
+        // If gameId is provided, send it to renderer to navigate to the game
+        if (options.gameId) {
+          const mainWindow = getMainWindow();
+          if (mainWindow) {
+            mainWindow.webContents.send('navigate-to-game', options.gameId);
+          }
+        }
       });
 
       notification.show();

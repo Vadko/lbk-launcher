@@ -5,7 +5,6 @@ import type {
   InstallationInfo,
   DetectedGameInfo,
 } from '../../shared/types';
-import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 import { useSettingsStore } from './useSettingsStore';
 
@@ -22,8 +21,6 @@ interface Store {
   // UI State
   selectedGame: Game | null;
   selectedStatuses: string[];
-  selectedAuthors: string[];
-  specialFilter: SpecialFilterType | null;
   searchQuery: string;
   isInitialLoad: boolean;
 
@@ -40,8 +37,6 @@ interface Store {
   // UI Actions
   setSelectedGame: (game: Game | null) => void;
   setSelectedStatuses: (statuses: string[]) => void;
-  setSelectedAuthors: (authors: string[]) => void;
-  setSpecialFilter: (filter: SpecialFilterType | null) => void;
   setSearchQuery: (query: string) => void;
   setInitialLoadComplete: () => void;
 
@@ -80,8 +75,6 @@ export const useStore = create<Store>((set, get) => ({
   // UI State
   selectedGame: null,
   selectedStatuses: [],
-  selectedAuthors: [],
-  specialFilter: null,
   searchQuery: '',
   isInitialLoad: true,
 
@@ -98,12 +91,7 @@ export const useStore = create<Store>((set, get) => ({
   // UI Actions
   setSelectedGame: (game) => set({ selectedGame: game }),
 
-  setSelectedStatuses: (selectedStatuses) => set({ selectedStatuses, specialFilter: null }),
-
-  setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
-
-  setSpecialFilter: (specialFilter) =>
-    set({ specialFilter, selectedStatuses: [], selectedAuthors: [] }),
+  setSelectedStatuses: (selectedStatuses) => set({ selectedStatuses }),
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 

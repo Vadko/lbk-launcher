@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw, Languages, Download, TrendingUp } from 'lucide-react';
 import { useSubscriptionsStore, type ToastNotification } from '../../store/useSubscriptionsStore';
+import { useStore } from '../../store/useStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {
@@ -66,6 +67,26 @@ const getToastTitle = (type: ToastNotification['type']) => {
 export const ToastNotifications: React.FC = () => {
   const toasts = useSubscriptionsStore((state) => state.toasts);
   const dismissToast = useSubscriptionsStore((state) => state.dismissToast);
+  const setSelectedGame = useStore((state) => state.setSelectedGame);
+
+  const handleToastClick = useCallback(async (toast: ToastNotification) => {
+    // Don't navigate for app-update notifications
+    if (toast.type === 'app-update') {
+      return;
+    }
+
+    // Load game and select it
+    try {
+      const games = await window.electronAPI.fetchGamesByIds([toast.gameId]);
+      if (games.length > 0) {
+        setSelectedGame(games[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load game:', error);
+    }
+
+    dismissToast(toast.id);
+  }, [setSelectedGame, dismissToast]);
 
   if (toasts.length === 0) return null;
 
@@ -79,7 +100,8 @@ export const ToastNotifications: React.FC = () => {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.9 }}
             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-            className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto`}
+            className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto cursor-pointer hover:scale-[1.02] transition-transform`}
+            onClick={() => handleToastClick(toast)}
           >
             <div className="flex items-start gap-3">
               <div
@@ -96,7 +118,10 @@ export const ToastNotifications: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => dismissToast(toast.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dismissToast(toast.id);
+                }}
                 className="flex-shrink-0 w-6 h-6 rounded-lg hover:bg-glass-hover transition-colors flex items-center justify-center"
               >
                 <X size={14} className="text-text-muted" />

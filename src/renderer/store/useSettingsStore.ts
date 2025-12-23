@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { SpecialFilterType } from '../components/Sidebar/types';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -17,7 +18,13 @@ interface SettingsStore {
   isSettingsModalOpen: boolean;
   saveLogsToFile: boolean;
   sidebarWidth: number;
+  specialFilter: SpecialFilterType | null;
+  selectedAuthors: string[];
+  notificationSoundsEnabled: boolean;
   setTheme: (theme: ThemeMode) => void;
+  toggleNotificationSounds: () => void;
+  setSpecialFilter: (filter: SpecialFilterType | null) => void;
+  setSelectedAuthors: (authors: string[]) => void;
   toggleAnimations: () => void;
   toggleAppUpdateNotifications: () => void;
   toggleGameUpdateNotifications: () => void;
@@ -49,8 +56,18 @@ export const useSettingsStore = create<SettingsStore>()(
       isSettingsModalOpen: false,
       saveLogsToFile: false,
       sidebarWidth: 320,
+      specialFilter: null,
+      selectedAuthors: [],
+      notificationSoundsEnabled: true,
 
       setTheme: (theme) => set({ theme }),
+
+      toggleNotificationSounds: () =>
+        set((state) => ({ notificationSoundsEnabled: !state.notificationSoundsEnabled })),
+
+      setSpecialFilter: (specialFilter) => set({ specialFilter }),
+
+      setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
 
       toggleAnimations: () =>
         set((state) => ({ animationsEnabled: !state.animationsEnabled })),
@@ -94,6 +111,23 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'littlebit-settings',
+      partialize: (state) => ({
+        theme: state.theme,
+        animationsEnabled: state.animationsEnabled,
+        appUpdateNotificationsEnabled: state.appUpdateNotificationsEnabled,
+        gameUpdateNotificationsEnabled: state.gameUpdateNotificationsEnabled,
+        createBackupBeforeInstall: state.createBackupBeforeInstall,
+        autoDetectInstalledGames: state.autoDetectInstalledGames,
+        showAdultGames: state.showAdultGames,
+        liquidGlassEnabled: state.liquidGlassEnabled,
+        christmasEffectsEnabled: state.christmasEffectsEnabled,
+        gamepadSoundsEnabled: state.gamepadSoundsEnabled,
+        saveLogsToFile: state.saveLogsToFile,
+        sidebarWidth: state.sidebarWidth,
+        specialFilter: state.specialFilter,
+        selectedAuthors: state.selectedAuthors,
+        notificationSoundsEnabled: state.notificationSoundsEnabled,
+      }),
     }
   )
 );

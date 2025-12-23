@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageCircle, RefreshCw, FolderOpen, Trash2, Heart } from 'lucide-react';
+import { MessageCircle, RefreshCw, FolderOpen, Trash2, Heart, Volume2, Play } from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Switch } from '../ui/Switch';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
+import { playNotificationSound } from '../../utils/notificationSounds';
+import { playNavigateSound, playConfirmSound, playBackSound } from '../../utils/gamepadSounds';
 
 const SettingItem = React.memo<{
   id: string;
@@ -47,6 +49,11 @@ export const SettingsModal: React.FC = () => {
   // Logging settings
   const saveLogsToFile = useSettingsStore((state) => state.saveLogsToFile);
   const toggleSaveLogsToFile = useSettingsStore((state) => state.toggleSaveLogsToFile);
+  // Sound settings
+  const notificationSoundsEnabled = useSettingsStore((state) => state.notificationSoundsEnabled);
+  const toggleNotificationSounds = useSettingsStore((state) => state.toggleNotificationSounds);
+  const gamepadSoundsEnabled = useSettingsStore((state) => state.gamepadSoundsEnabled);
+  const toggleGamepadSounds = useSettingsStore((state) => state.toggleGamepadSounds);
 
   // Check if liquid glass is supported
   const [isLiquidGlassSupported, setIsLiquidGlassSupported] = useState(false);
@@ -201,6 +208,22 @@ export const SettingsModal: React.FC = () => {
           onChange={toggleShowAdultGames}
         />
 
+        <SettingItem
+          id="notification-sounds"
+          title="Звуки сповіщень"
+          description="Програвати звуки при отриманні сповіщень про оновлення"
+          enabled={notificationSoundsEnabled}
+          onChange={toggleNotificationSounds}
+        />
+
+        <SettingItem
+          id="gamepad-sounds"
+          title="Звуки геймпада"
+          description="Програвати звуки при навігації геймпадом"
+          enabled={gamepadSoundsEnabled}
+          onChange={toggleGamepadSounds}
+        />
+
         {/* Clear cache only */}
         <button
           onClick={handleClearCacheOnly}
@@ -234,6 +257,66 @@ export const SettingsModal: React.FC = () => {
             </p>
           </div>
         </button>
+
+        {/* Sound preview section - only in dev mode */}
+        {import.meta.env.DEV && (
+          <div className="p-4 rounded-xl bg-glass border border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <Volume2 size={18} className="text-neon-blue" />
+              <h4 className="text-sm font-semibold text-text-main">Тест звуків (Dev)</h4>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-text-muted mb-2">Звуки сповіщень:</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { type: 'status-change' as const, label: 'Статус', color: 'from-green-500 to-green-600' },
+                    { type: 'version-update' as const, label: 'Версія', color: 'from-neon-blue to-neon-purple' },
+                    { type: 'app-update' as const, label: 'Додаток', color: 'from-neon-purple to-pink-500' },
+                    { type: 'progress-change' as const, label: 'Прогрес', color: 'from-amber-500 to-orange-500' },
+                    { type: 'team-new-game' as const, label: 'Нова гра', color: 'from-yellow-500 to-yellow-600' },
+                    { type: 'team-status-change' as const, label: 'Команда', color: 'from-cyan-500 to-cyan-600' },
+                  ].map(({ type, label, color }) => (
+                    <button
+                      key={type}
+                      onClick={() => playNotificationSound(type)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
+                    >
+                      <Play size={12} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-text-muted mb-2">Звуки геймпада:</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={playNavigateSound}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <Play size={12} />
+                    Навігація
+                  </button>
+                  <button
+                    onClick={playConfirmSound}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <Play size={12} />
+                    Підтвердити
+                  </button>
+                  <button
+                    onClick={playBackSound}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <Play size={12} />
+                    Назад
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Logging settings */}
         <SettingItem

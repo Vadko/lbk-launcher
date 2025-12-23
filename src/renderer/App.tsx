@@ -28,6 +28,7 @@ export const App: React.FC = () => {
     loadSteamGames,
     clearSteamGamesCache,
     clearDetectedGamesCache,
+    setSelectedGame,
   } = useStore();
   const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
     useSettingsStore();
@@ -44,11 +45,30 @@ export const App: React.FC = () => {
   // Обробка deep link для навігації до перекладу
   useDeepLink();
 
+  // Listen for navigation from system notifications
+  useEffect(() => {
+    if (!window.windowControls?.onNavigateToGame) return;
+
+    const unsubscribe = window.windowControls.onNavigateToGame(async (gameId) => {
+      console.log('[App] Navigating to game from notification:', gameId);
+      try {
+        const games = await window.electronAPI.fetchGamesByIds([gameId]);
+        if (games.length > 0) {
+          setSelectedGame(games[0]);
+        }
+      } catch (error) {
+        console.error('[App] Failed to load game:', error);
+      }
+    });
+
+    return unsubscribe;
+  }, [setSelectedGame]);
+
   // Listen for sync status from main process
   useEffect(() => {
     let hideTimeout: NodeJS.Timeout | null = null;
     const loaderStartTime = Date.now();
-    const MIN_LOADER_DISPLAY_MS = 600; // Minimum time to show loader for animations
+    const MIN_LOADER_DISPLAY_MS = 1000; // Minimum time to show loader for animations
 
     const hideLoaderWithDelay = () => {
       const elapsed = Date.now() - loaderStartTime;

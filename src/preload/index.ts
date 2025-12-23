@@ -138,8 +138,13 @@ contextBridge.exposeInMainWorld('windowControls', {
     return () => ipcRenderer.removeListener('window:maximized', handler);
   },
   isVisible: () => ipcRenderer.invoke('window:is-visible'),
-  showSystemNotification: (options: { title: string; body: string }) =>
+  showSystemNotification: (options: { title: string; body: string; gameId?: string }) =>
     ipcRenderer.invoke('show-system-notification', options),
+  onNavigateToGame: (callback: (gameId: string) => void) => {
+    const handler = (_: unknown, gameId: string) => callback(gameId);
+    ipcRenderer.on('navigate-to-game', handler);
+    return () => ipcRenderer.removeListener('navigate-to-game', handler);
+  },
   clearCacheAndRestart: () => ipcRenderer.invoke('clear-cache-and-restart'),
 });
 

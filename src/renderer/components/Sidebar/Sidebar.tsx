@@ -34,22 +34,39 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   const {
     selectedGame,
     selectedStatuses,
-    selectedAuthors,
-    specialFilter,
     searchQuery,
     setSelectedGame,
-    setSelectedStatuses,
-    setSelectedAuthors,
-    setSpecialFilter,
+    setSelectedStatuses: setSelectedStatusesRaw,
     setSearchQuery,
     gamesWithUpdates,
     isGameDetected,
     loadInstalledGamesFromSystem,
   } = useStore();
-  const { openSettingsModal, sidebarWidth, setSidebarWidth } = useSettingsStore();
+  const {
+    openSettingsModal,
+    sidebarWidth,
+    setSidebarWidth,
+    specialFilter,
+    setSpecialFilter: setSpecialFilterRaw,
+    selectedAuthors,
+    setSelectedAuthors,
+  } = useSettingsStore();
   const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  const setSelectedStatuses = useCallback((statuses: string[]) => {
+    setSpecialFilterRaw(null);
+    setSelectedStatusesRaw(statuses);
+  }, [setSpecialFilterRaw, setSelectedStatusesRaw]);
+
+  const setSpecialFilter = useCallback((filter: typeof specialFilter) => {
+    if (filter !== null) {
+      setSelectedStatusesRaw([]);
+      setSelectedAuthors([]);
+    }
+    setSpecialFilterRaw(filter);
+  }, [setSpecialFilterRaw, setSelectedStatusesRaw, setSelectedAuthors]);
 
   // Translation picker modal state
   const [pickerModalOpen, setPickerModalOpen] = useState(false);
