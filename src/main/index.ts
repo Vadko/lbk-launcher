@@ -1,4 +1,4 @@
-import { app, session } from 'electron';
+import { app, session, ipcMain } from 'electron';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import { initLogger } from './utils/logger';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
@@ -87,6 +87,7 @@ import { SupabaseRealtimeManager } from './db/supabase-realtime';
 // Глобальні менеджери
 let syncManager: SyncManager | null = null;
 let realtimeManager: SupabaseRealtimeManager | null = null;
+let currentSyncStatus: 'syncing' | 'ready' | 'error' = 'syncing';
 
 // Single instance lock - prevent multiple instances of the app
 const gotTheLock = app.requestSingleInstanceLock();
@@ -141,6 +142,9 @@ if (!gotTheLock) {
   setupInstallerHandlers();
   setupAutoUpdater();
 
+  // IPC handler for getting current sync status
+  ipcMain.handle('get-sync-status', () => currentSyncStatus);
+
   // App lifecycle
   app.whenReady().then(async () => {
     // Install React DevTools in development
@@ -157,19 +161,46 @@ if (!gotTheLock) {
     console.log('[Main] Initializing local database...');
     initDatabase();
 
-    // Запустити синхронізацію
+    // Fix YouTube error 153 by setting Referer header for YouTube requests
+    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      if (
+        details.url.includes('youtube.com') ||
+        details.url.includes('youtube-nocookie.com')
+      ) {
+        details.requestHeaders['Referer'] = 'https://littlebitua.github.io/';
+      }
+      callback({ requestHeaders: details.requestHeaders });
+    });
+
+    // Створити вікно ПЕРЕД синхронізацією, щоб показати лоадер
+    await createMainWindow();
+    initTray();
+
+    // Відправити статус синхронізації в renderer
+    const sendSyncStatus = (status: 'syncing' | 'ready' | 'error') => {
+      currentSyncStatus = status;
+      const mainWindow = getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('sync-status', status);
+      }
+    };
+
+    // Запустити синхронізацію (вікно вже відкрите, показує лоадер)
     console.log('[Main] Starting sync with Supabase...');
     syncManager = new SyncManager();
 
     try {
+      sendSyncStatus('syncing');
       await syncManager.sync(
         fetchAllGamesFromSupabase,
         fetchUpdatedGamesFromSupabase,
         fetchDeletedGameIdsFromSupabase
       );
       console.log('[Main] Initial sync completed');
+      sendSyncStatus('ready');
     } catch (error) {
       console.error('[Main] Error during initial sync:', error);
+      sendSyncStatus('error');
     }
 
     // Підписатися на realtime оновлення з Supabase
@@ -186,19 +217,6 @@ if (!gotTheLock) {
       }
     );
 
-    // Fix YouTube error 153 by setting Referer header for YouTube requests
-    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      if (
-        details.url.includes('youtube.com') ||
-        details.url.includes('youtube-nocookie.com')
-      ) {
-        details.requestHeaders['Referer'] = 'https://littlebitua.github.io/';
-      }
-      callback({ requestHeaders: details.requestHeaders });
-    });
-
-    await createMainWindow();
-    initTray(); // Створити tray одразу при запуску
     checkForUpdates();
 
     // Handle pending deep link if app was opened via protocol

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
+import { AnimatePresence } from 'framer-motion';
 import { AmbientBackground } from './components/Layout/AmbientBackground';
 import { TitleBar } from './components/Layout/TitleBar';
 import { Sidebar } from './components/Sidebar/Sidebar';
@@ -12,6 +13,7 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { NotificationModal } from './components/Notifications/NotificationModal';
 import { GamepadHints } from './components/GamepadHints/GamepadHints';
 import { ChristmasEffects } from './components/ChristmasEffects/ChristmasEffects';
+import { AppLoader } from './components/AppLoader/AppLoader';
 import { useStore } from './store/useStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
@@ -33,12 +35,57 @@ export const App: React.FC = () => {
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'loading' | 'syncing' | 'ready' | 'error'>('loading');
+  const [showLoader, setShowLoader] = useState(true);
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
 
   // Обробка deep link для навігації до перекладу
   useDeepLink();
+
+  // Listen for sync status from main process
+  useEffect(() => {
+    let hideTimeout: NodeJS.Timeout | null = null;
+    const loaderStartTime = Date.now();
+    const MIN_LOADER_DISPLAY_MS = 600; // Minimum time to show loader for animations
+
+    const hideLoaderWithDelay = () => {
+      const elapsed = Date.now() - loaderStartTime;
+      const remainingTime = Math.max(0, MIN_LOADER_DISPLAY_MS - elapsed);
+
+      hideTimeout = setTimeout(() => setShowLoader(false), remainingTime);
+    };
+
+    if (!window.electronAPI?.getSyncStatus) {
+      // No electron API - probably in browser, show app after minimum time
+      hideLoaderWithDelay();
+      return;
+    }
+
+    // Get current sync status immediately
+    window.electronAPI.getSyncStatus().then((status) => {
+      console.log('[App] Initial sync status:', status);
+      setSyncStatus(status);
+      if (status === 'ready' || status === 'error') {
+        hideLoaderWithDelay();
+      }
+    });
+
+    // Also listen for future status changes
+    const unsubscribe = window.electronAPI.onSyncStatus((status) => {
+      console.log('[App] Sync status changed:', status);
+      setSyncStatus(status);
+      if (status === 'ready' || status === 'error') {
+        hideLoaderWithDelay();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      if (hideTimeout) clearTimeout(hideTimeout);
+    };
+  }, []);
 
   // Простий скрол геймпадом (тільки в геймпад-режимі)
   useGamepadModeNavigation(isGamepadMode);
@@ -281,6 +328,12 @@ export const App: React.FC = () => {
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
   return (
+    <>
+      {/* Loader overlay with fade animation */}
+      <AnimatePresence>
+        {showLoader && <AppLoader status={syncStatus} />}
+      </AnimatePresence>
+
     <div
       className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
       data-gamepad-mode={isGamepadMode || undefined}
@@ -338,5 +391,6 @@ export const App: React.FC = () => {
       {/* Gamepad hints */}
       <GamepadHints />
     </div>
+    </>
   );
 };

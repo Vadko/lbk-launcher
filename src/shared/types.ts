@@ -173,6 +173,9 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  // Sync status
+  onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => () => void;
+  getSyncStatus: () => Promise<'syncing' | 'ready' | 'error'>;
 }
 
 declare global {

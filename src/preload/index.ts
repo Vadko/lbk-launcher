@@ -116,6 +116,13 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
+  // Sync status
+  onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {
+    const handler = (_: unknown, status: 'syncing' | 'ready' | 'error') => callback(status);
+    ipcRenderer.on('sync-status', handler);
+    return () => ipcRenderer.removeListener('sync-status', handler);
+  },
+  getSyncStatus: () => ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

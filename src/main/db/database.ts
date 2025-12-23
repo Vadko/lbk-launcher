@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 import { runMigrations } from './migrations';
 
 /**
@@ -183,5 +183,42 @@ export function clearGamesTable(): void {
   const db = getDatabase();
   db.exec('DELETE FROM games');
   db.exec('DELETE FROM sync_metadata');
+  // Force WAL checkpoint to ensure changes are written to main DB file
+  db.pragma('wal_checkpoint(TRUNCATE)');
   console.log('[Database] Games and sync_metadata tables cleared');
+}
+
+/**
+ * Get database file path
+ */
+export function getDatabasePath(): string {
+  const userDataPath = app.getPath('userData');
+  return join(userDataPath, 'littlebit.db');
+}
+
+/**
+ * Delete database file completely (for full reset)
+ */
+export function deleteDatabaseFile(): void {
+  const dbPath = getDatabasePath();
+  const walPath = `${dbPath}-wal`;
+  const shmPath = `${dbPath}-shm`;
+
+  // Delete main DB file
+  if (existsSync(dbPath)) {
+    unlinkSync(dbPath);
+    console.log('[Database] Deleted database file:', dbPath);
+  }
+
+  // Delete WAL file
+  if (existsSync(walPath)) {
+    unlinkSync(walPath);
+    console.log('[Database] Deleted WAL file:', walPath);
+  }
+
+  // Delete SHM file
+  if (existsSync(shmPath)) {
+    unlinkSync(shmPath);
+    console.log('[Database] Deleted SHM file:', shmPath);
+  }
 }

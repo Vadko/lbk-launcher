@@ -12,7 +12,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { getMainWindow } from '../window';
 import { join } from 'path';
 import { isLinux, isMacOS } from '../utils/platform';
-import { closeDatabase, clearGamesTable } from '../db/database';
+import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import {
   setSaveLogsEnabled,
   isSaveLogsEnabled,
@@ -161,11 +161,11 @@ export function setupWindowControls(): void {
         storages: ['cookies', 'filesystem', 'shadercache', 'cachestorage'],
       });
 
-      // Clear games table to force re-sync
-      clearGamesTable();
-
-      // Close database before restart
+      // Close database first
       closeDatabase();
+
+      // Delete database files to force full re-sync
+      deleteDatabaseFile();
 
       // Relaunch the app
       app.relaunch();
@@ -198,8 +198,11 @@ export function setupWindowControls(): void {
         ],
       });
 
-      // Close database before restart
+      // Close database first
       closeDatabase();
+
+      // Delete database files to force full re-sync
+      deleteDatabaseFile();
 
       // Relaunch the app
       app.relaunch();
@@ -232,8 +235,11 @@ export function setupWindowControls(): void {
         ],
       });
 
-      // Close database before restart
+      // Close database first
       closeDatabase();
+
+      // Delete database files to force full re-sync
+      deleteDatabaseFile();
 
       // Relaunch the app
       app.relaunch();

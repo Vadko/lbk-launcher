@@ -34,17 +34,74 @@ jobs:
           echo "Current tag: $CURRENT_TAG"
           echo "Previous tag: $PREVIOUS_TAG"
 
-          # Generate changelog from commits
+          # Generate changelog from commits with full body
           if [ -n "$PREVIOUS_TAG" ]; then
-            COMMITS=$(git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"- %s" --no-merges)
+            RANGE="${PREVIOUS_TAG}..${CURRENT_TAG}"
           else
-            COMMITS=$(git log ${CURRENT_TAG} --pretty=format:"- %s" --no-merges -20)
+            RANGE="${CURRENT_TAG}"
           fi
 
-          # Create release notes
-          NOTES="## Що нового
+          # Collect features, fixes, and other changes
+          FEATURES=""
+          FIXES=""
+          OTHER=""
 
-          ${COMMITS}"
+          while IFS= read -r line; do
+            if [[ "$line" == "---COMMIT---" ]]; then
+              CURRENT_TITLE=""
+              CURRENT_BODY=""
+              IN_BODY=false
+            elif [[ "$line" == "---BODY---" ]]; then
+              IN_BODY=true
+            elif [[ "$line" == "---END---" ]]; then
+              # Process the commit
+              if [[ -n "$CURRENT_TITLE" ]]; then
+                # Clean title from conventional commit prefix
+                CLEAN_TITLE=$(echo "$CURRENT_TITLE" | sed -E 's/^(feat|fix|chore|docs|style|refactor|perf|test)(\(.+\))?:\s*//')
+
+                # Format body as sub-items if exists
+                BODY_ITEMS=""
+                if [[ -n "$CURRENT_BODY" ]]; then
+                  while IFS= read -r body_line; do
+                    # Skip empty lines and lines starting with emoji (already formatted)
+                    if [[ -n "$body_line" && ! "$body_line" =~ ^[[:space:]]*$ ]]; then
+                      # Remove leading "- " if present
+                      body_line=$(echo "$body_line" | sed 's/^- //')
+                      BODY_ITEMS="${BODY_ITEMS}  - ${body_line}"$'\n'
+                    fi
+                  done <<< "$CURRENT_BODY"
+                fi
+
+                # Categorize by type
+                if [[ "$CURRENT_TITLE" =~ ^feat ]]; then
+                  FEATURES="${FEATURES}• ${CLEAN_TITLE}"$'\n'"${BODY_ITEMS}"
+                elif [[ "$CURRENT_TITLE" =~ ^fix ]]; then
+                  FIXES="${FIXES}• ${CLEAN_TITLE}"$'\n'"${BODY_ITEMS}"
+                else
+                  OTHER="${OTHER}• ${CLEAN_TITLE}"$'\n'"${BODY_ITEMS}"
+                fi
+              fi
+            elif [[ "$IN_BODY" == true ]]; then
+              CURRENT_BODY="${CURRENT_BODY}${line}"$'\n'
+            else
+              CURRENT_TITLE="$line"
+            fi
+          done < <(git log ${RANGE} --pretty=format:"---COMMIT---%n%s%n---BODY---%n%b%n---END---" --no-merges)
+
+          # Build release notes
+          NOTES="## Що нового у версії ${CURRENT_TAG#v}"$'\n\n'
+
+          if [[ -n "$FEATURES" ]]; then
+            NOTES="${NOTES}### ✨ Нові можливості"$'\n\n'"${FEATURES}"$'\n'
+          fi
+
+          if [[ -n "$FIXES" ]]; then
+            NOTES="${NOTES}### 🐛 Виправлення"$'\n\n'"${FIXES}"$'\n'
+          fi
+
+          if [[ -n "$OTHER" ]]; then
+            NOTES="${NOTES}### 🔧 Інші зміни"$'\n\n'"${OTHER}"$'\n'
+          fi
 
           echo "Release notes:"
           echo "$NOTES"
