@@ -191,7 +191,7 @@ export function useGames({
       console.log('[useGames] Game updated via realtime:', updatedGame.name);
 
       // Перевірити зміну версії для історії
-      const { addVersionUpdateNotification, notifications } =
+      const { addVersionUpdateNotification, hasNotifiedVersion } =
         useSubscriptionsStore.getState();
       const { installedGames, checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
         useStore.getState();
@@ -215,15 +215,9 @@ export function useGames({
             updatedGame.version &&
             oldGame.version !== updatedGame.version
           ) {
-            // Перевірити чи вже є така нотифікація (уникнення дублікатів)
-            const hasExistingVersionNotification = notifications.some(
-              (n) =>
-                n.type === 'version-update' &&
-                n.gameId === updatedGame.id &&
-                n.newValue === updatedGame.version
-            );
-
-            if (!hasExistingVersionNotification) {
+            // Перевірити чи ми вже показували сповіщення для цієї версії
+            // (навіть якщо користувач закрив сповіщення)
+            if (!hasNotifiedVersion(updatedGame.id, updatedGame.version)) {
               addVersionUpdateNotification(
                 updatedGame.id,
                 updatedGame.name,
@@ -269,9 +263,9 @@ export function useGames({
           // Гра не в списку
           if (!shouldBeInList) return prevGames;
 
-          // Додати гру і відсортувати за алфавітом
+          // Додати гру і відсортувати (латиниця перед кирилицею, як в БД)
           const newGames = [...prevGames, updatedGame];
-          newGames.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+          newGames.sort((a, b) => a.name.localeCompare(b.name));
           setTotal((prev) => prev + 1);
           return newGames;
         } 
@@ -282,10 +276,10 @@ export function useGames({
             return prevGames.filter((g) => g.id !== updatedGame.id);
           }
 
-          // Оновити гру і пересортувати
+          // Оновити гру і пересортувати (латиниця перед кирилицею, як в БД)
           const newGames = [...prevGames];
           newGames[index] = updatedGame;
-          newGames.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+          newGames.sort((a, b) => a.name.localeCompare(b.name));
           return newGames;
         
       });

@@ -131,7 +131,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     disabled={isAlreadySubscribed}
                     onChange={() => !isAlreadySubscribed && toggleAuthor(author)}
                     data-gamepad-modal-item
-                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-gradient-to-r checked:from-neon-blue checked:to-neon-purple transition-colors ${
+                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-neon-purple checked:border-neon-purple transition-colors focus:ring-2 focus:ring-neon-purple/50 focus:outline-none ${
                       isAlreadySubscribed ? 'cursor-default' : 'cursor-pointer'
                     }`}
                   />

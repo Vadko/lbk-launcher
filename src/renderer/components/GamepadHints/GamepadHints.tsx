@@ -1,16 +1,56 @@
 import React, { useEffect, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 
+type GamepadType = 'xbox' | 'playstation';
+
+type ButtonVariant = 'green' | 'red' | 'blue' | 'default';
+
 interface HintItem {
   button: string;
   label: string;
-  variant?: 'green' | 'red' | 'default';
+  variant?: ButtonVariant;
+}
+
+// Button mappings for different controller types
+const BUTTON_CONFIG: Record<
+  GamepadType,
+  { confirm: { label: string; variant: ButtonVariant }; back: { label: string; variant: ButtonVariant } }
+> = {
+  xbox: {
+    confirm: { label: 'A', variant: 'green' },
+    back: { label: 'B', variant: 'red' },
+  },
+  playstation: {
+    confirm: { label: '✕', variant: 'blue' }, // PlayStation Cross - blue
+    back: { label: '○', variant: 'red' }, // PlayStation Circle - red
+  },
+};
+
+/**
+ * Detect the type of connected gamepad based on its ID
+ */
+function detectGamepadType(): GamepadType {
+  const gamepads = navigator.getGamepads();
+  for (const gp of gamepads) {
+    if (!gp) continue;
+    const id = gp.id.toLowerCase();
+    if (
+      id.includes('playstation') ||
+      id.includes('dualshock') ||
+      id.includes('dualsense') ||
+      id.includes('sony')
+    ) {
+      return 'playstation';
+    }
+  }
+  return 'xbox';
 }
 
 const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) => {
-  const colors = {
+  const colors: Record<ButtonVariant, string> = {
     green: 'bg-green-500/20 border-green-500/50 text-green-400',
     red: 'bg-red-500/20 border-red-500/50 text-red-400',
+    blue: 'bg-blue-500/20 border-blue-500/50 text-blue-400', // PlayStation Cross
     default: 'bg-white/10 border-white/20 text-white',
   };
 
@@ -29,6 +69,14 @@ const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) 
 export const GamepadHints: React.FC = () => {
   const { isGamepadMode, navigationArea } = useGamepadModeStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [gamepadType, setGamepadType] = useState<GamepadType>('xbox');
+
+  // Detect gamepad type when entering gamepad mode
+  useEffect(() => {
+    if (isGamepadMode) {
+      setGamepadType(detectGamepadType());
+    }
+  }, [isGamepadMode]);
 
   useEffect(() => {
     if (!isGamepadMode) return;
@@ -47,31 +95,32 @@ export const GamepadHints: React.FC = () => {
 
   if (!isGamepadMode) return null;
 
+  const { confirm, back } = BUTTON_CONFIG[gamepadType];
   let hints: HintItem[] = [];
 
   if (isModalOpen) {
     hints = [
-      { button: 'A', label: 'Вибрати', variant: 'green' },
-      { button: 'B', label: 'Закрити', variant: 'red' },
+      { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
+      { button: back.label, label: 'Закрити', variant: back.variant },
       { button: '↑↓', label: 'Навігація' },
     ];
   } else if (navigationArea === 'header') {
     hints = [
-      { button: 'A', label: 'Відкрити', variant: 'green' },
+      { button: confirm.label, label: 'Відкрити', variant: confirm.variant },
       { button: '←→', label: 'Елементи' },
       { button: '↓', label: 'До ігор' },
     ];
   } else if (navigationArea === 'games') {
     hints = [
-      { button: 'A', label: 'Вибрати', variant: 'green' },
+      { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
       { button: '←→', label: 'Ігри' },
       { button: '↑', label: 'Пошук' },
       { button: '↓', label: 'Контент' },
     ];
   } else if (navigationArea === 'main-content') {
     hints = [
-      { button: 'A', label: 'Вибрати', variant: 'green' },
-      { button: 'B', label: 'Назад', variant: 'red' },
+      { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
+      { button: back.label, label: 'Назад', variant: back.variant },
       { button: '←→', label: 'Кнопки' },
       { button: '↑↓', label: 'Прокрутка' },
     ];

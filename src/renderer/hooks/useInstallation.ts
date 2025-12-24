@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { useModalStore } from '../store/useModalStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import type {
   Game,
   InstallResult,
@@ -178,6 +179,8 @@ export function useInstallation({
 
         setPendingInstallOptions(undefined);
         useStore.getState().clearGameUpdate(selectedGame.id);
+        // Clear notified version so next version update will show notification again
+        useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
 
         let message = isUpdateAvailable
           ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
@@ -449,6 +452,9 @@ export function useInstallation({
             });
             return;
           }
+
+          // Clear notified version so future installs will get notifications
+          useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
 
           showModal({
             title: 'Українізатор видалено',

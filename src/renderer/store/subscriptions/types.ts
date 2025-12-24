@@ -47,4 +47,6 @@ export type PersistedSubscriptionsState = {
   promptedGamesForSubscription: Set<string>;
   notifications: Notification[];
   unreadCount: number;
+  // Track which version updates have been shown to avoid duplicate notifications
+  notifiedVersions: Map<string, string>; // gameId -> version
 };

@@ -45,6 +45,10 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
   markGameAsPrompted: (gameId: string) => void;
   isGamePrompted: (gameId: string) => boolean;
 
+  // Version notification tracking
+  hasNotifiedVersion: (gameId: string, version: string) => boolean;
+  clearNotifiedVersion: (gameId: string) => void;
+
   // Notification Actions
   addNotification: (
     notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
@@ -103,6 +107,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       notifications: [],
       unreadCount: 0,
       toasts: [],
+      notifiedVersions: new Map<string, string>(),
 
       // Game subscription methods
       subscribe: (gameId, status, progress) => {
@@ -226,6 +231,20 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         return isValidSet<string>(promptedGamesForSubscription) && promptedGamesForSubscription.has(gameId);
       },
 
+      // Version notification tracking methods
+      hasNotifiedVersion: (gameId, version) => {
+        const { notifiedVersions } = get();
+        return isValidMap<string, string>(notifiedVersions) && notifiedVersions.get(gameId) === version;
+      },
+
+      clearNotifiedVersion: (gameId) => {
+        set((state) => {
+          const newNotifiedVersions = ensureMap<string, string>(state.notifiedVersions);
+          newNotifiedVersions.delete(gameId);
+          return { notifiedVersions: newNotifiedVersions };
+        });
+      },
+
       // Notification methods
       addNotification: (notificationParams, showToast = true) => {
         const notification = createNotification(notificationParams);
@@ -259,10 +278,17 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           idPrefix: `${gameId}-version`,
         });
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => {
+          // Track that we've notified about this version
+          const newNotifiedVersions = ensureMap<string, string>(state.notifiedVersions);
+          newNotifiedVersions.set(gameId, newVersion);
+
+          return {
+            notifications: [notification, ...state.notifications],
+            unreadCount: state.unreadCount + 1,
+            notifiedVersions: newNotifiedVersions,
+          };
+        });
 
         if (showToast) {
           const message = `Доступна версія ${newVersion}`;
@@ -441,6 +467,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         promptedGamesForSubscription: state.promptedGamesForSubscription,
         notifications: state.notifications,
         unreadCount: state.unreadCount,
+        notifiedVersions: state.notifiedVersions,
         // toasts are NOT persisted - they are temporary
       }),
       onRehydrateStorage: () => (state) => {
