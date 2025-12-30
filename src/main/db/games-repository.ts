@@ -129,7 +129,7 @@ export class GamesRepository {
 
   /**
    * Отримати ігри з фільтрацією
-   * Оскільки це local-first додаток, повертаємо всі ігри одразу
+   * Оскільки це local-first застосунок, повертаємо всі ігри одразу
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
     const { searchQuery = '', statuses = [], authors = [] } = params;

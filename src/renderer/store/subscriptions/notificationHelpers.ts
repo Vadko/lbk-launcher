@@ -22,7 +22,7 @@ export function getNotificationMessage(
 ): string {
   switch (notification.type) {
     case 'status-change':
-      return `Статус змінено на "${notification.newValue}"`;
+      return `Стан змінено на "${notification.newValue}"`;
     case 'version-update':
       return `Доступна версія ${notification.newValue}`;
     case 'app-update':
@@ -32,7 +32,7 @@ export function getNotificationMessage(
     case 'team-new-game':
       return `Нова локалізація від ${notification.teamName}`;
     case 'team-status-change':
-      return `${notification.teamName}: статус змінено на "${notification.newValue}"`;
+      return `${notification.teamName}: стан змінено на "${notification.newValue}"`;
     default:
       return 'Нове сповіщення';
   }

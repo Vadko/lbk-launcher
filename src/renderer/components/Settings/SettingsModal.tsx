@@ -126,7 +126,7 @@ export const SettingsModal: React.FC = () => {
             <MessageCircle size={20} color="#ffffff" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-sm font-semibold text-text-main">Зворотній зв'язок</h4>
+            <h4 className="text-sm font-semibold text-text-main">Зворотний зв'язок</h4>
             <p className="text-xs text-text-muted">Написати нам у Telegram</p>
           </div>
         </button>
@@ -195,14 +195,14 @@ export const SettingsModal: React.FC = () => {
         />
         <SettingItem
           id="auto-detect"
-          title="Автоматична перевірка встановлених ігор"
-          description="Автоматично визначати встановлені ігри на вашому комп'ютері"
+          title="Автоматичне виявлення встановлених ігор"
+          description="Автоматично виявляти встановлені на вашому комп'ютері ігри"
           enabled={autoDetectInstalledGames}
           onChange={toggleAutoDetectInstalledGames}
         />
         <SettingItem
           id="adult-games"
-          title="Показувати ігри з порно контентом"
+          title="Показувати ігри з порнографічним вмістом"
           description="Дозволити відображення ігор з порнографічним/еротичним контентом (hentai, візуальні новели для дорослих тощо)"
           enabled={showAdultGames}
           onChange={toggleShowAdultGames}
@@ -211,7 +211,7 @@ export const SettingsModal: React.FC = () => {
         <SettingItem
           id="notification-sounds"
           title="Звуки сповіщень"
-          description="Програвати звуки при отриманні сповіщень про оновлення"
+          description="Відтворювати звуки при отриманні сповіщень про оновлення"
           enabled={notificationSoundsEnabled}
           onChange={toggleNotificationSounds}
         />
@@ -219,7 +219,7 @@ export const SettingsModal: React.FC = () => {
         <SettingItem
           id="gamepad-sounds"
           title="Звуки геймпада"
-          description="Програвати звуки при навігації геймпадом"
+          description="Відтворювати звуки при навігації геймпадом"
           enabled={gamepadSoundsEnabled}
           onChange={toggleGamepadSounds}
         />
@@ -270,9 +270,9 @@ export const SettingsModal: React.FC = () => {
                 <p className="text-xs text-text-muted mb-2">Звуки сповіщень:</p>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { type: 'status-change' as const, label: 'Статус', color: 'from-green-500 to-green-600' },
+                    { type: 'status-change' as const, label: 'Стан', color: 'from-green-500 to-green-600' },
                     { type: 'version-update' as const, label: 'Версія', color: 'from-neon-blue to-neon-purple' },
-                    { type: 'app-update' as const, label: 'Додаток', color: 'from-neon-purple to-pink-500' },
+                    { type: 'app-update' as const, label: 'Застосунок', color: 'from-neon-purple to-pink-500' },
                     { type: 'progress-change' as const, label: 'Прогрес', color: 'from-amber-500 to-orange-500' },
                     { type: 'team-new-game' as const, label: 'Нова гра', color: 'from-yellow-500 to-yellow-600' },
                     { type: 'team-status-change' as const, label: 'Команда', color: 'from-cyan-500 to-cyan-600' },

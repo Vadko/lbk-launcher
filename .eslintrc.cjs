@@ -44,7 +44,7 @@ module.exports = {
     ],
 
     // === Best Practices ===
-    'no-console': 'off', // Дозволяємо console для Electron додатку
+    'no-console': 'off', // Дозволяємо console для Electron-застосунку
     'no-debugger': 'warn',
     'no-duplicate-imports': 'error',
     'no-template-curly-in-string': 'warn',

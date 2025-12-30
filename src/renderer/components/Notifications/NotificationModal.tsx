@@ -137,7 +137,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       case 'status-change':
         return (
           <>
-            Статус змінено з "{notification.oldValue}" на "{notification.newValue}"
+            Стан змінено з "{notification.oldValue}" на "{notification.newValue}"
           </>
         );
       case 'version-update':
@@ -159,7 +159,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       case 'team-status-change':
         return (
           <>
-            <span className="text-cyan-400">{notification.teamName}</span>: статус змінено на "{notification.newValue}"
+            <span className="text-cyan-400">{notification.teamName}</span>: стан змінено на "{notification.newValue}"
           </>
         );
       default:
@@ -226,7 +226,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
                   <h4 className="text-sm font-semibold text-text-main mb-1">
-                    Оновлення додатку
+                    Оновлення застосунку
                   </h4>
                   <p className="text-xs text-text-muted">
                     Сповіщення про нові версії LB Launcher
@@ -269,9 +269,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                   <Bell className="w-16 h-16 text-text-muted mx-auto mb-4 opacity-30" />
                   <p className="text-text-muted">Сповіщень немає</p>
                   <p className="text-sm text-text-muted mt-2">
-                    Підпишіться на українізатори зі статусом "Заплановано",
+                    Підпишіться на українізатори зі станом "Заплановано",
                     <br />
-                    щоб отримувати сповіщення про зміни статусу
+                    щоб отримувати сповіщення про зміни стану
                   </p>
                 </div>
               ) : (

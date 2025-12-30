@@ -21,12 +21,12 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
         const option = SPECIAL_FILTER_OPTIONS.find((o) => o.value === specialFilter);
         return option?.label || specialFilter;
       }
-      if (selectedStatuses.length === 0) return 'Усі статуси';
+      if (selectedStatuses.length === 0) return 'Усі стани';
       if (selectedStatuses.length === 1) {
         const option = STATUS_OPTIONS.find((o) => o.value === selectedStatuses[0]);
         return option?.label || selectedStatuses[0];
       }
-      return `${selectedStatuses.length} статуси`;
+      return `${selectedStatuses.length} стани`;
     }, [selectedStatuses, specialFilter]);
 
     const hasActiveFilter = specialFilter !== null || selectedStatuses.length > 0;

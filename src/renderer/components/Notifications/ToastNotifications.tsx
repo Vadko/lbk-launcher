@@ -52,7 +52,7 @@ const getToastBorder = (type: ToastNotification['type']) => {
 const getToastTitle = (type: ToastNotification['type']) => {
   switch (type) {
     case 'status-change':
-      return 'Зміна статусу';
+      return 'Зміна стану';
     case 'version-update':
       return 'Доступне оновлення';
     case 'app-update':

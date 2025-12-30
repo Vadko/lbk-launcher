@@ -103,7 +103,7 @@ function writeToFile(logMessage: string): void {
 }
 
 /**
- * Синхронний flush при закритті додатку
+ * Синхронний flush при закритті застосунку
  */
 function flushLogsSync(): void {
   if (logBuffer.length === 0) return;
@@ -170,7 +170,7 @@ export function initLogger(): void {
     writeToFile(formatLogMessage('INFO', message, ...args));
   };
 
-  // Flush логи при закритті додатку
+  // Flush логи при закритті застосунку
   app.on('before-quit', () => {
     flushLogsSync();
   });

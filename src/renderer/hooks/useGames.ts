@@ -21,7 +21,7 @@ interface UseGamesResult {
 
 /**
  * Хук для отримання ігор з локальної бази даних
- * Оскільки це local-first додаток, завантажуємо всі ігри одразу
+ * Оскільки це local-first застосунок, завантажуємо всі ігри одразу
  */
 export function useGames({
   selectedStatuses,

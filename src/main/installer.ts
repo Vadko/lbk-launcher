@@ -328,7 +328,7 @@ export async function installTranslation(
         achievementsExtractDir,
         getSignedDownloadUrl,
         onDownloadProgress,
-        (status) => onStatus?.({ message: `Ачівки: ${status.message}` })
+        (status) => onStatus?.({ message: `Досягнення: ${status.message}` })
       );
 
       achievementsInstallPath = await getSteamAchievementsPath();

@@ -408,7 +408,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }));
 
         if (showToast) {
-          const message = `${teamName}: статус змінено на "${newStatus}"`;
+          const message = `${teamName}: стан змінено на "${newStatus}"`;
           const toast = createToast(notification, message);
 
           set((state) => ({
