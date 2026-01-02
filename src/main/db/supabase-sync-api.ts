@@ -117,14 +117,24 @@ export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game
 
 /**
  * Завантажити ID ігор видалених після певної дати
+ * Якщо since не вказано - повертає всі видалені ігри
  */
-export async function fetchDeletedGameIdsFromSupabase(since: string): Promise<string[]> {
-  console.log(`[SupabaseSync] Fetching deleted games since ${since}`);
+export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<string[]> {
+  if (since) {
+    console.log(`[SupabaseSync] Fetching deleted games since ${since}`);
+  } else {
+    console.log(`[SupabaseSync] Fetching all deleted games`);
+  }
 
-  const data = await supabaseRequest<{ game_id: string }>('deleted_games', {
-    deleted_at: `gt.${since}`,
+  const params: Record<string, string> = {
     select: 'game_id',
-  });
+  };
+
+  if (since) {
+    params.deleted_at = `gt.${since}`;
+  }
+
+  const data = await supabaseRequest<{ game_id: string }>('deleted_games', params);
 
   const deletedIds = data.map((row) => row.game_id);
   console.log(`[SupabaseSync] Fetched ${deletedIds.length} deleted game IDs`);

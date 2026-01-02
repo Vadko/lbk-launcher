@@ -27,7 +27,7 @@ type GameInsertParams = {
   [K in keyof Omit<
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
-  >]: K extends 'approved' | 'is_adult' | 'license_only'
+  >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide'
     ? number // boolean перетворюється на 0/1 для SQLite
     : K extends 'platforms' | 'install_paths'
       ? string | null // JSON.stringify для SQLite
@@ -61,6 +61,8 @@ export class GamesRepository {
       approved: Boolean(row.approved),
       is_adult: Boolean(row.is_adult),
       license_only: Boolean(row.license_only),
+      ai: Boolean(row.ai),
+      hide: Boolean(row.hide),
       platforms,
       install_paths,
     } as Game;
@@ -124,6 +126,8 @@ export class GamesRepository {
       steam_app_id: game.steam_app_id ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
+      ai: game.ai ? 1 : 0,
+      hide: game.hide ? 1 : 0,
     };
   }
 
@@ -135,7 +139,7 @@ export class GamesRepository {
     const { searchQuery = '', statuses = [], authors = [] } = params;
     // Note: showAdultGames is now handled in UI (blur effect) instead of filtering here
 
-    const whereConditions: string[] = ['approved = 1'];
+    const whereConditions: string[] = ['approved = 1', 'hide = 0'];
     const queryParams: (string | number)[] = [];
 
     // Filter by statuses (multi-select)
@@ -186,7 +190,7 @@ export class GamesRepository {
     const stmt = this.db.prepare(`
       SELECT team
       FROM games
-      WHERE approved = 1 AND team IS NOT NULL AND team != ''
+      WHERE approved = 1 AND hide = 0 AND team IS NOT NULL AND team != ''
     `);
 
     const rows = stmt.all() as { team: string }[];
@@ -219,6 +223,7 @@ export class GamesRepository {
       FROM games
       WHERE id IN (${placeholders})
         AND approved = 1
+        AND hide = 0
       ORDER BY name ASC
     `);
 
@@ -238,6 +243,7 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE approved = 1
+        AND hide = 0
         AND install_paths IS NOT NULL
     `);
 
@@ -298,7 +304,7 @@ export class GamesRepository {
         voice_archive_hash, voice_archive_path, voice_archive_size,
         voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
         epic_archive_hash, epic_archive_path, epic_archive_size,
-        steam_app_id, website, youtube
+        steam_app_id, website, youtube, ai, hide
       ) VALUES (
         @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
         @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
@@ -309,7 +315,7 @@ export class GamesRepository {
         @voice_archive_hash, @voice_archive_path, @voice_archive_size,
         @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
         @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-        @steam_app_id, @website, @youtube
+        @steam_app_id, @website, @youtube, @ai, @hide
       )
     `);
 
@@ -332,7 +338,7 @@ export class GamesRepository {
           voice_archive_hash, voice_archive_path, voice_archive_size,
           voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
           epic_archive_hash, epic_archive_path, epic_archive_size,
-          steam_app_id, website, youtube
+          steam_app_id, website, youtube, ai, hide
         ) VALUES (
           @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
           @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
@@ -343,7 +349,7 @@ export class GamesRepository {
           @voice_archive_hash, @voice_archive_path, @voice_archive_size,
           @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
           @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-          @steam_app_id, @website, @youtube
+          @steam_app_id, @website, @youtube, @ai, @hide
         )
       `);
 

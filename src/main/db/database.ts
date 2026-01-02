@@ -123,7 +123,9 @@ export class DatabaseManager {
         youtube TEXT,
         epic_archive_hash TEXT,
         epic_archive_path TEXT,
-        epic_archive_size TEXT
+        epic_archive_size TEXT,
+        ai INTEGER NOT NULL DEFAULT 0,
+        hide INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
@@ -131,6 +133,7 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
       CREATE INDEX IF NOT EXISTS idx_games_is_adult ON games(is_adult);
       CREATE INDEX IF NOT EXISTS idx_games_updated_at ON games(updated_at);
+      CREATE INDEX IF NOT EXISTS idx_games_hide ON games(hide);
     `);
 
     // Таблиця для sync метаданих

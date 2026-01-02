@@ -46,9 +46,12 @@ export class SyncManager {
   }
 
   /**
-   * Повний sync - завантажити всі ігри з Supabase
+   * Повний sync - завантажити всі ігри з Supabase та видалити видалені
    */
-  async fullSync(fetchAllGames: () => Promise<Game[]>): Promise<void> {
+  async fullSync(
+    fetchAllGames: () => Promise<Game[]>,
+    fetchDeletedGameIds?: () => Promise<string[]>
+  ): Promise<void> {
     if (this.isSyncing) {
       console.log('[SyncManager] Sync already in progress, skipping');
       return;
@@ -65,12 +68,25 @@ export class SyncManager {
       if (games.length > 0) {
         this.gamesRepo.upsertGames(games);
         console.log(`[SyncManager] Inserted/updated ${games.length} games`);
-
-        // Оновити last_sync_timestamp
-        const now = new Date().toISOString();
-        this.setLastSyncTimestamp(now);
-        console.log('[SyncManager] Full sync completed successfully');
       }
+
+      // Видалити ігри, які є в deleted_games
+      if (fetchDeletedGameIds) {
+        const deletedIds = await fetchDeletedGameIds();
+        if (deletedIds.length > 0) {
+          console.log(
+            `[SyncManager] Deleting ${deletedIds.length} games from deleted_games table`
+          );
+          for (const gameId of deletedIds) {
+            this.gamesRepo.deleteGame(gameId);
+          }
+        }
+      }
+
+      // Оновити last_sync_timestamp
+      const now = new Date().toISOString();
+      this.setLastSyncTimestamp(now);
+      console.log('[SyncManager] Full sync completed successfully');
     } catch (error) {
       console.error('[SyncManager] Error during full sync:', error);
       throw error;
@@ -146,18 +162,19 @@ export class SyncManager {
   async sync(
     fetchAllGames: () => Promise<Game[]>,
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
-    fetchDeletedGameIds?: (since: string) => Promise<string[]>
+    fetchDeletedGameIds?: (since?: string) => Promise<string[]>
   ): Promise<void> {
     if (this.isFirstRun()) {
       console.log('[SyncManager] First run detected, performing full sync');
-      await this.fullSync(fetchAllGames);
+      // Для fullSync передаємо функцію без параметра since
+      await this.fullSync(fetchAllGames, fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined);
     } else {
       console.log('[SyncManager] Performing delta sync');
       try {
         await this.deltaSync(fetchUpdatedGames, fetchDeletedGameIds);
       } catch (error) {
         console.log('[SyncManager] Delta sync failed, falling back to full sync');
-        await this.fullSync(fetchAllGames);
+        await this.fullSync(fetchAllGames, fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined);
       }
     }
   }

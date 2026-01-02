@@ -226,6 +226,50 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_ai_and_hide_columns',
+    up: (db) => {
+      const hasAiColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='ai'"
+        )
+        .get() as { count: number };
+
+      if (hasAiColumn.count === 0) {
+        console.log('[Migrations] Running: add_ai_and_hide_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN ai INTEGER NOT NULL DEFAULT 0;
+          ALTER TABLE games ADD COLUMN hide INTEGER NOT NULL DEFAULT 0;
+          CREATE INDEX IF NOT EXISTS idx_games_hide ON games(hide);
+        `);
+        console.log('[Migrations] Completed: add_ai_and_hide_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_ai_and_hide',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_ai_hide_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_ai_and_hide');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_ai_hide_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_ai_and_hide - will resync on next startup'
+      );
+    },
+  },
 ];
 
 /**
