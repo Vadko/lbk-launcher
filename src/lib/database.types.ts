@@ -616,6 +616,82 @@ export type Database = {
           },
         ]
       }
+      media_upload_queue: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          file_hash: string | null
+          file_size: number | null
+          game_id: string
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          retry_count: number
+          slug: string | null
+          source_url: string
+          started_at: string | null
+          status: string
+          target_path: string | null
+          task_type: string
+          version: string | null
+          version_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_hash?: string | null
+          file_size?: number | null
+          game_id: string
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          retry_count?: number
+          slug?: string | null
+          source_url: string
+          started_at?: string | null
+          status?: string
+          target_path?: string | null
+          task_type: string
+          version?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_hash?: string | null
+          file_size?: number | null
+          game_id?: string
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          retry_count?: number
+          slug?: string | null
+          source_url?: string
+          started_at?: string | null
+          status?: string
+          target_path?: string | null
+          task_type?: string
+          version?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_upload_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_upload_queue_version_id_fkey"
+            columns: ["version_id"]
+            referencedRelation: "game_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       steam_apps: {
         Row: {
           app_id: number
