@@ -201,10 +201,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
         foundLetter = /[A-ZА-ЯҐЄІЇ]/.test(firstChar) ? firstChar : '#';
       }
     } else {
-      // 2. Standard Spy Logic with "Middleish" Trigger
-      // Instead of top edge (scrollTop), we use a trigger line further down
-      // e.g. 1/3 of the viewport height. This feels more like "it's active when it enters the main area"
-      const triggerLine = scrollTop + (clientHeight / 3);
+      // 2. Standard Spy Logic with "Top" Trigger
+      // Reverted to top tracking per user request.
+      // We add a small buffer (50px) so the switch happens just as the element enters the top area.
+      const triggerLine = scrollTop + 50;
 
       let activeGroup = null;
 
