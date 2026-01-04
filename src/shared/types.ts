@@ -162,6 +162,8 @@ export interface ElectronAPI {
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
+  // Steam integration
+  restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
   // Machine ID - for subscription tracking

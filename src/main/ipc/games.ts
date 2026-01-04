@@ -216,4 +216,56 @@ export function setupGamesHandlers(): void {
       };
     }
   });
+
+  // Restart Steam
+  ipcMain.handle('restart-steam', async () => {
+    try {
+      console.log('[Steam] Restarting Steam...');
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      const isWindows = process.platform === 'win32';
+      const isLinux = process.platform === 'linux';
+      const isMac = process.platform === 'darwin';
+
+      if (isWindows) {
+        // Kill Steam
+        await execAsync('taskkill /F /IM steam.exe').catch(() => { });
+        // Wait a bit
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Start Steam
+        const { shell } = await import('electron');
+        await shell.openExternal('steam://');
+      } else if (isLinux) {
+        // Kill Steam
+        await execAsync('pkill -TERM steam').catch(() => { });
+        // Wait a bit
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Start Steam
+        const { spawn } = await import('child_process');
+        // Run as detached process so it doesn't close when we close
+        const subprocess = spawn('steam', [], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        subprocess.unref();
+      } else if (isMac) {
+        // Kill Steam
+        await execAsync('pkill -TERM steam_osx').catch(() => { });
+        // Wait a bit
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Start Steam
+        const { shell } = await import('electron');
+        await shell.openExternal('steam://');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[Steam] Failed to restart Steam:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  });
 }

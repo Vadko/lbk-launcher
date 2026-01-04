@@ -26,16 +26,34 @@ export const GlobalModal: React.FC = () => {
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-glass">
           {getIcon()}
         </div>
-        <p className="text-text-muted whitespace-pre-line break-words">
-          {config.message}
-        </p>
-        <button
-          onClick={closeModal}
-          data-gamepad-confirm
-          className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
-        >
-          Зрозуміло
-        </button>
+        <p className="text-text-muted whitespace-pre-line break-words">{config.message}</p>
+        <div className="flex flex-col gap-2 w-full mt-2">
+          {config.actions && config.actions.length > 0 ? (
+            config.actions.map((action, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  action.onClick();
+                  closeModal();
+                }}
+                className={`w-full px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity ${action.variant === 'secondary'
+                    ? 'bg-glass-heavy text-white'
+                    : 'bg-gradient-to-r from-neon-blue to-neon-purple text-white'
+                  }`}
+              >
+                {action.label}
+              </button>
+            ))
+          ) : (
+            <button
+              onClick={closeModal}
+              data-gamepad-confirm
+              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+            >
+              Зрозуміло
+            </button>
+          )}
+        </div>
       </div>
     </Modal>
   );

@@ -84,11 +84,11 @@ export function useInstallation({
       const platform = selectedGame.platforms[0] || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
-          createBackup: createBackupBeforeInstall,
-          installText: true,
-          installVoice: false,
-          installAchievements: false,
-        };
+        createBackup: createBackupBeforeInstall,
+        installText: true,
+        installVoice: false,
+        installAchievements: false,
+      };
 
       if (options) {
         setPendingInstallOptions(options);
@@ -194,6 +194,20 @@ export function useInstallation({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
           type: 'success',
+          actions: [
+            {
+              label: 'Перезапустити Steam',
+              onClick: () => {
+                window.electronAPI.restartSteam();
+              },
+              variant: 'primary',
+            },
+            {
+              label: 'Зрозуміло',
+              onClick: () => { },
+              variant: 'secondary',
+            },
+          ],
         });
 
         // Trigger callback for first install (not update)
@@ -227,62 +241,62 @@ export function useInstallation({
 
   const handleConflictingTranslation = useCallback(
     async (conflict: ConflictingTranslation): Promise<boolean> => new Promise((resolve) => {
-        const teamInfo = conflict.team ? ` (${conflict.team})` : '';
-        showConfirm({
-          title: 'Інша локалізація вже встановлена',
-          message: `У папці гри вже встановлено іншу локалізацію:\n\n"${conflict.gameName}"${teamInfo}\nВерсія: ${conflict.version}\n\nЩоб встановити нову локалізацію, потрібно спочатку видалити попередню.\n\nВидалити попередню локалізацію?`,
-          confirmText: 'Видалити і продовжити',
-          cancelText: 'Скасувати',
-          onConfirm: async () => {
-            try {
-              // Get conflicting game info
-              const [conflictingGame] = await window.electronAPI.fetchGamesByIds([
-                conflict.gameId,
-              ]);
+      const teamInfo = conflict.team ? ` (${conflict.team})` : '';
+      showConfirm({
+        title: 'Інша локалізація вже встановлена',
+        message: `У папці гри вже встановлено іншу локалізацію:\n\n"${conflict.gameName}"${teamInfo}\nВерсія: ${conflict.version}\n\nЩоб встановити нову локалізацію, потрібно спочатку видалити попередню.\n\nВидалити попередню локалізацію?`,
+        confirmText: 'Видалити і продовжити',
+        cancelText: 'Скасувати',
+        onConfirm: async () => {
+          try {
+            // Get conflicting game info
+            const [conflictingGame] = await window.electronAPI.fetchGamesByIds([
+              conflict.gameId,
+            ]);
 
-              if (!conflictingGame) {
-                showModal({
-                  title: 'Помилка',
-                  message: 'Не вдалося знайти інформацію про встановлену локалізацію.',
-                  type: 'error',
-                });
-                resolve(false);
-                return;
-              }
-
-              // Uninstall conflicting translation
-              const result = await window.electronAPI.uninstallTranslation(conflictingGame);
-
-              if (!result.success) {
-                showModal({
-                  title: 'Помилка видалення',
-                  message: result.error?.message || 'Не вдалося видалити попередню локалізацію.',
-                  type: 'error',
-                });
-                resolve(false);
-                return;
-              }
-
-              // Refresh installed translations cache
-              await useStore.getState().loadInstalledGamesFromSystem();
-
-              resolve(true);
-            } catch (error) {
-              console.error('Error removing conflicting translation:', error);
+            if (!conflictingGame) {
               showModal({
                 title: 'Помилка',
-                message:
-                  error instanceof Error ? error.message : 'Не вдалося видалити попередню локалізацію.',
+                message: 'Не вдалося знайти інформацію про встановлену локалізацію.',
                 type: 'error',
               });
               resolve(false);
+              return;
             }
-          },
-          onCancel: () => {
+
+            // Uninstall conflicting translation
+            const result = await window.electronAPI.uninstallTranslation(conflictingGame);
+
+            if (!result.success) {
+              showModal({
+                title: 'Помилка видалення',
+                message: result.error?.message || 'Не вдалося видалити попередню локалізацію.',
+                type: 'error',
+              });
+              resolve(false);
+              return;
+            }
+
+            // Refresh installed translations cache
+            await useStore.getState().loadInstalledGamesFromSystem();
+
+            resolve(true);
+          } catch (error) {
+            console.error('Error removing conflicting translation:', error);
+            showModal({
+              title: 'Помилка',
+              message:
+                error instanceof Error ? error.message : 'Не вдалося видалити попередню локалізацію.',
+              type: 'error',
+            });
             resolve(false);
-          },
-        });
-      }),
+          }
+        },
+        onCancel: () => {
+          resolve(false);
+        },
+      });
+    }),
     [showConfirm, showModal]
   );
 
