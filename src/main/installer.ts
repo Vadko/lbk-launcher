@@ -98,7 +98,7 @@ export async function resumeDownload(
     // For now, we'll try with the old URL and if it fails, the error will be handled
     try {
       // Try to get a fresh URL using the archive path pattern
-      const archivePathMatch = state.url.match(/\/([^/]+\.zip)/);
+      const archivePathMatch = state.url.match(/\/([^/]+\.(zip|rar|7z))/);
       if (archivePathMatch) {
         const urlResult = await getSignedDownloadUrl(state.gameId, archivePathMatch[1]);
         if (urlResult.success) {
@@ -407,12 +407,24 @@ export async function installTranslation(
     }
 
     // 6. Copy files to game directory
-    const fullTargetPath = gamePath.path;
+    const additionalPath = game.additional_path || '';
+    const fullTargetPath = additionalPath
+      ? path.join(gamePath.path, additionalPath)
+      : gamePath.path;
     let installedFiles: string[] = [];
+
+    // Helper to prefix paths with additional_path
+    const prefixPaths = (files: string[]) =>
+      additionalPath ? files.map((f) => path.join(additionalPath, f)) : files;
 
     if (installText || installVoice) {
       installedFiles = await getAllFiles(extractDir);
       console.log(`[Installer] Will install ${installedFiles.length} files`);
+
+      if (additionalPath) {
+        console.log(`[Installer] Using additional_path: ${additionalPath}`);
+        await mkdir(fullTargetPath, { recursive: true });
+      }
 
       if (createBackup) {
         onStatus?.({ message: 'Створення резервної копії...' });
@@ -435,19 +447,17 @@ export async function installTranslation(
       gamePath: gamePath.path,
       hasBackup: createBackup,
       isCustomPath: !!customGamePath,
-      installedFiles,
+      installedFiles: prefixPaths(installedFiles),
       components: {
-        text: { installed: installText, files: textFiles },
+        text: { installed: installText, files: prefixPaths(textFiles) },
         ...(installVoice && voiceFiles.length > 0
-          ? { voice: { installed: true, files: voiceFiles } }
+          ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
           : {}),
         ...(installAchievements && achievementsFiles.length > 0 && achievementsInstallPath
           ? {
               achievements: {
                 installed: true,
-                files: achievementsFiles.map((f) =>
-                  path.join(achievementsInstallPath!, f)
-                ),
+                files: achievementsFiles,
               },
             }
           : {}),
@@ -498,7 +508,9 @@ async function downloadAndExtractArchive(
     throw new Error(`Архів ${type} не знайдено`);
   }
 
-  const archiveFilePath = path.join(downloadDir, `${game.id}_${type}.zip`);
+  // Get extension from archive path (supports .zip, .rar, .7z)
+  const archiveExt = path.extname(archivePath) || '.zip';
+  const archiveFilePath = path.join(downloadDir, `${game.id}_${type}${archiveExt}`);
 
   onStatus?.({ message: 'Отримання посилання для завантаження...' });
   const urlResult = await getSignedDownloadUrl(game.id, archivePath, type);

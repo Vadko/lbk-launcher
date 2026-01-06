@@ -270,6 +270,22 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_additional_path_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='additional_path'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_additional_path_column');
+        db.exec(`ALTER TABLE games ADD COLUMN additional_path TEXT;`);
+        console.log('[Migrations] Completed: add_additional_path_column');
+      }
+    },
+  },
 ];
 
 /**
