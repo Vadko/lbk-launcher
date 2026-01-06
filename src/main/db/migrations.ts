@@ -286,6 +286,30 @@ const migrations: Migration[] = [
       }
     },
   },
+  {
+    name: 'resync_for_additional_path',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_additional_path_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_additional_path');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_additional_path_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_additional_path - will resync on next startup'
+      );
+    },
+  },
 ];
 
 /**
