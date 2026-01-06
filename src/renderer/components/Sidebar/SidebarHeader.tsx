@@ -12,8 +12,7 @@ const subscribeToMediaQuery = (callback: () => void) => {
   return () => mediaQuery.removeEventListener('change', callback);
 };
 
-const getSystemDarkMode = () =>
-  window.matchMedia('(prefers-color-scheme: dark)').matches;
+const getSystemDarkMode = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 const SnowPile: React.FC = () => (
   <svg
@@ -26,7 +25,7 @@ const SnowPile: React.FC = () => (
       left: '2.5%',
       right: '0',
       height: '32px',
-      width: '95%'
+      width: '95%',
     }}
   >
     <path
@@ -72,7 +71,11 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
               onClick={toggleChristmasEffects}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-lg hover:bg-white/10 active:scale-95 transition-all"
               style={{ opacity: christmasEffectsEnabled ? 1 : 0.4 }}
-              title={christmasEffectsEnabled ? 'Вимкнути новорічні ефекти' : 'Увімкнути новорічні ефекти'}
+              title={
+                christmasEffectsEnabled
+                  ? 'Вимкнути новорічні ефекти'
+                  : 'Увімкнути новорічні ефекти'
+              }
             >
               🎄
             </button>

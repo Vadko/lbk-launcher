@@ -132,7 +132,9 @@ export const App: React.FC = () => {
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'loading' | 'syncing' | 'ready' | 'error'>('loading');
+  const [syncStatus, setSyncStatus] = useState<'loading' | 'syncing' | 'ready' | 'error'>(
+    'loading'
+  );
   const [showLoader, setShowLoader] = useState(true);
 
   // Підписка на real-time оновлення ігор
@@ -313,10 +315,9 @@ export const App: React.FC = () => {
 
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
-    } 
-      root.setAttribute('data-theme', theme);
-      console.log('[Theme] Applied theme:', theme);
-    
+    }
+    root.setAttribute('data-theme', theme);
+    console.log('[Theme] Applied theme:', theme);
   }, [theme]);
 
   useEffect(() => {
@@ -449,67 +450,65 @@ export const App: React.FC = () => {
   return (
     <>
       {/* Loader overlay with fade animation */}
-      <AnimatePresence>
-        {showLoader && <AppLoader status={syncStatus} />}
-      </AnimatePresence>
+      <AnimatePresence>{showLoader && <AppLoader status={syncStatus} />}</AnimatePresence>
 
-    <div
-      className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
-      data-gamepad-mode={isGamepadMode || undefined}
-    >
-      {/* Only show ambient background when liquid glass is not active */}
-      {!isLiquidGlassActive && <AmbientBackground />}
-      <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
-      <ChristmasEffects />
+      <div
+        className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
+        data-gamepad-mode={isGamepadMode || undefined}
+      >
+        {/* Only show ambient background when liquid glass is not active */}
+        {!isLiquidGlassActive && <AmbientBackground />}
+        <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
+        <ChristmasEffects />
 
-      {/* Main layout - changes based on gamepad mode */}
-      {isGamepadMode ? (
-        /* Gamepad layout: Header + Games strip on top, MainContent below */
-        <div className="flex flex-col h-full pt-8 relative z-10">
-          {/* Sidebar - hides when in main-content mode */}
-          <div
-            className={`transition-all duration-300 ease-in-out relative z-20 ${
-              navigationArea === 'main-content'
-                ? 'max-h-0 opacity-0 overflow-hidden'
-                : 'max-h-[300px] opacity-100'
-            }`}
-          >
+        {/* Main layout - changes based on gamepad mode */}
+        {isGamepadMode ? (
+          /* Gamepad layout: Header + Games strip on top, MainContent below */
+          <div className="flex flex-col h-full pt-8 relative z-10">
+            {/* Sidebar - hides when in main-content mode */}
+            <div
+              className={`transition-all duration-300 ease-in-out relative z-20 ${
+                navigationArea === 'main-content'
+                  ? 'max-h-0 opacity-0 overflow-hidden'
+                  : 'max-h-[300px] opacity-100'
+              }`}
+            >
+              <Sidebar
+                onOpenHistory={() => setShowNotificationHistory(true)}
+                isHorizontal={true}
+              />
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+              <MainContent />
+            </div>
+          </div>
+        ) : (
+          /* Normal layout: Vertical sidebar on left, MainContent on right */
+          <div className="flex h-full pt-8 px-2 pb-2 gap-2 relative z-10">
             <Sidebar
               onOpenHistory={() => setShowNotificationHistory(true)}
-              isHorizontal={true}
+              isHorizontal={false}
             />
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             <MainContent />
           </div>
-        </div>
-      ) : (
-        /* Normal layout: Vertical sidebar on left, MainContent on right */
-        <div className="flex h-full pt-8 px-2 pb-2 gap-2 relative z-10">
-          <Sidebar
-            onOpenHistory={() => setShowNotificationHistory(true)}
-            isHorizontal={false}
-          />
-          <MainContent />
-        </div>
-      )}
+        )}
 
-      {/* Update notifications */}
-      <UpdateNotification />
-      <ToastNotifications />
+        {/* Update notifications */}
+        <UpdateNotification />
+        <ToastNotifications />
 
-      {/* Global modals */}
-      <GlobalModal />
-      <ConfirmModal />
-      <SettingsModal />
-      <NotificationModal
-        isOpen={showNotificationHistory}
-        onClose={() => setShowNotificationHistory(false)}
-      />
+        {/* Global modals */}
+        <GlobalModal />
+        <ConfirmModal />
+        <SettingsModal />
+        <NotificationModal
+          isOpen={showNotificationHistory}
+          onClose={() => setShowNotificationHistory(false)}
+        />
 
-      {/* Gamepad hints */}
-      <GamepadHints />
-    </div>
+        {/* Gamepad hints */}
+        <GamepadHints />
+      </div>
     </>
   );
 };

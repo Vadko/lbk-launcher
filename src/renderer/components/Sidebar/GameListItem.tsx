@@ -17,7 +17,15 @@ interface GameListItemProps {
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
-  ({ game, isSelected, onClick, hasUpdate = false, isGameDetected = false, showTeamName = false, isHorizontalMode = false }) => {
+  ({
+    game,
+    isSelected,
+    onClick,
+    hasUpdate = false,
+    isGameDetected = false,
+    showTeamName = false,
+    isHorizontalMode = false,
+  }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
@@ -83,7 +91,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 />
               </>
             ) : (
-              <div className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${isAdultBlurred ? 'blur-lg' : ''}`}>
+              <div
+                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${isAdultBlurred ? 'blur-lg' : ''}`}
+              >
                 {game.name.charAt(0)}
               </div>
             )}
@@ -162,7 +172,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 />
               </>
             ) : (
-              <div className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm ${isAdultBlurred ? 'blur-md' : ''}`}>
+              <div
+                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm ${isAdultBlurred ? 'blur-md' : ''}`}
+              >
                 {game.name.charAt(0)}
               </div>
             )}

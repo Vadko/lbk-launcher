@@ -3,7 +3,12 @@ import path from 'path';
 import { promisify } from 'util';
 import got from 'got';
 import { app } from 'electron';
-import type { DownloadProgress, InstallationStatus, PausedDownloadState, InstallOptions } from '../../shared/types';
+import type {
+  DownloadProgress,
+  InstallationStatus,
+  PausedDownloadState,
+  InstallOptions,
+} from '../../shared/types';
 
 const unlink = promisify(fs.unlink);
 
@@ -127,7 +132,10 @@ export function getPausedDownloadState(gameId: string): PausedDownloadState | nu
     const data = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(data) as PausedDownloadState;
   } catch (error) {
-    console.error(`[Downloader] Failed to read paused download state for ${gameId}:`, error);
+    console.error(
+      `[Downloader] Failed to read paused download state for ${gameId}:`,
+      error
+    );
     return null;
   }
 }
@@ -142,7 +150,10 @@ export function clearPausedDownloadState(gameId: string): void {
       fs.unlinkSync(filePath);
       console.log(`[Downloader] Cleared paused download state for ${gameId}`);
     } catch (error) {
-      console.error(`[Downloader] Failed to clear paused download state for ${gameId}:`, error);
+      console.error(
+        `[Downloader] Failed to clear paused download state for ${gameId}:`,
+        error
+      );
     }
   }
 }
@@ -157,7 +168,9 @@ export function pauseCurrentDownload(gameId: string): PausedDownloadState | null
   }
 
   if (currentDownloadState.gameId !== gameId) {
-    console.log(`[Downloader] Active download is for different game: ${currentDownloadState.gameId}`);
+    console.log(
+      `[Downloader] Active download is for different game: ${currentDownloadState.gameId}`
+    );
     return null;
   }
 
@@ -241,12 +254,20 @@ export async function downloadFile(
           throw new Error('Завантаження скасовано');
         }
       } else if (currentStartByte > 0) {
-          onStatus?.({ message: 'Продовження завантаження...' });
-        } else {
-          onStatus?.({ message: 'Завантаження українізатора...' });
-        }
+        onStatus?.({ message: 'Продовження завантаження...' });
+      } else {
+        onStatus?.({ message: 'Завантаження українізатора...' });
+      }
 
-      await downloadFileAttempt(url, partialPath, onProgress, onStatus, signal, currentStartByte, expectedTotalBytes);
+      await downloadFileAttempt(
+        url,
+        partialPath,
+        onProgress,
+        onStatus,
+        signal,
+        currentStartByte,
+        expectedTotalBytes
+      );
 
       // Download complete - rename .part to final file
       if (fs.existsSync(outputPath)) {
@@ -294,7 +315,10 @@ export async function downloadFile(
             try {
               await unlink(partialPath);
             } catch (cleanupError) {
-              console.warn('[Downloader] Failed to clean up partial download:', cleanupError);
+              console.warn(
+                '[Downloader] Failed to clean up partial download:',
+                cleanupError
+              );
             }
           }
           throw error; // Don't retry on these errors
@@ -306,7 +330,10 @@ export async function downloadFile(
             try {
               await unlink(partialPath);
             } catch (cleanupError) {
-              console.warn('[Downloader] Failed to clean up partial download:', cleanupError);
+              console.warn(
+                '[Downloader] Failed to clean up partial download:',
+                cleanupError
+              );
             }
           }
           throw error; // Don't retry on abort
@@ -344,7 +371,9 @@ async function downloadFileAttempt(
   startByte = 0,
   expectedTotalBytes = 0
 ): Promise<void> {
-  console.log(`[Downloader] Starting download: ${url}${startByte > 0 ? ` (resuming from byte ${startByte})` : ''}`);
+  console.log(
+    `[Downloader] Starting download: ${url}${startByte > 0 ? ` (resuming from byte ${startByte})` : ''}`
+  );
 
   // Open file in append mode if resuming, otherwise overwrite
   const writeStream = fs.createWriteStream(outputPath, {
@@ -387,13 +416,17 @@ async function downloadFileAttempt(
       if (startByte > 0) {
         if (response.statusCode === 200) {
           // Server doesn't support range requests - need to restart
-          console.warn('[Downloader] Server does not support range requests, restarting from beginning');
+          console.warn(
+            '[Downloader] Server does not support range requests, restarting from beginning'
+          );
           serverSupportsRange = false;
           onStatus?.({ message: 'Сервер не підтримує продовження, перезапуск...' });
         } else if (response.statusCode === 416) {
           // Range not satisfiable - file may have changed on server
           console.error('[Downloader] Range not satisfiable (416)');
-          throw new Error('Файл на сервері змінився, потрібно перезапустити завантаження');
+          throw new Error(
+            'Файл на сервері змінився, потрібно перезапустити завантаження'
+          );
         }
       }
 
@@ -403,7 +436,10 @@ async function downloadFileAttempt(
         const match = contentRange.match(/bytes \d+-\d+\/(\d+)/);
         if (match) {
           actualTotalBytes = parseInt(match[1], 10);
-          console.log('[Downloader] Got total size from Content-Range:', actualTotalBytes);
+          console.log(
+            '[Downloader] Got total size from Content-Range:',
+            actualTotalBytes
+          );
         }
       }
     });
@@ -427,7 +463,9 @@ async function downloadFileAttempt(
       lastUpdateTime = now;
 
       // Calculate actual progress considering already downloaded bytes
-      const actualTransferred = serverSupportsRange ? startByte + transferred : transferred;
+      const actualTransferred = serverSupportsRange
+        ? startByte + transferred
+        : transferred;
       const actualTotal = actualTotalBytes;
       const actualPercent = actualTotal > 0 ? actualTransferred / actualTotal : 0;
 

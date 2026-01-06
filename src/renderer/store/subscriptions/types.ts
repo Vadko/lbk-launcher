@@ -2,7 +2,13 @@ import type { Game } from '../../../shared/types';
 
 export interface BaseNotification {
   id: string;
-  type: 'status-change' | 'version-update' | 'app-update' | 'progress-change' | 'team-new-game' | 'team-status-change';
+  type:
+    | 'status-change'
+    | 'version-update'
+    | 'app-update'
+    | 'progress-change'
+    | 'team-new-game'
+    | 'team-status-change';
   gameName: string;
   timestamp: number;
 }

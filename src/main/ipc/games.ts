@@ -1,4 +1,6 @@
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, shell } from 'electron';
+import { exec, spawn } from 'child_process';
+import { promisify } from 'util';
 import { fetchGames, fetchGamesByIds, findGamesByInstallPaths, fetchTeams } from '../api';
 import type { GetGamesParams, Game } from '../../shared/types';
 import {
@@ -7,6 +9,9 @@ import {
   getAllInstalledSteamGames,
 } from '../game-detector';
 import { getMachineId, trackSubscription } from '../tracking';
+
+const execAsync = promisify(exec);
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function setupGamesHandlers(): void {
   // Version
@@ -20,7 +25,8 @@ export function setupGamesHandlers(): void {
   // Track subscription (subscribe/unsubscribe) from renderer
   ipcMain.handle(
     'track-subscription',
-    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => trackSubscription(gameId, action)
+    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
+      trackSubscription(gameId, action)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
@@ -219,52 +225,42 @@ export function setupGamesHandlers(): void {
 
   // Restart Steam
   ipcMain.handle('restart-steam', async () => {
-    try {
-      console.log('[Steam] Restarting Steam...');
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-      const isWindows = process.platform === 'win32';
-      const isLinux = process.platform === 'linux';
-      const isMac = process.platform === 'darwin';
+    console.log('[Steam] Restarting Steam...');
 
-      if (isWindows) {
-        // Kill Steam
-        await execAsync('taskkill /F /IM steam.exe').catch(() => { });
-        // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Start Steam
-        const { shell } = await import('electron');
-        await shell.openExternal('steam://');
-      } else if (isLinux) {
-        // Kill Steam
-        await execAsync('pkill -TERM steam').catch(() => { });
-        // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        // Start Steam
-        const { spawn } = await import('child_process');
-        // Run as detached process so it doesn't close when we close
-        const subprocess = spawn('steam', [], {
-          detached: true,
-          stdio: 'ignore'
-        });
-        subprocess.unref();
-      } else if (isMac) {
-        // Kill Steam
-        await execAsync('pkill -TERM steam_osx').catch(() => { });
-        // Wait a bit
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Start Steam
-        const { shell } = await import('electron');
-        await shell.openExternal('steam://');
+    try {
+      switch (process.platform) {
+        case 'win32':
+          await execAsync('taskkill /F /IM steam.exe').catch((e) => {
+            console.log('[Steam] Steam process not found or already closed:', e.message);
+          });
+          await delay(1000);
+          await shell.openExternal('steam://');
+          break;
+
+        case 'linux':
+          await execAsync('pkill -TERM steam').catch((e) => {
+            console.log('[Steam] Steam process not found or already closed:', e.message);
+          });
+          await delay(2000);
+          spawn('steam', [], { detached: true, stdio: 'ignore' }).unref();
+          break;
+
+        case 'darwin':
+          await execAsync('pkill -f Steam').catch((e) => {
+            console.log('[Steam] Steam process not found or already closed:', e.message);
+          });
+          await delay(1000);
+          await shell.openExternal('steam://');
+          break;
       }
 
+      console.log('[Steam] Steam restart initiated');
       return { success: true };
     } catch (error) {
       console.error('[Steam] Failed to restart Steam:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });

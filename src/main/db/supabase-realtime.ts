@@ -1,4 +1,8 @@
-import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  createClient,
+  type RealtimeChannel,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
 import type { Game } from '../../shared/types';
 import { getMainWindow } from '../window';
 

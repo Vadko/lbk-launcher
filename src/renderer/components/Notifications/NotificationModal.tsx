@@ -17,7 +17,10 @@ import {
 import { Modal } from '../Modal/Modal';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
-import { useSubscriptionsStore, type Notification } from '../../store/useSubscriptionsStore';
+import {
+  useSubscriptionsStore,
+  type Notification,
+} from '../../store/useSubscriptionsStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 
@@ -153,13 +156,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       case 'team-new-game':
         return (
           <>
-            Нова локалізація від <span className="text-yellow-400">{notification.teamName}</span>
+            Нова локалізація від{' '}
+            <span className="text-yellow-400">{notification.teamName}</span>
           </>
         );
       case 'team-status-change':
         return (
           <>
-            <span className="text-cyan-400">{notification.teamName}</span>: стан змінено на "{notification.newValue}"
+            <span className="text-cyan-400">{notification.teamName}</span>: стан змінено
+            на "{notification.newValue}"
           </>
         );
       default:

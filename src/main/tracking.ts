@@ -170,4 +170,3 @@ export async function trackSubscription(
     return { success: false, error: String(error) };
   }
 }
-

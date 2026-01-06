@@ -20,8 +20,10 @@ const electronAPI: ElectronAPI = {
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),
-  getPausedDownload: (gameId: string) => ipcRenderer.invoke('get-paused-download', gameId),
-  cancelPausedDownload: (gameId: string) => ipcRenderer.invoke('cancel-paused-download', gameId),
+  getPausedDownload: (gameId: string) =>
+    ipcRenderer.invoke('get-paused-download', gameId),
+  cancelPausedDownload: (gameId: string) =>
+    ipcRenderer.invoke('cancel-paused-download', gameId),
   checkInstallation: (game: Game) => ipcRenderer.invoke('check-installation', game),
   getConflictingTranslation: (game: Game) =>
     ipcRenderer.invoke('get-conflicting-translation', game),
@@ -120,11 +122,13 @@ const electronAPI: ElectronAPI = {
   },
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {
-    const handler = (_: unknown, status: 'syncing' | 'ready' | 'error') => callback(status);
+    const handler = (_: unknown, status: 'syncing' | 'ready' | 'error') =>
+      callback(status);
     ipcRenderer.on('sync-status', handler);
     return () => ipcRenderer.removeListener('sync-status', handler);
   },
-  getSyncStatus: () => ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
+  getSyncStatus: () =>
+    ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
@@ -167,7 +171,8 @@ contextBridge.exposeInMainWorld('loggerAPI', {
 
 // Error handling API
 contextBridge.exposeInMainWorld('api', {
-  logError: (message: string, stack: string) => ipcRenderer.send('logger:log', 'error', message, [stack]),
+  logError: (message: string, stack: string) =>
+    ipcRenderer.send('logger:log', 'error', message, [stack]),
   clearCacheOnly: () => ipcRenderer.invoke('clear-cache-only'),
   clearAllData: () => ipcRenderer.invoke('clear-all-data-and-restart'),
   // Legacy - kept for backwards compatibility

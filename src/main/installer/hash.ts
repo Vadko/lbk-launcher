@@ -6,7 +6,10 @@ import { createHash } from 'crypto';
  * For files ≤100MB: full SHA-256 hash
  * For files >100MB: try fingerprint first, fallback to full SHA-256 for backward compatibility
  */
-export async function verifyFileHash(filePath: string, expectedHash: string): Promise<boolean> {
+export async function verifyFileHash(
+  filePath: string,
+  expectedHash: string
+): Promise<boolean> {
   const FULL_HASH_LIMIT = 100 * 1024 * 1024; // 100MB
   const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
 

@@ -222,7 +222,9 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
               {/* Footer with count */}
               {!isLoading && authors.length > 0 && (
                 <div className="px-3 py-2 border-t border-border text-xs text-text-muted text-center">
-                  {search ? `Знайдено: ${filteredAuthors.length}` : `Всього: ${authors.length}`}
+                  {search
+                    ? `Знайдено: ${filteredAuthors.length}`
+                    : `Всього: ${authors.length}`}
                 </div>
               )}
             </motion.div>

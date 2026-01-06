@@ -71,7 +71,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const willDownloadAchievements =
     hasAchievementsArchive && installAchievements && !isAchievementsInstalled;
   const willReinstallAchievements =
-    hasAchievementsArchive && installAchievements && isAchievementsInstalled && isReinstall;
+    hasAchievementsArchive &&
+    installAchievements &&
+    isAchievementsInstalled &&
+    isReinstall;
   const willRemoveVoice = hasVoiceArchive && !installVoice && isVoiceInstalled;
   const willRemoveAchievements =
     hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
@@ -110,7 +113,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     }
 
     return calculateTotalSize(sizes.filter(Boolean) as string[]);
-  }, [game, isReinstall, installText, willDownloadVoice, willDownloadAchievements, willReinstallAchievements]);
+  }, [
+    game,
+    isReinstall,
+    installText,
+    willDownloadVoice,
+    willDownloadAchievements,
+    willReinstallAchievements,
+  ]);
 
   // Compute approximate backup size (same as what will be installed)
   const backupSize = useMemo(() => {
@@ -432,7 +442,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 <Trash2 size={16} className="text-red-400" />
                 <span className="text-red-400">
                   Буде видалено:{' '}
-                  {[willRemoveVoice && 'озвучення', willRemoveAchievements && 'досягнення']
+                  {[
+                    willRemoveVoice && 'озвучення',
+                    willRemoveAchievements && 'досягнення',
+                  ]
                     .filter(Boolean)
                     .join(', ')}
                 </span>

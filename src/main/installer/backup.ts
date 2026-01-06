@@ -60,7 +60,10 @@ export async function backupFiles(sourceDir: string, targetDir: string): Promise
 /**
  * Restore files from backup (legacy format - .littlebit-backup directory)
  */
-export async function restoreBackupLegacy(backupDir: string, targetDir: string): Promise<void> {
+export async function restoreBackupLegacy(
+  backupDir: string,
+  targetDir: string
+): Promise<void> {
   try {
     const entries = await readdir(backupDir, { withFileTypes: true });
 
@@ -130,7 +133,10 @@ export async function restoreBackupNew(
 /**
  * Clean up empty directories recursively
  */
-export async function cleanupEmptyDirectories(dir: string, rootDir: string): Promise<void> {
+export async function cleanupEmptyDirectories(
+  dir: string,
+  rootDir: string
+): Promise<void> {
   try {
     if (!fs.existsSync(dir)) return;
 

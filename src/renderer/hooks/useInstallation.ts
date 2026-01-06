@@ -65,9 +65,13 @@ export function useInstallation({
 
   const [showInstallOptions, setShowInstallOptions] = useState(false);
   const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>();
-  const [pendingInstallOptions, setPendingInstallOptions] = useState<InstallOptions | undefined>();
+  const [pendingInstallOptions, setPendingInstallOptions] = useState<
+    InstallOptions | undefined
+  >();
 
-  const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
+  const gameProgress = selectedGame
+    ? getInstallationProgress(selectedGame.id)
+    : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
   const isUninstalling = gameProgress?.isUninstalling || false;
   const isPaused = gameProgress?.isPaused || false;
@@ -84,11 +88,11 @@ export function useInstallation({
       const platform = selectedGame.platforms[0] || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
-        createBackup: createBackupBeforeInstall,
-        installText: true,
-        installVoice: false,
-        installAchievements: false,
-      };
+          createBackup: createBackupBeforeInstall,
+          installText: true,
+          installVoice: false,
+          installAchievements: false,
+        };
 
       if (options) {
         setPendingInstallOptions(options);
@@ -204,7 +208,7 @@ export function useInstallation({
             },
             {
               label: 'Зрозуміло',
-              onClick: () => { },
+              onClick: () => {},
               variant: 'secondary',
             },
           ],
@@ -240,63 +244,68 @@ export function useInstallation({
   );
 
   const handleConflictingTranslation = useCallback(
-    async (conflict: ConflictingTranslation): Promise<boolean> => new Promise((resolve) => {
-      const teamInfo = conflict.team ? ` (${conflict.team})` : '';
-      showConfirm({
-        title: 'Інша локалізація вже встановлена',
-        message: `У папці гри вже встановлено іншу локалізацію:\n\n"${conflict.gameName}"${teamInfo}\nВерсія: ${conflict.version}\n\nЩоб встановити нову локалізацію, потрібно спочатку видалити попередню.\n\nВидалити попередню локалізацію?`,
-        confirmText: 'Видалити і продовжити',
-        cancelText: 'Скасувати',
-        onConfirm: async () => {
-          try {
-            // Get conflicting game info
-            const [conflictingGame] = await window.electronAPI.fetchGamesByIds([
-              conflict.gameId,
-            ]);
+    async (conflict: ConflictingTranslation): Promise<boolean> =>
+      new Promise((resolve) => {
+        const teamInfo = conflict.team ? ` (${conflict.team})` : '';
+        showConfirm({
+          title: 'Інша локалізація вже встановлена',
+          message: `У папці гри вже встановлено іншу локалізацію:\n\n"${conflict.gameName}"${teamInfo}\nВерсія: ${conflict.version}\n\nЩоб встановити нову локалізацію, потрібно спочатку видалити попередню.\n\nВидалити попередню локалізацію?`,
+          confirmText: 'Видалити і продовжити',
+          cancelText: 'Скасувати',
+          onConfirm: async () => {
+            try {
+              // Get conflicting game info
+              const [conflictingGame] = await window.electronAPI.fetchGamesByIds([
+                conflict.gameId,
+              ]);
 
-            if (!conflictingGame) {
+              if (!conflictingGame) {
+                showModal({
+                  title: 'Помилка',
+                  message: 'Не вдалося знайти інформацію про встановлену локалізацію.',
+                  type: 'error',
+                });
+                resolve(false);
+                return;
+              }
+
+              // Uninstall conflicting translation
+              const result =
+                await window.electronAPI.uninstallTranslation(conflictingGame);
+
+              if (!result.success) {
+                showModal({
+                  title: 'Помилка видалення',
+                  message:
+                    result.error?.message || 'Не вдалося видалити попередню локалізацію.',
+                  type: 'error',
+                });
+                resolve(false);
+                return;
+              }
+
+              // Refresh installed translations cache
+              await useStore.getState().loadInstalledGamesFromSystem();
+
+              resolve(true);
+            } catch (error) {
+              console.error('Error removing conflicting translation:', error);
               showModal({
                 title: 'Помилка',
-                message: 'Не вдалося знайти інформацію про встановлену локалізацію.',
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : 'Не вдалося видалити попередню локалізацію.',
                 type: 'error',
               });
               resolve(false);
-              return;
             }
-
-            // Uninstall conflicting translation
-            const result = await window.electronAPI.uninstallTranslation(conflictingGame);
-
-            if (!result.success) {
-              showModal({
-                title: 'Помилка видалення',
-                message: result.error?.message || 'Не вдалося видалити попередню локалізацію.',
-                type: 'error',
-              });
-              resolve(false);
-              return;
-            }
-
-            // Refresh installed translations cache
-            await useStore.getState().loadInstalledGamesFromSystem();
-
-            resolve(true);
-          } catch (error) {
-            console.error('Error removing conflicting translation:', error);
-            showModal({
-              title: 'Помилка',
-              message:
-                error instanceof Error ? error.message : 'Не вдалося видалити попередню локалізацію.',
-              type: 'error',
-            });
+          },
+          onCancel: () => {
             resolve(false);
-          }
-        },
-        onCancel: () => {
-          resolve(false);
-        },
-      });
-    }),
+          },
+        });
+      }),
     [showConfirm, showModal]
   );
 
@@ -334,7 +343,14 @@ export function useInstallation({
       setPendingInstallPath(customGamePath);
       setShowInstallOptions(true);
     },
-    [selectedGame, isInstalling, isCheckingInstallation, isOnline, showModal, handleConflictingTranslation]
+    [
+      selectedGame,
+      isInstalling,
+      isCheckingInstallation,
+      isOnline,
+      showModal,
+      handleConflictingTranslation,
+    ]
   );
 
   const handleInstallOptionsConfirm = useCallback(
@@ -555,7 +571,13 @@ export function useInstallation({
       });
       clearInstallationProgress(selectedGame.id);
     }
-  }, [selectedGame, isPaused, setInstallationProgress, clearInstallationProgress, showModal]);
+  }, [
+    selectedGame,
+    isPaused,
+    setInstallationProgress,
+    clearInstallationProgress,
+    showModal,
+  ]);
 
   const handleCancelDownload = useCallback(async () => {
     if (!selectedGame) return;
