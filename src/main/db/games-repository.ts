@@ -28,10 +28,10 @@ type GameInsertParams = {
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
   >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide'
-    ? number // boolean перетворюється на 0/1 для SQLite
-    : K extends 'platforms' | 'install_paths'
-      ? string | null // JSON.stringify для SQLite
-      : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+  ? number // boolean перетворюється на 0/1 для SQLite
+  : K extends 'platforms' | 'install_paths'
+  ? string | null // JSON.stringify для SQLite
+  : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 };
 
 /**
@@ -149,9 +149,10 @@ export class GamesRepository {
       queryParams.push(...statuses);
     }
 
+    // Filter by search query (case-insensitive via LOWER())
     if (searchQuery) {
-      whereConditions.push('name LIKE ?');
-      queryParams.push(`%${searchQuery}%`);
+      whereConditions.push('LOWER(name) LIKE ?');
+      queryParams.push(`%${searchQuery.toLowerCase()}%`);
     }
 
     // Adult games are always returned, UI will show blur overlay when setting is off
