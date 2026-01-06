@@ -47,9 +47,6 @@ importers:
       react-lazy-load-image-component:
         specifier: ^1.6.3
         version: 1.6.3(react@18.3.1)
-      react-snowfall:
-        specifier: ^2.4.0
-        version: 2.4.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-ts-gamepads:
         specifier: ^1.0.8
         version: 1.0.8(react@18.3.1)
@@ -2996,19 +2993,10 @@ packages:
     peerDependencies:
       react: ^18.3.1
 
-  react-fast-compare@3.2.2:
-    resolution: {integrity: sha512-nsO+KSNgo1SbJqJEYRE9ERzo7YtYbou/OqjSQKxV7jcKox7+usiUVZOAC+XnDOABXggQTno0Y1CpVnuWEc1boQ==}
-
   react-lazy-load-image-component@1.6.3:
     resolution: {integrity: sha512-kdQYUDbuISF3T9El0sBLNoWrmPohqlytcG4ognLtHYjY8bZAsJ0/Ez+VaV+0QlVyUY3K6dDXkuQAz3GpvdjBkw==}
     peerDependencies:
       react: ^15.x.x || ^16.x.x || ^17.x.x || ^18.x.x || ^19.x.x
-
-  react-snowfall@2.4.0:
-    resolution: {integrity: sha512-KAPMiGnxt11PEgC2pTVrTQsvk5jt1kLUtG+ZamiKLphTZ7GiYT1Aa5kX6jp4jKWq1kqJHchnGT9CDm4g86A5Gg==}
-    peerDependencies:
-      react: "^16.8 ||\_17.x || 18.x || 19.x"
-      react-dom: ^16.8 || 17.x || 18.x || 19.x
 
   react-ts-gamepads@1.0.8:
     resolution: {integrity: sha512-DHPwxsPH1RM6iVpPp14+ITIpO2GarMAdUfbM35GwgdEI5rfmSQM9UZh2Qqo0Cp0gkPJNiTyRnqgrwkp5iiic9A==}
@@ -6746,19 +6734,11 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-fast-compare@3.2.2: {}
-
   react-lazy-load-image-component@1.6.3(react@18.3.1):
     dependencies:
       lodash.debounce: 4.0.8
       lodash.throttle: 4.1.1
       react: 18.3.1
-
-  react-snowfall@2.4.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      react-fast-compare: 3.2.2
 
   react-ts-gamepads@1.0.8(react@18.3.1):
     dependencies:

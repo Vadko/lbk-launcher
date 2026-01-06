@@ -44,7 +44,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-lazy-load-image-component": "^1.6.3",
-    "react-snowfall": "^2.4.0",
     "react-ts-gamepads": "^1.0.8",
     "zustand": "^4.4.7"
   },

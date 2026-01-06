@@ -13,7 +13,6 @@ interface SettingsStore {
   autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
   liquidGlassEnabled: boolean;
-  christmasEffectsEnabled: boolean;
   gamepadSoundsEnabled: boolean;
   isSettingsModalOpen: boolean;
   saveLogsToFile: boolean;
@@ -33,7 +32,6 @@ interface SettingsStore {
   toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
   toggleLiquidGlass: () => void;
-  toggleChristmasEffects: () => void;
   toggleGamepadSounds: () => void;
   toggleSaveLogsToFile: () => void;
   toggleAlphabetSidebar: () => void;
@@ -53,7 +51,6 @@ export const useSettingsStore = create<SettingsStore>()(
       autoDetectInstalledGames: true,
       showAdultGames: false,
       liquidGlassEnabled: true,
-      christmasEffectsEnabled: true,
       gamepadSoundsEnabled: true,
       isSettingsModalOpen: false,
       saveLogsToFile: false,
@@ -97,9 +94,6 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleLiquidGlass: () =>
         set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled })),
 
-      toggleChristmasEffects: () =>
-        set((state) => ({ christmasEffectsEnabled: !state.christmasEffectsEnabled })),
-
       toggleGamepadSounds: () =>
         set((state) => ({ gamepadSoundsEnabled: !state.gamepadSoundsEnabled })),
 
@@ -126,7 +120,6 @@ export const useSettingsStore = create<SettingsStore>()(
         autoDetectInstalledGames: state.autoDetectInstalledGames,
         showAdultGames: state.showAdultGames,
         liquidGlassEnabled: state.liquidGlassEnabled,
-        christmasEffectsEnabled: state.christmasEffectsEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         saveLogsToFile: state.saveLogsToFile,
         sidebarWidth: state.sidebarWidth,
