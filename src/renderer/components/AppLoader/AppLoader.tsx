@@ -11,7 +11,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
       case 'syncing':
         return 'Синхронізація';
       case 'error':
-        return 'Помилка з\'єднання';
+        return "Помилка з'єднання";
       case 'loading':
       default:
         return 'Завантаження';
@@ -51,11 +51,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="mb-6"
         >
-          <img
-            src={logo}
-            alt="LittleBit"
-            className="w-24 h-24 drop-shadow-2xl"
-          />
+          <img src={logo} alt="LittleBit" className="w-24 h-24 drop-shadow-2xl" />
         </motion.div>
 
         {/* App name */}

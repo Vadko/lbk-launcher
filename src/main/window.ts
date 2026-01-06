@@ -75,15 +75,18 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   // Error handling for renderer process
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
-    console.error('[Window] Failed to load:', {
-      errorCode,
-      errorDescription,
-      validatedURL
-    });
-    // Show window anyway so user can see the error
-    mainWindow?.show();
-  });
+  mainWindow.webContents.on(
+    'did-fail-load',
+    (_event, errorCode, errorDescription, validatedURL) => {
+      console.error('[Window] Failed to load:', {
+        errorCode,
+        errorDescription,
+        validatedURL,
+      });
+      // Show window anyway so user can see the error
+      mainWindow?.show();
+    }
+  );
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[Window] Render process gone:', details);

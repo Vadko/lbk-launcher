@@ -187,7 +187,9 @@ export async function installTranslation(
     // 2. Detect game installation path
     // If license_only is enabled, don't allow custom path selection
     if (game.license_only && customGamePath) {
-      console.error(`[Installer] Manual selection not allowed for license-only game: ${game.id}`);
+      console.error(
+        `[Installer] Manual selection not allowed for license-only game: ${game.id}`
+      );
       throw new Error(
         `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
           `Ручний вибір папки заборонено.`
@@ -318,7 +320,10 @@ export async function installTranslation(
       platform,
     });
     if (installAchievements && game.achievements_archive_path && platform === 'steam') {
-      const achievementsExtractDir = path.join(downloadDir, `${game.id}_achievements_extract`);
+      const achievementsExtractDir = path.join(
+        downloadDir,
+        `${game.id}_achievements_extract`
+      );
       achievementsFiles = await downloadAndExtractArchive(
         game,
         'achievements',
@@ -440,7 +445,9 @@ export async function installTranslation(
           ? {
               achievements: {
                 installed: true,
-                files: achievementsFiles.map((f) => path.join(achievementsInstallPath!, f)),
+                files: achievementsFiles.map((f) =>
+                  path.join(achievementsInstallPath!, f)
+                ),
               },
             }
           : {}),
@@ -478,7 +485,11 @@ async function downloadAndExtractArchive(
   archiveHash: string | undefined | null,
   downloadDir: string,
   extractDir: string,
-  getSignedDownloadUrl: (gameId: string, path: string, type?: ArchiveType) => Promise<any>,
+  getSignedDownloadUrl: (
+    gameId: string,
+    path: string,
+    type?: ArchiveType
+  ) => Promise<any>,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void,
   downloadContext?: DownloadContext
@@ -567,17 +578,29 @@ function handleInstallationError(error: unknown): never {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
-    if (message.includes('err_connection_refused') || message.includes('enotfound') || message.includes('econnrefused')) {
-      throw new Error('Не вдалося підключитися до сервера.\n\nПеревірте підключення до Інтернету.');
+    if (
+      message.includes('err_connection_refused') ||
+      message.includes('enotfound') ||
+      message.includes('econnrefused')
+    ) {
+      throw new Error(
+        'Не вдалося підключитися до сервера.\n\nПеревірте підключення до Інтернету.'
+      );
     }
     if (message.includes('eacces') || message.includes('eperm')) {
-      throw new Error('Недостатньо прав для встановлення.\n\nЗапустіть застосунок від імені адміністратора.');
+      throw new Error(
+        'Недостатньо прав для встановлення.\n\nЗапустіть застосунок від імені адміністратора.'
+      );
     }
     if (message.includes('enospc')) {
-      throw new Error('Недостатньо місця на диску.\n\nЗвільніть місце та спробуйте знову.');
+      throw new Error(
+        'Недостатньо місця на диску.\n\nЗвільніть місце та спробуйте знову.'
+      );
     }
     if (message.includes('enoent')) {
-      throw new Error('Файл або папку не знайдено.\n\nПереконайтеся, що гра встановлена.');
+      throw new Error(
+        'Файл або папку не знайдено.\n\nПереконайтеся, що гра встановлена.'
+      );
     }
 
     throw new Error(`Помилка встановлення: ${error.message}`);
@@ -686,7 +709,10 @@ export async function removeComponents(
     }
 
     // Remove achievements component
-    if (componentsToRemove.achievements && installInfo.components?.achievements?.installed) {
+    if (
+      componentsToRemove.achievements &&
+      installInfo.components?.achievements?.installed
+    ) {
       for (const achievementFile of installInfo.components.achievements.files) {
         await restoreOrDeleteFile(achievementFile);
       }
@@ -727,7 +753,10 @@ async function restoreOrDeleteFile(filePath: string): Promise<void> {
 /**
  * Delete file and clean up empty parent directories
  */
-async function deleteFileAndCleanupDirs(filePath: string, rootDir: string): Promise<void> {
+async function deleteFileAndCleanupDirs(
+  filePath: string,
+  rootDir: string
+): Promise<void> {
   try {
     if (fs.existsSync(filePath)) {
       await unlink(filePath);

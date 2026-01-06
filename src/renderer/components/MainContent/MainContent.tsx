@@ -31,7 +31,10 @@ import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
 import { Tooltip } from '../ui/Tooltip';
-import { isSpecialTranslator, getSpecialTranslatorInfo } from '../../constants/specialTranslators';
+import {
+  isSpecialTranslator,
+  getSpecialTranslatorInfo,
+} from '../../constants/specialTranslators';
 import type { LaunchGameResult } from '../../../shared/types';
 
 export const MainContent: React.FC = () => {
@@ -44,7 +47,8 @@ export const MainContent: React.FC = () => {
     setInstallationProgress,
   } = useStore();
   const { showModal } = useModalStore();
-  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } = useSettingsStore();
+  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
+    useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -134,7 +138,9 @@ export const MainContent: React.FC = () => {
       // Don't abort if paused - download is already stopped
       if (selectedGame && isInstalling && !isPaused) {
         console.log('[MainContent] Aborting download due to connection loss');
-        await window.electronAPI?.abortDownload('Завантаження скасовано через відсутність підключення до Інтернету');
+        await window.electronAPI?.abortDownload(
+          'Завантаження скасовано через відсутність підключення до Інтернету'
+        );
         setInstallationProgress(selectedGame.id, {
           statusMessage:
             '❌ Завантаження скасовано через відсутність підключення до Інтернету',
@@ -272,7 +278,10 @@ export const MainContent: React.FC = () => {
         />
       )}
 
-      <div data-gamepad-main-content className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+      <div
+        data-gamepad-main-content
+        className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar"
+      >
         <GameHero game={selectedGame} />
 
         {/* Actions block */}
@@ -331,7 +340,12 @@ export const MainContent: React.FC = () => {
               />
             )}
             {selectedGame.support_url && (
-              <Button variant="pink" icon={<Heart size={20} />} onClick={handleSupport} data-gamepad-action>
+              <Button
+                variant="pink"
+                icon={<Heart size={20} />}
+                onClick={handleSupport}
+                data-gamepad-action
+              >
                 Підтримати переклад
               </Button>
             )}
@@ -386,12 +400,23 @@ export const MainContent: React.FC = () => {
           <div className="glass-card mb-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-neon-blue/20'}`}>
-                  <Users size={20} className={isSpecialTranslator(selectedGame.team) ? 'text-yellow-400' : 'text-neon-blue'} />
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-neon-blue/20'}`}
+                >
+                  <Users
+                    size={20}
+                    className={
+                      isSpecialTranslator(selectedGame.team)
+                        ? 'text-yellow-400'
+                        : 'text-neon-blue'
+                    }
+                  />
                 </div>
                 <div>
                   <div className="text-xs text-text-muted">
-                    {selectedGame.team.includes(',') ? 'Автори локалізації' : 'Автор локалізації'}
+                    {selectedGame.team.includes(',')
+                      ? 'Автори локалізації'
+                      : 'Автор локалізації'}
                   </div>
                   <div className="font-medium text-text-main">
                     {selectedGame.team.split(',').map((author, index, arr) => {
@@ -405,11 +430,16 @@ export const MainContent: React.FC = () => {
                             {trimmedAuthor}
                             {isSpecial && specialInfo && (
                               <Tooltip content={specialInfo.description}>
-                                <Star size={12} className="ml-1 fill-yellow-400 text-yellow-400 cursor-help" />
+                                <Star
+                                  size={12}
+                                  className="ml-1 fill-yellow-400 text-yellow-400 cursor-help"
+                                />
                               </Tooltip>
                             )}
                           </span>
-                          {index < arr.length - 1 && <span className="text-text-main">, </span>}
+                          {index < arr.length - 1 && (
+                            <span className="text-text-main">, </span>
+                          )}
                         </span>
                       );
                     })}
@@ -458,7 +488,9 @@ export const MainContent: React.FC = () => {
 
         {selectedGame.game_description && (
           <div className="glass-card mb-6">
-            <h3 className="text-lg font-head font-semibold text-text-main mb-3">Про гру</h3>
+            <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+              Про гру
+            </h3>
             <p className="text-text-muted leading-relaxed whitespace-pre-line">
               {selectedGame.game_description}
             </p>

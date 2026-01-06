@@ -35,7 +35,6 @@
     "@node-steam/vdf": "^2.2.0",
     "@supabase/supabase-js": "2.86.0",
     "better-sqlite3": "^12.5.0",
-    "electron-liquid-glass": "^1.1.1",
     "electron-updater": "6.6.2",
     "framer-motion": "^12.23.25",
     "got": "^11.8.6",
@@ -48,6 +47,9 @@
     "react-snowfall": "^2.4.0",
     "react-ts-gamepads": "^1.0.8",
     "zustand": "^4.4.7"
+  },
+  "optionalDependencies": {
+    "electron-liquid-glass": "^1.1.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

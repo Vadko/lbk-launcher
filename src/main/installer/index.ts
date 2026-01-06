@@ -14,9 +14,22 @@ export {
   getPartialFilePath,
 } from './download';
 export { extractArchive } from './archive';
-export { backupFiles, restoreBackupLegacy, restoreBackupNew, cleanupEmptyDirectories, BACKUP_SUFFIX } from './backup';
+export {
+  backupFiles,
+  restoreBackupLegacy,
+  restoreBackupNew,
+  cleanupEmptyDirectories,
+  BACKUP_SUFFIX,
+} from './backup';
 export { getAllFiles, copyDirectory, cleanupDownloadDir, deleteDirectory } from './files';
-export { checkPlatformCompatibility, getInstallerFileName, hasExecutableInstaller, runInstaller, getSteamAchievementsPath, isExecutableInstaller } from './platform';
+export {
+  checkPlatformCompatibility,
+  getInstallerFileName,
+  hasExecutableInstaller,
+  runInstaller,
+  getSteamAchievementsPath,
+  isExecutableInstaller,
+} from './platform';
 export { verifyFileHash } from './hash';
 export {
   saveInstallationInfo,
@@ -27,6 +40,6 @@ export {
   getAllInstalledGameIds,
   deleteCachedInstallationInfo,
   getConflictingTranslation,
-  INSTALLATION_INFO_FILE
+  INSTALLATION_INFO_FILE,
 } from './cache';
 export { parseSizeToBytes, checkDiskSpace } from './disk';

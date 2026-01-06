@@ -4,7 +4,14 @@ interface ModalConfig {
   title: string;
   message: string;
   type?: 'success' | 'error' | 'info';
+  actions?: ModalAction[];
   onClose?: () => void;
+}
+
+export interface ModalAction {
+  label: string;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary' | 'danger';
 }
 
 interface ModalStore {

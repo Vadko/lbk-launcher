@@ -258,11 +258,14 @@ export class GamesRepository {
       // "GameName" -> "gamename"
       if (p.includes('steamapps/common/')) {
         return p.split('steamapps/common/')[1];
-      } if (p.includes('steamapps\\common\\')) {
+      }
+      if (p.includes('steamapps\\common\\')) {
         return p.split('steamapps\\common\\')[1];
-      } if (p.includes('common/')) {
+      }
+      if (p.includes('common/')) {
         return p.split('common/')[1];
-      } if (p.includes('common\\')) {
+      }
+      if (p.includes('common\\')) {
         return p.split('common\\')[1];
       }
       return p;

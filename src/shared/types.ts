@@ -116,7 +116,9 @@ export interface ElectronAPI {
   ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
-  pauseDownload: (gameId: string) => Promise<{ success: boolean; state?: PausedDownloadState; error?: string }>;
+  pauseDownload: (
+    gameId: string
+  ) => Promise<{ success: boolean; state?: PausedDownloadState; error?: string }>;
   resumeDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   getPausedDownload: (gameId: string) => Promise<PausedDownloadState | null>;
   cancelPausedDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
@@ -162,6 +164,8 @@ export interface ElectronAPI {
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
+  // Steam integration
+  restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
   // Machine ID - for subscription tracking

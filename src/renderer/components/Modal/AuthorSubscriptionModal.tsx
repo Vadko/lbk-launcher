@@ -50,7 +50,10 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Count how many authors are not yet subscribed
-  const unsubscribedCount = useMemo(() => authors.filter((author) => !isSubscribedToTeam(author)).length, [authors, isSubscribedToTeam]);
+  const unsubscribedCount = useMemo(
+    () => authors.filter((author) => !isSubscribedToTeam(author)).length,
+    [authors, isSubscribedToTeam]
+  );
 
   const toggleAuthor = (author: string) => {
     setSelectedAuthors((prev) => {
@@ -101,8 +104,8 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
         {/* Description */}
         <p className="text-text-muted">
           Хочете отримувати сповіщення про нові локалізації від{' '}
-          {authors.length === 1 ? 'цього автора' : 'цих авторів'}? Ви зможете
-          змінити підписки в будь-який момент.
+          {authors.length === 1 ? 'цього автора' : 'цих авторів'}? Ви зможете змінити
+          підписки в будь-який момент.
         </p>
 
         {/* Authors list */}
@@ -158,7 +161,10 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     </span>
                     {isSpecial && specialInfo && (
                       <Tooltip content={specialInfo.description}>
-                        <Star size={14} className="text-yellow-400 fill-yellow-400 cursor-help flex-shrink-0" />
+                        <Star
+                          size={14}
+                          className="text-yellow-400 fill-yellow-400 cursor-help flex-shrink-0"
+                        />
                       </Tooltip>
                     )}
                     {isAlreadySubscribed && (

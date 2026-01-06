@@ -139,7 +139,9 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
             word-break: break-word;
           ">${message}</pre>
 
-          ${stack ? `
+          ${
+            stack
+              ? `
             <strong style="color: #ffd93d; display: block; margin-top: 16px;">Stack trace:</strong>
             <pre style="
               margin-top: 8px;
@@ -151,7 +153,9 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
               word-break: break-word;
               font-size: 11px;
             ">${stack}</pre>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
       </details>
     </div>
@@ -209,14 +213,11 @@ export function initGlobalErrorHandlers(): void {
   window.addEventListener('unhandledrejection', (event) => {
     console.error('[GlobalErrorHandler] Unhandled promise rejection:', event.reason);
 
-    const message = event.reason?.message || event.reason?.toString() || 'Unknown rejection';
+    const message =
+      event.reason?.message || event.reason?.toString() || 'Unknown rejection';
     const stack = event.reason?.stack;
 
-    showErrorScreen(
-      'Необроблений Promise rejection',
-      message,
-      stack
-    );
+    showErrorScreen('Необроблений Promise rejection', message, stack);
 
     // Prevent default error handling
     event.preventDefault();

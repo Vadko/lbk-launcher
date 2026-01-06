@@ -1,32 +1,40 @@
 import { createJSONStorage } from 'zustand/middleware';
-import type { SerializedMap, SerializedSet, PersistedSubscriptionsState, GameProgress } from './types';
+import type {
+  SerializedMap,
+  SerializedSet,
+  PersistedSubscriptionsState,
+  GameProgress,
+} from './types';
 
 /**
  * Custom storage with Map/Set serialization
  */
-export const customStorage = createJSONStorage<PersistedSubscriptionsState>(() => localStorage, {
-  reviver: (_key, value: unknown) => {
-    if (value && typeof value === 'object' && '__type' in value) {
-      const typed = value as SerializedMap | SerializedSet;
-      if (typed.__type === 'Map') {
-        return new Map(typed.data);
+export const customStorage = createJSONStorage<PersistedSubscriptionsState>(
+  () => localStorage,
+  {
+    reviver: (_key, value: unknown) => {
+      if (value && typeof value === 'object' && '__type' in value) {
+        const typed = value as SerializedMap | SerializedSet;
+        if (typed.__type === 'Map') {
+          return new Map(typed.data);
+        }
+        if (typed.__type === 'Set') {
+          return new Set(typed.data);
+        }
       }
-      if (typed.__type === 'Set') {
-        return new Set(typed.data);
+      return value;
+    },
+    replacer: (_key, value: unknown) => {
+      if (value instanceof Map) {
+        return { __type: 'Map', data: Array.from(value.entries()) } as SerializedMap;
       }
-    }
-    return value;
-  },
-  replacer: (_key, value: unknown) => {
-    if (value instanceof Map) {
-      return { __type: 'Map', data: Array.from(value.entries()) } as SerializedMap;
-    }
-    if (value instanceof Set) {
-      return { __type: 'Set', data: Array.from(value) } as SerializedSet;
-    }
-    return value;
-  },
-});
+      if (value instanceof Set) {
+        return { __type: 'Set', data: Array.from(value) } as SerializedSet;
+      }
+      return value;
+    },
+  }
+);
 
 /**
  * Type guard for Set
@@ -90,19 +98,25 @@ export function migrateStoreData(state: Partial<PersistedSubscriptionsState>): v
 
   if (!isValidSet(state.promptedGamesForSubscription)) {
     console.warn('[SubscriptionsStore] Migrating promptedGamesForSubscription to Set');
-    state.promptedGamesForSubscription = ensureSet<string>(state.promptedGamesForSubscription);
+    state.promptedGamesForSubscription = ensureSet<string>(
+      state.promptedGamesForSubscription
+    );
     migrated = true;
   }
 
   if (!isValidMap(state.subscribedGameStatuses)) {
     console.warn('[SubscriptionsStore] Migrating subscribedGameStatuses to Map');
-    state.subscribedGameStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
+    state.subscribedGameStatuses = ensureMap<string, string>(
+      state.subscribedGameStatuses
+    );
     migrated = true;
   }
 
   if (!isValidMap(state.subscribedGameProgress)) {
     console.warn('[SubscriptionsStore] Migrating subscribedGameProgress to Map');
-    state.subscribedGameProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
+    state.subscribedGameProgress = ensureMap<string, GameProgress>(
+      state.subscribedGameProgress
+    );
     migrated = true;
   }
 

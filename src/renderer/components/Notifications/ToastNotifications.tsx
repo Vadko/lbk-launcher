@@ -1,7 +1,10 @@
 import React, { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw, Languages, Download, TrendingUp } from 'lucide-react';
-import { useSubscriptionsStore, type ToastNotification } from '../../store/useSubscriptionsStore';
+import {
+  useSubscriptionsStore,
+  type ToastNotification,
+} from '../../store/useSubscriptionsStore';
 import { useStore } from '../../store/useStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
@@ -69,24 +72,27 @@ export const ToastNotifications: React.FC = () => {
   const dismissToast = useSubscriptionsStore((state) => state.dismissToast);
   const setSelectedGame = useStore((state) => state.setSelectedGame);
 
-  const handleToastClick = useCallback(async (toast: ToastNotification) => {
-    // Don't navigate for app-update notifications
-    if (toast.type === 'app-update') {
-      return;
-    }
-
-    // Load game and select it
-    try {
-      const games = await window.electronAPI.fetchGamesByIds([toast.gameId]);
-      if (games.length > 0) {
-        setSelectedGame(games[0]);
+  const handleToastClick = useCallback(
+    async (toast: ToastNotification) => {
+      // Don't navigate for app-update notifications
+      if (toast.type === 'app-update') {
+        return;
       }
-    } catch (error) {
-      console.error('Failed to load game:', error);
-    }
 
-    dismissToast(toast.id);
-  }, [setSelectedGame, dismissToast]);
+      // Load game and select it
+      try {
+        const games = await window.electronAPI.fetchGamesByIds([toast.gameId]);
+        if (games.length > 0) {
+          setSelectedGame(games[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load game:', error);
+      }
+
+      dismissToast(toast.id);
+    },
+    [setSelectedGame, dismissToast]
+  );
 
   if (toasts.length === 0) return null;
 
