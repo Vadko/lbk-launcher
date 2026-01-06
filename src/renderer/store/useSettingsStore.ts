@@ -21,6 +21,7 @@ interface SettingsStore {
   specialFilter: SpecialFilterType | null;
   selectedAuthors: string[];
   notificationSoundsEnabled: boolean;
+  alphabetSidebarEnabled: boolean;
   setTheme: (theme: ThemeMode) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
@@ -35,6 +36,7 @@ interface SettingsStore {
   toggleChristmasEffects: () => void;
   toggleGamepadSounds: () => void;
   toggleSaveLogsToFile: () => void;
+  toggleAlphabetSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
@@ -59,6 +61,7 @@ export const useSettingsStore = create<SettingsStore>()(
       specialFilter: null,
       selectedAuthors: [],
       notificationSoundsEnabled: true,
+      alphabetSidebarEnabled: true,
 
       setTheme: (theme) => set({ theme }),
 
@@ -103,6 +106,9 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleSaveLogsToFile: () =>
         set((state) => ({ saveLogsToFile: !state.saveLogsToFile })),
 
+      toggleAlphabetSidebar: () =>
+        set((state) => ({ alphabetSidebarEnabled: !state.alphabetSidebarEnabled })),
+
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
@@ -127,6 +133,7 @@ export const useSettingsStore = create<SettingsStore>()(
         specialFilter: state.specialFilter,
         selectedAuthors: state.selectedAuthors,
         notificationSoundsEnabled: state.notificationSoundsEnabled,
+        alphabetSidebarEnabled: state.alphabetSidebarEnabled,
       }),
     }
   )

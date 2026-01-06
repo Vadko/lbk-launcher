@@ -72,14 +72,7 @@ const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) 
 export const GamepadHints: React.FC = () => {
   const { isGamepadMode, navigationArea } = useGamepadModeStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [gamepadType, setGamepadType] = useState<GamepadType>('xbox');
-
-  // Detect gamepad type when entering gamepad mode
-  useEffect(() => {
-    if (isGamepadMode) {
-      setGamepadType(detectGamepadType());
-    }
-  }, [isGamepadMode]);
+  const [gamepadType, setGamepadType] = useState<GamepadType>(() => detectGamepadType());
 
   useEffect(() => {
     if (!isGamepadMode) return;

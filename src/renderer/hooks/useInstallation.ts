@@ -208,7 +208,7 @@ export function useInstallation({
             },
             {
               label: 'Зрозуміло',
-              onClick: () => {},
+              onClick: () => undefined,
               variant: 'secondary',
             },
           ],
