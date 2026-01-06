@@ -159,7 +159,9 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
             }
           } catch {
             // If we can't read actual file, cache is stale
-            console.log('[Installer] Cannot read actual installation file, cache is stale');
+            console.log(
+              '[Installer] Cannot read actual installation file, cache is stale'
+            );
             await unlink(previousInstallInfoPath);
             return null;
           }
@@ -170,15 +172,14 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
             `[Installer] Found previous installation at custom path: ${info.gamePath}`
           );
           return info;
-        } 
-          // Cache is stale - game folder or translation was removed
-          console.log('[Installer] Cache is stale, removing cached installation info');
-          try {
-            await unlink(previousInstallInfoPath);
-          } catch {
-            // Ignore deletion errors
-          }
-        
+        }
+        // Cache is stale - game folder or translation was removed
+        console.log('[Installer] Cache is stale, removing cached installation info');
+        try {
+          await unlink(previousInstallInfoPath);
+        } catch {
+          // Ignore deletion errors
+        }
       } catch (error) {
         console.warn('[Installer] Failed to read previous installation info:', error);
       }

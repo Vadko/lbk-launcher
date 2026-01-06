@@ -14,7 +14,10 @@ interface HintItem {
 // Button mappings for different controller types
 const BUTTON_CONFIG: Record<
   GamepadType,
-  { confirm: { label: string; variant: ButtonVariant }; back: { label: string; variant: ButtonVariant } }
+  {
+    confirm: { label: string; variant: ButtonVariant };
+    back: { label: string; variant: ButtonVariant };
+  }
 > = {
   xbox: {
     confirm: { label: 'A', variant: 'green' },

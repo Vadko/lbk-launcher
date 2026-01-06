@@ -155,7 +155,10 @@ export function setupInstallerHandlers(): void {
       return { success: false, error: 'Немає активного завантаження для призупинення' };
     } catch (error) {
       console.error('Error pausing download:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Невідома помилка' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Невідома помилка',
+      };
     }
   });
 
@@ -185,7 +188,10 @@ export function setupInstallerHandlers(): void {
       return { success: true };
     } catch (error) {
       console.error('Error resuming download:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Невідома помилка' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Невідома помилка',
+      };
     }
   });
 
@@ -212,7 +218,10 @@ export function setupInstallerHandlers(): void {
       return { success: true };
     } catch (error) {
       console.error('Error cancelling paused download:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Невідома помилка' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Невідома помилка',
+      };
     }
   });
 
@@ -248,5 +257,7 @@ export function setupInstallerHandlers(): void {
     }
   );
 
-  ipcMain.handle('check-platform-compatibility', async (_, game: Game) => checkPlatformCompatibility(game));
+  ipcMain.handle('check-platform-compatibility', async (_, game: Game) =>
+    checkPlatformCompatibility(game)
+  );
 }

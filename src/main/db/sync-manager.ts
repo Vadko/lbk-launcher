@@ -167,14 +167,20 @@ export class SyncManager {
     if (this.isFirstRun()) {
       console.log('[SyncManager] First run detected, performing full sync');
       // Для fullSync передаємо функцію без параметра since
-      await this.fullSync(fetchAllGames, fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined);
+      await this.fullSync(
+        fetchAllGames,
+        fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
+      );
     } else {
       console.log('[SyncManager] Performing delta sync');
       try {
         await this.deltaSync(fetchUpdatedGames, fetchDeletedGameIds);
       } catch (error) {
         console.log('[SyncManager] Delta sync failed, falling back to full sync');
-        await this.fullSync(fetchAllGames, fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined);
+        await this.fullSync(
+          fetchAllGames,
+          fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
+        );
       }
     }
   }

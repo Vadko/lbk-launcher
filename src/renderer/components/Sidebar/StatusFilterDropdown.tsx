@@ -145,9 +145,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
                   >
                     <span
                       className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
-                        isSelected
-                          ? 'bg-neon-blue border-neon-blue'
-                          : 'border-text-muted'
+                        isSelected ? 'bg-neon-blue border-neon-blue' : 'border-text-muted'
                       }`}
                     >
                       {isSelected && <Check size={12} className="text-white" />}

@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Notification, ToastNotification, GameProgress, PersistedSubscriptionsState } from './subscriptions/types';
+import type {
+  Notification,
+  ToastNotification,
+  GameProgress,
+  PersistedSubscriptionsState,
+} from './subscriptions/types';
 import {
   getNotificationMessage,
   createNotification,
@@ -20,7 +25,11 @@ import {
 } from './subscriptions/storageHelpers';
 
 // Re-export types for external use
-export type { Notification, ToastNotification, GameProgress } from './subscriptions/types';
+export type {
+  Notification,
+  ToastNotification,
+  GameProgress,
+} from './subscriptions/types';
 
 interface SubscriptionsStore extends PersistedSubscriptionsState {
   // Toast notifications (non-persisted, auto-dismiss)
@@ -118,7 +127,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           const newStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
           newStatuses.set(gameId, status);
 
-          const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
+          const newProgress = ensureMap<string, GameProgress>(
+            state.subscribedGameProgress
+          );
           if (progress) {
             newProgress.set(gameId, progress);
           }
@@ -140,7 +151,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           const newStatuses = ensureMap<string, string>(state.subscribedGameStatuses);
           newStatuses.delete(gameId);
 
-          const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
+          const newProgress = ensureMap<string, GameProgress>(
+            state.subscribedGameProgress
+          );
           newProgress.delete(gameId);
 
           return {
@@ -181,7 +194,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       updateSubscribedProgress: (gameId, progress) => {
         set((state) => {
-          const newProgress = ensureMap<string, GameProgress>(state.subscribedGameProgress);
+          const newProgress = ensureMap<string, GameProgress>(
+            state.subscribedGameProgress
+          );
           newProgress.set(gameId, progress);
           return { subscribedGameProgress: newProgress };
         });
@@ -228,13 +243,19 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       isGamePrompted: (gameId) => {
         const { promptedGamesForSubscription } = get();
-        return isValidSet<string>(promptedGamesForSubscription) && promptedGamesForSubscription.has(gameId);
+        return (
+          isValidSet<string>(promptedGamesForSubscription) &&
+          promptedGamesForSubscription.has(gameId)
+        );
       },
 
       // Version notification tracking methods
       hasNotifiedVersion: (gameId, version) => {
         const { notifiedVersions } = get();
-        return isValidMap<string, string>(notifiedVersions) && notifiedVersions.get(gameId) === version;
+        return (
+          isValidMap<string, string>(notifiedVersions) &&
+          notifiedVersions.get(gameId) === version
+        );
       },
 
       clearNotifiedVersion: (gameId) => {
@@ -264,11 +285,21 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled(notificationParams.type);
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(notificationParams.gameName, message, notificationParams.gameId);
+          showSystemNotificationIfHidden(
+            notificationParams.gameName,
+            message,
+            notificationParams.gameId
+          );
         }
       },
 
-      addVersionUpdateNotification: (gameId, gameName, oldVersion, newVersion, showToast = true) => {
+      addVersionUpdateNotification: (
+        gameId,
+        gameName,
+        oldVersion,
+        newVersion,
+        showToast = true
+      ) => {
         const notification = createNotification({
           type: 'version-update',
           gameId,
@@ -304,7 +335,14 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }
       },
 
-      addProgressChangeNotification: (gameId, gameName, progressType, oldValue, newValue, showToast = true) => {
+      addProgressChangeNotification: (
+        gameId,
+        gameName,
+        progressType,
+        oldValue,
+        newValue,
+        showToast = true
+      ) => {
         const notification = createNotification({
           type: 'progress-change',
           gameId,
@@ -391,7 +429,14 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }
       },
 
-      addTeamStatusChangeNotification: (gameId, gameName, teamName, oldStatus, newStatus, showToast = true) => {
+      addTeamStatusChangeNotification: (
+        gameId,
+        gameName,
+        teamName,
+        oldStatus,
+        newStatus,
+        showToast = true
+      ) => {
         const notification = createNotification({
           type: 'team-status-change',
           gameId,
@@ -440,7 +485,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       clearNotification: (notificationId) => {
         set((state) => {
-          const notifications = state.notifications.filter((n) => n.id !== notificationId);
+          const notifications = state.notifications.filter(
+            (n) => n.id !== notificationId
+          );
           const unreadCount = notifications.filter((n) => !n.read).length;
           return { notifications, unreadCount };
         });

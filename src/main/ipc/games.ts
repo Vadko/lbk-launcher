@@ -1,4 +1,6 @@
-import { app, ipcMain } from 'electron';
+import { app, ipcMain, shell } from 'electron';
+import { exec, spawn } from 'child_process';
+import { promisify } from 'util';
 import { fetchGames, fetchGamesByIds, findGamesByInstallPaths, fetchTeams } from '../api';
 import type { GetGamesParams, Game } from '../../shared/types';
 import {
@@ -7,6 +9,9 @@ import {
   getAllInstalledSteamGames,
 } from '../game-detector';
 import { getMachineId, trackSubscription } from '../tracking';
+
+const execAsync = promisify(exec);
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function setupGamesHandlers(): void {
   // Version
@@ -20,7 +25,8 @@ export function setupGamesHandlers(): void {
   // Track subscription (subscribe/unsubscribe) from renderer
   ipcMain.handle(
     'track-subscription',
-    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => trackSubscription(gameId, action)
+    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
+      trackSubscription(gameId, action)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
@@ -213,6 +219,48 @@ export function setupGamesHandlers(): void {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Не вдалося запустити гру',
+      };
+    }
+  });
+
+  // Restart Steam
+  ipcMain.handle('restart-steam', async () => {
+    console.log('[Steam] Restarting Steam...');
+
+    try {
+      switch (process.platform) {
+        case 'win32':
+          await execAsync('taskkill /F /IM steam.exe').catch((e) => {
+            console.log('[Steam] Steam process not found or already closed:', e.message);
+          });
+          await delay(1000);
+          await shell.openExternal('steam://');
+          break;
+
+        case 'linux':
+          await execAsync('pkill -TERM steam').catch((e) => {
+            console.log('[Steam] Steam process not found or already closed:', e.message);
+          });
+          await delay(2000);
+          spawn('steam', [], { detached: true, stdio: 'ignore' }).unref();
+          break;
+
+        case 'darwin':
+          await execAsync('pkill -f Steam').catch((e) => {
+            console.log('[Steam] Steam process not found or already closed:', e.message);
+          });
+          await delay(1000);
+          await shell.openExternal('steam://');
+          break;
+      }
+
+      console.log('[Steam] Steam restart initiated');
+      return { success: true };
+    } catch (error) {
+      console.error('[Steam] Failed to restart Steam:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });

@@ -6,7 +6,11 @@ interface TooltipProps {
   className?: string;
 }
 
-export const Tooltip: React.FC<TooltipProps> = ({ content, children, className = '' }) => {
+export const Tooltip: React.FC<TooltipProps> = ({
+  content,
+  children,
+  className = '',
+}) => {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
   const tooltipRef = useRef<HTMLDivElement>(null);

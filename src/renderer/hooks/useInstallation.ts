@@ -65,9 +65,13 @@ export function useInstallation({
 
   const [showInstallOptions, setShowInstallOptions] = useState(false);
   const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>();
-  const [pendingInstallOptions, setPendingInstallOptions] = useState<InstallOptions | undefined>();
+  const [pendingInstallOptions, setPendingInstallOptions] = useState<
+    InstallOptions | undefined
+  >();
 
-  const gameProgress = selectedGame ? getInstallationProgress(selectedGame.id) : undefined;
+  const gameProgress = selectedGame
+    ? getInstallationProgress(selectedGame.id)
+    : undefined;
   const isInstalling = gameProgress?.isInstalling || false;
   const isUninstalling = gameProgress?.isUninstalling || false;
   const isPaused = gameProgress?.isPaused || false;
@@ -194,6 +198,20 @@ export function useInstallation({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
           type: 'success',
+          actions: [
+            {
+              label: 'Перезапустити Steam',
+              onClick: () => {
+                window.electronAPI.restartSteam();
+              },
+              variant: 'primary',
+            },
+            {
+              label: 'Зрозуміло',
+              onClick: () => {},
+              variant: 'secondary',
+            },
+          ],
         });
 
         // Trigger callback for first install (not update)
@@ -226,7 +244,8 @@ export function useInstallation({
   );
 
   const handleConflictingTranslation = useCallback(
-    async (conflict: ConflictingTranslation): Promise<boolean> => new Promise((resolve) => {
+    async (conflict: ConflictingTranslation): Promise<boolean> =>
+      new Promise((resolve) => {
         const teamInfo = conflict.team ? ` (${conflict.team})` : '';
         showConfirm({
           title: 'Інша локалізація вже встановлена',
@@ -251,12 +270,14 @@ export function useInstallation({
               }
 
               // Uninstall conflicting translation
-              const result = await window.electronAPI.uninstallTranslation(conflictingGame);
+              const result =
+                await window.electronAPI.uninstallTranslation(conflictingGame);
 
               if (!result.success) {
                 showModal({
                   title: 'Помилка видалення',
-                  message: result.error?.message || 'Не вдалося видалити попередню локалізацію.',
+                  message:
+                    result.error?.message || 'Не вдалося видалити попередню локалізацію.',
                   type: 'error',
                 });
                 resolve(false);
@@ -272,7 +293,9 @@ export function useInstallation({
               showModal({
                 title: 'Помилка',
                 message:
-                  error instanceof Error ? error.message : 'Не вдалося видалити попередню локалізацію.',
+                  error instanceof Error
+                    ? error.message
+                    : 'Не вдалося видалити попередню локалізацію.',
                 type: 'error',
               });
               resolve(false);
@@ -320,7 +343,14 @@ export function useInstallation({
       setPendingInstallPath(customGamePath);
       setShowInstallOptions(true);
     },
-    [selectedGame, isInstalling, isCheckingInstallation, isOnline, showModal, handleConflictingTranslation]
+    [
+      selectedGame,
+      isInstalling,
+      isCheckingInstallation,
+      isOnline,
+      showModal,
+      handleConflictingTranslation,
+    ]
   );
 
   const handleInstallOptionsConfirm = useCallback(
@@ -541,7 +571,13 @@ export function useInstallation({
       });
       clearInstallationProgress(selectedGame.id);
     }
-  }, [selectedGame, isPaused, setInstallationProgress, clearInstallationProgress, showModal]);
+  }, [
+    selectedGame,
+    isPaused,
+    setInstallationProgress,
+    clearInstallationProgress,
+    showModal,
+  ]);
 
   const handleCancelDownload = useCallback(async () => {
     if (!selectedGame) return;

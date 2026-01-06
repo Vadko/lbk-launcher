@@ -297,7 +297,8 @@ export const useStore = create<Store>((set, get) => ({
 
   getInstallationInfo: (gameId: string) => get().installedGames.get(gameId),
 
-  isCheckingInstallationStatus: (gameId: string) => get().isCheckingInstallation.get(gameId) || false,
+  isCheckingInstallationStatus: (gameId: string) =>
+    get().isCheckingInstallation.get(gameId) || false,
 
   // Game Detection Actions
   clearDetectedGamesCache: () => {
@@ -425,7 +426,8 @@ export const useStore = create<Store>((set, get) => ({
           `[Store] Auto-unsubscribed from ${game.name} (status changed from planned)`
         );
         return; // Skip progress check since we unsubscribed
-      } if (!savedStatus) {
+      }
+      if (!savedStatus) {
         updateSubscribedStatus(gameId, game.status);
       }
 

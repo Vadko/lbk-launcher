@@ -87,9 +87,10 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       className={`
         relative flex-shrink-0 w-36 rounded-xl overflow-hidden cursor-pointer
         transition-all duration-200 outline-none
-        ${isSelected
-          ? 'ring-2 ring-neon-blue shadow-[0_0_20px_rgba(0,242,255,0.5)] scale-105 z-10'
-          : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-102'
+        ${
+          isSelected
+            ? 'ring-2 ring-neon-blue shadow-[0_0_20px_rgba(0,242,255,0.5)] scale-105 z-10'
+            : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-102'
         }
       `}
     >
@@ -101,7 +102,9 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       )}
 
       {/* Image */}
-      <div className={`relative aspect-[3/4] bg-glass ${isAdultBlurred ? 'blur-lg' : ''}`}>
+      <div
+        className={`relative aspect-[3/4] bg-glass ${isAdultBlurred ? 'blur-lg' : ''}`}
+      >
         {imageUrl && !imageError ? (
           <>
             {imageLoading && (
@@ -137,11 +140,15 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
 
         {/* Game name and team */}
         <div className="absolute inset-x-0 bottom-0 p-2">
-          <p className={`text-xs font-medium text-white line-clamp-1 ${isAdultBlurred ? 'blur-sm' : ''}`}>
+          <p
+            className={`text-xs font-medium text-white line-clamp-1 ${isAdultBlurred ? 'blur-sm' : ''}`}
+          >
             {game.name}
           </p>
           {hasMultipleTranslations && (
-            <p className={`text-[10px] text-neon-blue truncate ${isAdultBlurred ? 'blur-sm' : ''}`}>
+            <p
+              className={`text-[10px] text-neon-blue truncate ${isAdultBlurred ? 'blur-sm' : ''}`}
+            >
               {game.team}
             </p>
           )}

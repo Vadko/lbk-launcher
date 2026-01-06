@@ -1,5 +1,13 @@
 import { app } from 'electron';
-import { writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
+import {
+  writeFileSync,
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  unlinkSync,
+  statSync,
+} from 'fs';
 import { appendFile } from 'fs/promises';
 import { join } from 'path';
 
@@ -32,8 +40,7 @@ function formatLogMessage(level: string, message: string, ...args: unknown[]): s
   const timestamp = new Date().toISOString();
   const formattedArgs =
     args.length > 0
-      ? ` ${ 
-        args
+      ? ` ${args
           .map((arg) => {
             if (typeof arg === 'object') {
               try {

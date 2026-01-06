@@ -19,7 +19,8 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
   multipleAuthors,
   ...rest
 }) => {
-  const { isSubscribedToTeam, subscribeToTeam, unsubscribeFromTeam } = useSubscriptionsStore();
+  const { isSubscribedToTeam, subscribeToTeam, unsubscribeFromTeam } =
+    useSubscriptionsStore();
   const subscribed = isSubscribedToTeam(teamName);
   const isMultiple = multipleAuthors ?? teamName.includes(',');
 
@@ -47,12 +48,16 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
       {subscribed ? (
         <>
           <BellOff className="w-4 h-4" />
-          <span>Відписатися від {showTeamName ? teamName : isMultiple ? 'авторів' : 'автора'}</span>
+          <span>
+            Відписатися від {showTeamName ? teamName : isMultiple ? 'авторів' : 'автора'}
+          </span>
         </>
       ) : (
         <>
           <Users className="w-4 h-4" />
-          <span>Слідкувати за {showTeamName ? teamName : isMultiple ? 'авторами' : 'автором'}</span>
+          <span>
+            Слідкувати за {showTeamName ? teamName : isMultiple ? 'авторами' : 'автором'}
+          </span>
         </>
       )}
     </Button>

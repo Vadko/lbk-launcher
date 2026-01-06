@@ -1,11 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageCircle, RefreshCw, FolderOpen, Trash2, Heart, Volume2, Play } from 'lucide-react';
+import {
+  MessageCircle,
+  RefreshCw,
+  FolderOpen,
+  Trash2,
+  Heart,
+  Volume2,
+  Play,
+} from 'lucide-react';
 import { Modal } from '../Modal/Modal';
 import { Switch } from '../ui/Switch';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { playNotificationSound } from '../../utils/notificationSounds';
-import { playNavigateSound, playConfirmSound, playBackSound } from '../../utils/gamepadSounds';
+import {
+  playNavigateSound,
+  playConfirmSound,
+  playBackSound,
+} from '../../utils/gamepadSounds';
 
 const SettingItem = React.memo<{
   id: string;
@@ -50,8 +62,12 @@ export const SettingsModal: React.FC = () => {
   const saveLogsToFile = useSettingsStore((state) => state.saveLogsToFile);
   const toggleSaveLogsToFile = useSettingsStore((state) => state.toggleSaveLogsToFile);
   // Sound settings
-  const notificationSoundsEnabled = useSettingsStore((state) => state.notificationSoundsEnabled);
-  const toggleNotificationSounds = useSettingsStore((state) => state.toggleNotificationSounds);
+  const notificationSoundsEnabled = useSettingsStore(
+    (state) => state.notificationSoundsEnabled
+  );
+  const toggleNotificationSounds = useSettingsStore(
+    (state) => state.toggleNotificationSounds
+  );
   const gamepadSoundsEnabled = useSettingsStore((state) => state.gamepadSoundsEnabled);
   const toggleGamepadSounds = useSettingsStore((state) => state.toggleGamepadSounds);
 
@@ -249,9 +265,7 @@ export const SettingsModal: React.FC = () => {
             <Trash2 size={20} className="text-white" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-sm font-semibold text-text-main">
-              Очистити всі дані
-            </h4>
+            <h4 className="text-sm font-semibold text-text-main">Очистити всі дані</h4>
             <p className="text-xs text-text-muted">
               Видалити налаштування, підписки та всі дані
             </p>
@@ -270,12 +284,36 @@ export const SettingsModal: React.FC = () => {
                 <p className="text-xs text-text-muted mb-2">Звуки сповіщень:</p>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { type: 'status-change' as const, label: 'Стан', color: 'from-green-500 to-green-600' },
-                    { type: 'version-update' as const, label: 'Версія', color: 'from-neon-blue to-neon-purple' },
-                    { type: 'app-update' as const, label: 'Застосунок', color: 'from-neon-purple to-pink-500' },
-                    { type: 'progress-change' as const, label: 'Прогрес', color: 'from-amber-500 to-orange-500' },
-                    { type: 'team-new-game' as const, label: 'Нова гра', color: 'from-yellow-500 to-yellow-600' },
-                    { type: 'team-status-change' as const, label: 'Команда', color: 'from-cyan-500 to-cyan-600' },
+                    {
+                      type: 'status-change' as const,
+                      label: 'Стан',
+                      color: 'from-green-500 to-green-600',
+                    },
+                    {
+                      type: 'version-update' as const,
+                      label: 'Версія',
+                      color: 'from-neon-blue to-neon-purple',
+                    },
+                    {
+                      type: 'app-update' as const,
+                      label: 'Застосунок',
+                      color: 'from-neon-purple to-pink-500',
+                    },
+                    {
+                      type: 'progress-change' as const,
+                      label: 'Прогрес',
+                      color: 'from-amber-500 to-orange-500',
+                    },
+                    {
+                      type: 'team-new-game' as const,
+                      label: 'Нова гра',
+                      color: 'from-yellow-500 to-yellow-600',
+                    },
+                    {
+                      type: 'team-status-change' as const,
+                      label: 'Команда',
+                      color: 'from-cyan-500 to-cyan-600',
+                    },
                   ].map(({ type, label, color }) => (
                     <button
                       key={type}
@@ -344,13 +382,21 @@ export const SettingsModal: React.FC = () => {
         )}
 
         {/* Credits section */}
-        <div className="p-4 rounded-xl border credits-section" style={{ background: 'linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2))', borderColor: 'rgba(236, 72, 153, 0.5)' }}>
+        <div
+          className="p-4 rounded-xl border credits-section"
+          style={{
+            background:
+              'linear-gradient(to right, rgba(236, 72, 153, 0.2), rgba(168, 85, 247, 0.2))',
+            borderColor: 'rgba(236, 72, 153, 0.5)',
+          }}
+        >
           <div className="flex items-center gap-2 mb-3">
             <Heart size={18} className="text-pink-500" />
             <h4 className="text-sm font-semibold text-pink-500">Подяки</h4>
           </div>
           <p className="text-xs text-text-muted mb-3">
-            Особлива подяка перекладачам, які долучились до тестування з перших днів і допомогають робити цей лаунчер таким, яким він є:
+            Особлива подяка перекладачам, які долучились до тестування з перших днів і
+            допомогають робити цей лаунчер таким, яким він є:
           </p>
           <div className="flex flex-wrap gap-2">
             {SPECIAL_TRANSLATORS.map((translator) => (
