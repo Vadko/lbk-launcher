@@ -11,7 +11,9 @@ export interface GameGroup {
 export type StatusType = Database['public']['Enums']['game_status'];
 
 // Special filters that are single-select
-export type SpecialFilterType = 'installed-translations' | 'installed-games';
+export type SpecialFilterType = 'installed-translations' | 'installed-games' | 'with-achievements';
+
+export type SortOrderType = 'name' | 'downloads';
 
 export interface StatusFilterOption {
   label: string;
@@ -34,4 +36,10 @@ export const STATUS_OPTIONS: StatusFilterOption[] = [
 export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Встановлені українізатори', value: 'installed-translations' },
   { label: 'Встановлені ігри', value: 'installed-games' },
+  { label: 'З перекладом досягнень', value: 'with-achievements' },
+];
+
+export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [
+  { label: 'За назвою', value: 'name' },
+  { label: 'За популярністю', value: 'downloads' },
 ];

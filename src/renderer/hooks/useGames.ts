@@ -123,6 +123,37 @@ export function useGames({
         return;
       }
 
+      // Спеціальна обробка для ігор з перекладом досягнень
+      if (specialFilter === 'with-achievements') {
+        // Отримати всі ігри для фільтрації
+        const params: GetGamesParams = {
+          searchQuery,
+          statuses: selectedStatuses,
+          authors: selectedAuthors,
+        };
+
+        const result = await window.electronAPI.fetchGames(params);
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        // Відфільтрувати ігри, які мають архів з досягненнями
+        const filteredGames = result.games.filter(
+          (game) => !!game.achievements_archive_path
+        );
+
+        console.log(
+          '[useGames] Setting games with achievements:',
+          filteredGames.length,
+          'total fetched:',
+          result.total
+        );
+
+        setGames(filteredGames);
+        setTotal(filteredGames.length);
+        return;
+      }
+
       // Для інших фільтрів - завантажити всі ігри одразу
       // Note: showAdultGames is no longer passed - adult games are always loaded
       // and shown with blur effect in UI when setting is off
@@ -242,6 +273,18 @@ export function useGames({
           }
           // Гра не в списку - не додаємо (membership визначається окремими listeners)
           return prevGames;
+        }
+
+        if (specialFilter === 'with-achievements') {
+          if (!updatedGame.achievements_archive_path) {
+            // Якщо у гри зник переклад досягнень - видалити зі списку
+            if (index !== -1) {
+              setTotal((prev) => prev - 1);
+              return prevGames.filter((g) => g.id !== updatedGame.id);
+            }
+            return prevGames;
+          }
+          // Якщо гра має переклад досягнень - продовжити перевірку інших фільтрів
         }
 
         // Перевірити чи гра відповідає поточному фільтру пошуку
