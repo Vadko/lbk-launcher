@@ -1,7 +1,0 @@
-  feature/alphabet-sidebar-ux
-  feature/new-scrollbar
-  feature/restart-steam-button
-  fix/case-insensitive-search
-  fix/linux-tray-single-click
-* fix/sidebar-sorting-and-filtering
-  master

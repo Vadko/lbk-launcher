@@ -1,5 +1,0 @@
-commit 77b3ddaa471e02d1dc58262e010f01f4d527dda4
-Author: Вена <pan.vena@ukr.net>
-Date:   Thu Jan 8 13:43:40 2026 +0100
-
-    fix: sidebar sorting prioritizing Latin scripts and toggleable special filters
