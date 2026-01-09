@@ -100,13 +100,12 @@ export interface LaunchGameResult {
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
-  fetchGamesByIds: (gameIds: string[]) => Promise<Game[]>;
+  fetchGamesByIds: (gameIds: string[], searchQuery?: string) => Promise<Game[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
   findGamesByInstallPaths: (
     installPaths: string[],
-    offset?: number,
-    limit?: number
+    searchQuery?: string
   ) => Promise<GetGamesResult>;
   installTranslation: (
     game: Game,

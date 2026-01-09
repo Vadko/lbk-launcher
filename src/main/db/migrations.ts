@@ -350,6 +350,76 @@ const migrations: Migration[] = [
       );
     },
   },
+
+  {
+    name: 'add_name_search_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='name_search'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_name_search_column');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN name_search TEXT;
+          CREATE INDEX IF NOT EXISTS idx_games_name_search ON games(name_search);
+        `);
+        console.log('[Migrations] Completed: add_name_search_column');
+      }
+    },
+  },
+  {
+    name: 'add_fts5_search',
+    up: (db) => {
+      // Check if FTS table already exists
+      const tableExists = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='games_fts'"
+        )
+        .get() as { count: number };
+
+      if (tableExists.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: add_fts5_search');
+
+      // Create FTS5 virtual table for full-text search
+      db.exec(`
+        CREATE VIRTUAL TABLE games_fts USING fts5(
+          game_id UNINDEXED,
+          name_search,
+          tokenize='unicode61'
+        );
+      `);
+
+      console.log('[Migrations] Completed: add_fts5_search');
+    },
+  },
+  {
+    name: 'resync_for_fts5',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_fts5_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_fts5');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_fts5_done', '1', datetime('now'))
+      `);
+      console.log('[Migrations] Completed: resync_for_fts5 - will resync on next startup');
+    },
+  },
 ];
 
 /**

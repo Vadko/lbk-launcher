@@ -6,7 +6,7 @@ import type {
   Database as SupabaseDatabase,
 } from '../../shared/types';
 import { getDatabase } from './database';
-import { getSearchVariations } from '../../shared/search-utils';
+import { generateSearchableString, getSearchVariations } from '../../shared/search-utils';
 
 /**
  * Поля, які не зберігаються в локальній БД
@@ -33,6 +33,9 @@ type GameInsertParams = {
   : K extends 'platforms' | 'install_paths'
   ? string | null // JSON.stringify для SQLite
   : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+} & {
+  // Local-only field for search (not in Supabase)
+  name_search: string;
 };
 
 /**
@@ -101,6 +104,7 @@ export class GamesRepository {
       license_only: game.license_only ? 1 : 0,
       logo_path: game.logo_path ?? null,
       name: game.name,
+      name_search: generateSearchableString(game.name),
       platforms: JSON.stringify(game.platforms),
       project_id: game.project_id ?? null,
       slug: game.slug ?? null,
@@ -153,6 +157,15 @@ export class GamesRepository {
       queryParams.push(...statuses);
     }
 
+    // Filter by search query using FTS5
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      // FTS5 query with prefix matching (word*)
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(`id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`);
+      queryParams.push(ftsQuery);
+    }
+
     // Adult games are always returned, UI will show blur overlay when setting is off
 
     const whereClause = whereConditions.join(' AND ');
@@ -166,15 +179,6 @@ export class GamesRepository {
 
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
-
-    // Filter by search query (case-insensitive in JS)
-    if (searchQuery) {
-      const variations = getSearchVariations(searchQuery);
-      games = games.filter((game) => {
-        const nameLower = game.name.toLowerCase();
-        return variations.some((v) => nameLower.includes(v));
-      });
-    }
 
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
@@ -222,40 +226,59 @@ export class GamesRepository {
   /**
    * Отримати ігри за ID
    */
-  getGamesByIds(gameIds: string[]): Game[] {
+  getGamesByIds(gameIds: string[], searchQuery?: string): Game[] {
     if (gameIds.length === 0) return [];
 
-    const placeholders = gameIds.map(() => '?').join(',');
+    const whereConditions = [
+      `id IN (${gameIds.map(() => '?').join(',')})`,
+      'approved = 1',
+      'hide = 0',
+    ];
+    const queryParams: string[] = [...gameIds];
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(`id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`);
+      queryParams.push(ftsQuery);
+    }
+
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
-      WHERE id IN (${placeholders})
-        AND approved = 1
-        AND hide = 0
+      WHERE ${whereConditions.join(' AND ')}
       ORDER BY name ASC
     `);
 
-    const rows = stmt.all(...gameIds) as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
     return rows.map((row) => this.rowToGame(row));
   }
 
   /**
    * Знайти ігри за install paths
    */
-  findGamesByInstallPaths(installPaths: string[]): GetGamesResult {
+  findGamesByInstallPaths(installPaths: string[], searchQuery?: string): GetGamesResult {
     if (installPaths.length === 0) {
       return { games: [], total: 0 };
+    }
+
+    const whereConditions = ['approved = 1', 'hide = 0', 'install_paths IS NOT NULL'];
+    const queryParams: string[] = [];
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(`id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`);
+      queryParams.push(ftsQuery);
     }
 
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
-      WHERE approved = 1
-        AND hide = 0
-        AND install_paths IS NOT NULL
+      WHERE ${whereConditions.join(' AND ')}
     `);
 
-    const rows = stmt.all() as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
     const allGames = rows.map((row) => this.rowToGame(row));
 
     // Нормалізуємо всі шляхи до простих назв папок
@@ -301,16 +324,28 @@ export class GamesRepository {
   }
 
   /**
+   * Синхронізувати FTS індекс для гри
+   */
+  private syncFts(gameId: string, nameSearch: string): void {
+    // Delete existing entry
+    this.db.prepare('DELETE FROM games_fts WHERE game_id = ?').run(gameId);
+    // Insert new entry
+    this.db.prepare('INSERT INTO games_fts (game_id, name_search) VALUES (?, ?)').run(gameId, nameSearch);
+  }
+
+  /**
    * Вставити або оновити гру (upsert)
    */
   upsertGame(game: Game): void {
+    const params = this.gameToInsertParams(game);
+
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO games (
         id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
         banner_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
         fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
         installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
-        name, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
+        name, name_search, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
         thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
         voice_archive_hash, voice_archive_path, voice_archive_size,
         voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
@@ -321,7 +356,7 @@ export class GamesRepository {
         @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
         @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
         @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
-        @name, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
+        @name, @name_search, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
         @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
         @voice_archive_hash, @voice_archive_path, @voice_archive_size,
         @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
@@ -330,7 +365,8 @@ export class GamesRepository {
       )
     `);
 
-    stmt.run(this.gameToInsertParams(game));
+    stmt.run(params);
+    this.syncFts(game.id, params.name_search);
   }
 
   /**
@@ -338,13 +374,13 @@ export class GamesRepository {
    */
   upsertGames(games: Game[]): void {
     const upsert = this.db.transaction((gamesToInsert: Game[]) => {
-      const stmt = this.db.prepare(`
+      const gameStmt = this.db.prepare(`
         INSERT OR REPLACE INTO games (
           id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
           banner_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
           fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
           installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
-          name, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
+          name, name_search, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
           thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
           voice_archive_hash, voice_archive_path, voice_archive_size,
           voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
@@ -355,7 +391,7 @@ export class GamesRepository {
           @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
           @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
           @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
-          @name, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
+          @name, @name_search, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
           @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
           @voice_archive_hash, @voice_archive_path, @voice_archive_size,
           @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
@@ -364,8 +400,14 @@ export class GamesRepository {
         )
       `);
 
+      const ftsDeleteStmt = this.db.prepare('DELETE FROM games_fts WHERE game_id = ?');
+      const ftsInsertStmt = this.db.prepare('INSERT INTO games_fts (game_id, name_search) VALUES (?, ?)');
+
       for (const game of gamesToInsert) {
-        stmt.run(this.gameToInsertParams(game));
+        const params = this.gameToInsertParams(game);
+        gameStmt.run(params);
+        ftsDeleteStmt.run(game.id);
+        ftsInsertStmt.run(game.id, params.name_search);
       }
     });
 
@@ -376,8 +418,8 @@ export class GamesRepository {
    * Видалити гру
    */
   deleteGame(gameId: string): void {
-    const stmt = this.db.prepare('DELETE FROM games WHERE id = ?');
-    stmt.run(gameId);
+    this.db.prepare('DELETE FROM games WHERE id = ?').run(gameId);
+    this.db.prepare('DELETE FROM games_fts WHERE game_id = ?').run(gameId);
   }
 
   /**

@@ -4,12 +4,12 @@ import type { ElectronAPI, Game, InstallOptions } from '../shared/types';
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
-  fetchGamesByIds: (gameIds: string[]) =>
-    ipcRenderer.invoke('fetch-games-by-ids', gameIds),
+  fetchGamesByIds: (gameIds: string[], searchQuery?: string) =>
+    ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
-  findGamesByInstallPaths: (installPaths: string[], offset?: number, limit?: number) =>
-    ipcRenderer.invoke('find-games-by-install-paths', installPaths, offset, limit),
+  findGamesByInstallPaths: (installPaths: string[], searchQuery?: string) =>
+    ipcRenderer.invoke('find-games-by-install-paths', installPaths, searchQuery),
   installTranslation: (
     game: Game,
     platform: string,

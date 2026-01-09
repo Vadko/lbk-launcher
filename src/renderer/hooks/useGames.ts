@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getSearchVariations } from '../../shared/search-utils';
 import type { Game, GetGamesParams } from '../types/game';
 import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
@@ -71,24 +70,17 @@ export function useGames({
           return;
         }
 
-        // Отримати всі ігри зі встановленими українізаторами
-        const installedGames = await window.electronAPI.fetchGamesByIds(installedGameIds);
+        // Отримати ігри зі встановленими українізаторами (з SQL фільтрацією пошуку)
+        const installedGames = await window.electronAPI.fetchGamesByIds(
+          installedGameIds,
+          searchQuery || undefined
+        );
 
         // Перевірити чи запит ще актуальний
         if (signal.aborted) return;
 
-        // Застосувати пошук
-        let filteredGames = installedGames;
-        if (searchQuery) {
-          const variations = getSearchVariations(searchQuery);
-          filteredGames = installedGames.filter((game) => {
-            const nameLower = game.name.toLowerCase();
-            return variations.some((v) => nameLower.includes(v));
-          });
-        }
-
-        setGames(filteredGames);
-        setTotal(filteredGames.length);
+        setGames(installedGames);
+        setTotal(installedGames.length);
         return;
       }
 
@@ -105,24 +97,17 @@ export function useGames({
           return;
         }
 
-        // Знайти ігри за шляхами встановлення
-        const result = await window.electronAPI.findGamesByInstallPaths(installPaths);
+        // Знайти ігри за шляхами встановлення (з SQL фільтрацією пошуку)
+        const result = await window.electronAPI.findGamesByInstallPaths(
+          installPaths,
+          searchQuery || undefined
+        );
 
         // Перевірити чи запит ще актуальний
         if (signal.aborted) return;
 
-        // Застосувати пошук
-        let filteredGames = result.games;
-        if (searchQuery) {
-          const variations = getSearchVariations(searchQuery);
-          filteredGames = result.games.filter((game) => {
-            const nameLower = game.name.toLowerCase();
-            return variations.some((v) => nameLower.includes(v));
-          });
-        }
-
-        setGames(filteredGames);
-        setTotal(filteredGames.length);
+        setGames(result.games);
+        setTotal(result.total);
         return;
       }
 
@@ -248,11 +233,9 @@ export function useGames({
         }
 
         // Перевірити чи гра відповідає поточному фільтру пошуку
+        // Проста перевірка - повна фільтрація відбудеться при наступному reload
         const matchesSearch =
-          !searchQuery ||
-          getSearchVariations(searchQuery).some((v) =>
-            updatedGame.name.toLowerCase().includes(v)
-          );
+          !searchQuery || updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
 
         // Перевірити чи гра відповідає поточному фільтру статусу (multi-select)
         const matchesStatus =

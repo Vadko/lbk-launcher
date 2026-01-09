@@ -16,10 +16,10 @@ export function fetchGames(params: GetGamesParams = {}): GetGamesResult {
   }
 }
 
-export function fetchGamesByIds(gameIds: string[]): Game[] {
+export function fetchGamesByIds(gameIds: string[], searchQuery?: string): Game[] {
   try {
-    console.log('[API] Fetching games by IDs:', gameIds);
-    const games = gamesRepo.getGamesByIds(gameIds);
+    console.log('[API] Fetching games by IDs:', gameIds.length, 'searchQuery:', searchQuery);
+    const games = gamesRepo.getGamesByIds(gameIds, searchQuery);
     console.log(`[API] Fetched ${games.length} games by IDs`);
     return games;
   } catch (error) {
@@ -28,10 +28,10 @@ export function fetchGamesByIds(gameIds: string[]): Game[] {
   }
 }
 
-export function findGamesByInstallPaths(installPaths: string[]): GetGamesResult {
+export function findGamesByInstallPaths(installPaths: string[], searchQuery?: string): GetGamesResult {
   try {
-    console.log('[API] Finding games by install paths:', installPaths.length, 'paths');
-    const result = gamesRepo.findGamesByInstallPaths(installPaths);
+    console.log('[API] Finding games by install paths:', installPaths.length, 'paths, searchQuery:', searchQuery);
+    const result = gamesRepo.findGamesByInstallPaths(installPaths, searchQuery);
     console.log(
       `[API] Found ${result.games.length} games matching install paths, total: ${result.total}`
     );

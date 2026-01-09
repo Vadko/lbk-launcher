@@ -1,56 +1,40 @@
+import CyrillicToTranslit from 'cyrillic-to-translit-js';
 
-const EN_LAYOUT = "qwertyuiop[]asdfghjkl;'zxcvbnm,./`";
-const UA_LAYOUT = "йцукенгшщзхїфівапролджєячсмитьбю.'";
-const EN_LAYOUT_UPPER = "QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~";
-const UA_LAYOUT_UPPER = "ЙЦУКЕНГШЩЗХЇФІВАПРОЛДЖЄЯЧСМИТЬБЮ,₴";
+const translitUk = CyrillicToTranslit({ preset: 'uk' });
 
-// Mapping from char to char
-const MAP: Record<string, string> = {};
+function getTransliteration(input: string): string | null {
+  const hasCyrillic = /[а-яіїєґА-ЯІЇЄҐ]/.test(input);
+  const hasLatin = /[a-zA-Z]/.test(input);
 
-function addToMap(from: string, to: string) {
-    for (let i = 0; i < from.length; i++) {
-        const f = from[i];
-        const t = to[i] || '';
-        if (f && t) {
-            MAP[f] = t;
-            MAP[t] = f; // Bidirectional
-        }
+  if (hasCyrillic) {
+    const translit = translitUk.transform(input);
+    if (translit && translit !== input) {
+      return translit.toLowerCase();
     }
+  }
+
+  if (hasLatin) {
+    const reverse = translitUk.reverse(input);
+    if (reverse && reverse !== input) {
+      return reverse.toLowerCase();
+    }
+  }
+
+  return null;
 }
 
-addToMap(EN_LAYOUT, UA_LAYOUT);
-addToMap(EN_LAYOUT_UPPER, UA_LAYOUT_UPPER);
+export function generateSearchableString(name: string): string {
+  const nameLower = name.toLowerCase();
+  const translit = getTransliteration(name);
 
-/**
- * Returns alternative search query by swapping layout
- * "test" -> "еуіе"
- * "ігра" -> "srhf"
- */
-export function getLayoutSwappedString(input: string): string {
-    return input
-        .split('')
-        .map((char) => MAP[char] || char)
-        .join('');
+  return translit ? `${nameLower} ${translit}` : nameLower;
 }
 
-/**
- * Returns list of search queries (original + swapped)
- */
 export function getSearchVariations(input: string): string[] {
-    if (!input) return [];
+  if (!input) return [];
 
-    const variations = new Set<string>();
-    const normalized = input.toLowerCase();
+  const normalized = input.toLowerCase();
+  const translit = getTransliteration(input);
 
-    variations.add(normalized);
-
-    // Create swapped version
-    const swapped = getLayoutSwappedString(input).toLowerCase();
-
-    // Only add if it's different
-    if (swapped !== normalized) {
-        variations.add(swapped);
-    }
-
-    return Array.from(variations);
+  return translit ? [normalized, translit] : [normalized];
 }
