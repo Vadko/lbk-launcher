@@ -28,7 +28,7 @@ type GameInsertParams = {
   [K in keyof Omit<
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
-  >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide'
+  >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide' | 'achievements_third_party'
   ? number // boolean перетворюється на 0/1 для SQLite
   : K extends 'platforms' | 'install_paths'
   ? string | null // JSON.stringify для SQLite
@@ -64,6 +64,7 @@ export class GamesRepository {
       license_only: Boolean(row.license_only),
       ai: Boolean(row.ai),
       hide: Boolean(row.hide),
+      achievements_third_party: Boolean(row.achievements_third_party),
       platforms,
       install_paths,
     } as Game;
@@ -121,6 +122,8 @@ export class GamesRepository {
       achievements_archive_hash: game.achievements_archive_hash ?? null,
       achievements_archive_path: game.achievements_archive_path ?? null,
       achievements_archive_size: game.achievements_archive_size ?? null,
+      achievements_third_party: game.achievements_third_party ? 1 : 0,
+      additional_path: game.additional_path ?? null,
       epic_archive_hash: game.epic_archive_hash ?? null,
       epic_archive_path: game.epic_archive_path ?? null,
       epic_archive_size: game.epic_archive_size ?? null,

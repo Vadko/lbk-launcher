@@ -190,6 +190,7 @@ export type Database = {
           achievements_archive_hash: string | null
           achievements_archive_path: string | null
           achievements_archive_size: string | null
+          achievements_third_party: boolean | null
           additional_path: string | null
           ai: boolean
           approved_at: string | null
@@ -251,6 +252,7 @@ export type Database = {
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
+          achievements_third_party?: boolean | null
           additional_path?: string | null
           ai?: boolean
           approved_at?: string | null
@@ -312,6 +314,7 @@ export type Database = {
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
+          achievements_third_party?: boolean | null
           additional_path?: string | null
           ai?: boolean
           approved_at?: string | null
@@ -395,6 +398,7 @@ export type Database = {
           achievements_archive_hash: string | null
           achievements_archive_path: string | null
           achievements_archive_size: string | null
+          achievements_third_party: boolean | null
           additional_path: string | null
           ai: boolean
           approved: boolean
@@ -459,6 +463,7 @@ export type Database = {
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
+          achievements_third_party?: boolean | null
           additional_path?: string | null
           ai?: boolean
           approved?: boolean
@@ -523,6 +528,7 @@ export type Database = {
           achievements_archive_hash?: string | null
           achievements_archive_path?: string | null
           achievements_archive_size?: string | null
+          achievements_third_party?: boolean | null
           additional_path?: string | null
           ai?: boolean
           approved?: boolean

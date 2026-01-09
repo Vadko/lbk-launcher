@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 
 type GamepadType = 'xbox' | 'playstation';
@@ -72,7 +72,7 @@ const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) 
 export const GamepadHints: React.FC = () => {
   const { isGamepadMode, navigationArea } = useGamepadModeStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [gamepadType, setGamepadType] = useState<GamepadType>(() => detectGamepadType());
+  const gamepadType = useMemo(() => detectGamepadType(), []);
 
   useEffect(() => {
     if (!isGamepadMode) return;
