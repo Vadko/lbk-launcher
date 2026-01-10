@@ -145,8 +145,7 @@ export class GamesRepository {
    * Оскільки це local-first застосунок, повертаємо всі ігри одразу
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
-    const { searchQuery = '', statuses = [], authors = [] } = params;
-    // Note: showAdultGames is now handled in UI (blur effect) instead of filtering here
+    const { searchQuery = '', statuses = [], authors = [], sortOrder = 'name' } = params;
 
     const whereConditions: string[] = ['approved = 1', 'hide = 0'];
     const queryParams: (string | number)[] = [];
@@ -161,21 +160,21 @@ export class GamesRepository {
     // Filter by search query using FTS5
     if (searchQuery) {
       const variations = getSearchVariations(searchQuery);
-      // FTS5 query with prefix matching (word*)
       const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
       whereConditions.push(`id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`);
       queryParams.push(ftsQuery);
     }
 
-    // Adult games are always returned, UI will show blur overlay when setting is off
-
     const whereClause = whereConditions.join(' AND ');
+    const orderClause = sortOrder === 'downloads'
+      ? 'downloads DESC NULLS LAST, name ASC'
+      : 'name ASC';
 
     const gamesStmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereClause}
-      ORDER BY name ASC
+      ORDER BY ${orderClause}
     `);
 
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
@@ -185,14 +184,11 @@ export class GamesRepository {
     if (authors.length > 0) {
       games = games.filter((game) => {
         if (!game.team) return false;
-        // Check if any of the selected authors is in the game's team field
         return authors.some((author) => game.team?.includes(author));
       });
     }
 
-    const total = games.length;
-
-    return { games, total };
+    return { games, total: games.length };
   }
 
   /**
@@ -452,5 +448,39 @@ export class GamesRepository {
 
     const row = stmt.get(gameId) as Record<string, unknown> | undefined;
     return row ? this.rowToGame(row) : null;
+  }
+
+  /**
+   * Отримати лічильники для фільтрів (ефективний SQL запит з агрегацією)
+   */
+  getFilterCounts(): {
+    planned: number;
+    'in-progress': number;
+    completed: number;
+    'with-achievements': number;
+  } {
+    const stmt = this.db.prepare(`
+      SELECT
+        SUM(CASE WHEN status = 'planned' THEN 1 ELSE 0 END) as planned,
+        SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN 1 ELSE 0 END) as with_achievements
+      FROM games
+      WHERE approved = 1 AND hide = 0
+    `);
+
+    const row = stmt.get() as {
+      planned: number;
+      in_progress: number;
+      completed: number;
+      with_achievements: number;
+    };
+
+    return {
+      planned: row.planned || 0,
+      'in-progress': row.in_progress || 0,
+      completed: row.completed || 0,
+      'with-achievements': row.with_achievements || 0,
+    };
   }
 }

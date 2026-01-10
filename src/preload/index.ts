@@ -4,6 +4,7 @@ import type { ElectronAPI, Game, InstallOptions } from '../shared/types';
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
+  fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
   fetchGamesByIds: (gameIds: string[], searchQuery?: string) =>
     ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),

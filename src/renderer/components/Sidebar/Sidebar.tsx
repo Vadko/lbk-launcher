@@ -19,6 +19,7 @@ import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { useGames } from '../../hooks/useGames';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useAlphabetNavigation } from '../../hooks/useAlphabetNavigation';
+import { useFilterCounts } from '../../hooks/useFilterCounts';
 import type { GameGroup } from './types';
 import type { Game } from '../../types/game';
 
@@ -117,9 +118,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       selectedAuthors,
       specialFilter,
       searchQuery: debouncedSearchQuery,
+      sortOrder,
     });
 
-    // Group games by slug
+    // Group games by slug (games already sorted by SQL)
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();
 
@@ -137,42 +139,16 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         }
       }
 
+      // Sort translations within each group by progress
       for (const group of groupMap.values()) {
         group.translations.sort(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
       }
 
-      // Sort groups
-      const sortedGroups = Array.from(groupMap.values());
-
-      if (sortOrder === 'downloads') {
-        sortedGroups.sort((a, b) => {
-          // Get max downloads for each group
-          const maxDownloadsA = Math.max(...a.translations.map(t => t.downloads || 0));
-          const maxDownloadsB = Math.max(...b.translations.map(t => t.downloads || 0));
-
-          if (maxDownloadsA !== maxDownloadsB) {
-            return maxDownloadsB - maxDownloadsA; // Descending
-          }
-          // Fallback to name
-          return a.name.localeCompare(b.name);
-        });
-      } else {
-        // Default alphabetical sort (by name usually)
-        sortedGroups.sort((a, b) => {
-          const isALatin = /^[a-zA-Z]/.test(a.name);
-          const isBLatin = /^[a-zA-Z]/.test(b.name);
-
-          if (isALatin && !isBLatin) return -1;
-          if (!isALatin && isBLatin) return 1;
-
-          return a.name.localeCompare(b.name);
-        });
-      }
-
-      return sortedGroups;
-    }, [visibleGames, sortOrder]);
+      // Preserve order from SQL (already sorted)
+      return Array.from(groupMap.values());
+    }, [visibleGames]);
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
@@ -252,84 +228,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       return () => clearTimeout(timer);
     }, [loadInstalledGamesFromSystem]);
 
-    // Load counts for special filters
-    const [filterCounts, setFilterCounts] = useState<Record<string, number>>({
-      'installed-translations': 0,
-      'installed-games': 0,
-      'with-achievements': 0,
-    });
-
-    const updateFilterCounts = useCallback(async () => {
-      try {
-        // Parallel requests for counts
-        const [installedIds, installedPaths, allGamesResult] = await Promise.all([
-          window.electronAPI.getAllInstalledGameIds(),
-          window.electronAPI.getAllInstalledGamePaths(),
-          window.electronAPI.fetchGames({}),
-        ]);
-
-        // Resolve installed paths to actual games to get correct count
-        // (installedPaths may contain items not in our DB or not supported)
-        const installedGamesResult =
-          installedPaths.length > 0
-            ? await window.electronAPI.findGamesByInstallPaths(installedPaths)
-            : { games: [], total: 0 };
-
-        const withAchievementsCount = allGamesResult.games.filter(
-          (g) => !!g.achievements_archive_path
-        ).length;
-
-        const plannedCount = allGamesResult.games.filter(
-          (g) => g.status === 'planned'
-        ).length;
-        const inProgressCount = allGamesResult.games.filter(
-          (g) => g.status === 'in-progress'
-        ).length;
-        const completedCount = allGamesResult.games.filter(
-          (g) => g.status === 'completed'
-        ).length;
-
-        setFilterCounts({
-          'installed-translations': installedIds.length,
-          'installed-games': installedGamesResult.games.length,
-          'with-achievements': withAchievementsCount,
-          planned: plannedCount,
-          'in-progress': inProgressCount,
-          completed: completedCount,
-        });
-      } catch (err) {
-        console.error('[Sidebar] Error fetching filter counts:', err);
-      }
-    }, []);
-
-    // Initial load and listen for updates
-    useEffect(() => {
-      updateFilterCounts();
-
-      // Listeners to update counts
-      const unsubInstalled = window.electronAPI?.onInstalledGamesChanged?.(() => {
-        updateFilterCounts();
-      });
-
-      const unsubSteam = window.electronAPI?.onSteamLibraryChanged?.(() => {
-        updateFilterCounts();
-      });
-
-      // Also listen for general game updates as achievements status might change
-      const unsubGame = window.electronAPI?.onGameUpdated((_game) => {
-        // Optimistic check to avoid full refetch every time?
-        // For now, simpler to just refetch logic (it's local DB)
-        // Or we could debounce this
-        updateFilterCounts();
-      });
-
-      return () => {
-        unsubInstalled?.();
-        unsubSteam?.();
-        unsubGame?.();
-      };
-    }, [updateFilterCounts]);
-
+    // Filter counts from dedicated hook (with debouncing)
+    const { counts: filterCounts } = useFilterCounts();
 
     if (isHorizontal) {
       // Horizontal gamepad mode
