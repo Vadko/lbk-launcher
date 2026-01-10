@@ -79,6 +79,7 @@ export interface GetGamesParams {
   statuses?: string[];
   authors?: string[];
   showAdultGames?: boolean;
+  showAiTranslations?: boolean;
   sortOrder?: 'name' | 'downloads';
 }
 
@@ -109,12 +110,13 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
   fetchFilterCounts: () => Promise<FilterCountsResult>;
-  fetchGamesByIds: (gameIds: string[], searchQuery?: string) => Promise<Game[]>;
+  fetchGamesByIds: (gameIds: string[], searchQuery?: string, showAiTranslations?: boolean) => Promise<Game[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
   findGamesByInstallPaths: (
     installPaths: string[],
-    searchQuery?: string
+    searchQuery?: string,
+    showAiTranslations?: boolean
   ) => Promise<GetGamesResult>;
   installTranslation: (
     game: Game,

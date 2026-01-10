@@ -56,6 +56,8 @@ export const SettingsModal: React.FC = () => {
   );
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
   const toggleShowAdultGames = useSettingsStore((state) => state.toggleShowAdultGames);
+  const showAiTranslations = useSettingsStore((state) => state.showAiTranslations);
+  const toggleShowAiTranslations = useSettingsStore((state) => state.toggleShowAiTranslations);
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const toggleLiquidGlass = useSettingsStore((state) => state.toggleLiquidGlass);
   // Logging settings
@@ -222,6 +224,13 @@ export const SettingsModal: React.FC = () => {
           description="Дозволити відображення ігор з порнографічним/еротичним контентом (hentai, візуальні новели для дорослих тощо)"
           enabled={showAdultGames}
           onChange={toggleShowAdultGames}
+        />
+        <SettingItem
+          id="ai-translations"
+          title="Показувати AI-переклади"
+          description="Відображати переклади, створені за допомогою штучного інтелекту"
+          enabled={showAiTranslations}
+          onChange={toggleShowAiTranslations}
         />
 
         <SettingItem

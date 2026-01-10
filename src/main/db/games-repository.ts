@@ -145,10 +145,15 @@ export class GamesRepository {
    * Оскільки це local-first застосунок, повертаємо всі ігри одразу
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
-    const { searchQuery = '', statuses = [], authors = [], sortOrder = 'name' } = params;
+    const { searchQuery = '', statuses = [], authors = [], sortOrder = 'name', showAiTranslations = false } = params;
 
     const whereConditions: string[] = ['approved = 1', 'hide = 0'];
     const queryParams: (string | number)[] = [];
+
+    // Filter AI translations (hidden by default)
+    if (!showAiTranslations) {
+      whereConditions.push('ai = 0');
+    }
 
     // Filter by statuses (multi-select)
     if (statuses.length > 0) {
@@ -223,7 +228,7 @@ export class GamesRepository {
   /**
    * Отримати ігри за ID
    */
-  getGamesByIds(gameIds: string[], searchQuery?: string): Game[] {
+  getGamesByIds(gameIds: string[], searchQuery?: string, showAiTranslations = false): Game[] {
     if (gameIds.length === 0) return [];
 
     const whereConditions = [
@@ -232,6 +237,11 @@ export class GamesRepository {
       'hide = 0',
     ];
     const queryParams: string[] = [...gameIds];
+
+    // Filter AI translations (hidden by default)
+    if (!showAiTranslations) {
+      whereConditions.push('ai = 0');
+    }
 
     if (searchQuery) {
       const variations = getSearchVariations(searchQuery);
@@ -254,13 +264,18 @@ export class GamesRepository {
   /**
    * Знайти ігри за install paths
    */
-  findGamesByInstallPaths(installPaths: string[], searchQuery?: string): GetGamesResult {
+  findGamesByInstallPaths(installPaths: string[], searchQuery?: string, showAiTranslations = false): GetGamesResult {
     if (installPaths.length === 0) {
       return { games: [], total: 0 };
     }
 
     const whereConditions = ['approved = 1', 'hide = 0', 'install_paths IS NOT NULL'];
     const queryParams: string[] = [];
+
+    // Filter AI translations (hidden by default)
+    if (!showAiTranslations) {
+      whereConditions.push('ai = 0');
+    }
 
     if (searchQuery) {
       const variations = getSearchVariations(searchQuery);

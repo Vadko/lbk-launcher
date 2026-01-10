@@ -12,18 +12,18 @@ export function fetchGames(params: GetGamesParams = {}): GetGamesResult {
   }
 }
 
-export function fetchGamesByIds(gameIds: string[], searchQuery?: string): Game[] {
+export function fetchGamesByIds(gameIds: string[], searchQuery?: string, showAiTranslations = false): Game[] {
   try {
-    return gamesRepo.getGamesByIds(gameIds, searchQuery);
+    return gamesRepo.getGamesByIds(gameIds, searchQuery, showAiTranslations);
   } catch (error) {
     console.error('[API] Error fetching games by IDs:', error);
     return [];
   }
 }
 
-export function findGamesByInstallPaths(installPaths: string[], searchQuery?: string): GetGamesResult {
+export function findGamesByInstallPaths(installPaths: string[], searchQuery?: string, showAiTranslations = false): GetGamesResult {
   try {
-    return gamesRepo.findGamesByInstallPaths(installPaths, searchQuery);
+    return gamesRepo.findGamesByInstallPaths(installPaths, searchQuery, showAiTranslations);
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);
     return { games: [], total: 0 };

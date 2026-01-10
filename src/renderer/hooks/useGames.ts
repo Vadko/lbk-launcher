@@ -10,6 +10,7 @@ interface UseGamesParams {
   specialFilter: SpecialFilterType | null;
   searchQuery: string;
   sortOrder?: 'name' | 'downloads';
+  showAiTranslations?: boolean;
 }
 
 interface UseGamesResult {
@@ -30,8 +31,11 @@ export function useGames({
   specialFilter,
   searchQuery,
   sortOrder = 'name',
+  showAiTranslations = false,
 }: UseGamesParams): UseGamesResult {
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
+  // AI translations are filtered in SQL via showAiTranslations param
+
   const checkSubscribedGamesStatus = useStore(
     (state) => state.checkSubscribedGamesStatus
   );
@@ -72,10 +76,11 @@ export function useGames({
           return;
         }
 
-        // Отримати ігри зі встановленими українізаторами (з SQL фільтрацією пошуку)
+        // Отримати ігри зі встановленими українізаторами (з SQL фільтрацією пошуку та AI)
         const installedGames = await window.electronAPI.fetchGamesByIds(
           installedGameIds,
-          searchQuery || undefined
+          searchQuery || undefined,
+          showAiTranslations
         );
 
         // Перевірити чи запит ще актуальний
@@ -99,10 +104,11 @@ export function useGames({
           return;
         }
 
-        // Знайти ігри за шляхами встановлення (з SQL фільтрацією пошуку)
+        // Знайти ігри за шляхами встановлення (з SQL фільтрацією пошуку та AI)
         const result = await window.electronAPI.findGamesByInstallPaths(
           installPaths,
-          searchQuery || undefined
+          searchQuery || undefined,
+          showAiTranslations
         );
 
         // Перевірити чи запит ще актуальний
@@ -120,6 +126,7 @@ export function useGames({
           statuses: selectedStatuses,
           authors: selectedAuthors,
           sortOrder,
+          showAiTranslations,
         };
 
         const result = await window.electronAPI.fetchGames(params);
@@ -128,12 +135,12 @@ export function useGames({
         if (signal.aborted) return;
 
         // Filter games that have achievements archive
-        const filteredGames = result.games.filter(
+        const withAchievements = result.games.filter(
           (game) => !!game.achievements_archive_path
         );
 
-        setGames(filteredGames);
-        setTotal(filteredGames.length);
+        setGames(withAchievements);
+        setTotal(withAchievements.length);
         return;
       }
 
@@ -143,6 +150,7 @@ export function useGames({
         statuses: selectedStatuses,
         authors: selectedAuthors,
         sortOrder,
+        showAiTranslations,
       };
 
       const result = await window.electronAPI.fetchGames(params);
@@ -168,7 +176,7 @@ export function useGames({
         setIsLoading(false);
       }
     }
-  }, [specialFilter, searchQuery, selectedStatuses, selectedAuthors, sortOrder]);
+  }, [specialFilter, searchQuery, selectedStatuses, selectedAuthors, sortOrder, showAiTranslations]);
 
   /**
    * Перезавантажити

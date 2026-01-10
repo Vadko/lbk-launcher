@@ -40,9 +40,9 @@ export function setupGamesHandlers(): void {
   });
 
   // Fetch games by IDs - SYNC
-  ipcMain.handle('fetch-games-by-ids', (_, gameIds: string[], searchQuery?: string) => {
+  ipcMain.handle('fetch-games-by-ids', (_, gameIds: string[], searchQuery?: string, showAiTranslations = false) => {
     try {
-      return fetchGamesByIds(gameIds, searchQuery);
+      return fetchGamesByIds(gameIds, searchQuery, showAiTranslations);
     } catch (error) {
       console.error('Error fetching games by IDs:', error);
       return [];
@@ -97,9 +97,9 @@ export function setupGamesHandlers(): void {
   });
 
   // Find games by install paths - SYNC
-  ipcMain.handle('find-games-by-install-paths', (_, installPaths: string[], searchQuery?: string) => {
+  ipcMain.handle('find-games-by-install-paths', (_, installPaths: string[], searchQuery?: string, showAiTranslations = false) => {
     try {
-      return findGamesByInstallPaths(installPaths, searchQuery);
+      return findGamesByInstallPaths(installPaths, searchQuery, showAiTranslations);
     } catch (error) {
       console.error('Error finding games by install paths:', error);
       return { games: [], total: 0 };

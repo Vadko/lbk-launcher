@@ -13,6 +13,7 @@ interface SettingsStore {
   createBackupBeforeInstall: boolean;
   autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
+  showAiTranslations: boolean;
   liquidGlassEnabled: boolean;
   gamepadSoundsEnabled: boolean;
   isSettingsModalOpen: boolean;
@@ -33,6 +34,7 @@ interface SettingsStore {
   toggleCreateBackup: () => void;
   toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
+  toggleShowAiTranslations: () => void;
   toggleLiquidGlass: () => void;
   toggleGamepadSounds: () => void;
   toggleSaveLogsToFile: () => void;
@@ -53,6 +55,7 @@ export const useSettingsStore = create<SettingsStore>()(
       createBackupBeforeInstall: true,
       autoDetectInstalledGames: true,
       showAdultGames: false,
+      showAiTranslations: false,
       liquidGlassEnabled: true,
       gamepadSoundsEnabled: true,
       isSettingsModalOpen: false,
@@ -96,6 +99,9 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleShowAdultGames: () =>
         set((state) => ({ showAdultGames: !state.showAdultGames })),
 
+      toggleShowAiTranslations: () =>
+        set((state) => ({ showAiTranslations: !state.showAiTranslations })),
+
       toggleLiquidGlass: () =>
         set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled })),
 
@@ -125,6 +131,7 @@ export const useSettingsStore = create<SettingsStore>()(
         createBackupBeforeInstall: state.createBackupBeforeInstall,
         autoDetectInstalledGames: state.autoDetectInstalledGames,
         showAdultGames: state.showAdultGames,
+        showAiTranslations: state.showAiTranslations,
         liquidGlassEnabled: state.liquidGlassEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         saveLogsToFile: state.saveLogsToFile,
