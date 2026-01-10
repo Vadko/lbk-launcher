@@ -19,6 +19,7 @@ import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { useGames } from '../../hooks/useGames';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useAlphabetNavigation } from '../../hooks/useAlphabetNavigation';
+import { useFilterCounts } from '../../hooks/useFilterCounts';
 import type { GameGroup } from './types';
 import type { Game } from '../../types/game';
 
@@ -53,6 +54,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setSelectedAuthors,
       alphabetSidebarEnabled,
       toggleAlphabetSidebar,
+      sortOrder,
+      setSortOrder,
     } = useSettingsStore();
     const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
 
@@ -115,9 +118,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       selectedAuthors,
       specialFilter,
       searchQuery: debouncedSearchQuery,
+      sortOrder,
     });
 
-    // Group games by slug
+    // Group games by slug (games already sorted by SQL)
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();
 
@@ -135,12 +139,14 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         }
       }
 
+      // Sort translations within each group by progress
       for (const group of groupMap.values()) {
         group.translations.sort(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
       }
 
+      // Preserve order from SQL (already sorted)
       return Array.from(groupMap.values());
     }, [visibleGames]);
 
@@ -222,6 +228,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       return () => clearTimeout(timer);
     }, [loadInstalledGamesFromSystem]);
 
+    // Filter counts from dedicated hook (with debouncing)
+    const { counts: filterCounts } = useFilterCounts();
+
     if (isHorizontal) {
       // Horizontal gamepad mode
       return (
@@ -245,6 +254,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
                 onStatusesChange={setSelectedStatuses}
                 specialFilter={specialFilter}
                 onSpecialFilterChange={setSpecialFilter}
+                counts={filterCounts}
+                sortOrder={sortOrder}
+                onSortChange={setSortOrder}
               />
             </div>
             <div className="flex-1 min-w-0 max-w-[220px]" data-gamepad-header-item>
@@ -345,6 +357,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onStatusesChange={setSelectedStatuses}
             specialFilter={specialFilter}
             onSpecialFilterChange={setSpecialFilter}
+            counts={filterCounts}
+            sortOrder={sortOrder}
+            onSortChange={setSortOrder}
           />
           <AuthorsFilterDropdown
             selectedAuthors={selectedAuthors}
@@ -352,17 +367,18 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             authors={authors}
             isLoading={authorsLoading}
           />
-          <button
-            onClick={toggleAlphabetSidebar}
-            className={`p-1 flex-shrink-0 transition-all hover:scale-110 ${
-              alphabetSidebarEnabled
+          {sortOrder === 'name' && (
+            <button
+              onClick={toggleAlphabetSidebar}
+              className={`p-1 flex-shrink-0 transition-all hover:scale-110 ${alphabetSidebarEnabled
                 ? 'text-[var(--text-main)]'
                 : 'text-text-muted hover:text-[var(--text-main)]'
-            }`}
-            title={alphabetSidebarEnabled ? 'Сховати алфавіт' : 'Показати алфавіт'}
-          >
-            <SortAsc size={18} />
-          </button>
+                }`}
+              title={alphabetSidebarEnabled ? 'Сховати алфавіт' : 'Показати алфавіт'}
+            >
+              <SortAsc size={18} />
+            </button>
+          )}
         </div>
 
         {/* Games list with Alphabet Sidebar */}
@@ -447,8 +463,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             </AnimatePresence>
           </div>
 
-          {/* Alphabet sidebar */}
-          {!isLoading && totalGames > 0 && alphabetSidebarEnabled && (
+          {/* Alphabet sidebar - only show when sorting by name */}
+          {!isLoading && totalGames > 0 && alphabetSidebarEnabled && sortOrder === 'name' && (
             <AlphabetSidebar
               alphabet={sortedAlphabet}
               onLetterClick={handleLetterClick}

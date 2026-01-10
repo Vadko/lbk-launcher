@@ -1,7 +1,7 @@
 import { app, ipcMain, shell } from 'electron';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
-import { fetchGames, fetchGamesByIds, findGamesByInstallPaths, fetchTeams } from '../api';
+import { fetchGames, fetchGamesByIds, findGamesByInstallPaths, fetchTeams, fetchFilterCounts } from '../api';
 import type { GetGamesParams, Game } from '../../shared/types';
 import {
   getFirstAvailableGamePath,
@@ -56,6 +56,21 @@ export function setupGamesHandlers(): void {
     } catch (error) {
       console.error('Error fetching teams:', error);
       return [];
+    }
+  });
+
+  // Fetch filter counts - SYNC (efficient SQL aggregation)
+  ipcMain.handle('fetch-filter-counts', () => {
+    try {
+      return fetchFilterCounts();
+    } catch (error) {
+      console.error('Error fetching filter counts:', error);
+      return {
+        planned: 0,
+        'in-progress': 0,
+        completed: 0,
+        'with-achievements': 0,
+      };
     }
   });
 

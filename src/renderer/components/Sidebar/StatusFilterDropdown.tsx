@@ -1,79 +1,93 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ListFilter, Check, X } from 'lucide-react';
-import { STATUS_OPTIONS, SPECIAL_FILTER_OPTIONS, type SpecialFilterType } from './types';
+import {
+  STATUS_OPTIONS,
+  SPECIAL_FILTER_OPTIONS,
+  SORT_OPTIONS,
+  type SpecialFilterType,
+  type SortOrderType,
+} from './types';
+import type { FilterCounts } from '../../hooks/useFilterCounts';
 
 interface StatusFilterDropdownProps {
   selectedStatuses: string[];
   onStatusesChange: (statuses: string[]) => void;
   specialFilter: SpecialFilterType | null;
   onSpecialFilterChange: (filter: SpecialFilterType | null) => void;
+  counts?: FilterCounts;
+  sortOrder: SortOrderType;
+  onSortChange: (order: SortOrderType) => void;
 }
 
 export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.memo(
-  ({ selectedStatuses, onStatusesChange, specialFilter, onSpecialFilterChange }) => {
+  ({
+    selectedStatuses,
+    onStatusesChange,
+    specialFilter,
+    onSpecialFilterChange,
+    counts,
+    sortOrder,
+    onSortChange,
+  }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Determine current label
     const currentLabel = useMemo(() => {
       if (specialFilter) {
-        const option = SPECIAL_FILTER_OPTIONS.find((o) => o.value === specialFilter);
-        return option?.label || specialFilter;
+        return SPECIAL_FILTER_OPTIONS.find((o) => o.value === specialFilter)?.label || specialFilter;
       }
-      if (selectedStatuses.length === 0) return 'Усі стани';
+      if (selectedStatuses.length === 0) return 'Всі стани';
       if (selectedStatuses.length === 1) {
-        const option = STATUS_OPTIONS.find((o) => o.value === selectedStatuses[0]);
-        return option?.label || selectedStatuses[0];
+        return STATUS_OPTIONS.find((o) => o.value === selectedStatuses[0])?.label || selectedStatuses[0];
       }
       return `${selectedStatuses.length} стани`;
     }, [selectedStatuses, specialFilter]);
 
     const hasActiveFilter = specialFilter !== null || selectedStatuses.length > 0;
 
-    // Close menu on outside click
     useEffect(() => {
-      const handleClickOutside = (event: MouseEvent) => {
-        if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (!isOpen) return;
+      const handleClickOutside = (e: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
           setIsOpen(false);
         }
       };
-
-      if (isOpen) {
-        document.addEventListener('mousedown', handleClickOutside);
-      }
-
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isOpen]);
 
-    // Toggle status selection
     const handleStatusToggle = useCallback(
       (status: string) => {
-        if (selectedStatuses.includes(status)) {
-          onStatusesChange(selectedStatuses.filter((s) => s !== status));
-        } else {
-          onStatusesChange([...selectedStatuses, status]);
-        }
+        onStatusesChange(
+          selectedStatuses.includes(status)
+            ? selectedStatuses.filter((s) => s !== status)
+            : [...selectedStatuses, status]
+        );
       },
       [selectedStatuses, onStatusesChange]
     );
 
-    // Handle special filter selection
     const handleSpecialFilterSelect = useCallback(
       (filter: SpecialFilterType) => {
-        onSpecialFilterChange(filter);
+        onSpecialFilterChange(specialFilter === filter ? null : filter);
         setIsOpen(false);
       },
-      [onSpecialFilterChange]
+      [onSpecialFilterChange, specialFilter]
     );
 
-    // Clear all filters
     const handleClearAll = useCallback(() => {
       onStatusesChange([]);
       onSpecialFilterChange(null);
     }, [onStatusesChange, onSpecialFilterChange]);
+
+    const handleSortChange = useCallback(
+      (order: SortOrderType) => {
+        onSortChange(order);
+        setIsOpen(false);
+      },
+      [onSortChange]
+    );
 
     return (
       <div className="relative flex-1 min-w-0" ref={menuRef}>
@@ -95,12 +109,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
@@ -114,7 +123,6 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
               className="absolute top-full left-0 mt-1 py-1 w-[calc(200%+0.5rem)] bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-hidden filter-dropdown"
               data-gamepad-dropdown
             >
-              {/* Clear filter button */}
               {hasActiveFilter && (
                 <>
                   <button
@@ -129,7 +137,6 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
                 </>
               )}
 
-              {/* Status options with checkboxes */}
               {STATUS_OPTIONS.map((option) => {
                 const isSelected = selectedStatuses.includes(option.value);
                 return (
@@ -138,38 +145,66 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
                     onClick={() => handleStatusToggle(option.value)}
                     data-gamepad-dropdown-item
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                      isSelected
-                        ? 'bg-glass-hover text-text-main'
-                        : 'text-text-muted hover:bg-glass hover:text-text-main'
+                      isSelected ? 'bg-glass-hover text-text-main' : 'text-text-muted hover:bg-glass hover:text-text-main'
                     }`}
                   >
-                    <span
-                      className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
-                        isSelected ? 'bg-neon-blue border-neon-blue' : 'border-text-muted'
-                      }`}
-                    >
+                    <span className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
+                      isSelected ? 'bg-neon-blue border-neon-blue' : 'border-text-muted'
+                    }`}>
                       {isSelected && <Check size={12} className="text-white" />}
                     </span>
-                    <span>{option.label}</span>
+                    <span className="flex-1 text-left">{option.label}</span>
+                    {counts?.[option.value] !== undefined && (
+                      <span className="px-1.5 py-0.5 text-xs rounded-full bg-glass text-text-muted">
+                        {counts[option.value]}
+                      </span>
+                    )}
                   </button>
                 );
               })}
 
-              {/* Separator */}
               <div className="border-t border-border my-1" />
 
-              {/* Special filters (single select) */}
               {SPECIAL_FILTER_OPTIONS.map((option) => {
                 const isSelected = specialFilter === option.value;
                 return (
+                  <React.Fragment key={option.value}>
+                    {option.value === 'with-achievements' && <div className="border-t border-border my-1" />}
+                    <button
+                      onClick={() => handleSpecialFilterSelect(option.value)}
+                      data-gamepad-dropdown-item
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                        isSelected ? 'bg-glass-hover text-text-main' : 'text-text-muted hover:bg-glass hover:text-text-main'
+                      }`}
+                    >
+                      <span>{option.label}</span>
+                      <span className="flex items-center gap-2">
+                        {counts?.[option.value] !== undefined && (
+                          <span className="px-1.5 py-0.5 text-xs rounded-full bg-glass text-text-muted">
+                            {counts[option.value]}
+                          </span>
+                        )}
+                        {isSelected && <Check size={14} />}
+                      </span>
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+              <div className="border-t border-border my-1" />
+              <div className="px-3 py-1 text-xs text-text-muted font-medium uppercase tracking-wider">
+                Сортування
+              </div>
+
+              {SORT_OPTIONS.map((option) => {
+                const isSelected = sortOrder === option.value;
+                return (
                   <button
                     key={option.value}
-                    onClick={() => handleSpecialFilterSelect(option.value)}
+                    onClick={() => handleSortChange(option.value)}
                     data-gamepad-dropdown-item
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                      isSelected
-                        ? 'bg-glass-hover text-text-main'
-                        : 'text-text-muted hover:bg-glass hover:text-text-main'
+                      isSelected ? 'bg-glass-hover text-text-main' : 'text-text-muted hover:bg-glass hover:text-text-main'
                     }`}
                   >
                     <span>{option.label}</span>

@@ -1,27 +1,20 @@
-import type { Game, GetGamesParams, GetGamesResult } from '../shared/types';
+import type { Game, GetGamesParams, GetGamesResult, FilterCountsResult } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
 
-// Використовуємо локальну базу даних замість Supabase
 const gamesRepo = new GamesRepository();
 
 export function fetchGames(params: GetGamesParams = {}): GetGamesResult {
   try {
-    console.log('[API] Fetching games from local database with params:', params);
-    const result = gamesRepo.getGames(params);
-    console.log(`[API] Fetched ${result.games.length} games, total: ${result.total}`);
-    return result;
+    return gamesRepo.getGames(params);
   } catch (error) {
-    console.error('[API] Error fetching games from local database:', error);
+    console.error('[API] Error fetching games:', error);
     return { games: [], total: 0 };
   }
 }
 
 export function fetchGamesByIds(gameIds: string[], searchQuery?: string): Game[] {
   try {
-    console.log('[API] Fetching games by IDs:', gameIds.length, 'searchQuery:', searchQuery);
-    const games = gamesRepo.getGamesByIds(gameIds, searchQuery);
-    console.log(`[API] Fetched ${games.length} games by IDs`);
-    return games;
+    return gamesRepo.getGamesByIds(gameIds, searchQuery);
   } catch (error) {
     console.error('[API] Error fetching games by IDs:', error);
     return [];
@@ -30,12 +23,7 @@ export function fetchGamesByIds(gameIds: string[], searchQuery?: string): Game[]
 
 export function findGamesByInstallPaths(installPaths: string[], searchQuery?: string): GetGamesResult {
   try {
-    console.log('[API] Finding games by install paths:', installPaths.length, 'paths, searchQuery:', searchQuery);
-    const result = gamesRepo.findGamesByInstallPaths(installPaths, searchQuery);
-    console.log(
-      `[API] Found ${result.games.length} games matching install paths, total: ${result.total}`
-    );
-    return result;
+    return gamesRepo.findGamesByInstallPaths(installPaths, searchQuery);
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);
     return { games: [], total: 0 };
@@ -44,12 +32,18 @@ export function findGamesByInstallPaths(installPaths: string[], searchQuery?: st
 
 export function fetchTeams(): string[] {
   try {
-    console.log('[API] Fetching unique authors from local database');
-    const authors = gamesRepo.getUniqueAuthors();
-    console.log(`[API] Fetched ${authors.length} unique authors`);
-    return authors;
+    return gamesRepo.getUniqueAuthors();
   } catch (error) {
     console.error('[API] Error fetching authors:', error);
     return [];
+  }
+}
+
+export function fetchFilterCounts(): FilterCountsResult {
+  try {
+    return gamesRepo.getFilterCounts();
+  } catch (error) {
+    console.error('[API] Error fetching filter counts:', error);
+    return { planned: 0, 'in-progress': 0, completed: 0, 'with-achievements': 0 };
   }
 }

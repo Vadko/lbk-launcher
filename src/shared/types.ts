@@ -79,11 +79,19 @@ export interface GetGamesParams {
   statuses?: string[];
   authors?: string[];
   showAdultGames?: boolean;
+  sortOrder?: 'name' | 'downloads';
 }
 
 export interface GetGamesResult {
   games: Game[];
   total: number;
+}
+
+export interface FilterCountsResult {
+  planned: number;
+  'in-progress': number;
+  completed: number;
+  'with-achievements': number;
 }
 
 export interface DetectedGameInfo {
@@ -100,6 +108,7 @@ export interface LaunchGameResult {
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
+  fetchFilterCounts: () => Promise<FilterCountsResult>;
   fetchGamesByIds: (gameIds: string[], searchQuery?: string) => Promise<Game[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;

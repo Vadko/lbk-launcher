@@ -9,6 +9,7 @@ interface UseGamesParams {
   selectedAuthors: string[];
   specialFilter: SpecialFilterType | null;
   searchQuery: string;
+  sortOrder?: 'name' | 'downloads';
 }
 
 interface UseGamesResult {
@@ -28,6 +29,7 @@ export function useGames({
   selectedAuthors,
   specialFilter,
   searchQuery,
+  sortOrder = 'name',
 }: UseGamesParams): UseGamesResult {
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
   const checkSubscribedGamesStatus = useStore(
@@ -111,13 +113,36 @@ export function useGames({
         return;
       }
 
+      // Спеціальна обробка для ігор з перекладом досягнень
+      if (specialFilter === 'with-achievements') {
+        const params: GetGamesParams = {
+          searchQuery,
+          statuses: selectedStatuses,
+          authors: selectedAuthors,
+          sortOrder,
+        };
+
+        const result = await window.electronAPI.fetchGames(params);
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        // Filter games that have achievements archive
+        const filteredGames = result.games.filter(
+          (game) => !!game.achievements_archive_path
+        );
+
+        setGames(filteredGames);
+        setTotal(filteredGames.length);
+        return;
+      }
+
       // Для інших фільтрів - завантажити всі ігри одразу
-      // Note: showAdultGames is no longer passed - adult games are always loaded
-      // and shown with blur effect in UI when setting is off
       const params: GetGamesParams = {
         searchQuery,
         statuses: selectedStatuses,
         authors: selectedAuthors,
+        sortOrder,
       };
 
       const result = await window.electronAPI.fetchGames(params);
@@ -125,12 +150,6 @@ export function useGames({
       // Перевірити чи запит ще актуальний
       if (signal.aborted) return;
 
-      console.log(
-        '[useGames] Setting games:',
-        result.games.length,
-        'total:',
-        result.total
-      );
       setGames(result.games);
       setTotal(result.total);
     } catch (error) {
@@ -149,7 +168,7 @@ export function useGames({
         setIsLoading(false);
       }
     }
-  }, [specialFilter, searchQuery, selectedStatuses, selectedAuthors]);
+  }, [specialFilter, searchQuery, selectedStatuses, selectedAuthors, sortOrder]);
 
   /**
    * Перезавантажити
@@ -230,6 +249,18 @@ export function useGames({
           }
           // Гра не в списку - не додаємо (membership визначається окремими listeners)
           return prevGames;
+        }
+
+        if (specialFilter === 'with-achievements') {
+          if (!updatedGame.achievements_archive_path) {
+            // Якщо у гри зник переклад досягнень - видалити зі списку
+            if (index !== -1) {
+              setTotal((prev) => prev - 1);
+              return prevGames.filter((g) => g.id !== updatedGame.id);
+            }
+            return prevGames;
+          }
+          // Якщо гра має переклад досягнень - продовжити перевірку інших фільтрів
         }
 
         // Перевірити чи гра відповідає поточному фільтру пошуку
