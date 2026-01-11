@@ -27,13 +27,13 @@ const getToastGradient = (type: ToastNotification['type']) => {
     case 'status-change':
       return 'from-green-500 to-green-600';
     case 'version-update':
-      return 'from-neon-blue to-neon-purple';
+      return 'from-color-accent to-color-main';
     case 'app-update':
-      return 'from-neon-purple to-pink-500';
+      return 'from-color-main to-color-accent';
     case 'progress-change':
-      return 'from-amber-500 to-orange-500';
+      return 'from-color-mixed to-color-mixed';
     default:
-      return 'from-neon-blue to-neon-purple';
+      return 'from-color-accent to-color-main';
   }
 };
 
@@ -42,13 +42,13 @@ const getToastBorder = (type: ToastNotification['type']) => {
     case 'status-change':
       return 'border-green-500';
     case 'version-update':
-      return 'border-neon-blue';
+      return 'border-color-accent';
     case 'app-update':
-      return 'border-neon-purple';
+      return 'border-color-main';
     case 'progress-change':
-      return 'border-amber-500';
+      return 'border-color-mixed';
     default:
-      return 'border-neon-blue';
+      return 'border-color-accent';
   }
 };
 

@@ -27,7 +27,7 @@ export const ConfirmModal: React.FC = () => {
           <button
             onClick={confirm}
             data-gamepad-confirm
-            className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+            className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             {config.confirmText || 'Підтвердити'}
           </button>

@@ -278,12 +278,13 @@ export function useGames({
 
         // Перевірити чи гра відповідає поточному фільтру статусу (multi-select)
         const matchesStatus =
-          selectedStatuses.length === 0 || selectedStatuses.includes(updatedGame.status);
+          selectedStatuses?.length === 0 ||
+          selectedStatuses?.includes(updatedGame.status);
 
         // Перевірити чи гра відповідає фільтру авторів (multi-select)
         const matchesAuthors =
-          selectedAuthors.length === 0 ||
-          selectedAuthors.some((author) => updatedGame.team?.includes(author));
+          selectedAuthors?.length === 0 ||
+          selectedAuthors?.some((author) => updatedGame.team?.includes(author));
 
         // Adult games are always shown in list (with blur overlay in UI)
         const shouldBeInList =

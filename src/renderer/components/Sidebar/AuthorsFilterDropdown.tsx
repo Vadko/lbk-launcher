@@ -204,11 +204,11 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                             <span
                               className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
                                 isSelected
-                                  ? 'bg-neon-blue border-neon-blue'
+                                  ? 'bg-color-accent border-color-accent'
                                   : 'border-text-muted'
                               }`}
                             >
-                              {isSelected && <Check size={12} className="text-white" />}
+                              {isSelected && <Check size={12} className="text-text-dark" />}
                             </span>
                             <span className="truncate">{author}</span>
                           </button>

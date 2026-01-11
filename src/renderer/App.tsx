@@ -482,7 +482,7 @@ export const App: React.FC = () => {
           </div>
         ) : (
           /* Normal layout: Vertical sidebar on left, MainContent on right */
-          <div className="flex h-full pt-8 px-2 pb-2 gap-2 relative z-10">
+          <div className="main-bg flex h-full pt-8 px-2 pb-2 gap-2 relative z-10">
             <Sidebar
               onOpenHistory={() => setShowNotificationHistory(true)}
               isHorizontal={false}

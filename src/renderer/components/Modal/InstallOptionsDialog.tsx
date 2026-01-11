@@ -182,10 +182,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 checked={createBackup}
                 onChange={(e) => setCreateBackup(e.target.checked)}
                 data-gamepad-modal-item
-                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-neon-purple checked:border-neon-purple transition-colors cursor-pointer focus:ring-2 focus:ring-neon-purple/50 focus:outline-none"
+                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors cursor-pointer focus:ring-2 focus:ring-color-main/50 focus:outline-none"
               />
               <svg
-                className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+                className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
                   createBackup ? 'opacity-100' : 'opacity-0'
                 }`}
                 viewBox="0 0 24 24"
@@ -198,8 +198,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Shield size={18} className="text-neon-blue" />
-                <span className="font-medium text-text-main group-hover:text-neon-blue transition-colors">
+                <Shield size={18} className="text-color-accent" />
+                <span className="font-medium text-text-main group-hover:text-color-accent transition-colors">
                   Створити резервну копію
                 </span>
               </div>
@@ -207,7 +207,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 Зберегти оригінальні файли гри. Рекомендовано для можливості відновлення.
               </p>
               {createBackup && backupSize && (
-                <p className="flex items-center gap-1 mt-1 text-neon-blue text-sm">
+                <p className="flex items-center gap-1 mt-1 text-color-accent text-sm">
                   <Archive size={14} />
                   <span>Орієнтовний розмір: {backupSize}</span>
                 </p>
@@ -224,10 +224,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               checked={installText}
               onChange={(e) => setInstallText(e.target.checked)}
               data-gamepad-modal-item
-              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-neon-purple checked:border-neon-purple transition-colors cursor-pointer focus:ring-2 focus:ring-neon-purple/50 focus:outline-none"
+              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors cursor-pointer focus:ring-2 focus:ring-color-main/50 focus:outline-none"
             />
             <svg
-              className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+              className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
                 installText ? 'opacity-100' : 'opacity-0'
               }`}
               viewBox="0 0 24 24"
@@ -240,8 +240,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <FileText size={18} className="text-neon-blue" />
-              <span className="font-medium text-text-main group-hover:text-neon-blue transition-colors">
+              <FileText size={18} className="text-color-accent" />
+              <span className="font-medium text-text-main group-hover:text-color-accent transition-colors">
                 Текстова локалізація
               </span>
               {isReinstall && (
@@ -254,7 +254,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <div className="text-sm text-text-muted mt-1">
               <p>Переклад текстів гри українською.</p>
               {game.archive_size && (
-                <p className="flex items-center gap-1 mt-1 text-neon-blue">
+                <p className="flex items-center gap-1 mt-1 text-color-accent">
                   <Archive size={14} />
                   <span>Розмір: {game.archive_size}</span>
                 </p>
@@ -286,10 +286,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               onChange={(e) => setInstallVoice(e.target.checked)}
               disabled={!hasVoiceArchive}
               data-gamepad-modal-item
-              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-neon-purple checked:border-neon-purple transition-colors focus:ring-2 focus:ring-neon-purple/50 focus:outline-none ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
             />
             <svg
-              className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+              className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
                 hasVoiceArchive && installVoice ? 'opacity-100' : 'opacity-0'
               }`}
               viewBox="0 0 24 24"
@@ -357,10 +357,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 onChange={(e) => setInstallAchievements(e.target.checked)}
                 disabled={!hasAchievementsArchive}
                 data-gamepad-modal-item
-                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-neon-purple checked:border-neon-purple transition-colors focus:ring-2 focus:ring-neon-purple/50 focus:outline-none ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               />
               <svg
-                className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+                className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
                   hasAchievementsArchive && installAchievements
                     ? 'opacity-100'
                     : 'opacity-0'
@@ -483,7 +483,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity ${
               !hasChanges
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-neon-blue to-neon-purple text-white hover:opacity-90'
+                : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
             {isReinstall ? 'Застосувати' : 'Встановити'}

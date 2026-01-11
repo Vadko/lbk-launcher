@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 /**
  * Hook для обробки deep link навігації.
  * Слухає події deep-link від main process і навігує до потрібного перекладу.
- * URL формат: littlebit://games/{slug}/{team}
+ * URL формат: lbk://games/{slug}/{team}
  */
 export function useDeepLink() {
   const setSelectedGame = useStore((state) => state.setSelectedGame);

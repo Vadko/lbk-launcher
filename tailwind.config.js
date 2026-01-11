@@ -13,6 +13,7 @@ export default {
       },
       textColor: {
         'text-main': 'var(--text-main)',
+        'text-dark': 'var(--text-dark)',
         'text-muted': 'var(--text-muted)',
       },
       borderColor: {
@@ -25,6 +26,9 @@ export default {
         'neon-pink': 'var(--neon-pink)',
         'neon-orange': 'var(--neon-orange)',
         'neon-green': 'var(--neon-green)',
+        'color-main': 'var(--color-main)',
+        'color-accent': 'var(--color-accent)',
+        'color-mixed': 'var(--color-mixed)',
       },
       fontFamily: {
         head: ['Space Grotesk', 'Segoe UI', 'sans-serif'],

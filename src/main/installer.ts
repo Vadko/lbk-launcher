@@ -55,7 +55,7 @@ const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
 
-const BACKUP_DIR_NAME = '.littlebit-backup';
+const BACKUP_DIR_NAME = '.lbk-backup';
 
 // Re-export utilities for external use
 export {
@@ -259,7 +259,7 @@ export async function installTranslation(
 
     // 4. Download archives
     const tempDir = app.getPath('temp');
-    const downloadDir = path.join(tempDir, 'little-bit-downloads');
+    const downloadDir = path.join(tempDir, 'lbk-downloads');
     await mkdir(downloadDir, { recursive: true });
 
     const { getSignedDownloadUrl } = await import('./tracking');

@@ -146,7 +146,7 @@ export const UpdateNotification = () => {
 
   // Normal floating toast notification
   return (
-    <div className="fixed bottom-4 right-4 glass-panel notification-toast border border-neon-blue rounded-xl p-4 shadow-xl max-w-sm z-50">
+    <div className="fixed bottom-4 right-4 glass-panel notification-toast border border-color-accent rounded-xl p-4 shadow-xl max-w-sm z-50">
       <div className="flex items-start gap-3">
         <div className="p-2 bg-blue-500/20 rounded-lg">
           {downloading ? (

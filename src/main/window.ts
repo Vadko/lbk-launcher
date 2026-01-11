@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { join } from 'path';
 import {
   applyLiquidGlass,
@@ -60,6 +60,12 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
+
+  // open target="_blank" links in default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
 
   // Track loading progress
   mainWindow.webContents.on('did-start-loading', () => {

@@ -58,7 +58,7 @@ export async function backupFiles(sourceDir: string, targetDir: string): Promise
 }
 
 /**
- * Restore files from backup (legacy format - .littlebit-backup directory)
+ * Restore files from backup (legacy format - .lbk-backup directory)
  */
 export async function restoreBackupLegacy(
   backupDir: string,

@@ -3,9 +3,9 @@
  * @see https://www.electron.build/configuration/configuration
  */
 module.exports = {
-  appId: 'com.littlebit.launcher',
-  productName: 'LB Launcher',
-  copyright: 'Copyright © 2025 LB UA',
+  appId: 'com.lbk.launcher',
+  productName: 'LBK Launcher',
+  copyright: 'Copyright © 2026 LBK UA',
 
   directories: {
     buildResources: 'resources',
@@ -42,8 +42,8 @@ module.exports = {
 
   protocols: [
     {
-      name: 'LB Launcher Protocol',
-      schemes: ['littlebit'],
+      name: 'LBK Launcher Protocol',
+      schemes: ['lbk'],
     },
   ],
 
@@ -61,7 +61,7 @@ module.exports = {
     icon: 'resources/icon.png',
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
-    legalTrademarks: '© 2025 LB UA',
+    legalTrademarks: '© 2026 LBK UA',
   },
 
   portable: {
@@ -71,7 +71,6 @@ module.exports = {
   linux: {
     target: ['AppImage', 'rpm'],
     category: 'Utility',
-    maintainer: 'LB UA <info@littlebit.org.ua>',
     // Steam Deck compatibility
     executableArgs: ['--no-sandbox', '--disable-gpu-sandbox'],
   },
@@ -86,7 +85,7 @@ module.exports = {
     language: "1058",
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: "LB Launcher",
+    shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
   },

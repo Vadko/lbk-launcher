@@ -31,7 +31,7 @@ function getLogFilePath(): string {
       mkdirSync(logsDir, { recursive: true });
     }
     const date = new Date().toISOString().split('T')[0];
-    logFilePath = join(logsDir, `littlebit-${date}.log`);
+    logFilePath = join(logsDir, `lbk-${date}.log`);
   }
   return logFilePath;
 }
@@ -134,7 +134,7 @@ export function setSaveLogsEnabled(enabled: boolean): void {
     if (!existsSync(filePath)) {
       writeFileSync(
         filePath,
-        `=== LittleBit Launcher Logs ===\nStarted: ${new Date().toISOString()}\n\n`
+        `=== LBK Launcher Logs ===\nStarted: ${new Date().toISOString()}\n\n`
       );
     }
   } else {
@@ -204,7 +204,7 @@ function cleanupOldLogs(): void {
     const maxAge = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
     for (const file of files) {
-      if (!file.startsWith('littlebit-') || !file.endsWith('.log')) continue;
+      if (!file.startsWith('lbk-') || !file.endsWith('.log')) continue;
 
       const filePath = join(logsDir, file);
       try {

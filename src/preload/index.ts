@@ -183,7 +183,7 @@ contextBridge.exposeInMainWorld('api', {
 // Handle liquid glass preference request from main process
 ipcRenderer.on('liquid-glass:get-preference', () => {
   // Get the preference from localStorage (settings store)
-  const settings = localStorage.getItem('littlebit-settings');
+  const settings = localStorage.getItem('lbk-settings');
   let enabled = true; // Default to true
 
   if (settings) {

@@ -90,10 +90,6 @@ export const SettingsModal: React.FC = () => {
     await window.liquidGlassAPI?.toggle(newValue);
   };
 
-  const handleOpenFeedback = useCallback(() => {
-    window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
-  }, []);
-
   const handleClearCacheOnly = useCallback(async () => {
     await window.api?.clearCacheOnly();
   }, []);
@@ -128,7 +124,7 @@ export const SettingsModal: React.FC = () => {
         <button
           onClick={closeSettingsModal}
           data-gamepad-cancel
-          className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+          className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
         >
           Закрити
         </button>
@@ -136,8 +132,10 @@ export const SettingsModal: React.FC = () => {
     >
       <div className="space-y-4">
         {/* Feedback link */}
-        <button
-          onClick={handleOpenFeedback}
+        <a
+          href="https://t.me/lbk_launcher_bot"
+          target="_blank"
+          rel="noopener noreferrer"
           className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
         >
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
@@ -147,7 +145,7 @@ export const SettingsModal: React.FC = () => {
             <h4 className="text-sm font-semibold text-text-main">Зворотний зв'язок</h4>
             <p className="text-xs text-text-muted">Написати нам у Telegram</p>
           </div>
-        </button>
+        </a>
 
         {/* Theme selector */}
         <div className="p-4 rounded-xl bg-glass border border-border">
@@ -157,7 +155,7 @@ export const SettingsModal: React.FC = () => {
               onClick={() => setTheme('light')}
               className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 theme === 'light'
-                  ? 'bg-gradient-to-r from-neon-blue to-neon-purple text-white'
+                  ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
                   : 'bg-glass border border-border text-text-muted hover:text-text-main hover:border-border-hover'
               }`}
             >
@@ -167,7 +165,7 @@ export const SettingsModal: React.FC = () => {
               onClick={() => setTheme('dark')}
               className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 theme === 'dark'
-                  ? 'bg-gradient-to-r from-neon-blue to-neon-purple text-white'
+                  ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
                   : 'bg-glass border border-border text-text-muted hover:text-text-main hover:border-border-hover'
               }`}
             >
@@ -177,7 +175,7 @@ export const SettingsModal: React.FC = () => {
               onClick={() => setTheme('system')}
               className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 theme === 'system'
-                  ? 'bg-gradient-to-r from-neon-blue to-neon-purple text-white'
+                  ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
                   : 'bg-glass border border-border text-text-muted hover:text-text-main hover:border-border-hover'
               }`}
             >
@@ -285,7 +283,7 @@ export const SettingsModal: React.FC = () => {
         {import.meta.env.DEV && (
           <div className="p-4 rounded-xl bg-glass border border-border">
             <div className="flex items-center gap-2 mb-3">
-              <Volume2 size={18} className="text-neon-blue" />
+              <Volume2 size={18} className="text-color-accent" />
               <h4 className="text-sm font-semibold text-text-main">Тест звуків (Dev)</h4>
             </div>
             <div className="space-y-3">
@@ -301,12 +299,12 @@ export const SettingsModal: React.FC = () => {
                     {
                       type: 'version-update' as const,
                       label: 'Версія',
-                      color: 'from-neon-blue to-neon-purple',
+                      color: 'from-color-accent to-color-main',
                     },
                     {
                       type: 'app-update' as const,
                       label: 'Застосунок',
-                      color: 'from-neon-purple to-pink-500',
+                      color: 'from-color-main to-color-mixed',
                     },
                     {
                       type: 'progress-change' as const,

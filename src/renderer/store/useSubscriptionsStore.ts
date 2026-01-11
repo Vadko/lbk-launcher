@@ -375,7 +375,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         const notification = createNotification({
           type: 'app-update',
           gameId: 'app',
-          gameName: 'LB Launcher',
+          gameName: 'LBK Launcher',
           oldValue: oldVersion,
           newValue: newVersion,
           idPrefix: 'app-update',
@@ -396,7 +396,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('app-update');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden('LB Launcher', message);
+          showSystemNotificationIfHidden('LBK Launcher', message);
         }
       },
 

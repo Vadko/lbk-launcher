@@ -5,14 +5,14 @@ export interface SpecialTranslator {
   description: string;
 }
 
-const SPECIAL_DESCRIPTION = 'Допомагає розвивати LB Launcher з перших днів';
+const SPECIAL_DESCRIPTION = 'Допомагає розвивати LBK Launcher з перших днів';
 
 export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
   { name: 'Владислав', team: 'Sent_DeZ', description: SPECIAL_DESCRIPTION },
   { name: 'Вена', team: 'Ліниві ШІ', description: SPECIAL_DESCRIPTION },
-  { name: 'Віталій', team: 'GameGlobe Localization', description: SPECIAL_DESCRIPTION },
   { name: 'Євгеній', team: 'kurasagi', description: SPECIAL_DESCRIPTION },
   { name: 'Костянтин', team: 'KostyanChek8', description: SPECIAL_DESCRIPTION },
+  { name: 'GameGlobe Localization', team: 'GameGlobe Localization', description: 'Команда лаунчера' },
   { name: 'Little Bit', team: 'Little Bit', description: 'Команда лаунчера' },
 ];
 

@@ -71,7 +71,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             isHorizontalMode ? 'w-[200px] flex-col' : ''
           } ${
             isAnySelected
-              ? 'bg-[rgba(0,242,255,0.1)] border border-[rgba(0,242,255,0.5)] shadow-[0_0_20px_rgba(0,242,255,0.2)]'
+              ? 'border border-[rgba(255,164,122,0.5)] shadow-[0_0_20px_rgba(255,164,122,0.2)]'
               : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
           }`}
         >
@@ -109,17 +109,17 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   />
                 </>
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm">
+                <div className="w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-sm">
                   {group.name.charAt(0)}
                 </div>
               )}
             </div>
             {anyHasUpdate && !isAdultBlurred && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-neon-blue rounded-full border-2 border-bg-dark animate-pulse z-10" />
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
             )}
             {anyGameDetected && !isAdultBlurred && (
               <div
-                className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-dark z-10"
+                className="absolute -bottom-1 -right-1 w-4 h-4 bg-color-main rounded-full border-2 border-bg-dark z-10"
                 title="Гра встановлена"
               />
             )}
@@ -132,7 +132,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             </h4>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-neon-blue to-neon-purple rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${avgProgress}%` }}
               />
             </div>

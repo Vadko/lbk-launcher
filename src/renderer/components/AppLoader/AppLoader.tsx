@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import logo from '../../../../resources/icon.png';
+import logo from '../../../../resources/logo.svg';
 
 interface AppLoaderProps {
   status: 'syncing' | 'ready' | 'error' | 'loading';
@@ -26,11 +26,11 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
       className="app-loader fixed inset-0 bg-[#0a0a0f] flex flex-col items-center justify-center z-[9999] overflow-hidden"
     >
       {/* Subtle gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neon-blue/10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-color-main/10" />
 
       {/* Animated glow behind logo */}
       <motion.div
-        className="absolute w-64 h-64 rounded-full bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 blur-3xl"
+        className="absolute w-64 h-64 rounded-full bg-gradient-to-r from-color-accent/20 to-color-main/20 blur-3xl"
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.3, 0.5, 0.3],
@@ -51,7 +51,11 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="mb-6"
         >
-          <img src={logo} alt="LittleBit" className="w-24 h-24 drop-shadow-2xl" />
+          <img
+            src={logo}
+            alt="LBK Logo"
+            className="w-24 h-24 drop-shadow-2xl"
+          />
         </motion.div>
 
         {/* App name */}
@@ -59,9 +63,9 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="text-3xl font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent mb-2"
+          className="text-3xl font-bold bg-gradient-to-r from-color-accent to-color-main bg-clip-text text-transparent mb-2"
         >
-          Little Bit
+          LBK Launcher
         </motion.h1>
 
         {/* Tagline */}
@@ -88,7 +92,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-2 h-2 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple"
+                    className="w-2 h-2 rounded-full bg-gradient-to-r from-color-accent to-color-main"
                     animate={{
                       scale: [1, 1.3, 1],
                       opacity: [0.5, 1, 0.5],
@@ -138,7 +142,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
 
       {/* Bottom decoration line */}
       <motion.div
-        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-blue/30 to-transparent"
+        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
         animate={{
           opacity: [0.3, 0.6, 0.3],
         }}

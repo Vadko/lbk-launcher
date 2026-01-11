@@ -1,10 +1,9 @@
 {
-  "name": "little-bit",
-  "version": "1.28.0",
+  "name": "lbk-launcher",
+  "version": "2.0.0",
   "description": "Інсталятор українізаторів відеоігор",
   "author": {
-    "name": "LB UA",
-    "email": "info@vadko.dev"
+    "name": "LBK Team"
   },
   "license": "GPL-3.0-or-later",
   "main": "out/main/index.js",

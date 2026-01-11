@@ -32,7 +32,7 @@ img {
 /* Dark theme (default) */
 :root,
 :root[data-theme='dark'] {
-  --bg-dark: #050b14;
+  --bg-dark: #0f0f10;
   --glass: rgba(255, 255, 255, 0.03);
   --glass-hover: rgba(255, 255, 255, 0.1);
   --border: rgba(255, 255, 255, 0.1);
@@ -44,7 +44,12 @@ img {
   --neon-green: #10b981;
   --gamepad-focus: #fbbf24;
   --text-main: #ffffff;
+  --text-dark: #121213;
   --text-muted: #94a3b8;
+
+  --color-main: #a8cf96;
+  --color-accent: #ffa47a;
+  --color-mixed: #efeead;
 }
 
 /* Light theme */
@@ -61,7 +66,12 @@ img {
   --neon-green: #34d399;
   --gamepad-focus: #f59e0b;
   --text-main: #0f172a;
+  --text-dark: #121213;
   --text-muted: #334155;
+
+  --color-main: #a8cf96;
+  --color-accent: #ffa47a;
+  --color-mixed: #efeead;
 }
 
 /* ==========================================================================
@@ -86,6 +96,13 @@ body {
 
 html.maximized #root {
   border-radius: 0;
+}
+
+.main-bg {
+  background-image: url('../../../resources/main-bg.png');
+  background-position: center top;
+  background-size: 100% auto;
+  background-repeat: no-repeat;
 }
 
 /* ==========================================================================
@@ -276,7 +293,9 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 :root[data-theme='light'] body.liquid-glass-enabled .bg-glass,
-:root[data-theme='light'] body.liquid-glass-enabled [class*='bg-glass']:not([class*='hover']) {
+:root[data-theme='light']
+  body.liquid-glass-enabled
+  [class*='bg-glass']:not([class*='hover']) {
   background: rgba(255, 255, 255, 0.15) !important;
 }
 
@@ -487,7 +506,11 @@ body.liquid-glass-enabled .glass-input:focus {
 
 /* Credits section - light theme */
 :root[data-theme='light'] .credits-section {
-  background: linear-gradient(to right, rgba(236, 72, 153, 0.15), rgba(168, 85, 247, 0.15));
+  background: linear-gradient(
+    to right,
+    rgba(236, 72, 153, 0.15),
+    rgba(168, 85, 247, 0.15)
+  );
   border-color: rgba(168, 85, 247, 0.4);
 }
 
@@ -577,7 +600,7 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--neon-blue), var(--neon-purple));
+  background: linear-gradient(180deg, var(--color-accent), var(--color-main));
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: content-box;
@@ -586,7 +609,7 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--neon-blue), var(--neon-pink));
+  background: linear-gradient(180deg, var(--color-accent), var(--color-main));
   background-clip: content-box;
   border: 2px solid transparent;
   box-shadow: 0 0 12px rgba(0, 242, 255, 0.5);
@@ -597,7 +620,7 @@ body.liquid-glass-enabled .glass-input:focus {
    ========================================================================== */
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  background: linear-gradient(135deg, var(--color-accent), var(--color-main));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -645,7 +668,9 @@ body.liquid-glass-enabled .glass-input:focus {
 [data-gamepad-mode] [data-focusable='true']:focus-visible {
   outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.4) !important;
+  box-shadow:
+    0 0 0 6px rgba(251, 191, 36, 0.3),
+    0 0 20px rgba(251, 191, 36, 0.4) !important;
 }
 
 [data-gamepad-mode] .game-list-item:focus,
@@ -681,7 +706,9 @@ body.liquid-glass-enabled .glass-input:focus {
 :root[data-theme='light'] [data-gamepad-mode] [tabindex]:focus-visible,
 :root[data-theme='light'] [data-gamepad-mode] [data-focusable='true']:focus-visible {
   outline: 3px solid var(--gamepad-focus) !important;
-  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.4) !important;
+  box-shadow:
+    0 0 0 6px rgba(245, 158, 11, 0.3),
+    0 0 20px rgba(245, 158, 11, 0.4) !important;
 }
 
 :root[data-theme='light'] [data-gamepad-mode] .game-list-item:focus,
@@ -701,12 +728,16 @@ body.liquid-glass-enabled .glass-input:focus {
 [data-gamepad-mode] [data-gamepad-selected] {
   outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: 2px;
-  box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.3), 0 0 20px rgba(251, 191, 36, 0.4) !important;
+  box-shadow:
+    0 0 0 6px rgba(251, 191, 36, 0.3),
+    0 0 20px rgba(251, 191, 36, 0.4) !important;
 }
 
 :root[data-theme='light'] [data-gamepad-mode] [data-gamepad-selected] {
   outline: 3px solid var(--gamepad-focus) !important;
-  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.4) !important;
+  box-shadow:
+    0 0 0 6px rgba(245, 158, 11, 0.3),
+    0 0 20px rgba(245, 158, 11, 0.4) !important;
 }
 
 /* ==========================================================================
@@ -746,4 +777,3 @@ body.liquid-glass-enabled .glass-input:focus {
 :root[data-theme='light'] .drag-region .text-text-muted\/70 {
   color: rgba(0, 0, 0, 0.5) !important;
 }
-

@@ -5,6 +5,7 @@ import { getGameImageUrl } from '../../utils/imageUrl';
 import { Loader } from '../ui/Loader';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useImagePreload } from '../../hooks/useImagePreload';
+import { StatusBadge } from '../Elements/StatusBadge';
 
 interface GameListItemProps {
   game: Game;
@@ -14,6 +15,8 @@ interface GameListItemProps {
   isGameDetected?: boolean;
   showTeamName?: boolean;
   isHorizontalMode?: boolean;
+  isCardStyle?: boolean;
+  showDownloadCounter?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -25,6 +28,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     isGameDetected = false,
     showTeamName = false,
     isHorizontalMode = false,
+    isCardStyle = false,
+    showDownloadCounter = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -51,6 +56,103 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
       }
     };
 
+    // Card style rendering
+    if (isCardStyle) {
+      return (
+        <div
+          ref={preloadRef}
+          role="button"
+          tabIndex={0}
+          onClick={onClick}
+          onKeyDown={handleKeyDown}
+          data-game-card
+          className={`glass-card !p-0 flex flex-col items-center`}
+        >
+          <div className="relative h-64 w-full bg-glass rounded-t-xl overflow-hidden">
+            {thumbnailUrl && !imageError ? (
+              <>
+                {imageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-glass">
+                    <Loader size="sm" />
+                  </div>
+                )}
+                <img
+                  src={thumbnailUrl}
+                  alt={game.name}
+                  draggable={false}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    setImageError(true);
+                    setImageLoading(false);
+                  }}
+                />
+              </>
+            ) : (
+              <div
+                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl ${isAdultBlurred ? 'blur-lg' : ''}`}
+              >
+                {game.name.charAt(0)}
+              </div>
+            )}
+
+            {/* Adult content indicator */}
+            {isAdultBlurred && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <EyeOff size={20} className="text-white/80" />
+              </div>
+            )}
+
+            {/* Indicators */}
+            {hasUpdate && (
+              <div className="absolute top-2 right-2 w-3 h-3 bg-accent rounded-full animate-pulse" />
+            )}
+            {isGameDetected && (
+              <div
+                className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
+                title="Гра встановлена"
+              />
+            )}
+          </div>
+          <div className="flex-grow p-4 gap-2 flex flex-col w-full">
+            <h3 className="text-lg font-head font-semibold text-text-main">
+              {game.name}
+            </h3>
+            {showDownloadCounter && (
+              <p className="text-xs text-text-muted mb-2">
+                Встановлень: {game.downloads}
+              </p>
+            )}
+            {/* Info */}
+            <div className="p-3 bg-glass-hover rounded-xl">
+              <h4 className="font-medium text-sm text-text-main mb-2 truncate">
+                {game.team}
+              </h4>
+
+              <div className="flex gap-3 items-center w-full">
+                {game.status && (
+                  <StatusBadge status={game.status} className="flex-shrink-0" />
+                )}
+                {game.status !== 'planned' && (
+                  <>
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
+                      <div
+                        className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                        style={{ width: `${averageProgress}%` }}
+                      />
+                    </div>
+                    <span className='text-text-main'>{`${averageProgress}%`}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Horizontal compact mode for gamepad
     if (isHorizontalMode) {
       return (
@@ -63,7 +165,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           data-gamepad-card
           className={`game-list-item relative w-[200px] rounded-xl cursor-pointer transition-all duration-300 outline-none ${
             isSelected
-              ? 'ring-2 ring-neon-blue shadow-[0_0_20px_rgba(0,242,255,0.4)]'
+              ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.4)]'
               : 'ring-1 ring-white/10 hover:ring-white/30'
           }`}
         >
@@ -107,7 +209,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
             {/* Indicators */}
             {hasUpdate && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-neon-blue rounded-full animate-pulse" />
+              <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse" />
             )}
             {isGameDetected && (
               <div
@@ -124,7 +226,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             </h4>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-neon-blue to-neon-purple rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${averageProgress}%` }}
               />
             </div>
@@ -144,7 +246,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         data-nav-group="game-list"
         className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
           isSelected
-            ? 'bg-[rgba(0,242,255,0.1)] border border-[rgba(0,242,255,0.5)] shadow-[0_0_20px_rgba(0,242,255,0.2)]'
+            ? 'border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]'
             : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
         }`}
       >
@@ -186,7 +288,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
           </div>
           {hasUpdate && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-neon-blue rounded-full border-2 border-bg-dark animate-pulse z-10" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
           )}
           {isGameDetected && (
             <div
@@ -205,7 +307,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-neon-blue to-neon-purple rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${averageProgress}%` }}
               />
             </div>

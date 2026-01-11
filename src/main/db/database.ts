@@ -13,7 +13,7 @@ export class DatabaseManager {
 
   private constructor() {
     const userDataPath = app.getPath('userData');
-    const dbPath = join(userDataPath, 'littlebit.db');
+    const dbPath = join(userDataPath, 'lbk.db');
     const dbExists = existsSync(dbPath);
 
     if (dbExists) {
@@ -197,7 +197,7 @@ export function clearGamesTable(): void {
  */
 export function getDatabasePath(): string {
   const userDataPath = app.getPath('userData');
-  return join(userDataPath, 'littlebit.db');
+  return join(userDataPath, 'lbk.db');
 }
 
 /**

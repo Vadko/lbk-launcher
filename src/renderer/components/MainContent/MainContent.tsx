@@ -36,6 +36,7 @@ import {
   getSpecialTranslatorInfo,
 } from '../../constants/specialTranslators';
 import type { LaunchGameResult } from '../../../shared/types';
+import { GamesSection } from './GamesSection';
 
 export const MainContent: React.FC = () => {
   const {
@@ -208,15 +209,10 @@ export const MainContent: React.FC = () => {
 
   if (!selectedGame) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-        <div className="glass-card p-8 rounded-2xl">
-          <Gamepad2 size={64} className="text-text-muted mb-4 opacity-50 mx-auto" />
-          <h2 className="text-2xl font-head font-semibold text-text-main mb-2">
-            Виберіть гру зі списку
-          </h2>
-          <p className="text-text-muted max-w-md">
-            Виберіть гру, щоб побачити деталі та встановити українізатор
-          </p>
+      <div className="flex-1 grid items-center px-8 overflow-y-auto custom-scrollbar">
+        <div className="grid grid-rows-auto gap-16 h-auto">
+          <GamesSection title="Новинки" />
+          <GamesSection title="Популярне у гравців" showDownloadCounter={true} />
         </div>
       </div>
     );
@@ -239,7 +235,7 @@ export const MainContent: React.FC = () => {
           </p>
           <button
             onClick={openSettingsModal}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             <Settings size={20} />
             Відкрити налаштування
@@ -341,7 +337,7 @@ export const MainContent: React.FC = () => {
             )}
             {selectedGame.support_url && (
               <Button
-                variant="pink"
+                variant="accent"
                 icon={<Heart size={20} />}
                 onClick={handleSupport}
                 data-gamepad-action
