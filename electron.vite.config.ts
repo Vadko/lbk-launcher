@@ -1,7 +1,7 @@
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import react from '@vitejs/plugin-react-swc'
-import path from 'path'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import react from '@vitejs/plugin-react-swc';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import path from 'path';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
   main: {
@@ -9,31 +9,31 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-      }
+      },
     },
     build: {
       rollupOptions: {
         input: {
-          index: path.resolve(__dirname, 'src/main/index.ts')
+          index: path.resolve(__dirname, 'src/main/index.ts'),
         },
-        external: ['better-sqlite3']
-      }
-    }
+        external: ['better-sqlite3'],
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-      }
+      },
     },
     build: {
       rollupOptions: {
         input: {
-          index: path.resolve(__dirname, 'src/preload/index.ts')
-        }
-      }
-    }
+          index: path.resolve(__dirname, 'src/preload/index.ts'),
+        },
+      },
+    },
   },
   renderer: {
     root: 'src/renderer',
@@ -43,8 +43,8 @@ export default defineConfig({
         '@resources': path.resolve(__dirname, './resources'),
         '@renderer': path.resolve(__dirname, './src/renderer'),
         '@components': path.resolve(__dirname, './src/renderer/components'),
-        '@store': path.resolve(__dirname, './src/renderer/store')
-      }
+        '@store': path.resolve(__dirname, './src/renderer/store'),
+      },
     },
     plugins: [
       react(),
@@ -53,23 +53,23 @@ export default defineConfig({
         globals: {
           Buffer: true,
           global: true,
-          process: true
-        }
-      })
+          process: true,
+        },
+      }),
     ],
     build: {
       outDir: path.resolve(__dirname, 'out/renderer'),
       rollupOptions: {
         input: {
-          index: path.resolve(__dirname, 'src/renderer/index.html')
-        }
-      }
+          index: path.resolve(__dirname, 'src/renderer/index.html'),
+        },
+      },
     },
     server: {
       port: 5173,
       hmr: {
-        overlay: true
-      }
-    }
-  }
-})
+        overlay: true,
+      },
+    },
+  },
+});

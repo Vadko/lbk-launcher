@@ -95,10 +95,9 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                       w-full p-3 rounded-xl mb-1 last:mb-0 text-left transition-all
                       flex items-center gap-3 group
                       ${
-                        
                         isSelected
-                            ? 'bg-color-accent/20 ring-1 ring-color-accent'
-                            : 'hover:bg-glass-hover focus:bg-glass-hover focus:ring-1 focus:ring-color-accent/50'
+                          ? 'bg-color-accent/20 ring-1 ring-color-accent'
+                          : 'hover:bg-glass-hover focus:bg-glass-hover focus:ring-1 focus:ring-color-accent/50'
                       }
                     `}
                   >
@@ -143,7 +142,9 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
                         <span
-                          className={progress >= 100 ? 'text-color-main' : 'text-color-accent'}
+                          className={
+                            progress >= 100 ? 'text-color-main' : 'text-color-accent'
+                          }
                         >
                           {progress}%
                         </span>

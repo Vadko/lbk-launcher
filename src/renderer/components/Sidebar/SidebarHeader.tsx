@@ -1,9 +1,9 @@
-import React, { useSyncExternalStore } from 'react';
 import logo from '@resources/logo.svg';
 import logoDark from '@resources/logo-dark.svg';
 import { useSettingsStore } from '@store/useSettingsStore';
 import { useStore } from '@store/useStore';
 import { Home } from 'lucide-react';
+import React, { useSyncExternalStore } from 'react';
 
 interface SidebarHeaderProps {
   isCompact?: boolean;

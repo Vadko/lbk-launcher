@@ -208,7 +208,9 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                                   : 'border-text-muted'
                               }`}
                             >
-                              {isSelected && <Check size={12} className="text-text-dark" />}
+                              {isSelected && (
+                                <Check size={12} className="text-text-dark" />
+                              )}
                             </span>
                             <span className="truncate">{author}</span>
                           </button>

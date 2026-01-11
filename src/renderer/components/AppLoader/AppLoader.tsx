@@ -51,11 +51,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           transition={{ duration: 0.5, ease: 'easeOut' }}
           className="mb-6"
         >
-          <img
-            src={logo}
-            alt="LBK Logo"
-            className="w-24 h-24 drop-shadow-2xl"
-          />
+          <img src={logo} alt="LBK Logo" className="w-24 h-24 drop-shadow-2xl" />
         </motion.div>
 
         {/* App name */}

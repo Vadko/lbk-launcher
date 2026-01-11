@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { EyeOff } from 'lucide-react';
-import { Loader } from '../ui/Loader';
+import type { Game } from '@renderer/types/game';
 import { getGameImageUrl } from '@renderer/utils/imageUrl';
 import { useSettingsStore } from '@store/useSettingsStore';
-import type { Game } from '@renderer/types/game';
+import { EyeOff } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader } from '../ui/Loader';
 
 interface GamepadCardProps {
   game: Game;

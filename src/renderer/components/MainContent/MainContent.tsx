@@ -1,42 +1,42 @@
-import React, { useEffect, useState, useCallback } from 'react';
 import {
   Download,
-  RefreshCw,
-  Heart,
-  Gamepad2,
-  Trash2,
-  Play,
   EyeOff,
+  Gamepad2,
+  Heart,
+  Play,
+  RefreshCw,
   Settings,
-  Users,
   Star,
+  Trash2,
+  Users,
 } from 'lucide-react';
-import { useStore } from '../../store/useStore';
+import React, { useCallback, useEffect, useState } from 'react';
+import type { LaunchGameResult } from '../../../shared/types';
+import {
+  getSpecialTranslatorInfo,
+  isSpecialTranslator,
+} from '../../constants/specialTranslators';
+import { useInstallation } from '../../hooks/useInstallation';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
-import { useInstallation } from '../../hooks/useInstallation';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
-import { GameHero } from './GameHero';
-import { StatusCard } from './StatusCard';
-import { InfoCard } from './InfoCard';
-import { VideoCard } from './VideoCard';
-import { SocialLinksCard } from './SocialLinksCard';
-import { FundraisingProgressCard } from './FundraisingProgressCard';
-import { InstallationStatusBadge } from './InstallationStatusBadge';
-import { DownloadProgressCard } from './DownloadProgressCard';
-import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
 import { Tooltip } from '../ui/Tooltip';
-import {
-  isSpecialTranslator,
-  getSpecialTranslatorInfo,
-} from '../../constants/specialTranslators';
-import type { LaunchGameResult } from '../../../shared/types';
+import { DownloadProgressCard } from './DownloadProgressCard';
+import { FundraisingProgressCard } from './FundraisingProgressCard';
+import { GameHero } from './GameHero';
 import { GamesSection } from './GamesSection';
+import { InfoCard } from './InfoCard';
+import { InstallationStatusBadge } from './InstallationStatusBadge';
+import { InstallationStatusMessage } from './InstallationStatusMessage';
+import { SocialLinksCard } from './SocialLinksCard';
+import { StatusCard } from './StatusCard';
+import { VideoCard } from './VideoCard';
 
 export const MainContent: React.FC = () => {
   const {

@@ -26,7 +26,8 @@ export const Button: React.FC<ButtonProps> = ({
     amber:
       'bg-color-mixed text-text-dark shadow-[0_4px_15px_rgba(239,238,173,0.4)] hover:shadow-[0_8px_25px_rgba(239,238,173,0.6)] hover:brightness-110 hover:-translate-y-0.5',
     pink: 'bg-gradient-to-r from-[#ec4899] to-[#db2777] text-white shadow-[0_4px_15px_rgba(236,72,153,0.4)] hover:shadow-[0_8px_25px_rgba(236,72,153,0.6)] hover:brightness-110 hover:-translate-y-0.5',
-    accent: 'bg-color-accent text-text-dark shadow-[0_4px_15px_rgba(255,164,122,0.4)] hover:shadow-[0_8px_25px_rgba(255,164,122,0.6)] hover:brightness-110 hover:-translate-y-0.5',
+    accent:
+      'bg-color-accent text-text-dark shadow-[0_4px_15px_rgba(255,164,122,0.4)] hover:shadow-[0_8px_25px_rgba(255,164,122,0.6)] hover:brightness-110 hover:-translate-y-0.5',
   };
 
   return (

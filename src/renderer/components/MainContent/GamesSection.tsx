@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
 import type { Game } from '@renderer/types/game';
+import React, { useEffect } from 'react';
 import { useGames } from '@/renderer/hooks/useGames';
-import { GameListItem } from '../Sidebar/GameListItem';
 import { useStore } from '@/renderer/store/useStore';
+import { GameListItem } from '../Sidebar/GameListItem';
 
 interface GamesSectionProps {
   title: string;

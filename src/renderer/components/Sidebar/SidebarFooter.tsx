@@ -1,7 +1,7 @@
+import { Bell, Home, Settings, Volume2, VolumeX } from 'lucide-react';
 import React from 'react';
-import { Settings, Bell, Volume2, VolumeX, Home } from 'lucide-react';
-import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface SidebarFooterProps {
   onOpenHistory: () => void;

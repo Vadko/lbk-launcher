@@ -1,11 +1,11 @@
+import { Globe, Send, Youtube } from 'lucide-react';
 import React from 'react';
 import type { Game } from '../../types/game';
-import { Globe, Send, Youtube } from 'lucide-react';
-import { XIcon } from '../Icons/XIcon';
 import { DiscordIcon } from '../Icons/DiscordIcon';
-import { SteamIcon } from '../Icons/SteamIcon';
-import { GOGIcon } from '../Icons/GOGIcon';
 import { EpicIcon } from '../Icons/EpicIcon';
+import { GOGIcon } from '../Icons/GOGIcon';
+import { SteamIcon } from '../Icons/SteamIcon';
+import { XIcon } from '../Icons/XIcon';
 
 interface SocialLinksCardProps {
   game: Game;

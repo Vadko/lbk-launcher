@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
 import { EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { useImagePreload } from '../../hooks/useImagePreload';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
-import { Loader } from '../ui/Loader';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { useImagePreload } from '../../hooks/useImagePreload';
 import { StatusBadge } from '../Elements/StatusBadge';
+import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
   game: Game;
@@ -143,7 +143,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                         style={{ width: `${averageProgress}%` }}
                       />
                     </div>
-                    <span className='text-text-main'>{`${averageProgress}%`}</span>
+                    <span className="text-text-main">{`${averageProgress}%`}</span>
                   </>
                 )}
               </div>

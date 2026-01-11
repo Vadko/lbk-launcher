@@ -26,7 +26,9 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         {isPaused ? 'Завантаження призупинено' : 'Завантаження файлів...'}
       </span>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-color-accent">{Math.round(progress)}%</span>
+        <span className="text-sm font-bold text-color-accent">
+          {Math.round(progress)}%
+        </span>
 
         <div className="flex gap-1 ml-2">
           {isPaused ? (
