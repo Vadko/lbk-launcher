@@ -80,7 +80,7 @@ export interface GetGamesParams {
   authors?: string[];
   showAdultGames?: boolean;
   showAiTranslations?: boolean;
-  sortOrder?: 'name' | 'downloads';
+  sortOrder?: 'name' | 'downloads' | 'newest';
 }
 
 export interface GetGamesResult {

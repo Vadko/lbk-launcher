@@ -5,11 +5,11 @@ import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import type { Game, GetGamesParams } from '../types/game';
 
 interface UseGamesParams {
-  selectedStatuses: string[];
-  selectedAuthors: string[];
-  specialFilter: SpecialFilterType | null;
-  searchQuery: string;
-  sortOrder?: 'name' | 'downloads';
+  selectedStatuses?: string[];
+  selectedAuthors?: string[];
+  specialFilter?: SpecialFilterType | null;
+  searchQuery?: string;
+  sortOrder?: 'name' | 'downloads' | 'newest';
   showAiTranslations?: boolean;
 }
 

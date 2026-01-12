@@ -179,8 +179,14 @@ export class GamesRepository {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    const orderClause =
-      sortOrder === 'downloads' ? 'downloads DESC NULLS LAST, name ASC' : 'name ASC';
+    let orderClause: string;
+    if (sortOrder === 'downloads') {
+      orderClause = 'downloads DESC NULLS LAST, name ASC';
+    } else if (sortOrder === 'newest') {
+      orderClause = 'updated_at DESC NULLS LAST, name ASC';
+    } else {
+      orderClause = 'name ASC';
+    }
 
     const gamesStmt = this.db.prepare(`
       SELECT *

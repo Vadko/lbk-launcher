@@ -16,7 +16,7 @@ export type SpecialFilterType =
   | 'installed-games'
   | 'with-achievements';
 
-export type SortOrderType = 'name' | 'downloads';
+export type SortOrderType = 'name' | 'downloads' | 'newest';
 
 export interface StatusFilterOption {
   label: string;
@@ -45,4 +45,5 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
 export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [
   { label: 'За назвою', value: 'name' },
   { label: 'За популярністю', value: 'downloads' },
+  { label: 'За новизною', value: 'newest' },
 ];
