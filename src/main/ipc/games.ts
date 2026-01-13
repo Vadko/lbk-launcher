@@ -265,11 +265,88 @@ export function setupGamesHandlers(): void {
           break;
 
         case 'linux':
-          await execAsync('pkill -TERM steam').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(2000);
-          spawn('steam', [], { detached: true, stdio: 'ignore' }).unref();
+          // 0. Check if Steam is running
+          let isRunning = false;
+          try {
+            await execAsync('pgrep -x steam');
+            isRunning = true;
+          } catch {
+            isRunning = false;
+          }
+
+          if (isRunning) {
+            // 1. Try graceful shutdown using steam command
+            console.log('[Steam] Sending shutdown command...');
+            try {
+              await execAsync('steam -shutdown');
+            } catch (e) {
+              console.log('[Steam] "steam -shutdown" failed, trying pkill:', e);
+              await execAsync('pkill -TERM steam').catch(() => { });
+            }
+
+            // 2. Wait for process to exit (max 10 seconds)
+            try {
+              const start = Date.now();
+              let running = true;
+              while (running && Date.now() - start < 10000) {
+                try {
+                  // pgrep returns 0 if process exists
+                  await execAsync('pgrep -x steam');
+                  await delay(500);
+                } catch {
+                  running = false;
+                }
+              }
+            } catch (e) {
+              console.warn('[Steam] Error waiting for process exit:', e);
+            }
+          } else {
+            console.log('[Steam] Steam is not running, skipping shutdown');
+          }
+
+          // 3. Launch Steam
+          // Python: subprocess.Popen(["steam"], start_new_session=True, ...)
+          // If "steam" command works for shutdown, it should work for launch.
+          // But we keep our robust fallback logic just in case.
+
+          let launched = false;
+
+          try {
+            // Try simple "steam" command first (like Python)
+            console.log('[Steam] Launching steam...');
+            spawn('steam', [], {
+              detached: true,
+              stdio: 'ignore'
+            }).unref();
+            launched = true;
+          } catch (e) {
+            console.log('[Steam] Standard steam launch failed, trying detection:', e);
+          }
+
+          if (!launched) {
+            // Fallback to detected paths
+            const { existsSync } = await import('fs');
+            const { homedir } = await import('os');
+            const home = homedir();
+            const isFlatpak = existsSync(`${home}/.var/app/com.valvesoftware.Steam`);
+            const isSnap = existsSync(`${home}/snap/steam`);
+
+            if (isFlatpak) {
+              try {
+                spawn('flatpak', ['run', 'com.valvesoftware.Steam'], {
+                  detached: true,
+                  stdio: 'ignore',
+                }).unref();
+              } catch (err) { console.warn(err); }
+            } else if (isSnap) {
+              try {
+                spawn('snap', ['run', 'steam'], {
+                  detached: true,
+                  stdio: 'ignore',
+                }).unref();
+              } catch (err) { console.warn(err); }
+            }
+          }
           break;
 
         case 'darwin':
