@@ -7,6 +7,82 @@ import type { Game } from '../../shared/types';
  */
 
 /**
+ * Поля, які НЕ потрібно завантажувати (великі file_list та FTS поля)
+ */
+type ExcludedFields =
+  | 'archive_file_list'
+  | 'voice_archive_file_list'
+  | 'achievements_archive_file_list'
+  | 'epic_archive_file_list'
+  | 'name_fts'
+  | 'name_search';
+
+/**
+ * Колонки для вибірки (type-safe)
+ */
+const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
+  'id',
+  'slug',
+  'name',
+  'version',
+  'translation_progress',
+  'editing_progress',
+  'team',
+  'game_description',
+  'description',
+  'support_url',
+  'video_url',
+  'platforms',
+  'status',
+  'approved',
+  'approved_at',
+  'approved_by',
+  'banner_path',
+  'logo_path',
+  'thumbnail_path',
+  'archive_path',
+  'archive_size',
+  'archive_hash',
+  'created_by',
+  'project_id',
+  'created_at',
+  'updated_at',
+  'install_paths',
+  'installation_file_linux_path',
+  'installation_file_windows_path',
+  'fonts_progress',
+  'textures_progress',
+  'voice_progress',
+  'telegram',
+  'youtube',
+  'twitter',
+  'website',
+  'discord',
+  'is_adult',
+  'license_only',
+  'fundraising_goal',
+  'fundraising_current',
+  'downloads',
+  'subscriptions',
+  'voice_archive_path',
+  'voice_archive_hash',
+  'voice_archive_size',
+  'achievements_archive_path',
+  'achievements_archive_hash',
+  'achievements_archive_size',
+  'achievements_third_party',
+  'steam_app_id',
+  'epic_archive_path',
+  'epic_archive_hash',
+  'epic_archive_size',
+  'ai',
+  'hide',
+  'additional_path',
+];
+
+const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
+
+/**
  * Отримати Supabase credentials
  */
 function getSupabaseCredentials() {
@@ -61,6 +137,7 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
 
   while (hasMore) {
     const data = await supabaseRequest<Game>('games', {
+      select: GAME_SELECT_STRING,
       approved: 'eq.true',
       order: 'name.asc',
       offset: offset.toString(),
@@ -95,6 +172,7 @@ export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game
 
   while (hasMore) {
     const data = await supabaseRequest<Game>('games', {
+      select: GAME_SELECT_STRING,
       approved: 'eq.true',
       updated_at: `gt.${since}`,
       order: 'updated_at.asc',
