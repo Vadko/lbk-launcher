@@ -264,7 +264,7 @@ export function setupGamesHandlers(): void {
           await shell.openExternal('steam://');
           break;
 
-        case 'linux':
+        case 'linux': {
           // 0. Check if Steam is running
           let isRunning = false;
           try {
@@ -281,7 +281,7 @@ export function setupGamesHandlers(): void {
               await execAsync('steam -shutdown');
             } catch (e) {
               console.log('[Steam] "steam -shutdown" failed, trying pkill:', e);
-              await execAsync('pkill -TERM steam').catch(() => { });
+              await execAsync('pkill -TERM steam').catch(() => void 0);
             }
 
             // 2. Wait for process to exit (max 10 seconds)
@@ -348,6 +348,7 @@ export function setupGamesHandlers(): void {
             }
           }
           break;
+        }
 
         case 'darwin':
           await execAsync('pkill -f Steam').catch((e) => {
