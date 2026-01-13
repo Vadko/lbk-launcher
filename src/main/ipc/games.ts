@@ -316,7 +316,7 @@ export function setupGamesHandlers(): void {
             console.log('[Steam] Launching steam...');
             spawn('steam', [], {
               detached: true,
-              stdio: 'ignore'
+              stdio: 'ignore',
             }).unref();
             launched = true;
           } catch (e) {
@@ -337,14 +337,18 @@ export function setupGamesHandlers(): void {
                   detached: true,
                   stdio: 'ignore',
                 }).unref();
-              } catch (err) { console.warn(err); }
+              } catch (err) {
+                console.warn(err);
+              }
             } else if (isSnap) {
               try {
                 spawn('snap', ['run', 'steam'], {
                   detached: true,
                   stdio: 'ignore',
                 }).unref();
-              } catch (err) { console.warn(err); }
+              } catch (err) {
+                console.warn(err);
+              }
             }
           }
           break;
