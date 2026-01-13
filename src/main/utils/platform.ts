@@ -12,6 +12,18 @@ export function isLinux(): boolean {
   return process.platform === 'linux';
 }
 
+export function isSteamDeckDesktop(): boolean {
+  return process.env.SteamOS === '1';
+}
+
+export function isSteamDeckGame(): boolean {
+  return process.env.SteamDeck === '1';
+}
+
+export function isSteamDeck(): boolean {
+  return isSteamDeckDesktop() || isSteamDeckGame();
+}
+
 export function getPlatform(): 'macos' | 'windows' | 'linux' | 'unknown' {
   if (isMacOS()) return 'macos';
   if (isWindows()) return 'windows';
