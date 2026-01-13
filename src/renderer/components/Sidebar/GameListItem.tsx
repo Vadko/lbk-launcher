@@ -1,12 +1,12 @@
-import { EyeOff } from "lucide-react";
-import React, { useState } from "react";
-import { useImagePreload } from "../../hooks/useImagePreload";
-import { useSettingsStore } from "../../store/useSettingsStore";
-import type { Game } from "../../types/game";
-import { getGameImageUrl } from "../../utils/imageUrl";
-import { StatusBadge } from "../Elements/StatusBadge";
-import { Loader } from "../ui/Loader";
-import { PopularIcon } from "../Icons/PopularIcon";
+import { EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { useImagePreload } from '../../hooks/useImagePreload';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import type { Game } from '../../types/game';
+import { getGameImageUrl } from '../../utils/imageUrl';
+import { StatusBadge } from '../Elements/StatusBadge';
+import { PopularIcon } from '../Icons/PopularIcon';
+import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
   game: Game;
@@ -51,7 +51,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const preloadRef = useImagePreload([bannerUrl, logoUrl]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         onClick();
       }
@@ -82,8 +82,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   alt={game.name}
                   draggable={false}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imageLoading ? "opacity-0" : "opacity-100"
-                  } ${isAdultBlurred ? "blur-lg" : ""}`}
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
                   onLoad={() => setImageLoading(false)}
                   onError={() => {
                     setImageError(true);
@@ -94,7 +94,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             ) : (
               <div
                 className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl ${
-                  isAdultBlurred ? "blur-lg" : ""
+                  isAdultBlurred ? 'blur-lg' : ''
                 }`}
               >
                 {game.name.charAt(0)}
@@ -129,7 +129,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </div>
             )}
             {/* Info */}
-            <div className="p-3 bg-glass-hover rounded-xl">
+            <div className="p-3 bg-glass-hover rounded-xl mt-auto">
               <h4 className="font-semibold mb-2 truncate">{game.team}</h4>
 
               <div className="flex gap-3 items-center w-full">
@@ -140,7 +140,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     className="flex-shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
                   />
                 )}
-                {game.status !== "planned" && (
+                {game.status !== 'planned' && (
                   <>
                     <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
                       <div
@@ -170,8 +170,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           data-gamepad-card
           className={`game-list-item relative w-[200px] rounded-xl cursor-pointer transition-all duration-300 outline-none ${
             isSelected
-              ? "ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.4)]"
-              : "ring-1 ring-white/10 hover:ring-white/30"
+              ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.4)]'
+              : 'ring-1 ring-white/10 hover:ring-white/30'
           }`}
         >
           {/* Thumbnail */}
@@ -188,8 +188,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   alt={game.name}
                   draggable={false}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imageLoading ? "opacity-0" : "opacity-100"
-                  } ${isAdultBlurred ? "blur-lg" : ""}`}
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
                   onLoad={() => setImageLoading(false)}
                   onError={() => {
                     setImageError(true);
@@ -200,7 +200,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             ) : (
               <div
                 className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${
-                  isAdultBlurred ? "blur-lg" : ""
+                  isAdultBlurred ? 'blur-lg' : ''
                 }`}
               >
                 {game.name.charAt(0)}
@@ -253,8 +253,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         data-nav-group="game-list"
         className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
           isSelected
-            ? "border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]"
-            : "bg-glass border border-transparent hover:bg-glass-hover hover:border-border"
+            ? 'border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]'
+            : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
         }`}
       >
         <div className="relative w-12 h-12 flex-shrink-0 select-none">
@@ -271,8 +271,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   alt={game.name}
                   draggable={false}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imageLoading ? "opacity-0" : "opacity-100"
-                  } ${isAdultBlurred ? "blur-md" : ""}`}
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-md' : ''}`}
                   onLoad={() => setImageLoading(false)}
                   onError={() => {
                     setImageError(true);
@@ -283,7 +283,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             ) : (
               <div
                 className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm ${
-                  isAdultBlurred ? "blur-md" : ""
+                  isAdultBlurred ? 'blur-md' : ''
                 }`}
               >
                 {game.name.charAt(0)}
@@ -311,9 +311,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {showTeamName ? game.team : game.name}
           </h4>
           {showTeamName && (
-            <p className="text-xs text-text-muted mb-1 truncate">
-              {averageProgress}%
-            </p>
+            <p className="text-xs text-text-muted mb-1 truncate">{averageProgress}%</p>
           )}
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
