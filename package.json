@@ -31,15 +31,16 @@
     "generate:icns": "bash scripts/generate-icns.sh"
   },
   "dependencies": {
-    "7zip-bin-full": "^25.1.2",
     "@node-steam/vdf": "^2.2.0",
     "@supabase/supabase-js": "2.86.0",
+    "7zip-bin-full": "^25.1.2",
     "better-sqlite3": "^12.5.0",
     "cyrillic-to-translit-js": "^3.2.1",
     "electron-updater": "6.6.2",
     "framer-motion": "^12.23.25",
     "got": "^11.8.6",
     "lucide-react": "^0.294.0",
+    "mixpanel-browser": "^2.73.0",
     "node-7z": "^3.0.0",
     "node-machine-id": "^1.1.12",
     "react": "^18.2.0",

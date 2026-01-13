@@ -5,6 +5,7 @@ import type {
   InstallationInfo,
 } from '../../shared/types';
 import type { Game } from '../types/game';
+import { trackEvent } from '../utils/analytics';
 import { useSettingsStore } from './useSettingsStore';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 
@@ -89,7 +90,10 @@ export const useStore = create<Store>((set, get) => ({
   isCheckingInstallation: new Map(),
 
   // UI Actions
-  setSelectedGame: (game) => set({ selectedGame: game }),
+  setSelectedGame: (game) => {
+    if (game) trackEvent('Select game', { 'Game Id': game.id, 'Game Name': game.name });
+    set({ selectedGame: game });
+  },
 
   setSelectedStatuses: (selectedStatuses) => set({ selectedStatuses }),
 

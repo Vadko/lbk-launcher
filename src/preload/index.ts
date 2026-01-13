@@ -122,6 +122,8 @@ const electronAPI: ElectronAPI = {
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
+  // Platform
+  getPlatform: () => ipcRenderer.sendSync('get-platform'),
   // Machine ID - for subscription tracking
   getMachineId: () => ipcRenderer.invoke('get-machine-id'),
   // Track subscription events

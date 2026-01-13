@@ -1,4 +1,5 @@
 import { AnimatePresence } from 'framer-motion';
+import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
 import { AppLoader } from './components/AppLoader/AppLoader';
@@ -19,6 +20,7 @@ import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
+import { trackEvent } from './utils/analytics';
 
 // Higher deadzone for mode switching to prevent accidental triggers from stick drift
 const MODE_SWITCH_DEADZONE = 0.8;
@@ -116,6 +118,33 @@ function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
   return false;
 }
 
+try {
+  const mpToken = import.meta.env.DEV
+    ? import.meta.env.VITE_MIXPANEL_TOKEN_DEV
+    : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
+  if (mpToken) {
+    mixpanel.init(mpToken, {
+      debug: import.meta.env.DEV,
+    });
+  }
+} catch (err) {
+  console.error('[Analytics] mixpanel.init failed', err);
+}
+
+// Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично
+(async () => {
+  try {
+    const version = await window.electronAPI?.getVersion?.();
+    const machineId = await window.electronAPI?.getMachineId?.();
+    if (version) {
+      mixpanel.register({ 'Launcher Version': version });
+      mixpanel.register({ 'Machine ID': machineId });
+    }
+  } catch (err) {
+    console.error('[Analytics] mixpanel.register failed', err);
+  }
+})();
+
 export const App: React.FC = () => {
   const {
     setInitialLoadComplete,
@@ -202,6 +231,15 @@ export const App: React.FC = () => {
       unsubscribe();
       if (hideTimeout) clearTimeout(hideTimeout);
     };
+  }, []);
+
+  // Відстеження першого запуску додатку
+  useEffect(() => {
+    const hasLaunchedBefore = localStorage.getItem('has-launched-before');
+    if (!hasLaunchedBefore) {
+      localStorage.setItem('has-launched-before', 'true');
+      trackEvent('First App Open');
+    }
   }, []);
 
   // Простий скрол геймпадом (тільки в геймпад-режимі)

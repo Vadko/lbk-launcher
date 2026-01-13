@@ -182,6 +182,8 @@ export interface ElectronAPI {
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
+  // Platform
+  getPlatform: () => string;
   // Machine ID - for subscription tracking
   getMachineId: () => Promise<string | null>;
   // Track subscription events

@@ -2,6 +2,7 @@ import { exec, spawn } from 'child_process';
 import { app, ipcMain, shell } from 'electron';
 import { promisify } from 'util';
 import type { Game, GetGamesParams } from '../../shared/types';
+import { getPlatform } from '../utils/platform';
 import {
   fetchFilterCounts,
   fetchGames,
@@ -23,6 +24,11 @@ export function setupGamesHandlers(): void {
   // Version
   ipcMain.on('get-version', (event) => {
     event.returnValue = app.getVersion();
+  });
+
+  // Platform
+  ipcMain.on('get-platform', (event) => {
+    event.returnValue = getPlatform();
   });
 
   // Machine ID - for subscription tracking
