@@ -323,7 +323,7 @@ export const MainContent: React.FC = () => {
             )}
 
             {/* Separator */}
-            <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2" />
+            <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
 
             {/* Secondary actions */}
             {isPlanned && (
