@@ -67,6 +67,7 @@ export class DatabaseManager {
 
   /**
    * Створення таблиць - структура співпадає з Supabase
+   * ВАЖЛИВО: При додаванні нових колонок тут, також додайте міграцію для існуючих БД!
    */
   private createTables(): void {
     this.db.exec(`
@@ -97,6 +98,7 @@ export class DatabaseManager {
         license_only INTEGER NOT NULL DEFAULT 0,
         logo_path TEXT,
         name TEXT NOT NULL,
+        name_search TEXT, -- For FTS search
         platforms TEXT NOT NULL, -- JSON array
         project_id TEXT,
         slug TEXT NOT NULL,
@@ -119,6 +121,7 @@ export class DatabaseManager {
         achievements_archive_path TEXT,
         achievements_archive_size TEXT,
         achievements_third_party TEXT,
+        additional_path TEXT,
         steam_app_id INTEGER,
         website TEXT,
         youtube TEXT,
@@ -130,11 +133,19 @@ export class DatabaseManager {
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
+      CREATE INDEX IF NOT EXISTS idx_games_name_search ON games(name_search);
       CREATE INDEX IF NOT EXISTS idx_games_approved ON games(approved);
       CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
       CREATE INDEX IF NOT EXISTS idx_games_is_adult ON games(is_adult);
       CREATE INDEX IF NOT EXISTS idx_games_updated_at ON games(updated_at);
       CREATE INDEX IF NOT EXISTS idx_games_hide ON games(hide);
+
+      -- FTS5 virtual table for full-text search
+      CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
+        game_id UNINDEXED,
+        name_search,
+        tokenize='unicode61'
+      );
     `);
 
     // Таблиця для sync метаданих
