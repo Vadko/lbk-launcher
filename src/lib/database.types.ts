@@ -200,6 +200,7 @@ export type Database = {
           archive_path: string | null
           archive_size: string | null
           banner_path: string | null
+          capsule_path: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -262,6 +263,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -324,6 +326,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -409,6 +412,7 @@ export type Database = {
           archive_path: string | null
           archive_size: string | null
           banner_path: string | null
+          capsule_path: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -434,7 +438,7 @@ export type Database = {
           license_only: boolean
           logo_path: string | null
           name: string
-          name_fts: unknown | null
+          name_fts: unknown
           name_search: string | null
           platforms: string[]
           project_id: string | null
@@ -476,6 +480,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -501,7 +506,7 @@ export type Database = {
           license_only?: boolean
           logo_path?: string | null
           name: string
-          name_fts?: unknown | null
+          name_fts?: unknown
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
@@ -543,6 +548,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -568,7 +574,7 @@ export type Database = {
           license_only?: boolean
           logo_path?: string | null
           name?: string
-          name_fts?: unknown | null
+          name_fts?: unknown
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
@@ -838,7 +844,7 @@ export type Database = {
           is_adult: boolean | null
           latest_updated_at: string | null
           name: string | null
-          name_fts: unknown | null
+          name_fts: unknown
           slug: string | null
           thumbnail_path: string | null
           translations: Json | null
@@ -855,10 +861,10 @@ export type Database = {
       check_download_rate_limit: {
         Args: {
           p_game_id: string
-          p_user_identifier: string
-          p_size_threshold_mb?: number
           p_max_downloads?: number
+          p_size_threshold_mb?: number
           p_time_window_hours?: number
+          p_user_identifier: string
         }
         Returns: {
           allowed: boolean
@@ -867,88 +873,40 @@ export type Database = {
           next_available_at: string
         }[]
       }
-      generate_author_slug: {
-        Args: { author_name: string }
-        Returns: string
-      }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      increment_game_downloads: {
-        Args:
-          | { p_game_id: string; p_user_identifier: string }
-          | {
+      generate_author_slug: { Args: { author_name: string }; Returns: string }
+      increment_game_downloads:
+        | {
+            Args: { p_game_id: string; p_user_identifier: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
               p_game_id: string
-              p_user_identifier: string
               p_machine_id?: string
+              p_user_identifier: string
             }
-        Returns: undefined
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin_or_moderator: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_moderator: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_verified_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+            Returns: undefined
+          }
+      is_admin: { Args: never; Returns: boolean }
+      is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_moderator: { Args: never; Returns: boolean }
+      is_verified_user: { Args: never; Returns: boolean }
       remove_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
       }
       search_steam_apps: {
-        Args: { search_query: string; limit_val?: number; offset_val?: number }
+        Args: { limit_val?: number; offset_val?: number; search_query: string }
         Returns: {
           app_id: number
-          name: string
           installdir: string
+          name: string
         }[]
       }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      sync_steam_apps_cron: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      validate_install_paths: {
-        Args: { paths: Json }
-        Returns: boolean
-      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_steam_apps_cron: { Args: never; Returns: undefined }
+      validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
       game_status: "completed" | "in-progress" | "planned"
@@ -970,21 +928,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1002,14 +964,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1025,14 +989,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1048,14 +1014,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1063,14 +1031,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
