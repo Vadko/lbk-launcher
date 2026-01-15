@@ -87,6 +87,7 @@ export class GamesRepository {
       archive_path: game.archive_path ?? null,
       archive_size: game.archive_size ?? null,
       banner_path: game.banner_path ?? null,
+      capsule_path: game.capsule_path ?? null,
       created_at: game.created_at ?? null,
       created_by: game.created_by ?? null,
       description: game.description ?? null,
@@ -375,7 +376,7 @@ export class GamesRepository {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO games (
         id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
-        banner_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
+        banner_path, capsule_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
         fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
         installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
         name, name_search, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
@@ -387,7 +388,7 @@ export class GamesRepository {
         steam_app_id, website, youtube, ai, hide
       ) VALUES (
         @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
-        @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
+        @banner_path, @capsule_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
         @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
         @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
         @name, @name_search, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
@@ -412,7 +413,7 @@ export class GamesRepository {
       const gameStmt = this.db.prepare(`
         INSERT OR REPLACE INTO games (
           id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
-          banner_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
+          banner_path, capsule_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
           fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
           installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
           name, name_search, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
@@ -424,7 +425,7 @@ export class GamesRepository {
           steam_app_id, website, youtube, ai, hide
         ) VALUES (
           @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
-          @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
+          @banner_path, @capsule_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
           @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
           @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
           @name, @name_search, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
