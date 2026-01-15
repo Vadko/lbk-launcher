@@ -60,6 +60,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  protonPath?: string;
 }
 
 export interface PausedDownloadState {
@@ -117,6 +118,7 @@ export interface ElectronAPI {
   ) => Promise<Game[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
+  getAvailableProtons: () => Promise<Array<{ name: string; path: string }>>;
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,

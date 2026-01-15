@@ -2,7 +2,6 @@ import { exec, spawn } from 'child_process';
 import { app, ipcMain, shell } from 'electron';
 import { promisify } from 'util';
 import type { Game, GetGamesParams } from '../../shared/types';
-import { getPlatform } from '../utils/platform';
 import {
   fetchFilterCounts,
   fetchGames,
@@ -15,7 +14,9 @@ import {
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
 } from '../game-detector';
+import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription } from '../tracking';
+import { getPlatform } from '../utils/platform';
 
 const execAsync = promisify(exec);
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -108,6 +109,16 @@ export function setupGamesHandlers(): void {
     } catch (error) {
       console.error('Error getting installed Steam games:', error);
       return {};
+    }
+  });
+
+  // Get all installed Protons
+  ipcMain.handle('get-available-protons', async () => {
+    try {
+      return findProtons();
+    } catch (error) {
+      console.error('Error getting available Protons:', error);
+      return [];
     }
   });
 

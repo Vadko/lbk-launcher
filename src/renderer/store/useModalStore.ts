@@ -1,11 +1,22 @@
 import { create } from 'zustand';
 
+interface SelectOption {
+  name: string;
+  value: string;
+}
+
 interface ModalConfig {
   title: string;
   message: string;
   type?: 'success' | 'error' | 'info';
   actions?: ModalAction[];
   onClose?: () => void;
+  selectConfig?: {
+    options: SelectOption[];
+    selectedValue?: string;
+    onSelectionChange?: (value: string) => void;
+    placeholder?: string;
+  };
 }
 
 export interface ModalAction {

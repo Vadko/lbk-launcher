@@ -12,6 +12,7 @@ const electronAPI: ElectronAPI = {
   ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, showAiTranslations),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
+  getAvailableProtons: () => ipcRenderer.invoke('get-available-protons'),
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,

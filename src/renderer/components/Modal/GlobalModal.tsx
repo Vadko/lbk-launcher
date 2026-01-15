@@ -1,6 +1,7 @@
 import { CheckCircle, Info, XCircle } from 'lucide-react';
 import React from 'react';
 import { useModalStore } from '../../store/useModalStore';
+import { SelectDropdown } from '../ui/SelectDropdown';
 import { Modal } from './Modal';
 
 export const GlobalModal: React.FC = () => {
@@ -29,6 +30,23 @@ export const GlobalModal: React.FC = () => {
         <p className="text-text-muted whitespace-pre-line break-words">
           {config.message}
         </p>
+
+        {/* Dropdown selection if selectConfig is provided */}
+        {config.selectConfig && (
+          <div className="w-full space-y-2">
+            <label className="block text-sm font-medium text-text-main text-left">
+              {config.selectConfig.placeholder || 'Оберіть варіант'}:
+            </label>
+            <SelectDropdown
+              options={config.selectConfig.options}
+              selectedValue={config.selectConfig.selectedValue}
+              onSelectionChange={config.selectConfig.onSelectionChange || (() => {})}
+              placeholder={config.selectConfig.placeholder}
+              className="w-full"
+            />
+          </div>
+        )}
+
         <div className="flex flex-col gap-2 w-full mt-2">
           {config.actions && config.actions.length > 0 ? (
             config.actions.map((action, index) => (
