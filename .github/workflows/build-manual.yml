@@ -3,16 +3,21 @@ name: Manual Build
 on:
   workflow_dispatch:
     inputs:
-      platform:
-        description: 'Platform to build for'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - windows
-          - linux
-          - macos
+      windows:
+        description: 'Build for Windows'
+        required: false
+        type: boolean
+        default: true
+      linux:
+        description: 'Build for Linux'
+        required: false
+        type: boolean
+        default: true
+      macos:
+        description: 'Build for macOS'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -78,7 +83,11 @@ jobs:
       - name: Check if should run
         id: should_run
         run: |
-          if [ "${{ github.event.inputs.platform }}" = "all" ] || [ "${{ github.event.inputs.platform }}" = "${{ matrix.platform }}" ]; then
+          if [ "${{ matrix.platform }}" = "windows" ] && [ "${{ github.event.inputs.windows }}" = "true" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.platform }}" = "linux" ] && [ "${{ github.event.inputs.linux }}" = "true" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.platform }}" = "macos" ] && [ "${{ github.event.inputs.macos }}" = "true" ]; then
             echo "run=true" >> $GITHUB_OUTPUT
           else
             echo "run=false" >> $GITHUB_OUTPUT
