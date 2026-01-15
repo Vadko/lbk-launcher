@@ -9,6 +9,7 @@ import {
   fetchTeams,
   findGamesByInstallPaths,
 } from '../api';
+import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
@@ -80,6 +81,16 @@ export function setupGamesHandlers(): void {
         completed: 0,
         'with-achievements': 0,
       };
+    }
+  });
+
+  // Fetch trending games with download counts
+  ipcMain.handle('fetch-trending-games', async (_, days = 30, limit = 10) => {
+    try {
+      return await fetchTrendingGames(days, limit);
+    } catch (error) {
+      console.error('Error fetching trending games:', error);
+      return [];
     }
   });
 
