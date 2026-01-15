@@ -211,8 +211,12 @@ export const MainContent: React.FC = () => {
     return (
       <div className="flex-1 grid items-center px-8 overflow-y-auto custom-scrollbar">
         <div className="grid grid-rows-auto gap-16 h-auto">
-          <GamesSection title="Новинки" sortOrder='newest'/>
-          <GamesSection title="Популярне у гравців" showDownloadCounter={true} sortOrder='downloads' />
+          <GamesSection title="Новинки" sortOrder="newest" />
+          <GamesSection
+            title="Популярне у гравців"
+            showDownloadCounter={true}
+            sortOrder="downloads"
+          />
         </div>
       </div>
     );
