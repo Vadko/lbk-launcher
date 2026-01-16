@@ -120,7 +120,7 @@ export const useStore = create<Store>((set, get) => ({
     const ownedGames = await window.electronAPI.getOwnedSteamGames();
     const ownedGamesMap = new Map<string, OwnedSteamGame>();
 
-    ownedGames.forEach(game => {
+    ownedGames.forEach((game) => {
       ownedGamesMap.set(String(game.appId), game);
     });
 

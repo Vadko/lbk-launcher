@@ -214,4 +214,3 @@ ipcRenderer.on('liquid-glass:get-preference', () => {
 
   ipcRenderer.send('liquid-glass:get-preference-response', enabled);
 });
-

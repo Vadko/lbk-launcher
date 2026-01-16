@@ -41,9 +41,8 @@ export function useFilterCounts() {
 
       // Отримуємо ігри зі встановленими українізаторами (тільки з SQL where conditions)
       // Але у нас немає API для count, тому використовуємо length
-      const installedGamesResult = await window.electronAPI.findGamesByInstallPaths(
-        installedPaths
-      );
+      const installedGamesResult =
+        await window.electronAPI.findGamesByInstallPaths(installedPaths);
 
       if (!isMountedRef.current) return;
 

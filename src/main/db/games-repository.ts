@@ -30,10 +30,10 @@ type GameInsertParams = {
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
   >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide'
-  ? number // boolean перетворюється на 0/1 для SQLite
-  : K extends 'platforms' | 'install_paths'
-  ? string | null // JSON.stringify для SQLite
-  : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+    ? number // boolean перетворюється на 0/1 для SQLite
+    : K extends 'platforms' | 'install_paths'
+      ? string | null // JSON.stringify для SQLite
+      : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
   // Local-only field for search (not in Supabase)
   name_search: string;

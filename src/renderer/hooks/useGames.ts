@@ -172,7 +172,7 @@ export function useGames({
         const currentOwnedGames = useStore.getState().ownedSteamGames;
 
         // Filter games where steam_app_id matches our owned list
-        const filteredGames = result.games.filter(game => {
+        const filteredGames = result.games.filter((game) => {
           const steamAppId = game.steam_app_id ? String(game.steam_app_id) : '';
           return currentOwnedGames.has(steamAppId);
         });
