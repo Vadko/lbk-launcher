@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { getSteamPath } from '../game-detector';
-import { parseLibraryFolders } from '../utils/vdf-parser';
+
 import * as vdf from '@node-steam/vdf';
 
 export interface OwnedSteamGame {
