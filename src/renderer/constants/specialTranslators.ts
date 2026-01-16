@@ -1,5 +1,5 @@
 // List of special translators to highlight in the UI
-export interface SpecialTranslator {
+interface SpecialTranslator {
   name: string;
   team?: string;
   description: string;
@@ -17,13 +17,11 @@ export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
 ];
 
 // Get all team names for matching
-export const SPECIAL_TRANSLATOR_TEAMS = SPECIAL_TRANSLATORS.filter((t) => t.team).map(
-  (t) => t.team!.toLowerCase()
+const SPECIAL_TRANSLATOR_TEAMS = SPECIAL_TRANSLATORS.filter((t) => t.team).map((t) =>
+  t.team!.toLowerCase()
 );
 
-export const SPECIAL_TRANSLATOR_NAMES = SPECIAL_TRANSLATORS.map((t) =>
-  t.name.toLowerCase()
-);
+const SPECIAL_TRANSLATOR_NAMES = SPECIAL_TRANSLATORS.map((t) => t.name.toLowerCase());
 
 // Check if a team name matches any special translator
 export const isSpecialTranslator = (teamName: string): boolean => {
@@ -47,7 +45,3 @@ export const getSpecialTranslatorInfo = (
     ) || null
   );
 };
-
-// Check if a single author name is a special translator
-export const isAuthorSpecial = (authorName: string): boolean =>
-  getSpecialTranslatorInfo(authorName) !== null;

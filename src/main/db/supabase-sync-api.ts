@@ -219,3 +219,39 @@ export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<s
   console.log(`[SupabaseSync] Fetched ${deletedIds.length} deleted game IDs`);
   return deletedIds;
 }
+
+interface TrendingGame {
+  game_id: string;
+  downloads: number;
+}
+
+/**
+ * Завантажити найпопулярніші ігри за останні N днів
+ * @param days - кількість днів для аналізу
+ * @param limit - максимальна кількість ігор
+ * @returns масив {game_id, downloads}
+ */
+export async function fetchTrendingGames(days = 30, limit = 10): Promise<TrendingGame[]> {
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  console.log(`[SupabaseSync] Fetching trending games for last ${days} days`);
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_trending_games`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_days: days, p_limit: limit }),
+  });
+
+  if (!response.ok) {
+    console.error(`[SupabaseSync] Failed to fetch trending games: ${response.status}`);
+    return [];
+  }
+
+  const data: TrendingGame[] = await response.json();
+  console.log(`[SupabaseSync] Fetched ${data.length} trending games`);
+  return data;
+}

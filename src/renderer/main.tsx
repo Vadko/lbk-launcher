@@ -1,7 +1,9 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
+import { queryClient } from './queries/queryClient';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import './styles/globals.css';
 import './styles/animations.css';
@@ -20,7 +22,9 @@ try {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
       </ErrorBoundary>
     </React.StrictMode>
   );

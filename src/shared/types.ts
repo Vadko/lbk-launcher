@@ -110,6 +110,10 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
   fetchFilterCounts: () => Promise<FilterCountsResult>;
+  fetchTrendingGames: (
+    days?: number,
+    limit?: number
+  ) => Promise<{ game_id: string; downloads: number }[]>;
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,

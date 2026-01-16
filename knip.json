@@ -8,6 +8,8 @@
   ],
   "project": ["src/**/*.{ts,tsx}"],
   "ignore": [
-    "src/lib/database.types.ts"
+    "src/lib/database.types.ts",
+    "src/renderer/queries/index.ts",
+    "src/renderer/queries/useTrendingGames.ts"
   ]
 }

@@ -25,11 +25,7 @@ import type {
 } from './subscriptions/types';
 
 // Re-export types for external use
-export type {
-  GameProgress,
-  Notification,
-  ToastNotification,
-} from './subscriptions/types';
+export type { Notification, ToastNotification } from './subscriptions/types';
 
 interface SubscriptionsStore extends PersistedSubscriptionsState {
   // Toast notifications (non-persisted, auto-dismiss)

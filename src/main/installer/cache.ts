@@ -202,7 +202,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
 /**
  * Get path to the installation info file from a previous installation
  */
-export function getPreviousInstallPath(gameId: string): string | null {
+function getPreviousInstallPath(gameId: string): string | null {
   try {
     const userDataPath = app.getPath('userData');
     const installInfoDir = path.join(userDataPath, 'installation-cache');

@@ -5,6 +5,8 @@ const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
   fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
+  fetchTrendingGames: (days?: number, limit?: number) =>
+    ipcRenderer.invoke('fetch-trending-games', days, limit),
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
