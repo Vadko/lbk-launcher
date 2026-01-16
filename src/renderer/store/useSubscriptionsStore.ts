@@ -26,7 +26,6 @@ import type {
 
 // Re-export types for external use
 export type {
-  GameProgress,
   Notification,
   ToastNotification,
 } from './subscriptions/types';

@@ -1,5 +1,5 @@
 // Featured translations to highlight in the UI with trophy badge
-export interface FeaturedTranslation {
+interface FeaturedTranslation {
   gameSlug: string;
   team?: string; // If specified, only this team's translation is featured
   description: string;

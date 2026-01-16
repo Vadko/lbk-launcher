@@ -1,5 +1,5 @@
 // List of special translators to highlight in the UI
-export interface SpecialTranslator {
+interface SpecialTranslator {
   name: string;
   team?: string;
   description: string;
