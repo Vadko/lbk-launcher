@@ -1,15 +1,14 @@
 import type { Game } from '../../../shared/types';
 
-
 interface BaseNotification {
   id: string;
   type:
-  | 'status-change'
-  | 'version-update'
-  | 'app-update'
-  | 'progress-change'
-  | 'team-new-game'
-  | 'team-status-change';
+    | 'status-change'
+    | 'version-update'
+    | 'app-update'
+    | 'progress-change'
+    | 'team-new-game'
+    | 'team-status-change';
   gameName: string;
   timestamp: number;
 }
@@ -26,7 +25,6 @@ export interface ToastNotification extends BaseNotification {
   message: string;
   gameId: string;
 }
-
 
 export type GameProgress = Pick<
   Game,
