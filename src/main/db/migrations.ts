@@ -417,6 +417,46 @@ const migrations: Migration[] = [
       }
     },
   },
+  {
+    name: 'add_capsule_path_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='capsule_path'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_capsule_path_column');
+        db.exec(`ALTER TABLE games ADD COLUMN capsule_path TEXT;`);
+        console.log('[Migrations] Completed: add_capsule_path_column');
+      }
+    },
+  },
+  {
+    name: 'resync_for_capsule_path',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_capsule_path_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_capsule_path');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_capsule_path_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_capsule_path - will resync on next startup'
+      );
+    },
+  },
 ];
 
 /**

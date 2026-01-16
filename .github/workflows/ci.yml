@@ -51,3 +51,6 @@ jobs:
 
       - name: Biome check
         run: pnpm format:check
+
+      - name: Knip check
+        run: pnpm find-unused

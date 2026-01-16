@@ -40,6 +40,7 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'banner_path',
   'logo_path',
   'thumbnail_path',
+  'capsule_path',
   'archive_path',
   'archive_size',
   'archive_hash',

@@ -80,6 +80,7 @@ export class DatabaseManager {
         archive_path TEXT,
         archive_size TEXT,
         banner_path TEXT,
+        capsule_path TEXT,
         created_at TEXT NOT NULL,
         created_by TEXT NOT NULL,
         description TEXT,
