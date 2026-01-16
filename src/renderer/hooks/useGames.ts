@@ -40,6 +40,9 @@ export function useGames({
     (state) => state.checkSubscribedGamesStatus
   );
 
+  const ownedSteamGames = useStore((state) => state.ownedSteamGames);
+  const loadOwnedSteamGames = useStore((state) => state.loadOwnedSteamGames);
+
   const [games, setGames] = useState<Game[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,6 +147,57 @@ export function useGames({
         return;
       }
 
+      // Спеціальна обробка для куплених ігор
+      if (specialFilter === 'owned-games') {
+        // Завантажити оновлений список куплених ігор, якщо він порожній
+        if (ownedSteamGames.size === 0) {
+          await loadOwnedSteamGames();
+          // Re-check abort
+          if (signal.aborted) return;
+        }
+
+        const params: GetGamesParams = {
+          searchQuery,
+          statuses: selectedStatuses,
+          authors: selectedAuthors,
+          sortOrder, // 'name' or 'downloads'
+          showAiTranslations,
+        };
+
+        const result = await window.electronAPI.fetchGames(params);
+
+        if (signal.aborted) return;
+
+        // Ми беремо actual owned games list з store
+        const currentOwnedGames = useStore.getState().ownedSteamGames;
+
+        // Filter games where steam_app_id matches our owned list
+        const filteredGames = result.games.filter(game => {
+          const steamAppId = game.steam_app_id ? String(game.steam_app_id) : '';
+          return currentOwnedGames.has(steamAppId);
+        });
+
+        // Сортуємо: Спочатку ті що куплені (вони всі куплені тут), потім за часом гри
+        filteredGames.sort((a, b) => {
+          const steamAppIdA = a.steam_app_id ? String(a.steam_app_id) : '';
+          const steamAppIdB = b.steam_app_id ? String(b.steam_app_id) : '';
+
+          const gameA = currentOwnedGames.get(steamAppIdA);
+          const gameB = currentOwnedGames.get(steamAppIdB);
+
+          const playtimeA = gameA?.playtime_forever || 0;
+          const playtimeB = gameB?.playtime_forever || 0;
+
+          if (playtimeA !== playtimeB) return playtimeB - playtimeA;
+
+          return a.name.localeCompare(b.name);
+        });
+
+        setGames(filteredGames);
+        setTotal(filteredGames.length);
+        return;
+      }
+
       // Для інших фільтрів - завантажити всі ігри одразу
       const params: GetGamesParams = {
         searchQuery,
@@ -158,7 +212,11 @@ export function useGames({
       // Перевірити чи запит ще актуальний
       if (signal.aborted) return;
 
-      setGames(result.games);
+      let finalGames = result.games;
+
+      // Клієнтське сортування для "Куплені" (owned) logic REMOVED - moved to specialFilter
+
+      setGames(finalGames);
       setTotal(result.total);
     } catch (error) {
       // Ігноруємо помилки від скасованих запитів

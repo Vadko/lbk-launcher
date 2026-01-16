@@ -14,6 +14,7 @@ import {
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
 } from '../game-detector';
+import { SteamLibraryService } from '../services/steam-library';
 import { getMachineId, trackSubscription } from '../tracking';
 
 const execAsync = promisify(exec);
@@ -102,6 +103,27 @@ export function setupGamesHandlers(): void {
     } catch (error) {
       console.error('Error getting installed Steam games:', error);
       return {};
+    }
+  });
+
+  // Get owned Steam games (from localconfig.vdf)
+  ipcMain.handle('get-owned-steam-games', async () => {
+    try {
+      return await SteamLibraryService.getInstance().getOwnedGames();
+    } catch (error) {
+      console.error('Error getting owned Steam games:', error);
+      return [];
+    }
+  });
+
+  // Count games by Steam App IDs (intersection of owned vs DB)
+  ipcMain.handle('count-games-by-steam-app-ids', async (_, steamAppIds: string[]) => {
+    try {
+      const { countGamesBySteamAppIds } = await import('../api');
+      return countGamesBySteamAppIds(steamAppIds);
+    } catch (error) {
+      console.error('Error counting games by Steam App IDs:', error);
+      return 0;
     }
   });
 

@@ -30,10 +30,10 @@ type GameInsertParams = {
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
   >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide'
-    ? number // boolean перетворюється на 0/1 для SQLite
-    : K extends 'platforms' | 'install_paths'
-      ? string | null // JSON.stringify для SQLite
-      : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+  ? number // boolean перетворюється на 0/1 для SQLite
+  : K extends 'platforms' | 'install_paths'
+  ? string | null // JSON.stringify для SQLite
+  : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
   // Local-only field for search (not in Supabase)
   name_search: string;
@@ -133,6 +133,7 @@ export class GamesRepository {
       epic_archive_path: game.epic_archive_path ?? null,
       epic_archive_size: game.epic_archive_size ?? null,
       steam_app_id: game.steam_app_id ?? null,
+      capsule_path: game.capsule_path ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
       ai: game.ai ? 1 : 0,
@@ -384,7 +385,7 @@ export class GamesRepository {
         voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
         achievements_third_party, additional_path,
         epic_archive_hash, epic_archive_path, epic_archive_size,
-        steam_app_id, website, youtube, ai, hide
+        steam_app_id, capsule_path, website, youtube, ai, hide
       ) VALUES (
         @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
         @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
@@ -396,7 +397,7 @@ export class GamesRepository {
         @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
         @achievements_third_party, @additional_path,
         @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-        @steam_app_id, @website, @youtube, @ai, @hide
+        @steam_app_id, @capsule_path, @website, @youtube, @ai, @hide
       )
     `);
 
@@ -421,7 +422,7 @@ export class GamesRepository {
           voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
           achievements_third_party, additional_path,
           epic_archive_hash, epic_archive_path, epic_archive_size,
-          steam_app_id, website, youtube, ai, hide
+          steam_app_id, capsule_path, website, youtube, ai, hide
         ) VALUES (
           @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
           @banner_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
@@ -433,7 +434,7 @@ export class GamesRepository {
           @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
           @achievements_third_party, @additional_path,
           @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-          @steam_app_id, @website, @youtube, @ai, @hide
+          @steam_app_id, @capsule_path, @website, @youtube, @ai, @hide
         )
       `);
 
@@ -520,5 +521,22 @@ export class GamesRepository {
       completed: row.completed || 0,
       'with-achievements': row.with_achievements || 0,
     };
+  }
+
+  /**
+   * Порахувати кількість ігор за Steam AppID
+   */
+  countGamesBySteamAppIds(steamAppIds: string[]): number {
+    if (steamAppIds.length === 0) return 0;
+
+    const placeholders = steamAppIds.map(() => '?').join(',');
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM games
+      WHERE approved = 1 AND hide = 0 AND steam_app_id IN (${placeholders})
+    `);
+
+    const result = stmt.get(...steamAppIds) as { count: number };
+    return result.count;
   }
 }

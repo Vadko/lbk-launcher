@@ -33,6 +33,11 @@ const electronAPI: ElectronAPI = {
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),
+  getOwnedSteamGames: () => ipcRenderer.invoke('get-owned-steam-games'),
+  countGamesBySteamAppIds: (steamAppIds: string[]) =>
+    ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
+  saveGameIcon: (gameId: string, iconUrl: string) =>
+    ipcRenderer.invoke('save-game-icon', gameId, iconUrl),
   getPausedDownload: (gameId: string) =>
     ipcRenderer.invoke('get-paused-download', gameId),
   cancelPausedDownload: (gameId: string) =>
@@ -209,3 +214,4 @@ ipcRenderer.on('liquid-glass:get-preference', () => {
 
   ipcRenderer.send('liquid-glass:get-preference-response', enabled);
 });
+

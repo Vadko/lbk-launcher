@@ -4,11 +4,13 @@ import type { FilterCountsResult } from '../../shared/types';
 export type FilterCounts = FilterCountsResult & {
   'installed-translations': number;
   'installed-games': number;
+  'owned-games': number;
 };
 
 const INITIAL_COUNTS: FilterCounts = {
   'installed-translations': 0,
   'installed-games': 0,
+  'owned-games': 0,
   'with-achievements': 0,
   planned: 0,
   'in-progress': 0,
@@ -25,18 +27,23 @@ export function useFilterCounts() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const [sqlCounts, installedIds, installedPaths] = await Promise.all([
+      const [sqlCounts, installedIds, installedPaths, ownedGames] = await Promise.all([
         window.electronAPI.fetchFilterCounts(),
         window.electronAPI.getAllInstalledGameIds(),
         window.electronAPI.getAllInstalledGamePaths(),
+        window.electronAPI.getOwnedSteamGames(),
       ]);
 
       if (!isMountedRef.current) return;
 
-      const installedGamesResult =
-        installedPaths.length > 0
-          ? await window.electronAPI.findGamesByInstallPaths(installedPaths)
-          : { games: [], total: 0 };
+      const ownedAppIds = ownedGames.map((g) => String(g.appId));
+      const ownedCount = await window.electronAPI.countGamesBySteamAppIds(ownedAppIds);
+
+      // Отримуємо ігри зі встановленими українізаторами (тільки з SQL where conditions)
+      // Але у нас немає API для count, тому використовуємо length
+      const installedGamesResult = await window.electronAPI.findGamesByInstallPaths(
+        installedPaths
+      );
 
       if (!isMountedRef.current) return;
 
@@ -44,6 +51,7 @@ export function useFilterCounts() {
         ...sqlCounts,
         'installed-translations': installedIds.length,
         'installed-games': installedGamesResult.games.length,
+        'owned-games': ownedCount,
       });
     } catch (err) {
       console.error('[useFilterCounts] Error:', err);

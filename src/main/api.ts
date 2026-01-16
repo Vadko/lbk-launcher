@@ -64,3 +64,12 @@ export function fetchFilterCounts(): FilterCountsResult {
     return { planned: 0, 'in-progress': 0, completed: 0, 'with-achievements': 0 };
   }
 }
+
+export function countGamesBySteamAppIds(steamAppIds: string[]): number {
+  try {
+    return gamesRepo.countGamesBySteamAppIds(steamAppIds);
+  } catch (error) {
+    console.error('[API] Error counting games by Steam IDs:', error);
+    return 0;
+  }
+}

@@ -4,6 +4,13 @@ export type { Database };
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 
+export interface OwnedSteamGame {
+  appId: number;
+  name: string;
+  playtime_forever: number; // minutes
+  last_played: number; // unix timestamp
+}
+
 interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
@@ -80,7 +87,7 @@ export interface GetGamesParams {
   authors?: string[];
   showAdultGames?: boolean;
   showAiTranslations?: boolean;
-  sortOrder?: 'name' | 'downloads';
+  sortOrder?: 'name' | 'downloads' | 'owned';
 }
 
 export interface GetGamesResult {
@@ -146,6 +153,9 @@ export interface ElectronAPI {
   ) => Promise<InstallResult>;
   checkPlatformCompatibility: (game: Game) => Promise<string | null>;
   openExternal: (url: string) => Promise<void>;
+  getOwnedSteamGames: () => Promise<OwnedSteamGame[]>;
+  countGamesBySteamAppIds: (steamAppIds: string[]) => Promise<number>;
+  saveGameIcon: (gameId: string, iconUrl: string) => Promise<void>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;
   onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void;

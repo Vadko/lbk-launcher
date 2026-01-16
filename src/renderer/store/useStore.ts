@@ -3,6 +3,7 @@ import type {
   DetectedGameInfo,
   DownloadProgress,
   InstallationInfo,
+  OwnedSteamGame,
 } from '../../shared/types';
 import type { Game } from '../types/game';
 import { useSettingsStore } from './useSettingsStore';
@@ -26,6 +27,7 @@ interface Store {
 
   // Steam State
   steamGames: Map<string, string>; // installdir (lowercase) -> full path
+  ownedSteamGames: Map<string, OwnedSteamGame>; // appId -> Info from localconfig
 
   // Installation State
   installedGames: Map<string, InstallationInfo>; // Metadata про встановлені українізатори
@@ -42,6 +44,7 @@ interface Store {
 
   // Steam Actions
   loadSteamGames: () => Promise<void>;
+  loadOwnedSteamGames: () => Promise<void>;
   clearSteamGamesCache: () => void;
 
   // Installation Actions
@@ -80,6 +83,7 @@ export const useStore = create<Store>((set, get) => ({
 
   // Steam State
   steamGames: new Map(),
+  ownedSteamGames: new Map(),
 
   // Installation State
   installedGames: new Map(),
@@ -107,6 +111,21 @@ export const useStore = create<Store>((set, get) => ({
 
     console.log(`[Store] Loaded ${steamGamesMap.size} Steam games`);
     set({ steamGames: steamGamesMap });
+  },
+
+  loadOwnedSteamGames: async () => {
+    if (!window.electronAPI) return;
+
+    console.log('[Store] Loading Owned Steam games...');
+    const ownedGames = await window.electronAPI.getOwnedSteamGames();
+    const ownedGamesMap = new Map<string, OwnedSteamGame>();
+
+    ownedGames.forEach(game => {
+      ownedGamesMap.set(String(game.appId), game);
+    });
+
+    console.log(`[Store] Loaded ${ownedGamesMap.size} Owned Steam games`);
+    set({ ownedSteamGames: ownedGamesMap });
   },
 
   clearSteamGamesCache: () => {
