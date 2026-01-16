@@ -17,7 +17,8 @@ export interface TrendingGameWithDetails extends Game {
  */
 export const trendingKeys = {
   all: ['trending'] as const,
-  list: (days: number, limit: number) => [...trendingKeys.all, 'list', days, limit] as const,
+  list: (days: number, limit: number) =>
+    [...trendingKeys.all, 'list', days, limit] as const,
   withDetails: (days: number, limit: number) =>
     [...trendingKeys.all, 'details', days, limit] as const,
 };
