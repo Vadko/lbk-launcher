@@ -8,7 +8,7 @@ export interface GameGroup {
 }
 
 // Status type for multi-select filter
-export type StatusType = Database['public']['Enums']['game_status'];
+type StatusType = Database['public']['Enums']['game_status'];
 
 // Special filters that are single-select
 export type SpecialFilterType =
@@ -19,12 +19,12 @@ export type SpecialFilterType =
 
 export type SortOrderType = 'name' | 'downloads';
 
-export interface StatusFilterOption {
+interface StatusFilterOption {
   label: string;
   value: StatusType;
 }
 
-export interface SpecialFilterOption {
+interface SpecialFilterOption {
   label: string;
   value: SpecialFilterType;
 }
