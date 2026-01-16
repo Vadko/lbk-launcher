@@ -17,13 +17,11 @@ export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
 ];
 
 // Get all team names for matching
-const SPECIAL_TRANSLATOR_TEAMS = SPECIAL_TRANSLATORS.filter((t) => t.team).map(
-  (t) => t.team!.toLowerCase()
+const SPECIAL_TRANSLATOR_TEAMS = SPECIAL_TRANSLATORS.filter((t) => t.team).map((t) =>
+  t.team!.toLowerCase()
 );
 
-const SPECIAL_TRANSLATOR_NAMES = SPECIAL_TRANSLATORS.map((t) =>
-  t.name.toLowerCase()
-);
+const SPECIAL_TRANSLATOR_NAMES = SPECIAL_TRANSLATORS.map((t) => t.name.toLowerCase());
 
 // Check if a team name matches any special translator
 export const isSpecialTranslator = (teamName: string): boolean => {
@@ -47,4 +45,3 @@ export const getSpecialTranslatorInfo = (
     ) || null
   );
 };
-
