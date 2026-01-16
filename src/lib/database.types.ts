@@ -93,6 +93,7 @@ export type Database = {
           downloaded_at: string | null
           game_id: string
           id: string
+          is_first_session: boolean | null
           machine_id: string | null
           user_identifier: string
         }
@@ -100,6 +101,7 @@ export type Database = {
           downloaded_at?: string | null
           game_id: string
           id?: string
+          is_first_session?: boolean | null
           machine_id?: string | null
           user_identifier: string
         }
@@ -107,6 +109,7 @@ export type Database = {
           downloaded_at?: string | null
           game_id?: string
           id?: string
+          is_first_session?: boolean | null
           machine_id?: string | null
           user_identifier?: string
         }
@@ -640,6 +643,33 @@ export type Database = {
           },
         ]
       }
+      launcher_sessions: {
+        Row: {
+          app_version: string | null
+          ended_at: string | null
+          id: string
+          is_first_launch: boolean | null
+          started_at: string | null
+          user_identifier: string
+        }
+        Insert: {
+          app_version?: string | null
+          ended_at?: string | null
+          id?: string
+          is_first_launch?: boolean | null
+          started_at?: string | null
+          user_identifier: string
+        }
+        Update: {
+          app_version?: string | null
+          ended_at?: string | null
+          id?: string
+          is_first_launch?: boolean | null
+          started_at?: string | null
+          user_identifier?: string
+        }
+        Relationships: []
+      }
       media_upload_queue: {
         Row: {
           additional_path: string | null
@@ -761,6 +791,62 @@ export type Database = {
         }
         Relationships: []
       }
+      support_clicks: {
+        Row: {
+          clicked_at: string | null
+          game_id: string
+          id: string
+          user_identifier: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          game_id: string
+          id?: string
+          user_identifier: string
+        }
+        Update: {
+          clicked_at?: string | null
+          game_id?: string
+          id?: string
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_clicks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      translation_uninstalls: {
+        Row: {
+          game_id: string
+          id: string
+          uninstalled_at: string | null
+          user_identifier: string
+        }
+        Insert: {
+          game_id: string
+          id?: string
+          uninstalled_at?: string | null
+          user_identifier: string
+        }
+        Update: {
+          game_id?: string
+          id?: string
+          uninstalled_at?: string | null
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translation_uninstalls_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_threads: {
         Row: {
           created_at: string | null
@@ -874,6 +960,66 @@ export type Database = {
         }[]
       }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
+      get_active_users: {
+        Args: { p_date?: string }
+        Returns: {
+          dau: number
+          mau: number
+          wau: number
+        }[]
+      }
+      get_downloads_per_player: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          downloads_count: number
+          percentage: number
+          players_count: number
+        }[]
+      }
+      get_first_session_downloads: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          conversion_rate: number
+          first_session_downloads: number
+          total_first_launches: number
+        }[]
+      }
+      get_players_with_downloads: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          percentage: number
+          players_with_downloads: number
+          total_unique_players: number
+        }[]
+      }
+      get_support_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_supports_per_user: number
+          total_clicks: number
+          unique_users: number
+          users_who_supported: number
+        }[]
+      }
+      get_team_statistics: {
+        Args: never
+        Returns: {
+          ai_count: number
+          completed_count: number
+          games_count: number
+          team_name: string
+          total_downloads: number
+          with_textures_count: number
+          with_voice_count: number
+        }[]
+      }
+      get_trending_games: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: {
+          downloads: number
+          game_id: string
+        }[]
+      }
       increment_game_downloads:
         | {
             Args: { p_game_id: string; p_user_identifier: string }
