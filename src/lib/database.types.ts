@@ -643,6 +643,30 @@ export type Database = {
           },
         ]
       }
+      kurin_skipped: {
+        Row: {
+          id: string
+          kurin_id: number
+          reason: string | null
+          skipped_at: string | null
+          skipped_by: string | null
+        }
+        Insert: {
+          id?: string
+          kurin_id: number
+          reason?: string | null
+          skipped_at?: string | null
+          skipped_by?: string | null
+        }
+        Update: {
+          id?: string
+          kurin_id?: number
+          reason?: string | null
+          skipped_at?: string | null
+          skipped_by?: string | null
+        }
+        Relationships: []
+      }
       launcher_sessions: {
         Row: {
           app_version: string | null
