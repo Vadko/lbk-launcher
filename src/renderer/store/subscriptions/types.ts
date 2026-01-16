@@ -1,6 +1,6 @@
 import type { Game } from '../../../shared/types';
 
-export interface BaseNotification {
+interface BaseNotification {
   id: string;
   type:
     | 'status-change'

@@ -9,7 +9,7 @@ import { getPlatform, isLinux, isWindows } from '../utils/platform';
 /**
  * Check if file is an executable installer
  */
-export function isExecutableInstaller(fileName: string): boolean {
+function isExecutableInstaller(fileName: string): boolean {
   const executableExtensions = [
     '.exe',
     '.msi',

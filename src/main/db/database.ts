@@ -193,21 +193,9 @@ export function closeDatabase(): void {
 }
 
 /**
- * Helper функція для очищення таблиці ігор
- */
-export function clearGamesTable(): void {
-  const db = getDatabase();
-  db.exec('DELETE FROM games');
-  db.exec('DELETE FROM sync_metadata');
-  // Force WAL checkpoint to ensure changes are written to main DB file
-  db.pragma('wal_checkpoint(TRUNCATE)');
-  console.log('[Database] Games and sync_metadata tables cleared');
-}
-
-/**
  * Get database file path
  */
-export function getDatabasePath(): string {
+function getDatabasePath(): string {
   const userDataPath = app.getPath('userData');
   return join(userDataPath, 'littlebit.db');
 }

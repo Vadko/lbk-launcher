@@ -220,7 +220,7 @@ export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<s
   return deletedIds;
 }
 
-export interface TrendingGame {
+interface TrendingGame {
   game_id: string;
   downloads: number;
 }
