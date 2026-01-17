@@ -1016,6 +1016,15 @@ export type Database = {
           total_unique_players: number
         }[]
       }
+      get_subscription_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_subscriptions_per_user: number
+          total_subscriptions: number
+          unique_games_subscribed: number
+          unique_users_subscribed: number
+        }[]
+      }
       get_support_statistics: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -1044,6 +1053,14 @@ export type Database = {
           game_id: string
         }[]
       }
+      get_uninstall_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_uninstalls_per_user: number
+          total_uninstalls: number
+          unique_users_uninstalled: number
+        }[]
+      }
       increment_game_downloads:
         | {
             Args: { p_game_id: string; p_user_identifier: string }
@@ -1052,6 +1069,15 @@ export type Database = {
         | {
             Args: {
               p_game_id: string
+              p_machine_id?: string
+              p_user_identifier: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_game_id: string
+              p_is_first_session?: boolean
               p_machine_id?: string
               p_user_identifier: string
             }
