@@ -3,7 +3,7 @@
  * Використовується в main process
  */
 
-export interface SupabaseCredentials {
+interface SupabaseCredentials {
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
 }
