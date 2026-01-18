@@ -1,4 +1,5 @@
 import type { Game } from '../../shared/types';
+import { getSupabaseCredentials } from './supabase-credentials';
 
 /**
  * API для синхронізації з Supabase через REST API
@@ -82,21 +83,6 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
 ];
 
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
-
-/**
- * Отримати Supabase credentials
- */
-function getSupabaseCredentials() {
-  // В main process використовуємо import.meta.env (Vite)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Missing Supabase credentials in environment variables');
-  }
-
-  return { SUPABASE_URL, SUPABASE_ANON_KEY };
-}
 
 /**
  * Виконати запит до Supabase REST API

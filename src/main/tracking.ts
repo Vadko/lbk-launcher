@@ -12,6 +12,7 @@
 
 import { machineIdSync } from 'node-machine-id';
 import type { TrackingResponse } from '../shared/api-config';
+import { getSupabaseCredentials } from './db/supabase-credentials';
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
 
@@ -77,14 +78,7 @@ export async function getSignedDownloadUrl(
   params: GetSignedDownloadUrlParams
 ): Promise<GetSignedUrlResponse> {
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
-
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error('[Tracking] Missing Supabase credentials');
-    return { success: false, error: 'Missing Supabase credentials' };
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   // Get machine ID for unique downloads tracking (not for rate limiting)
   const machineId = getMachineId();
@@ -157,13 +151,7 @@ export async function trackSubscription(
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error('[Tracking] Missing Supabase credentials');
-    return { success: false, error: 'Missing Supabase credentials' };
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
     console.log(`[Tracking] Tracking ${action} for game:`, gameId);
@@ -202,13 +190,7 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error('[Tracking] Missing Supabase credentials');
-    return { success: false, error: 'Missing Supabase credentials' };
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
     console.log(`[Tracking] Tracking support click for game:`, gameId);
@@ -251,14 +233,7 @@ async function checkIsFirstLaunch(): Promise<boolean> {
     return false;
   }
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    isFirstLaunchChecked = true;
-    isFirstLaunch = false;
-    return false;
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
     // Check if there are any previous sessions for this machine
@@ -298,13 +273,7 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error('[Tracking] Missing Supabase credentials');
-    return { success: false, error: 'Missing Supabase credentials' };
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
     // Check if this is the first launch before recording
@@ -356,12 +325,7 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return { success: false, error: 'Missing Supabase credentials' };
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
     console.log(`[Tracking] Ending session: ${currentSessionId}`);
@@ -400,13 +364,7 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.error('[Tracking] Missing Supabase credentials');
-    return { success: false, error: 'Missing Supabase credentials' };
-  }
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
     console.log(`[Tracking] Tracking uninstall for game:`, gameId);
