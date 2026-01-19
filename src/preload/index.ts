@@ -129,6 +129,9 @@ const electronAPI: ElectronAPI = {
   // Track subscription events
   trackSubscription: (gameId: string, action: 'subscribe' | 'unsubscribe') =>
     ipcRenderer.invoke('track-subscription', gameId, action),
+  // Track support click events
+  trackSupportClick: (gameId: string) =>
+    ipcRenderer.invoke('track-support-click', gameId),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);

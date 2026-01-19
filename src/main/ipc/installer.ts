@@ -22,6 +22,7 @@ import {
   getPausedDownloadState,
   pauseCurrentDownload,
 } from '../installer/download';
+import { trackUninstall } from '../tracking';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {
@@ -120,6 +121,11 @@ export function setupInstallerHandlers(): void {
   ipcMain.handle('uninstall-translation', async (_, game: Game) => {
     try {
       await uninstallTranslation(game);
+
+      // Track uninstall for statistics
+      trackUninstall(game.id).catch((err) => {
+        console.error('[Installer] Failed to track uninstall:', err);
+      });
 
       // Note: cache invalidation та installed-games-changed event
       // автоматично відбуваються через InstallationWatcher при зміні файлів

@@ -15,7 +15,7 @@ import {
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
 } from '../game-detector';
-import { getMachineId, trackSubscription } from '../tracking';
+import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
 
 const execAsync = promisify(exec);
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -34,6 +34,11 @@ export function setupGamesHandlers(): void {
     'track-subscription',
     async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
       trackSubscription(gameId, action)
+  );
+
+  // Track support click
+  ipcMain.handle('track-support-click', async (_, gameId: string) =>
+    trackSupportClick(gameId)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД

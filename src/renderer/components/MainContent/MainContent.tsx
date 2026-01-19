@@ -160,6 +160,11 @@ export const MainContent: React.FC = () => {
   const handleSupport = useCallback(() => {
     if (!selectedGame?.support_url) return;
 
+    // Track support click
+    if (window.electronAPI?.trackSupportClick) {
+      window.electronAPI.trackSupportClick(selectedGame.id);
+    }
+
     if (window.electronAPI) {
       window.electronAPI.openExternal(selectedGame.support_url);
     } else {

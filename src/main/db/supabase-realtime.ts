@@ -5,6 +5,7 @@ import {
 } from '@supabase/supabase-js';
 import type { Game } from '@/shared/types.ts';
 import { getMainWindow } from '../window';
+import { getSupabaseCredentials } from './supabase-credentials';
 
 /**
  * Тип для broadcast payload від realtime.send
@@ -33,13 +34,9 @@ export class SupabaseRealtimeManager {
   private onDeleteCallback: ((gameId: string) => void) | null = null;
 
   constructor() {
-    // Отримати credentials з env
-    this.supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    this.supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!this.supabaseUrl || !this.supabaseKey) {
-      throw new Error('Missing Supabase credentials in environment variables');
-    }
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+    this.supabaseUrl = SUPABASE_URL;
+    this.supabaseKey = SUPABASE_ANON_KEY;
   }
 
   /**
