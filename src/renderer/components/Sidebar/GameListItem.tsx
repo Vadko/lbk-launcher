@@ -43,7 +43,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
       (game.translation_progress + game.editing_progress) / 2
     );
 
-    const thumbnailUrl = getGameImageUrl(game.thumbnail_path, game.updated_at);
+    const thumbnailUrl = getGameImageUrl(isCardStyle ? game.capsule_path : game.thumbnail_path, game.updated_at);
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
@@ -67,7 +67,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           onClick={onClick}
           onKeyDown={handleKeyDown}
           data-game-card
-          className={`glass-card !p-0 flex flex-col items-center`}
+          className={`group glass-card !p-0 flex flex-col items-center`}
         >
           <div className="relative h-56 w-full bg-glass rounded-t-xl overflow-hidden">
             {thumbnailUrl && !imageError ? (
@@ -81,7 +81,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   src={thumbnailUrl}
                   alt={game.name}
                   draggable={false}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
                     imageLoading ? 'opacity-0' : 'opacity-100'
                   } ${isAdultBlurred ? 'blur-lg' : ''}`}
                   onLoad={() => setImageLoading(false)}

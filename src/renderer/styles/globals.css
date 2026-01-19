@@ -99,7 +99,7 @@ html.maximized #root {
 }
 
 .main-bg {
-  background-image: url("../../../resources/main-bg.png");
+  background-image: url("../../../resources/main-bg.webp");
   background-position: center top;
   background-size: 100% auto;
   background-repeat: no-repeat;
