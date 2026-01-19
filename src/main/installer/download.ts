@@ -70,13 +70,6 @@ export function abortCurrentDownload(reason = 'Завантаження скас
 }
 
 /**
- * Get current download abort controller
- */
-export function getDownloadAbortController(): AbortController | null {
-  return currentDownloadAbortController;
-}
-
-/**
  * Set current download abort controller
  */
 export function setDownloadAbortController(controller: AbortController | null): void {
@@ -93,7 +86,7 @@ export function setCurrentDownloadState(state: typeof currentDownloadState): voi
 /**
  * Update downloaded bytes in current state
  */
-export function updateCurrentDownloadedBytes(bytes: number, totalBytes: number): void {
+function updateCurrentDownloadedBytes(bytes: number, totalBytes: number): void {
   if (currentDownloadState) {
     currentDownloadState.downloadedBytes = bytes;
     currentDownloadState.totalBytes = totalBytes;
@@ -114,7 +107,7 @@ function getPausedDownloadsDir(): string {
 /**
  * Save paused download state to disk
  */
-export function savePausedDownloadState(state: PausedDownloadState): void {
+function savePausedDownloadState(state: PausedDownloadState): void {
   const filePath = path.join(getPausedDownloadsDir(), `${state.gameId}.json`);
   fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
   console.log(`[Downloader] Saved paused download state for ${state.gameId}`);

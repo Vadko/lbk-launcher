@@ -13,7 +13,6 @@ export {
   deleteCachedInstallationInfo,
   getAllInstalledGameIds,
   getConflictingTranslation,
-  getPreviousInstallPath,
   INSTALLATION_INFO_FILE,
   invalidateInstalledGameIdsCache,
   removeOrphanedInstallationMetadata,
@@ -24,14 +23,8 @@ export {
   abortCurrentDownload,
   clearPausedDownloadState,
   downloadFile,
-  getDownloadAbortController,
-  getPartialFilePath,
-  getPausedDownloadState,
-  pauseCurrentDownload,
-  savePausedDownloadState,
   setCurrentDownloadState,
   setDownloadAbortController,
-  updateCurrentDownloadedBytes,
 } from './download';
 export { ManualSelectionError, PausedSignal, RateLimitError } from './errors';
 export { cleanupDownloadDir, copyDirectory, deleteDirectory, getAllFiles } from './files';
@@ -41,6 +34,5 @@ export {
   getInstallerFileName,
   getSteamAchievementsPath,
   hasExecutableInstaller,
-  isExecutableInstaller,
   runInstaller,
 } from './platform';

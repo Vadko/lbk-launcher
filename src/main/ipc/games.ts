@@ -9,13 +9,14 @@ import {
   fetchTeams,
   findGamesByInstallPaths,
 } from '../api';
+import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
 } from '../game-detector';
 import { findProtons } from '../installer/proton';
-import { getMachineId, trackSubscription } from '../tracking';
+import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
 import { getPlatform } from '../utils/platform';
 
 const execAsync = promisify(exec);
@@ -40,6 +41,11 @@ export function setupGamesHandlers(): void {
     'track-subscription',
     async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
       trackSubscription(gameId, action)
+  );
+
+  // Track support click
+  ipcMain.handle('track-support-click', async (_, gameId: string) =>
+    trackSupportClick(gameId)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
@@ -87,6 +93,16 @@ export function setupGamesHandlers(): void {
         completed: 0,
         'with-achievements': 0,
       };
+    }
+  });
+
+  // Fetch trending games with download counts
+  ipcMain.handle('fetch-trending-games', async (_, days = 30, limit = 10) => {
+    try {
+      return await fetchTrendingGames(days, limit);
+    } catch (error) {
+      console.error('Error fetching trending games:', error);
+      return [];
     }
   });
 

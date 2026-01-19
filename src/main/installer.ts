@@ -100,7 +100,10 @@ export async function resumeDownload(
       // Try to get a fresh URL using the archive path pattern
       const archivePathMatch = state.url.match(/\/([^/]+\.(zip|rar|7z))/);
       if (archivePathMatch) {
-        const urlResult = await getSignedDownloadUrl(state.gameId, archivePathMatch[1]);
+        const urlResult = await getSignedDownloadUrl({
+          gameId: state.gameId,
+          archivePath: archivePathMatch[1],
+        });
         if (urlResult.success) {
           downloadUrl = urlResult.downloadUrl;
           console.log('[Installer] Got fresh signed URL');
@@ -262,8 +265,11 @@ export async function installTranslation(
     const downloadDir = path.join(tempDir, 'lbk-downloads');
     await mkdir(downloadDir, { recursive: true });
 
-    const { getSignedDownloadUrl } = await import('./tracking');
+    const { isCurrentSessionFirstLaunch } = await import('./tracking');
     const extractDir = path.join(downloadDir, `${game.id}_extract`);
+
+    // Check if this is first session (for conversion tracking)
+    const isFirstSession = isCurrentSessionFirstLaunch();
 
     // 4.1 Download text archive if requested
     let textFiles: string[] = [];
@@ -277,35 +283,35 @@ export async function installTranslation(
         console.log('[Installer] Using Epic-specific archive');
       }
 
-      textFiles = await downloadAndExtractArchive(
+      textFiles = await downloadAndExtractArchive({
         game,
-        'text',
+        type: 'text',
         archivePath,
         archiveHash,
         downloadDir,
         extractDir,
-        getSignedDownloadUrl,
+        isFirstSession,
         onDownloadProgress,
         onStatus,
-        { options, platform: gamePath.platform, customGamePath }
-      );
+        downloadContext: { options, platform: gamePath.platform, customGamePath },
+      });
     }
 
     // 4.2 Download voice archive if requested
     let voiceFiles: string[] = [];
     if (installVoice && game.voice_archive_path) {
       const voiceExtractDir = path.join(downloadDir, `${game.id}_voice_extract`);
-      voiceFiles = await downloadAndExtractArchive(
+      voiceFiles = await downloadAndExtractArchive({
         game,
-        'voice',
-        game.voice_archive_path,
-        game.voice_archive_hash,
+        type: 'voice',
+        archivePath: game.voice_archive_path,
+        archiveHash: game.voice_archive_hash,
         downloadDir,
-        voiceExtractDir,
-        getSignedDownloadUrl,
+        extractDir: voiceExtractDir,
+        isFirstSession,
         onDownloadProgress,
-        (status) => onStatus?.({ message: `Озвучення: ${status.message}` })
-      );
+        onStatus: (status) => onStatus?.({ message: `Озвучення: ${status.message}` }),
+      });
       // Copy voice files to main extract directory
       await copyDirectory(voiceExtractDir, extractDir);
     }
@@ -324,17 +330,17 @@ export async function installTranslation(
         downloadDir,
         `${game.id}_achievements_extract`
       );
-      achievementsFiles = await downloadAndExtractArchive(
+      achievementsFiles = await downloadAndExtractArchive({
         game,
-        'achievements',
-        game.achievements_archive_path,
-        game.achievements_archive_hash,
+        type: 'achievements',
+        archivePath: game.achievements_archive_path,
+        archiveHash: game.achievements_archive_hash,
         downloadDir,
-        achievementsExtractDir,
-        getSignedDownloadUrl,
+        extractDir: achievementsExtractDir,
+        isFirstSession,
         onDownloadProgress,
-        (status) => onStatus?.({ message: `Досягнення: ${status.message}` })
-      );
+        onStatus: (status) => onStatus?.({ message: `Досягнення: ${status.message}` }),
+      });
 
       achievementsInstallPath = await getSteamAchievementsPath();
       if (achievementsInstallPath) {
@@ -485,25 +491,40 @@ interface DownloadContext {
   customGamePath?: string;
 }
 
+interface DownloadAndExtractParams {
+  game: Game;
+  type: ArchiveType;
+  archivePath: string | undefined | null;
+  archiveHash: string | undefined | null;
+  downloadDir: string;
+  extractDir: string;
+  isFirstSession?: boolean;
+  onDownloadProgress?: (progress: DownloadProgress) => void;
+  onStatus?: (status: InstallationStatus) => void;
+  downloadContext?: DownloadContext;
+}
+
 /**
  * Download and extract an archive
  */
 async function downloadAndExtractArchive(
-  game: Game,
-  type: ArchiveType,
-  archivePath: string | undefined | null,
-  archiveHash: string | undefined | null,
-  downloadDir: string,
-  extractDir: string,
-  getSignedDownloadUrl: (
-    gameId: string,
-    path: string,
-    type?: ArchiveType
-  ) => Promise<any>,
-  onDownloadProgress?: (progress: DownloadProgress) => void,
-  onStatus?: (status: InstallationStatus) => void,
-  downloadContext?: DownloadContext
+  params: DownloadAndExtractParams
 ): Promise<string[]> {
+  const {
+    game,
+    type,
+    archivePath,
+    archiveHash,
+    downloadDir,
+    extractDir,
+    isFirstSession = false,
+    onDownloadProgress,
+    onStatus,
+    downloadContext,
+  } = params;
+
+  const { getSignedDownloadUrl } = await import('./tracking');
+
   if (!archivePath) {
     throw new Error(`Архів ${type} не знайдено`);
   }
@@ -513,7 +534,12 @@ async function downloadAndExtractArchive(
   const archiveFilePath = path.join(downloadDir, `${game.id}_${type}${archiveExt}`);
 
   onStatus?.({ message: 'Отримання посилання для завантаження...' });
-  const urlResult = await getSignedDownloadUrl(game.id, archivePath, type);
+  const urlResult = await getSignedDownloadUrl({
+    gameId: game.id,
+    archivePath,
+    archiveType: type,
+    isFirstSession,
+  });
 
   if (!urlResult.success) {
     if (urlResult.error === 'rate_limit_exceeded' && 'nextAvailableAt' in urlResult) {

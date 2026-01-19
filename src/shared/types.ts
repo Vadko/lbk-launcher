@@ -111,6 +111,10 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
   fetchFilterCounts: () => Promise<FilterCountsResult>;
+  fetchTrendingGames: (
+    days?: number,
+    limit?: number
+  ) => Promise<{ game_id: string; downloads: number }[]>;
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
@@ -193,6 +197,8 @@ export interface ElectronAPI {
     gameId: string,
     action: 'subscribe' | 'unsubscribe'
   ) => Promise<{ success: boolean; error?: string }>;
+  // Track support click events
+  trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
   // Sync status

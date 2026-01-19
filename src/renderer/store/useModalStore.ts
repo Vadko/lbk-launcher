@@ -19,7 +19,7 @@ interface ModalConfig {
   };
 }
 
-export interface ModalAction {
+interface ModalAction {
   label: string;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'danger';

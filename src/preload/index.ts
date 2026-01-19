@@ -5,6 +5,8 @@ const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
   fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
+  fetchTrendingGames: (days?: number, limit?: number) =>
+    ipcRenderer.invoke('fetch-trending-games', days, limit),
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
@@ -130,6 +132,9 @@ const electronAPI: ElectronAPI = {
   // Track subscription events
   trackSubscription: (gameId: string, action: 'subscribe' | 'unsubscribe') =>
     ipcRenderer.invoke('track-subscription', gameId, action),
+  // Track support click events
+  trackSupportClick: (gameId: string) =>
+    ipcRenderer.invoke('track-support-click', gameId),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);

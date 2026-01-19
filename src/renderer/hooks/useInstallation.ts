@@ -199,20 +199,28 @@ export function useInstallation({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
           type: 'success',
-          actions: [
-            {
-              label: 'Перезапустити Steam',
-              onClick: () => {
-                window.electronAPI.restartSteam();
-              },
-              variant: 'primary',
-            },
-            {
-              label: 'Зрозуміло',
-              onClick: () => undefined,
-              variant: 'secondary',
-            },
-          ],
+          actions: effectiveOptions.installAchievements
+            ? [
+                {
+                  label: 'Перезапустити Steam',
+                  onClick: () => {
+                    window.electronAPI.restartSteam();
+                  },
+                  variant: 'primary',
+                },
+                {
+                  label: 'Пізніше',
+                  onClick: () => undefined,
+                  variant: 'secondary',
+                },
+              ]
+            : [
+                {
+                  label: 'Зрозуміло',
+                  onClick: () => undefined,
+                  variant: 'primary',
+                },
+              ],
         });
 
         // Trigger callback for first install (not update)

@@ -3,8 +3,18 @@ import {
   type RealtimeChannel,
   type SupabaseClient,
 } from '@supabase/supabase-js';
-import type { Game } from '../../shared/types';
+import type { Game } from '@/shared/types.ts';
 import { getMainWindow } from '../window';
+import { getSupabaseCredentials } from './supabase-credentials';
+
+/**
+ * Тип для broadcast payload від realtime.send
+ */
+interface BroadcastPayload {
+  event: string;
+  type: 'broadcast';
+  payload: Game;
+}
 
 const MAX_RETRY_ATTEMPTS = 5;
 const INITIAL_RETRY_DELAY_MS = 1000;
@@ -24,13 +34,9 @@ export class SupabaseRealtimeManager {
   private onDeleteCallback: ((gameId: string) => void) | null = null;
 
   constructor() {
-    // Отримати credentials з env
-    this.supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    this.supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!this.supabaseUrl || !this.supabaseKey) {
-      throw new Error('Missing Supabase credentials in environment variables');
-    }
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+    this.supabaseUrl = SUPABASE_URL;
+    this.supabaseKey = SUPABASE_ANON_KEY;
   }
 
   /**
@@ -106,6 +112,51 @@ export class SupabaseRealtimeManager {
   }
 
   /**
+   * Обробити broadcast подію
+   */
+  private handleBroadcastEvent(
+    event: string,
+    payload: BroadcastPayload,
+    onUpdate: (game: Game) => void,
+    onDelete: (gameId: string) => void
+  ): void {
+    const game = payload.payload;
+    console.log(`[SupabaseRealtime] Game ${event}:`, game.name, `(${game.id})`);
+
+    if (event === 'DELETE') {
+      onDelete(game.id);
+      const mainWindow = getMainWindow();
+      if (mainWindow) {
+        mainWindow.webContents.send('game-removed', game.id);
+        console.log('[SupabaseRealtime] Sent game-removed to renderer:', game.id);
+      }
+      return;
+    }
+
+    // INSERT або UPDATE
+    if (!game.approved) {
+      if (event === 'UPDATE') {
+        console.log('[SupabaseRealtime] Game unapproved, removing:', game.name);
+        onDelete(game.id);
+        const mainWindow = getMainWindow();
+        if (mainWindow) {
+          mainWindow.webContents.send('game-removed', game.id);
+        }
+      } else {
+        console.log('[SupabaseRealtime] New game not approved, skipping:', game.name);
+      }
+      return;
+    }
+
+    onUpdate(game);
+    const mainWindow = getMainWindow();
+    if (mainWindow) {
+      mainWindow.webContents.send('game-updated', game);
+      console.log(`[SupabaseRealtime] Sent ${event} to renderer:`, game.name);
+    }
+  }
+
+  /**
    * Внутрішній метод підписки
    */
   private subscribeInternal(
@@ -117,115 +168,27 @@ export class SupabaseRealtimeManager {
       return;
     }
 
-    console.log('[SupabaseRealtime] Subscribing to games table changes...');
+    console.log('[SupabaseRealtime] Subscribing to games-broadcast channel...');
 
     this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
 
     this.channel = this.supabase
-      .channel('games-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'games',
-        },
-        (payload) => {
-          console.log('[SupabaseRealtime] Game inserted:', payload);
-          const newGame = payload.new as Game;
-
-          // Тільки approved ігри додаємо
-          if (!newGame.approved) {
-            console.log(
-              '[SupabaseRealtime] New game not approved, skipping:',
-              newGame.name
-            );
-            return;
-          }
-
-          // Додати в локальну БД через callback
-          onUpdate(newGame);
-
-          // Відправити в renderer process
-          const mainWindow = getMainWindow();
-          if (mainWindow) {
-            mainWindow.webContents.send('game-updated', newGame);
-            console.log('[SupabaseRealtime] Sent new game to renderer:', newGame.name);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'games',
-        },
-        (payload) => {
-          console.log('[SupabaseRealtime] Game updated:', payload);
-          const updatedGame = payload.new as Game;
-
-          // Якщо гра більше не approved, видалити з локальної БД
-          if (!updatedGame.approved) {
-            console.log(
-              '[SupabaseRealtime] Game unapproved, removing from local DB:',
-              updatedGame.name
-            );
-            onDelete(updatedGame.id);
-
-            // Відправити game-removed в renderer
-            const mainWindow = getMainWindow();
-            if (mainWindow) {
-              mainWindow.webContents.send('game-removed', updatedGame.id);
-            }
-            return;
-          }
-
-          // Оновити локальну БД через callback
-          onUpdate(updatedGame);
-
-          // Відправити оновлення в renderer process
-          const mainWindow = getMainWindow();
-          if (mainWindow) {
-            // Відправити game-updated для оновлення конкретної гри
-            mainWindow.webContents.send('game-updated', updatedGame);
-
-            console.log('[SupabaseRealtime] Sent update to renderer:', updatedGame.name);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'games',
-        },
-        (payload) => {
-          console.log('[SupabaseRealtime] Game deleted:', payload);
-          const deletedGameId = payload.old.id as string;
-
-          // Видалити з локальної БД
-          onDelete(deletedGameId);
-
-          // Відправити game-removed в renderer
-          const mainWindow = getMainWindow();
-          if (mainWindow) {
-            mainWindow.webContents.send('game-removed', deletedGameId);
-            console.log(
-              '[SupabaseRealtime] Sent game-removed to renderer:',
-              deletedGameId
-            );
-          }
-        }
-      )
+      .channel('games-broadcast')
+      .on('broadcast', { event: 'INSERT' }, (payload: BroadcastPayload) => {
+        this.handleBroadcastEvent('INSERT', payload, onUpdate, onDelete);
+      })
+      .on('broadcast', { event: 'UPDATE' }, (payload: BroadcastPayload) => {
+        this.handleBroadcastEvent('UPDATE', payload, onUpdate, onDelete);
+      })
+      .on('broadcast', { event: 'DELETE' }, (payload: BroadcastPayload) => {
+        this.handleBroadcastEvent('DELETE', payload, onUpdate, onDelete);
+      })
       .subscribe((status, err) => {
         console.log('[SupabaseRealtime] Subscription status:', status);
 
         if (status === 'SUBSCRIBED') {
-          // Успішно підключились - скидаємо лічильник спроб
           this.retryCount = 0;
-          console.log('[SupabaseRealtime] Successfully connected to realtime');
+          console.log('[SupabaseRealtime] Successfully connected to broadcast channel');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error('[SupabaseRealtime] Connection error:', err);
           this.channel = null;

@@ -83,6 +83,7 @@ import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
+import { trackSessionEnd, trackSessionStart } from './tracking';
 import { createMainWindow, getMainWindow } from './window';
 
 // Глобальні менеджери
@@ -220,6 +221,12 @@ if (!gotTheLock) {
 
     checkForUpdates();
 
+    // Track session start (after sync is complete)
+    const appVersion = app.getVersion();
+    trackSessionStart(appVersion).catch((err) => {
+      console.error('[Main] Failed to track session start:', err);
+    });
+
     // Handle pending deep link if app was opened via protocol
     if (pendingDeepLink) {
       handleDeepLink(pendingDeepLink);
@@ -252,6 +259,13 @@ if (!gotTheLock) {
       } else {
         await createMainWindow();
       }
+    });
+  });
+
+  // Track session end before quit
+  app.on('before-quit', () => {
+    trackSessionEnd().catch((err) => {
+      console.error('[Main] Failed to track session end:', err);
     });
   });
 

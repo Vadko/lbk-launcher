@@ -93,6 +93,7 @@ export type Database = {
           downloaded_at: string | null
           game_id: string
           id: string
+          is_first_session: boolean | null
           machine_id: string | null
           user_identifier: string
         }
@@ -100,6 +101,7 @@ export type Database = {
           downloaded_at?: string | null
           game_id: string
           id?: string
+          is_first_session?: boolean | null
           machine_id?: string | null
           user_identifier: string
         }
@@ -107,6 +109,7 @@ export type Database = {
           downloaded_at?: string | null
           game_id?: string
           id?: string
+          is_first_session?: boolean | null
           machine_id?: string | null
           user_identifier?: string
         }
@@ -200,6 +203,7 @@ export type Database = {
           archive_path: string | null
           archive_size: string | null
           banner_path: string | null
+          capsule_path: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -262,6 +266,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -324,6 +329,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -409,6 +415,7 @@ export type Database = {
           archive_path: string | null
           archive_size: string | null
           banner_path: string | null
+          capsule_path: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -434,7 +441,7 @@ export type Database = {
           license_only: boolean
           logo_path: string | null
           name: string
-          name_fts: unknown | null
+          name_fts: unknown
           name_search: string | null
           platforms: string[]
           project_id: string | null
@@ -476,6 +483,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -501,7 +509,7 @@ export type Database = {
           license_only?: boolean
           logo_path?: string | null
           name: string
-          name_fts?: unknown | null
+          name_fts?: unknown
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
@@ -543,6 +551,7 @@ export type Database = {
           archive_path?: string | null
           archive_size?: string | null
           banner_path?: string | null
+          capsule_path?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -568,7 +577,7 @@ export type Database = {
           license_only?: boolean
           logo_path?: string | null
           name?: string
-          name_fts?: unknown | null
+          name_fts?: unknown
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
@@ -633,6 +642,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kurin_skipped: {
+        Row: {
+          id: string
+          kurin_id: number
+          reason: string | null
+          skipped_at: string | null
+          skipped_by: string | null
+        }
+        Insert: {
+          id?: string
+          kurin_id: number
+          reason?: string | null
+          skipped_at?: string | null
+          skipped_by?: string | null
+        }
+        Update: {
+          id?: string
+          kurin_id?: number
+          reason?: string | null
+          skipped_at?: string | null
+          skipped_by?: string | null
+        }
+        Relationships: []
+      }
+      launcher_sessions: {
+        Row: {
+          app_version: string | null
+          ended_at: string | null
+          id: string
+          is_first_launch: boolean | null
+          started_at: string | null
+          user_identifier: string
+        }
+        Insert: {
+          app_version?: string | null
+          ended_at?: string | null
+          id?: string
+          is_first_launch?: boolean | null
+          started_at?: string | null
+          user_identifier: string
+        }
+        Update: {
+          app_version?: string | null
+          ended_at?: string | null
+          id?: string
+          is_first_launch?: boolean | null
+          started_at?: string | null
+          user_identifier?: string
+        }
+        Relationships: []
       }
       media_upload_queue: {
         Row: {
@@ -755,6 +815,62 @@ export type Database = {
         }
         Relationships: []
       }
+      support_clicks: {
+        Row: {
+          clicked_at: string | null
+          game_id: string
+          id: string
+          user_identifier: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          game_id: string
+          id?: string
+          user_identifier: string
+        }
+        Update: {
+          clicked_at?: string | null
+          game_id?: string
+          id?: string
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_clicks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      translation_uninstalls: {
+        Row: {
+          game_id: string
+          id: string
+          uninstalled_at: string | null
+          user_identifier: string
+        }
+        Insert: {
+          game_id: string
+          id?: string
+          uninstalled_at?: string | null
+          user_identifier: string
+        }
+        Update: {
+          game_id?: string
+          id?: string
+          uninstalled_at?: string | null
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translation_uninstalls_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_threads: {
         Row: {
           created_at: string | null
@@ -838,7 +954,7 @@ export type Database = {
           is_adult: boolean | null
           latest_updated_at: string | null
           name: string | null
-          name_fts: unknown | null
+          name_fts: unknown
           slug: string | null
           thumbnail_path: string | null
           translations: Json | null
@@ -855,10 +971,10 @@ export type Database = {
       check_download_rate_limit: {
         Args: {
           p_game_id: string
-          p_user_identifier: string
-          p_size_threshold_mb?: number
           p_max_downloads?: number
+          p_size_threshold_mb?: number
           p_time_window_hours?: number
+          p_user_identifier: string
         }
         Returns: {
           allowed: boolean
@@ -867,88 +983,126 @@ export type Database = {
           next_available_at: string
         }[]
       }
-      generate_author_slug: {
-        Args: { author_name: string }
-        Returns: string
+      generate_author_slug: { Args: { author_name: string }; Returns: string }
+      get_active_users: {
+        Args: { p_date?: string }
+        Returns: {
+          dau: number
+          mau: number
+          wau: number
+        }[]
       }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
+      get_downloads_per_player: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          downloads_count: number
+          percentage: number
+          players_count: number
+        }[]
       }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
+      get_first_session_downloads: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          conversion_rate: number
+          first_session_downloads: number
+          total_first_launches: number
+        }[]
       }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
+      get_players_with_downloads: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          percentage: number
+          players_with_downloads: number
+          total_unique_players: number
+        }[]
       }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
+      get_subscription_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_subscriptions_per_user: number
+          total_subscriptions: number
+          unique_games_subscribed: number
+          unique_users_subscribed: number
+        }[]
       }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
+      get_support_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_supports_per_user: number
+          total_clicks: number
+          unique_users: number
+          users_who_supported: number
+        }[]
       }
-      increment_game_downloads: {
-        Args:
-          | { p_game_id: string; p_user_identifier: string }
-          | {
+      get_team_statistics: {
+        Args: never
+        Returns: {
+          ai_count: number
+          completed_count: number
+          games_count: number
+          team_name: string
+          total_downloads: number
+          with_textures_count: number
+          with_voice_count: number
+        }[]
+      }
+      get_trending_games: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: {
+          downloads: number
+          game_id: string
+        }[]
+      }
+      get_uninstall_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_uninstalls_per_user: number
+          total_uninstalls: number
+          unique_users_uninstalled: number
+        }[]
+      }
+      increment_game_downloads:
+        | {
+            Args: { p_game_id: string; p_user_identifier: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
               p_game_id: string
-              p_user_identifier: string
               p_machine_id?: string
+              p_user_identifier: string
             }
-        Returns: undefined
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin_or_moderator: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_moderator: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_verified_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_game_id: string
+              p_is_first_session?: boolean
+              p_machine_id?: string
+              p_user_identifier: string
+            }
+            Returns: undefined
+          }
+      is_admin: { Args: never; Returns: boolean }
+      is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_moderator: { Args: never; Returns: boolean }
+      is_verified_user: { Args: never; Returns: boolean }
       remove_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
       }
       search_steam_apps: {
-        Args: { search_query: string; limit_val?: number; offset_val?: number }
+        Args: { limit_val?: number; offset_val?: number; search_query: string }
         Returns: {
           app_id: number
-          name: string
           installdir: string
+          name: string
         }[]
       }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      sync_steam_apps_cron: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      validate_install_paths: {
-        Args: { paths: Json }
-        Returns: boolean
-      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_steam_apps_cron: { Args: never; Returns: undefined }
+      validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
       game_status: "completed" | "in-progress" | "planned"
@@ -970,21 +1124,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1002,14 +1160,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1025,14 +1185,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1048,14 +1210,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1063,14 +1227,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
