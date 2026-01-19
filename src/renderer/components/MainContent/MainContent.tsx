@@ -214,13 +214,13 @@ export const MainContent: React.FC = () => {
 
   if (!selectedGame) {
     return (
-      <div className="flex-1 grid items-center px-8 overflow-y-auto custom-scrollbar">
-        <div className="grid grid-rows-auto gap-16 h-auto">
+      <div className="flex-1 grid items-center px-8 overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]">
+        <div className="grid grid-rows-auto gap-10 h-auto">
           <GamesSection title="Новинки" sortOrder="newest" />
           <GamesSection
             title="Популярне у гравців"
             showDownloadCounter={true}
-            sortOrder="downloads"
+            showTrendsGames={true}
           />
         </div>
       </div>

@@ -37,14 +37,16 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
     useEffect(() => {
       if (isOpen && buttonRef.current) {
         const buttonRect = buttonRef.current.getBoundingClientRect();
-        
+
         // Find the closest modal container
-        const modalContainer = buttonRef.current.closest('[role="dialog"], .modal-content');
+        const modalContainer = buttonRef.current.closest(
+          '[role="dialog"], .modal-content'
+        );
         const modalRect = modalContainer?.getBoundingClientRect();
-        
+
         let spaceBelow: number;
         let spaceAbove: number;
-        
+
         if (modalRect) {
           // Calculate space within modal
           spaceBelow = modalRect.bottom - buttonRect.bottom - 40; // 40px margin
@@ -55,14 +57,15 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           spaceBelow = viewportHeight - buttonRect.bottom - 20;
           spaceAbove = buttonRect.top - 20;
         }
-        
+
         // Use space below, but if not enough, use the larger of the two spaces
-        const availableSpace = spaceBelow > 80 ? spaceBelow : Math.max(spaceBelow, spaceAbove);
+        const availableSpace =
+          spaceBelow > 80 ? spaceBelow : Math.max(spaceBelow, spaceAbove);
         const calculatedMaxHeight = Math.min(120, Math.max(60, availableSpace));
-        
+
         setMaxHeight(calculatedMaxHeight);
         setDropdownPosition(spaceBelow >= 80 ? 'below' : 'above');
-        
+
         // Use requestAnimationFrame to ensure calculations are done before showing
         requestAnimationFrame(() => {
           setIsReady(true);
@@ -130,13 +133,13 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
               } bg-bg-dark border border-border rounded-lg shadow-xl z-[60] overflow-hidden`}
               data-gamepad-dropdown
             >
-              <div 
+              <div
                 className={`overflow-y-auto custom-scrollbar py-1 transition-opacity duration-100 ${
                   isReady ? 'opacity-100' : 'opacity-0'
                 }`}
-                style={{ 
+                style={{
                   maxHeight: `${maxHeight}px`,
-                  minHeight: isReady ? 'auto' : '60px' // Prevent layout shift
+                  minHeight: isReady ? 'auto' : '60px', // Prevent layout shift
                 }}
               >
                 {!isReady ? (

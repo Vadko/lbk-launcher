@@ -565,7 +565,7 @@ export function useInstallation({
       setInstallationProgress,
       clearInstallationProgress,
       checkInstallationStatus,
-      selectedProton
+      selectedProton,
     ]
   );
 

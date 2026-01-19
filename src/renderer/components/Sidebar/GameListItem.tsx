@@ -1,6 +1,7 @@
 import { EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
+import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -9,7 +10,7 @@ import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
-  game: Game;
+  game: Game | TrendingGameWithDetails;
   isSelected: boolean;
   onClick: () => void;
   hasUpdate?: boolean;
@@ -43,7 +44,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
       (game.translation_progress + game.editing_progress) / 2
     );
 
-    const thumbnailUrl = getGameImageUrl(isCardStyle ? game.capsule_path : game.thumbnail_path, game.updated_at);
+    const thumbnailUrl = getGameImageUrl(
+      (isCardStyle ? game.capsule_path : null) ?? game.thumbnail_path,
+      game.updated_at
+    );
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
@@ -125,7 +129,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               <div className="flex items-center gap-2">
                 <PopularIcon />
                 <span>Завантажено гравцями</span>
-                <span className="ml-auto">{game.downloads}</span>
+                <span className="ml-auto">
+                  {'trendingDownloads' in game ? game.trendingDownloads : game.downloads}
+                </span>
               </div>
             )}
             {/* Info */}
