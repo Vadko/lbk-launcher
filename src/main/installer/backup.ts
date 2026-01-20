@@ -53,7 +53,9 @@ export async function backupFiles(
     for (const entry of entries) {
       const sourcePath = path.join(sourceDir, entry.name);
       const targetPath = path.join(targetDir, entry.name);
-      const entryRelativePath = relativePath ? path.join(relativePath, entry.name) : entry.name;
+      const entryRelativePath = relativePath
+        ? path.join(relativePath, entry.name)
+        : entry.name;
 
       if (entry.isDirectory()) {
         // Recursively backup subdirectory
@@ -82,7 +84,9 @@ export async function backupFiles(
     }
 
     if (backedUpCount > 0 && !backupDir) {
-      console.log(`[Backup] Backup completed: ${backedUpCount} files backed up to ${rootBackupDir}`);
+      console.log(
+        `[Backup] Backup completed: ${backedUpCount} files backed up to ${rootBackupDir}`
+      );
     }
   } catch (error) {
     console.error('[Backup] Error creating backup:', error);

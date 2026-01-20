@@ -112,7 +112,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {game.ai && (
               <div
                 className="absolute top-2 left-2 p-1 bg-purple-500/80 rounded"
-                title={game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'}
+                title={
+                  game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'
+                }
               >
                 <Bot size={10} className="text-white" />
               </div>

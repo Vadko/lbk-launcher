@@ -41,7 +41,12 @@ import {
   setDownloadAbortController,
 } from './installer/download';
 import { ManualSelectionError, PausedSignal, RateLimitError } from './installer/errors';
-import { cleanupDownloadDir, copyDirectory, deleteDirectory, getAllFiles } from './installer/files';
+import {
+  cleanupDownloadDir,
+  copyDirectory,
+  deleteDirectory,
+  getAllFiles,
+} from './installer/files';
 import { verifyFileHash } from './installer/hash';
 import {
   checkPlatformCompatibility,

@@ -582,7 +582,9 @@ const migrations: Migration[] = [
         VALUES ('migration_ai_to_text_done', '1', datetime('now'))
       `);
 
-      console.log('[Migrations] Completed: change_ai_to_text - table recreated, will resync on next startup');
+      console.log(
+        '[Migrations] Completed: change_ai_to_text - table recreated, will resync on next startup'
+      );
     },
   },
 ];
