@@ -2,6 +2,7 @@
 
 export { extractArchive } from './archive';
 export {
+  BACKUP_DIR_NAME,
   BACKUP_SUFFIX,
   backupFiles,
   cleanupEmptyDirectories,

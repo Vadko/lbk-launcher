@@ -12,50 +12,48 @@ import type {
   PausedDownloadState,
 } from '../shared/types';
 import { getFirstAvailableGamePath } from './game-detector';
-
 // Import all utilities from installer modules
+import { extractArchive } from './installer/archive';
 import {
-  abortCurrentDownload,
+  BACKUP_DIR_NAME,
   BACKUP_SUFFIX,
   backupFiles,
-  checkDiskSpace,
-  checkInstallation,
-  checkPlatformCompatibility,
-  cleanupDownloadDir,
   cleanupEmptyDirectories,
-  clearPausedDownloadState,
-  copyDirectory,
+  restoreBackupLegacy,
+  restoreBackupNew,
+} from './installer/backup';
+import {
+  checkInstallation,
   deleteCachedInstallationInfo,
-  deleteDirectory,
-  downloadFile,
-  extractArchive,
-  getAllFiles,
   getAllInstalledGameIds,
   getConflictingTranslation,
+  INSTALLATION_INFO_FILE,
+  invalidateInstalledGameIdsCache,
+  removeOrphanedInstallationMetadata,
+  saveInstallationInfo,
+} from './installer/cache';
+import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
+import {
+  abortCurrentDownload,
+  clearPausedDownloadState,
+  downloadFile,
+  setCurrentDownloadState,
+  setDownloadAbortController,
+} from './installer/download';
+import { ManualSelectionError, PausedSignal, RateLimitError } from './installer/errors';
+import { cleanupDownloadDir, copyDirectory, deleteDirectory, getAllFiles } from './installer/files';
+import { verifyFileHash } from './installer/hash';
+import {
+  checkPlatformCompatibility,
   getInstallerFileName,
   getSteamAchievementsPath,
   hasExecutableInstaller,
-  INSTALLATION_INFO_FILE,
-  invalidateInstalledGameIdsCache,
-  ManualSelectionError,
-  PausedSignal,
-  parseSizeToBytes,
-  RateLimitError,
-  removeOrphanedInstallationMetadata,
-  restoreBackupLegacy,
-  restoreBackupNew,
   runInstaller,
-  saveInstallationInfo,
-  setCurrentDownloadState,
-  setDownloadAbortController,
-  verifyFileHash,
-} from './installer/index';
+} from './installer/platform';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
-
-const BACKUP_DIR_NAME = '.littlebit-backup';
 
 // Re-export utilities for external use
 export {
@@ -359,7 +357,7 @@ export async function installTranslation(
           achievementFilesToCopy.push({ src: srcPath, dest: destPath });
         }
 
-        // Backup original files (not already installed translations)
+        // Backup original achievement files (using _backup suffix)
         if (createBackup) {
           for (const { dest } of achievementFilesToCopy) {
             const backupPath = dest + BACKUP_SUFFIX;
@@ -672,10 +670,14 @@ export async function uninstallTranslation(game: Game): Promise<void> {
       if (installInfo.components.voice?.installed) {
         allFilesToDelete.push(...installInfo.components.voice.files);
       }
-      // Handle achievements separately (full paths)
+      // Handle achievements separately (files are just filenames, need to get full path)
       if (installInfo.components.achievements?.installed) {
-        for (const achievementFile of installInfo.components.achievements.files) {
-          await restoreOrDeleteFile(achievementFile);
+        const achievementsPath = await getSteamAchievementsPath();
+        if (achievementsPath) {
+          for (const achievementFile of installInfo.components.achievements.files) {
+            const fullPath = path.join(achievementsPath, achievementFile);
+            await restoreOrDeleteFile(fullPath);
+          }
         }
       }
     } else if (installInfo.installedFiles?.length) {
@@ -751,8 +753,12 @@ export async function removeComponents(
       componentsToRemove.achievements &&
       installInfo.components?.achievements?.installed
     ) {
-      for (const achievementFile of installInfo.components.achievements.files) {
-        await restoreOrDeleteFile(achievementFile);
+      const achievementsPath = await getSteamAchievementsPath();
+      if (achievementsPath) {
+        for (const achievementFile of installInfo.components.achievements.files) {
+          const fullPath = path.join(achievementsPath, achievementFile);
+          await restoreOrDeleteFile(fullPath);
+        }
       }
       installInfo.components.achievements = { installed: false, files: [] };
     }
@@ -769,19 +775,47 @@ export async function removeComponents(
 
 /**
  * Restore from backup or delete file if no backup exists
+ * Supports both new format (.littlebit-backup/ dir) and legacy format (_backup suffix)
  */
-async function restoreOrDeleteFile(filePath: string): Promise<void> {
-  const backupPath = filePath + BACKUP_SUFFIX;
+async function restoreOrDeleteFile(
+  filePath: string,
+  backupBaseDir?: string
+): Promise<void> {
+  const fileName = path.basename(filePath);
+  const fileDir = path.dirname(filePath);
+
+  // Try new format first (.littlebit-backup/ directory)
+  const newBackupDir = backupBaseDir || path.join(fileDir, BACKUP_DIR_NAME);
+  const newBackupPath = path.join(newBackupDir, fileName);
+
+  // Legacy format (file_backup suffix)
+  const legacyBackupPath = filePath + BACKUP_SUFFIX;
+
   try {
-    if (fs.existsSync(backupPath)) {
+    // Check new format first
+    if (fs.existsSync(newBackupPath)) {
       if (fs.existsSync(filePath)) {
         await unlink(filePath);
       }
-      await fs.promises.rename(backupPath, filePath);
-      console.log(`[Installer] Restored from backup: ${filePath}`);
-    } else if (fs.existsSync(filePath)) {
+      await fs.promises.rename(newBackupPath, filePath);
+      console.log(`[Installer] Restored from backup dir: ${fileName}`);
+      return;
+    }
+
+    // Fall back to legacy format
+    if (fs.existsSync(legacyBackupPath)) {
+      if (fs.existsSync(filePath)) {
+        await unlink(filePath);
+      }
+      await fs.promises.rename(legacyBackupPath, filePath);
+      console.log(`[Installer] Restored from legacy backup: ${fileName}`);
+      return;
+    }
+
+    // No backup found, just delete the file
+    if (fs.existsSync(filePath)) {
       await unlink(filePath);
-      console.log(`[Installer] Deleted (no backup): ${filePath}`);
+      console.log(`[Installer] Deleted (no backup): ${fileName}`);
     }
   } catch (error) {
     console.warn(`[Installer] Failed to restore/delete ${filePath}:`, error);

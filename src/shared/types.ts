@@ -1,6 +1,7 @@
 import type { Database } from '../lib/database.types';
 
 export type { Database };
+export type Platform = Database['public']['Enums']['install_source'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 
@@ -79,7 +80,7 @@ export interface GetGamesParams {
   statuses?: string[];
   authors?: string[];
   showAdultGames?: boolean;
-  showAiTranslations?: boolean;
+  hideAiTranslations?: boolean;
   sortOrder?: 'name' | 'downloads';
 }
 

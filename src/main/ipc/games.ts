@@ -54,9 +54,9 @@ export function setupGamesHandlers(): void {
   // Fetch games by IDs - SYNC
   ipcMain.handle(
     'fetch-games-by-ids',
-    (_, gameIds: string[], searchQuery?: string, showAiTranslations = false) => {
+    (_, gameIds: string[], searchQuery?: string, hideAiTranslations = false) => {
       try {
-        return fetchGamesByIds(gameIds, searchQuery, showAiTranslations);
+        return fetchGamesByIds(gameIds, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error fetching games by IDs:', error);
         return [];
@@ -124,9 +124,9 @@ export function setupGamesHandlers(): void {
   // Find games by install paths - SYNC
   ipcMain.handle(
     'find-games-by-install-paths',
-    (_, installPaths: string[], searchQuery?: string, showAiTranslations = false) => {
+    (_, installPaths: string[], searchQuery?: string, hideAiTranslations = false) => {
       try {
-        return findGamesByInstallPaths(installPaths, searchQuery, showAiTranslations);
+        return findGamesByInstallPaths(installPaths, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error finding games by install paths:', error);
         return { games: [], total: 0 };

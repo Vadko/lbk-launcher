@@ -29,11 +29,13 @@ type GameInsertParams = {
   [K in keyof Omit<
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
-  >]: K extends 'approved' | 'is_adult' | 'license_only' | 'ai' | 'hide'
+  >]: K extends 'approved' | 'is_adult' | 'license_only' | 'hide'
     ? number // boolean перетворюється на 0/1 для SQLite
-    : K extends 'platforms' | 'install_paths'
-      ? string | null // JSON.stringify для SQLite
-      : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+    : K extends 'ai'
+      ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
+      : K extends 'platforms' | 'install_paths'
+        ? string | null // JSON.stringify для SQLite
+        : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
   // Local-only field for search (not in Supabase)
   name_search: string;
@@ -66,7 +68,7 @@ export class GamesRepository {
       approved: Boolean(row.approved),
       is_adult: Boolean(row.is_adult),
       license_only: Boolean(row.license_only),
-      ai: Boolean(row.ai),
+      ai: row.ai as string | null, // ai тепер текстове: 'edited' | 'non-edited' | null
       hide: Boolean(row.hide),
       achievements_third_party: row.achievements_third_party || null,
       platforms,
@@ -136,7 +138,7 @@ export class GamesRepository {
       steam_app_id: game.steam_app_id ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
-      ai: game.ai ? 1 : 0,
+      ai: game.ai, // ai тепер текстове: 'edited' | 'non-edited' | null
       hide: game.hide ? 1 : 0,
     };
   }
@@ -151,15 +153,15 @@ export class GamesRepository {
       statuses = [],
       authors = [],
       sortOrder = 'name',
-      showAiTranslations = false,
+      hideAiTranslations = false,
     } = params;
 
     const whereConditions: string[] = ['approved = 1', 'hide = 0'];
     const queryParams: (string | number)[] = [];
 
-    // Filter AI translations (hidden by default)
-    if (!showAiTranslations) {
-      whereConditions.push('ai = 0');
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
     }
 
     // Filter by statuses (multi-select)
@@ -239,7 +241,7 @@ export class GamesRepository {
   getGamesByIds(
     gameIds: string[],
     searchQuery?: string,
-    showAiTranslations = false
+    hideAiTranslations = false
   ): Game[] {
     if (gameIds.length === 0) return [];
 
@@ -250,9 +252,9 @@ export class GamesRepository {
     ];
     const queryParams: string[] = [...gameIds];
 
-    // Filter AI translations (hidden by default)
-    if (!showAiTranslations) {
-      whereConditions.push('ai = 0');
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
     }
 
     if (searchQuery) {
@@ -281,7 +283,7 @@ export class GamesRepository {
   findGamesByInstallPaths(
     installPaths: string[],
     searchQuery?: string,
-    showAiTranslations = false
+    hideAiTranslations = false
   ): GetGamesResult {
     if (installPaths.length === 0) {
       return { games: [], total: 0 };
@@ -290,9 +292,9 @@ export class GamesRepository {
     const whereConditions = ['approved = 1', 'hide = 0', 'install_paths IS NOT NULL'];
     const queryParams: string[] = [];
 
-    // Filter AI translations (hidden by default)
-    if (!showAiTranslations) {
-      whereConditions.push('ai = 0');
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
     }
 
     if (searchQuery) {

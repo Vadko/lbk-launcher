@@ -56,9 +56,9 @@ export const SettingsModal: React.FC = () => {
   );
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
   const toggleShowAdultGames = useSettingsStore((state) => state.toggleShowAdultGames);
-  const showAiTranslations = useSettingsStore((state) => state.showAiTranslations);
-  const toggleShowAiTranslations = useSettingsStore(
-    (state) => state.toggleShowAiTranslations
+  const hideAiTranslations = useSettingsStore((state) => state.hideAiTranslations);
+  const toggleHideAiTranslations = useSettingsStore(
+    (state) => state.toggleHideAiTranslations
   );
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const toggleLiquidGlass = useSettingsStore((state) => state.toggleLiquidGlass);
@@ -229,10 +229,10 @@ export const SettingsModal: React.FC = () => {
         />
         <SettingItem
           id="ai-translations"
-          title="Показувати AI-переклади"
-          description="Відображати переклади, створені за допомогою штучного інтелекту"
-          enabled={showAiTranslations}
-          onChange={toggleShowAiTranslations}
+          title="Приховати ШІ-переклади"
+          description="Сховати переклади, створені за допомогою штучного інтелекту"
+          enabled={hideAiTranslations}
+          onChange={toggleHideAiTranslations}
         />
 
         <SettingItem
