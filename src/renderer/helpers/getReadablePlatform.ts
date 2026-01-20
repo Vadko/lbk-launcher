@@ -1,14 +1,14 @@
-export const getReadablePlatform = (platform: string) => {
-  switch (platform) {
-    case 'steam':
-      return 'Steam';
-    case 'epic':
-      return 'Epic Games Store';
-    case 'gog':
-      return 'GOG';
-    case 'emulator':
-      return 'Емулятор';
-    case 'other':
-      return 'Інша';
-  }
+import type { Platform } from '../../shared/types';
+
+export const getReadablePlatform = (platform: string): string => {
+  const platformMap: Record<Platform, string> = {
+    steam: 'Steam',
+    epic: 'Epic Games Store',
+    gog: 'GOG',
+    rockstar: 'Rockstar Games Launcher',
+    emulator: 'Емулятор',
+    other: 'Інша',
+  };
+
+  return platformMap[platform as Platform] ?? platform;
 };
