@@ -396,7 +396,7 @@ export async function installTranslation(
       onStatus?.({ message: 'Очищення тимчасових файлів...' });
       await cleanupDownloadDir(downloadDir);
 
-      await runInstaller(fullTargetPath, installerFileName);
+      await runInstaller(fullTargetPath, installerFileName, onStatus, options.protonPath);
 
       const installationInfo: InstallationInfo = {
         gameId: game.id,

@@ -433,99 +433,55 @@ export function useInstallation({
         selectedGame.installation_file_linux_path;
 
       if (hasInstaller) {
-        const isLinux = window.electronAPI.getPlatform() === 'linux';
-        const protons = [
-          { name: 'Proton Experimental', path: 'Proton Experimental' },
-          { name: 'Proton GE', path: 'Proton GE' },
-          { name: 'Proton 10.0', path: 'Proton 10.0' },
-          { name: 'Proton 9.0', path: 'Proton 9.0' },
-          { name: 'Proton 8.0', path: 'Proton 8.0' },
-          { name: 'Proton 7.0', path: 'Proton 7.0' },
-        ];
-
-        // Set initial selected proton if not already set
-        if (!selectedProton && protons.length > 0) {
-          setSelectedProton(protons[0].path);
-        }
-
-        const showProtonModal = (currentSelection: string) => {
-          showModal({
-            title: 'Запуск інсталятора',
-            message:
-              'Після завантаження та розпакування українізатора буде запущено інсталятор з вибраною версією Proton.',
-            type: 'info',
-            selectConfig: {
-              options: protons.map((p) => ({ name: p.name, value: p.path })),
-              selectedValue: currentSelection,
-              onSelectionChange: (value) => {
-                console.log('[useInstallation] Selected Proton:', value);
-                setSelectedProton(value);
-                showProtonModal(value);
-              },
-              placeholder: 'Оберіть версію Proton',
-            },
-            actions: [
-              {
-                label: 'Продовжити',
-                onClick: async () => {
-                  await performInstallation(pendingInstallPath, {
-                    ...installOptions,
-                    protonPath: currentSelection,
-                  });
-                },
-                variant: 'primary',
-              },
-              {
-                label: 'Скасувати',
-                onClick: () => undefined,
-                variant: 'secondary',
-              },
-            ],
-          });
-        };
-
-        showProtonModal(selectedProton || protons[0]?.path);
-        return;
+        const isLinux = (await window.electronAPI.getPlatform()) === 'linux';
 
         if (isLinux) {
           // Get available Proton versions for Linux
           const protons = (await window.electronAPI.getAvailableProtons?.()) || [];
 
-          if (protons && protons.length > 0) {
+          if (protons) {
             // Create a state holder for selected proton
-            const protonState = { selectedPath: protons[0]?.path || '' };
+            if (!selectedProton && protons.length > 0) {
+              setSelectedProton(protons[0].path);
+            }
 
-            showModal({
-              title: 'Вибір версії Proton',
-              message:
-                'Після завантаження та розпакування українізатора буде запущено інсталятор з вибраною версією Proton.',
-              type: 'info',
-              selectConfig: {
-                options: protons.map((p) => ({ name: p.name, value: p.path })),
-                selectedValue: protonState.selectedPath,
-                onSelectionChange: (value) => {
-                  protonState.selectedPath = value;
-                },
-                placeholder: 'Оберіть версію Proton',
-              },
-              actions: [
-                {
-                  label: 'Продовжити',
-                  onClick: async () => {
-                    await performInstallation(pendingInstallPath, {
-                      ...installOptions,
-                      protonPath: protonState.selectedPath,
-                    });
+            const showProtonModal = (currentSelection: string) => {
+              showModal({
+                title: 'Запуск інсталятора',
+                message:
+                  'Після завантаження та розпакування українізатора буде запущено інсталятор з вибраною версією Proton.\n\nШлях до папки буде скопійовано в буфер',
+                type: 'info',
+                selectConfig: {
+                  options: protons.map((p) => ({ name: p.name, value: p.path })),
+                  selectedValue: currentSelection,
+                  onSelectionChange: (value) => {
+                    console.log('[useInstallation] Selected Proton:', value);
+                    setSelectedProton(value);
+                    showProtonModal(value);
                   },
-                  variant: 'primary',
+                  placeholder: 'Оберіть версію Proton',
                 },
-                {
-                  label: 'Скасувати',
-                  onClick: () => undefined,
-                  variant: 'secondary',
-                },
-              ],
-            });
+                actions: [
+                  {
+                    label: 'Продовжити',
+                    onClick: async () => {
+                      await performInstallation(pendingInstallPath, {
+                        ...installOptions,
+                        protonPath: currentSelection,
+                      });
+                    },
+                    variant: 'primary',
+                  },
+                  {
+                    label: 'Скасувати',
+                    onClick: () => undefined,
+                    variant: 'secondary',
+                  },
+                ],
+              });
+            };
+
+            showProtonModal(selectedProton || protons[0]?.path);
           } else {
             showConfirm({
               title: 'Запуск інсталятора',
