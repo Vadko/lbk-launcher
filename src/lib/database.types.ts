@@ -195,7 +195,7 @@ export type Database = {
           achievements_archive_size: string | null
           achievements_third_party: string | null
           additional_path: string | null
-          ai: boolean
+          ai: string | null
           approved_at: string | null
           approved_by: string | null
           archive_file_list: Json | null
@@ -258,7 +258,7 @@ export type Database = {
           achievements_archive_size?: string | null
           achievements_third_party?: string | null
           additional_path?: string | null
-          ai?: boolean
+          ai?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archive_file_list?: Json | null
@@ -321,7 +321,7 @@ export type Database = {
           achievements_archive_size?: string | null
           achievements_third_party?: string | null
           additional_path?: string | null
-          ai?: boolean
+          ai?: string | null
           approved_at?: string | null
           approved_by?: string | null
           archive_file_list?: Json | null
@@ -406,7 +406,7 @@ export type Database = {
           achievements_archive_size: string | null
           achievements_third_party: string | null
           additional_path: string | null
-          ai: boolean
+          ai: string | null
           approved: boolean
           approved_at: string | null
           approved_by: string | null
@@ -474,7 +474,7 @@ export type Database = {
           achievements_archive_size?: string | null
           achievements_third_party?: string | null
           additional_path?: string | null
-          ai?: boolean
+          ai?: string | null
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -542,7 +542,7 @@ export type Database = {
           achievements_archive_size?: string | null
           achievements_third_party?: string | null
           additional_path?: string | null
-          ai?: boolean
+          ai?: string | null
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -1105,6 +1105,7 @@ export type Database = {
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
+      ai_status: "edited" | "non-edited"
       game_status: "completed" | "in-progress" | "planned"
       install_source:
         | "steam"
@@ -1244,6 +1245,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_status: ["edited", "non-edited"],
       game_status: ["completed", "in-progress", "planned"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
       user_role: ["admin", "moderator", "translator", "user"],
