@@ -11,6 +11,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import React from 'react';
+import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import type { Game } from '../../types/game';
 import { Tooltip } from '../ui/Tooltip';
@@ -47,7 +48,7 @@ const formatDate = (dateString: string | null | undefined): string => {
 };
 
 export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
-  const platformsText = game.platforms.join(', ').toUpperCase();
+  const platformsText = game.platforms.map(getReadablePlatform).join(', ');
   const isPlanned = game.status === 'planned';
   const hasDownloads = !!game.downloads && game.downloads > 0;
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
