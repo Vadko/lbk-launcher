@@ -93,7 +93,7 @@ export const SettingsModal: React.FC = () => {
   };
 
   const handleOpenFeedback = useCallback(() => {
-    window.electronAPI?.openExternal('https://t.me/lb_launcher_bot');
+    window.electronAPI?.openExternal('https://t.me/lbk_launcher_bot');
   }, []);
 
   const handleClearCacheOnly = useCallback(async () => {

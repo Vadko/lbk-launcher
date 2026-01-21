@@ -159,9 +159,9 @@ LB Launcher підтримує навігацію геймпадом! Режим
 
 <br>
 
-### 💬 **[➡️ Натисніть сюди, щоб додати свій переклад ⬅️](https://t.me/lb_launcher_bot)**
+### 💬 **[➡️ Натисніть сюди, щоб додати свій переклад ⬅️](https://t.me/lbk_launcher_bot)**
 
-[![Telegram](https://img.shields.io/badge/Напишіть_нам-@lb__launcher__bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/lb_launcher_bot)
+[![Telegram](https://img.shields.io/badge/Напишіть_нам-@lb__launcher__bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/lbk_launcher_bot)
 
 <br>
 </div>
