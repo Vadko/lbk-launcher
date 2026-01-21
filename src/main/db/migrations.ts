@@ -457,6 +457,160 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'change_ai_to_text',
+    up: (db) => {
+      // Check if migration is already done
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_ai_to_text_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: change_ai_to_text');
+
+      // SQLite doesn't support ALTER COLUMN to remove NOT NULL constraint
+      // We need to recreate the table with the correct schema
+      // This is safe because launcher data is always synced from server
+
+      db.exec(`
+        PRAGMA foreign_keys = OFF;
+
+        -- Create new table with ai as TEXT (nullable)
+        CREATE TABLE games_new (
+          id TEXT PRIMARY KEY,
+          approved INTEGER NOT NULL DEFAULT 0,
+          approved_at TEXT,
+          approved_by TEXT,
+          archive_hash TEXT,
+          archive_path TEXT,
+          archive_size TEXT,
+          banner_path TEXT,
+          capsule_path TEXT,
+          created_at TEXT NOT NULL,
+          created_by TEXT NOT NULL,
+          description TEXT,
+          discord TEXT,
+          downloads INTEGER,
+          subscriptions INTEGER,
+          editing_progress INTEGER NOT NULL DEFAULT 0,
+          fonts_progress INTEGER,
+          fundraising_current INTEGER,
+          fundraising_goal INTEGER,
+          game_description TEXT,
+          install_paths TEXT,
+          installation_file_linux_path TEXT,
+          installation_file_windows_path TEXT,
+          is_adult INTEGER NOT NULL DEFAULT 0,
+          license_only INTEGER NOT NULL DEFAULT 0,
+          logo_path TEXT,
+          name TEXT NOT NULL,
+          name_search TEXT,
+          platforms TEXT NOT NULL,
+          project_id TEXT,
+          slug TEXT NOT NULL,
+          status TEXT NOT NULL,
+          support_url TEXT,
+          team TEXT NOT NULL,
+          telegram TEXT,
+          textures_progress INTEGER,
+          thumbnail_path TEXT,
+          translation_progress INTEGER NOT NULL DEFAULT 0,
+          twitter TEXT,
+          updated_at TEXT NOT NULL,
+          version TEXT,
+          video_url TEXT,
+          voice_archive_hash TEXT,
+          voice_archive_path TEXT,
+          voice_archive_size TEXT,
+          voice_progress INTEGER,
+          achievements_archive_hash TEXT,
+          achievements_archive_path TEXT,
+          achievements_archive_size TEXT,
+          achievements_third_party TEXT,
+          additional_path TEXT,
+          steam_app_id INTEGER,
+          website TEXT,
+          youtube TEXT,
+          epic_archive_hash TEXT,
+          epic_archive_path TEXT,
+          epic_archive_size TEXT,
+          ai TEXT,
+          hide INTEGER NOT NULL DEFAULT 0
+        );
+
+        -- Copy data, converting ai: 0 -> NULL, 1 -> 'edited'
+        INSERT INTO games_new SELECT
+          id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
+          banner_path, capsule_path, created_at, created_by, description, discord, downloads,
+          subscriptions, editing_progress, fonts_progress, fundraising_current, fundraising_goal,
+          game_description, install_paths, installation_file_linux_path, installation_file_windows_path,
+          is_adult, license_only, logo_path, name, name_search, platforms, project_id, slug, status,
+          support_url, team, telegram, textures_progress, thumbnail_path, translation_progress,
+          twitter, updated_at, version, video_url, voice_archive_hash, voice_archive_path,
+          voice_archive_size, voice_progress, achievements_archive_hash, achievements_archive_path,
+          achievements_archive_size, achievements_third_party, additional_path, steam_app_id,
+          website, youtube, epic_archive_hash, epic_archive_path, epic_archive_size,
+          CASE WHEN ai = 1 THEN 'edited' ELSE NULL END,
+          hide
+        FROM games;
+
+        -- Drop old table and rename new
+        DROP TABLE games;
+        ALTER TABLE games_new RENAME TO games;
+
+        -- Recreate indexes
+        CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
+        CREATE INDEX IF NOT EXISTS idx_games_name_search ON games(name_search);
+        CREATE INDEX IF NOT EXISTS idx_games_approved ON games(approved);
+        CREATE INDEX IF NOT EXISTS idx_games_status ON games(status);
+        CREATE INDEX IF NOT EXISTS idx_games_is_adult ON games(is_adult);
+        CREATE INDEX IF NOT EXISTS idx_games_updated_at ON games(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_games_hide ON games(hide);
+
+        PRAGMA foreign_keys = ON;
+      `);
+
+      // Mark migration as done and force resync to get fresh data
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_ai_to_text_done', '1', datetime('now'))
+      `);
+
+      console.log(
+        '[Migrations] Completed: change_ai_to_text - table recreated, will resync on next startup'
+      );
+    },
+  },
+  {
+    name: 'resync_for_ai_text_fix',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_ai_text_fix_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_ai_text_fix');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_ai_text_fix_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_ai_text_fix - will resync on next startup'
+      );
+    },
+  },
 ];
 
 /**

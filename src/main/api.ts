@@ -20,10 +20,10 @@ export function fetchGames(params: GetGamesParams = {}): GetGamesResult {
 export function fetchGamesByIds(
   gameIds: string[],
   searchQuery?: string,
-  showAiTranslations = false
+  hideAiTranslations = false
 ): Game[] {
   try {
-    return gamesRepo.getGamesByIds(gameIds, searchQuery, showAiTranslations);
+    return gamesRepo.getGamesByIds(gameIds, searchQuery, hideAiTranslations);
   } catch (error) {
     console.error('[API] Error fetching games by IDs:', error);
     return [];
@@ -33,13 +33,13 @@ export function fetchGamesByIds(
 export function findGamesByInstallPaths(
   installPaths: string[],
   searchQuery?: string,
-  showAiTranslations = false
+  hideAiTranslations = false
 ): GetGamesResult {
   try {
     return gamesRepo.findGamesByInstallPaths(
       installPaths,
       searchQuery,
-      showAiTranslations
+      hideAiTranslations
     );
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);

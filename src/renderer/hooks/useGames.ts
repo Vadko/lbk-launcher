@@ -10,7 +10,7 @@ interface UseGamesParams {
   specialFilter: SpecialFilterType | null;
   searchQuery: string;
   sortOrder?: 'name' | 'downloads';
-  showAiTranslations?: boolean;
+  hideAiTranslations?: boolean;
 }
 
 interface UseGamesResult {
@@ -31,10 +31,10 @@ export function useGames({
   specialFilter,
   searchQuery,
   sortOrder = 'name',
-  showAiTranslations = false,
+  hideAiTranslations = false,
 }: UseGamesParams): UseGamesResult {
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
-  // AI translations are filtered in SQL via showAiTranslations param
+  // AI translations are filtered in SQL via hideAiTranslations param
 
   const checkSubscribedGamesStatus = useStore(
     (state) => state.checkSubscribedGamesStatus
@@ -80,7 +80,7 @@ export function useGames({
         const installedGames = await window.electronAPI.fetchGamesByIds(
           installedGameIds,
           searchQuery || undefined,
-          showAiTranslations
+          hideAiTranslations
         );
 
         // Перевірити чи запит ще актуальний
@@ -108,7 +108,7 @@ export function useGames({
         const result = await window.electronAPI.findGamesByInstallPaths(
           installPaths,
           searchQuery || undefined,
-          showAiTranslations
+          hideAiTranslations
         );
 
         // Перевірити чи запит ще актуальний
@@ -126,7 +126,7 @@ export function useGames({
           statuses: selectedStatuses,
           authors: selectedAuthors,
           sortOrder,
-          showAiTranslations,
+          hideAiTranslations,
         };
 
         const result = await window.electronAPI.fetchGames(params);
@@ -150,7 +150,7 @@ export function useGames({
         statuses: selectedStatuses,
         authors: selectedAuthors,
         sortOrder,
-        showAiTranslations,
+        hideAiTranslations,
       };
 
       const result = await window.electronAPI.fetchGames(params);
@@ -182,7 +182,7 @@ export function useGames({
     selectedStatuses,
     selectedAuthors,
     sortOrder,
-    showAiTranslations,
+    hideAiTranslations,
   ]);
 
   /**

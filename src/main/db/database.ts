@@ -129,7 +129,7 @@ export class DatabaseManager {
         epic_archive_hash TEXT,
         epic_archive_path TEXT,
         epic_archive_size TEXT,
-        ai INTEGER NOT NULL DEFAULT 0,
+        ai TEXT,
         hide INTEGER NOT NULL DEFAULT 0
       );
 
