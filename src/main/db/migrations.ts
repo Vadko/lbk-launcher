@@ -543,7 +543,7 @@ const migrations: Migration[] = [
           hide INTEGER NOT NULL DEFAULT 0
         );
 
-        -- Copy data, converting ai: 0 -> NULL, 1 -> 'non-edited'
+        -- Copy data, converting ai: 0 -> NULL, 1 -> 'edited'
         INSERT INTO games_new SELECT
           id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
           banner_path, capsule_path, created_at, created_by, description, discord, downloads,
@@ -555,7 +555,7 @@ const migrations: Migration[] = [
           voice_archive_size, voice_progress, achievements_archive_hash, achievements_archive_path,
           achievements_archive_size, achievements_third_party, additional_path, steam_app_id,
           website, youtube, epic_archive_hash, epic_archive_path, epic_archive_size,
-          CASE WHEN ai = 1 THEN 'non-edited' ELSE NULL END,
+          CASE WHEN ai = 1 THEN 'edited' ELSE NULL END,
           hide
         FROM games;
 
