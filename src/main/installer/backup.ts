@@ -150,6 +150,11 @@ export async function restoreBackupNew(
       if (hasBackupDir) {
         const newBackupPath = path.join(backupDir, relativePath);
         if (fs.existsSync(newBackupPath)) {
+          // Ensure target directory exists (it may have been deleted during file cleanup)
+          const targetDir = path.dirname(targetPath);
+          if (!fs.existsSync(targetDir)) {
+            await fs.promises.mkdir(targetDir, { recursive: true });
+          }
           // Restore the original file from backup directory
           await fs.promises.copyFile(newBackupPath, targetPath);
           // Delete the backup file
@@ -163,6 +168,11 @@ export async function restoreBackupNew(
       // Fall back to legacy format (file_backup suffix)
       const legacyBackupPath = targetPath + BACKUP_SUFFIX;
       if (fs.existsSync(legacyBackupPath)) {
+        // Ensure target directory exists (it may have been deleted during file cleanup)
+        const legacyTargetDir = path.dirname(targetPath);
+        if (!fs.existsSync(legacyTargetDir)) {
+          await fs.promises.mkdir(legacyTargetDir, { recursive: true });
+        }
         // Restore the original file from legacy backup
         await fs.promises.copyFile(legacyBackupPath, targetPath);
         // Delete the backup file
