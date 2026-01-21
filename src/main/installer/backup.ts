@@ -104,7 +104,13 @@ export async function restoreBackupLegacy(
   targetDir: string
 ): Promise<void> {
   try {
+    if (!fs.existsSync(backupDir)) {
+      console.log(`[Restore] Backup directory does not exist: ${backupDir}`);
+      return;
+    }
+
     const entries = await readdir(backupDir, { withFileTypes: true });
+    let restoredCount = 0;
 
     for (const entry of entries) {
       const backupPath = path.join(backupDir, entry.name);
@@ -114,13 +120,28 @@ export async function restoreBackupLegacy(
         // Recursively restore subdirectory
         await restoreBackupLegacy(backupPath, targetPath);
       } else {
+        // Check if backup file still exists before restoring
+        if (!fs.existsSync(backupPath)) {
+          console.warn(`[Restore] Backup file missing, skipping: ${entry.name}`);
+          continue;
+        }
+
+        // Ensure target directory exists
+        const targetDirPath = path.dirname(targetPath);
+        if (!fs.existsSync(targetDirPath)) {
+          await fs.promises.mkdir(targetDirPath, { recursive: true });
+        }
+
         // Restore file
         await fs.promises.copyFile(backupPath, targetPath);
         console.log(`[Restore] Restored (legacy): ${entry.name}`);
+        restoredCount++;
       }
     }
 
-    console.log('[Restore] Legacy restore completed');
+    if (restoredCount > 0) {
+      console.log(`[Restore] Legacy restore completed: ${restoredCount} files`);
+    }
   } catch (error) {
     console.error('[Restore] Error restoring backup:', error);
     throw new Error(
@@ -210,6 +231,7 @@ export async function restoreBackupNew(
 
 /**
  * Clean up empty directories recursively
+ * Skips backup directory to preserve backup structure
  */
 export async function cleanupEmptyDirectories(
   dir: string,
@@ -218,19 +240,29 @@ export async function cleanupEmptyDirectories(
   try {
     if (!fs.existsSync(dir)) return;
 
+    // Never clean up inside backup directory
+    if (dir.includes(BACKUP_DIR_NAME) || path.basename(dir) === BACKUP_DIR_NAME) {
+      return;
+    }
+
     const entries = await readdir(dir, { withFileTypes: true });
 
-    // Recursively clean subdirectories first
+    // Recursively clean subdirectories first (skip backup dir)
     for (const entry of entries) {
-      if (entry.isDirectory()) {
+      if (entry.isDirectory() && entry.name !== BACKUP_DIR_NAME) {
         const subDir = path.join(dir, entry.name);
         await cleanupEmptyDirectories(subDir, rootDir);
       }
     }
 
-    // Check if directory is now empty
+    // Check if directory is now empty (ignore backup dir when counting)
     const remainingEntries = await readdir(dir);
-    if (remainingEntries.length === 0 && dir !== rootDir) {
+    const nonBackupEntries = remainingEntries.filter((e) => e !== BACKUP_DIR_NAME);
+    if (nonBackupEntries.length === 0 && dir !== rootDir) {
+      // Don't delete if only backup dir remains
+      if (remainingEntries.length > 0) {
+        return;
+      }
       await fs.promises.rmdir(dir);
       console.log(`[Cleanup] Deleted empty directory: ${path.relative(rootDir, dir)}`);
     }

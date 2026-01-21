@@ -829,19 +829,30 @@ async function restoreOrDeleteFile(
 
 /**
  * Delete file and clean up empty parent directories
+ * Protects backup directory from accidental deletion
  */
 async function deleteFileAndCleanupDirs(
   filePath: string,
   rootDir: string
 ): Promise<void> {
   try {
+    // Never delete files inside backup directory
+    if (filePath.includes(BACKUP_DIR_NAME)) {
+      console.warn(`[Installer] Skipping deletion of backup file: ${filePath}`);
+      return;
+    }
+
     if (fs.existsSync(filePath)) {
       await unlink(filePath);
       console.log(`[Installer] Deleted: ${path.relative(rootDir, filePath)}`);
 
-      // Clean up empty parent directories
+      // Clean up empty parent directories (but never the backup dir)
       let dirPath = path.dirname(filePath);
       while (dirPath !== rootDir) {
+        // Never remove backup directory
+        if (dirPath.includes(BACKUP_DIR_NAME) || path.basename(dirPath) === BACKUP_DIR_NAME) {
+          break;
+        }
         try {
           const entries = await readdir(dirPath);
           if (entries.length === 0) {
