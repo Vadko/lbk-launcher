@@ -850,7 +850,10 @@ async function deleteFileAndCleanupDirs(
       let dirPath = path.dirname(filePath);
       while (dirPath !== rootDir) {
         // Never remove backup directory
-        if (dirPath.includes(BACKUP_DIR_NAME) || path.basename(dirPath) === BACKUP_DIR_NAME) {
+        if (
+          dirPath.includes(BACKUP_DIR_NAME) ||
+          path.basename(dirPath) === BACKUP_DIR_NAME
+        ) {
           break;
         }
         try {
