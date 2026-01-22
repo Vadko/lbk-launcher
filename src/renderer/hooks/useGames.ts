@@ -172,6 +172,29 @@ export function useGames({
         return;
       }
 
+      // Спеціальна обробка для ігор з озвученням
+      if (specialFilter === 'with-voice') {
+        const params: GetGamesParams = {
+          searchQuery,
+          statuses: selectedStatuses,
+          authors: selectedAuthors,
+          sortOrder,
+          hideAiTranslations,
+        };
+
+        const result = await window.electronAPI.fetchGames(params);
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        // Filter games that have voice archive
+        const withVoice = result.games.filter((game) => !!game.voice_archive_path);
+
+        setGames(withVoice);
+        setTotal(withVoice.length);
+        return;
+      }
+
       // Для інших фільтрів - завантажити всі ігри одразу
       const params: GetGamesParams = {
         searchQuery,
@@ -305,6 +328,18 @@ export function useGames({
             return prevGames;
           }
           // Якщо гра має переклад досягнень - продовжити перевірку інших фільтрів
+        }
+
+        if (specialFilter === 'with-voice') {
+          if (!updatedGame.voice_archive_path) {
+            // Якщо у гри зникло озвучення - видалити зі списку
+            if (index !== -1) {
+              setTotal((prev) => prev - 1);
+              return prevGames.filter((g) => g.id !== updatedGame.id);
+            }
+            return prevGames;
+          }
+          // Якщо гра має озвучення - продовжити перевірку інших фільтрів
         }
 
         // Перевірити чи гра відповідає поточному фільтру пошуку

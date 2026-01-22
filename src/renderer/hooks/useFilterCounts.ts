@@ -12,6 +12,7 @@ const INITIAL_COUNTS: FilterCounts = {
   'installed-games': 0,
   'available-in-steam': 0,
   'with-achievements': 0,
+  'with-voice': 0,
   planned: 0,
   'in-progress': 0,
   completed: 0,
@@ -40,7 +41,7 @@ export function useFilterCounts() {
       const [installedGamesResult, steamLibraryCount] = await Promise.all([
         installedPaths.length > 0
           ? window.electronAPI.findGamesByInstallPaths(installedPaths)
-          : Promise.resolve({ games: [], total: 0 }),
+          : Promise.resolve({ games: [], total: 0, uniqueCount: 0 }),
         steamLibraryAppIds.length > 0
           ? window.electronAPI.countGamesBySteamAppIds(steamLibraryAppIds)
           : Promise.resolve(0),
@@ -51,7 +52,7 @@ export function useFilterCounts() {
       setCounts({
         ...sqlCounts,
         'installed-translations': installedIds.length,
-        'installed-games': installedGamesResult.games.length,
+        'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
         'available-in-steam': steamLibraryCount,
       });
     } catch (err) {

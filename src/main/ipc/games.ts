@@ -88,6 +88,7 @@ export function setupGamesHandlers(): void {
         'in-progress': 0,
         completed: 0,
         'with-achievements': 0,
+        'with-voice': 0,
       };
     }
   });

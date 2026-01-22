@@ -46,7 +46,11 @@ export function readSteamLibraryCache(): SteamLibraryCache | null {
     const cache = JSON.parse(content) as SteamLibraryCache;
 
     // Validate cache structure
-    if (!cache.steamId || !Array.isArray(cache.appIds) || typeof cache.licensecacheSize !== 'number') {
+    if (
+      !cache.steamId ||
+      !Array.isArray(cache.appIds) ||
+      typeof cache.licensecacheSize !== 'number'
+    ) {
       console.log('[SteamLibraryAPI] Invalid cache structure, ignoring');
       return null;
     }

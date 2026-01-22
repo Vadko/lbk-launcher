@@ -61,7 +61,13 @@ export function fetchFilterCounts(): FilterCountsResult {
     return gamesRepo.getFilterCounts();
   } catch (error) {
     console.error('[API] Error fetching filter counts:', error);
-    return { planned: 0, 'in-progress': 0, completed: 0, 'with-achievements': 0 };
+    return {
+      planned: 0,
+      'in-progress': 0,
+      completed: 0,
+      'with-achievements': 0,
+      'with-voice': 0,
+    };
   }
 }
 

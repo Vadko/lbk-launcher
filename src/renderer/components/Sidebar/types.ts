@@ -15,7 +15,8 @@ export type SpecialFilterType =
   | 'installed-translations'
   | 'installed-games'
   | 'available-in-steam'
-  | 'with-achievements';
+  | 'with-achievements'
+  | 'with-voice';
 
 export type SortOrderType = 'name' | 'downloads';
 
@@ -42,6 +43,7 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Встановлені ігри', value: 'installed-games' },
   { label: 'Доступно зі Steam', value: 'available-in-steam' },
   { label: 'З перекладом досягнень', value: 'with-achievements' },
+  { label: 'З озвученням', value: 'with-voice' },
 ];
 
 export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [

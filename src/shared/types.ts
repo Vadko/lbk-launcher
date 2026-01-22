@@ -87,6 +87,7 @@ export interface GetGamesParams {
 export interface GetGamesResult {
   games: Game[];
   total: number;
+  uniqueCount?: number; // Count of unique games by slug (for filters)
 }
 
 export interface FilterCountsResult {
@@ -94,6 +95,7 @@ export interface FilterCountsResult {
   'in-progress': number;
   completed: number;
   'with-achievements': number;
+  'with-voice': number;
 }
 
 export interface DetectedGameInfo {
