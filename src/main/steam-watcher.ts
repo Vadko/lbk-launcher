@@ -2,21 +2,29 @@ import type { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+  getLastKnownLicensecacheSize,
+  getLicensecachePath,
+  getLicensecacheSize,
   getSteamPath,
   invalidateSteamGamesCache,
+  invalidateSteamLibraryAppIdsCache,
   invalidateSteamPathCache,
+  updateLastKnownLicensecacheSize,
 } from './game-detector';
 import { parseLibraryFolders } from './utils/vdf-parser';
 
 let libraryFoldersWatcher: fs.FSWatcher | null = null;
 let steamappsWatchers: fs.FSWatcher[] = [];
+let licensecacheWatcher: fs.FSWatcher | null = null;
 
-// Debounce timer to avoid multiple rapid notifications
+// Debounce timers to avoid multiple rapid notifications
 let debounceTimer: NodeJS.Timeout | null = null;
+let licensecacheDebounceTimer: NodeJS.Timeout | null = null;
 const DEBOUNCE_DELAY = 2000; // 2 seconds
 
 /**
  * Notify renderer about Steam library changes (debounced)
+ * Used for appmanifest changes (game install/uninstall)
  */
 function notifyLibraryChanged(mainWindow: BrowserWindow | null): void {
   if (debounceTimer) {
@@ -27,8 +35,36 @@ function notifyLibraryChanged(mainWindow: BrowserWindow | null): void {
     console.log('[SteamWatcher] Notifying renderer about Steam library changes');
     invalidateSteamPathCache();
     invalidateSteamGamesCache();
+    invalidateSteamLibraryAppIdsCache();
     mainWindow?.webContents.send('steam-library-changed');
     debounceTimer = null;
+  }, DEBOUNCE_DELAY);
+}
+
+/**
+ * Notify renderer about Steam owned games changes (debounced)
+ * Used for licensecache changes (game purchase/refund)
+ */
+function notifyOwnedGamesChanged(mainWindow: BrowserWindow | null): void {
+  if (licensecacheDebounceTimer) {
+    clearTimeout(licensecacheDebounceTimer);
+  }
+
+  licensecacheDebounceTimer = setTimeout(() => {
+    const currentSize = getLicensecacheSize();
+    const lastKnownSize = getLastKnownLicensecacheSize();
+
+    // Only notify if size actually changed
+    if (currentSize !== null && currentSize !== lastKnownSize) {
+      console.log(
+        `[SteamWatcher] licensecache size changed: ${lastKnownSize} -> ${currentSize}`
+      );
+      updateLastKnownLicensecacheSize(currentSize);
+      invalidateSteamLibraryAppIdsCache();
+      mainWindow?.webContents.send('steam-library-changed');
+    }
+
+    licensecacheDebounceTimer = null;
   }, DEBOUNCE_DELAY);
 }
 
@@ -87,6 +123,38 @@ function watchSteamappsFolder(
 }
 
 /**
+ * Start watching licensecache for owned games changes (purchase/refund)
+ */
+function watchLicensecache(mainWindow: BrowserWindow | null): fs.FSWatcher | null {
+  const licensecachePath = getLicensecachePath();
+  if (!licensecachePath || !fs.existsSync(licensecachePath)) {
+    console.log('[SteamWatcher] licensecache not found, skipping watcher');
+    return null;
+  }
+
+  // Initialize last known size
+  const initialSize = getLicensecacheSize();
+  if (initialSize !== null) {
+    updateLastKnownLicensecacheSize(initialSize);
+  }
+
+  try {
+    const watcher = fs.watch(licensecachePath, (eventType) => {
+      if (eventType === 'change') {
+        console.log('[SteamWatcher] licensecache changed');
+        notifyOwnedGamesChanged(mainWindow);
+      }
+    });
+
+    console.log(`[SteamWatcher] Watching licensecache at ${licensecachePath}`);
+    return watcher;
+  } catch (error) {
+    console.error('[SteamWatcher] Error watching licensecache:', error);
+    return null;
+  }
+}
+
+/**
  * Start watching Steam library for changes
  * Watches both libraryfolders.vdf and steamapps folders for appmanifest changes
  */
@@ -127,8 +195,12 @@ export function startSteamWatcher(mainWindow: BrowserWindow | null): void {
     }
   }
 
+  // Watch licensecache for owned games changes (purchase/refund)
+  licensecacheWatcher = watchLicensecache(mainWindow);
+
   console.log(
-    `[SteamWatcher] Watching ${steamappsWatchers.length} steamapps folder(s) + libraryfolders.vdf`
+    `[SteamWatcher] Watching ${steamappsWatchers.length} steamapps folder(s) + libraryfolders.vdf` +
+      (licensecacheWatcher ? ' + licensecache' : '')
   );
 }
 
@@ -141,9 +213,19 @@ export function stopSteamWatcher(): void {
     debounceTimer = null;
   }
 
+  if (licensecacheDebounceTimer) {
+    clearTimeout(licensecacheDebounceTimer);
+    licensecacheDebounceTimer = null;
+  }
+
   if (libraryFoldersWatcher) {
     libraryFoldersWatcher.close();
     libraryFoldersWatcher = null;
+  }
+
+  if (licensecacheWatcher) {
+    licensecacheWatcher.close();
+    licensecacheWatcher = null;
   }
 
   for (const watcher of steamappsWatchers) {

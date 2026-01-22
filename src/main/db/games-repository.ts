@@ -358,6 +358,74 @@ export class GamesRepository {
   }
 
   /**
+   * Знайти ігри за Steam App IDs
+   */
+  findGamesBySteamAppIds(
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations = false
+  ): GetGamesResult {
+    if (steamAppIds.length === 0) {
+      return { games: [], total: 0 };
+    }
+
+    const whereConditions = [
+      'approved = 1',
+      'hide = 0',
+      'steam_app_id IS NOT NULL',
+      `steam_app_id IN (${steamAppIds.map(() => '?').join(',')})`,
+    ];
+    const queryParams: (string | number)[] = [...steamAppIds];
+
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
+    }
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(
+        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+      );
+      queryParams.push(ftsQuery);
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT *
+      FROM games
+      WHERE ${whereConditions.join(' AND ')}
+      ORDER BY name ASC
+    `);
+
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const games = rows.map((row) => this.rowToGame(row));
+
+    return { games, total: games.length };
+  }
+
+  /**
+   * Підрахувати кількість ігор доступних зі Steam бібліотеки
+   */
+  countGamesBySteamAppIds(steamAppIds: number[]): number {
+    if (steamAppIds.length === 0) {
+      return 0;
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM games
+      WHERE approved = 1
+        AND hide = 0
+        AND steam_app_id IS NOT NULL
+        AND steam_app_id IN (${steamAppIds.map(() => '?').join(',')})
+    `);
+
+    const result = stmt.get(...steamAppIds) as { count: number };
+    return result.count;
+  }
+
+  /**
    * Синхронізувати FTS індекс для гри
    */
   private syncFts(gameId: string, nameSearch: string): void {

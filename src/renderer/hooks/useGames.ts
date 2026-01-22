@@ -119,6 +119,34 @@ export function useGames({
         return;
       }
 
+      // Спеціальна обробка для ігор доступних зі Steam бібліотеки
+      if (specialFilter === 'available-in-steam') {
+        const steamLibraryAppIds = await window.electronAPI.getSteamLibraryAppIds();
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        if (steamLibraryAppIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Отримати ігри за Steam App IDs (з SQL фільтрацією пошуку та AI)
+        const result = await window.electronAPI.findGamesBySteamAppIds(
+          steamLibraryAppIds,
+          searchQuery || undefined,
+          hideAiTranslations
+        );
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        setGames(result.games);
+        setTotal(result.total);
+        return;
+      }
+
       // Спеціальна обробка для ігор з перекладом досягнень
       if (specialFilter === 'with-achievements') {
         const params: GetGamesParams = {
@@ -250,11 +278,12 @@ export function useGames({
           }
         }
 
-        // Для спеціальних фільтрів (installed-games, installed-translations)
+        // Для спеціальних фільтрів (installed-games, installed-translations, available-in-steam)
         // просто оновлюємо дані гри якщо вона вже в списку, не додаємо/видаляємо
         if (
           specialFilter === 'installed-games' ||
-          specialFilter === 'installed-translations'
+          specialFilter === 'installed-translations' ||
+          specialFilter === 'available-in-steam'
         ) {
           if (index !== -1) {
             // Гра є в списку - оновити дані
@@ -365,15 +394,16 @@ export function useGames({
     return unsubscribe;
   }, [specialFilter, loadGames]);
 
-  // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор)
+  // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор та доступних зі Steam)
   // Перереєструємо listener при зміні specialFilter для коректної роботи closure
   useEffect(() => {
     if (!window.electronAPI?.onSteamLibraryChanged) return;
     // Підписуємось тільки якщо активний відповідний фільтр
-    if (specialFilter !== 'installed-games') return;
+    if (specialFilter !== 'installed-games' && specialFilter !== 'available-in-steam')
+      return;
 
     const handleSteamLibraryChanged = () => {
-      console.log('[useGames] Steam library changed, reloading installed games list');
+      console.log('[useGames] Steam library changed, reloading list');
       loadGames();
     };
 

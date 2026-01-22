@@ -14,6 +14,7 @@ type StatusType = Database['public']['Enums']['game_status'];
 export type SpecialFilterType =
   | 'installed-translations'
   | 'installed-games'
+  | 'available-in-steam'
   | 'with-achievements';
 
 export type SortOrderType = 'name' | 'downloads';
@@ -39,6 +40,7 @@ export const STATUS_OPTIONS: StatusFilterOption[] = [
 export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Встановлені українізатори', value: 'installed-translations' },
   { label: 'Встановлені ігри', value: 'installed-games' },
+  { label: 'Доступно зі Steam', value: 'available-in-steam' },
   { label: 'З перекладом досягнень', value: 'with-achievements' },
 ];
 

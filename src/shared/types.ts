@@ -127,6 +127,13 @@ export interface ElectronAPI {
     searchQuery?: string,
     showAiTranslations?: boolean
   ) => Promise<GetGamesResult>;
+  getSteamLibraryAppIds: () => Promise<number[]>;
+  findGamesBySteamAppIds: (
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean
+  ) => Promise<GetGamesResult>;
+  countGamesBySteamAppIds: (steamAppIds: number[]) => Promise<number>;
   installTranslation: (
     game: Game,
     platform: string,
