@@ -794,6 +794,30 @@ export type Database = {
         }
         Relationships: []
       }
+      steam_library_rate_limits: {
+        Row: {
+          created_at: string
+          machine_id: string
+          request_count: number
+          reset_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          machine_id: string
+          request_count?: number
+          reset_date?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          machine_id?: string
+          request_count?: number
+          reset_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       steam_sync_metadata: {
         Row: {
           id: number
@@ -983,6 +1007,11 @@ export type Database = {
           next_available_at: string
         }[]
       }
+      check_steam_library_rate_limit: {
+        Args: { p_daily_limit?: number; p_machine_id: string }
+        Returns: number
+      }
+      cleanup_steam_library_rate_limits: { Args: never; Returns: number }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
         Args: { p_date?: string }
