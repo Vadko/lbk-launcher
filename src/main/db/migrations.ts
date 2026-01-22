@@ -471,6 +471,21 @@ const migrations: Migration[] = [
         return;
       }
 
+      // Check if ai column is already TEXT (for new databases created with correct schema)
+      const aiColumnInfo = db
+        .prepare("SELECT type FROM pragma_table_info('games') WHERE name='ai'")
+        .get() as { type: string } | undefined;
+
+      if (aiColumnInfo?.type === 'TEXT') {
+        // Column is already TEXT, just mark migration as done
+        console.log('[Migrations] ai column is already TEXT, skipping change_ai_to_text');
+        db.exec(`
+          INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+          VALUES ('migration_ai_to_text_done', '1', datetime('now'))
+        `);
+        return;
+      }
+
       console.log('[Migrations] Running: change_ai_to_text');
 
       // SQLite doesn't support ALTER COLUMN to remove NOT NULL constraint
@@ -608,6 +623,33 @@ const migrations: Migration[] = [
       `);
       console.log(
         '[Migrations] Completed: resync_for_ai_text_fix - will resync on next startup'
+      );
+    },
+  },
+  {
+    name: 'resync_for_ai_migration_fix_v2',
+    up: (db) => {
+      // This migration fixes the issue where change_ai_to_text migration
+      // was incorrectly converting TEXT 'edited'/'non-edited' values to NULL
+      // because it compared TEXT with INTEGER (ai = 1)
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_ai_fix_v2_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_ai_migration_fix_v2');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_ai_fix_v2_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_ai_migration_fix_v2 - will resync on next startup'
       );
     },
   },

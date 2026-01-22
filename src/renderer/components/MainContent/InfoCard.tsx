@@ -60,7 +60,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-head font-semibold text-text-main">Інформація</h3>
         <div className="flex items-center gap-2">
-          {game.ai && (
+          {(game.ai === 'edited' || game.ai === 'non-edited') && (
             <Tooltip
               content={
                 game.ai === 'edited'

@@ -138,7 +138,7 @@ export class GamesRepository {
       steam_app_id: game.steam_app_id ?? null,
       website: game.website ?? null,
       youtube: game.youtube ?? null,
-      ai: game.ai, // ai тепер текстове: 'edited' | 'non-edited' | null
+      ai: game.ai ?? null,
       hide: game.hide ? 1 : 0,
     };
   }

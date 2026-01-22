@@ -109,7 +109,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {hasUpdate && (
               <div className="absolute top-2 right-2 w-3 h-3 bg-neon-blue rounded-full animate-pulse" />
             )}
-            {game.ai && (
+            {(game.ai === 'edited' || game.ai === 'non-edited') && (
               <div
                 className="absolute top-2 left-2 p-1 bg-purple-500/80 rounded"
                 title={
@@ -198,7 +198,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {hasUpdate && (
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-neon-blue rounded-full border-2 border-bg-dark animate-pulse z-10" />
           )}
-          {game.ai && (
+          {(game.ai === 'edited' || game.ai === 'non-edited') && (
             <div
               className="absolute -top-1 -left-1 p-0.5 bg-purple-500 rounded border-2 border-bg-dark z-10"
               title={game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'}
