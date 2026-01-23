@@ -3,7 +3,7 @@
  * Unified logic for launching and restarting Steam across platforms
  */
 
-import { type ChildProcess, exec, spawn } from 'child_process';
+import { type ChildProcess, exec, execSync, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { promisify } from 'util';
@@ -42,7 +42,7 @@ function detectLinuxSteamType(): SteamInstallationType {
 
   // Check if native steam command exists
   try {
-    require('child_process').execSync('which steam', { stdio: 'ignore' });
+    execSync('which steam', { stdio: 'ignore' });
     return 'native';
   } catch {
     return 'unknown';
@@ -205,9 +205,9 @@ async function launchSteamLinux(url?: string): Promise<boolean> {
 }
 
 /**
- * Launch Steam (cross-platform)
+ * Launch Steam (cross-platform) (internal)
  */
-export async function launchSteam(url?: string): Promise<boolean> {
+async function launchSteam(url?: string): Promise<boolean> {
   if (isLinux()) {
     return launchSteamLinux(url);
   }
