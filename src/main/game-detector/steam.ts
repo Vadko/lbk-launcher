@@ -204,18 +204,18 @@ function detectSteamPathLinux(): string | null {
 // ============================================================================
 
 /**
- * Convert Steam64 ID to Steam3 ID
+ * Convert Steam64 ID to Steam3 ID (internal)
  */
-export function steam64ToSteam3(steam64Id: string): string {
+function steam64ToSteam3(steam64Id: string): string {
   const steam64 = BigInt(steam64Id);
   const steam3 = steam64 - BigInt('76561197960265728');
   return steam3.toString();
 }
 
 /**
- * Get the current Steam3 user ID (active/most recent user)
+ * Get the current Steam3 user ID (active/most recent user) (internal)
  */
-export function getCurrentSteamUserId(): string | null {
+function getCurrentSteamUserId(): string | null {
   const steamPath = getSteamPath();
   if (!steamPath) return null;
 
@@ -313,9 +313,9 @@ export function updateLastKnownLicensecacheSize(size: number | null): void {
 // ============================================================================
 
 /**
- * Get Steam library folders (with caching)
+ * Get Steam library folders (with caching) (internal)
  */
-export function getSteamLibraryFolders(steamPath: string): string[] {
+function getSteamLibraryFolders(steamPath: string): string[] {
   if (cache.libraryFolders?.steamPath === steamPath) {
     return cache.libraryFolders.folders;
   }

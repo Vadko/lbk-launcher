@@ -10,7 +10,7 @@ import { getMachineId } from './tracking';
 const SUPABASE_URL = 'https://supabase.lbklauncher.com';
 const EDGE_FUNCTION_PATH = '/functions/v1/steam-library';
 
-export interface SteamLibraryCache {
+interface SteamLibraryCache {
   steamId: string;
   appIds: number[];
   licensecacheSize: number;

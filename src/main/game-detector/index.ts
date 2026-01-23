@@ -8,7 +8,7 @@ import { findEpicGame, getInstalledEpicGamePaths } from './epic';
 import { findGOGGame, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
 import { findSteamGame, getInstalledSteamGamePaths } from './steam';
-import type { GamePath } from './types';
+import type { GamePath } from './types'; // Used locally
 
 // ============================================================================
 // Re-exports
@@ -17,7 +17,6 @@ import type { GamePath } from './types';
 // Steam
 export {
   getAllInstalledSteamGames,
-  getCurrentSteamUserId,
   getLastKnownLicensecacheSize,
   getLicensecachePath,
   getLicensecacheSize,
@@ -26,11 +25,8 @@ export {
   invalidateSteamGamesCache,
   invalidateSteamLibraryAppIdsCache,
   invalidateSteamPathCache,
-  steam64ToSteam3,
   updateLastKnownLicensecacheSize,
 } from './steam';
-// Types
-export type { GamePath } from './types';
 
 // ============================================================================
 // Main Detection Logic
