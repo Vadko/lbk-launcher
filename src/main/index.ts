@@ -64,6 +64,16 @@ if (isLinux()) {
   app.commandLine.appendSwitch('no-sandbox');
   // Enable gamepad support
   app.commandLine.appendSwitch('enable-gamepad-extensions');
+
+  // Check if running in Steam Deck Gaming Mode (Gamescope)
+  const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
+  if (isGamingMode) {
+    console.log('[Main] Detected Gaming Mode (Gamescope), applying GPU workarounds');
+    // Disable GPU compositing - speeds up startup significantly in Gamescope
+    // Software rendering is fast enough for this UI-only app
+    app.commandLine.appendSwitch('disable-gpu');
+    app.commandLine.appendSwitch('disable-software-rasterizer');
+  }
 }
 
 import { checkForUpdates, setupAutoUpdater } from './auto-updater';

@@ -17,6 +17,8 @@ export const Input: React.FC<InputProps> = ({
 }) => {
   // Track IME composition state to prevent double input on Steam Deck
   const isComposingRef = useRef(false);
+  // Track if we just ended composition to skip the duplicate onChange
+  const justEndedCompositionRef = useRef(false);
 
   return (
     <div className={`relative ${className}`}>
@@ -30,15 +32,23 @@ export const Input: React.FC<InputProps> = ({
         value={value}
         onChange={(e) => {
           // Skip onChange during IME composition to prevent double input
-          if (!isComposingRef.current) {
-            onChange(e.target.value);
+          if (isComposingRef.current) {
+            return;
           }
+          // Skip the onChange that fires right after onCompositionEnd
+          if (justEndedCompositionRef.current) {
+            justEndedCompositionRef.current = false;
+            return;
+          }
+          onChange(e.target.value);
         }}
         onCompositionStart={() => {
           isComposingRef.current = true;
+          justEndedCompositionRef.current = false;
         }}
         onCompositionEnd={(e) => {
           isComposingRef.current = false;
+          justEndedCompositionRef.current = true;
           // Fire onChange after composition ends with final value
           onChange(e.currentTarget.value);
         }}

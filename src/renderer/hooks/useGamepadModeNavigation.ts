@@ -607,24 +607,26 @@ export function useGamepadModeNavigation(enabled = true) {
       const activeElement = document.activeElement as HTMLElement;
       const isInputActive = isTextInput(activeElement);
 
-      // B button - if input is focused, blur it; otherwise handle normally
-      if (isButtonJustPressed(gp, BUTTON.B) && canInput('button-b')) {
-        if (isInputActive) {
-          // Exit input editing mode - blur and return focus to parent dropdown item
-          playBackSound();
-          activeElement.blur();
-          // Find parent dropdown item to focus
-          const parentDropdownItem = activeElement.closest<HTMLElement>(
-            '[data-gamepad-dropdown-item]'
-          );
-          if (parentDropdownItem) {
-            parentDropdownItem.focus();
-          } else {
-            setGamepadSelected(activeElement);
-          }
-          return;
+      // B button - if input is focused, blur it (use pressed instead of justPressed
+      // because Steam Deck keyboard consumes the first B press to close itself)
+      if (isInputActive && gp.buttons[BUTTON.B]?.pressed && canInput('input-blur-b')) {
+        // Exit input editing mode - blur and return focus to parent dropdown item
+        playBackSound();
+        activeElement.blur();
+        // Find parent dropdown item to focus
+        const parentDropdownItem = activeElement.closest<HTMLElement>(
+          '[data-gamepad-dropdown-item]'
+        );
+        if (parentDropdownItem) {
+          parentDropdownItem.focus();
+        } else {
+          setGamepadSelected(activeElement);
         }
+        return;
+      }
 
+      // B button - handle other cases (only on button press, not hold)
+      if (isButtonJustPressed(gp, BUTTON.B) && canInput('button-b')) {
         // If dropdown is open, close it
         if (isDropdownOpen()) {
           playBackSound();
