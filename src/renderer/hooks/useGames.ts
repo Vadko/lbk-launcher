@@ -10,7 +10,7 @@ interface UseGamesParams {
   specialFilter?: SpecialFilterType | null;
   searchQuery?: string;
   sortOrder?: 'name' | 'downloads' | 'newest';
-  showAiTranslations?: boolean;
+  hideAiTranslations?: boolean;
 }
 
 interface UseGamesResult {
@@ -31,10 +31,10 @@ export function useGames({
   specialFilter,
   searchQuery,
   sortOrder = 'name',
-  showAiTranslations = false,
+  hideAiTranslations = false,
 }: UseGamesParams): UseGamesResult {
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
-  // AI translations are filtered in SQL via showAiTranslations param
+  // AI translations are filtered in SQL via hideAiTranslations param
 
   const checkSubscribedGamesStatus = useStore(
     (state) => state.checkSubscribedGamesStatus
@@ -80,7 +80,7 @@ export function useGames({
         const installedGames = await window.electronAPI.fetchGamesByIds(
           installedGameIds,
           searchQuery || undefined,
-          showAiTranslations
+          hideAiTranslations
         );
 
         // Перевірити чи запит ще актуальний
@@ -108,7 +108,35 @@ export function useGames({
         const result = await window.electronAPI.findGamesByInstallPaths(
           installPaths,
           searchQuery || undefined,
-          showAiTranslations
+          hideAiTranslations
+        );
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        setGames(result.games);
+        setTotal(result.total);
+        return;
+      }
+
+      // Спеціальна обробка для ігор доступних зі Steam бібліотеки
+      if (specialFilter === 'available-in-steam') {
+        const steamLibraryAppIds = await window.electronAPI.getSteamLibraryAppIds();
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        if (steamLibraryAppIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Отримати ігри за Steam App IDs (з SQL фільтрацією пошуку та AI)
+        const result = await window.electronAPI.findGamesBySteamAppIds(
+          steamLibraryAppIds,
+          searchQuery || undefined,
+          hideAiTranslations
         );
 
         // Перевірити чи запит ще актуальний
@@ -126,7 +154,7 @@ export function useGames({
           statuses: selectedStatuses,
           authors: selectedAuthors,
           sortOrder,
-          showAiTranslations,
+          hideAiTranslations,
         };
 
         const result = await window.electronAPI.fetchGames(params);
@@ -144,13 +172,36 @@ export function useGames({
         return;
       }
 
+      // Спеціальна обробка для ігор з озвученням
+      if (specialFilter === 'with-voice') {
+        const params: GetGamesParams = {
+          searchQuery,
+          statuses: selectedStatuses,
+          authors: selectedAuthors,
+          sortOrder,
+          hideAiTranslations,
+        };
+
+        const result = await window.electronAPI.fetchGames(params);
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        // Filter games that have voice archive
+        const withVoice = result.games.filter((game) => !!game.voice_archive_path);
+
+        setGames(withVoice);
+        setTotal(withVoice.length);
+        return;
+      }
+
       // Для інших фільтрів - завантажити всі ігри одразу
       const params: GetGamesParams = {
         searchQuery,
         statuses: selectedStatuses,
         authors: selectedAuthors,
         sortOrder,
-        showAiTranslations,
+        hideAiTranslations,
       };
 
       const result = await window.electronAPI.fetchGames(params);
@@ -182,7 +233,7 @@ export function useGames({
     selectedStatuses,
     selectedAuthors,
     sortOrder,
-    showAiTranslations,
+    hideAiTranslations,
   ]);
 
   /**
@@ -250,11 +301,12 @@ export function useGames({
           }
         }
 
-        // Для спеціальних фільтрів (installed-games, installed-translations)
+        // Для спеціальних фільтрів (installed-games, installed-translations, available-in-steam)
         // просто оновлюємо дані гри якщо вона вже в списку, не додаємо/видаляємо
         if (
           specialFilter === 'installed-games' ||
-          specialFilter === 'installed-translations'
+          specialFilter === 'installed-translations' ||
+          specialFilter === 'available-in-steam'
         ) {
           if (index !== -1) {
             // Гра є в списку - оновити дані
@@ -276,6 +328,18 @@ export function useGames({
             return prevGames;
           }
           // Якщо гра має переклад досягнень - продовжити перевірку інших фільтрів
+        }
+
+        if (specialFilter === 'with-voice') {
+          if (!updatedGame.voice_archive_path) {
+            // Якщо у гри зникло озвучення - видалити зі списку
+            if (index !== -1) {
+              setTotal((prev) => prev - 1);
+              return prevGames.filter((g) => g.id !== updatedGame.id);
+            }
+            return prevGames;
+          }
+          // Якщо гра має озвучення - продовжити перевірку інших фільтрів
         }
 
         // Перевірити чи гра відповідає поточному фільтру пошуку
@@ -366,15 +430,16 @@ export function useGames({
     return unsubscribe;
   }, [specialFilter, loadGames]);
 
-  // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор)
+  // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор та доступних зі Steam)
   // Перереєструємо listener при зміні specialFilter для коректної роботи closure
   useEffect(() => {
     if (!window.electronAPI?.onSteamLibraryChanged) return;
     // Підписуємось тільки якщо активний відповідний фільтр
-    if (specialFilter !== 'installed-games') return;
+    if (specialFilter !== 'installed-games' && specialFilter !== 'available-in-steam')
+      return;
 
     const handleSteamLibraryChanged = () => {
-      console.log('[useGames] Steam library changed, reloading installed games list');
+      console.log('[useGames] Steam library changed, reloading list');
       loadGames();
     };
 

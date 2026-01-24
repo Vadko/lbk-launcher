@@ -1,26 +1,25 @@
-import { exec, spawn } from 'child_process';
-import { app, ipcMain, shell } from 'electron';
-import { promisify } from 'util';
+import { app, ipcMain } from 'electron';
 import type { Game, GetGamesParams } from '../../shared/types';
 import {
+  countGamesBySteamAppIds,
   fetchFilterCounts,
   fetchGames,
   fetchGamesByIds,
   fetchTeams,
   findGamesByInstallPaths,
+  findGamesBySteamAppIds,
 } from '../api';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
+  getSteamLibraryAppIds,
 } from '../game-detector';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 import { getPlatform } from '../utils/platform';
-
-const execAsync = promisify(exec);
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function setupGamesHandlers(): void {
   // Version
@@ -61,9 +60,9 @@ export function setupGamesHandlers(): void {
   // Fetch games by IDs - SYNC
   ipcMain.handle(
     'fetch-games-by-ids',
-    (_, gameIds: string[], searchQuery?: string, showAiTranslations = false) => {
+    (_, gameIds: string[], searchQuery?: string, hideAiTranslations = false) => {
       try {
-        return fetchGamesByIds(gameIds, searchQuery, showAiTranslations);
+        return fetchGamesByIds(gameIds, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error fetching games by IDs:', error);
         return [];
@@ -92,6 +91,7 @@ export function setupGamesHandlers(): void {
         'in-progress': 0,
         completed: 0,
         'with-achievements': 0,
+        'with-voice': 0,
       };
     }
   });
@@ -141,15 +141,48 @@ export function setupGamesHandlers(): void {
   // Find games by install paths - SYNC
   ipcMain.handle(
     'find-games-by-install-paths',
-    (_, installPaths: string[], searchQuery?: string, showAiTranslations = false) => {
+    (_, installPaths: string[], searchQuery?: string, hideAiTranslations = false) => {
       try {
-        return findGamesByInstallPaths(installPaths, searchQuery, showAiTranslations);
+        return findGamesByInstallPaths(installPaths, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error finding games by install paths:', error);
         return { games: [], total: 0 };
       }
     }
   );
+
+  // Get Steam library App IDs (owned games, installed or not)
+  ipcMain.handle('get-steam-library-app-ids', async () => {
+    try {
+      return await getSteamLibraryAppIds();
+    } catch (error) {
+      console.error('Error getting Steam library App IDs:', error);
+      return [];
+    }
+  });
+
+  // Find games by Steam App IDs
+  ipcMain.handle(
+    'find-games-by-steam-app-ids',
+    (_, steamAppIds: number[], searchQuery?: string, hideAiTranslations = false) => {
+      try {
+        return findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations);
+      } catch (error) {
+        console.error('Error finding games by Steam App IDs:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
+
+  // Count games by Steam App IDs
+  ipcMain.handle('count-games-by-steam-app-ids', (_, steamAppIds: number[]) => {
+    try {
+      return countGamesBySteamAppIds(steamAppIds);
+    } catch (error) {
+      console.error('Error counting games by Steam App IDs:', error);
+      return 0;
+    }
+  });
 
   // Launch game
   ipcMain.handle('launch-game', async (_, game: Game) => {
@@ -181,89 +214,12 @@ export function setupGamesHandlers(): void {
 
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
-        // Try to find Steam App ID from the game path
         const { findSteamAppId } = await import('../game-launcher');
         const appId = await findSteamAppId(gamePath.path);
 
         if (appId) {
-          console.log('[LaunchGame] Launching via Steam protocol with App ID:', appId);
-          const { isLinux } = await import('../utils/platform');
-
-          if (isLinux()) {
-            // On Linux, detect Steam installation type and use appropriate command
-            const { spawn } = await import('child_process');
-            const { existsSync } = await import('fs');
-            const { homedir } = await import('os');
-            const steamUrl = `steam://rungameid/${appId}`;
-
-            // Detect Steam installation type
-            const home = homedir();
-            const isFlatpak = existsSync(`${home}/.var/app/com.valvesoftware.Steam`);
-            const isSnap = existsSync(`${home}/snap/steam`);
-
-            let launched = false;
-
-            if (isFlatpak) {
-              // Flatpak Steam
-              console.log('[LaunchGame] Detected Flatpak Steam installation');
-              try {
-                spawn('flatpak', ['run', 'com.valvesoftware.Steam', steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] Flatpak Steam launch failed:', err);
-              }
-            } else if (isSnap) {
-              // Snap Steam
-              console.log('[LaunchGame] Detected Snap Steam installation');
-              try {
-                spawn('snap', ['run', 'steam', steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] Snap Steam launch failed:', err);
-              }
-            }
-
-            // Try native steam command
-            if (!launched) {
-              console.log('[LaunchGame] Trying native Steam command');
-              try {
-                spawn('steam', [steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] Native Steam command failed:', err);
-              }
-            }
-
-            // Fallback to xdg-open
-            if (!launched) {
-              console.log('[LaunchGame] Trying xdg-open fallback');
-              try {
-                spawn('xdg-open', [steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] xdg-open failed:', err);
-              }
-            }
-
-            if (launched) {
-              return { success: true };
-            }
-          } else {
-            // On Windows/macOS, use shell.openExternal
-            const { shell } = await import('electron');
-            await shell.openExternal(`steam://rungameid/${appId}`);
+          const result = await launchSteamGame(appId);
+          if (result.success) {
             return { success: true };
           }
         }
@@ -284,44 +240,5 @@ export function setupGamesHandlers(): void {
   });
 
   // Restart Steam
-  ipcMain.handle('restart-steam', async () => {
-    console.log('[Steam] Restarting Steam...');
-
-    try {
-      switch (process.platform) {
-        case 'win32':
-          await execAsync('taskkill /F /IM steam.exe').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(1000);
-          await shell.openExternal('steam://');
-          break;
-
-        case 'linux':
-          await execAsync('pkill -TERM steam').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(2000);
-          spawn('steam', [], { detached: true, stdio: 'ignore' }).unref();
-          break;
-
-        case 'darwin':
-          await execAsync('pkill -f Steam').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(1000);
-          await shell.openExternal('steam://');
-          break;
-      }
-
-      console.log('[Steam] Steam restart initiated');
-      return { success: true };
-    } catch (error) {
-      console.error('[Steam] Failed to restart Steam:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
+  ipcMain.handle('restart-steam', () => restartSteam());
 }
