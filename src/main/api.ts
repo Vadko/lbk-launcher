@@ -61,6 +61,34 @@ export function fetchFilterCounts(): FilterCountsResult {
     return gamesRepo.getFilterCounts();
   } catch (error) {
     console.error('[API] Error fetching filter counts:', error);
-    return { planned: 0, 'in-progress': 0, completed: 0, 'with-achievements': 0 };
+    return {
+      planned: 0,
+      'in-progress': 0,
+      completed: 0,
+      'with-achievements': 0,
+      'with-voice': 0,
+    };
+  }
+}
+
+export function findGamesBySteamAppIds(
+  steamAppIds: number[],
+  searchQuery?: string,
+  hideAiTranslations = false
+): GetGamesResult {
+  try {
+    return gamesRepo.findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations);
+  } catch (error) {
+    console.error('[API] Error finding games by Steam App IDs:', error);
+    return { games: [], total: 0 };
+  }
+}
+
+export function countGamesBySteamAppIds(steamAppIds: number[]): number {
+  try {
+    return gamesRepo.countGamesBySteamAppIds(steamAppIds);
+  } catch (error) {
+    console.error('[API] Error counting games by Steam App IDs:', error);
+    return 0;
   }
 }

@@ -87,6 +87,7 @@ export interface GetGamesParams {
 export interface GetGamesResult {
   games: Game[];
   total: number;
+  uniqueCount?: number; // Count of unique games by slug (for filters)
 }
 
 export interface FilterCountsResult {
@@ -94,6 +95,7 @@ export interface FilterCountsResult {
   'in-progress': number;
   completed: number;
   'with-achievements': number;
+  'with-voice': number;
 }
 
 export interface DetectedGameInfo {
@@ -127,6 +129,13 @@ export interface ElectronAPI {
     searchQuery?: string,
     showAiTranslations?: boolean
   ) => Promise<GetGamesResult>;
+  getSteamLibraryAppIds: () => Promise<number[]>;
+  findGamesBySteamAppIds: (
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean
+  ) => Promise<GetGamesResult>;
+  countGamesBySteamAppIds: (steamAppIds: number[]) => Promise<number>;
   installTranslation: (
     game: Game,
     platform: string,

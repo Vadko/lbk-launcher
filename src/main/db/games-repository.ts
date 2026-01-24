@@ -183,7 +183,9 @@ export class GamesRepository {
 
     const whereClause = whereConditions.join(' AND ');
     const orderClause =
-      sortOrder === 'downloads' ? 'downloads DESC NULLS LAST, name ASC' : 'name ASC';
+      sortOrder === 'downloads'
+        ? 'downloads DESC NULLS LAST, name COLLATE NOCASE ASC'
+        : 'name COLLATE NOCASE ASC';
 
     const gamesStmt = this.db.prepare(`
       SELECT *
@@ -227,9 +229,9 @@ export class GamesRepository {
       })
       .filter((author) => author.length > 0);
 
-    // Get unique authors and sort alphabetically
+    // Get unique authors and sort alphabetically (case-insensitive)
     const uniqueAuthors = [...new Set(allAuthors)].sort((a, b) =>
-      a.localeCompare(b, 'uk')
+      a.localeCompare(b, 'uk', { sensitivity: 'base' })
     );
 
     return uniqueAuthors;
@@ -270,7 +272,7 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY name ASC
+      ORDER BY name COLLATE NOCASE ASC
     `);
 
     const rows = stmt.all(...queryParams) as Record<string, unknown>[];
@@ -350,11 +352,84 @@ export class GamesRepository {
       });
     });
 
-    matchedGames.sort((a, b) => a.name.localeCompare(b.name, 'uk'));
+    matchedGames.sort((a, b) =>
+      a.name.localeCompare(b.name, 'uk', { sensitivity: 'base' })
+    );
 
-    const total = matchedGames.length;
+    // Count unique games by slug (not total translations)
+    const uniqueCount = new Set(matchedGames.map((g) => g.slug || g.id)).size;
 
-    return { games: matchedGames, total };
+    return { games: matchedGames, total: matchedGames.length, uniqueCount };
+  }
+
+  /**
+   * Знайти ігри за Steam App IDs
+   * Повертає всі переклади, але total рахує унікальні ігри (за steam_app_id)
+   */
+  findGamesBySteamAppIds(
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations = false
+  ): GetGamesResult {
+    if (steamAppIds.length === 0) {
+      return { games: [], total: 0 };
+    }
+
+    const whereConditions = [
+      'approved = 1',
+      'hide = 0',
+      'steam_app_id IS NOT NULL',
+      `steam_app_id IN (${steamAppIds.map(() => '?').join(',')})`,
+    ];
+    const queryParams: (string | number)[] = [...steamAppIds];
+
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
+    }
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(
+        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+      );
+      queryParams.push(ftsQuery);
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT *
+      FROM games
+      WHERE ${whereConditions.join(' AND ')}
+      ORDER BY name COLLATE NOCASE ASC
+    `);
+
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const games = rows.map((row) => this.rowToGame(row));
+
+    return { games, total: games.length };
+  }
+
+  /**
+   * Підрахувати кількість унікальних ігор доступних зі Steam бібліотеки
+   * (рахує унікальні steam_app_id, щоб не дублювати ігри з кількома перекладами)
+   */
+  countGamesBySteamAppIds(steamAppIds: number[]): number {
+    if (steamAppIds.length === 0) {
+      return 0;
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT COUNT(DISTINCT steam_app_id) as count
+      FROM games
+      WHERE approved = 1
+        AND hide = 0
+        AND steam_app_id IS NOT NULL
+        AND steam_app_id IN (${steamAppIds.map(() => '?').join(',')})
+    `);
+
+    const result = stmt.get(...steamAppIds) as { count: number };
+    return result.count;
   }
 
   /**
@@ -493,19 +568,23 @@ export class GamesRepository {
 
   /**
    * Отримати лічильники для фільтрів (ефективний SQL запит з агрегацією)
+   * Рахує унікальні ігри за slug (або id якщо slug відсутній),
+   * щоб не дублювати ігри з кількома перекладами
    */
   getFilterCounts(): {
     planned: number;
     'in-progress': number;
     completed: number;
     'with-achievements': number;
+    'with-voice': number;
   } {
     const stmt = this.db.prepare(`
       SELECT
-        SUM(CASE WHEN status = 'planned' THEN 1 ELSE 0 END) as planned,
-        SUM(CASE WHEN status = 'in-progress' THEN 1 ELSE 0 END) as in_progress,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN 1 ELSE 0 END) as with_achievements
+        COUNT(DISTINCT CASE WHEN status = 'planned' THEN COALESCE(slug, id) END) as planned,
+        COUNT(DISTINCT CASE WHEN status = 'in-progress' THEN COALESCE(slug, id) END) as in_progress,
+        COUNT(DISTINCT CASE WHEN status = 'completed' THEN COALESCE(slug, id) END) as completed,
+        COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
+        COUNT(DISTINCT CASE WHEN voice_archive_path IS NOT NULL AND voice_archive_path != '' THEN COALESCE(slug, id) END) as with_voice
       FROM games
       WHERE approved = 1 AND hide = 0
     `);
@@ -515,6 +594,7 @@ export class GamesRepository {
       in_progress: number;
       completed: number;
       with_achievements: number;
+      with_voice: number;
     };
 
     return {
@@ -522,6 +602,7 @@ export class GamesRepository {
       'in-progress': row.in_progress || 0,
       completed: row.completed || 0,
       'with-achievements': row.with_achievements || 0,
+      'with-voice': row.with_voice || 0,
     };
   }
 }

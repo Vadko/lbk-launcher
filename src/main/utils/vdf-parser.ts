@@ -33,6 +33,36 @@ export function parseLibraryFolders(content: string): string[] {
 }
 
 /**
+ * Parse Steam localconfig.vdf file and extract all App IDs from user's library
+ * Path: userdata/<steamid>/config/localconfig.vdf
+ * Structure: UserLocalConfigStore.Software.Valve.Steam.apps.<appid>
+ * Returns all App IDs that user has ever launched (their full library)
+ */
+export function parseLocalConfigApps(content: string): number[] {
+  try {
+    const parsed = vdf.parse(content);
+    const appIds: number[] = [];
+
+    // Navigate to: UserLocalConfigStore.Software.Valve.Steam.apps
+    const apps = parsed?.UserLocalConfigStore?.Software?.Valve?.Steam?.apps;
+    if (!apps || typeof apps !== 'object') return [];
+
+    for (const appId of Object.keys(apps)) {
+      const parsedAppId = parseInt(appId, 10);
+      // Filter out system entries (0, 1, 2, 7) and invalid IDs
+      if (!isNaN(parsedAppId) && parsedAppId > 10) {
+        appIds.push(parsedAppId);
+      }
+    }
+
+    return appIds;
+  } catch (error) {
+    console.error('[VDFParser] Error parsing localconfig.vdf:', error);
+    return [];
+  }
+}
+
+/**
  * Parse Steam appmanifest file
  */
 interface AppManifest {
@@ -59,6 +89,45 @@ export function parseAppManifest(content: string): AppManifest | null {
     };
   } catch (error) {
     console.error('[VDFParser] Error parsing appmanifest:', error);
+    return null;
+  }
+}
+
+/**
+ * Parse Steam loginusers.vdf file and get the most recent (active) user
+ * Path: <steam_path>/config/loginusers.vdf
+ * Returns Steam64 ID of the most recent user, or null if not found
+ */
+export function parseMostRecentUser(content: string): string | null {
+  try {
+    const parsed = vdf.parse(content);
+    const users = parsed?.users;
+
+    if (!users || typeof users !== 'object') return null;
+
+    let mostRecentUser: string | null = null;
+    let highestTimestamp = 0;
+
+    for (const steam64Id of Object.keys(users)) {
+      const user = users[steam64Id];
+      if (!user || typeof user !== 'object') continue;
+
+      // Check MostRecent flag first (most reliable)
+      if (user.MostRecent === '1') {
+        return steam64Id;
+      }
+
+      // Fallback to timestamp comparison
+      const timestamp = parseInt(user.Timestamp || '0', 10);
+      if (timestamp > highestTimestamp) {
+        highestTimestamp = timestamp;
+        mostRecentUser = steam64Id;
+      }
+    }
+
+    return mostRecentUser;
+  } catch (error) {
+    console.error('[VDFParser] Error parsing loginusers.vdf:', error);
     return null;
   }
 }

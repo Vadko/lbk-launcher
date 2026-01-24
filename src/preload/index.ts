@@ -25,6 +25,20 @@ const electronAPI: ElectronAPI = {
       searchQuery,
       hideAiTranslations
     ),
+  getSteamLibraryAppIds: () => ipcRenderer.invoke('get-steam-library-app-ids'),
+  findGamesBySteamAppIds: (
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean
+  ) =>
+    ipcRenderer.invoke(
+      'find-games-by-steam-app-ids',
+      steamAppIds,
+      searchQuery,
+      hideAiTranslations
+    ),
+  countGamesBySteamAppIds: (steamAppIds: number[]) =>
+    ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
   installTranslation: (
     game: Game,
     platform: string,

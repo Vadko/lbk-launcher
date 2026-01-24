@@ -1,17 +1,20 @@
 import { app, ipcMain } from 'electron';
 import type { Game, GetGamesParams } from '../../shared/types';
 import {
+  countGamesBySteamAppIds,
   fetchFilterCounts,
   fetchGames,
   fetchGamesByIds,
   fetchTeams,
   findGamesByInstallPaths,
+  findGamesBySteamAppIds,
 } from '../api';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
+  getSteamLibraryAppIds,
 } from '../game-detector';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
@@ -81,6 +84,7 @@ export function setupGamesHandlers(): void {
         'in-progress': 0,
         completed: 0,
         'with-achievements': 0,
+        'with-voice': 0,
       };
     }
   });
@@ -129,6 +133,39 @@ export function setupGamesHandlers(): void {
       }
     }
   );
+
+  // Get Steam library App IDs (owned games, installed or not)
+  ipcMain.handle('get-steam-library-app-ids', async () => {
+    try {
+      return await getSteamLibraryAppIds();
+    } catch (error) {
+      console.error('Error getting Steam library App IDs:', error);
+      return [];
+    }
+  });
+
+  // Find games by Steam App IDs
+  ipcMain.handle(
+    'find-games-by-steam-app-ids',
+    (_, steamAppIds: number[], searchQuery?: string, hideAiTranslations = false) => {
+      try {
+        return findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations);
+      } catch (error) {
+        console.error('Error finding games by Steam App IDs:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
+
+  // Count games by Steam App IDs
+  ipcMain.handle('count-games-by-steam-app-ids', (_, steamAppIds: number[]) => {
+    try {
+      return countGamesBySteamAppIds(steamAppIds);
+    } catch (error) {
+      console.error('Error counting games by Steam App IDs:', error);
+      return 0;
+    }
+  });
 
   // Launch game
   ipcMain.handle('launch-game', async (_, game: Game) => {
