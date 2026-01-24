@@ -1,6 +1,4 @@
-import { exec, spawn } from 'child_process';
-import { app, ipcMain, shell } from 'electron';
-import { promisify } from 'util';
+import { app, ipcMain } from 'electron';
 import type { Game, GetGamesParams } from '../../shared/types';
 import {
   fetchFilterCounts,
@@ -16,9 +14,7 @@ import {
   getFirstAvailableGamePath,
 } from '../game-detector';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
-
-const execAsync = promisify(exec);
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 
 export function setupGamesHandlers(): void {
   // Version
@@ -164,89 +160,12 @@ export function setupGamesHandlers(): void {
 
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
-        // Try to find Steam App ID from the game path
         const { findSteamAppId } = await import('../game-launcher');
         const appId = await findSteamAppId(gamePath.path);
 
         if (appId) {
-          console.log('[LaunchGame] Launching via Steam protocol with App ID:', appId);
-          const { isLinux } = await import('../utils/platform');
-
-          if (isLinux()) {
-            // On Linux, detect Steam installation type and use appropriate command
-            const { spawn } = await import('child_process');
-            const { existsSync } = await import('fs');
-            const { homedir } = await import('os');
-            const steamUrl = `steam://rungameid/${appId}`;
-
-            // Detect Steam installation type
-            const home = homedir();
-            const isFlatpak = existsSync(`${home}/.var/app/com.valvesoftware.Steam`);
-            const isSnap = existsSync(`${home}/snap/steam`);
-
-            let launched = false;
-
-            if (isFlatpak) {
-              // Flatpak Steam
-              console.log('[LaunchGame] Detected Flatpak Steam installation');
-              try {
-                spawn('flatpak', ['run', 'com.valvesoftware.Steam', steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] Flatpak Steam launch failed:', err);
-              }
-            } else if (isSnap) {
-              // Snap Steam
-              console.log('[LaunchGame] Detected Snap Steam installation');
-              try {
-                spawn('snap', ['run', 'steam', steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] Snap Steam launch failed:', err);
-              }
-            }
-
-            // Try native steam command
-            if (!launched) {
-              console.log('[LaunchGame] Trying native Steam command');
-              try {
-                spawn('steam', [steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] Native Steam command failed:', err);
-              }
-            }
-
-            // Fallback to xdg-open
-            if (!launched) {
-              console.log('[LaunchGame] Trying xdg-open fallback');
-              try {
-                spawn('xdg-open', [steamUrl], {
-                  detached: true,
-                  stdio: 'ignore',
-                }).unref();
-                launched = true;
-              } catch (err) {
-                console.warn('[LaunchGame] xdg-open failed:', err);
-              }
-            }
-
-            if (launched) {
-              return { success: true };
-            }
-          } else {
-            // On Windows/macOS, use shell.openExternal
-            const { shell } = await import('electron');
-            await shell.openExternal(`steam://rungameid/${appId}`);
+          const result = await launchSteamGame(appId);
+          if (result.success) {
             return { success: true };
           }
         }
@@ -267,44 +186,5 @@ export function setupGamesHandlers(): void {
   });
 
   // Restart Steam
-  ipcMain.handle('restart-steam', async () => {
-    console.log('[Steam] Restarting Steam...');
-
-    try {
-      switch (process.platform) {
-        case 'win32':
-          await execAsync('taskkill /F /IM steam.exe').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(1000);
-          await shell.openExternal('steam://');
-          break;
-
-        case 'linux':
-          await execAsync('pkill -TERM steam').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(2000);
-          spawn('steam', [], { detached: true, stdio: 'ignore' }).unref();
-          break;
-
-        case 'darwin':
-          await execAsync('pkill -f Steam').catch((e) => {
-            console.log('[Steam] Steam process not found or already closed:', e.message);
-          });
-          await delay(1000);
-          await shell.openExternal('steam://');
-          break;
-      }
-
-      console.log('[Steam] Steam restart initiated');
-      return { success: true };
-    } catch (error) {
-      console.error('[Steam] Failed to restart Steam:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
+  ipcMain.handle('restart-steam', () => restartSteam());
 }
