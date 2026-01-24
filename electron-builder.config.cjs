@@ -42,8 +42,8 @@ module.exports = {
 
   protocols: [
     {
-      name: 'LB Launcher Protocol',
-      schemes: ['littlebit'],
+      name: 'LBK Launcher Protocol',
+      schemes: ['lbk'],
     },
   ],
 
@@ -86,7 +86,7 @@ module.exports = {
     language: "1058",
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
-    shortcutName: "LB Launcher",
+    shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
   },
