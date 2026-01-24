@@ -4,26 +4,26 @@ import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 
 // Deep link handling
-const PROTOCOL = 'littlebit';
+const PROTOCOL = 'lbk';
 let pendingDeepLink: string | null = null;
 
-// Parse deep link URL: littlebit://games/{slug}/{team}
+// Parse deep link URL: lbk://games/{slug}/{team}
 function parseDeepLink(url: string): { slug: string; team: string } | null {
   try {
-    // URL format: littlebit://games/{slug}/{team}
+    // URL format: lbk://games/{slug}/{team}
     const urlObj = new URL(url);
     if (urlObj.protocol !== `${PROTOCOL}:`) return null;
 
     const pathParts = urlObj.pathname.replace(/^\/+/, '').split('/');
     // pathParts: ['games', 'slug', 'team'] or hostname might be 'games'
 
-    // Handle both littlebit://games/slug/team and littlebit:///games/slug/team
+    // Handle both lbk://games/slug/team and lb:///games/slug/team
     let parts: string[];
     if (urlObj.hostname === 'games') {
-      // littlebit://games/slug/team -> hostname='games', pathname='/slug/team'
+      // lbk://games/slug/team -> hostname='games', pathname='/slug/team'
       parts = ['games', ...pathParts];
     } else if (pathParts[0] === 'games') {
-      // littlebit:///games/slug/team -> pathname='/games/slug/team'
+      // lbk:///games/slug/team -> pathname='/games/slug/team'
       parts = pathParts;
     } else {
       return null;
