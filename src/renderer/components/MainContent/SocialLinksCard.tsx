@@ -1,5 +1,6 @@
-import { Globe, Send, Youtube } from 'lucide-react';
-import React from 'react';
+import { Check, Globe, Send, Share2, Youtube } from 'lucide-react';
+import React, { useState } from 'react';
+import { teamToSlug } from '../../../shared/search-utils';
 import type { Game } from '../../types/game';
 import { DiscordIcon } from '../Icons/DiscordIcon';
 import { SteamIcon } from '../Icons/SteamIcon';
@@ -36,6 +37,61 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => {
         {icon}
       </div>
       <span className="text-sm text-text-main font-medium">{label}</span>
+    </button>
+  );
+};
+
+const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    if (!game.slug || !game.team) return;
+
+    const teamSlug = teamToSlug(game.team);
+    const shareUrl = `https://lbklauncher.com/open/${game.slug}/${teamSlug}`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  if (!game.slug || !game.team) return null;
+
+  return (
+    <button
+      onClick={handleShare}
+      data-nav-group="main-links"
+      className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border transition-all duration-300 ${
+        copied
+          ? 'border-green-500/60 text-green-400'
+          : 'border-border hover:border-neon-purple/60'
+      }`}
+      title="Скопіювати посилання"
+    >
+      <div
+        className={`transition-all duration-300 ${
+          copied ? 'text-green-400' : 'text-neon-purple group-hover:brightness-125'
+        }`}
+      >
+        {copied ? <Check size={18} /> : <Share2 size={18} />}
+      </div>
+      <span className="text-sm font-medium">
+        {copied ? 'Скопійовано!' : 'Поділитись'}
+      </span>
     </button>
   );
 };
@@ -100,7 +156,9 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
     },
   ].filter(Boolean) as SocialLinkProps[];
 
-  if (links.length === 0 && !game.steam_app_id) {
+  const hasShareButton = game.slug && game.team;
+
+  if (links.length === 0 && !game.steam_app_id && !hasShareButton) {
     return null;
   }
 
@@ -109,7 +167,8 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
       <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
       <div className="flex flex-wrap items-center gap-3">
         {game.steam_app_id && <SteamStoreButton steamAppId={game.steam_app_id} />}
-        {links.length > 0 && game.steam_app_id && (
+        <ShareButton game={game} />
+        {links.length > 0 && (game.steam_app_id || hasShareButton) && (
           <div className="hidden sm:block w-0 h-10 border-l border-border-hover" />
         )}
         {links.map((link, index) => (
