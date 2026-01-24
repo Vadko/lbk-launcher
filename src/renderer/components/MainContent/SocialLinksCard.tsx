@@ -1,6 +1,6 @@
 import { Check, Globe, Send, Share2, Youtube } from 'lucide-react';
 import React, { useState } from 'react';
-import { teamToSlug } from '../../../shared/utils';
+import { teamToSlug } from '../../../shared/search-utils';
 import type { Game } from '../../types/game';
 import { DiscordIcon } from '../Icons/DiscordIcon';
 import { SteamIcon } from '../Icons/SteamIcon';
