@@ -89,7 +89,9 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
       >
         {copied ? <Check size={18} /> : <Share2 size={18} />}
       </div>
-      <span className="text-sm font-medium">{copied ? 'Скопійовано!' : 'Поділитись'}</span>
+      <span className="text-sm font-medium">
+        {copied ? 'Скопійовано!' : 'Поділитись'}
+      </span>
     </button>
   );
 };
