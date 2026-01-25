@@ -1,0 +1,34 @@
+name: Manual Flatpak Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.29.0). Leave empty for latest.'
+        required: false
+
+jobs:
+  trigger-flatpak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG=$(gh api repos/Vadko/littlebit-launcher/releases/latest --jq '.tag_name')
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved tag: $TAG"
+
+      - name: Trigger Flatpak repo build
+        env:
+          GH_TOKEN: ${{ secrets.FLATPAK_DISPATCH_TOKEN }}
+        run: |
+          TAG="${{ steps.resolve.outputs.tag }}"
+          echo "Triggering Flatpak build for tag: $TAG"
+          jq -n --arg tag "$TAG" '{"event_type":"new-release","client_payload":{"tag":$tag}}' | \
+            gh api repos/Vadko/lbk-flatpak/dispatches --method POST --input -

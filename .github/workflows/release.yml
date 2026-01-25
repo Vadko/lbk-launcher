@@ -177,6 +177,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FLATPAK_DISPATCH_TOKEN }}
         run: |
-          gh api repos/Vadko/lbk-flatpak/dispatches \
-            -f event_type=new-release \
-            -f "client_payload[tag]=${GITHUB_REF#refs/tags/}"
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "Triggering Flatpak build for tag: $TAG"
+          jq -n --arg tag "$TAG" '{"event_type":"new-release","client_payload":{"tag":$tag}}' | \
+            gh api repos/Vadko/lbk-flatpak/dispatches --method POST --input -
