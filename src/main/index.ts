@@ -77,14 +77,15 @@ if (isLinux()) {
   const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    // Disable GPU acceleration entirely in Gaming Mode.
-    // Chromium's GPU process does EGL/DRI hardware probing at startup which
-    // stalls or crashes repeatedly under Gamescope on the Steam Deck's AMD APU
-    // (ANGLE EGL_NOT_INITIALIZED errors, GPU process crash+retry cycles).
-    // Each retry adds 10-30s, causing the Steam loader to spin for minutes.
-    // Software rendering is fast enough for this UI-only app, and --disable-gpu
-    // makes startup instant. This does NOT affect game GPU performance.
-    app.commandLine.appendSwitch('disable-gpu');
+    // Disable GPU compositing in Gaming Mode.
+    // Chromium's GPU compositor conflicts with Gamescope's own compositor,
+    // causing stalls during EGL/DRI hardware probing on the Steam Deck's AMD APU.
+    // --disable-gpu-compositing lets Chromium still use GPU for rasterization
+    // but composites on CPU, avoiding the Gamescope conflict.
+    // --disable-gpu fully disables GPU which makes the app sluggish.
+    app.commandLine.appendSwitch('disable-gpu-compositing');
+    // Run GPU work in the main process to avoid separate GPU process fork overhead
+    app.commandLine.appendSwitch('in-process-gpu');
   }
 }
 
