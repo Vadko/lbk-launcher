@@ -72,6 +72,7 @@ module.exports = {
     target: ['AppImage', 'rpm'],
     category: 'Utility',
     maintainer: 'LB UA <info@littlebit.org.ua>',
+    executableName: 'lbk-launcher',
     // Steam Deck compatibility
     executableArgs: ['--no-sandbox', '--disable-gpu-sandbox'],
   },
