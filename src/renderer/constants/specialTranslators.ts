@@ -5,7 +5,7 @@ interface SpecialTranslator {
   description: string;
 }
 
-const SPECIAL_DESCRIPTION = 'Допомагає розвивати LB Launcher з перших днів';
+const SPECIAL_DESCRIPTION = 'Допомагає розвивати LBK Launcher з перших днів';
 
 export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
   { name: 'Владислав', team: 'Sent_DeZ', description: SPECIAL_DESCRIPTION },

@@ -4,7 +4,7 @@
  */
 module.exports = {
   appId: 'com.littlebit.launcher',
-  productName: 'LB Launcher',
+  productName: 'LBK Launcher',
   copyright: 'Copyright © 2025 LB UA',
 
   directories: {

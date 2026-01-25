@@ -1,8 +1,8 @@
-# LB Launcher
+# LBK Launcher
 
 [![Website](https://img.shields.io/badge/Сайт-lblauncher.com-00f2ff?style=for-the-badge&logo=google-chrome&logoColor=white)](https://lblauncher.com/)
 
-**LB Launcher** — настільний застосунок, який збирає українські фанатські локалізації в одному місці й допомагає встановлювати їх без танців із бубном.
+**LBK Launcher** — настільний застосунок, який збирає українські фанатські локалізації в одному місці й допомагає встановлювати їх без танців із бубном.
 
 > Один лаунчер. Багато команд. Ще більше ігор українською.
 
@@ -11,8 +11,8 @@
 ## ⬇️ Завантаження
 
 ### Windows
-[![Windows Setup](https://img.shields.io/badge/Setup-завантажити-00f2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-win-Setup.exe)
-[![Windows Portable](https://img.shields.io/badge/Portable-завантажити-00a2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-win-Portable.exe)
+[![Windows Setup](https://img.shields.io/badge/Setup-завантажити-00f2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-win-Setup.exe)
+[![Windows Portable](https://img.shields.io/badge/Portable-завантажити-00a2ff.svg?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij4KPHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTYsNmgxN3YxN0g2VjZ6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LjA0MiwyMi45NThWNkg0MnYxNi45NThIMjUuMDQyeiI+PC9wYXRoPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik02LDI1aDE3djE3SDZWMjV6Ij48L3BhdGg+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTTI1LDQyVjI1aDE3djE3SDI1eiI+PC9wYXRoPgo8L3N2Zz4=&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-win-Portable.exe)
 
 <details>
 <summary>⚠️ Браузер або Windows можуть заблокувати завантаження/встановлення</summary>
@@ -27,7 +27,7 @@
 
 **Чому це відбувається?**
 
-Microsoft вимагає, щоб програми були підписані цифровим сертифікатом (EV Code Signing Certificate коштує від $200-400/рік). LB Launcher — безкоштовний open-source проєкт, тому ми не маємо такого сертифіката. Windows SmartScreen автоматично блокує непідписані програми, особливо якщо вони ще не набрали «репутацію» (достатню кількість завантажень).
+Microsoft вимагає, щоб програми були підписані цифровим сертифікатом (EV Code Signing Certificate коштує від $200-400/рік). LBK Launcher — безкоштовний open-source проєкт, тому ми не маємо такого сертифіката. Windows SmartScreen автоматично блокує непідписані програми, особливо якщо вони ще не набрали «репутацію» (достатню кількість завантажень).
 
 **Як запустити інсталятор?**
 
@@ -54,15 +54,15 @@ Microsoft вимагає, щоб програми були підписані ц
 </details>
 
 ### macOS
-[![macOS Apple Silicon](https://img.shields.io/badge/Apple_Silicon-завантажити-a855f7?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-1.19.4-arm64.dmg)
-[![macOS Intel](https://img.shields.io/badge/Intel-завантажити-9333ea?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-1.19.4-x64.dmg)
+[![macOS Apple Silicon](https://img.shields.io/badge/Apple_Silicon-завантажити-a855f7?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-1.19.4-arm64.dmg)
+[![macOS Intel](https://img.shields.io/badge/Intel-завантажити-9333ea?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-1.19.4-x64.dmg)
 
 ### Linux
-[![Linux AppImage](https://img.shields.io/badge/AppImage-завантажити-10b981?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-linux.AppImage)
-[![Linux RPM](https://img.shields.io/badge/RPM-завантажити-059669?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-linux.rpm)
+[![Linux AppImage](https://img.shields.io/badge/AppImage-завантажити-10b981?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.AppImage)
+[![Linux RPM](https://img.shields.io/badge/RPM-завантажити-059669?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.rpm)
 
 ### Steam Deck
-[![Steam Deck](https://img.shields.io/badge/Steam_Deck-завантажити-1a9fff?logo=steam&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LB-Launcher-linux.AppImage)
+[![Steam Deck](https://img.shields.io/badge/Steam_Deck-завантажити-1a9fff?logo=steam&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.AppImage)
 
 <details>
 <summary>📖 Інструкція з встановлення на Steam Deck</summary>
@@ -77,7 +77,7 @@ Microsoft вимагає, щоб програми були підписані ц
 
 1. Відкрий файловий менеджер **Dolphin**
 2. Перейди до папки `Downloads`
-3. Клацни правою кнопкою миші на файл `LB-Launcher-linux.AppImage`
+3. Клацни правою кнопкою миші на файл `LBK-Launcher-linux.AppImage`
 4. Обери **«Properties»** (Властивості)
 5. Перейди на вкладку **«Permissions»** (Дозволи)
 6. Постав галочку **«Execute: Allow executing file as program»** (Є виконуваним)
@@ -88,12 +88,12 @@ Microsoft вимагає, щоб програми були підписані ц
 1. Відкрий **Steam** в Desktop Mode
 2. Натисни **«Додати гру»** (Add a Game) → **«Додати гру не зі Steam»** (Add a Non-Steam Game)
 3. Натисни **«Огляд»** (Browse) і перейди до папки `Downloads`
-4. Обери файл `LB-Launcher-linux.AppImage`
+4. Обери файл `LBK-Launcher-linux.AppImage`
 5. Натисни **«Додати вибрані програми»** (Add Selected Programs)
 
 **4. Налаштування контролера (опціонально)**
-LB Launcher підтримує навігацію геймпадом! Режим навігації ввімкнеться автоматично при натиску на любу кнопку геймпаду.
-> 💡 Тепер можеш запускати LB Launcher прямо з Gaming Mode!
+LBK Launcher підтримує навігацію геймпадом! Режим навігації ввімкнеться автоматично при натиску на любу кнопку геймпаду.
+> 💡 Тепер можеш запускати LBK Launcher прямо з Gaming Mode!
 
 </details>
 
@@ -104,7 +104,7 @@ LB Launcher підтримує навігацію геймпадом! Режим
 ## 📸 Скріншоти
 
 <p align="center">
-  <img src="docs/screenshots/2.jpg" alt="LB Launcher" width="800" />
+  <img src="docs/screenshots/2.jpg" alt="LBK Launcher" width="800" />
 </p>
 
 <details>
@@ -170,7 +170,7 @@ LB Launcher підтримує навігацію геймпадом! Режим
 
 ## 🎮 Що це таке
 
-LB Launcher:
+LBK Launcher:
 - показує каталог доступних локалізацій;
 - вміє завантажувати й встановлювати переклади за тебе;
 - може оновлювати встановлені локалізації, коли виходять нові версії;
@@ -215,7 +215,7 @@ LB Launcher:
 
 ## 🧱 Технологічний стек
 
-LB Launcher — **відкритий проєкт з відкритим вихідним кодом**, побудований на сучасних інструментах:
+LBK Launcher — **відкритий проєкт з відкритим вихідним кодом**, побудований на сучасних інструментах:
 
 - **Electron 39 + Vite** — настільний фреймворк та швидке збирання
 - **React 18 + TypeScript** — інтерфейс користувача

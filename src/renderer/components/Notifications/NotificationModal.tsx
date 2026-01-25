@@ -234,7 +234,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     Оновлення застосунку
                   </h4>
                   <p className="text-xs text-text-muted">
-                    Сповіщення про нові версії LB Launcher
+                    Сповіщення про нові версії LBK Launcher
                   </p>
                 </div>
                 <Switch
