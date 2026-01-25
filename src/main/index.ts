@@ -68,16 +68,14 @@ if (isLinux()) {
   const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    // Use native Wayland via Ozone — Gamescope is a Wayland compositor,
-    // so native Wayland avoids the slow XWayland translation layer
-    app.commandLine.appendSwitch('ozone-platform', 'wayland');
-    // Disable GPU compositing — let Gamescope handle compositing,
-    // Electron just needs to render flat frames (fast CPU path)
-    app.commandLine.appendSwitch('disable-gpu-compositing');
-    // Run GPU in-process to skip forking a separate GPU process
-    app.commandLine.appendSwitch('in-process-gpu');
-    // Skip shader disk cache (slow I/O inside AppImage)
-    app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+    // Disable GPU acceleration entirely in Gaming Mode.
+    // Chromium's GPU process does EGL/DRI hardware probing at startup which
+    // stalls or crashes repeatedly under Gamescope on the Steam Deck's AMD APU
+    // (ANGLE EGL_NOT_INITIALIZED errors, GPU process crash+retry cycles).
+    // Each retry adds 10-30s, causing the Steam loader to spin for minutes.
+    // Software rendering is fast enough for this UI-only app, and --disable-gpu
+    // makes startup instant. This does NOT affect game GPU performance.
+    app.commandLine.appendSwitch('disable-gpu');
   }
 }
 
