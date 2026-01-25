@@ -78,13 +78,6 @@ export function runProton({
       STEAM_COMPAT_DATA_PATH: prefix,
       STEAM_COMPAT_CLIENT_INSTALL_PATH: `${HOME}/.steam/root`,
 
-      // Детальний лог Proton
-      STEAM_COMPAT_DEBUG: '1',
-      WINEDEBUG: '+timestamp,+pid,+seh,+loaddll,+process',
-
-      // Запис логів у файл
-      PROTON_LOG: '1',
-
       // Вимкнення 3D / DX / Vulkan
       PROTON_USE_WINED3D: '1',
       PROTON_NO_D3D11: '1',
