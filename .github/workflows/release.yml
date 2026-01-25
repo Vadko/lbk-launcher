@@ -172,6 +172,7 @@ jobs:
   trigger-flatpak:
     runs-on: ubuntu-latest
     needs: release
+    environment: production
     steps:
       - name: Trigger Flatpak repo build
         env:
