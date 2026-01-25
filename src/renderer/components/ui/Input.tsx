@@ -19,6 +19,9 @@ export const Input: React.FC<InputProps> = ({
   const isComposingRef = useRef(false);
   // Track if we just ended composition to skip the duplicate onChange
   const justEndedCompositionRef = useRef(false);
+  // Fallback deduplication for Gamescope keyboard (may not fire IME events)
+  const lastValueRef = useRef(value);
+  const lastChangeTimeRef = useRef(0);
 
   return (
     <div className={`relative ${className}`}>
@@ -40,7 +43,16 @@ export const Input: React.FC<InputProps> = ({
             justEndedCompositionRef.current = false;
             return;
           }
-          onChange(e.target.value);
+          const newValue = e.target.value;
+          const now = Date.now();
+          // Deduplicate rapid identical onChange events from Gamescope virtual keyboard
+          // (fires both keyboard event and direct input event simultaneously)
+          if (newValue === lastValueRef.current && now - lastChangeTimeRef.current < 100) {
+            return;
+          }
+          lastValueRef.current = newValue;
+          lastChangeTimeRef.current = now;
+          onChange(newValue);
         }}
         onCompositionStart={() => {
           isComposingRef.current = true;
@@ -50,7 +62,10 @@ export const Input: React.FC<InputProps> = ({
           isComposingRef.current = false;
           justEndedCompositionRef.current = true;
           // Fire onChange after composition ends with final value
-          onChange(e.currentTarget.value);
+          const newValue = e.currentTarget.value;
+          lastValueRef.current = newValue;
+          lastChangeTimeRef.current = Date.now();
+          onChange(newValue);
         }}
         placeholder={placeholder}
         className={`w-full px-4 py-3 ${

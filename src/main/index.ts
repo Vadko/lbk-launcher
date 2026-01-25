@@ -68,11 +68,16 @@ if (isLinux()) {
   // Check if running in Steam Deck Gaming Mode (Gamescope)
   const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
   if (isGamingMode) {
-    console.log('[Main] Detected Gaming Mode (Gamescope), applying GPU workarounds');
-    // Disable GPU compositing - speeds up startup significantly in Gamescope
-    // Software rendering is fast enough for this UI-only app
-    app.commandLine.appendSwitch('disable-gpu');
-    app.commandLine.appendSwitch('disable-software-rasterizer');
+    console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
+    // Use ANGLE with SwiftShader for reliable software rendering in Gamescope
+    // (disable-gpu + disable-software-rasterizer was causing extremely slow startup
+    // because both rendering paths were disabled, forcing slowest CPU-only fallback)
+    app.commandLine.appendSwitch('use-gl', 'angle');
+    app.commandLine.appendSwitch('use-angle', 'swiftshader');
+    // Disable GPU shader disk cache to avoid slow I/O on AppImage
+    app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+    // Run GPU process in-process to reduce fork overhead
+    app.commandLine.appendSwitch('in-process-gpu');
   }
 }
 

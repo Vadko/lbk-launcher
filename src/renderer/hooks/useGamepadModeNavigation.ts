@@ -341,17 +341,29 @@ export function useGamepadModeNavigation(enabled = true) {
         return;
       }
 
-      // B button - if input is focused, blur it; otherwise cancel/close
-      if (isButtonJustPressed(gp, BUTTON.B) && canInput('modal-button-b')) {
-        if (isInputActive) {
-          // Exit input editing mode - blur and set as selected
-          playBackSound();
-          activeElement.blur();
+      // B button - if input is focused, blur it and close the modal in one action.
+      // Use pressed (not justPressed) because Steam Deck keyboard consumes
+      // the first B press to close itself.
+      if (isInputActive && gp.buttons[BUTTON.B]?.pressed && canInput('modal-button-b')) {
+        playBackSound();
+        activeElement.blur();
+        // Check if there are other non-input focusable elements in the modal
+        const hasOtherElements = focusableElements.some((el) => !isTextInput(el));
+        if (hasOtherElements) {
+          // Modal has buttons — just exit input editing, select the input visually
           setGamepadSelected(activeElement);
-          return;
+        } else {
+          // Modal only has inputs — close it entirely
+          const cancelButton = modal.querySelector<HTMLButtonElement>(
+            '[data-gamepad-cancel]'
+          );
+          if (cancelButton) cancelButton.click();
         }
+        return;
+      }
 
-        // Find cancel button by data attribute
+      // B button - cancel/close modal (no input focused)
+      if (gp.buttons[BUTTON.B]?.pressed && canInput('modal-button-b')) {
         const cancelButton = modal.querySelector<HTMLButtonElement>(
           '[data-gamepad-cancel]'
         );
@@ -607,20 +619,33 @@ export function useGamepadModeNavigation(enabled = true) {
       const activeElement = document.activeElement as HTMLElement;
       const isInputActive = isTextInput(activeElement);
 
-      // B button - if input is focused, blur it (use pressed instead of justPressed
-      // because Steam Deck keyboard consumes the first B press to close itself)
+      // B button - if input is focused, blur it and immediately perform the next
+      // back action (close dropdown or return to games). This combines two levels
+      // into one press, so the user needs only 2 B presses total in Gaming Mode:
+      // 1st B = Gamescope closes its on-screen keyboard (app doesn't see it)
+      // 2nd B = blur input + close dropdown / return to games
+      // (use pressed instead of justPressed because Steam Deck keyboard
+      // consumes the first B press to close itself)
       if (isInputActive && gp.buttons[BUTTON.B]?.pressed && canInput('input-blur-b')) {
-        // Exit input editing mode - blur and return focus to parent dropdown item
         playBackSound();
         activeElement.blur();
-        // Find parent dropdown item to focus
-        const parentDropdownItem = activeElement.closest<HTMLElement>(
-          '[data-gamepad-dropdown-item]'
-        );
-        if (parentDropdownItem) {
-          parentDropdownItem.focus();
+        // After blurring, immediately perform the next back action
+        if (isDropdownOpen()) {
+          // Close dropdown
+          const event = new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          document.body.dispatchEvent(event);
         } else {
-          setGamepadSelected(activeElement);
+          // Return to games area
+          setGamepadSelected(null);
+          setNavigationArea('games');
+          const cards = getGameCards();
+          if (cards[focusedGameIndex]) {
+            cards[focusedGameIndex].focus();
+          }
         }
         return;
       }
