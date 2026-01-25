@@ -73,42 +73,12 @@ if (isLinux()) {
   delete process.env.GTK_IM_MODULE;
   delete process.env.QT_IM_MODULE;
 
-  // Detect Flatpak environment
-  const isFlatpak = !!process.env.FLATPAK_ID;
-
   // Check if running in Steam Deck Gaming Mode (Gamescope)
   const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
 
-  // Check if running on Steam Deck (SteamOS)
-  const isSteamDeck =
-    process.env.SteamDeck === '1' ||
-    process.env.SteamOS === '1' ||
-    (process.env.XDG_CURRENT_DESKTOP || '').toLowerCase().includes('gamescope');
-
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    // Use ANGLE with SwiftShader for reliable software rendering in Gamescope.
-    // Hardware GPU probing stalls when Gamescope compositor is active, so we
-    // bypass it entirely with SwiftShader CPU-based rendering.
-    app.commandLine.appendSwitch('use-gl', 'angle');
-    app.commandLine.appendSwitch('use-angle', 'swiftshader');
-    // Disable GPU shader disk cache to avoid slow I/O on AppImage/Flatpak
-    app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
-    // Run GPU process in-process to reduce fork overhead
-    app.commandLine.appendSwitch('in-process-gpu');
-  } else if (isFlatpak || isSteamDeck) {
-    console.log('[Main] Detected Flatpak/Steam Deck environment, applying GPU optimizations');
-    // Enable GPU acceleration features for better performance
-    app.commandLine.appendSwitch('enable-gpu-rasterization');
-    app.commandLine.appendSwitch('enable-zero-copy');
-    app.commandLine.appendSwitch('ignore-gpu-blocklist');
-    // Use Ozone platform for native Wayland support
-    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
-    // Enable hardware video decode if available
-    app.commandLine.appendSwitch(
-      'enable-features',
-      'VaapiVideoDecoder,VaapiVideoEncoder,CanvasOopRasterization'
-    );
+    app.commandLine.appendSwitch('disable-gpu');
   }
 }
 
