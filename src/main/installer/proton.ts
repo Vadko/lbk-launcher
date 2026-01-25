@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import CyrillicToTranslit from 'cyrillic-to-translit-js';
 import fs from 'fs';
 import os from 'os';
@@ -19,11 +19,12 @@ export function findProtons() {
   const result = [] as Array<{ name: string; path: string }>;
 
   steamGames.forEach((gamePath) => {
-    const gameName = path.basename(gamePath);
-    if (gameName.toLowerCase().includes('proton')) {
+    const protonName = path.basename(gamePath);
+    const protonNameLower = protonName.toLowerCase();
+    if (protonNameLower.includes('proton') && !protonNameLower.includes('beta')) {
       const protonPath = path.join(gamePath, 'proton');
       if (fs.existsSync(protonPath)) {
-        result.push({ name: gameName, path: protonPath });
+        result.push({ name: protonName, path: protonPath });
       }
     }
   });
