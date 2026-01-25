@@ -19,6 +19,10 @@ module.exports = {
       from: 'resources/icon.png',
       to: 'icon.png',
     },
+    {
+      from: 'resources/icon-dark.png',
+      to: 'icon-dark.png',
+    },
   ],
 
   icon: 'resources/icon.png',
