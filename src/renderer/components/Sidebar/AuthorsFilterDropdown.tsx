@@ -17,9 +17,6 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
     const menuRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const isComposingRef = useRef(false);
-    // Deduplication for Gamescope virtual keyboard: fires two input events per keypress
-    const lastInputDataRef = useRef<string | null>(null);
-    const lastInputTimeRef = useRef(0);
     const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
 
     // Determine current label
@@ -138,21 +135,6 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                   ref={searchInputRef}
                   type="text"
                   value={search}
-                  onBeforeInput={(e) => {
-                    const inputEvent = e.nativeEvent as InputEvent;
-                    if (inputEvent.inputType === 'insertText' && inputEvent.data) {
-                      const now = Date.now();
-                      if (
-                        inputEvent.data === lastInputDataRef.current &&
-                        now - lastInputTimeRef.current < 50
-                      ) {
-                        e.preventDefault();
-                        return;
-                      }
-                      lastInputDataRef.current = inputEvent.data;
-                      lastInputTimeRef.current = now;
-                    }
-                  }}
                   onChange={(e) => {
                     if (isComposingRef.current) return;
                     setSearch(e.target.value);

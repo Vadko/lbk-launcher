@@ -64,6 +64,15 @@ if (isLinux()) {
   // Enable gamepad support
   app.commandLine.appendSwitch('enable-gamepad-extensions');
 
+  // Prevent double keyboard input from GTK input method module.
+  // When GTK_IM_MODULE is set (e.g. 'ibus', 'fcitx'), key events are processed
+  // through two paths simultaneously (Wayland text-input + GTK IM module),
+  // each producing a separate input event → every character appears twice.
+  // This is a known issue with Electron AppImages on Steam Deck Gaming Mode.
+  // See: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/issues/4250
+  delete process.env.GTK_IM_MODULE;
+  delete process.env.QT_IM_MODULE;
+
   // Check if running in Steam Deck Gaming Mode (Gamescope)
   const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
   if (isGamingMode) {

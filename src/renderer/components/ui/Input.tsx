@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useRef } from 'react';
 
 interface InputProps {
   value: string;
@@ -15,33 +15,10 @@ export const Input: React.FC<InputProps> = ({
   icon,
   className = '',
 }) => {
-  // Track IME composition state to prevent double input on Steam Deck
+  // Track IME composition state to prevent double input (safety net for
+  // non-Gamescope Linux environments where GTK_IM_MODULE deletion doesn't apply)
   const isComposingRef = useRef(false);
   const justEndedCompositionRef = useRef(false);
-  // Deduplication for Gamescope virtual keyboard: it fires two separate
-  // input events per keypress (e.g. 'a' → onChange("a") then onChange("aa")).
-  // We track the last InputEvent to detect and skip the duplicate.
-  const lastInputEventTimeRef = useRef(0);
-  const lastInputDataRef = useRef<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Handle native beforeinput to track what character is being inserted
-  const handleBeforeInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
-    const inputEvent = e.nativeEvent as InputEvent;
-    if (inputEvent.inputType === 'insertText' && inputEvent.data) {
-      const now = Date.now();
-      // If the same character is being inserted within 50ms — it's a Gamescope duplicate
-      if (
-        inputEvent.data === lastInputDataRef.current &&
-        now - lastInputEventTimeRef.current < 50
-      ) {
-        e.preventDefault();
-        return;
-      }
-      lastInputDataRef.current = inputEvent.data;
-      lastInputEventTimeRef.current = now;
-    }
-  }, []);
 
   return (
     <div className={`relative ${className}`}>
@@ -51,16 +28,12 @@ export const Input: React.FC<InputProps> = ({
         </div>
       )}
       <input
-        ref={inputRef}
         type="text"
         value={value}
-        onBeforeInput={handleBeforeInput}
         onChange={(e) => {
-          // Skip onChange during IME composition to prevent double input
           if (isComposingRef.current) {
             return;
           }
-          // Skip the onChange that fires right after onCompositionEnd
           if (justEndedCompositionRef.current) {
             justEndedCompositionRef.current = false;
             return;
