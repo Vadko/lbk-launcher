@@ -72,14 +72,37 @@ export function runProton({
 
     const env = {
       ...process.env,
+
+      // Префікс
       STEAM_COMPAT_DATA_PATH: prefix,
       STEAM_COMPAT_CLIENT_INSTALL_PATH: `${HOME}/.steam/root`,
+
+      // Детальний лог Proton
+      STEAM_COMPAT_DEBUG: '1',
+      WINEDEBUG: '+timestamp,+pid,+seh,+loaddll,+process',
+
+      // Запис логів у файл
+      PROTON_LOG: '1',
+
+      // Вимкнення 3D / DX / Vulkan
+      PROTON_USE_WINED3D: '1',
+      PROTON_NO_D3D11: '1',
+      PROTON_NO_D3D10: '1',
+      PROTON_NO_D3D9: '1',
+      PROTON_NO_ESYNC: '1',
+      PROTON_NO_FSYNC: '1',
+
+      // Вимкнення Vulkan
+      VK_ICD_FILENAMES: '/dev/null',
     };
 
     const child = spawn(protonPath, ['run', enFilePath], {
       env,
       stdio: 'inherit',
     });
+
+    child.stdout?.once('data', () => console.log('[proton] Started'));
+    child.stderr?.once('data', () => console.log('[proton] Started'));
 
     child.on('exit', (code) => {
       // Clean up prefix folder unless KEEP_PREFIX is set
