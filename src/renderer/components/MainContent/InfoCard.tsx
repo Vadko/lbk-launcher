@@ -1,6 +1,7 @@
 import {
   Award,
   Bell,
+  Bot,
   Calendar,
   CalendarClock,
   CalendarPlus,
@@ -11,6 +12,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import React from 'react';
+import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import type { Game } from '../../types/game';
 import { Tooltip } from '../ui/Tooltip';
@@ -47,7 +49,7 @@ const formatDate = (dateString: string | null | undefined): string => {
 };
 
 export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
-  const platformsText = game.platforms.join(', ').toUpperCase();
+  const platformsText = game.platforms.map(getReadablePlatform).join(', ');
   const isPlanned = game.status === 'planned';
   const hasDownloads = !!game.downloads && game.downloads > 0;
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
@@ -57,14 +59,31 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
     <div className="glass-card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-head font-semibold text-text-main">Інформація</h3>
-        {featuredInfo && (
-          <Tooltip content={featuredInfo.description} align="left">
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 rounded text-amber-400 text-xs cursor-help">
-              <Award size={12} />
-              <span>Відзнака</span>
-            </div>
-          </Tooltip>
-        )}
+        <div className="flex items-center gap-2">
+          {(game.ai === 'edited' || game.ai === 'non-edited') && (
+            <Tooltip
+              content={
+                game.ai === 'edited'
+                  ? 'Переклад зроблено за допомогою ШІ та відредаговано людиною'
+                  : 'Переклад зроблено за допомогою ШІ без редагування'
+              }
+              align="left"
+            >
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/20 rounded text-purple-400 text-xs cursor-help">
+                <Bot size={12} />
+                <span>{game.ai === 'edited' ? 'ШІ (ред.)' : 'ШІ'}</span>
+              </div>
+            </Tooltip>
+          )}
+          {featuredInfo && (
+            <Tooltip content={featuredInfo.description} align="left">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 rounded text-amber-400 text-xs cursor-help">
+                <Award size={12} />
+                <span>Відзнака</span>
+              </div>
+            </Tooltip>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <InfoItem icon={<Gamepad2 size={18} />} label="Платформи" value={platformsText} />

@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       toggleAlphabetSidebar,
       sortOrder,
       setSortOrder,
-      showAiTranslations,
+      hideAiTranslations,
     } = useSettingsStore();
     const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
 
@@ -120,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       specialFilter,
       searchQuery: debouncedSearchQuery,
       sortOrder,
-      showAiTranslations,
+      hideAiTranslations,
     });
 
     // Group games by slug (games already sorted by SQL)

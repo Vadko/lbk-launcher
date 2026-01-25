@@ -13,7 +13,7 @@ interface SettingsStore {
   createBackupBeforeInstall: boolean;
   autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
-  showAiTranslations: boolean;
+  hideAiTranslations: boolean;
   liquidGlassEnabled: boolean;
   gamepadSoundsEnabled: boolean;
   isSettingsModalOpen: boolean;
@@ -34,7 +34,7 @@ interface SettingsStore {
   toggleCreateBackup: () => void;
   toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
-  toggleShowAiTranslations: () => void;
+  toggleHideAiTranslations: () => void;
   toggleLiquidGlass: () => void;
   toggleGamepadSounds: () => void;
   toggleSaveLogsToFile: () => void;
@@ -55,7 +55,7 @@ export const useSettingsStore = create<SettingsStore>()(
       createBackupBeforeInstall: true,
       autoDetectInstalledGames: true,
       showAdultGames: false,
-      showAiTranslations: false,
+      hideAiTranslations: false,
       liquidGlassEnabled: true,
       gamepadSoundsEnabled: true,
       isSettingsModalOpen: false,
@@ -99,8 +99,8 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleShowAdultGames: () =>
         set((state) => ({ showAdultGames: !state.showAdultGames })),
 
-      toggleShowAiTranslations: () =>
-        set((state) => ({ showAiTranslations: !state.showAiTranslations })),
+      toggleHideAiTranslations: () =>
+        set((state) => ({ hideAiTranslations: !state.hideAiTranslations })),
 
       toggleLiquidGlass: () =>
         set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled })),
@@ -131,7 +131,7 @@ export const useSettingsStore = create<SettingsStore>()(
         createBackupBeforeInstall: state.createBackupBeforeInstall,
         autoDetectInstalledGames: state.autoDetectInstalledGames,
         showAdultGames: state.showAdultGames,
-        showAiTranslations: state.showAiTranslations,
+        hideAiTranslations: state.hideAiTranslations,
         liquidGlassEnabled: state.liquidGlassEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         saveLogsToFile: state.saveLogsToFile,

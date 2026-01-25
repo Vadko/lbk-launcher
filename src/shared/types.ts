@@ -1,6 +1,7 @@
 import type { Database } from '../lib/database.types';
 
 export type { Database };
+export type Platform = Database['public']['Enums']['install_source'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 
@@ -80,13 +81,14 @@ export interface GetGamesParams {
   statuses?: string[];
   authors?: string[];
   showAdultGames?: boolean;
-  showAiTranslations?: boolean;
+  hideAiTranslations?: boolean;
   sortOrder?: 'name' | 'downloads' | 'newest';
 }
 
 export interface GetGamesResult {
   games: Game[];
   total: number;
+  uniqueCount?: number; // Count of unique games by slug (for filters)
 }
 
 export interface FilterCountsResult {
@@ -94,6 +96,7 @@ export interface FilterCountsResult {
   'in-progress': number;
   completed: number;
   'with-achievements': number;
+  'with-voice': number;
 }
 
 export interface DetectedGameInfo {
@@ -128,6 +131,13 @@ export interface ElectronAPI {
     searchQuery?: string,
     showAiTranslations?: boolean
   ) => Promise<GetGamesResult>;
+  getSteamLibraryAppIds: () => Promise<number[]>;
+  findGamesBySteamAppIds: (
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean
+  ) => Promise<GetGamesResult>;
+  countGamesBySteamAppIds: (steamAppIds: number[]) => Promise<number>;
   installTranslation: (
     game: Game,
     platform: string,

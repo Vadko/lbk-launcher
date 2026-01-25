@@ -10,22 +10,36 @@ const electronAPI: ElectronAPI = {
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
-    showAiTranslations?: boolean
-  ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, showAiTranslations),
+    hideAiTranslations?: boolean
+  ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, hideAiTranslations),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
   getAvailableProtons: () => ipcRenderer.invoke('get-available-protons'),
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,
-    showAiTranslations?: boolean
+    hideAiTranslations?: boolean
   ) =>
     ipcRenderer.invoke(
       'find-games-by-install-paths',
       installPaths,
       searchQuery,
-      showAiTranslations
+      hideAiTranslations
     ),
+  getSteamLibraryAppIds: () => ipcRenderer.invoke('get-steam-library-app-ids'),
+  findGamesBySteamAppIds: (
+    steamAppIds: number[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean
+  ) =>
+    ipcRenderer.invoke(
+      'find-games-by-steam-app-ids',
+      steamAppIds,
+      searchQuery,
+      hideAiTranslations
+    ),
+  countGamesBySteamAppIds: (steamAppIds: number[]) =>
+    ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
   installTranslation: (
     game: Game,
     platform: string,

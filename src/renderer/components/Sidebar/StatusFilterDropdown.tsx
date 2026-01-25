@@ -40,7 +40,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
           specialFilter
         );
       }
-      if (selectedStatuses.length === 0) return 'Всі стани';
+      if (selectedStatuses.length === 0) return 'Усі стани';
       if (selectedStatuses.length === 1) {
         return (
           STATUS_OPTIONS.find((o) => o.value === selectedStatuses[0])?.label ||

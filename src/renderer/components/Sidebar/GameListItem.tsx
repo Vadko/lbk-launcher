@@ -1,4 +1,4 @@
-import { EyeOff } from 'lucide-react';
+import { Bot, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
@@ -224,6 +224,16 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {hasUpdate && (
               <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse" />
             )}
+            {(game.ai === 'edited' || game.ai === 'non-edited') && (
+              <div
+                className="absolute top-2 left-2 p-1 bg-purple-500/80 rounded"
+                title={
+                  game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'
+                }
+              >
+                <Bot size={10} className="text-white" />
+              </div>
+            )}
             {isGameDetected && (
               <div
                 className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
@@ -304,6 +314,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           </div>
           {hasUpdate && (
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
+          )}
+          {(game.ai === 'edited' || game.ai === 'non-edited') && (
+            <div
+              className="absolute -top-1 -left-1 p-0.5 bg-purple-500 rounded border-2 border-bg-dark z-10"
+              title={game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'}
+            >
+              <Bot size={10} className="text-white" />
+            </div>
           )}
           {isGameDetected && (
             <div
