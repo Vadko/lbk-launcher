@@ -17,9 +17,9 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
     const menuRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const isComposingRef = useRef(false);
-    // Fallback deduplication for Gamescope keyboard (may not fire IME events)
-    const lastSearchRef = useRef('');
-    const lastSearchTimeRef = useRef(0);
+    // Deduplication for Gamescope virtual keyboard: fires two input events per keypress
+    const lastInputDataRef = useRef<string | null>(null);
+    const lastInputTimeRef = useRef(0);
     const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
 
     // Determine current label
@@ -138,27 +138,31 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                   ref={searchInputRef}
                   type="text"
                   value={search}
+                  onBeforeInput={(e) => {
+                    const inputEvent = e.nativeEvent as InputEvent;
+                    if (inputEvent.inputType === 'insertText' && inputEvent.data) {
+                      const now = Date.now();
+                      if (
+                        inputEvent.data === lastInputDataRef.current &&
+                        now - lastInputTimeRef.current < 50
+                      ) {
+                        e.preventDefault();
+                        return;
+                      }
+                      lastInputDataRef.current = inputEvent.data;
+                      lastInputTimeRef.current = now;
+                    }
+                  }}
                   onChange={(e) => {
                     if (isComposingRef.current) return;
-                    const newValue = e.target.value;
-                    const now = Date.now();
-                    // Deduplicate rapid identical events from Gamescope virtual keyboard
-                    if (newValue === lastSearchRef.current && now - lastSearchTimeRef.current < 100) {
-                      return;
-                    }
-                    lastSearchRef.current = newValue;
-                    lastSearchTimeRef.current = now;
-                    setSearch(newValue);
+                    setSearch(e.target.value);
                   }}
                   onCompositionStart={() => {
                     isComposingRef.current = true;
                   }}
                   onCompositionEnd={(e) => {
                     isComposingRef.current = false;
-                    const newValue = e.currentTarget.value;
-                    lastSearchRef.current = newValue;
-                    lastSearchTimeRef.current = Date.now();
-                    setSearch(newValue);
+                    setSearch(e.currentTarget.value);
                   }}
                   placeholder="Пошук автора..."
                   className="flex-1 bg-transparent text-sm text-text-main placeholder-text-muted outline-none"

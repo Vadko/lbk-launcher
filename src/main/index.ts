@@ -58,7 +58,6 @@ function handleDeepLink(url: string) {
 }
 
 // Steam Deck / Gaming Mode support
-// Disable GPU sandbox to prevent issues with Gamescope
 if (isLinux()) {
   app.commandLine.appendSwitch('disable-gpu-sandbox');
   app.commandLine.appendSwitch('no-sandbox');
@@ -69,15 +68,16 @@ if (isLinux()) {
   const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    // Use ANGLE with SwiftShader for reliable software rendering in Gamescope
-    // (disable-gpu + disable-software-rasterizer was causing extremely slow startup
-    // because both rendering paths were disabled, forcing slowest CPU-only fallback)
-    app.commandLine.appendSwitch('use-gl', 'angle');
-    app.commandLine.appendSwitch('use-angle', 'swiftshader');
-    // Disable GPU shader disk cache to avoid slow I/O on AppImage
-    app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
-    // Run GPU process in-process to reduce fork overhead
+    // Use native Wayland via Ozone — Gamescope is a Wayland compositor,
+    // so native Wayland avoids the slow XWayland translation layer
+    app.commandLine.appendSwitch('ozone-platform', 'wayland');
+    // Disable GPU compositing — let Gamescope handle compositing,
+    // Electron just needs to render flat frames (fast CPU path)
+    app.commandLine.appendSwitch('disable-gpu-compositing');
+    // Run GPU in-process to skip forking a separate GPU process
     app.commandLine.appendSwitch('in-process-gpu');
+    // Skip shader disk cache (slow I/O inside AppImage)
+    app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
   }
 }
 

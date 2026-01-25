@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 
 interface InputProps {
   value: string;
@@ -17,11 +17,31 @@ export const Input: React.FC<InputProps> = ({
 }) => {
   // Track IME composition state to prevent double input on Steam Deck
   const isComposingRef = useRef(false);
-  // Track if we just ended composition to skip the duplicate onChange
   const justEndedCompositionRef = useRef(false);
-  // Fallback deduplication for Gamescope keyboard (may not fire IME events)
-  const lastValueRef = useRef(value);
-  const lastChangeTimeRef = useRef(0);
+  // Deduplication for Gamescope virtual keyboard: it fires two separate
+  // input events per keypress (e.g. 'a' → onChange("a") then onChange("aa")).
+  // We track the last InputEvent to detect and skip the duplicate.
+  const lastInputEventTimeRef = useRef(0);
+  const lastInputDataRef = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Handle native beforeinput to track what character is being inserted
+  const handleBeforeInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
+    const inputEvent = e.nativeEvent as InputEvent;
+    if (inputEvent.inputType === 'insertText' && inputEvent.data) {
+      const now = Date.now();
+      // If the same character is being inserted within 50ms — it's a Gamescope duplicate
+      if (
+        inputEvent.data === lastInputDataRef.current &&
+        now - lastInputEventTimeRef.current < 50
+      ) {
+        e.preventDefault();
+        return;
+      }
+      lastInputDataRef.current = inputEvent.data;
+      lastInputEventTimeRef.current = now;
+    }
+  }, []);
 
   return (
     <div className={`relative ${className}`}>
@@ -31,8 +51,10 @@ export const Input: React.FC<InputProps> = ({
         </div>
       )}
       <input
+        ref={inputRef}
         type="text"
         value={value}
+        onBeforeInput={handleBeforeInput}
         onChange={(e) => {
           // Skip onChange during IME composition to prevent double input
           if (isComposingRef.current) {
@@ -43,16 +65,7 @@ export const Input: React.FC<InputProps> = ({
             justEndedCompositionRef.current = false;
             return;
           }
-          const newValue = e.target.value;
-          const now = Date.now();
-          // Deduplicate rapid identical onChange events from Gamescope virtual keyboard
-          // (fires both keyboard event and direct input event simultaneously)
-          if (newValue === lastValueRef.current && now - lastChangeTimeRef.current < 100) {
-            return;
-          }
-          lastValueRef.current = newValue;
-          lastChangeTimeRef.current = now;
-          onChange(newValue);
+          onChange(e.target.value);
         }}
         onCompositionStart={() => {
           isComposingRef.current = true;
@@ -61,11 +74,7 @@ export const Input: React.FC<InputProps> = ({
         onCompositionEnd={(e) => {
           isComposingRef.current = false;
           justEndedCompositionRef.current = true;
-          // Fire onChange after composition ends with final value
-          const newValue = e.currentTarget.value;
-          lastValueRef.current = newValue;
-          lastChangeTimeRef.current = Date.now();
-          onChange(newValue);
+          onChange(e.currentTarget.value);
         }}
         placeholder={placeholder}
         className={`w-full px-4 py-3 ${
