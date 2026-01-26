@@ -1,6 +1,6 @@
 # LBK Launcher
 
-[![Website](https://img.shields.io/badge/Сайт-lblauncher.com-00f2ff?style=for-the-badge&logo=google-chrome&logoColor=white)](https://lblauncher.com/)
+[![Website](https://img.shields.io/badge/Сайт-lbklauncher.com-00f2ff?style=for-the-badge&logo=google-chrome&logoColor=white)](https://lbklauncher.com/)
 
 **LBK Launcher** — настільний застосунок, який збирає українські фанатські локалізації в одному місці й допомагає встановлювати їх без танців із бубном.
 
@@ -161,7 +161,7 @@ LBK Launcher підтримує навігацію геймпадом! Режи�
 
 ### 💬 **[➡️ Натисніть сюди, щоб додати свій переклад ⬅️](https://t.me/lbk_launcher_bot)**
 
-[![Telegram](https://img.shields.io/badge/Напишіть_нам-@lb__launcher__bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/lbk_launcher_bot)
+[![Telegram](https://img.shields.io/badge/Напишіть_нам-@lbk__launcher__bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/lbk_launcher_bot)
 
 <br>
 </div>
