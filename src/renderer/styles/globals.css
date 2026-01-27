@@ -98,13 +98,6 @@ html.maximized #root {
   border-radius: 0;
 }
 
-.main-bg {
-  background-image: url("../../../resources/main-bg.webp");
-  background-position: center top;
-  background-size: 100% auto;
-  background-repeat: no-repeat;
-}
-
 /* ==========================================================================
    4. GLASSMORPHISM COMPONENTS
    ========================================================================== */

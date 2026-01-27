@@ -1,4 +1,5 @@
 import { AnimatePresence } from 'framer-motion';
+import mainBg from '../../resources/main-bg.webp';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
@@ -520,7 +521,14 @@ export const App: React.FC = () => {
           </div>
         ) : (
           /* Normal layout: Vertical sidebar on left, MainContent on right */
-          <div className="main-bg flex h-full pt-8 px-2 pb-2 gap-2 relative z-10">
+          <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
+            {/* Background image */}
+            <img
+              src={mainBg}
+              alt=""
+              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+              aria-hidden="true"
+            />
             <Sidebar
               onOpenHistory={() => setShowNotificationHistory(true)}
               isHorizontal={false}
