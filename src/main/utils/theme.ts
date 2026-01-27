@@ -2,11 +2,7 @@ import { app, nativeTheme } from 'electron';
 import { join } from 'path';
 import { isMacOS } from '../utils/platform';
 
-export function isDark(): boolean {
-  return nativeTheme.shouldUseDarkColors;
-}
-
-export function isLight(): boolean {
+function isLight(): boolean {
   return !nativeTheme.shouldUseDarkColors;
 }
 

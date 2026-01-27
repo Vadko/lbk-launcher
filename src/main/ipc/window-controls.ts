@@ -10,7 +10,6 @@ import {
   Tray,
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import {
   getLogFileDirectory,

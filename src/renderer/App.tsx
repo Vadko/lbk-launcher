@@ -1,8 +1,8 @@
 import { AnimatePresence } from 'framer-motion';
-import mainBg from '../../resources/main-bg.webp';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
+import mainBg from '../../resources/main-bg.webp';
 import { AppLoader } from './components/AppLoader/AppLoader';
 import { GamepadHints } from './components/GamepadHints/GamepadHints';
 import { AmbientBackground } from './components/Layout/AmbientBackground';

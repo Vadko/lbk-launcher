@@ -18,8 +18,8 @@ import {
 } from '../game-detector';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
-import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 import { getPlatform } from '../utils/platform';
+import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 
 export function setupGamesHandlers(): void {
   // Version
