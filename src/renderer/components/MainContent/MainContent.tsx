@@ -1,7 +1,6 @@
 import {
   Download,
   EyeOff,
-  Gamepad2,
   Heart,
   Play,
   RefreshCw,

@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import CyrillicToTranslit from 'cyrillic-to-translit-js';
 import fs from 'fs';
 import os from 'os';

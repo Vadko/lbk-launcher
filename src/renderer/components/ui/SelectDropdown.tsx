@@ -26,6 +26,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
     const [isOpen, setIsOpen] = useState(false);
     const [maxHeight, setMaxHeight] = useState(120); // Start with smaller default
     const [isReady, setIsReady] = useState(false); // Track if calculations are done
+    const [dropdownPosition, setDropdownPosition] = useState<'above' | 'below'>('below');
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -62,20 +63,20 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
         const availableSpace =
           spaceBelow > 80 ? spaceBelow : Math.max(spaceBelow, spaceAbove);
         const calculatedMaxHeight = Math.min(120, Math.max(60, availableSpace));
+        const position = spaceBelow >= 80 ? 'below' : 'above';
 
-        setMaxHeight(calculatedMaxHeight);
-        setDropdownPosition(spaceBelow >= 80 ? 'below' : 'above');
-
-        // Use requestAnimationFrame to ensure calculations are done before showing
+        // Use requestAnimationFrame to batch state updates and avoid cascading renders
         requestAnimationFrame(() => {
+          setMaxHeight(calculatedMaxHeight);
+          setDropdownPosition(position);
           setIsReady(true);
         });
       } else if (!isOpen) {
-        setIsReady(false);
+        requestAnimationFrame(() => {
+          setIsReady(false);
+        });
       }
     }, [isOpen]);
-
-    const [dropdownPosition, setDropdownPosition] = useState<'above' | 'below'>('below');
 
     // Close menu on outside click
     useEffect(() => {
