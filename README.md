@@ -104,7 +104,7 @@ LBK Launcher підтримує навігацію геймпадом! Режи�
 ## 📸 Скріншоти
 
 <p align="center">
-  <img src="docs/screenshots/2.jpg" alt="LBK Launcher" width="800" />
+  <img width="1920" height="1032" alt="LBK Launcher" src="https://lbklauncher.com/assets/2.webp" />
 </p>
 
 <details>
@@ -115,27 +115,27 @@ LBK Launcher підтримує навігацію геймпадом! Режи�
 <table>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/1.jpg" alt="Світла тема" />
+      <img width="1920" height="1032" alt="Світла тема" src="https://lbklauncher.com/assets/1.webp" />
       <p align="center"><em>Світла тема — сторінка гри</em></p>
     </td>
     <td width="50%">
-      <img src="docs/screenshots/2.jpg" alt="Темна тема" />
+      <img width="1920" height="1032" alt="Темна тема" src="https://lbklauncher.com/assets/2.webp" />
       <p align="center"><em>Темна тема — сторінка гри</em></p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/3.jpg" alt="Налаштування" />
+      <img width="1920" height="1032" alt="Налаштування" src="https://lbklauncher.com/assets/3.webp" />
       <p align="center"><em>Налаштування застосунку</em></p>
     </td>
     <td width="50%">
-      <img src="docs/screenshots/4.jpg" alt="Сповіщення" />
+      <img width="1920" height="1032" alt="Сповіщення" src="https://lbklauncher.com/assets/5.webp" />
       <p align="center"><em>Центр сповіщень</em></p>
     </td>
   </tr>
   <tr>
     <td colspan="2">
-      <img src="docs/screenshots/5.jpg" alt="Встановлена локалізація" />
+      <img width="1920" height="1032" alt="Встановлена локалізація" src="https://lbklauncher.com/assets/7.webp" />
       <p align="center"><em>Встановлена локалізація</em></p>
     </td>
   </tr>
