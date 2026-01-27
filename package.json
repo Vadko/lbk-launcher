@@ -3,7 +3,8 @@
   "version": "2.0.0",
   "description": "Інсталятор українізаторів відеоігор",
   "author": {
-    "name": "LBK Team"
+    "name": "LBK Team",
+    "email": "info@lbklauncher.com"
   },
   "license": "GPL-3.0-or-later",
   "main": "out/main/index.js",

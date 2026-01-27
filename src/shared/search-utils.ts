@@ -38,3 +38,11 @@ export function getSearchVariations(input: string): string[] {
 
   return translit ? [normalized, translit] : [normalized];
 }
+
+export function teamToSlug(team: string): string {
+  return translitUk
+    .transform(team)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}

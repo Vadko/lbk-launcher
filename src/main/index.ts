@@ -57,13 +57,29 @@ function handleDeepLink(url: string) {
   }
 }
 
-// Steam Deck / Gaming Mode support
-// Disable GPU sandbox to prevent issues with Gamescope
+// Steam Deck / Gaming Mode / Flatpak support
 if (isLinux()) {
   app.commandLine.appendSwitch('disable-gpu-sandbox');
   app.commandLine.appendSwitch('no-sandbox');
   // Enable gamepad support
   app.commandLine.appendSwitch('enable-gamepad-extensions');
+
+  // Prevent double keyboard input from GTK input method module.
+  // When GTK_IM_MODULE is set (e.g. 'ibus', 'fcitx'), key events are processed
+  // through two paths simultaneously (Wayland text-input + GTK IM module),
+  // each producing a separate input event → every character appears twice.
+  // This is a known issue with Electron AppImages on Steam Deck Gaming Mode.
+  // See: https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/issues/4250
+  delete process.env.GTK_IM_MODULE;
+  delete process.env.QT_IM_MODULE;
+
+  // Check if running in Steam Deck Gaming Mode (Gamescope)
+  const isGamingMode = !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
+
+  if (isGamingMode) {
+    console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
+    app.commandLine.appendSwitch('disable-gpu');
+  }
 }
 
 import { checkForUpdates, setupAutoUpdater } from './auto-updater';
@@ -169,7 +185,7 @@ if (!gotTheLock) {
         details.url.includes('youtube.com') ||
         details.url.includes('youtube-nocookie.com')
       ) {
-        details.requestHeaders['Referer'] = 'http://127.0.0.1:5500/';
+        details.requestHeaders['Referer'] = 'https://lbklauncher.com/';
       }
       callback({ requestHeaders: details.requestHeaders });
     });

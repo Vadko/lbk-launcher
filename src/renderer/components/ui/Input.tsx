@@ -15,8 +15,10 @@ export const Input: React.FC<InputProps> = ({
   icon,
   className = '',
 }) => {
-  // Track IME composition state to prevent double input on Steam Deck
+  // Track IME composition state to prevent double input (safety net for
+  // non-Gamescope Linux environments where GTK_IM_MODULE deletion doesn't apply)
   const isComposingRef = useRef(false);
+  const justEndedCompositionRef = useRef(false);
 
   return (
     <div className={`relative ${className}`}>
@@ -29,17 +31,22 @@ export const Input: React.FC<InputProps> = ({
         type="text"
         value={value}
         onChange={(e) => {
-          // Skip onChange during IME composition to prevent double input
-          if (!isComposingRef.current) {
-            onChange(e.target.value);
+          if (isComposingRef.current) {
+            return;
           }
+          if (justEndedCompositionRef.current) {
+            justEndedCompositionRef.current = false;
+            return;
+          }
+          onChange(e.target.value);
         }}
         onCompositionStart={() => {
           isComposingRef.current = true;
+          justEndedCompositionRef.current = false;
         }}
         onCompositionEnd={(e) => {
           isComposingRef.current = false;
-          // Fire onChange after composition ends with final value
+          justEndedCompositionRef.current = true;
           onChange(e.currentTarget.value);
         }}
         placeholder={placeholder}

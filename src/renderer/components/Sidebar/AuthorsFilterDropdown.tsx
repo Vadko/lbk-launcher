@@ -136,9 +136,8 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                   type="text"
                   value={search}
                   onChange={(e) => {
-                    if (!isComposingRef.current) {
-                      setSearch(e.target.value);
-                    }
+                    if (isComposingRef.current) return;
+                    setSearch(e.target.value);
                   }}
                   onCompositionStart={() => {
                     isComposingRef.current = true;
