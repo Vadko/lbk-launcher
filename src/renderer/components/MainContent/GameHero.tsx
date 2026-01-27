@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { EyeOff } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
@@ -119,6 +120,14 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
 
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-bg-dark/50 to-transparent" />
+
+      {/* Hidden game indicator */}
+      {game.hide && (
+        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-amber-500/90 rounded-lg backdrop-blur-sm z-10">
+          <EyeOff size={16} className="text-white" />
+          <span className="text-sm font-medium text-white">Прихована</span>
+        </div>
+      )}
 
       {/* Game logo */}
       <div className="relative h-full flex items-end p-8">

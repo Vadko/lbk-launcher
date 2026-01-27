@@ -122,6 +122,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 title="Гра встановлена"
               />
             )}
+            {game.hide && (
+              <div
+                className="absolute bottom-2 left-2 p-1 bg-amber-500/80 rounded"
+                title="Прихована гра"
+              >
+                <EyeOff size={12} className="text-white" />
+              </div>
+            )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
             <h3 className="text-lg font-head font-bold">{game.name}</h3>
@@ -240,6 +248,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 title="Гра встановлена"
               />
             )}
+            {game.hide && (
+              <div
+                className="absolute bottom-2 left-2 p-1 bg-amber-500/80 rounded"
+                title="Прихована гра"
+              >
+                <EyeOff size={10} className="text-white" />
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -328,6 +344,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-dark z-10"
               title="Гра встановлена"
             />
+          )}
+          {game.hide && (
+            <div
+              className="absolute -bottom-1 -left-1 p-0.5 bg-amber-500 rounded border-2 border-bg-dark z-10"
+              title="Прихована гра"
+            >
+              <EyeOff size={10} className="text-white" />
+            </div>
           )}
         </div>
         <div className="flex-1 min-w-0">

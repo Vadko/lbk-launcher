@@ -156,7 +156,7 @@ export class GamesRepository {
       hideAiTranslations = false,
     } = params;
 
-    const whereConditions: string[] = ['approved = 1', 'hide = 0'];
+    const whereConditions: string[] = ['approved = 1'];
     const queryParams: (string | number)[] = [];
 
     // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
@@ -220,7 +220,7 @@ export class GamesRepository {
     const stmt = this.db.prepare(`
       SELECT team
       FROM games
-      WHERE approved = 1 AND hide = 0 AND team IS NOT NULL AND team != ''
+      WHERE approved = 1 AND team IS NOT NULL AND team != ''
     `);
 
     const rows = stmt.all() as { team: string }[];
@@ -254,7 +254,6 @@ export class GamesRepository {
     const whereConditions = [
       `id IN (${gameIds.map(() => '?').join(',')})`,
       'approved = 1',
-      'hide = 0',
     ];
     const queryParams: string[] = [...gameIds];
 
@@ -295,7 +294,7 @@ export class GamesRepository {
       return { games: [], total: 0 };
     }
 
-    const whereConditions = ['approved = 1', 'hide = 0', 'install_paths IS NOT NULL'];
+    const whereConditions = ['approved = 1', 'install_paths IS NOT NULL'];
     const queryParams: string[] = [];
 
     // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
@@ -381,7 +380,6 @@ export class GamesRepository {
 
     const whereConditions = [
       'approved = 1',
-      'hide = 0',
       'steam_app_id IS NOT NULL',
       `steam_app_id IN (${steamAppIds.map(() => '?').join(',')})`,
     ];
@@ -427,7 +425,6 @@ export class GamesRepository {
       SELECT COUNT(DISTINCT steam_app_id) as count
       FROM games
       WHERE approved = 1
-        AND hide = 0
         AND steam_app_id IS NOT NULL
         AND steam_app_id IN (${steamAppIds.map(() => '?').join(',')})
     `);
@@ -590,7 +587,7 @@ export class GamesRepository {
         COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
         COUNT(DISTINCT CASE WHEN voice_archive_path IS NOT NULL AND voice_archive_path != '' THEN COALESCE(slug, id) END) as with_voice
       FROM games
-      WHERE approved = 1 AND hide = 0
+      WHERE approved = 1
     `);
 
     const row = stmt.get() as {
