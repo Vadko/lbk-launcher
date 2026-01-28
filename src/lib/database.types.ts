@@ -623,16 +623,22 @@ export type Database = {
           game_id: string
           imported_at: string
           kurin_id: number
+          localization_index: number
+          localization_name: string | null
         }
         Insert: {
           game_id: string
           imported_at?: string
           kurin_id: number
+          localization_index?: number
+          localization_name?: string | null
         }
         Update: {
           game_id?: string
           imported_at?: string
           kurin_id?: number
+          localization_index?: number
+          localization_name?: string | null
         }
         Relationships: [
           {
