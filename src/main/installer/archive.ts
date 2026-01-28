@@ -1,5 +1,5 @@
-import { app } from 'electron';
 import { execSync } from 'child_process';
+import { app } from 'electron';
 import fs from 'fs';
 import { extractFull } from 'node-7z';
 import path from 'path';
