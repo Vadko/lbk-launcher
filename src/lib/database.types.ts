@@ -651,6 +651,7 @@ export type Database = {
       }
       kurin_skipped: {
         Row: {
+          game_name: string | null
           id: string
           kurin_id: number
           reason: string | null
@@ -658,6 +659,7 @@ export type Database = {
           skipped_by: string | null
         }
         Insert: {
+          game_name?: string | null
           id?: string
           kurin_id: number
           reason?: string | null
@@ -665,6 +667,7 @@ export type Database = {
           skipped_by?: string | null
         }
         Update: {
+          game_name?: string | null
           id?: string
           kurin_id?: number
           reason?: string | null
