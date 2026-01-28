@@ -876,6 +876,40 @@ export type Database = {
           },
         ]
       }
+      translation_playtime: {
+        Row: {
+          game_id: string
+          id: string
+          playtime_minutes: number
+          recorded_at: string | null
+          steam_app_id: number
+          user_identifier: string
+        }
+        Insert: {
+          game_id: string
+          id?: string
+          playtime_minutes: number
+          recorded_at?: string | null
+          steam_app_id: number
+          user_identifier: string
+        }
+        Update: {
+          game_id?: string
+          id?: string
+          playtime_minutes?: number
+          recorded_at?: string | null
+          steam_app_id?: number
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translation_playtime_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       translation_uninstalls: {
         Row: {
           game_id: string
@@ -1052,6 +1086,27 @@ export type Database = {
           percentage: number
           players_with_downloads: number
           total_unique_players: number
+        }[]
+      }
+      get_playtime_by_game: {
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Returns: {
+          avg_session_minutes: number
+          game_id: string
+          game_name: string
+          total_playtime_hours: number
+          total_sessions: number
+          unique_players: number
+        }[]
+      }
+      get_playtime_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_session_minutes: number
+          total_playtime_hours: number
+          total_records: number
+          unique_games: number
+          unique_players: number
         }[]
       }
       get_subscription_statistics: {
