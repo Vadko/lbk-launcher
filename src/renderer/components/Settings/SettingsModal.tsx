@@ -1,4 +1,5 @@
 import {
+  BrushCleaning,
   FolderOpen,
   Heart,
   MessageCircle,
@@ -91,6 +92,10 @@ export const SettingsModal: React.FC = () => {
     // Apply the change immediately
     await window.liquidGlassAPI?.toggle(newValue);
   };
+
+  const handleKurinSync = useCallback(async () => {
+    await window.electronAPI?.syncKurinGames();
+  }, []);
 
   const handleClearCacheOnly = useCallback(async () => {
     await window.api?.clearCacheOnly();
@@ -249,13 +254,31 @@ export const SettingsModal: React.FC = () => {
           onChange={toggleGamepadSounds}
         />
 
+        {/* Kurin sync */}
+        <button
+          onClick={handleKurinSync}
+          className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+        >
+          <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center flex-shrink-0">
+            <RefreshCw size={20} className="text-text-dark" />
+          </div>
+          <div className="flex-1 text-left">
+            <h4 className="text-sm font-semibold text-text-main">
+              Синхронізація з Kurin`
+            </h4>
+            <p className="text-xs text-text-muted">
+              Знайти встановлені ігри, додані через Kurin`, та імпортувати їх
+            </p>
+          </div>
+        </button>
+
         {/* Clear cache only */}
         <button
           onClick={handleClearCacheOnly}
           className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
         >
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-            <RefreshCw size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center flex-shrink-0">
+            <BrushCleaning size={20} className="text-text-dark" />
           </div>
           <div className="flex-1 text-left">
             <h4 className="text-sm font-semibold text-text-main">Очистити кеш</h4>
@@ -270,8 +293,8 @@ export const SettingsModal: React.FC = () => {
           onClick={handleClearAllData}
           className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-300"
         >
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
-            <Trash2 size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center flex-shrink-0">
+            <Trash2 size={20} className="text-text-dark" />
           </div>
           <div className="flex-1 text-left">
             <h4 className="text-sm font-semibold text-text-main">Очистити всі дані</h4>

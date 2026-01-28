@@ -191,7 +191,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               {showSettings ? 'Налаштування сповіщень' : 'Сповіщення'}
             </h2>
             {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
-              <span className="px-2 py-1 bg-color-accent text-bg-dark text-xs font-bold rounded-full">
+              <span className="px-2 py-1 bg-color-accent text-text-dark text-xs font-bold rounded-full">
                 {notifications.filter((n) => !n.read).length}
               </span>
             )}

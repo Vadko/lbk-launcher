@@ -16,6 +16,7 @@ import {
   getFirstAvailableGamePath,
   getSteamLibraryAppIds,
 } from '../game-detector';
+import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
 import { getPlatform } from '../utils/platform';
@@ -102,6 +103,16 @@ export function setupGamesHandlers(): void {
       return await fetchTrendingGames(days, limit);
     } catch (error) {
       console.error('Error fetching trending games:', error);
+      return [];
+    }
+  });
+
+  // Sync Kurin installed games data
+  ipcMain.handle('sync-kurin-games', async () => {
+    try {
+      return syncKurinGames();
+    } catch (error) {
+      console.error('Error sync kurin games:', error);
       return [];
     }
   });

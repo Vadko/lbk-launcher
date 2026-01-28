@@ -12,6 +12,7 @@ const electronAPI: ElectronAPI = {
     searchQuery?: string,
     hideAiTranslations?: boolean
   ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, hideAiTranslations),
+  syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
   getAvailableProtons: () => ipcRenderer.invoke('get-available-protons'),

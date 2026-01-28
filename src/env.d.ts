@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_DEBUG_MODE: string;
   readonly VITE_MIXPANEL_TOKEN_DEV: string;
   readonly VITE_MIXPANEL_TOKEN_PROD: string;
+  readonly VITE_KURIN_KEY: string;
 }
 
 interface ImportMeta {

@@ -8,6 +8,7 @@ const unlink = promisify(fs.unlink);
 const execPromise = promisify(exec);
 
 export const BACKUP_SUFFIX = '_backup'; // Legacy format: file.upk -> file.upk_backup
+export const KURIN_BACKUP_SUFFIX = '.kbak'; // Format: file.upk -> file.upk.kbak
 export const BACKUP_DIR_NAME = '.lbk-backup'; // New format: hidden directory in game folder
 
 /**
@@ -199,6 +200,22 @@ export async function restoreBackupNew(
         // Delete the backup file
         await unlink(legacyBackupPath);
         console.log(`[Restore] Restored: ${relativePath} (legacy format)`);
+        restoredCount++;
+      }
+
+      // Support kurin format (file_backup suffix)
+      const kurinBackupPath = targetPath + KURIN_BACKUP_SUFFIX;
+      if (fs.existsSync(kurinBackupPath)) {
+        // Ensure target directory exists (it may have been deleted during file cleanup)
+        const kurinTargetDir = path.dirname(targetPath);
+        if (!fs.existsSync(kurinTargetDir)) {
+          await fs.promises.mkdir(kurinTargetDir, { recursive: true });
+        }
+        // Restore the original file from legacy backup
+        await fs.promises.copyFile(kurinBackupPath, targetPath);
+        // Delete the backup file
+        await unlink(kurinBackupPath);
+        console.log(`[Restore] Restored: ${relativePath} (kurin format)`);
         restoredCount++;
       }
     }

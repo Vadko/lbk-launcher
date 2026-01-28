@@ -56,7 +56,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
         >
           <Bell size={20} className="mx-auto text-text-muted" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-bg-dark text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+            <span className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}

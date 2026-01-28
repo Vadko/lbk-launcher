@@ -247,12 +247,13 @@ export class GamesRepository {
   getGamesByIds(
     gameIds: string[],
     searchQuery?: string,
-    hideAiTranslations = false
+    hideAiTranslations = false,
+    useSteamIdField = false
   ): Game[] {
     if (gameIds.length === 0) return [];
 
     const whereConditions = [
-      `id IN (${gameIds.map(() => '?').join(',')})`,
+      `${useSteamIdField ? 'steam_app_id' : 'id'} IN (${gameIds.map(() => '?').join(',')})`,
       'approved = 1',
       'hide = 0',
     ];
