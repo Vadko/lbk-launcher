@@ -3,27 +3,34 @@
  * @see https://www.electron.build/configuration/configuration
  */
 module.exports = {
-  appId: 'com.littlebit.launcher',
+  appId: 'com.lbk.launcher',
   productName: 'LBK Launcher',
-  copyright: 'Copyright © 2025 LB UA',
+  copyright: 'Copyright © 2026 LBK UA',
 
   directories: {
     buildResources: 'resources',
     output: 'release/${version}',
   },
 
-  files: ['out/**/*'],
+  files: [
+    'out/**/*',
+    '!node_modules/7zip-bin-full/**',
+  ],
 
   extraResources: [
     {
       from: 'resources/icon.png',
       to: 'icon.png',
     },
+    {
+      from: 'resources/icon-dark.png',
+      to: 'icon-dark.png',
+    },
   ],
 
   icon: 'resources/icon.png',
 
-  asarUnpack: ['**/*.node', '**/7zip-bin-full/**'],
+  asarUnpack: ['**/*.node'],
 
   electronLanguages: ['en-US', 'uk'],
 
@@ -61,7 +68,14 @@ module.exports = {
     icon: 'resources/icon.png',
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
-    legalTrademarks: '© 2025 LB UA',
+    legalTrademarks: '© 2026 LBK UA',
+    extraResources: [
+      {
+        from: 'node_modules/7zip-bin-full/win',
+        to: '7zip/win',
+        filter: ['**/*'],
+      },
+    ],
   },
 
   portable: {
@@ -71,10 +85,17 @@ module.exports = {
   linux: {
     target: ['AppImage', 'rpm'],
     category: 'Utility',
-    maintainer: 'LB UA <info@littlebit.org.ua>',
+    maintainer: 'LBK UA <info@lbklauncher.com>',
     executableName: 'lbk-launcher',
     // Steam Deck compatibility
     executableArgs: ['--no-sandbox', '--disable-gpu-sandbox'],
+    extraResources: [
+      {
+        from: 'node_modules/7zip-bin-full/linux',
+        to: '7zip/linux',
+        filter: ['**/*'],
+      },
+    ],
   },
 
   nsis: {
@@ -110,6 +131,13 @@ module.exports = {
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',
     notarize: true,
+    extraResources: [
+      {
+        from: 'node_modules/7zip-bin-full/mac',
+        to: '7zip/mac',
+        filter: ['**/*'],
+      },
+    ],
   },
 
   dmg: {
