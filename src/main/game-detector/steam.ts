@@ -19,7 +19,9 @@ import {
   parseAppManifest,
   parseLibraryFolders,
   parseLocalConfigApps,
+  parseLocalConfigPlaytime,
   parseMostRecentUser,
+  type SteamAppPlaytime,
 } from '../utils/vdf-parser';
 
 // ============================================================================
@@ -632,4 +634,86 @@ export function invalidateSteamLibraryAppIdsCache(): void {
   console.log('[Steam] Invalidating library App IDs cache');
   cache.libraryAppIds = null;
   invalidateSteamLibraryCache(); // Also invalidate file cache
+}
+
+// ============================================================================
+// Steam Playtime Detection
+// ============================================================================
+
+export { SteamAppPlaytime };
+
+/**
+ * Get playtime for all Steam apps from localconfig.vdf
+ * Returns Map of App ID -> playtime data
+ */
+function getSteamPlaytimes(): Map<number, SteamAppPlaytime> {
+  const steamPath = getSteamPath();
+  if (!steamPath) {
+    console.log('[Steam] Playtime: Steam not found');
+    return new Map();
+  }
+
+  const steamUserId = getCurrentSteamUserId();
+  if (!steamUserId) {
+    console.log('[Steam] Playtime: No Steam user found');
+    return new Map();
+  }
+
+  try {
+    const localConfigPath = path.join(
+      steamPath,
+      'userdata',
+      steamUserId,
+      'config',
+      'localconfig.vdf'
+    );
+
+    if (!fs.existsSync(localConfigPath)) {
+      console.log('[Steam] Playtime: localconfig.vdf not found');
+      return new Map();
+    }
+
+    const content = fs.readFileSync(localConfigPath, 'utf8');
+    const playtimes = parseLocalConfigPlaytime(content);
+
+    console.log(`[Steam] Playtime: found data for ${playtimes.size} apps`);
+    return playtimes;
+  } catch (error) {
+    console.error('[Steam] Playtime: Error reading localconfig.vdf:', error);
+    return new Map();
+  }
+}
+
+/**
+ * Get playtime for specific Steam App IDs
+ * @param appIds - Array of Steam App IDs to get playtime for
+ * @returns Map of App ID -> playtime in minutes
+ */
+export function getSteamPlaytimesForApps(
+  appIds: number[]
+): Map<number, SteamAppPlaytime> {
+  const allPlaytimes = getSteamPlaytimes();
+  const result = new Map<number, SteamAppPlaytime>();
+
+  for (const appId of appIds) {
+    const playtime = allPlaytimes.get(appId);
+    if (playtime) {
+      result.set(appId, playtime);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get path to localconfig.vdf for file watching
+ */
+function getLocalConfigPath(): string | null {
+  const steamPath = getSteamPath();
+  if (!steamPath) return null;
+
+  const steamUserId = getCurrentSteamUserId();
+  if (!steamUserId) return null;
+
+  return path.join(steamPath, 'userdata', steamUserId, 'config', 'localconfig.vdf');
 }
