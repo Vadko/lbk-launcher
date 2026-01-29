@@ -1133,6 +1133,8 @@ export type Database = {
           ai_count: number
           completed_count: number
           games_count: number
+          in_progress_count: number
+          planned_count: number
           team_name: string
           total_downloads: number
           with_textures_count: number
