@@ -10,42 +10,30 @@ import { isLinux, isMacOS, isWindows } from '../utils/platform';
 const mkdir = promisify(fs.mkdir);
 
 /**
- * Get architecture folder name for 7zip binaries
+ * Get 7z binary path from a base directory
  */
-function getArchFolder(): string {
+function get7zBinaryPath(basePath: string): string {
   const arch = process.arch;
-  return arch === 'x64' ? 'x64' : arch === 'arm64' ? 'arm64' : 'ia32';
+  const archFolder = arch === 'x64' ? 'x64' : arch === 'arm64' ? 'arm64' : 'ia32';
+
+  if (isWindows()) {
+    return path.join(basePath, 'win', archFolder, '7z.exe');
+  }
+  if (isMacOS()) {
+    return path.join(basePath, 'mac', arch, '7zz');
+  }
+  return path.join(basePath, 'linux', archFolder, '7zz');
 }
 
 /**
  * Get 7z binary path from extraResources or node_modules (dev)
  */
 function getResourcesBased7zPath(): string {
-  const arch = process.arch;
-  const archFolder = getArchFolder();
+  const basePath = app.isPackaged
+    ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), '7zip')
+    : path.join(app.getAppPath(), 'node_modules', '7zip-bin-full');
 
-  // In development, use node_modules directly
-  if (!app.isPackaged) {
-    const nodeModulesPath = path.join(app.getAppPath(), 'node_modules', '7zip-bin-full');
-    if (isWindows()) {
-      return path.join(nodeModulesPath, 'win', archFolder, '7z.exe');
-    } else if (isMacOS()) {
-      return path.join(nodeModulesPath, 'mac', arch, '7zz');
-    } else {
-      return path.join(nodeModulesPath, 'linux', archFolder, '7zz');
-    }
-  }
-
-  // In production, use extraResources
-  const resourcesPath = process.resourcesPath || path.join(app.getAppPath(), '..');
-
-  if (isWindows()) {
-    return path.join(resourcesPath, '7zip', 'win', archFolder, '7z.exe');
-  } else if (isMacOS()) {
-    return path.join(resourcesPath, '7zip', 'mac', arch, '7zz');
-  } else {
-    return path.join(resourcesPath, '7zip', 'linux', archFolder, '7zz');
-  }
+  return get7zBinaryPath(basePath);
 }
 
 /**
