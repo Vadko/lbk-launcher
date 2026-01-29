@@ -13,7 +13,7 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getSteamPlaytimesForApps, type SteamAppPlaytime } from './game-detector/steam';
+import { getSteamPlaytimesForApps } from './game-detector/steam';
 import { getAllInstalledGameIds } from './installer';
 
 // ============================================================================
@@ -336,20 +336,4 @@ export async function calculatePlaytimeDeltas(): Promise<PlaytimeDelta[]> {
   }
 
   return deltas;
-}
-
-/**
- * Get current playtime for a specific game (for UI display)
- */
-function getCurrentPlaytimeForGame(steamAppId: number): SteamAppPlaytime | null {
-  const playtimes = getSteamPlaytimesForApps([steamAppId]);
-  return playtimes.get(steamAppId) ?? null;
-}
-
-/**
- * Force refresh cache (e.g., after installing a new localization)
- */
-async function refreshPlaytimeCache(): Promise<void> {
-  console.log('[PlaytimeTracker] Refreshing cache...');
-  await recordPlaytimeAtSessionStart();
 }

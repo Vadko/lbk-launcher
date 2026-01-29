@@ -640,8 +640,6 @@ export function invalidateSteamLibraryAppIdsCache(): void {
 // Steam Playtime Detection
 // ============================================================================
 
-export { SteamAppPlaytime };
-
 /**
  * Get playtime for all Steam apps from localconfig.vdf
  * Returns Map of App ID -> playtime data
@@ -703,17 +701,4 @@ export function getSteamPlaytimesForApps(
   }
 
   return result;
-}
-
-/**
- * Get path to localconfig.vdf for file watching
- */
-function getLocalConfigPath(): string | null {
-  const steamPath = getSteamPath();
-  if (!steamPath) return null;
-
-  const steamUserId = getCurrentSteamUserId();
-  if (!steamUserId) return null;
-
-  return path.join(steamPath, 'userdata', steamUserId, 'config', 'localconfig.vdf');
 }
