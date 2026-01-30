@@ -17,14 +17,27 @@ let installedGameIdsCache: string[] | null = null;
 
 /**
  * Find the installation info file path, supporting both new and legacy formats.
+ * If old format is found, attempts to rename it to the new format.
  * @param gamePath The path to the game installation directory.
  * @returns The path to the installation info file.
  */
 export function findInstallationInfoFile(gamePath: string) {
   const oldFormatPath = path.join(gamePath, '.littlebit-translation.json');
-  if (fs.existsSync(oldFormatPath)) return oldFormatPath;
+  const newFormatPath = path.join(gamePath, INSTALLATION_INFO_FILE);
 
-  return path.join(gamePath, INSTALLATION_INFO_FILE);
+  if (fs.existsSync(oldFormatPath)) {
+    try {
+      // Try to rename old format to new format
+      fs.renameSync(oldFormatPath, newFormatPath);
+      return newFormatPath;
+    } catch (error) {
+      // If rename fails, return path to old format
+      console.warn('[Installer] Failed to rename old format file, using old path:', error);
+      return oldFormatPath;
+    }
+  }
+
+  return newFormatPath;
 }
 
 /**

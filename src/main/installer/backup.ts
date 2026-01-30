@@ -14,14 +14,27 @@ export const BACKUP_DIR_NAME = '.lbk-backup'; // New format: hidden directory in
 
 /**
  * Find the backup directory path, supporting both new and legacy formats.
+ * If old format is found, attempts to rename it to the new format.
  * @param targetDir The target game installation directory.
  * @returns The path to the backup directory.
  */
 export function findBackupDir(targetDir: string) {
   const oldDirPath = path.join(targetDir, BACKUP_DIR_NAME_LEGACY);
-  if (fs.existsSync(oldDirPath)) return oldDirPath;
+  const newDirPath = path.join(targetDir, BACKUP_DIR_NAME);
 
-  return path.join(targetDir, BACKUP_DIR_NAME);
+  if (fs.existsSync(oldDirPath)) {
+    try {
+      // Try to rename old format to new format
+      fs.renameSync(oldDirPath, newDirPath);
+      return newDirPath;
+    } catch (error) {
+      // If rename fails, return path to old format
+      console.warn('[Backup] Failed to rename old backup directory, using old path:', error);
+      return oldDirPath;
+    }
+  }
+
+  return newDirPath;
 }
 
 /**
