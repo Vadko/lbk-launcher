@@ -14,13 +14,13 @@ export const StatusCard: React.FC<StatusCardProps> = ({ game }) => (
     <div>
       <ProgressBar label="Переклад" value={game.translation_progress} color="#A2D2F6" />
       <ProgressBar label="Редактура" value={game.editing_progress} color="#FFD7A1" />
-      {game.fonts_progress && (
+      {game.fonts_progress && game.fonts_progress > 0 && (
         <ProgressBar label="Шрифти" value={game.fonts_progress} color="#FDA0B2" />
       )}
-      {game.textures_progress && (
+      {game.textures_progress && game.textures_progress > 0 && (
         <ProgressBar label="Текстури" value={game.textures_progress} color="#BDFC9F" />
       )}
-      {game.voice_progress && (
+      {game.voice_progress && game.voice_progress > 0 && (
         <ProgressBar label="Озвучення" value={game.voice_progress} color="#06b6d4" />
       )}
     </div>
