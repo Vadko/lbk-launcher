@@ -1,21 +1,46 @@
-import { path7z as originalPath7z, path7zzs } from '7zip-bin-full';
 import { execSync } from 'child_process';
+import { app } from 'electron';
 import fs from 'fs';
 import { extractFull } from 'node-7z';
+import path from 'path';
 import { promisify } from 'util';
 import type { InstallationStatus } from '../../shared/types';
+import { isLinux, isMacOS, isWindows } from '../utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 
-// Fix for ASAR: replace .asar with .asar.unpacked for spawnable binaries
-const bundled7z = originalPath7z.replace('app.asar', 'app.asar.unpacked');
-const bundled7zzs = path7zzs.replace('app.asar', 'app.asar.unpacked');
+/**
+ * Get 7z binary path from a base directory
+ */
+function get7zBinaryPath(basePath: string): string {
+  const arch = process.arch;
+  const archFolder = arch === 'x64' ? 'x64' : arch === 'arm64' ? 'arm64' : 'ia32';
+
+  if (isWindows()) {
+    return path.join(basePath, 'win', archFolder, '7z.exe');
+  }
+  if (isMacOS()) {
+    return path.join(basePath, 'mac', arch, '7zz');
+  }
+  return path.join(basePath, 'linux', archFolder, '7zz');
+}
+
+/**
+ * Get 7z binary path from extraResources or node_modules (dev)
+ */
+function getResourcesBased7zPath(): string {
+  const basePath = app.isPackaged
+    ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), '7zip')
+    : path.join(app.getAppPath(), 'node_modules', '7zip-bin-full');
+
+  return get7zBinaryPath(basePath);
+}
 
 /**
  * Check if system 7z is available (for Linux/Steam Deck compatibility)
  */
 function getSystem7zPath(): string | null {
-  if (process.platform !== 'linux') return null;
+  if (!isLinux()) return null;
 
   try {
     // Try common 7z command names
@@ -41,29 +66,27 @@ function getSystem7zPath(): string | null {
 
 /**
  * Get the best available 7z binary path
- * Priority: system 7z > static 7zzs > bundled 7zz
+ * Priority: system 7z (Linux) > extraResources 7z
  */
 function get7zPath(): string {
   // On Linux, prefer system 7z for better compatibility (especially Steam Deck)
-  if (process.platform === 'linux') {
+  if (isLinux()) {
     const system7z = getSystem7zPath();
     if (system7z) {
       return system7z;
     }
-
-    // Fallback to static binary (no dynamic library dependencies)
-    if (fs.existsSync(bundled7zzs)) {
-      console.log(`[7z] Using static bundled 7zzs: ${bundled7zzs}`);
-      return bundled7zzs;
-    }
   }
 
-  // Default: use bundled 7zz
-  console.log(`[7z] Using bundled 7z: ${bundled7z}`);
-  return bundled7z;
-}
+  // Use 7z from extraResources (works for all builds including portable)
+  const resourcesPath = getResourcesBased7zPath();
+  if (fs.existsSync(resourcesPath)) {
+    console.log(`[7z] Using resources 7z: ${resourcesPath}`);
+    return resourcesPath;
+  }
 
-const path7z = get7zPath();
+  console.error(`[7z] 7z binary not found at: ${resourcesPath}`);
+  throw new Error(`7z binary not found: ${resourcesPath}`);
+}
 
 /**
  * Extract ZIP archive with support for all compression methods and UTF-8/Cyrillic filenames
@@ -85,6 +108,9 @@ export async function extractArchive(
   console.log(`[Installer] Extracting archive: ${archivePath}`);
   console.log(`[Installer] Target directory: ${extractPath}`);
   console.log(`[Installer] Archive size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+
+  const path7z = get7zPath();
+  console.log(`[Installer] Using 7z: ${path7z}`);
 
   return new Promise<void>((resolve, reject) => {
     // Use 7-Zip for extraction (supports all compression methods including LZMA)

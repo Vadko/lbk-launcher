@@ -131,3 +131,63 @@ export function parseMostRecentUser(content: string): string | null {
     return null;
   }
 }
+
+/**
+ * Steam app playtime data
+ */
+export interface SteamAppPlaytime {
+  /** Total playtime in minutes */
+  playtimeMinutes: number;
+  /** Last played timestamp (Unix seconds) */
+  lastPlayed?: number;
+}
+
+/**
+ * Parse Steam localconfig.vdf file and extract playtime for all apps
+ * Path: userdata/<steamid>/config/localconfig.vdf
+ * Structure: UserLocalConfigStore.Software.Valve.Steam.apps.<appid>.Playtime
+ * Returns Map of App ID -> playtime in minutes
+ */
+export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppPlaytime> {
+  const playtimes = new Map<number, SteamAppPlaytime>();
+
+  try {
+    const parsed = vdf.parse(content);
+
+    // Navigate to: UserLocalConfigStore.Software.Valve.Steam.apps
+    const apps = parsed?.UserLocalConfigStore?.Software?.Valve?.Steam?.apps;
+    if (!apps || typeof apps !== 'object') return playtimes;
+
+    for (const [appIdStr, appData] of Object.entries(apps)) {
+      const appId = parseInt(appIdStr, 10);
+      if (isNaN(appId) || appId <= 10) continue;
+
+      if (appData && typeof appData === 'object') {
+        const data = appData as Record<string, unknown>;
+
+        // Try different playtime field names (Steam uses different formats)
+        const playtimeStr =
+          data.Playtime || data.playtime || data.playtime_forever || data.PlaytimeForever;
+
+        if (playtimeStr !== undefined) {
+          const playtimeMinutes = parseInt(String(playtimeStr), 10);
+          if (!isNaN(playtimeMinutes) && playtimeMinutes > 0) {
+            const lastPlayedStr = data.LastPlayed || data.lastplayed;
+            const lastPlayed = lastPlayedStr
+              ? parseInt(String(lastPlayedStr), 10)
+              : undefined;
+
+            playtimes.set(appId, {
+              playtimeMinutes,
+              lastPlayed: lastPlayed && !isNaN(lastPlayed) ? lastPlayed : undefined,
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[VDFParser] Error parsing localconfig playtime:', error);
+  }
+
+  return playtimes;
+}
