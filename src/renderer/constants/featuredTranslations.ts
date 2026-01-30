@@ -23,10 +23,8 @@ const FEATURED_TRANSLATIONS: FeaturedTranslation[] = [
 export const getFeaturedInfo = (
   gameSlug: string,
   team?: string
-): FeaturedTranslation | null => {
-  return (
+): FeaturedTranslation | null => (
     FEATURED_TRANSLATIONS.find(
       (t) => t.gameSlug === gameSlug && (t.team === undefined || t.team === team)
     ) || null
   );
-};

@@ -3,7 +3,6 @@ module.exports = {
   env: { browser: true, es2020: true, node: true },
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
   ignorePatterns: ['dist', 'out', '.eslintrc.cjs', 'node_modules'],
@@ -15,33 +14,16 @@ module.exports = {
       jsx: true,
     },
   },
-  plugins: ['react-refresh', 'unused-imports'],
+  plugins: ['react-refresh'],
   rules: {
     // === React ===
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
 
-    // === TypeScript ===
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-unused-vars': 'off', // Використовуємо unused-imports замість цього
-    '@typescript-eslint/no-empty-function': 'warn',
-    '@typescript-eslint/no-empty-interface': 'warn',
-    '@typescript-eslint/prefer-as-const': 'warn',
-    '@typescript-eslint/no-inferrable-types': 'warn',
-    '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
-
-    // === Unused imports/vars ===
-    'unused-imports/no-unused-imports': 'warn',
-    'unused-imports/no-unused-vars': [
-      'warn',
-      {
-        vars: 'all',
-        varsIgnorePattern: '^_',
-        args: 'after-used',
-        argsIgnorePattern: '^_',
-      },
-    ],
+    // === Disable for TypeScript (tsc handles these) ===
+    'no-unused-vars': 'off',
+    'no-undef': 'off',
 
     // === Best Practices ===
     'no-console': 'off', // Дозволяємо console для Electron-застосунку

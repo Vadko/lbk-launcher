@@ -34,7 +34,7 @@ interface UseInstallationResult {
     installOptions: InstallOptions,
     removeOptions: { removeVoice: boolean; removeAchievements: boolean }
   ) => Promise<void>;
-  handleUninstall: () => Promise<void>;
+  handleUninstall: () => void;
   handlePauseDownload: () => Promise<void>;
   handleResumeDownload: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
@@ -253,7 +253,7 @@ export function useInstallation({
   );
 
   const handleConflictingTranslation = useCallback(
-    async (conflict: ConflictingTranslation): Promise<boolean> =>
+    (conflict: ConflictingTranslation): Promise<boolean> =>
       new Promise((resolve) => {
         const teamInfo = conflict.team ? ` (${conflict.team})` : '';
         showConfirm({
@@ -525,7 +525,7 @@ export function useInstallation({
     ]
   );
 
-  const handleUninstall = useCallback(async () => {
+  const handleUninstall = useCallback(() => {
     if (!selectedGame || !installationInfo) return;
 
     const hasBackup = installationInfo.hasBackup !== false;

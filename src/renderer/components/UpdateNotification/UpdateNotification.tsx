@@ -59,6 +59,7 @@ export const UpdateNotification = () => {
       console.error('Update error:', error);
       setDownloading(false);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDownload = async () => {

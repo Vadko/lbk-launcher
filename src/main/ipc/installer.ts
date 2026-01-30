@@ -142,7 +142,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('abort-download', async (_, reason?: string) => {
+  ipcMain.handle('abort-download', (_, reason?: string) => {
     try {
       abortCurrentDownload(reason);
       return { success: true };
@@ -152,7 +152,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('pause-download', async (_, gameId: string) => {
+  ipcMain.handle('pause-download', (_, gameId: string) => {
     try {
       const state = pauseCurrentDownload(gameId);
       if (state) {
@@ -168,7 +168,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('resume-download', async (_, gameId: string) => {
+  ipcMain.handle('resume-download', (_, gameId: string) => {
     try {
       const state = getPausedDownloadState(gameId);
       if (!state) {
@@ -201,7 +201,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('get-paused-download', async (_, gameId: string) => {
+  ipcMain.handle('get-paused-download', (_, gameId: string) => {
     try {
       return getPausedDownloadState(gameId);
     } catch (error) {
@@ -210,7 +210,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('cancel-paused-download', async (_, gameId: string) => {
+  ipcMain.handle('cancel-paused-download', (_, gameId: string) => {
     try {
       const state = getPausedDownloadState(gameId);
       if (state) {
@@ -263,7 +263,7 @@ export function setupInstallerHandlers(): void {
     }
   );
 
-  ipcMain.handle('check-platform-compatibility', async (_, game: Game) =>
+  ipcMain.handle('check-platform-compatibility', (_, game: Game) =>
     checkPlatformCompatibility(game)
   );
 }

@@ -66,7 +66,7 @@ export async function verifyFileHash(
 /**
  * Calculate full SHA-256 hash using streaming
  */
-async function calculateFullHash(filePath: string): Promise<string> {
+function calculateFullHash(filePath: string): Promise<string> {
   const hash = createHash('sha256');
   const stream = fs.createReadStream(filePath);
 
@@ -81,11 +81,11 @@ async function calculateFullHash(filePath: string): Promise<string> {
  * Calculate fingerprint hash for large files
  * Hash of: first 10MB + last 10MB + file size (as 8-byte little-endian)
  */
-async function calculateFingerprintHash(
+function calculateFingerprintHash(
   filePath: string,
   fileSize: number,
   chunkSize: number
-): Promise<string> {
+): string {
   const fd = fs.openSync(filePath, 'r');
 
   try {

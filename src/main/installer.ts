@@ -608,7 +608,7 @@ async function downloadAndExtractArchive(
   await extractArchive(archiveFilePath, extractDir, onStatus);
 
   // Get list of extracted files
-  return await getAllFiles(extractDir);
+  return getAllFiles(extractDir);
 }
 
 /**

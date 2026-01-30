@@ -11,7 +11,7 @@ import { getIcon } from './utils/theme';
 let mainWindow: BrowserWindow | null = null;
 let liquidGlassId: number | null = null;
 
-export async function createMainWindow(): Promise<BrowserWindow> {
+export function createMainWindow(): BrowserWindow {
   console.log('[Window] Creating main window...');
 
   // Check if liquid glass is supported and get user preference
@@ -99,10 +99,10 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     console.error('[Window] Render process gone:', details);
   });
 
-  mainWindow.on('closed', async () => {
+  mainWindow.on('closed', () => {
     // Clean up liquid glass if it was applied
     if (liquidGlassId) {
-      await removeLiquidGlass(liquidGlassId);
+      removeLiquidGlass(liquidGlassId);
       liquidGlassId = null;
     }
     mainWindow = null;
@@ -129,13 +129,13 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   }, 5000); // Show after 5 seconds if ready-to-show hasn't fired
 
   // Apply liquid glass immediately after window is ready (if supported)
-  mainWindow.once('ready-to-show', async () => {
+  mainWindow.once('ready-to-show', () => {
     console.log('[Window] ready-to-show event fired');
     clearTimeout(showTimeout);
     if (isSupported) {
       console.log('[Window] Applying liquid glass on ready-to-show');
       // Apply with default enabled state - user can toggle it later in settings
-      liquidGlassId = await applyLiquidGlass(mainWindow!, true);
+      liquidGlassId = applyLiquidGlass(mainWindow!, true);
       console.log('[Window] Liquid glass applied with ID:', liquidGlassId);
     }
     // Show window after liquid glass is applied (or immediately if not supported)
@@ -154,20 +154,18 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 // IPC handler for toggling liquid glass
-ipcMain.handle('liquid-glass:toggle', async (_event, enabled: boolean) => {
+ipcMain.handle('liquid-glass:toggle', (_event, enabled: boolean) => {
   if (!mainWindow) return;
 
   if (enabled && supportsMacOSLiquidGlass()) {
     // Apply liquid glass if not already applied
     if (!liquidGlassId) {
-      liquidGlassId = await applyLiquidGlass(mainWindow, true);
+      liquidGlassId = applyLiquidGlass(mainWindow, true);
     }
-  } else {
+  } else if (liquidGlassId) {
     // Remove liquid glass if applied
-    if (liquidGlassId) {
-      await removeLiquidGlass(liquidGlassId);
-      liquidGlassId = null;
-    }
+    removeLiquidGlass(liquidGlassId);
+    liquidGlassId = null;
   }
 });
 

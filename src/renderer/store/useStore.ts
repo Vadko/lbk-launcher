@@ -61,7 +61,7 @@ interface Store {
 
   // Game Detection Actions
   clearDetectedGamesCache: () => void;
-  detectInstalledGames: (games: Game[]) => Promise<void>;
+  detectInstalledGames: (games: Game[]) => void;
   isGameDetected: (gameId: string) => boolean;
 
   // Subscription Status Check
@@ -310,7 +310,7 @@ export const useStore = create<Store>((set, get) => ({
     set({ detectedGames: new Map() });
   },
 
-  detectInstalledGames: async (games: Game[]) => {
+  detectInstalledGames: (games: Game[]) => {
     if (!window.electronAPI) return;
 
     try {

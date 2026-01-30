@@ -11,10 +11,10 @@ const liquidGlass =
  * @param userPreference Whether the user has enabled liquid glass in settings
  * @returns The glass ID if successful, null otherwise
  */
-export async function applyLiquidGlass(
+export function applyLiquidGlass(
   window: BrowserWindow,
   userPreference = true
-): Promise<number | null> {
+): number | null {
   try {
     // Check if we should enable liquid glass
     if (!shouldEnableLiquidGlass(userPreference)) {
@@ -67,7 +67,7 @@ export async function applyLiquidGlass(
  * Glass effects are automatically cleaned up when the window is destroyed.
  * @param glassId The glass ID returned from applyLiquidGlass
  */
-export async function removeLiquidGlass(glassId: number | null): Promise<void> {
+export function removeLiquidGlass(glassId: number | null): void {
   // Note: electron-liquid-glass does not provide a removeView API
   // The glass effect is automatically cleaned up when the window is destroyed
   console.log(

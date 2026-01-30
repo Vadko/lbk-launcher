@@ -111,39 +111,36 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
             }
           }
         }
-        // macOS/Linux: check executable permission or .app bundle
+        // macOS: check for .app bundles
+        else if (isMacOS() && macAppPattern.test(file)) {
+          executables.push(filePath);
+        }
+        // Unix-like: check executable permission
         else {
-          // Check for .app bundles on macOS
-          if (isMacOS() && macAppPattern.test(file)) {
-            executables.push(filePath);
-          }
-          // Check for executable permission on Unix-like systems
-          else {
-            try {
-              fs.accessSync(filePath, fs.constants.X_OK);
-              // Skip common non-executable file types
-              const skipExtensions = [
-                '.txt',
-                '.md',
-                '.json',
-                '.xml',
-                '.cfg',
-                '.ini',
-                '.log',
-                '.png',
-                '.jpg',
-                '.ico',
-                '.dll',
-                '.so',
-                '.dylib',
-              ];
-              const ext = path.extname(file).toLowerCase();
-              if (!skipExtensions.includes(ext)) {
-                executables.push(filePath);
-              }
-            } catch {
-              // Not executable, skip
+          try {
+            fs.accessSync(filePath, fs.constants.X_OK);
+            // Skip common non-executable file types
+            const skipExtensions = [
+              '.txt',
+              '.md',
+              '.json',
+              '.xml',
+              '.cfg',
+              '.ini',
+              '.log',
+              '.png',
+              '.jpg',
+              '.ico',
+              '.dll',
+              '.so',
+              '.dylib',
+            ];
+            const ext = path.extname(file).toLowerCase();
+            if (!skipExtensions.includes(ext)) {
+              executables.push(filePath);
             }
+          } catch {
+            // Not executable, skip
           }
         }
       }

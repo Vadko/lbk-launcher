@@ -167,7 +167,7 @@ export async function runInstaller(
  * Get Steam achievements path (Steam/appcache/stats)
  * Always uses the main Steam installation path, not the game's library folder
  */
-export async function getSteamAchievementsPath(): Promise<string | null> {
+export function getSteamAchievementsPath(): string | null {
   try {
     // Always use main Steam installation path (where Steam.exe is located)
     // Achievements must be in the main Steam folder, not in additional libraries

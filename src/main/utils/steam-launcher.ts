@@ -61,10 +61,10 @@ async function isSteamRunning(): Promise<boolean> {
     if (isWindows()) {
       await execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe');
       return true;
-    } else if (isLinux()) {
+    } if (isLinux()) {
       await execAsync('pgrep -x steam');
       return true;
-    } else if (isMacOS()) {
+    } if (isMacOS()) {
       await execAsync('pgrep -x Steam');
       return true;
     }
@@ -104,10 +104,10 @@ async function shutdownSteam(): Promise<void> {
 
   if (isWindows()) {
     // Windows: taskkill
-    await execAsync('taskkill /IM steam.exe').catch(() => {
+    await execAsync('taskkill /IM steam.exe').catch(() => 
       // If graceful fails, force kill
-      return execAsync('taskkill /F /IM steam.exe').catch(() => void 0);
-    });
+       execAsync('taskkill /F /IM steam.exe').catch(() => void 0)
+    );
   } else if (isLinux()) {
     // Linux: try steam -shutdown first (graceful), then pkill
     const steamType = detectLinuxSteamType();
@@ -126,9 +126,7 @@ async function shutdownSteam(): Promise<void> {
     }
   } else if (isMacOS()) {
     // macOS: osascript for graceful quit, then pkill
-    await execAsync('osascript -e \'quit app "Steam"\'').catch(() => {
-      return execAsync('pkill -TERM Steam').catch(() => void 0);
-    });
+    await execAsync('osascript -e \'quit app "Steam"\'').catch(() => execAsync('pkill -TERM Steam').catch(() => void 0));
   }
 
   // Wait for process to exit
@@ -165,7 +163,7 @@ function spawnDetached(command: string, args: string[] = []): ChildProcess {
 /**
  * Launch Steam with optional URL (e.g., steam://rungameid/123)
  */
-async function launchSteamLinux(url?: string): Promise<boolean> {
+function launchSteamLinux(url?: string): boolean {
   const steamType = detectLinuxSteamType();
   const args = url ? [url] : [];
 

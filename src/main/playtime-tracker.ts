@@ -225,7 +225,7 @@ export async function recordPlaytimeAtSessionStart(): Promise<PlaytimeDelta[]> {
  * Recover playtime data from a previous session that didn't close properly
  * (crash, force quit, kill process)
  */
-async function recoverOrphanedSession(): Promise<PlaytimeDelta[]> {
+function recoverOrphanedSession(): PlaytimeDelta[] {
   const deltas: PlaytimeDelta[] = [];
 
   try {
@@ -291,7 +291,7 @@ async function recoverOrphanedSession(): Promise<PlaytimeDelta[]> {
  * Called at launcher shutdown
  * Compares current playtime with recorded values and returns deltas
  */
-export async function calculatePlaytimeDeltas(): Promise<PlaytimeDelta[]> {
+export function calculatePlaytimeDeltas(): PlaytimeDelta[] {
   console.log('[PlaytimeTracker] Calculating playtime deltas...');
 
   const deltas: PlaytimeDelta[] = [];

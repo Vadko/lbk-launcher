@@ -90,25 +90,23 @@ export async function backupFiles(
       if (entry.isDirectory()) {
         // Recursively backup subdirectory
         await backupFiles(sourcePath, targetPath, rootBackupDir, entryRelativePath);
-      } else {
-        // Check if file exists in target directory
-        if (fs.existsSync(targetPath)) {
-          const backupPath = path.join(rootBackupDir, entryRelativePath);
-          const backupFileDir = path.dirname(backupPath);
+      } else if (fs.existsSync(targetPath)) {
+        // File exists in target - create backup
+        const backupPath = path.join(rootBackupDir, entryRelativePath);
+        const backupFileDir = path.dirname(backupPath);
 
-          // Only create backup if it doesn't exist (preserve original files)
-          if (!fs.existsSync(backupPath)) {
-            // Ensure backup subdirectory exists
-            if (!fs.existsSync(backupFileDir)) {
-              await fs.promises.mkdir(backupFileDir, { recursive: true });
-            }
-
-            await fs.promises.copyFile(targetPath, backupPath);
-            console.log(`[Backup] Backed up: ${entryRelativePath}`);
-            backedUpCount++;
-          } else {
-            console.log(`[Backup] Backup already exists, skipping: ${entryRelativePath}`);
+        // Only create backup if it doesn't exist (preserve original files)
+        if (!fs.existsSync(backupPath)) {
+          // Ensure backup subdirectory exists
+          if (!fs.existsSync(backupFileDir)) {
+            await fs.promises.mkdir(backupFileDir, { recursive: true });
           }
+
+          await fs.promises.copyFile(targetPath, backupPath);
+          console.log(`[Backup] Backed up: ${entryRelativePath}`);
+          backedUpCount++;
+        } else {
+          console.log(`[Backup] Backup already exists, skipping: ${entryRelativePath}`);
         }
       }
     }
