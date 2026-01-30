@@ -216,11 +216,9 @@ function steam64ToSteam3(steam64Id: string): string {
 
 /**
  * Get the current Steam3 user ID (active/most recent user) (internal)
+ * @param steamPath - Steam installation path
  */
-function getCurrentSteamUserId(): string | null {
-  const steamPath = getSteamPath();
-  if (!steamPath) return null;
-
+function getCurrentSteamUserId(steamPath: string): string | null {
   // Try to get most recent user from loginusers.vdf
   try {
     const loginUsersPath = path.join(steamPath, 'config', 'loginusers.vdf');
@@ -266,20 +264,55 @@ function getCurrentSteamUserId(): string | null {
 }
 
 // ============================================================================
-// Licensecache (for detecting owned games changes)
+// User Config Paths
 // ============================================================================
+
+/**
+ * Get the path to a file in the current user's config folder
+ * Base path: Steam/userdata/{userId}/config/{filename}
+ */
+function getUserConfigPath(filename: string): string | null {
+  const steamPath = getSteamPath();
+  if (!steamPath) return null;
+
+  const steamUserId = getCurrentSteamUserId(steamPath);
+  if (!steamUserId) return null;
+
+  return path.join(steamPath, 'userdata', steamUserId, 'config', filename);
+}
+
+/**
+ * Get the path to localconfig.vdf for current user
+ */
+function getLocalConfigPath(): string | null {
+  return getUserConfigPath('localconfig.vdf');
+}
+
+/**
+ * Read localconfig.vdf content for current user
+ * Returns null if Steam/user not found or file doesn't exist
+ */
+function readLocalConfigContent(): string | null {
+  const localConfigPath = getLocalConfigPath();
+  if (!localConfigPath) return null;
+
+  try {
+    if (!fs.existsSync(localConfigPath)) {
+      console.log(`[Steam] localconfig.vdf not found at ${localConfigPath}`);
+      return null;
+    }
+    return fs.readFileSync(localConfigPath, 'utf8');
+  } catch (error) {
+    console.error('[Steam] Error reading localconfig.vdf:', error);
+    return null;
+  }
+}
 
 /**
  * Get the path to licensecache file for current user
  */
 export function getLicensecachePath(): string | null {
-  const steamPath = getSteamPath();
-  if (!steamPath) return null;
-
-  const steamUserId = getCurrentSteamUserId();
-  if (!steamUserId) return null;
-
-  return path.join(steamPath, 'userdata', steamUserId, 'config', 'licensecache');
+  return getUserConfigPath('licensecache');
 }
 
 /**
@@ -509,7 +542,7 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
     return [];
   }
 
-  const steam3Id = getCurrentSteamUserId();
+  const steam3Id = getCurrentSteamUserId(steamPath);
   if (!steam3Id) {
     console.log('[Steam] No Steam user found');
     return [];
@@ -573,36 +606,19 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
 
   // Fallback to localconfig.vdf
   console.log('[Steam] Library: API failed, falling back to localconfig.vdf');
-  return getSteamLibraryAppIdsFallback(steamPath, steam3Id);
+  return getSteamLibraryAppIdsFallback();
 }
 
-function getSteamLibraryAppIdsFallback(steamPath: string, steamUserId: string): number[] {
-  try {
-    const localConfigPath = path.join(
-      steamPath,
-      'userdata',
-      steamUserId,
-      'config',
-      'localconfig.vdf'
-    );
-
-    if (fs.existsSync(localConfigPath)) {
-      const content = fs.readFileSync(localConfigPath, 'utf8');
-      const appIds = parseLocalConfigApps(content);
-
-      console.log(
-        `[Steam] Library: using localconfig.vdf fallback (${appIds.length} apps)`
-      );
-      cache.libraryAppIds = appIds;
-      return appIds;
-    }
-
-    console.log(`[Steam] localconfig.vdf not found at ${localConfigPath}`);
-  } catch (error) {
-    console.error('[Steam] Error reading localconfig.vdf:', error);
+function getSteamLibraryAppIdsFallback(): number[] {
+  const content = readLocalConfigContent();
+  if (!content) {
+    return [];
   }
 
-  return [];
+  const appIds = parseLocalConfigApps(content);
+  console.log(`[Steam] Library: using localconfig.vdf fallback (${appIds.length} apps)`);
+  cache.libraryAppIds = appIds;
+  return appIds;
 }
 
 // ============================================================================
@@ -645,41 +661,14 @@ export function invalidateSteamLibraryAppIdsCache(): void {
  * Returns Map of App ID -> playtime data
  */
 function getSteamPlaytimes(): Map<number, SteamAppPlaytime> {
-  const steamPath = getSteamPath();
-  if (!steamPath) {
-    console.log('[Steam] Playtime: Steam not found');
+  const content = readLocalConfigContent();
+  if (!content) {
     return new Map();
   }
 
-  const steamUserId = getCurrentSteamUserId();
-  if (!steamUserId) {
-    console.log('[Steam] Playtime: No Steam user found');
-    return new Map();
-  }
-
-  try {
-    const localConfigPath = path.join(
-      steamPath,
-      'userdata',
-      steamUserId,
-      'config',
-      'localconfig.vdf'
-    );
-
-    if (!fs.existsSync(localConfigPath)) {
-      console.log('[Steam] Playtime: localconfig.vdf not found');
-      return new Map();
-    }
-
-    const content = fs.readFileSync(localConfigPath, 'utf8');
-    const playtimes = parseLocalConfigPlaytime(content);
-
-    console.log(`[Steam] Playtime: found data for ${playtimes.size} apps`);
-    return playtimes;
-  } catch (error) {
-    console.error('[Steam] Playtime: Error reading localconfig.vdf:', error);
-    return new Map();
-  }
+  const playtimes = parseLocalConfigPlaytime(content);
+  console.log(`[Steam] Playtime: found data for ${playtimes.size} apps`);
+  return playtimes;
 }
 
 /**
