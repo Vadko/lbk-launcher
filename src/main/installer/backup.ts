@@ -29,7 +29,10 @@ export function findBackupDir(targetDir: string) {
       return newDirPath;
     } catch (error) {
       // If rename fails, return path to old format
-      console.warn('[Backup] Failed to rename old backup directory, using old path:', error);
+      console.warn(
+        '[Backup] Failed to rename old backup directory, using old path:',
+        error
+      );
       return oldDirPath;
     }
   }
@@ -284,7 +287,12 @@ export async function cleanupEmptyDirectories(
     if (!fs.existsSync(dir)) return;
 
     // Never clean up inside backup directory
-    if (dir.includes(BACKUP_DIR_NAME) || path.basename(dir) === BACKUP_DIR_NAME || dir.includes(BACKUP_DIR_NAME_LEGACY) || path.basename(dir) === BACKUP_DIR_NAME_LEGACY) {
+    if (
+      dir.includes(BACKUP_DIR_NAME) ||
+      path.basename(dir) === BACKUP_DIR_NAME ||
+      dir.includes(BACKUP_DIR_NAME_LEGACY) ||
+      path.basename(dir) === BACKUP_DIR_NAME_LEGACY
+    ) {
       return;
     }
 
@@ -292,7 +300,11 @@ export async function cleanupEmptyDirectories(
 
     // Recursively clean subdirectories first (skip backup dir)
     for (const entry of entries) {
-      if (entry.isDirectory() && entry.name !== BACKUP_DIR_NAME && entry.name !== BACKUP_DIR_NAME_LEGACY) {
+      if (
+        entry.isDirectory() &&
+        entry.name !== BACKUP_DIR_NAME &&
+        entry.name !== BACKUP_DIR_NAME_LEGACY
+      ) {
         const subDir = path.join(dir, entry.name);
         await cleanupEmptyDirectories(subDir, rootDir);
       }
@@ -300,7 +312,9 @@ export async function cleanupEmptyDirectories(
 
     // Check if directory is now empty (ignore backup dir when counting)
     const remainingEntries = await readdir(dir);
-    const nonBackupEntries = remainingEntries.filter((e) => e !== BACKUP_DIR_NAME && e !== BACKUP_DIR_NAME_LEGACY);
+    const nonBackupEntries = remainingEntries.filter(
+      (e) => e !== BACKUP_DIR_NAME && e !== BACKUP_DIR_NAME_LEGACY
+    );
     if (nonBackupEntries.length === 0 && dir !== rootDir) {
       // Don't delete if only backup dir remains
       if (remainingEntries.length > 0) {

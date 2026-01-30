@@ -32,7 +32,10 @@ export function findInstallationInfoFile(gamePath: string) {
       return newFormatPath;
     } catch (error) {
       // If rename fails, return path to old format
-      console.warn('[Installer] Failed to rename old format file, using old path:', error);
+      console.warn(
+        '[Installer] Failed to rename old format file, using old path:',
+        error
+      );
       return oldFormatPath;
     }
   }
