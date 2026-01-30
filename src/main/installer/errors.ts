@@ -40,7 +40,13 @@ export class RateLimitError extends Error {
   ) {
     const nextTime = nextAvailableAt ? new Date(nextAvailableAt) : null;
     const timeStr = nextTime
-      ? nextTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+      ? nextTime.toLocaleString('uk-UA', {
+          day: 'numeric',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
       : 'невідомо';
 
     super(

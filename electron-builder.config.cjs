@@ -12,7 +12,10 @@ module.exports = {
     output: 'release/${version}',
   },
 
-  files: ['out/**/*'],
+  files: [
+    'out/**/*',
+    '!node_modules/7zip-bin-full/**',
+  ],
 
   extraResources: [
     {
@@ -27,7 +30,7 @@ module.exports = {
 
   icon: 'resources/icon.png',
 
-  asarUnpack: ['**/*.node', '**/7zip-bin-full/**'],
+  asarUnpack: ['**/*.node'],
 
   electronLanguages: ['en-US', 'uk'],
 
@@ -66,6 +69,13 @@ module.exports = {
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
     legalTrademarks: '© 2026 LBK UA',
+    extraResources: [
+      {
+        from: 'node_modules/7zip-bin-full/win',
+        to: '7zip/win',
+        filter: ['**/*'],
+      },
+    ],
   },
 
   portable: {
@@ -79,6 +89,13 @@ module.exports = {
     executableName: 'lbk-launcher',
     // Steam Deck compatibility
     executableArgs: ['--no-sandbox', '--disable-gpu-sandbox'],
+    extraResources: [
+      {
+        from: 'node_modules/7zip-bin-full/linux',
+        to: '7zip/linux',
+        filter: ['**/*'],
+      },
+    ],
   },
 
   nsis: {
@@ -114,6 +131,13 @@ module.exports = {
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',
     notarize: true,
+    extraResources: [
+      {
+        from: 'node_modules/7zip-bin-full/mac',
+        to: '7zip/mac',
+        filter: ['**/*'],
+      },
+    ],
   },
 
   dmg: {

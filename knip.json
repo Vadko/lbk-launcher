@@ -11,5 +11,8 @@
     "src/lib/database.types.ts",
     "src/renderer/queries/index.ts",
     "src/renderer/queries/useTrendingGames.ts"
+  ],
+  "ignoreDependencies": [
+    "7zip-bin-full"
   ]
 }
