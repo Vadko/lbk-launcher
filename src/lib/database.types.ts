@@ -86,6 +86,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_authors_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       game_downloads: {
@@ -120,6 +126,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_downloads_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       game_subscriptions: {
@@ -147,6 +159,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_subscriptions_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -395,6 +413,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_versions_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -647,6 +671,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "kurin_imports_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       kurin_skipped: {
@@ -775,6 +805,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "media_upload_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
             foreignKeyName: "media_upload_queue_version_id_fkey"
             columns: ["version_id"]
             referencedRelation: "game_versions"
@@ -874,6 +910,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "support_clicks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       translation_playtime: {
@@ -908,6 +950,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "translation_playtime_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       translation_uninstalls: {
@@ -935,6 +983,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "translation_uninstalls_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -1026,6 +1080,13 @@ export type Database = {
           thumbnail_path: string | null
           translations: Json | null
           translations_count: number | null
+        }
+        Relationships: []
+      }
+      trending_games_cache: {
+        Row: {
+          downloads: number | null
+          game_id: string | null
         }
         Relationships: []
       }
