@@ -102,17 +102,17 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       case 'status-change':
         return <Languages className="w-4 h-4 text-green-400" />;
       case 'version-update':
-        return <RefreshCw className="w-4 h-4 text-neon-blue" />;
+        return <RefreshCw className="w-4 h-4 text-color-accent" />;
       case 'app-update':
-        return <Download className="w-4 h-4 text-neon-purple" />;
+        return <Download className="w-4 h-4 text-color-main" />;
       case 'progress-change':
-        return <TrendingUp className="w-4 h-4 text-amber-400" />;
+        return <TrendingUp className="w-4 h-4 text-color-mixed" />;
       case 'team-new-game':
         return <Sparkles className="w-4 h-4 text-yellow-400" />;
       case 'team-status-change':
         return <Users className="w-4 h-4 text-cyan-400" />;
       default:
-        return <Bell className="w-4 h-4 text-neon-blue" />;
+        return <Bell className="w-4 h-4 text-color-accent" />;
     }
   };
 
@@ -121,17 +121,17 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       case 'status-change':
         return 'bg-green-500/20';
       case 'version-update':
-        return 'bg-neon-blue/20';
+        return 'bg-color-accent/20';
       case 'app-update':
-        return 'bg-neon-purple/20';
+        return 'bg-color-main/20';
       case 'progress-change':
-        return 'bg-amber-500/20';
+        return 'bg-color-mixed/20';
       case 'team-new-game':
         return 'bg-yellow-500/20';
       case 'team-status-change':
         return 'bg-cyan-500/20';
       default:
-        return 'bg-neon-blue/20';
+        return 'bg-color-accent/20';
     }
   };
 
@@ -182,16 +182,16 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 onClick={() => setShowSettings(false)}
                 className="p-1 hover:bg-glass rounded-lg transition-colors"
               >
-                <ChevronLeft className="w-6 h-6 text-neon-blue" />
+                <ChevronLeft className="w-6 h-6 text-color-accent" />
               </button>
             ) : (
-              <Bell className="w-6 h-6 text-neon-blue" />
+              <Bell className="w-6 h-6 text-color-accent" />
             )}
             <h2 className="text-2xl font-bold text-text-main">
               {showSettings ? 'Налаштування сповіщень' : 'Сповіщення'}
             </h2>
             {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
-              <span className="px-2 py-1 bg-neon-blue text-bg-dark text-xs font-bold rounded-full">
+              <span className="px-2 py-1 bg-color-accent text-text-dark text-xs font-bold rounded-full">
                 {notifications.filter((n) => !n.read).length}
               </span>
             )}
@@ -310,7 +310,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                         className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
                           notification.read
                             ? 'notification-item bg-glass border-border opacity-70 hover:opacity-100'
-                            : 'notification-item-unread bg-glass-hover border-neon-blue/30 hover:bg-glass'
+                            : 'notification-item-unread bg-glass-hover border-color-accent/30 hover:bg-glass'
                         }`}
                         onClick={() => handleNotificationClick(notification)}
                       >
@@ -323,7 +323,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               {!notification.read && (
-                                <span className="w-2 h-2 bg-neon-blue rounded-full animate-pulse flex-shrink-0" />
+                                <span className="w-2 h-2 bg-color-accent rounded-full animate-pulse flex-shrink-0" />
                               )}
                               <h3 className="font-semibold text-text-main truncate">
                                 {notification.gameName}

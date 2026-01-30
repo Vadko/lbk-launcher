@@ -1,8 +1,8 @@
+import type { Game } from '@renderer/types/game';
+import { getGameImageUrl } from '@renderer/utils/imageUrl';
+import { useSettingsStore } from '@store/useSettingsStore';
 import { EyeOff } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import type { Game } from '../../types/game';
-import { getGameImageUrl } from '../../utils/imageUrl';
 import { Loader } from '../ui/Loader';
 
 interface GamepadCardProps {
@@ -89,7 +89,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
         transition-all duration-200 outline-none
         ${
           isSelected
-            ? 'ring-2 ring-neon-blue shadow-[0_0_20px_rgba(0,242,255,0.5)] scale-105 z-10'
+            ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.5)] scale-105 z-10'
             : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-102'
         }
       `}
@@ -128,7 +128,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
             />
           </>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-neon-purple/50 to-neon-blue/50 flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-color-main/50 to-color-accent/50 flex items-center justify-center">
             <span className="text-white/70 font-bold text-2xl">
               {game.name.charAt(0)}
             </span>
@@ -147,7 +147,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
           </p>
           {hasMultipleTranslations && (
             <p
-              className={`text-[10px] text-neon-blue truncate ${isAdultBlurred ? 'blur-sm' : ''}`}
+              className={`text-[10px] text-color-accent truncate ${isAdultBlurred ? 'blur-sm' : ''}`}
             >
               {game.team}
             </p>
@@ -156,7 +156,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
 
         {/* Translations count badge */}
         {hasMultipleTranslations && !isAdultBlurred && (
-          <div className="absolute top-2 right-2 min-w-[20px] h-5 px-1.5 bg-neon-purple/90 rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(189,0,255,0.6)]">
+          <div className="absolute top-2 right-2 min-w-[20px] h-5 px-1.5 bg-color-main/90 rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(168,207,150,0.6)]">
             <span className="text-[10px] font-bold text-white">
               {translations.length}
             </span>
@@ -165,12 +165,12 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
 
         {/* Update indicator */}
         {hasUpdate && !isAdultBlurred && !hasMultipleTranslations && (
-          <div className="absolute top-2 right-2 w-3 h-3 bg-neon-blue rounded-full animate-pulse shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
+          <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse shadow-[0_0_8px_rgba(255,164,122,0.8)]" />
         )}
 
         {/* Installed indicator */}
         {isDetected && !isAdultBlurred && (
-          <div className="absolute top-2 left-2 w-3 h-3 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+          <div className="absolute top-2 left-2 w-3 h-3 bg-color-main rounded-full shadow-[0_0_8px_rgba(168,207,150,0.8)]" />
         )}
       </div>
     </div>

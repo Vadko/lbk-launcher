@@ -182,10 +182,14 @@ export class GamesRepository {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    const orderClause =
-      sortOrder === 'downloads'
-        ? 'downloads DESC NULLS LAST, name COLLATE NOCASE ASC'
-        : 'name COLLATE NOCASE ASC';
+    let orderClause: string;
+    if (sortOrder === 'downloads') {
+      orderClause = 'downloads DESC NULLS LAST, name COLLATE NOCASE ASC';
+    } else if (sortOrder === 'newest') {
+      orderClause = 'approved_at DESC NULLS LAST, name COLLATE NOCASE ASC';
+    } else {
+      orderClause = 'name COLLATE NOCASE ASC';
+    }
 
     const gamesStmt = this.db.prepare(`
       SELECT *
@@ -243,12 +247,13 @@ export class GamesRepository {
   getGamesByIds(
     gameIds: string[],
     searchQuery?: string,
-    hideAiTranslations = false
+    hideAiTranslations = false,
+    useSteamIdField = false
   ): Game[] {
     if (gameIds.length === 0) return [];
 
     const whereConditions = [
-      `id IN (${gameIds.map(() => '?').join(',')})`,
+      `${useSteamIdField ? 'steam_app_id' : 'id'} IN (${gameIds.map(() => '?').join(',')})`,
       'approved = 1',
       'hide = 0',
     ];

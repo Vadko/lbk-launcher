@@ -14,7 +14,7 @@ export const Loader: React.FC<LoaderProps> = ({ size = 'md', className = '' }) =
 
   return (
     <div
-      className={`${sizeClasses[size]} border-neon-blue border-t-transparent rounded-full animate-spin ${className}`}
+      className={`${sizeClasses[size]} border-color-accent border-t-transparent rounded-full animate-spin ${className}`}
     />
   );
 };

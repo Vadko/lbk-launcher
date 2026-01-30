@@ -68,6 +68,7 @@ export function useInstallation({
   const [pendingInstallOptions, setPendingInstallOptions] = useState<
     InstallOptions | undefined
   >();
+  const [selectedProton, setSelectedProton] = useState<string | undefined>();
 
   const gameProgress = selectedGame
     ? getInstallationProgress(selectedGame.id)
@@ -432,16 +433,79 @@ export function useInstallation({
         selectedGame.installation_file_linux_path;
 
       if (hasInstaller) {
-        showConfirm({
-          title: 'Запуск інсталятора',
-          message:
-            'Після завантаження та розпакування українізатора буде запущено інсталятор.\n\nПродовжити встановлення?',
-          confirmText: 'Продовжити',
-          cancelText: 'Скасувати',
-          onConfirm: async () => {
-            await performInstallation(pendingInstallPath, installOptions);
-          },
-        });
+        const isLinux = (await window.electronAPI.getPlatform()) === 'linux';
+
+        if (isLinux) {
+          // Get available Proton versions for Linux
+          const protons = (await window.electronAPI.getAvailableProtons?.()) || [];
+
+          if (protons) {
+            // Create a state holder for selected proton
+            if (!selectedProton && protons.length > 0) {
+              setSelectedProton(protons[0].path);
+            }
+
+            const showProtonModal = (currentSelection: string) => {
+              showModal({
+                title: 'Запуск інсталятора',
+                message:
+                  'Після завантаження та розпакування українізатора буде запущено інсталятор з вибраною версією Proton.\n\nШлях до папки буде скопійовано в буфер',
+                type: 'info',
+                selectConfig: {
+                  options: protons.map((p) => ({ name: p.name, value: p.path })),
+                  selectedValue: currentSelection,
+                  onSelectionChange: (value) => {
+                    console.log('[useInstallation] Selected Proton:', value);
+                    setSelectedProton(value);
+                    showProtonModal(value);
+                  },
+                  placeholder: 'Оберіть версію Proton',
+                },
+                actions: [
+                  {
+                    label: 'Продовжити',
+                    onClick: async () => {
+                      await performInstallation(pendingInstallPath, {
+                        ...installOptions,
+                        protonPath: currentSelection,
+                      });
+                    },
+                    variant: 'primary',
+                  },
+                  {
+                    label: 'Скасувати',
+                    onClick: () => undefined,
+                    variant: 'secondary',
+                  },
+                ],
+              });
+            };
+
+            showProtonModal(selectedProton || protons[0]?.path);
+          } else {
+            showConfirm({
+              title: 'Запуск інсталятора',
+              message:
+                'Після завантаження та розпакування українізатор не вдасться запустити інсталятор через відсутність Proton.\n\nПродовжити встановлення без Proton?',
+              confirmText: 'Продовжити',
+              cancelText: 'Скасувати',
+              onConfirm: async () => {
+                await performInstallation(pendingInstallPath, installOptions);
+              },
+            });
+          }
+        } else {
+          showConfirm({
+            title: 'Запуск інсталятора',
+            message:
+              'Після завантаження та розпакування українізатора буде запущено інсталятор.\n\nПродовжити встановлення?',
+            confirmText: 'Продовжити',
+            cancelText: 'Скасувати',
+            onConfirm: async () => {
+              await performInstallation(pendingInstallPath, installOptions);
+            },
+          });
+        }
         return;
       }
 
@@ -457,6 +521,7 @@ export function useInstallation({
       setInstallationProgress,
       clearInstallationProgress,
       checkInstallationStatus,
+      selectedProton,
     ]
   );
 

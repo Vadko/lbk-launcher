@@ -15,18 +15,20 @@ import { getFirstAvailableGamePath } from './game-detector';
 import { extractArchive } from './installer/archive';
 import {
   BACKUP_DIR_NAME,
+  BACKUP_DIR_NAME_LEGACY,
   BACKUP_SUFFIX,
   backupFiles,
   cleanupEmptyDirectories,
+  findBackupDir,
   restoreBackupLegacy,
   restoreBackupNew,
 } from './installer/backup';
 import {
   checkInstallation,
   deleteCachedInstallationInfo,
+  findInstallationInfoFile,
   getAllInstalledGameIds,
   getConflictingTranslation,
-  INSTALLATION_INFO_FILE,
   invalidateInstalledGameIdsCache,
   removeOrphanedInstallationMetadata,
   saveInstallationInfo,
@@ -400,7 +402,7 @@ export async function installTranslation(
       onStatus?.({ message: 'Очищення тимчасових файлів...' });
       await cleanupDownloadDir(downloadDir);
 
-      await runInstaller(fullTargetPath, installerFileName);
+      await runInstaller(fullTargetPath, installerFileName, onStatus, options.protonPath);
 
       const installationInfo: InstallationInfo = {
         gameId: game.id,
@@ -664,7 +666,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
     }
 
     const gamePath = installInfo.gamePath;
-    const backupDir = path.join(gamePath, BACKUP_DIR_NAME);
+    const backupDir = findBackupDir(gamePath);
 
     // Collect files to delete
     let allFilesToDelete: string[] = [];
@@ -713,7 +715,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
     await cleanupEmptyDirectories(gamePath, gamePath);
 
     // Delete installation info
-    const infoPath = path.join(gamePath, INSTALLATION_INFO_FILE);
+    const infoPath = findInstallationInfoFile(gamePath);
     if (fs.existsSync(infoPath)) {
       await unlink(infoPath);
     }
@@ -781,7 +783,7 @@ export async function removeComponents(
 
 /**
  * Restore from backup or delete file if no backup exists
- * Supports both new format (.littlebit-backup/ dir) and legacy format (_backup suffix)
+ * Supports both new format (.lbk-backup/ dir) and legacy format (_backup suffix)
  */
 async function restoreOrDeleteFile(
   filePath: string,
@@ -790,8 +792,8 @@ async function restoreOrDeleteFile(
   const fileName = path.basename(filePath);
   const fileDir = path.dirname(filePath);
 
-  // Try new format first (.littlebit-backup/ directory)
-  const newBackupDir = backupBaseDir || path.join(fileDir, BACKUP_DIR_NAME);
+  // Try new format first (.lbk-backup/ directory)
+  const newBackupDir = backupBaseDir || findBackupDir(fileDir);
   const newBackupPath = path.join(newBackupDir, fileName);
 
   // Legacy format (file_backup suffix)
@@ -838,7 +840,7 @@ async function deleteFileAndCleanupDirs(
 ): Promise<void> {
   try {
     // Never delete files inside backup directory
-    if (filePath.includes(BACKUP_DIR_NAME)) {
+    if (filePath.includes(BACKUP_DIR_NAME) || filePath.includes(BACKUP_DIR_NAME_LEGACY)) {
       console.warn(`[Installer] Skipping deletion of backup file: ${filePath}`);
       return;
     }
@@ -853,7 +855,9 @@ async function deleteFileAndCleanupDirs(
         // Never remove backup directory
         if (
           dirPath.includes(BACKUP_DIR_NAME) ||
-          path.basename(dirPath) === BACKUP_DIR_NAME
+          dirPath.includes(BACKUP_DIR_NAME_LEGACY) ||
+          path.basename(dirPath) === BACKUP_DIR_NAME ||
+          path.basename(dirPath) === BACKUP_DIR_NAME_LEGACY
         ) {
           break;
         }

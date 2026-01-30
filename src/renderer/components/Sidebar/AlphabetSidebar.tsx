@@ -129,7 +129,7 @@ export const AlphabetSidebar: React.FC<AlphabetSidebarProps> = React.memo(
             >
               <div className="relative flex items-center justify-center w-14 h-14 rounded-full shadow-[0_4px_24px_rgba(0,0,0,0.4)] bg-glass backdrop-blur-md border border-neon-blue/40">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent" />
-                <span className="text-2xl font-bold font-head text-neon-blue drop-shadow-[0_0_10px_rgba(0,242,255,0.6)]">
+                <span className="text-2xl font-bold font-head text-neon-blue drop-shadow-[0_0_10px_rgba(255,164,122,0.6)]">
                   {activeLetter}
                 </span>
                 <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[8px] border-t-transparent border-l-[10px] border-l-neon-blue/40 border-b-[8px] border-b-transparent" />

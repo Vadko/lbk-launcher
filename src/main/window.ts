@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { join } from 'path';
 import {
   applyLiquidGlass,
@@ -6,6 +6,7 @@ import {
   removeLiquidGlass,
 } from './liquid-glass';
 import { supportsMacOSLiquidGlass } from './utils/platform';
+import { getIcon } from './utils/theme';
 
 let mainWindow: BrowserWindow | null = null;
 let liquidGlassId: number | null = null;
@@ -27,7 +28,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     transparent: isSupported, // Enable transparency for liquid glass on macOS 26+
     backgroundColor: isSupported ? undefined : '#050b14', // No background color when transparent
     vibrancy: undefined, // Must be undefined for liquid glass
-    icon: join(app.getAppPath(), 'resources/icon.png'),
+    icon: getIcon('window'),
     webPreferences: {
       preload: join(app.getAppPath(), 'out/preload/index.js'),
       nodeIntegration: false,
@@ -60,6 +61,12 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
+
+  // open target="_blank" links in default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
 
   // Track loading progress
   mainWindow.webContents.on('did-start-loading', () => {

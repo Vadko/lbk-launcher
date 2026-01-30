@@ -37,9 +37,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
           href={videoUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 border border-neon-blue/30 hover:border-neon-blue/60 transition-all duration-300 text-white hover:shadow-[0_0_20px_rgba(0,242,255,0.3)]"
+          className="flex items-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-color-accent/20 to-color-main/20 border border-color-accent/30 hover:border-color-accent/60 transition-all duration-300 text-white hover:shadow-[0_0_20px_rgba(255,164,122,0.3)]"
         >
-          <Play size={20} className="text-neon-blue" />
+          <Play size={20} className="text-color-accent" />
           <span className="font-medium">Переглянути відео</span>
         </a>
       </div>

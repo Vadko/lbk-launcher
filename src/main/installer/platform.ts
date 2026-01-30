@@ -1,8 +1,8 @@
 import { exec } from 'child_process';
-import { shell } from 'electron';
+import { clipboard, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import type { Game } from '../../shared/types';
+import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
 
@@ -46,11 +46,6 @@ export function checkPlatformCompatibility(game: Game): string | null {
     return 'Цей українізатор доступний тільки для Linux. Встановлення на Windows неможливе.';
   }
 
-  // Linux: needs Linux installer
-  if (isLinuxOS && !hasLinuxInstaller) {
-    return 'Цей українізатор доступний тільки для Windows. Встановлення на Linux неможливе.';
-  }
-
   // macOS: can run Linux shell scripts, but not Windows installers
   if (isMacOS) {
     // If only Windows installer available - block
@@ -80,6 +75,10 @@ export function getInstallerFileName(game: Game): string | null {
     return game.installation_file_linux_path;
   }
 
+  if (isLinuxOS && game.installation_file_windows_path) {
+    return game.installation_file_windows_path;
+  }
+
   return null;
 }
 
@@ -97,7 +96,9 @@ export function hasExecutableInstaller(game: Game): boolean {
  */
 export async function runInstaller(
   extractDir: string,
-  installerFileName: string
+  installerFileName: string,
+  onStatus?: (status: InstallationStatus) => void,
+  protonPath?: string
 ): Promise<void> {
   try {
     const installerPath = path.join(extractDir, installerFileName);
@@ -126,13 +127,31 @@ export async function runInstaller(
       });
     }
 
-    // Use Electron's shell.openPath for all platforms
-    const result = await shell.openPath(installerPath);
+    if (platform === 'linux' && protonPath) {
+      // Use Proton on Linux if protonPath is provided
+      console.log(`[Installer] Launching installer via Proton: ${protonPath}`);
+      const { runProton } = await import('./proton');
 
-    if (result) {
-      // result is an error string if something went wrong
-      console.error('[Installer] Failed to launch installer:', result);
-      throw new Error(result);
+      // Copy installer path in Wine format to clipboard for user convenience
+      const winePath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
+      clipboard.writeText(winePath);
+
+      onStatus?.({ message: 'Налаштування та запуск Proton' });
+
+      const exitCode = await runProton({ protonPath, filePath: installerPath });
+      if (exitCode !== null) {
+        console.log(`[Installer] Installer exited with code: ${exitCode}`);
+        if (exitCode === 1) throw new Error('Встановлення не було завершене');
+      }
+    } else {
+      // Use Electron's shell.openPath for all platforms
+      const result = await shell.openPath(installerPath);
+
+      if (result) {
+        // result is an error string if something went wrong
+        console.error('[Installer] Failed to launch installer:', result);
+        throw new Error(result);
+      }
     }
 
     console.log('[Installer] Installer launched successfully');

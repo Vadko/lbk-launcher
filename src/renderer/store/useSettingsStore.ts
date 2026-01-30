@@ -121,7 +121,7 @@ export const useSettingsStore = create<SettingsStore>()(
       closeSettingsModal: () => set({ isSettingsModalOpen: false }),
     }),
     {
-      name: 'littlebit-settings',
+      name: 'lbk-settings',
       partialize: (state) => ({
         theme: state.theme,
         sortOrder: state.sortOrder,

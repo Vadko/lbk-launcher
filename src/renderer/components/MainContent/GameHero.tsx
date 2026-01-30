@@ -87,7 +87,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
     <div className="relative h-[300px] rounded-2xl overflow-hidden mb-6 select-none">
       {/* Banner placeholder - only visible when banner is unavailable */}
       {!showBanner && (
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-neon-purple via-neon-blue to-neon-pink opacity-30" />
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-color-main via-color-accent to-color-main opacity-30" />
       )}
 
       {/* Banner image */}

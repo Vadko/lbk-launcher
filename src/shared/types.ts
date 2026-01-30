@@ -61,6 +61,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  protonPath?: string;
 }
 
 export interface PausedDownloadState {
@@ -81,7 +82,7 @@ export interface GetGamesParams {
   authors?: string[];
   showAdultGames?: boolean;
   hideAiTranslations?: boolean;
-  sortOrder?: 'name' | 'downloads';
+  sortOrder?: 'name' | 'downloads' | 'newest';
 }
 
 export interface GetGamesResult {
@@ -122,8 +123,10 @@ export interface ElectronAPI {
     searchQuery?: string,
     showAiTranslations?: boolean
   ) => Promise<Game[]>;
+  syncKurinGames: () => Promise<void>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
+  getAvailableProtons: () => Promise<Array<{ name: string; path: string }>>;
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,
@@ -196,6 +199,8 @@ export interface ElectronAPI {
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
+  // Platform
+  getPlatform: () => string;
   // Machine ID - for subscription tracking
   getMachineId: () => Promise<string | null>;
   // Track subscription events

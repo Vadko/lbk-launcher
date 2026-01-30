@@ -32,7 +32,7 @@ img {
 /* Dark theme (default) */
 :root,
 :root[data-theme="dark"] {
-  --bg-dark: #050b14;
+  --bg-dark: #0f0f10;
   --glass: rgba(255, 255, 255, 0.03);
   --glass-hover: rgba(255, 255, 255, 0.1);
   --border: rgba(255, 255, 255, 0.1);
@@ -44,7 +44,12 @@ img {
   --neon-green: #10b981;
   --gamepad-focus: #fbbf24;
   --text-main: #ffffff;
+  --text-dark: #121213;
   --text-muted: #94a3b8;
+
+  --color-main: 168 207 150;
+  --color-accent: 255 164 122;
+  --color-mixed: 239 238 173;
 }
 
 /* Light theme */
@@ -61,7 +66,12 @@ img {
   --neon-green: #34d399;
   --gamepad-focus: #f59e0b;
   --text-main: #0f172a;
+  --text-dark: #121213;
   --text-muted: #334155;
+
+  --color-main: #a8cf96;
+  --color-accent: #ffa47a;
+  --color-mixed: #efeead;
 }
 
 /* ==========================================================================
@@ -583,7 +593,7 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--neon-blue), var(--neon-purple));
+  background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-main)));
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: content-box;
@@ -592,7 +602,7 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--neon-blue), var(--neon-pink));
+  background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-main)));
   background-clip: content-box;
   border: 2px solid transparent;
   box-shadow: 0 0 12px rgba(0, 242, 255, 0.5);
@@ -603,7 +613,7 @@ body.liquid-glass-enabled .glass-input:focus {
    ========================================================================== */
 
 .text-gradient {
-  background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+  background: linear-gradient(135deg, rgb(var(--color-accent)), rgb(var(--color-main)));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

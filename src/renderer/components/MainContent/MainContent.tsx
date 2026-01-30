@@ -1,7 +1,6 @@
 import {
   Download,
   EyeOff,
-  Gamepad2,
   Heart,
   Play,
   RefreshCw,
@@ -30,6 +29,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { DownloadProgressCard } from './DownloadProgressCard';
 import { FundraisingProgressCard } from './FundraisingProgressCard';
 import { GameHero } from './GameHero';
+import { GamesSection } from './GamesSection';
 import { InfoCard } from './InfoCard';
 import { InstallationStatusBadge } from './InstallationStatusBadge';
 import { InstallationStatusMessage } from './InstallationStatusMessage';
@@ -213,15 +213,14 @@ export const MainContent: React.FC = () => {
 
   if (!selectedGame) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-        <div className="glass-card p-8 rounded-2xl">
-          <Gamepad2 size={64} className="text-text-muted mb-4 opacity-50 mx-auto" />
-          <h2 className="text-2xl font-head font-semibold text-text-main mb-2">
-            Виберіть гру зі списку
-          </h2>
-          <p className="text-text-muted max-w-md">
-            Виберіть гру, щоб побачити деталі та встановити українізатор
-          </p>
+      <div className="flex-1 grid items-center px-8 overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]">
+        <div className="grid grid-rows-auto gap-10 h-auto">
+          <GamesSection title="Новинки" sortOrder="newest" />
+          <GamesSection
+            title="Популярне у гравців"
+            showDownloadCounter={true}
+            showTrendsGames={true}
+          />
         </div>
       </div>
     );
@@ -244,7 +243,7 @@ export const MainContent: React.FC = () => {
           </p>
           <button
             onClick={openSettingsModal}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple text-white font-semibold hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             <Settings size={20} />
             Відкрити налаштування
@@ -332,7 +331,7 @@ export const MainContent: React.FC = () => {
             )}
 
             {/* Separator */}
-            <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2" />
+            <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
 
             {/* Secondary actions */}
             {isPlanned && (
@@ -346,7 +345,7 @@ export const MainContent: React.FC = () => {
             )}
             {selectedGame.support_url && (
               <Button
-                variant="pink"
+                variant="accent"
                 icon={<Heart size={20} />}
                 onClick={handleSupport}
                 data-gamepad-action

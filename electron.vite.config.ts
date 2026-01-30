@@ -40,6 +40,10 @@ export default defineConfig({
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        '@resources': path.resolve(__dirname, './resources'),
+        '@renderer': path.resolve(__dirname, './src/renderer'),
+        '@components': path.resolve(__dirname, './src/renderer/components'),
+        '@store': path.resolve(__dirname, './src/renderer/store'),
       },
     },
     plugins: [

@@ -20,10 +20,16 @@ export function fetchGames(params: GetGamesParams = {}): GetGamesResult {
 export function fetchGamesByIds(
   gameIds: string[],
   searchQuery?: string,
-  hideAiTranslations = false
+  hideAiTranslations = false,
+  useSteamIdField = false
 ): Game[] {
   try {
-    return gamesRepo.getGamesByIds(gameIds, searchQuery, hideAiTranslations);
+    return gamesRepo.getGamesByIds(
+      gameIds,
+      searchQuery,
+      hideAiTranslations,
+      useSteamIdField
+    );
   } catch (error) {
     console.error('[API] Error fetching games by IDs:', error);
     return [];

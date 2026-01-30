@@ -26,7 +26,9 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         {isPaused ? 'Завантаження призупинено' : 'Завантаження файлів...'}
       </span>
       <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-neon-blue">{Math.round(progress)}%</span>
+        <span className="text-sm font-bold text-color-accent">
+          {Math.round(progress)}%
+        </span>
 
         <div className="flex gap-1 ml-2">
           {isPaused ? (
@@ -61,7 +63,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         className={`h-full rounded-full transition-all duration-300 ease-out ${
           isPaused
             ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-            : 'bg-gradient-to-r from-neon-blue to-neon-purple'
+            : 'bg-gradient-to-r from-color-accent to-color-main'
         }`}
         style={{
           width: `${progress}%`,
@@ -83,13 +85,13 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         <>
           <div className="flex justify-between">
             <span className="text-text-muted">Швидкість:</span>
-            <span className="text-neon-blue font-medium">
+            <span className="text-color-accent font-medium">
               {formatBytes(downloadProgress.bytesPerSecond)}/с
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-text-muted">Залишилось часу:</span>
-            <span className="text-neon-purple font-medium">
+            <span className="text-color-main font-medium">
               {formatTime(downloadProgress.timeRemaining)}
             </span>
           </div>

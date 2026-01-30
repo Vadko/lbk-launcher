@@ -24,7 +24,11 @@
     "baseUrl": ".",
     "types": ["electron-vite/node"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@resources/*": ["./resources/*"],
+      "@renderer/*": ["./src/renderer/*"],
+      "@components/*": ["./src/renderer/components/*"],
+      "@store/*": ["./src/renderer/store/*"]
     }
   },
   "include": ["src"],

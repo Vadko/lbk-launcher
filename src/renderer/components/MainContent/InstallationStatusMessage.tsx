@@ -32,7 +32,7 @@ const getStatusIconAndColor = (
   }
   return {
     icon: (
-      <div className="w-5 h-5 border-2 border-neon-blue border-t-transparent rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-color-accent border-t-transparent rounded-full animate-spin" />
     ),
     colorClass: 'text-white',
   };

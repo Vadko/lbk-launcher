@@ -1,6 +1,8 @@
 import { AnimatePresence } from 'framer-motion';
+import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
+import mainBg from '../../resources/main-bg.webp';
 import { AppLoader } from './components/AppLoader/AppLoader';
 import { GamepadHints } from './components/GamepadHints/GamepadHints';
 import { AmbientBackground } from './components/Layout/AmbientBackground';
@@ -19,6 +21,7 @@ import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
+import { trackEvent } from './utils/analytics';
 
 // Higher deadzone for mode switching to prevent accidental triggers from stick drift
 const MODE_SWITCH_DEADZONE = 0.8;
@@ -116,6 +119,33 @@ function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
   return false;
 }
 
+try {
+  const mpToken = import.meta.env.DEV
+    ? import.meta.env.VITE_MIXPANEL_TOKEN_DEV
+    : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
+  if (mpToken) {
+    mixpanel.init(mpToken, {
+      debug: import.meta.env.DEV,
+    });
+  }
+} catch (err) {
+  console.error('[Analytics] mixpanel.init failed', err);
+}
+
+// Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично
+(async () => {
+  try {
+    const version = await window.electronAPI?.getVersion?.();
+    const machineId = await window.electronAPI?.getMachineId?.();
+    if (version) {
+      mixpanel.register({ 'Launcher Version': version });
+      mixpanel.register({ 'Machine ID': machineId });
+    }
+  } catch (err) {
+    console.error('[Analytics] mixpanel.register failed', err);
+  }
+})();
+
 export const App: React.FC = () => {
   const {
     setInitialLoadComplete,
@@ -202,6 +232,15 @@ export const App: React.FC = () => {
       unsubscribe();
       if (hideTimeout) clearTimeout(hideTimeout);
     };
+  }, []);
+
+  // Відстеження першого запуску додатку
+  useEffect(() => {
+    const hasLaunchedBefore = localStorage.getItem('has-launched-before');
+    if (!hasLaunchedBefore) {
+      localStorage.setItem('has-launched-before', 'true');
+      trackEvent('First App Open');
+    }
   }, []);
 
   // Простий скрол геймпадом (тільки в геймпад-режимі)
@@ -482,7 +521,14 @@ export const App: React.FC = () => {
           </div>
         ) : (
           /* Normal layout: Vertical sidebar on left, MainContent on right */
-          <div className="flex h-full pt-8 px-2 pb-2 gap-2 relative z-10">
+          <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
+            {/* Background image */}
+            <img
+              src={mainBg}
+              alt=""
+              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+              aria-hidden="true"
+            />
             <Sidebar
               onOpenHistory={() => setShowNotificationHistory(true)}
               isHorizontal={false}

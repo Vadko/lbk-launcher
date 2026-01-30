@@ -4,12 +4,12 @@ import {
   Menu,
   Notification,
   nativeImage,
+  nativeTheme,
   session,
   shell,
   Tray,
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import {
   getLogFileDirectory,
@@ -17,6 +17,7 @@ import {
   setSaveLogsEnabled,
 } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
+import { getIcon } from '../utils/theme';
 import { getMainWindow } from '../window';
 
 // Get the app icon path for notifications
@@ -25,9 +26,7 @@ function getNotificationIcon(): string | undefined {
     // macOS uses the app icon automatically
     return undefined;
   }
-  return app.isPackaged
-    ? join(process.resourcesPath, 'icon.png')
-    : join(app.getAppPath(), 'resources', 'icon.png');
+  return getIcon('notification');
 }
 
 let tray: Tray | null = null;
@@ -49,22 +48,7 @@ function showAndFocusWindow(): void {
 function createTray() {
   if (tray) return tray;
 
-  let iconPath: string;
-
-  if (isMacOS()) {
-    // На macOS використовуємо Template іконку для автоматичної адаптації до теми
-    const iconName = 'trayIconTemplate.png';
-    iconPath = app.isPackaged
-      ? join(process.resourcesPath, iconName)
-      : join(app.getAppPath(), 'resources', iconName);
-  } else {
-    // Для інших платформ використовуємо звичайну іконку
-    iconPath = app.isPackaged
-      ? join(process.resourcesPath, 'icon.png')
-      : join(app.getAppPath(), 'resources', 'icon.png');
-  }
-
-  const icon = nativeImage.createFromPath(iconPath);
+  const icon = nativeImage.createFromPath(getIcon('tray'));
 
   // На macOS потрібно встановити що це Template іконка
   if (isMacOS()) {
@@ -88,6 +72,12 @@ function createTray() {
 
   return tray;
 }
+
+nativeTheme.on('updated', () => {
+  tray?.setImage(nativeImage.createFromPath(getIcon('tray')));
+  const window = getMainWindow();
+  window?.setIcon(getIcon('window'));
+});
 
 export function initTray(): void {
   createTray();

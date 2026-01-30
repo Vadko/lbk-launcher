@@ -122,6 +122,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
+          VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
+          VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
         run: pnpm build
 
       - name: Build and publish (Windows)
@@ -131,6 +133,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
+          VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
+          VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm dist:win --publish always
 
@@ -141,6 +145,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
+          VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
+          VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm dist:linux --publish always
 
@@ -158,6 +164,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
+          VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
+          VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Code Signing
           CSC_LINK: ${{ secrets.CSC_LINK }}

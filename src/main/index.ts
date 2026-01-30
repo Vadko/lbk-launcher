@@ -17,7 +17,7 @@ function parseDeepLink(url: string): { slug: string; team: string } | null {
     const pathParts = urlObj.pathname.replace(/^\/+/, '').split('/');
     // pathParts: ['games', 'slug', 'team'] or hostname might be 'games'
 
-    // Handle both lbk://games/slug/team and lb:///games/slug/team
+    // Handle both lbk://games/slug/team and lbk:///games/slug/team
     let parts: string[];
     if (urlObj.hostname === 'games') {
       // lbk://games/slug/team -> hostname='games', pathname='/slug/team'
@@ -189,7 +189,7 @@ if (!gotTheLock) {
         details.url.includes('youtube.com') ||
         details.url.includes('youtube-nocookie.com')
       ) {
-        details.requestHeaders['Referer'] = 'https://littlebitua.github.io/';
+        details.requestHeaders['Referer'] = 'https://lbklauncher.com/';
       }
       callback({ requestHeaders: details.requestHeaders });
     });

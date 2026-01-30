@@ -1,19 +1,24 @@
 import { Bot, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
+import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
+import { StatusBadge } from '../Elements/StatusBadge';
+import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
-  game: Game;
+  game: Game | TrendingGameWithDetails;
   isSelected: boolean;
   onClick: () => void;
   hasUpdate?: boolean;
   isGameDetected?: boolean;
   showTeamName?: boolean;
   isHorizontalMode?: boolean;
+  isCardStyle?: boolean;
+  showDownloadCounter?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -25,6 +30,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     isGameDetected = false,
     showTeamName = false,
     isHorizontalMode = false,
+    isCardStyle = false,
+    showDownloadCounter = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -37,7 +44,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
       (game.translation_progress + game.editing_progress) / 2
     );
 
-    const thumbnailUrl = getGameImageUrl(game.thumbnail_path, game.updated_at);
+    const thumbnailUrl = getGameImageUrl(
+      (isCardStyle ? game.capsule_path : null) ?? game.thumbnail_path,
+      game.updated_at
+    );
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
@@ -51,6 +61,109 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
       }
     };
 
+    // Card style rendering
+    if (isCardStyle) {
+      return (
+        <div
+          ref={preloadRef}
+          role="button"
+          tabIndex={0}
+          onClick={onClick}
+          onKeyDown={handleKeyDown}
+          data-game-card
+          className={`group glass-card !p-0 flex flex-col items-center`}
+        >
+          <div className="relative h-56 w-full bg-glass rounded-t-xl overflow-hidden">
+            {thumbnailUrl && !imageError ? (
+              <>
+                {imageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-glass">
+                    <Loader size="sm" />
+                  </div>
+                )}
+                <img
+                  src={thumbnailUrl}
+                  alt={game.name}
+                  draggable={false}
+                  className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
+                    imageLoading ? 'opacity-0' : 'opacity-100'
+                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    setImageError(true);
+                    setImageLoading(false);
+                  }}
+                />
+              </>
+            ) : (
+              <div
+                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl ${
+                  isAdultBlurred ? 'blur-lg' : ''
+                }`}
+              >
+                {game.name.charAt(0)}
+              </div>
+            )}
+
+            {/* Adult content indicator */}
+            {isAdultBlurred && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <EyeOff size={20} className="text-white/80" />
+              </div>
+            )}
+
+            {/* Indicators */}
+            {hasUpdate && (
+              <div className="absolute top-2 right-2 w-3 h-3 bg-accent rounded-full animate-pulse" />
+            )}
+            {isGameDetected && (
+              <div
+                className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
+                title="Гра встановлена"
+              />
+            )}
+          </div>
+          <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
+            <h3 className="text-lg font-head font-bold">{game.name}</h3>
+            {showDownloadCounter && (
+              <div className="flex items-center gap-2">
+                <PopularIcon />
+                <span>Завантажено гравцями</span>
+                <span className="ml-auto">
+                  {'trendingDownloads' in game ? game.trendingDownloads : game.downloads}
+                </span>
+              </div>
+            )}
+            {/* Info */}
+            <div className="p-3 bg-glass-hover rounded-xl mt-auto">
+              <h4 className="font-semibold mb-2 truncate">{game.team}</h4>
+
+              <div className="flex gap-3 items-center w-full">
+                {game.status && (
+                  <StatusBadge
+                    status={game.status}
+                    style="capsule"
+                    className="flex-shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
+                  />
+                )}
+                {game.status !== 'planned' && (
+                  <>
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
+                      <div
+                        className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                        style={{ width: `${averageProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Horizontal compact mode for gamepad
     if (isHorizontalMode) {
       return (
@@ -63,7 +176,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           data-gamepad-card
           className={`game-list-item relative w-[200px] rounded-xl cursor-pointer transition-all duration-300 outline-none ${
             isSelected
-              ? 'ring-2 ring-neon-blue shadow-[0_0_20px_rgba(0,242,255,0.4)]'
+              ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.4)]'
               : 'ring-1 ring-white/10 hover:ring-white/30'
           }`}
         >
@@ -92,7 +205,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${isAdultBlurred ? 'blur-lg' : ''}`}
+                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${
+                  isAdultBlurred ? 'blur-lg' : ''
+                }`}
               >
                 {game.name.charAt(0)}
               </div>
@@ -107,7 +222,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
             {/* Indicators */}
             {hasUpdate && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-neon-blue rounded-full animate-pulse" />
+              <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse" />
             )}
             {(game.ai === 'edited' || game.ai === 'non-edited') && (
               <div
@@ -134,7 +249,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             </h4>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-neon-blue to-neon-purple rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${averageProgress}%` }}
               />
             </div>
@@ -154,7 +269,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         data-nav-group="game-list"
         className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
           isSelected
-            ? 'bg-[rgba(0,242,255,0.1)] border border-[rgba(0,242,255,0.5)] shadow-[0_0_20px_rgba(0,242,255,0.2)]'
+            ? 'border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]'
             : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
         }`}
       >
@@ -183,7 +298,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm ${isAdultBlurred ? 'blur-md' : ''}`}
+                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm ${
+                  isAdultBlurred ? 'blur-md' : ''
+                }`}
               >
                 {game.name.charAt(0)}
               </div>
@@ -196,7 +313,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
           </div>
           {hasUpdate && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-neon-blue rounded-full border-2 border-bg-dark animate-pulse z-10" />
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
           )}
           {(game.ai === 'edited' || game.ai === 'non-edited') && (
             <div
@@ -223,7 +340,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-neon-blue to-neon-purple rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${averageProgress}%` }}
               />
             </div>

@@ -12,8 +12,10 @@ const electronAPI: ElectronAPI = {
     searchQuery?: string,
     hideAiTranslations?: boolean
   ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, hideAiTranslations),
+  syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
+  getAvailableProtons: () => ipcRenderer.invoke('get-available-protons'),
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,
@@ -138,6 +140,8 @@ const electronAPI: ElectronAPI = {
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
+  // Platform
+  getPlatform: () => ipcRenderer.sendSync('get-platform'),
   // Machine ID - for subscription tracking
   getMachineId: () => ipcRenderer.invoke('get-machine-id'),
   // Track subscription events
@@ -214,7 +218,7 @@ contextBridge.exposeInMainWorld('api', {
 // Handle liquid glass preference request from main process
 ipcRenderer.on('liquid-glass:get-preference', () => {
   // Get the preference from localStorage (settings store)
-  const settings = localStorage.getItem('littlebit-settings');
+  const settings = localStorage.getItem('lbk-settings');
   let enabled = true; // Default to true
 
   if (settings) {

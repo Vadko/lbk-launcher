@@ -16,13 +16,21 @@ import {
   getFirstAvailableGamePath,
   getSteamLibraryAppIds,
 } from '../game-detector';
+import { syncKurinGames } from '../game-detector/kurin';
+import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 
 export function setupGamesHandlers(): void {
   // Version
   ipcMain.on('get-version', (event) => {
     event.returnValue = app.getVersion();
+  });
+
+  // Platform
+  ipcMain.on('get-platform', (event) => {
+    event.returnValue = getPlatform();
   });
 
   // Machine ID - for subscription tracking
@@ -99,6 +107,16 @@ export function setupGamesHandlers(): void {
     }
   });
 
+  // Sync Kurin installed games data
+  ipcMain.handle('sync-kurin-games', async () => {
+    try {
+      return syncKurinGames();
+    } catch (error) {
+      console.error('Error sync kurin games:', error);
+      return [];
+    }
+  });
+
   // Get all installed game paths from the system
   ipcMain.handle('get-all-installed-game-paths', async () => {
     try {
@@ -118,6 +136,16 @@ export function setupGamesHandlers(): void {
     } catch (error) {
       console.error('Error getting installed Steam games:', error);
       return {};
+    }
+  });
+
+  // Get all installed Protons
+  ipcMain.handle('get-available-protons', async () => {
+    try {
+      return findProtons();
+    } catch (error) {
+      console.error('Error getting available Protons:', error);
+      return [];
     }
   });
 

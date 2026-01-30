@@ -1,10 +1,10 @@
 {
-  "name": "little-bit",
-  "version": "1.30.3",
+  "name": "lbk-launcher",
+  "version": "2.0.0",
   "description": "Інсталятор українізаторів відеоігор",
   "author": {
-    "name": "LB UA",
-    "email": "info@vadko.dev"
+    "name": "LBK Team",
+    "email": "info@lbklauncher.com"
   },
   "license": "GPL-3.0-or-later",
   "main": "out/main/index.js",
@@ -41,7 +41,8 @@
     "electron-updater": "6.6.2",
     "framer-motion": "^12.23.25",
     "got": "^11.8.6",
-    "lucide-react": "^0.294.0",
+    "lucide-react": "^0.563.0",
+    "mixpanel-browser": "^2.73.0",
     "node-7z": "^3.0.0",
     "node-machine-id": "^1.1.12",
     "react": "^18.2.0",

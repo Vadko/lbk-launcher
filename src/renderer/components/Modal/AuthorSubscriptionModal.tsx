@@ -88,8 +88,8 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-neon-blue/20 flex items-center justify-center">
-            <Users size={24} className="text-neon-blue" />
+          <div className="w-12 h-12 rounded-full bg-color-accent/20 flex items-center justify-center">
+            <Users size={24} className="text-color-accent" />
           </div>
           <div>
             <p className="text-text-main font-medium">{gameName}</p>
@@ -123,7 +123,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                   isAlreadySubscribed
                     ? 'bg-green-500/10 border-green-500/30 cursor-default'
                     : isSelected
-                      ? 'bg-glass border-neon-blue/50 hover:border-neon-blue'
+                      ? 'bg-glass border-color-accent/50 hover:border-color-accent'
                       : 'bg-glass border-border hover:border-border-hover'
                 }`}
               >
@@ -134,12 +134,12 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     disabled={isAlreadySubscribed}
                     onChange={() => !isAlreadySubscribed && toggleAuthor(author)}
                     data-gamepad-modal-item
-                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-neon-purple checked:border-neon-purple transition-colors focus:ring-2 focus:ring-neon-purple/50 focus:outline-none ${
+                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${
                       isAlreadySubscribed ? 'cursor-default' : 'cursor-pointer'
                     }`}
                   />
                   <svg
-                    className={`absolute w-3 h-3 text-white pointer-events-none transition-opacity ${
+                    className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
                       isAlreadySubscribed || isSelected ? 'opacity-100' : 'opacity-0'
                     }`}
                     viewBox="0 0 24 24"
@@ -198,7 +198,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity flex items-center justify-center gap-2 ${
               selectedAuthors.size === 0
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-neon-blue to-neon-purple text-white hover:opacity-90'
+                : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
             <Bell size={18} />
