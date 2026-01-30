@@ -398,3 +398,58 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
 export function isCurrentSessionFirstLaunch(): boolean {
   return isFirstLaunch;
 }
+
+// ============================================================================
+// Playtime Tracking
+// ============================================================================
+
+interface PlaytimeData {
+  gameId: string;
+  steamAppId: number;
+  deltaMinutes: number;
+}
+
+/**
+ * Track playtime for multiple games (batch)
+ * Called when launcher closes with playtime changes
+ */
+export async function trackPlaytime(
+  playtimeData: PlaytimeData[]
+): Promise<TrackingResponse> {
+  if (playtimeData.length === 0) {
+    return { success: true };
+  }
+
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping playtime tracking');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    console.log(`[Tracking] Tracking playtime for ${playtimeData.length} games`);
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        type: 'playtime',
+        userIdentifier: machineId,
+        playtimeData,
+      }),
+    });
+
+    const result = (await response.json()) as TrackingResponse;
+    console.log('[Tracking] Playtime tracking response:', result);
+
+    return result;
+  } catch (error) {
+    console.error('[Tracking] Failed to track playtime:', error);
+    return { success: false, error: String(error) };
+  }
+}
