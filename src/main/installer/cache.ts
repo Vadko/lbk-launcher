@@ -10,7 +10,7 @@ const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
 
-export const INSTALLATION_INFO_FILE = '.lbk-translation.json';
+const INSTALLATION_INFO_FILE = '.lbk-translation.json';
 
 // Cache for installed game IDs
 let installedGameIdsCache: string[] | null = null;

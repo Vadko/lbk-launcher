@@ -8,7 +8,7 @@ const unlink = promisify(fs.unlink);
 const execPromise = promisify(exec);
 
 export const BACKUP_SUFFIX = '_backup'; // Legacy format: file.upk -> file.upk_backup
-export const KURIN_BACKUP_SUFFIX = '.kbak'; // Format: file.upk -> file.upk.kbak
+const KURIN_BACKUP_SUFFIX = '.kbak'; // Format: file.upk -> file.upk.kbak
 export const BACKUP_DIR_NAME_LEGACY = '.littlebit-backup'; // Legacy format: hidden directory in game folder
 export const BACKUP_DIR_NAME = '.lbk-backup'; // New format: hidden directory in game folder
 
