@@ -19,16 +19,16 @@ import {
   BACKUP_SUFFIX,
   backupFiles,
   cleanupEmptyDirectories,
+  findBackupDir,
   restoreBackupLegacy,
   restoreBackupNew,
-  findBackupDir
 } from './installer/backup';
 import {
   checkInstallation,
   deleteCachedInstallationInfo,
+  findInstallationInfoFile,
   getAllInstalledGameIds,
   getConflictingTranslation,
-  findInstallationInfoFile,
   invalidateInstalledGameIdsCache,
   removeOrphanedInstallationMetadata,
   saveInstallationInfo,
