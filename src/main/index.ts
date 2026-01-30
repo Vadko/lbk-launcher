@@ -98,8 +98,12 @@ import {
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import {
+  calculatePlaytimeDeltas,
+  recordPlaytimeAtSessionStart,
+} from './playtime-tracker';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
-import { trackSessionEnd, trackSessionStart } from './tracking';
+import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { createMainWindow, getMainWindow } from './window';
 
 // Глобальні менеджери
@@ -243,6 +247,22 @@ if (!gotTheLock) {
       console.error('[Main] Failed to track session start:', err);
     });
 
+    // Record playtime at session start (for delta calculation on exit)
+    // Also recovers and sends data from previous crashed sessions
+    recordPlaytimeAtSessionStart()
+      .then(async (recoveredDeltas) => {
+        // Send recovered playtime from previous crashed/force-quit session
+        if (recoveredDeltas.length > 0) {
+          console.log(
+            `[Main] Sending recovered playtime for ${recoveredDeltas.length} games from previous session`
+          );
+          await trackPlaytime(recoveredDeltas);
+        }
+      })
+      .catch((err) => {
+        console.error('[Main] Failed to record playtime at start:', err);
+      });
+
     // Handle pending deep link if app was opened via protocol
     if (pendingDeepLink) {
       handleDeepLink(pendingDeepLink);
@@ -278,11 +298,40 @@ if (!gotTheLock) {
     });
   });
 
-  // Track session end before quit
-  app.on('before-quit', () => {
-    trackSessionEnd().catch((err) => {
-      console.error('[Main] Failed to track session end:', err);
-    });
+  // Track session end and playtime before quit
+  // Use will-quit with preventDefault to ensure async operations complete
+  let isQuitting = false;
+
+  app.on('will-quit', (event) => {
+    if (isQuitting) return; // Already processing quit
+
+    event.preventDefault();
+    isQuitting = true;
+
+    console.log('[Main] App quitting, sending tracking data...');
+
+    // Run async operations and then quit
+    (async () => {
+      try {
+        // Calculate playtime changes during this session
+        const playtimeDeltas = await calculatePlaytimeDeltas();
+        if (playtimeDeltas.length > 0) {
+          console.log(`[Main] Sending playtime for ${playtimeDeltas.length} games`);
+          await trackPlaytime(playtimeDeltas);
+        }
+      } catch (err) {
+        console.error('[Main] Failed to track playtime:', err);
+      }
+
+      try {
+        await trackSessionEnd();
+      } catch (err) {
+        console.error('[Main] Failed to track session end:', err);
+      }
+
+      console.log('[Main] Tracking complete, quitting app');
+      app.quit();
+    })();
   });
 
   app.on('window-all-closed', () => {
