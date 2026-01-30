@@ -9,6 +9,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useModalStore } from '@/renderer/store/useModalStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import {
@@ -39,6 +40,7 @@ const SettingItem = React.memo<{
 SettingItem.displayName = 'SettingItem';
 
 export const SettingsModal: React.FC = () => {
+  const { showModal } = useModalStore();
   const isSettingsModalOpen = useSettingsStore((state) => state.isSettingsModalOpen);
   const closeSettingsModal = useSettingsStore((state) => state.closeSettingsModal);
   const theme = useSettingsStore((state) => state.theme);
@@ -94,8 +96,22 @@ export const SettingsModal: React.FC = () => {
   };
 
   const handleKurinSync = useCallback(async () => {
-    await window.electronAPI?.syncKurinGames();
-  }, []);
+    closeSettingsModal();
+    const syncedGameNames = await window.electronAPI?.syncKurinGames();
+    if (syncedGameNames && syncedGameNames.length > 0) {
+      showModal({
+        title: 'Синхронізація завершена',
+        message: `Синхронізовано ${syncedGameNames.length} ${syncedGameNames.length === 1 ? 'гру' : 'ігор'}: ${syncedGameNames.join(', ')}`,
+        type: 'info',
+      });
+    } else {
+      showModal({
+        title: 'Синхронізація завершена',
+        message: 'Не знайдено ігор, встановлених через Kurin, або Kurin не встановлено.',
+        type: 'info',
+      });
+    }
+  }, [showModal, closeSettingsModal]);
 
   const handleClearCacheOnly = useCallback(async () => {
     await window.api?.clearCacheOnly();
