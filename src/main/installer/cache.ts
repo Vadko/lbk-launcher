@@ -16,6 +16,18 @@ export const INSTALLATION_INFO_FILE = '.lbk-translation.json';
 let installedGameIdsCache: string[] | null = null;
 
 /**
+ * Find the installation info file path, supporting both new and legacy formats.
+ * @param gamePath The path to the game installation directory.
+ * @returns The path to the installation info file.
+ */
+export function findInstallationInfoFile(gamePath: string) {
+  const oldFormatPath = path.join(gamePath, '.littlebit-translation.json');
+  if (fs.existsSync(oldFormatPath)) return oldFormatPath;
+
+  return path.join(gamePath, INSTALLATION_INFO_FILE);
+}
+
+/**
  * Save installation info to game directory
  */
 export async function saveInstallationInfo(
@@ -59,7 +71,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
 
     if (gamePath && gamePath.exists) {
       // Check for installation info file in library path
-      const infoPath = path.join(gamePath.path, INSTALLATION_INFO_FILE);
+      const infoPath = findInstallationInfoFile(gamePath.path);
 
       if (fs.existsSync(infoPath)) {
         // Read installation info from library path
@@ -142,7 +154,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
         const info: InstallationInfo = JSON.parse(infoContent);
 
         // Verify the path still exists AND the installation info file exists in game folder
-        const gameInfoPath = path.join(info.gamePath, INSTALLATION_INFO_FILE);
+        const gameInfoPath = findInstallationInfoFile(info.gamePath);
         if (fs.existsSync(info.gamePath) && fs.existsSync(gameInfoPath)) {
           // Read the actual file from game folder to verify it's still this translation
           try {
@@ -326,7 +338,7 @@ export async function getConflictingTranslation(
       return null;
     }
 
-    const infoPath = path.join(gamePath.path, INSTALLATION_INFO_FILE);
+    const infoPath = findInstallationInfoFile(gamePath.path);
 
     if (!fs.existsSync(infoPath)) {
       return null;

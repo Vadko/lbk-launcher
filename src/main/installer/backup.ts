@@ -9,7 +9,20 @@ const execPromise = promisify(exec);
 
 export const BACKUP_SUFFIX = '_backup'; // Legacy format: file.upk -> file.upk_backup
 export const KURIN_BACKUP_SUFFIX = '.kbak'; // Format: file.upk -> file.upk.kbak
+export const BACKUP_DIR_NAME_LEGACY = '.littlebit-backup'; // Legacy format: hidden directory in game folder
 export const BACKUP_DIR_NAME = '.lbk-backup'; // New format: hidden directory in game folder
+
+/**
+ * Find the backup directory path, supporting both new and legacy formats.
+ * @param targetDir The target game installation directory.
+ * @returns The path to the backup directory.
+ */
+export function findBackupDir(targetDir: string) {
+  const oldDirPath = path.join(targetDir, BACKUP_DIR_NAME_LEGACY);
+  if (fs.existsSync(oldDirPath)) return oldDirPath;
+
+  return path.join(targetDir, BACKUP_DIR_NAME);
+}
 
 /**
  * Set hidden attribute on a folder (Windows only)
@@ -37,7 +50,7 @@ export async function backupFiles(
 ): Promise<void> {
   try {
     // Initialize backup directory on first call
-    const rootBackupDir = backupDir || path.join(targetDir, BACKUP_DIR_NAME);
+    const rootBackupDir = backupDir || findBackupDir(targetDir);
 
     if (!backupDir) {
       // First call - create backup directory if needed
@@ -162,7 +175,7 @@ export async function restoreBackupNew(
 ): Promise<void> {
   try {
     let restoredCount = 0;
-    const backupDir = path.join(targetDir, BACKUP_DIR_NAME);
+    const backupDir = findBackupDir(targetDir);
     const hasBackupDir = fs.existsSync(backupDir);
 
     for (const relativePath of installedFiles) {
@@ -258,7 +271,7 @@ export async function cleanupEmptyDirectories(
     if (!fs.existsSync(dir)) return;
 
     // Never clean up inside backup directory
-    if (dir.includes(BACKUP_DIR_NAME) || path.basename(dir) === BACKUP_DIR_NAME) {
+    if (dir.includes(BACKUP_DIR_NAME) || path.basename(dir) === BACKUP_DIR_NAME || dir.includes(BACKUP_DIR_NAME_LEGACY) || path.basename(dir) === BACKUP_DIR_NAME_LEGACY) {
       return;
     }
 
@@ -266,7 +279,7 @@ export async function cleanupEmptyDirectories(
 
     // Recursively clean subdirectories first (skip backup dir)
     for (const entry of entries) {
-      if (entry.isDirectory() && entry.name !== BACKUP_DIR_NAME) {
+      if (entry.isDirectory() && entry.name !== BACKUP_DIR_NAME && entry.name !== BACKUP_DIR_NAME_LEGACY) {
         const subDir = path.join(dir, entry.name);
         await cleanupEmptyDirectories(subDir, rootDir);
       }
@@ -274,7 +287,7 @@ export async function cleanupEmptyDirectories(
 
     // Check if directory is now empty (ignore backup dir when counting)
     const remainingEntries = await readdir(dir);
-    const nonBackupEntries = remainingEntries.filter((e) => e !== BACKUP_DIR_NAME);
+    const nonBackupEntries = remainingEntries.filter((e) => e !== BACKUP_DIR_NAME && e !== BACKUP_DIR_NAME_LEGACY);
     if (nonBackupEntries.length === 0 && dir !== rootDir) {
       // Don't delete if only backup dir remains
       if (remainingEntries.length > 0) {
