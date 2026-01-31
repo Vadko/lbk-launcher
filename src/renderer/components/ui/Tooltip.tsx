@@ -26,28 +26,40 @@ export const Tooltip: React.FC<TooltipProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
+  const [arrowPosition, setArrowPosition] = useState(50); // відсоток від лівого краю
+  const [mouseX, setMouseX] = useState(0);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLSpanElement>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect -- intentional position calculation after visibility change */
   useEffect(() => {
-    if (isVisible && containerRef.current) {
+    if (isVisible && containerRef.current && tooltipRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+
       // If tooltip would go above viewport, show it below
       if (rect.top < 40) {
         setPosition('bottom');
       } else {
         setPosition('top');
       }
+
+      // Calculate arrow position based on mouseX
+      const relativeX = mouseX - tooltipRect.left;
+      const percentage = (relativeX / tooltipRect.width) * 100;
+      setArrowPosition(Math.max(5, Math.min(95, percentage)));
     }
-  }, [isVisible]);
+  }, [isVisible, mouseX]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <span
       ref={containerRef}
       className={`relative inline-flex items-center ${className}`}
-      onMouseEnter={() => setIsVisible(true)}
+      onMouseEnter={(e) => {
+        setMouseX(e.clientX);
+        setIsVisible(true);
+      }}
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
@@ -61,8 +73,9 @@ export const Tooltip: React.FC<TooltipProps> = ({
         >
           {content}
           <div
-            className={`absolute left-1/2 -translate-x-1/2 w-0 h-0 border-4 border-transparent
+            className={`absolute w-0 h-0 border-4 border-transparent
               ${position === 'top' ? 'top-full border-t-gray-900' : 'bottom-full border-b-gray-900'}`}
+            style={{ left: `${arrowPosition}%`, transform: 'translateX(-50%)' }}
           />
         </div>
       )}
