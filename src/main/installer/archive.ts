@@ -70,7 +70,7 @@ function getSystem7zPath(): string | null {
         // Command not found, try next
       }
     }
-  } catch (error) {
+  } catch {
     console.log('[7z] No system 7z found');
   }
   return null;
@@ -101,6 +101,17 @@ function get7zPath(): string {
 }
 
 /**
+ * Check if error is just a Steam Deck LD_PRELOAD warning (not a real error)
+ */
+function isLdPreloadWarning(errorMessage: string, stderr?: string): boolean {
+  const text = `${errorMessage} ${stderr || ''}`.toLowerCase();
+  return (
+    (text.includes('ld_preload') || text.includes('wrong elf class')) &&
+    text.includes('ignored')
+  );
+}
+
+/**
  * Extract ZIP archive with support for all compression methods and UTF-8/Cyrillic filenames
  * Uses 7-Zip which supports LZMA, Deflate64, and all other compression methods
  */
@@ -126,7 +137,6 @@ export async function extractArchive(
 
   return new Promise<void>((resolve, reject) => {
     // Use 7-Zip for extraction (supports all compression methods including LZMA)
-    // Pass clean env to avoid Steam Deck's LD_PRELOAD conflicts
     const stream = extractFull(archivePath, extractPath, {
       $bin: path7z,
       $progress: true,
@@ -154,8 +164,18 @@ export async function extractArchive(
       resolve();
     });
 
-    stream.on('error', (err: Error) => {
+    stream.on('error', (err: Error & { stderr?: string }) => {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      const stderr = err.stderr || '';
+
+      // Ignore LD_PRELOAD warnings from Steam Deck (not a real error)
+      if (isLdPreloadWarning(errorMessage, stderr)) {
+        console.log(
+          `[Installer] Ignoring LD_PRELOAD warning (Steam Deck): ${errorMessage}`
+        );
+        return;
+      }
+
       console.error(`[Installer] extractArchive failed:`, {
         message: errorMessage,
         archivePath,

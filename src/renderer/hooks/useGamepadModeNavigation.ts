@@ -434,10 +434,8 @@ export function useGamepadModeNavigation(enabled = true) {
             !focusableElements.includes(document.activeElement as HTMLElement)
           ) {
             // Text input is selected but not focused - activate it
-            // Click + focus for Steam Deck keyboard to appear
             playConfirmSound();
             setGamepadSelected(null);
-            currentElement.click();
             currentElement.focus();
           } else {
             // Regular element - click it
@@ -723,9 +721,8 @@ export function useGamepadModeNavigation(enabled = true) {
             // Check if this dropdown item contains an input
             const innerInput = focused.querySelector<HTMLInputElement>('input, textarea');
             if (innerInput) {
-              // Click + focus for Steam Deck keyboard to appear
+              // Focus the input inside
               playConfirmSound();
-              innerInput.click();
               innerInput.focus();
             } else {
               playConfirmSound();
@@ -809,10 +806,8 @@ export function useGamepadModeNavigation(enabled = true) {
         if (currentElement) {
           if (isTextInput(currentElement) && currentElement !== document.activeElement) {
             // Text input is selected but not focused - activate it
-            // Click + focus for Steam Deck keyboard to appear
             playConfirmSound();
             setGamepadSelected(null);
-            currentElement.click();
             currentElement.focus();
           } else {
             // Regular element - click it
