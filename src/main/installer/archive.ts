@@ -37,6 +37,17 @@ function getResourcesBased7zPath(): string {
 }
 
 /**
+ * Get clean environment without Steam's LD_PRELOAD
+ * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
+ */
+function getCleanEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
+  delete env.LD_PRELOAD;
+  return env;
+}
+
+/**
  * Check if system 7z is available (for Linux/Steam Deck compatibility)
  */
 function getSystem7zPath(): string | null {
@@ -49,6 +60,7 @@ function getSystem7zPath(): string | null {
         const result = execSync(`which ${cmd}`, {
           encoding: 'utf-8',
           timeout: 5000,
+          env: getCleanEnv(),
         }).trim();
         if (result) {
           console.log(`[7z] Found system 7z: ${result}`);
@@ -114,9 +126,11 @@ export async function extractArchive(
 
   return new Promise<void>((resolve, reject) => {
     // Use 7-Zip for extraction (supports all compression methods including LZMA)
+    // Pass clean env to avoid Steam Deck's LD_PRELOAD conflicts
     const stream = extractFull(archivePath, extractPath, {
       $bin: path7z,
       $progress: true,
+      $spawnOptions: isLinux() ? { env: getCleanEnv() } : undefined,
     });
 
     stream.on('data', (data: { file?: string }) => {

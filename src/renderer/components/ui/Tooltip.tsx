@@ -36,7 +36,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     if (isVisible && containerRef.current && tooltipRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
-      
+
       // If tooltip would go above viewport, show it below
       if (rect.top < 40) {
         setPosition('bottom');
