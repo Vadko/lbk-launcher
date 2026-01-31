@@ -1,4 +1,3 @@
-import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
@@ -16,18 +15,20 @@ import { getFirstAvailableGamePath } from './game-detector';
 import { extractArchive } from './installer/archive';
 import {
   BACKUP_DIR_NAME,
+  BACKUP_DIR_NAME_LEGACY,
   BACKUP_SUFFIX,
   backupFiles,
   cleanupEmptyDirectories,
+  findBackupDir,
   restoreBackupLegacy,
   restoreBackupNew,
 } from './installer/backup';
 import {
   checkInstallation,
   deleteCachedInstallationInfo,
+  findInstallationInfoFile,
   getAllInstalledGameIds,
   getConflictingTranslation,
-  INSTALLATION_INFO_FILE,
   invalidateInstalledGameIdsCache,
   removeOrphanedInstallationMetadata,
   saveInstallationInfo,
@@ -229,7 +230,11 @@ export async function installTranslation(
 
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
 
-    // 3. Check available disk space
+    // 3. Create temp directory on the same disk as the game (for correct disk space check and faster file operations)
+    const downloadDir = path.join(gamePath.path, '.lbk-temp');
+    await mkdir(downloadDir, { recursive: true });
+
+    // 4. Check available disk space
     let requiredSpace = 0;
     if (installText) {
       // Use epic_archive_size if platform is 'epic' and epic_archive is available
@@ -249,10 +254,13 @@ export async function installTranslation(
     }
 
     if (requiredSpace > 0) {
-      const neededSpace = requiredSpace * 3; // 3x for archive + extracted + final copy
+      // 2x for archive + extracted (final copy uses rename, not copy, since same disk)
+      const neededSpace = requiredSpace * 2;
       const diskSpace = await checkDiskSpace(gamePath.path);
 
       if (diskSpace < neededSpace) {
+        // Cleanup temp dir before throwing
+        await cleanupDownloadDir(downloadDir);
         throw new Error(
           `Недостатньо місця на диску.\n\n` +
             `Необхідно: ${formatBytes(neededSpace)}\n` +
@@ -263,18 +271,13 @@ export async function installTranslation(
       console.log(`[Installer] ✓ Disk space check passed`);
     }
 
-    // 4. Download archives
-    const tempDir = app.getPath('temp');
-    const downloadDir = path.join(tempDir, 'lbk-downloads');
-    await mkdir(downloadDir, { recursive: true });
-
     const { isCurrentSessionFirstLaunch } = await import('./tracking');
     const extractDir = path.join(downloadDir, `${game.id}_extract`);
 
     // Check if this is first session (for conversion tracking)
     const isFirstSession = isCurrentSessionFirstLaunch();
 
-    // 4.1 Download text archive if requested
+    // 5.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
       // Use epic_archive if platform is 'epic' and epic_archive is available
@@ -300,7 +303,7 @@ export async function installTranslation(
       });
     }
 
-    // 4.2 Download voice archive if requested
+    // 5.2 Download voice archive if requested
     let voiceFiles: string[] = [];
     if (installVoice && game.voice_archive_path) {
       const voiceExtractDir = path.join(downloadDir, `${game.id}_voice_extract`);
@@ -319,7 +322,7 @@ export async function installTranslation(
       await copyDirectory(voiceExtractDir, extractDir);
     }
 
-    // 4.3 Download achievements archive if requested (Steam only)
+    // 5.3 Download achievements archive if requested (Steam only)
     let achievementsFiles: string[] = [];
     let achievementsInstallPath: string | null = null;
     console.log(`[Installer] Achievements check:`, {
@@ -385,7 +388,7 @@ export async function installTranslation(
       }
     }
 
-    // 5. Check for executable installer
+    // 6. Check for executable installer
     const installerFileName = getInstallerFileName(game);
     const isExeInstaller = hasExecutableInstaller(game);
 
@@ -415,7 +418,7 @@ export async function installTranslation(
       return;
     }
 
-    // 6. Copy files to game directory
+    // 7. Copy files to game directory
     const additionalPath = game.additional_path || '';
     const fullTargetPath = additionalPath
       ? path.join(gamePath.path, additionalPath)
@@ -444,11 +447,11 @@ export async function installTranslation(
       await copyDirectory(extractDir, fullTargetPath);
     }
 
-    // 7. Cleanup
+    // 8. Cleanup
     onStatus?.({ message: 'Очищення тимчасових файлів...' });
     await cleanupDownloadDir(downloadDir);
 
-    // 8. Save installation info
+    // 9. Save installation info
     const installationInfo: InstallationInfo = {
       gameId: game.id,
       version: game.version || '1.0.0',
@@ -663,7 +666,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
     }
 
     const gamePath = installInfo.gamePath;
-    const backupDir = path.join(gamePath, BACKUP_DIR_NAME);
+    const backupDir = findBackupDir(gamePath);
 
     // Collect files to delete
     let allFilesToDelete: string[] = [];
@@ -712,7 +715,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
     await cleanupEmptyDirectories(gamePath, gamePath);
 
     // Delete installation info
-    const infoPath = path.join(gamePath, INSTALLATION_INFO_FILE);
+    const infoPath = findInstallationInfoFile(gamePath);
     if (fs.existsSync(infoPath)) {
       await unlink(infoPath);
     }
@@ -780,7 +783,7 @@ export async function removeComponents(
 
 /**
  * Restore from backup or delete file if no backup exists
- * Supports both new format (.littlebit-backup/ dir) and legacy format (_backup suffix)
+ * Supports both new format (.lbk-backup/ dir) and legacy format (_backup suffix)
  */
 async function restoreOrDeleteFile(
   filePath: string,
@@ -789,8 +792,8 @@ async function restoreOrDeleteFile(
   const fileName = path.basename(filePath);
   const fileDir = path.dirname(filePath);
 
-  // Try new format first (.littlebit-backup/ directory)
-  const newBackupDir = backupBaseDir || path.join(fileDir, BACKUP_DIR_NAME);
+  // Try new format first (.lbk-backup/ directory)
+  const newBackupDir = backupBaseDir || findBackupDir(fileDir);
   const newBackupPath = path.join(newBackupDir, fileName);
 
   // Legacy format (file_backup suffix)
@@ -837,7 +840,7 @@ async function deleteFileAndCleanupDirs(
 ): Promise<void> {
   try {
     // Never delete files inside backup directory
-    if (filePath.includes(BACKUP_DIR_NAME)) {
+    if (filePath.includes(BACKUP_DIR_NAME) || filePath.includes(BACKUP_DIR_NAME_LEGACY)) {
       console.warn(`[Installer] Skipping deletion of backup file: ${filePath}`);
       return;
     }
@@ -852,7 +855,9 @@ async function deleteFileAndCleanupDirs(
         // Never remove backup directory
         if (
           dirPath.includes(BACKUP_DIR_NAME) ||
-          path.basename(dirPath) === BACKUP_DIR_NAME
+          dirPath.includes(BACKUP_DIR_NAME_LEGACY) ||
+          path.basename(dirPath) === BACKUP_DIR_NAME ||
+          path.basename(dirPath) === BACKUP_DIR_NAME_LEGACY
         ) {
           break;
         }

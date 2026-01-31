@@ -123,6 +123,7 @@ export interface ElectronAPI {
     searchQuery?: string,
     showAiTranslations?: boolean
   ) => Promise<Game[]>;
+  syncKurinGames: () => Promise<string[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
   getAvailableProtons: () => Promise<Array<{ name: string; path: string }>>;

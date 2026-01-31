@@ -10,10 +10,38 @@ const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
 
-export const INSTALLATION_INFO_FILE = '.lbk-translation.json';
+const INSTALLATION_INFO_FILE = '.lbk-translation.json';
 
 // Cache for installed game IDs
 let installedGameIdsCache: string[] | null = null;
+
+/**
+ * Find the installation info file path, supporting both new and legacy formats.
+ * If old format is found, attempts to rename it to the new format.
+ * @param gamePath The path to the game installation directory.
+ * @returns The path to the installation info file.
+ */
+export function findInstallationInfoFile(gamePath: string) {
+  const oldFormatPath = path.join(gamePath, '.littlebit-translation.json');
+  const newFormatPath = path.join(gamePath, INSTALLATION_INFO_FILE);
+
+  if (fs.existsSync(oldFormatPath)) {
+    try {
+      // Try to rename old format to new format
+      fs.renameSync(oldFormatPath, newFormatPath);
+      return newFormatPath;
+    } catch (error) {
+      // If rename fails, return path to old format
+      console.warn(
+        '[Installer] Failed to rename old format file, using old path:',
+        error
+      );
+      return oldFormatPath;
+    }
+  }
+
+  return newFormatPath;
+}
 
 /**
  * Save installation info to game directory
@@ -59,7 +87,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
 
     if (gamePath && gamePath.exists) {
       // Check for installation info file in library path
-      const infoPath = path.join(gamePath.path, INSTALLATION_INFO_FILE);
+      const infoPath = findInstallationInfoFile(gamePath.path);
 
       if (fs.existsSync(infoPath)) {
         // Read installation info from library path
@@ -142,7 +170,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
         const info: InstallationInfo = JSON.parse(infoContent);
 
         // Verify the path still exists AND the installation info file exists in game folder
-        const gameInfoPath = path.join(info.gamePath, INSTALLATION_INFO_FILE);
+        const gameInfoPath = findInstallationInfoFile(info.gamePath);
         if (fs.existsSync(info.gamePath) && fs.existsSync(gameInfoPath)) {
           // Read the actual file from game folder to verify it's still this translation
           try {
@@ -326,7 +354,7 @@ export async function getConflictingTranslation(
       return null;
     }
 
-    const infoPath = path.join(gamePath.path, INSTALLATION_INFO_FILE);
+    const infoPath = findInstallationInfoFile(gamePath.path);
 
     if (!fs.existsSync(infoPath)) {
       return null;

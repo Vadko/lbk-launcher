@@ -26,9 +26,9 @@ export default {
         'neon-pink': 'var(--neon-pink)',
         'neon-orange': 'var(--neon-orange)',
         'neon-green': 'var(--neon-green)',
-        'color-main': 'var(--color-main)',
-        'color-accent': 'var(--color-accent)',
-        'color-mixed': 'var(--color-mixed)',
+        'color-main': 'rgb(var(--color-main) / <alpha-value>)',
+        'color-accent': 'rgb(var(--color-accent) / <alpha-value>)',
+        'color-mixed': 'rgb(var(--color-mixed) / <alpha-value>)',
       },
       fontFamily: {
         head: ['Space Grotesk', 'Segoe UI', 'sans-serif'],

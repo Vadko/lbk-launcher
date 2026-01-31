@@ -1,5 +1,5 @@
-import { app } from 'electron';
 import { execSync } from 'child_process';
+import { app } from 'electron';
 import fs from 'fs';
 import { extractFull } from 'node-7z';
 import path from 'path';
@@ -10,42 +10,41 @@ import { isLinux, isMacOS, isWindows } from '../utils/platform';
 const mkdir = promisify(fs.mkdir);
 
 /**
- * Get architecture folder name for 7zip binaries
+ * Get 7z binary path from a base directory
  */
-function getArchFolder(): string {
+function get7zBinaryPath(basePath: string): string {
   const arch = process.arch;
-  return arch === 'x64' ? 'x64' : arch === 'arm64' ? 'arm64' : 'ia32';
+  const archFolder = arch === 'x64' ? 'x64' : arch === 'arm64' ? 'arm64' : 'ia32';
+
+  if (isWindows()) {
+    return path.join(basePath, 'win', archFolder, '7z.exe');
+  }
+  if (isMacOS()) {
+    return path.join(basePath, 'mac', arch, '7zz');
+  }
+  return path.join(basePath, 'linux', archFolder, '7zz');
 }
 
 /**
  * Get 7z binary path from extraResources or node_modules (dev)
  */
 function getResourcesBased7zPath(): string {
-  const arch = process.arch;
-  const archFolder = getArchFolder();
+  const basePath = app.isPackaged
+    ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), '7zip')
+    : path.join(app.getAppPath(), 'node_modules', '7zip-bin-full');
 
-  // In development, use node_modules directly
-  if (!app.isPackaged) {
-    const nodeModulesPath = path.join(app.getAppPath(), 'node_modules', '7zip-bin-full');
-    if (isWindows()) {
-      return path.join(nodeModulesPath, 'win', archFolder, '7z.exe');
-    } else if (isMacOS()) {
-      return path.join(nodeModulesPath, 'mac', arch, '7zz');
-    } else {
-      return path.join(nodeModulesPath, 'linux', archFolder, '7zz');
-    }
-  }
+  return get7zBinaryPath(basePath);
+}
 
-  // In production, use extraResources
-  const resourcesPath = process.resourcesPath || path.join(app.getAppPath(), '..');
-
-  if (isWindows()) {
-    return path.join(resourcesPath, '7zip', 'win', archFolder, '7z.exe');
-  } else if (isMacOS()) {
-    return path.join(resourcesPath, '7zip', 'mac', arch, '7zz');
-  } else {
-    return path.join(resourcesPath, '7zip', 'linux', archFolder, '7zz');
-  }
+/**
+ * Get clean environment without Steam's LD_PRELOAD
+ * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
+ */
+function getCleanEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
+  delete env.LD_PRELOAD;
+  return env;
 }
 
 /**
@@ -61,6 +60,7 @@ function getSystem7zPath(): string | null {
         const result = execSync(`which ${cmd}`, {
           encoding: 'utf-8',
           timeout: 5000,
+          env: getCleanEnv(),
         }).trim();
         if (result) {
           console.log(`[7z] Found system 7z: ${result}`);
@@ -70,7 +70,7 @@ function getSystem7zPath(): string | null {
         // Command not found, try next
       }
     }
-  } catch (error) {
+  } catch {
     console.log('[7z] No system 7z found');
   }
   return null;
@@ -98,6 +98,17 @@ function get7zPath(): string {
 
   console.error(`[7z] 7z binary not found at: ${resourcesPath}`);
   throw new Error(`7z binary not found: ${resourcesPath}`);
+}
+
+/**
+ * Check if error is just a Steam Deck LD_PRELOAD warning (not a real error)
+ */
+function isLdPreloadWarning(errorMessage: string, stderr?: string): boolean {
+  const text = `${errorMessage} ${stderr || ''}`.toLowerCase();
+  return (
+    (text.includes('ld_preload') || text.includes('wrong elf class')) &&
+    text.includes('ignored')
+  );
 }
 
 /**
@@ -129,6 +140,7 @@ export async function extractArchive(
     const stream = extractFull(archivePath, extractPath, {
       $bin: path7z,
       $progress: true,
+      $spawnOptions: isLinux() ? { env: getCleanEnv() } : undefined,
     });
 
     stream.on('data', (data: { file?: string }) => {
@@ -152,8 +164,18 @@ export async function extractArchive(
       resolve();
     });
 
-    stream.on('error', (err: Error) => {
+    stream.on('error', (err: Error & { stderr?: string }) => {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      const stderr = err.stderr || '';
+
+      // Ignore LD_PRELOAD warnings from Steam Deck (not a real error)
+      if (isLdPreloadWarning(errorMessage, stderr)) {
+        console.log(
+          `[Installer] Ignoring LD_PRELOAD warning (Steam Deck): ${errorMessage}`
+        );
+        return;
+      }
+
       console.error(`[Installer] extractArchive failed:`, {
         message: errorMessage,
         archivePath,

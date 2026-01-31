@@ -86,6 +86,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_authors_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       game_downloads: {
@@ -120,6 +126,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_downloads_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       game_subscriptions: {
@@ -147,6 +159,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_subscriptions_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -396,6 +414,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_versions_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       games: {
@@ -623,16 +647,22 @@ export type Database = {
           game_id: string
           imported_at: string
           kurin_id: number
+          localization_index: number
+          localization_name: string | null
         }
         Insert: {
           game_id: string
           imported_at?: string
           kurin_id: number
+          localization_index?: number
+          localization_name?: string | null
         }
         Update: {
           game_id?: string
           imported_at?: string
           kurin_id?: number
+          localization_index?: number
+          localization_name?: string | null
         }
         Relationships: [
           {
@@ -641,10 +671,17 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "kurin_imports_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       kurin_skipped: {
         Row: {
+          game_name: string | null
           id: string
           kurin_id: number
           reason: string | null
@@ -652,6 +689,7 @@ export type Database = {
           skipped_by: string | null
         }
         Insert: {
+          game_name?: string | null
           id?: string
           kurin_id: number
           reason?: string | null
@@ -659,6 +697,7 @@ export type Database = {
           skipped_by?: string | null
         }
         Update: {
+          game_name?: string | null
           id?: string
           kurin_id?: number
           reason?: string | null
@@ -766,6 +805,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "media_upload_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
             foreignKeyName: "media_upload_queue_version_id_fkey"
             columns: ["version_id"]
             referencedRelation: "game_versions"
@@ -865,6 +910,52 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "support_clicks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
+      translation_playtime: {
+        Row: {
+          game_id: string
+          id: string
+          playtime_minutes: number
+          recorded_at: string | null
+          steam_app_id: number
+          user_identifier: string
+        }
+        Insert: {
+          game_id: string
+          id?: string
+          playtime_minutes: number
+          recorded_at?: string | null
+          steam_app_id: number
+          user_identifier: string
+        }
+        Update: {
+          game_id?: string
+          id?: string
+          playtime_minutes?: number
+          recorded_at?: string | null
+          steam_app_id?: number
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translation_playtime_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "translation_playtime_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       translation_uninstalls: {
@@ -892,6 +983,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "translation_uninstalls_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -986,6 +1083,13 @@ export type Database = {
         }
         Relationships: []
       }
+      trending_games_cache: {
+        Row: {
+          downloads: number | null
+          game_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_game_subscription: {
@@ -1045,6 +1149,27 @@ export type Database = {
           total_unique_players: number
         }[]
       }
+      get_playtime_by_game: {
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Returns: {
+          avg_session_minutes: number
+          game_id: string
+          game_name: string
+          total_playtime_hours: number
+          total_sessions: number
+          unique_players: number
+        }[]
+      }
+      get_playtime_statistics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          avg_session_minutes: number
+          total_playtime_hours: number
+          total_records: number
+          unique_games: number
+          unique_players: number
+        }[]
+      }
       get_subscription_statistics: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -1069,6 +1194,8 @@ export type Database = {
           ai_count: number
           completed_count: number
           games_count: number
+          in_progress_count: number
+          planned_count: number
           team_name: string
           total_downloads: number
           with_textures_count: number
