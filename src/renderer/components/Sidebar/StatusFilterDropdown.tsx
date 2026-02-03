@@ -182,7 +182,9 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
 
               <div className="border-t border-border my-1" />
 
-              {SPECIAL_FILTER_OPTIONS.map((option) => {
+              {SPECIAL_FILTER_OPTIONS.filter(
+                (option) => !counts || counts[option.value] !== 0
+              ).map((option) => {
                 const isSelected = specialFilter === option.value;
                 return (
                   <React.Fragment key={option.value}>

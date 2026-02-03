@@ -14,9 +14,9 @@ import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
+  getEpicLibrary,
   getFirstAvailableGamePath,
-  getHeroicEpicLibrary,
-  getHeroicGogLibrary,
+  getGogLibrary,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -198,12 +198,12 @@ export function setupGamesHandlers(): void {
     }
   });
 
-  // Get Heroic GOG library
-  ipcMain.handle('get-heroic-gog-library', async () => {
+  // Get GOG library
+  ipcMain.handle('get-gog-library', async () => {
     try {
-      return getHeroicGogLibrary();
+      return getGogLibrary();
     } catch (error) {
-      console.error('Error getting Heroic GOG library:', error);
+      console.error('Error getting GOG library:', error);
       return [];
     }
   });
@@ -222,12 +222,12 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Get Heroic Epic library
-  ipcMain.handle('get-heroic-epic-library', async () => {
+  // Get Epic library
+  ipcMain.handle('get-epic-library', async () => {
     try {
-      return getHeroicEpicLibrary();
+      return getEpicLibrary();
     } catch (error) {
-      console.error('Error getting Heroic Epic library:', error);
+      console.error('Error getting Epic library:', error);
       return [];
     }
   });

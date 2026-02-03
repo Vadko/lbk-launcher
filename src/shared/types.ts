@@ -144,8 +144,8 @@ export interface ElectronAPI {
     searchQuery?: string,
     hideAiTranslations?: boolean
   ) => Promise<GetGamesResult>;
-  getHeroicGogLibrary: () => Promise<string[]>;
-  getHeroicEpicLibrary: () => Promise<string[]>;
+  getGogLibrary: () => Promise<string[]>;
+  getEpicLibrary: () => Promise<string[]>;
   installTranslation: (
     game: Game,
     platform: string,

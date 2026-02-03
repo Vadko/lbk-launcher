@@ -6,6 +6,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import {
+  findGameInHeroicDirs,
+  getAllHeroicGameFolders,
+  getHeroicConfigPaths,
+} from './heroic';
 
 interface HeroicLegendaryGame {
   app_title: string;
@@ -79,32 +84,18 @@ export function findEpicGame(gameFolderName: string): string | null {
   console.log(`[Epic] Searching for game: "${gameFolderName}"`);
 
   if (isLinux()) {
-    const home = os.homedir();
-    const heroicPaths = [
-      path.join(home, 'Games/Heroic'),
-      path.join(home, '.var/app/com.heroicgameslauncher.hgl/Games/Heroic'),
-    ];
-
-    // Check directories
-    for (const heroicPath of heroicPaths) {
-      if (fs.existsSync(heroicPath)) {
-        const gamePath = path.join(heroicPath, gameFolderName);
-        if (fs.existsSync(gamePath)) {
-          console.log(`[Epic] ✓ Game found (Heroic): ${gamePath}`);
-          return gamePath;
-        }
-      }
+    // Check Heroic directories
+    const heroicPath = findGameInHeroicDirs(gameFolderName);
+    if (heroicPath) {
+      console.log(`[Epic] ✓ Game found (Heroic): ${heroicPath}`);
+      return heroicPath;
     }
 
     // Try parsing legendary_library.json
     try {
-      const configPaths = [
-        path.join(
-          home,
-          '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
-        ),
-        path.join(home, '.config/heroic/store_cache/legendary_library.json'),
-      ];
+      const configPaths = getHeroicConfigPaths().map((p) =>
+        path.join(p, 'store_cache/legendary_library.json')
+      );
 
       for (const configPath of configPaths) {
         if (fs.existsSync(configPath)) {
@@ -185,37 +176,14 @@ export function getInstalledEpicGamePaths(): string[] {
 
   try {
     if (isLinux()) {
-      const home = os.homedir();
-      const heroicPaths = [
-        path.join(home, 'Games/Heroic'),
-        path.join(home, '.var/app/com.heroicgameslauncher.hgl/Games/Heroic'),
-      ];
-
-      for (const heroicPath of heroicPaths) {
-        if (fs.existsSync(heroicPath)) {
-          try {
-            const epicGames = fs.readdirSync(heroicPath);
-            for (const game of epicGames) {
-              const gamePath = path.join(heroicPath, game);
-              if (fs.statSync(gamePath).isDirectory()) {
-                paths.push(game);
-              }
-            }
-          } catch (e) {
-            console.warn(`[Epic] Error reading Heroic path ${heroicPath}:`, e);
-          }
-        }
-      }
+      // Get all game folders from Heroic directories
+      paths.push(...getAllHeroicGameFolders());
 
       // Read from legendary_library.json as well
       try {
-        const configPaths = [
-          path.join(
-            home,
-            '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
-          ),
-          path.join(home, '.config/heroic/store_cache/legendary_library.json'),
-        ];
+        const configPaths = getHeroicConfigPaths().map((p) =>
+          path.join(p, 'store_cache/legendary_library.json')
+        );
 
         for (const configPath of configPaths) {
           if (fs.existsSync(configPath)) {
@@ -265,17 +233,12 @@ export function getInstalledEpicGamePaths(): string[] {
  * Get all Epic games from Heroic/Legendary library (owned games)
  * Returns array of game titles
  */
-export function getHeroicEpicLibrary(): string[] {
+export function getEpicLibrary(): string[] {
   if (!isLinux()) return [];
 
-  const home = os.homedir();
-  const configPaths = [
-    path.join(
-      home,
-      '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
-    ),
-    path.join(home, '.config/heroic/store_cache/legendary_library.json'),
-  ];
+  const configPaths = getHeroicConfigPaths().map((p) =>
+    path.join(p, 'store_cache/legendary_library.json')
+  );
 
   const titles: string[] = [];
 

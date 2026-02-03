@@ -37,15 +37,15 @@ export function useFilterCounts() {
         installedIds,
         installedPaths,
         steamLibraryAppIds,
-        heroicGogTitles,
-        heroicEpicTitles,
+        gogTitles,
+        epicTitles,
       ] = await Promise.all([
         window.electronAPI.fetchFilterCounts(),
         window.electronAPI.getAllInstalledGameIds(),
         window.electronAPI.getAllInstalledGamePaths(),
         window.electronAPI.getSteamLibraryAppIds(),
-        window.electronAPI.getHeroicGogLibrary(),
-        window.electronAPI.getHeroicEpicLibrary(),
+        window.electronAPI.getGogLibrary(),
+        window.electronAPI.getEpicLibrary(),
       ]);
 
       if (!isMountedRef.current) return;
@@ -62,12 +62,12 @@ export function useFilterCounts() {
         steamLibraryAppIds.length > 0
           ? window.electronAPI.countGamesBySteamAppIds(steamLibraryAppIds)
           : Promise.resolve(0),
-        heroicGogTitles.length > 0
-          ? window.electronAPI.findGamesByTitles(heroicGogTitles)
-          : Promise.resolve({ total: 0 }),
-        heroicEpicTitles.length > 0
-          ? window.electronAPI.findGamesByTitles(heroicEpicTitles)
-          : Promise.resolve({ total: 0 }),
+        gogTitles.length > 0
+          ? window.electronAPI.findGamesByTitles(gogTitles)
+          : Promise.resolve({ games: [], total: 0 }),
+        epicTitles.length > 0
+          ? window.electronAPI.findGamesByTitles(epicTitles)
+          : Promise.resolve({ games: [], total: 0 }),
       ]);
 
       if (!isMountedRef.current) return;

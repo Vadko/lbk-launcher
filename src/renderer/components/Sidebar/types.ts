@@ -44,8 +44,8 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Встановлені українізатори', value: 'installed-translations' },
   { label: 'Встановлені ігри', value: 'installed-games' },
   { label: 'Доступно зі Steam', value: 'available-in-steam' },
-  { label: 'Доступно з GOG (Heroic)', value: 'owned-gog-games' },
-  { label: 'Доступно з Epic (Heroic)', value: 'owned-epic-games' },
+  { label: 'Доступно з GOG', value: 'owned-gog-games' },
+  { label: 'Доступно з Epic', value: 'owned-epic-games' },
   { label: 'З перекладом досягнень', value: 'with-achievements' },
   { label: 'З озвученням', value: 'with-voice' },
 ];

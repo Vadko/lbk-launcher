@@ -147,9 +147,9 @@ export function useGames({
         return;
       }
 
-      // Special handling for GOG Owned Games (Heroic)
+      // Special handling for GOG Owned Games
       if (specialFilter === 'owned-gog-games') {
-        const titles = await window.electronAPI.getHeroicGogLibrary();
+        const titles = await window.electronAPI.getGogLibrary();
 
         if (signal.aborted) return;
 
@@ -172,9 +172,9 @@ export function useGames({
         return;
       }
 
-      // Special handling for Epic Owned Games (Heroic)
+      // Special handling for Epic Owned Games
       if (specialFilter === 'owned-epic-games') {
-        const titles = await window.electronAPI.getHeroicEpicLibrary();
+        const titles = await window.electronAPI.getEpicLibrary();
 
         if (signal.aborted) return;
 

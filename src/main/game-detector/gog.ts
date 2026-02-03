@@ -7,6 +7,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import {
+  findGameInHeroicDirs,
+  getAllHeroicGameFolders,
+  getHeroicConfigPaths,
+} from './heroic';
 
 /**
  * Detect GOG Galaxy installation path
@@ -65,32 +70,18 @@ interface HeroicGogGame {
 export function findGOGGame(gameFolderName: string): string | null {
   // Linux (Heroic) support
   if (isLinux()) {
-    const home = os.homedir();
-    const heroicPaths = [
-      path.join(home, 'Games/Heroic'),
-      path.join(home, '.var/app/com.heroicgameslauncher.hgl/Games/Heroic'),
-    ];
-
-    // Check directories
-    for (const heroicPath of heroicPaths) {
-      if (fs.existsSync(heroicPath)) {
-        const gamePath = path.join(heroicPath, gameFolderName);
-        if (fs.existsSync(gamePath)) {
-          console.log(`[GOG] ✓ Game found (Heroic): ${gamePath}`);
-          return gamePath;
-        }
-      }
+    // Check Heroic directories
+    const heroicPath = findGameInHeroicDirs(gameFolderName);
+    if (heroicPath) {
+      console.log(`[GOG] ✓ Game found (Heroic): ${heroicPath}`);
+      return heroicPath;
     }
 
     // Try parsing installed.json
     try {
-      const configPaths = [
-        path.join(
-          home,
-          '.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store/installed.json'
-        ),
-        path.join(home, '.config/heroic/gog_store/installed.json'),
-      ];
+      const configPaths = getHeroicConfigPaths().map((p) =>
+        path.join(p, 'gog_store/installed.json')
+      );
 
       for (const configPath of configPaths) {
         if (fs.existsSync(configPath)) {
@@ -139,37 +130,14 @@ export function getInstalledGOGGamePaths(): string[] {
   try {
     // Linux (Heroic) support
     if (isLinux()) {
-      const home = os.homedir();
-      const heroicPaths = [
-        path.join(home, 'Games/Heroic'),
-        path.join(home, '.var/app/com.heroicgameslauncher.hgl/Games/Heroic'),
-      ];
-
-      for (const heroicPath of heroicPaths) {
-        if (fs.existsSync(heroicPath)) {
-          try {
-            const gogGames = fs.readdirSync(heroicPath);
-            for (const game of gogGames) {
-              const gamePath = path.join(heroicPath, game);
-              if (fs.statSync(gamePath).isDirectory()) {
-                paths.push(game);
-              }
-            }
-          } catch (e) {
-            console.warn(`[GOG] Error reading Heroic path ${heroicPath}:`, e);
-          }
-        }
-      }
+      // Get all game folders from Heroic directories
+      paths.push(...getAllHeroicGameFolders());
 
       // Read from installed.json as well
       try {
-        const configPaths = [
-          path.join(
-            home,
-            '.var/app/com.heroicgameslauncher.hgl/config/heroic/gog_store/installed.json'
-          ),
-          path.join(home, '.config/heroic/gog_store/installed.json'),
-        ];
+        const configPaths = getHeroicConfigPaths().map((p) =>
+          path.join(p, 'gog_store/installed.json')
+        );
 
         for (const configPath of configPaths) {
           if (fs.existsSync(configPath)) {
@@ -210,17 +178,12 @@ export function getInstalledGOGGamePaths(): string[] {
  * Get all GOG games from Heroic library (owned games)
  * Returns array of game titles
  */
-export function getHeroicGogLibrary(): string[] {
+export function getGogLibrary(): string[] {
   if (!isLinux()) return [];
 
-  const home = os.homedir();
-  const configPaths = [
-    path.join(
-      home,
-      '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/gog_library.json'
-    ),
-    path.join(home, '.config/heroic/store_cache/gog_library.json'),
-  ];
+  const configPaths = getHeroicConfigPaths().map((p) =>
+    path.join(p, 'store_cache/gog_library.json')
+  );
 
   const titles: string[] = [];
 
