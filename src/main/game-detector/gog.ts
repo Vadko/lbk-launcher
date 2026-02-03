@@ -2,6 +2,7 @@
  * GOG Galaxy Detection
  */
 
+import Database from 'better-sqlite3';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -12,6 +13,235 @@ import {
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
 } from './heroic';
+
+/**
+ * GOG game info file structure (goggame-*.info)
+ */
+interface GOGGameInfoFile {
+  gameId: string;
+  rootGameId: string;
+  name: string;
+  buildId?: string;
+  clientId?: string;
+  standalone?: boolean;
+  dependencyGameId?: string;
+  language?: string;
+  languages?: string[];
+  playTasks?: Array<{
+    type: string;
+    path?: string;
+    name?: string;
+    isPrimary?: boolean;
+  }>;
+}
+
+/**
+ * Get GOG Galaxy database path
+ */
+function getGOGGalaxyDBPath(): string | null {
+  try {
+    if (isWindows()) {
+      const localAppData = process.env.LOCALAPPDATA;
+      if (localAppData) {
+        const dbPath = path.join(localAppData, 'GOG.com/Galaxy/storage/galaxy-2.0.db');
+        if (fs.existsSync(dbPath)) {
+          return dbPath;
+        }
+      }
+    } else if (isMacOS()) {
+      const dbPath = path.join(
+        os.homedir(),
+        'Library/Application Support/GOG.com/Galaxy/Storage/galaxy-2.0.db'
+      );
+      if (fs.existsSync(dbPath)) {
+        return dbPath;
+      }
+    }
+  } catch (error) {
+    console.warn('[GOG] Error getting Galaxy DB path:', error);
+  }
+  return null;
+}
+
+/**
+ * Get common GOG game installation directories
+ */
+function getGOGGameDirs(): string[] {
+  const dirs: string[] = [];
+  const home = os.homedir();
+
+  if (isWindows()) {
+    // Common Windows GOG paths
+    dirs.push('C:\\GOG Games');
+    dirs.push('C:\\Program Files (x86)\\GOG Galaxy\\Games');
+    dirs.push('C:\\Program Files\\GOG Galaxy\\Games');
+    dirs.push(path.join(home, 'GOG Games'));
+
+    // Check other drives
+    for (const drive of ['D', 'E', 'F', 'G']) {
+      dirs.push(`${drive}:\\GOG Games`);
+      dirs.push(`${drive}:\\Games\\GOG`);
+    }
+  } else if (isMacOS()) {
+    dirs.push(path.join(home, 'GOG Games'));
+    dirs.push('/Applications/GOG Games');
+    dirs.push(path.join(home, 'Library/Application Support/GOG.com/Galaxy/Games'));
+  }
+
+  return dirs.filter((dir) => fs.existsSync(dir));
+}
+
+/**
+ * Read goggame-*.info file and extract game info
+ */
+function readGOGGameInfo(infoFilePath: string): GOGGameInfoFile | null {
+  try {
+    const content = fs.readFileSync(infoFilePath, 'utf8');
+    return JSON.parse(content) as GOGGameInfoFile;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Scan directory for goggame-*.info files and extract game titles
+ */
+function scanDirForGOGGames(dir: string): string[] {
+  const titles: string[] = [];
+
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+
+      const gameDir = path.join(dir, entry.name);
+      let infoDir = gameDir;
+
+      // On macOS, info files are inside .app/Contents/Resources/
+      if (isMacOS()) {
+        const appBundles = fs.readdirSync(gameDir).filter((f) => f.endsWith('.app'));
+        if (appBundles.length > 0) {
+          const resourcesPath = path.join(gameDir, appBundles[0], 'Contents/Resources');
+          if (fs.existsSync(resourcesPath)) {
+            infoDir = resourcesPath;
+          }
+        }
+      }
+
+      // Find goggame-*.info files
+      try {
+        const files = fs.readdirSync(infoDir);
+        for (const file of files) {
+          if (file.match(/^goggame-\d+\.info$/)) {
+            const info = readGOGGameInfo(path.join(infoDir, file));
+            if (info?.name) {
+              titles.push(info.name);
+            }
+          }
+        }
+      } catch {
+        // Skip directories we can't read
+      }
+    }
+  } catch (error) {
+    console.warn(`[GOG] Error scanning dir ${dir}:`, error);
+  }
+
+  return titles;
+}
+
+/**
+ * Get installed games from GOG Galaxy SQLite database
+ */
+function getGamesFromGalaxyDB(): string[] {
+  const dbPath = getGOGGalaxyDBPath();
+  if (!dbPath) return [];
+
+  const titles: string[] = [];
+
+  try {
+    // Open database in readonly mode
+    const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+
+    try {
+      // Query installed games from InstalledBaseProducts table
+      const rows = db
+        .prepare(
+          `
+          SELECT DISTINCT p.title
+          FROM InstalledBaseProducts ibp
+          JOIN Products p ON ibp.productId = p.productId
+          WHERE p.title IS NOT NULL
+        `
+        )
+        .all() as Array<{ title: string }>;
+
+      for (const row of rows) {
+        if (row.title) {
+          titles.push(row.title);
+        }
+      }
+    } catch (queryError) {
+      // Try alternative table structure (older Galaxy versions)
+      try {
+        const rows = db
+          .prepare(
+            `
+            SELECT DISTINCT title
+            FROM Products
+            WHERE isInstalled = 1 AND title IS NOT NULL
+          `
+          )
+          .all() as Array<{ title: string }>;
+
+        for (const row of rows) {
+          if (row.title) {
+            titles.push(row.title);
+          }
+        }
+      } catch {
+        console.warn('[GOG] Could not query Galaxy database');
+      }
+    }
+
+    db.close();
+  } catch (error) {
+    console.warn('[GOG] Error reading Galaxy database:', error);
+  }
+
+  return titles;
+}
+
+/**
+ * Get GOG games from Windows Registry
+ */
+function getGamesFromRegistry(): string[] {
+  if (!isWindows()) return [];
+
+  const titles: string[] = [];
+
+  try {
+    // Query HKEY_LOCAL_MACHINE for GOG games
+    const output = execSync(
+      'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\GOG.com\\Games" /s 2>nul',
+      { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 }
+    );
+
+    // Parse registry output for GAMENAME values
+    const matches = output.matchAll(/GAMENAME\s+REG_SZ\s+(.+)/g);
+    for (const match of matches) {
+      const title = match[1].trim();
+      if (title) {
+        titles.push(title);
+      }
+    }
+  } catch {
+    // Registry key doesn't exist or access denied
+  }
+
+  return titles;
+}
 
 /**
  * Detect GOG Galaxy installation path
@@ -175,39 +405,71 @@ export function getInstalledGOGGamePaths(): string[] {
 }
 
 /**
- * Get all GOG games from Heroic library (owned games)
+ * Get all GOG games (installed/owned)
  * Returns array of game titles
  */
 export function getGogLibrary(): string[] {
-  if (!isLinux()) return [];
+  const titles = new Set<string>();
 
-  const configPaths = getHeroicConfigPaths().map((p) =>
-    path.join(p, 'store_cache/gog_library.json')
-  );
+  // Linux: Use Heroic launcher data
+  if (isLinux()) {
+    const configPaths = getHeroicConfigPaths().map((p) =>
+      path.join(p, 'store_cache/gog_library.json')
+    );
 
-  const titles: string[] = [];
+    try {
+      for (const configPath of configPaths) {
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, 'utf8');
+          const data = JSON.parse(content);
 
-  try {
-    for (const configPath of configPaths) {
-      if (fs.existsSync(configPath)) {
-        const content = fs.readFileSync(configPath, 'utf8');
-        const data = JSON.parse(content);
+          // GOG library structure: { games: [...] }
+          const games = Array.isArray(data) ? data : data.games || [];
 
-        // GOG library structure: { games: [...] }
-        const games = Array.isArray(data) ? data : data.games || [];
-
-        if (Array.isArray(games)) {
-          for (const game of games as HeroicGogGame[]) {
-            if (game.title) {
-              titles.push(game.title);
+          if (Array.isArray(games)) {
+            for (const game of games as HeroicGogGame[]) {
+              if (game.title) {
+                titles.add(game.title);
+              }
             }
           }
         }
       }
+    } catch (error) {
+      console.error('[GOG] Error reading Heroic library:', error);
     }
-  } catch (error) {
-    console.error('[GOG] Error reading Heroic library:', error);
   }
 
-  return titles;
+  // Windows/macOS: Use native GOG Galaxy detection
+  if (isWindows() || isMacOS()) {
+    // Method 1: GOG Galaxy SQLite database
+    const dbTitles = getGamesFromGalaxyDB();
+    for (const title of dbTitles) {
+      titles.add(title);
+    }
+
+    // Method 2: Scan goggame-*.info files in common directories
+    const gogDirs = getGOGGameDirs();
+    for (const dir of gogDirs) {
+      const scannedTitles = scanDirForGOGGames(dir);
+      for (const title of scannedTitles) {
+        titles.add(title);
+      }
+    }
+
+    // Method 3: Windows Registry (Windows only)
+    if (isWindows()) {
+      const registryTitles = getGamesFromRegistry();
+      for (const title of registryTitles) {
+        titles.add(title);
+      }
+    }
+  }
+
+  const result = Array.from(titles);
+  if (result.length > 0) {
+    console.log(`[GOG] Found ${result.length} games in library`);
+  }
+
+  return result;
 }
