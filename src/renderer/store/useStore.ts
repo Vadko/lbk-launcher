@@ -18,7 +18,12 @@ interface InstallationProgress {
   statusMessage: string | null;
 }
 
+type SyncStatus = 'loading' | 'syncing' | 'ready' | 'error';
+
 interface Store {
+  // Sync State
+  syncStatus: SyncStatus;
+
   // UI State
   selectedGame: Game | null;
   selectedStatuses: string[];
@@ -34,6 +39,9 @@ interface Store {
   gamesWithUpdates: Set<string>; // Ігри з доступними оновленнями
   installationProgress: Map<string, InstallationProgress>;
   isCheckingInstallation: Map<string, boolean>;
+
+  // Sync Actions
+  setSyncStatus: (status: SyncStatus) => void;
 
   // UI Actions
   setSelectedGame: (game: Game | null) => void;
@@ -73,6 +81,9 @@ interface Store {
 // бо користувач може встановити/видалити ігри через Steam/GOG/Epic
 
 export const useStore = create<Store>((set, get) => ({
+  // Sync State
+  syncStatus: 'loading',
+
   // UI State
   selectedGame: null,
   selectedStatuses: [],
@@ -88,6 +99,9 @@ export const useStore = create<Store>((set, get) => ({
   gamesWithUpdates: new Set(),
   installationProgress: new Map(),
   isCheckingInstallation: new Map(),
+
+  // Sync Actions
+  setSyncStatus: (syncStatus) => set({ syncStatus }),
 
   // UI Actions
   setSelectedGame: (game) => {

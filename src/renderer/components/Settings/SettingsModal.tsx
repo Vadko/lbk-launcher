@@ -131,13 +131,6 @@ export const SettingsModal: React.FC = () => {
     await window.loggerAPI?.openLogsFolder();
   }, []);
 
-  // Sync logger state when modal opens
-  useEffect(() => {
-    if (isSettingsModalOpen) {
-      window.loggerAPI?.setEnabled(saveLogsToFile);
-    }
-  }, [isSettingsModalOpen, saveLogsToFile]);
-
   return (
     <Modal
       isOpen={isSettingsModalOpen}
