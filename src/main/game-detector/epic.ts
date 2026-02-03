@@ -250,7 +250,7 @@ export function getHeroicEpicLibrary(): string[] {
 
       // Legendary library structure: { library: [...] }
       // Or sometimes just array? content seems to be { library: [...] }
-      const games = Array.isArray(data) ? data : (data.library || Object.values(data));
+      const games = Array.isArray(data) ? data : data.library || Object.values(data);
 
       for (const game of games as any[]) {
         // User reports Epic names are in description

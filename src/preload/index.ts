@@ -46,12 +46,7 @@ const electronAPI: ElectronAPI = {
     searchQuery?: string,
     hideAiTranslations?: boolean
   ) =>
-    ipcRenderer.invoke(
-      'find-games-by-titles',
-      titles,
-      searchQuery,
-      hideAiTranslations
-    ),
+    ipcRenderer.invoke('find-games-by-titles', titles, searchQuery, hideAiTranslations),
   getHeroicGogLibrary: () => ipcRenderer.invoke('get-heroic-gog-library'),
   getHeroicEpicLibrary: () => ipcRenderer.invoke('get-heroic-epic-library'),
   installTranslation: (

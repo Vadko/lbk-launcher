@@ -54,7 +54,7 @@ export function useFilterCounts() {
         installedGamesResult,
         steamLibraryCount,
         gogLibraryResult,
-        epicLibraryResult
+        epicLibraryResult,
       ] = await Promise.all([
         installedPaths.length > 0
           ? window.electronAPI.findGamesByInstallPaths(installedPaths)

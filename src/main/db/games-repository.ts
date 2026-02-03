@@ -30,12 +30,12 @@ type GameInsertParams = {
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
   >]: K extends 'approved' | 'is_adult' | 'license_only' | 'hide'
-  ? number // boolean перетворюється на 0/1 для SQLite
-  : K extends 'ai'
-  ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
-  : K extends 'platforms' | 'install_paths'
-  ? string | null // JSON.stringify для SQLite
-  : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+    ? number // boolean перетворюється на 0/1 для SQLite
+    : K extends 'ai'
+      ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
+      : K extends 'platforms' | 'install_paths'
+        ? string | null // JSON.stringify для SQLite
+        : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
   // Local-only field for search (not in Supabase)
   name_search: string;
@@ -623,10 +623,7 @@ export class GamesRepository {
       return { games: [], total: 0 };
     }
 
-    const whereConditions = [
-      'approved = 1',
-      'hide = 0',
-    ];
+    const whereConditions = ['approved = 1', 'hide = 0'];
 
     // Create query with parameters for titles
     const placeholders = titles.map(() => '?').join(',');

@@ -209,7 +209,7 @@ export function getHeroicGogLibrary(): string[] {
       const data = JSON.parse(content);
 
       // GOG library structure: { games: [...] }
-      const games = Array.isArray(data) ? data : (data.games || []);
+      const games = Array.isArray(data) ? data : data.games || [];
 
       if (Array.isArray(games)) {
         for (const game of games) {
