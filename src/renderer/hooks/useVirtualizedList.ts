@@ -34,20 +34,12 @@ export function useVirtualizedList({
   rootMargin = '200px',
   enabled = true,
 }: UseVirtualizedListOptions): UseVirtualizedListResult {
-  const [renderCount, setRenderCount] = useState(
-    enabled ? Math.min(initialRenderCount, totalItems) : totalItems
-  );
+  const [renderCount, setRenderCount] = useState(initialRenderCount);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Reset when totalItems changes (e.g., filter applied)
-  useEffect(() => {
-    if (enabled) {
-      setRenderCount(Math.min(initialRenderCount, totalItems));
-    } else {
-      setRenderCount(totalItems);
-    }
-  }, [totalItems, initialRenderCount, enabled]);
+  // Clamp renderCount to actual totalItems (handles filter changes automatically)
+  const actualRenderCount = enabled ? Math.min(renderCount, totalItems) : totalItems;
 
   // Setup IntersectionObserver
   useEffect(() => {
@@ -57,33 +49,12 @@ export function useVirtualizedList({
     if (!sentinel) return;
 
     // Don't observe if we're already rendering everything
-    if (renderCount >= totalItems) {
-      console.log('[VirtualizedList] All items rendered:', renderCount, '/', totalItems);
-      return;
-    }
-
-    console.log(
-      '[VirtualizedList] Observing sentinel, current:',
-      renderCount,
-      '/',
-      totalItems
-    );
+    if (actualRenderCount >= totalItems) return;
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          setRenderCount((prev) => {
-            const next = Math.min(prev + incrementCount, totalItems);
-            console.log(
-              '[VirtualizedList] Loading more:',
-              prev,
-              '->',
-              next,
-              '/',
-              totalItems
-            );
-            return next;
-          });
+          setRenderCount((prev) => Math.min(prev + incrementCount, totalItems));
         }
       },
       { rootMargin }
@@ -94,18 +65,14 @@ export function useVirtualizedList({
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [enabled, renderCount, totalItems, incrementCount, rootMargin]);
+  }, [enabled, actualRenderCount, totalItems, incrementCount, rootMargin]);
 
   const reset = useCallback(() => {
-    if (enabled) {
-      setRenderCount(Math.min(initialRenderCount, totalItems));
-    } else {
-      setRenderCount(totalItems);
-    }
-  }, [enabled, initialRenderCount, totalItems]);
+    setRenderCount(initialRenderCount);
+  }, [initialRenderCount]);
 
   return {
-    renderCount,
+    renderCount: actualRenderCount,
     sentinelRef,
     reset,
   };
