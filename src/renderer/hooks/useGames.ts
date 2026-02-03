@@ -356,8 +356,6 @@ export function useGames({
         if (
           specialFilter === 'installed-games' ||
           specialFilter === 'installed-translations' ||
-          specialFilter === 'installed-games' ||
-          specialFilter === 'installed-translations' ||
           specialFilter === 'available-in-steam' ||
           specialFilter === 'owned-gog-games' ||
           specialFilter === 'owned-epic-games'
