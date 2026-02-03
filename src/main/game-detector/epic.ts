@@ -7,6 +7,20 @@ import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
 
+interface HeroicLegendaryGame {
+  app_title: string;
+  title: string;
+  install?: {
+    install_path: string;
+  };
+  extra?: {
+    about?: {
+      description?: string;
+    };
+  };
+  [key: string]: unknown;
+}
+
 /**
  * Detect Epic Games Launcher manifests path
  */
@@ -84,31 +98,41 @@ export function findEpicGame(gameFolderName: string): string | null {
 
     // Try parsing legendary_library.json
     try {
-      const configPath = path.join(
-        home,
-        '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
-      );
-      if (fs.existsSync(configPath)) {
-        const content = fs.readFileSync(configPath, 'utf8');
-        const library = JSON.parse(content);
-        // Handle both array and object format (values)
-        const games = Array.isArray(library) ? library : Object.values(library);
+      const configPaths = [
+        path.join(
+          home,
+          '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
+        ),
+        path.join(home, '.config/heroic/store_cache/legendary_library.json'),
+      ];
 
-        const game = games.find((g: any) => {
-          if (g?.install?.install_path) {
-            return (
-              path.basename(g.install.install_path).toLowerCase() ===
-              gameFolderName.toLowerCase()
+      for (const configPath of configPaths) {
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, 'utf8');
+          const library = JSON.parse(content);
+          // Handle both array and object format (values)
+          const games = Array.isArray(library) ? library : Object.values(library);
+
+          const game = games.find((g: HeroicLegendaryGame) => {
+            if (g?.install?.install_path) {
+              return (
+                path.basename(g.install.install_path).toLowerCase() ===
+                gameFolderName.toLowerCase()
+              );
+            }
+            return false;
+          });
+
+          if (
+            game &&
+            game.install?.install_path &&
+            fs.existsSync(game.install.install_path)
+          ) {
+            console.log(
+              `[Epic] ✓ Game found via legendary_library.json: ${game.install.install_path}`
             );
+            return game.install.install_path;
           }
-          return false;
-        });
-
-        if (game && fs.existsSync(game.install.install_path)) {
-          console.log(
-            `[Epic] ✓ Game found via legendary_library.json: ${game.install.install_path}`
-          );
-          return game.install.install_path;
         }
       }
     } catch (e) {
@@ -185,18 +209,27 @@ export function getInstalledEpicGamePaths(): string[] {
 
       // Read from legendary_library.json as well
       try {
-        const configPath = path.join(
-          home,
-          '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
-        );
-        if (fs.existsSync(configPath)) {
-          const content = fs.readFileSync(configPath, 'utf8');
-          const library = JSON.parse(content);
-          const games = Array.isArray(library) ? library : Object.values(library);
+        const configPaths = [
+          path.join(
+            home,
+            '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
+          ),
+          path.join(home, '.config/heroic/store_cache/legendary_library.json'),
+        ];
 
-          for (const game of games as any[]) {
-            if (game?.install?.install_path && fs.existsSync(game.install.install_path)) {
-              paths.push(path.basename(game.install.install_path));
+        for (const configPath of configPaths) {
+          if (fs.existsSync(configPath)) {
+            const content = fs.readFileSync(configPath, 'utf8');
+            const library = JSON.parse(content);
+            const games = Array.isArray(library) ? library : Object.values(library);
+
+            for (const game of games as HeroicLegendaryGame[]) {
+              if (
+                game?.install?.install_path &&
+                fs.existsSync(game.install.install_path)
+              ) {
+                paths.push(path.basename(game.install.install_path));
+              }
             }
           }
         }
@@ -236,32 +269,37 @@ export function getHeroicEpicLibrary(): string[] {
   if (!isLinux()) return [];
 
   const home = os.homedir();
-  const configPath = path.join(
-    home,
-    '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
-  );
+  const configPaths = [
+    path.join(
+      home,
+      '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
+    ),
+    path.join(home, '.config/heroic/store_cache/legendary_library.json'),
+  ];
 
   const titles: string[] = [];
 
   try {
-    if (fs.existsSync(configPath)) {
-      const content = fs.readFileSync(configPath, 'utf8');
-      const data = JSON.parse(content);
+    for (const configPath of configPaths) {
+      if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, 'utf8');
+        const data = JSON.parse(content);
 
-      // Legendary library structure: { library: [...] }
-      // Or sometimes just array? content seems to be { library: [...] }
-      const games = Array.isArray(data) ? data : data.library || Object.values(data);
+        // Legendary library structure: { library: [...] }
+        // Or sometimes just array? content seems to be { library: [...] }
+        const games = Array.isArray(data) ? data : data.library || Object.values(data);
 
-      for (const game of games as any[]) {
-        // User reports Epic names are in description
-        // Structure: extra.about.description
-        if (game?.extra?.about?.description) {
-          titles.push(game.extra.about.description);
-        } else if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
-          // Fallback to app_title only if it doesn't look like a hash ID
-          titles.push(game.app_title);
-        } else if (game.title) {
-          titles.push(game.title);
+        for (const game of games as HeroicLegendaryGame[]) {
+          // User reports Epic names are in description
+          // Structure: extra.about.description
+          if (game?.extra?.about?.description) {
+            titles.push(game.extra.about.description);
+          } else if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
+            // Fallback to app_title only if it doesn't look like a hash ID
+            titles.push(game.app_title);
+          } else if (game.title) {
+            titles.push(game.title);
+          }
         }
       }
     }
