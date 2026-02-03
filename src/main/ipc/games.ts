@@ -9,11 +9,14 @@ import {
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
 } from '../api';
+import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
   getFirstAvailableGamePath,
+  getHeroicEpicLibrary,
+  getHeroicGogLibrary,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -192,6 +195,40 @@ export function setupGamesHandlers(): void {
     } catch (error) {
       console.error('Error counting games by Steam App IDs:', error);
       return 0;
+    }
+  });
+
+  // Get Heroic GOG library
+  ipcMain.handle('get-heroic-gog-library', async () => {
+    try {
+      return getHeroicGogLibrary();
+    } catch (error) {
+      console.error('Error getting Heroic GOG library:', error);
+      return [];
+    }
+  });
+
+  // Find games by titles
+  ipcMain.handle(
+    'find-games-by-titles',
+    (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
+      try {
+        const repo = new GamesRepository();
+        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
+      } catch (error) {
+        console.error('Error finding games by titles:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
+
+  // Get Heroic Epic library
+  ipcMain.handle('get-heroic-epic-library', async () => {
+    try {
+      return getHeroicEpicLibrary();
+    } catch (error) {
+      console.error('Error getting Heroic Epic library:', error);
+      return [];
     }
   });
 

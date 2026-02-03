@@ -5,12 +5,16 @@ export type FilterCounts = FilterCountsResult & {
   'installed-translations': number;
   'installed-games': number;
   'available-in-steam': number;
+  'owned-gog-games': number;
+  'owned-epic-games': number;
 };
 
 const INITIAL_COUNTS: FilterCounts = {
   'installed-translations': 0,
   'installed-games': 0,
   'available-in-steam': 0,
+  'owned-gog-games': 0,
+  'owned-epic-games': 0,
   'with-achievements': 0,
   'with-voice': 0,
   planned: 0,
@@ -28,23 +32,42 @@ export function useFilterCounts() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const [sqlCounts, installedIds, installedPaths, steamLibraryAppIds] =
-        await Promise.all([
-          window.electronAPI.fetchFilterCounts(),
-          window.electronAPI.getAllInstalledGameIds(),
-          window.electronAPI.getAllInstalledGamePaths(),
-          window.electronAPI.getSteamLibraryAppIds(),
-        ]);
+      const [
+        sqlCounts,
+        installedIds,
+        installedPaths,
+        steamLibraryAppIds,
+        heroicGogTitles,
+        heroicEpicTitles,
+      ] = await Promise.all([
+        window.electronAPI.fetchFilterCounts(),
+        window.electronAPI.getAllInstalledGameIds(),
+        window.electronAPI.getAllInstalledGamePaths(),
+        window.electronAPI.getSteamLibraryAppIds(),
+        window.electronAPI.getHeroicGogLibrary(),
+        window.electronAPI.getHeroicEpicLibrary(),
+      ]);
 
       if (!isMountedRef.current) return;
 
-      const [installedGamesResult, steamLibraryCount] = await Promise.all([
+      const [
+        installedGamesResult,
+        steamLibraryCount,
+        gogLibraryResult,
+        epicLibraryResult
+      ] = await Promise.all([
         installedPaths.length > 0
           ? window.electronAPI.findGamesByInstallPaths(installedPaths)
           : Promise.resolve({ games: [], total: 0, uniqueCount: 0 }),
         steamLibraryAppIds.length > 0
           ? window.electronAPI.countGamesBySteamAppIds(steamLibraryAppIds)
           : Promise.resolve(0),
+        heroicGogTitles.length > 0
+          ? window.electronAPI.findGamesByTitles(heroicGogTitles)
+          : Promise.resolve({ total: 0 }),
+        heroicEpicTitles.length > 0
+          ? window.electronAPI.findGamesByTitles(heroicEpicTitles)
+          : Promise.resolve({ total: 0 }),
       ]);
 
       if (!isMountedRef.current) return;
@@ -54,6 +77,8 @@ export function useFilterCounts() {
         'installed-translations': installedIds.length,
         'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
         'available-in-steam': steamLibraryCount,
+        'owned-gog-games': gogLibraryResult.total,
+        'owned-epic-games': epicLibraryResult.total,
       });
     } catch (err) {
       console.error('[useFilterCounts] Error:', err);

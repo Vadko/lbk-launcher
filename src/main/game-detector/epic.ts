@@ -5,7 +5,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { isMacOS, isWindows } from '../utils/platform';
+import { isLinux, isMacOS, isWindows } from '../utils/platform';
 
 /**
  * Detect Epic Games Launcher manifests path
@@ -64,6 +64,58 @@ function parseEpicManifest(
 export function findEpicGame(gameFolderName: string): string | null {
   console.log(`[Epic] Searching for game: "${gameFolderName}"`);
 
+  if (isLinux()) {
+    const home = os.homedir();
+    const heroicPaths = [
+      path.join(home, 'Games/Heroic'),
+      path.join(home, '.var/app/com.heroicgameslauncher.hgl/Games/Heroic'),
+    ];
+
+    // Check directories
+    for (const heroicPath of heroicPaths) {
+      if (fs.existsSync(heroicPath)) {
+        const gamePath = path.join(heroicPath, gameFolderName);
+        if (fs.existsSync(gamePath)) {
+          console.log(`[Epic] ✓ Game found (Heroic): ${gamePath}`);
+          return gamePath;
+        }
+      }
+    }
+
+    // Try parsing legendary_library.json
+    try {
+      const configPath = path.join(
+        home,
+        '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
+      );
+      if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, 'utf8');
+        const library = JSON.parse(content);
+        // Handle both array and object format (values)
+        const games = Array.isArray(library) ? library : Object.values(library);
+
+        const game = games.find((g: any) => {
+          if (g?.install?.install_path) {
+            return (
+              path.basename(g.install.install_path).toLowerCase() ===
+              gameFolderName.toLowerCase()
+            );
+          }
+          return false;
+        });
+
+        if (game && fs.existsSync(game.install.install_path)) {
+          console.log(
+            `[Epic] ✓ Game found via legendary_library.json: ${game.install.install_path}`
+          );
+          return game.install.install_path;
+        }
+      }
+    } catch (e) {
+      console.warn('[Epic] Error checking Legendary config:', e);
+    }
+  }
+
   const epicManifestPath = getEpicPath();
   if (!epicManifestPath) {
     console.warn('[Epic] Cannot search - Epic Games Launcher not found');
@@ -108,6 +160,51 @@ export function getInstalledEpicGamePaths(): string[] {
   const paths: string[] = [];
 
   try {
+    if (isLinux()) {
+      const home = os.homedir();
+      const heroicPaths = [
+        path.join(home, 'Games/Heroic'),
+        path.join(home, '.var/app/com.heroicgameslauncher.hgl/Games/Heroic'),
+      ];
+
+      for (const heroicPath of heroicPaths) {
+        if (fs.existsSync(heroicPath)) {
+          try {
+            const epicGames = fs.readdirSync(heroicPath);
+            for (const game of epicGames) {
+              const gamePath = path.join(heroicPath, game);
+              if (fs.statSync(gamePath).isDirectory()) {
+                paths.push(game);
+              }
+            }
+          } catch (e) {
+            console.warn(`[Epic] Error reading Heroic path ${heroicPath}:`, e);
+          }
+        }
+      }
+
+      // Read from legendary_library.json as well
+      try {
+        const configPath = path.join(
+          home,
+          '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
+        );
+        if (fs.existsSync(configPath)) {
+          const content = fs.readFileSync(configPath, 'utf8');
+          const library = JSON.parse(content);
+          const games = Array.isArray(library) ? library : Object.values(library);
+
+          for (const game of games as any[]) {
+            if (game?.install?.install_path && fs.existsSync(game.install.install_path)) {
+              paths.push(path.basename(game.install.install_path));
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Epic] Error reading Legendary config:', e);
+      }
+    }
+
     const epicManifestPath = getEpicPath();
     if (epicManifestPath && fs.existsSync(epicManifestPath)) {
       const manifestFiles = fs
@@ -129,4 +226,48 @@ export function getInstalledEpicGamePaths(): string[] {
   }
 
   return paths;
+}
+
+/**
+ * Get all Epic games from Heroic/Legendary library (owned games)
+ * Returns array of game titles
+ */
+export function getHeroicEpicLibrary(): string[] {
+  if (!isLinux()) return [];
+
+  const home = os.homedir();
+  const configPath = path.join(
+    home,
+    '.var/app/com.heroicgameslauncher.hgl/config/heroic/store_cache/legendary_library.json'
+  );
+
+  const titles: string[] = [];
+
+  try {
+    if (fs.existsSync(configPath)) {
+      const content = fs.readFileSync(configPath, 'utf8');
+      const data = JSON.parse(content);
+
+      // Legendary library structure: { library: [...] }
+      // Or sometimes just array? content seems to be { library: [...] }
+      const games = Array.isArray(data) ? data : (data.library || Object.values(data));
+
+      for (const game of games as any[]) {
+        // User reports Epic names are in description
+        // Structure: extra.about.description
+        if (game?.extra?.about?.description) {
+          titles.push(game.extra.about.description);
+        } else if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
+          // Fallback to app_title only if it doesn't look like a hash ID
+          titles.push(game.app_title);
+        } else if (game.title) {
+          titles.push(game.title);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Epic] Error reading Heroic/Legendary library:', error);
+  }
+
+  return titles;
 }

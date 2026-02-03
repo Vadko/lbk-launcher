@@ -143,3 +143,7 @@ export function getAllInstalledGamePaths(): string[] {
   );
   return installedPaths;
 }
+
+// Heroic Libraries
+export { getHeroicEpicLibrary } from './epic';
+export { getHeroicGogLibrary } from './gog';

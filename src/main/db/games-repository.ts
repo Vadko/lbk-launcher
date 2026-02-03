@@ -30,12 +30,12 @@ type GameInsertParams = {
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
   >]: K extends 'approved' | 'is_adult' | 'license_only' | 'hide'
-    ? number // boolean перетворюється на 0/1 для SQLite
-    : K extends 'ai'
-      ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
-      : K extends 'platforms' | 'install_paths'
-        ? string | null // JSON.stringify для SQLite
-        : SupabaseDatabase['public']['Tables']['games']['Row'][K];
+  ? number // boolean перетворюється на 0/1 для SQLite
+  : K extends 'ai'
+  ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
+  : K extends 'platforms' | 'install_paths'
+  ? string | null // JSON.stringify для SQLite
+  : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
   // Local-only field for search (not in Supabase)
   name_search: string;
@@ -609,5 +609,55 @@ export class GamesRepository {
       'with-achievements': row.with_achievements || 0,
       'with-voice': row.with_voice || 0,
     };
+  }
+
+  /**
+   * Знайти ігри за списком назв (exact match, case-insensitive)
+   */
+  findGamesByTitles(
+    titles: string[],
+    searchQuery?: string,
+    hideAiTranslations = false
+  ): GetGamesResult {
+    if (titles.length === 0) {
+      return { games: [], total: 0 };
+    }
+
+    const whereConditions = [
+      'approved = 1',
+      'hide = 0',
+    ];
+
+    // Create query with parameters for titles
+    const placeholders = titles.map(() => '?').join(',');
+    whereConditions.push(`name COLLATE NOCASE IN (${placeholders})`);
+
+    const queryParams: (string | number)[] = [...titles];
+
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
+    }
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(
+        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+      );
+      queryParams.push(ftsQuery);
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT *
+      FROM games
+      WHERE ${whereConditions.join(' AND ')}
+      ORDER BY name COLLATE NOCASE ASC
+    `);
+
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const games = rows.map((row) => this.rowToGame(row));
+
+    return { games, total: games.length };
   }
 }
