@@ -2,9 +2,10 @@
  * Клієнт для комунікації з DB Worker
  * Надає async API для виконання SQLite операцій у worker thread
  */
-import { Worker } from 'worker_threads';
-import path from 'path';
+
 import { app } from 'electron';
+import path from 'path';
+import { Worker } from 'worker_threads';
 import type { Game } from '../../shared/types';
 
 type WorkerResponse =

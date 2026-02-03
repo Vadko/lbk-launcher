@@ -1,7 +1,7 @@
 import {
-  useQuery,
   type UseQueryOptions,
   type UseQueryResult,
+  useQuery,
 } from '@tanstack/react-query';
 import { useStore } from '../store/useStore';
 
@@ -13,9 +13,7 @@ export function useSyncAwareQuery<
   TQueryFnData = unknown,
   TError = Error,
   TData = TQueryFnData,
->(
-  options: UseQueryOptions<TQueryFnData, TError, TData>
-): UseQueryResult<TData, TError> {
+>(options: UseQueryOptions<TQueryFnData, TError, TData>): UseQueryResult<TData, TError> {
   const syncStatus = useStore((state) => state.syncStatus);
   const isSyncReady = syncStatus === 'ready' || syncStatus === 'error';
 

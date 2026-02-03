@@ -19,9 +19,9 @@ import {
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
-import { createTimer } from '../utils/logger';
 
 export function setupGamesHandlers(): void {
   // Version

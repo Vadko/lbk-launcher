@@ -23,7 +23,7 @@ type ExcludedLocalFields =
  * - arrays/objects -> JSON string
  * - Виключені поля file_list
  */
-export type GameInsertParams = {
+type GameInsertParams = {
   [K in keyof Omit<
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
@@ -42,7 +42,7 @@ export type GameInsertParams = {
 /**
  * Конвертувати Game в параметри для вставки в БД
  */
-export function gameToInsertParams(game: Game): GameInsertParams {
+function gameToInsertParams(game: Game): GameInsertParams {
   return {
     id: game.id,
     approved: game.approved ? 1 : 0,
@@ -109,7 +109,7 @@ export function gameToInsertParams(game: Game): GameInsertParams {
 /**
  * SQL для upsert гри
  */
-export const UPSERT_GAME_SQL = `
+const UPSERT_GAME_SQL = `
   INSERT OR REPLACE INTO games (
     id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
     banner_path, capsule_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,

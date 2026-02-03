@@ -2,10 +2,11 @@
  * Worker Thread для SQLite операцій
  * Виконує важкі database операції без блокування main thread
  */
-import { parentPort, workerData } from 'worker_threads';
+
 import Database from 'better-sqlite3';
+import { parentPort, workerData } from 'worker_threads';
 import type { Game } from '../../shared/types';
-import { upsertGamesTransaction, deleteGameById } from './db-queries';
+import { deleteGameById, upsertGamesTransaction } from './db-queries';
 
 // Ініціалізація бази даних з переданим шляхом
 let db: Database.Database | null = null;

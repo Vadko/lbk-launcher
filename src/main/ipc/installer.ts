@@ -1,7 +1,6 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
-import { createTimer } from '../utils/logger';
 import {
   abortCurrentDownload,
   checkInstallation,
@@ -24,6 +23,7 @@ import {
   pauseCurrentDownload,
 } from '../installer/download';
 import { trackUninstall } from '../tracking';
+import { createTimer } from '../utils/logger';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {

@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { getSearchVariations } from '../../shared/search-utils';
 import type { Game, GetGamesParams, GetGamesResult } from '../../shared/types';
 import { getDatabase } from './database';
-import { upsertGamesTransaction, upsertGameSingle, deleteGameById } from './db-queries';
+import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-queries';
 
 /**
  * Repository для роботи з іграми в локальній базі даних

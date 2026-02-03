@@ -18,7 +18,7 @@ interface InstallationProgress {
   statusMessage: string | null;
 }
 
-export type SyncStatus = 'loading' | 'syncing' | 'ready' | 'error';
+type SyncStatus = 'loading' | 'syncing' | 'ready' | 'error';
 
 interface Store {
   // Sync State

@@ -1,9 +1,9 @@
 import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
-import { getDatabase } from './database';
-import { GamesRepository } from './games-repository';
-import { dbWorkerClient } from './db-worker-client';
 import { createTimer } from '../utils/logger';
+import { getDatabase } from './database';
+import { dbWorkerClient } from './db-worker-client';
+import { GamesRepository } from './games-repository';
 
 /**
  * Менеджер синхронізації між Supabase та локальною базою даних
