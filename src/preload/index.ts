@@ -199,7 +199,6 @@ contextBridge.exposeInMainWorld('liquidGlassAPI', {
 // Logger API
 contextBridge.exposeInMainWorld('loggerAPI', {
   setEnabled: (enabled: boolean) => ipcRenderer.invoke('logger:set-enabled', enabled),
-  isEnabled: () => ipcRenderer.invoke('logger:is-enabled'),
   openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
   log: (level: string, message: string, ...args: unknown[]) =>
     ipcRenderer.send('logger:log', level, message, args),

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useSyncAwareQuery } from './useSyncAwareQuery';
 import type { Game } from '../types/game';
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -39,7 +40,7 @@ export function useTrendingGamesList(days = 30, limit = 10) {
  * Отримати trending ігри з повними даними
  */
 export function useTrendingGames(days = 30, limit = 10) {
-  return useQuery({
+  return useSyncAwareQuery({
     queryKey: trendingKeys.withDetails(days, limit),
     queryFn: async (): Promise<TrendingGameWithDetails[]> => {
       const trending = await window.electronAPI.fetchTrendingGames(days, limit);

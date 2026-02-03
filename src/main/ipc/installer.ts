@@ -1,6 +1,7 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
+import { createTimer } from '../utils/logger';
 import {
   abortCurrentDownload,
   checkInstallation,
@@ -74,9 +75,13 @@ export function setupInstallerHandlers(): void {
   );
 
   ipcMain.handle('check-installation', async (_, game: Game) => {
+    const timer = createTimer(`IPC: check-installation (${game.name})`);
     try {
-      return await checkInstallation(game);
+      const result = await checkInstallation(game);
+      timer.end();
+      return result;
     } catch (error) {
+      timer.end();
       console.error('Error checking installation:', error);
       return null;
     }
