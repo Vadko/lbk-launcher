@@ -17,6 +17,8 @@ import {
   getEpicLibrary,
   getFirstAvailableGamePath,
   getGogLibrary,
+  getGOGGalaxyClientPath,
+  getGOGGameId,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -270,6 +272,33 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
+        }
+      } else if (gamePath.platform === 'gog') {
+        // For GOG games, try to launch via GOG Galaxy client
+        const clientPath = getGOGGalaxyClientPath();
+        const gameId = getGOGGameId(gamePath.path);
+
+        if (clientPath && gameId) {
+          try {
+            const { spawn } = await import('child_process');
+            spawn(
+              clientPath,
+              ['/command=runGame', `/gameId=${gameId}`, `/path="${gamePath.path}"`],
+              {
+                detached: true,
+                stdio: 'ignore',
+              }
+            ).unref();
+
+            return { success: true };
+          } catch (error) {
+            console.error('[LaunchGame] Error launching GOG game via Galaxy:', error);
+            // Fall through to direct executable launch
+          }
+        } else {
+          console.warn(
+            '[LaunchGame] GOG Galaxy client or game ID not found, falling back to direct launch'
+          );
         }
       }
 

@@ -32,7 +32,9 @@ interface HeroicLegendaryGame {
 function getEpicPath(): string | null {
   try {
     if (isWindows()) {
-      const manifestPath = 'C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests';
+      const programData = process.env.PROGRAMDATA;
+       if (!programData) return null;
+      const manifestPath = path.join(programData, 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests');
       if (fs.existsSync(manifestPath)) {
         console.log('[Epic] Manifests found at:', manifestPath);
         return manifestPath;

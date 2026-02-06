@@ -28,6 +28,9 @@ export {
   updateLastKnownLicensecacheSize,
 } from './steam';
 
+// GOG
+export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
+
 // ============================================================================
 // Main Detection Logic
 // ============================================================================

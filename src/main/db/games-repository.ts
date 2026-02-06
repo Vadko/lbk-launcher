@@ -623,13 +623,20 @@ export class GamesRepository {
       return { games: [], total: 0 };
     }
 
+    // Trim all titles to remove extra whitespace
+    const trimmedTitles = titles.map((t) => t.trim()).filter((t) => t.length > 0);
+
+    if (trimmedTitles.length === 0) {
+      return { games: [], total: 0 };
+    }
+
     const whereConditions = ['approved = 1', 'hide = 0'];
 
     // Create query with parameters for titles
-    const placeholders = titles.map(() => '?').join(',');
+    const placeholders = trimmedTitles.map(() => '?').join(',');
     whereConditions.push(`name COLLATE NOCASE IN (${placeholders})`);
 
-    const queryParams: (string | number)[] = [...titles];
+    const queryParams: (string | number)[] = [...trimmedTitles];
 
     // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
     if (hideAiTranslations) {
