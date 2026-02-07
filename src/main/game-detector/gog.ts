@@ -13,6 +13,7 @@ import {
   getHeroicConfigPaths,
   getHeroicGamePaths,
 } from './heroic';
+import { getCleanTitle } from './game-titles';
 
 const GOG_DB_FILENAME = 'galaxy-2.0.db';
 
@@ -153,7 +154,7 @@ function getAllGamesFromGalaxyDB(): string[] {
     console.warn('[GOG] Error reading Galaxy database:', error);
   }
 
-  return dbData.map((g) => g.title!.trim()).filter((t) => t);
+  return dbData.map((g) => getCleanTitle(g.title!.trim())).filter((t) => t);
 }
 
 /**
@@ -421,7 +422,7 @@ function getAllInstalledGOGGames(): Map<string, string> {
         if (Array.isArray(games)) {
           for (const game of games as HeroicGogGame[]) {
             if (game.title && game.install_path && fs.existsSync(game.install_path)) {
-              gamesMap.set(game.title.toLowerCase(), game.install_path);
+              gamesMap.set(getCleanTitle(game.title).toLowerCase(), game.install_path);
             }
           }
         }
@@ -436,7 +437,7 @@ function getAllInstalledGOGGames(): Map<string, string> {
 
     for (const game of installedGames) {
       if (game.title && game.installationPath && fs.existsSync(game.installationPath)) {
-        gamesMap.set(game.title.toLowerCase(), game.installationPath);
+        gamesMap.set(getCleanTitle(game.title).toLowerCase(), game.installationPath);
       }
     }
   }
@@ -472,7 +473,7 @@ export function getGogLibrary(): string[] {
         if (Array.isArray(games)) {
           allTitles.push(
             ...games
-              .map((g: HeroicGogGame) => g.title)
+              .map((g: HeroicGogGame) => (g.title ? getCleanTitle(g.title) : null))
               .filter((title): title is string => !!title)
           );
         }

@@ -11,6 +11,7 @@ import {
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
 } from './heroic';
+import { getCleanTitle } from './game-titles';
 
 interface HeroicLegendaryGame {
   app_title: string;
@@ -269,11 +270,11 @@ export function getEpicLibrary(): string[] {
 
             // User reports Epic names are in description
             if (game?.extra?.about?.description) {
-              titles.add(cleanTitle(game.extra.about.description));
+              titles.add(getCleanTitle(cleanTitle(game.extra.about.description)));
             } else if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
-              titles.add(cleanTitle(game.app_title));
+              titles.add(getCleanTitle(cleanTitle(game.app_title)));
             } else if (game.title) {
-              titles.add(cleanTitle(game.title));
+              titles.add(getCleanTitle(cleanTitle(game.title)));
             }
           }
         }
@@ -298,7 +299,7 @@ export function getEpicLibrary(): string[] {
           const manifest = parseEpicManifest(manifestFullPath);
 
           if (manifest?.displayName) {
-            titles.add(manifest.displayName);
+            titles.add(getCleanTitle(manifest.displayName));
           }
         }
       } catch (error) {
