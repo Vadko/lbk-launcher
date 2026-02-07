@@ -33,7 +33,7 @@ function getEpicPath(): string | null {
   try {
     if (isWindows()) {
       const programData = process.env.PROGRAMDATA;
-       if (!programData) return null;
+      if (!programData) return null;
       const manifestPath = path.join(programData, 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests');
       if (fs.existsSync(manifestPath)) {
         console.log('[Epic] Manifests found at:', manifestPath);
@@ -183,9 +183,10 @@ export function getInstalledEpicGamePaths(): string[] {
 
       // Read from legendary_library.json as well
       try {
-        const configPaths = getHeroicConfigPaths().map((p) =>
-          path.join(p, 'store_cache/legendary_library.json')
-        );
+        const configPaths = getHeroicConfigPaths().flatMap((p) => [
+          path.join(p, 'store_cache/legendary_library.json'),
+          path.join(p, 'store_cache/legendary_install_info.json')
+        ]);
 
         for (const configPath of configPaths) {
           if (fs.existsSync(configPath)) {
@@ -238,11 +239,15 @@ export function getInstalledEpicGamePaths(): string[] {
 export function getEpicLibrary(): string[] {
   const titles = new Set<string>();
 
+  // Helper to clean up titles (remove double spaces)
+  const cleanTitle = (t: string) => t.replace(/\s+/g, ' ').trim();
+
   // Linux: Use Heroic/Legendary library
   if (isLinux()) {
-    const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, 'store_cache/legendary_library.json')
-    );
+    const configPaths = getHeroicConfigPaths().flatMap((p) => [
+      path.join(p, 'store_cache/legendary_library.json'),
+      path.join(p, 'store_cache/legendary_install_info.json')
+    ]);
 
     try {
       for (const configPath of configPaths) {
@@ -253,14 +258,16 @@ export function getEpicLibrary(): string[] {
           // Legendary library structure: { library: [...] }
           const games = Array.isArray(data) ? data : data.library || Object.values(data);
 
-          for (const game of games as HeroicLegendaryGame[]) {
+          for (const item of games as any[]) {
+            const game = item.game || item; // Handle install_info structure
+
             // User reports Epic names are in description
             if (game?.extra?.about?.description) {
-              titles.add(game.extra.about.description);
+              titles.add(cleanTitle(game.extra.about.description));
             } else if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
-              titles.add(game.app_title);
+              titles.add(cleanTitle(game.app_title));
             } else if (game.title) {
-              titles.add(game.title);
+              titles.add(cleanTitle(game.title));
             }
           }
         }
@@ -300,4 +307,95 @@ export function getEpicLibrary(): string[] {
   }
 
   return result;
+}
+
+/**
+ * Get Epic App Name from Heroic/Legendary config by path
+ */
+export function getHeroicEpicAppName(gamePath: string): string | null {
+  if (!isLinux()) return null;
+
+  try {
+    const configPaths = getHeroicConfigPaths().flatMap((p) => [
+      path.join(p, 'store_cache/legendary_library.json'),
+      path.join(p, 'store_cache/legendary_install_info.json')
+    ]);
+
+    // Helper to normalize strings for comparison (remove special chars, lowercase)
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetFolder = normalize(path.basename(gamePath));
+
+    for (const configPath of configPaths) {
+      if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, 'utf8');
+        let data;
+        try {
+          data = JSON.parse(content);
+        } catch (e) { continue; }
+
+        let games: any[] = [];
+        let gamesById: Record<string, any> = {};
+
+        if (Array.isArray(data)) {
+          games = data;
+        } else if (data.library && Array.isArray(data.library)) {
+          games = data.library;
+        } else {
+          // Fallback for object format (keys are app_names) where values are games
+          gamesById = data;
+          games = Object.values(data);
+        }
+
+        // 1. Try exact path match
+        const game = games.find((g: any) => {
+          const installPath = g?.install?.install_path || g?.install_path;
+          return installPath && path.resolve(installPath) === path.resolve(gamePath);
+        });
+
+        if (game) {
+          if (game.app_name) return game.app_name;
+          if (game.appName) return game.appName;
+        }
+
+        // 1.5 Try path match in Object keys loop (if gamesById was populated)
+        for (const [appName, g] of Object.entries(gamesById)) {
+          const val = g as any;
+          const installPath = val?.install?.install_path || val?.install_path;
+          if (installPath && path.resolve(installPath) === path.resolve(gamePath)) {
+            return appName;
+          }
+        }
+
+        // 2. Fallback: Title match (Folder name matching Game Title)
+        const gameByTitle = games.find((g: any) => {
+          const title = g?.title || g?.game?.title; // game.title for install_info
+          return title && normalize(title) === targetFolder;
+        });
+
+        if (gameByTitle) {
+          if (gameByTitle.app_name) return gameByTitle.app_name;
+          if (gameByTitle.appName) return gameByTitle.appName;
+          if (gameByTitle.game?.app_name) return gameByTitle.game.app_name;
+        }
+
+        // Check object items by Title
+        for (const [appName, g] of Object.entries(gamesById)) {
+          const val = g as any;
+          const title = val?.title || val?.game?.title;
+          if (title && normalize(title) === targetFolder) {
+            return appName;
+          }
+          // Also check if appName itself is the key (already handled by iteration logic if needed?)
+          // Usually gamesById has appName as key.
+          if (Object.keys(gamesById).includes(appName)) {
+            // Double check if this entry is the one we want via Title
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Epic] Error getting Heroic AppName:', error);
+  }
+
+  return null;
 }

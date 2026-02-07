@@ -9,9 +9,9 @@ import * as os from "os";
 import * as path from "path";
 import { isLinux, isMacOS, isWindows } from "../utils/platform";
 import {
-  findGameInHeroicDirs,
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
+  getHeroicGamePaths,
 } from "./heroic";
 
 const GOG_DB_FILENAME = "galaxy-2.0.db";
@@ -217,6 +217,45 @@ export function getGOGGameId(gamePath: string): number | null {
   return null;
 }
 
+/**
+ * Get GOG Game ID from Heroic config by path
+ */
+export function getHeroicGOGId(gamePath: string): string | null {
+  if (!isLinux()) return null;
+
+  try {
+    const configPaths = getHeroicConfigPaths().map((p) =>
+      path.join(p, "gog_store/installed.json"),
+    );
+
+    for (const configPath of configPaths) {
+      if (!fs.existsSync(configPath)) continue;
+
+      const content = fs.readFileSync(configPath, "utf8");
+      const data = JSON.parse(content);
+      const games = Array.isArray(data) ? data : (data.installed || []);
+
+      if (Array.isArray(games)) {
+        const game = games.find((g: HeroicGogGame) => {
+          return g.install_path && path.resolve(g.install_path) === path.resolve(gamePath);
+        });
+
+        if (game && game.appName) {
+          return game.appName as string;
+        }
+        // Fallback: use ID from installed.json if appName is missing
+        if (game && game.id) {
+          return game.id as string;
+        }
+      }
+    }
+  } catch (error) {
+    console.error("[GOG] Error getting Heroic ID:", error);
+  }
+
+  return null;
+}
+
 interface HeroicGogGame {
   install_path?: string;
   title?: string;
@@ -229,11 +268,30 @@ interface HeroicGogGame {
 export function findGOGGame(gameFolderName: string): string | null {
   // Linux (Heroic) support
   if (isLinux()) {
-    // Check Heroic directories
-    const heroicPath = findGameInHeroicDirs(gameFolderName);
-    if (heroicPath) {
-      console.log(`[GOG] ✓ Game found (Heroic): ${heroicPath}`);
-      return heroicPath;
+    // Helper to normalize strings for comparison (remove special chars, lowercase)
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetFolder = normalize(gameFolderName);
+
+    // Check Heroic directories (fuzzy match)
+    const heroicDirs = [
+      ...getHeroicGamePaths(), // Flatpak + Native
+      // Add other possible library paths if needed (usually handled by getHeroicGamePaths)
+    ];
+
+    for (const dir of heroicDirs) {
+      if (!fs.existsSync(dir)) continue;
+      try {
+        const subdirs = fs.readdirSync(dir);
+        for (const subdir of subdirs) {
+          if (normalize(subdir) === targetFolder) {
+            const fullPath = path.join(dir, subdir);
+            if (fs.statSync(fullPath).isDirectory()) {
+              console.log(`[GOG] ✓ Game found (Heroic fuzzy): ${fullPath}`);
+              return fullPath;
+            }
+          }
+        }
+      } catch (e) { }
     }
 
     // Try parsing installed.json
@@ -251,8 +309,13 @@ export function findGOGGame(gameFolderName: string): string | null {
             const game = games.find((g: HeroicGogGame) => {
               const installPath = g.install_path;
               if (installPath) {
-                return path.basename(installPath) === gameFolderName;
+                // Try exact basename match
+                if (path.basename(installPath) === gameFolderName) return true;
+                // Try normalized match
+                if (normalize(path.basename(installPath)) === targetFolder) return true;
               }
+              // Try normalized title match if folder name matches title
+              if (g.title && normalize(g.title) === targetFolder) return true;
               return false;
             });
 

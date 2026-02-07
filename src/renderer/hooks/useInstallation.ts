@@ -57,6 +57,7 @@ export function useInstallation({
     setInstallationProgress,
     clearInstallationProgress,
     checkInstallationStatus,
+    steamGames,
   } = useStore();
 
   const { showModal } = useModalStore();
@@ -89,11 +90,11 @@ export function useInstallation({
       const platform = selectedGame.platforms[0] || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
-          createBackup: createBackupBeforeInstall,
-          installText: true,
-          installVoice: false,
-          installAchievements: false,
-        };
+        createBackup: createBackupBeforeInstall,
+        installText: true,
+        installVoice: false,
+        installAchievements: false,
+      };
 
       if (options) {
         setPendingInstallOptions(options);
@@ -191,7 +192,14 @@ export function useInstallation({
           ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
           : `Українізатор ${selectedGame.name} успішно встановлено!`;
 
-        if (effectiveOptions.installAchievements) {
+        const installPath = customGamePath || installationInfo?.gamePath;
+        const isSteamPath = installPath
+          ? Array.from(steamGames.values()).some(
+            (p) => installPath.startsWith(p) || p.startsWith(installPath)
+          )
+          : platform === 'steam';
+
+        if (effectiveOptions.installAchievements && isSteamPath) {
           message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
         }
 
@@ -199,8 +207,9 @@ export function useInstallation({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
           type: 'success',
-          actions: effectiveOptions.installAchievements
-            ? [
+          actions:
+            effectiveOptions.installAchievements && isSteamPath
+              ? [
                 {
                   label: 'Перезапустити Steam',
                   onClick: () => {
@@ -214,7 +223,7 @@ export function useInstallation({
                   variant: 'secondary',
                 },
               ]
-            : [
+              : [
                 {
                   label: 'Зрозуміло',
                   onClick: () => undefined,
