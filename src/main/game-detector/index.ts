@@ -14,6 +14,8 @@ import type { GamePath } from './types'; // Used locally
 // Re-exports
 // ============================================================================
 
+// GOG
+export { getGOGGalaxyClientPath, getGOGGameId, getHeroicGOGId } from './gog';
 // Steam
 export {
   getAllInstalledSteamGames,
@@ -27,9 +29,6 @@ export {
   invalidateSteamPathCache,
   updateLastKnownLicensecacheSize,
 } from './steam';
-
-// GOG
-export { getGOGGalaxyClientPath, getGOGGameId, getHeroicGOGId } from './gog';
 
 // ============================================================================
 // Main Detection Logic

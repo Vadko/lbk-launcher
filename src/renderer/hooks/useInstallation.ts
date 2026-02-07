@@ -90,11 +90,11 @@ export function useInstallation({
       const platform = selectedGame.platforms[0] || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
-        createBackup: createBackupBeforeInstall,
-        installText: true,
-        installVoice: false,
-        installAchievements: false,
-      };
+          createBackup: createBackupBeforeInstall,
+          installText: true,
+          installVoice: false,
+          installAchievements: false,
+        };
 
       if (options) {
         setPendingInstallOptions(options);
@@ -195,8 +195,8 @@ export function useInstallation({
         const installPath = customGamePath || installationInfo?.gamePath;
         const isSteamPath = installPath
           ? Array.from(steamGames.values()).some(
-            (p) => installPath.startsWith(p) || p.startsWith(installPath)
-          )
+              (p) => installPath.startsWith(p) || p.startsWith(installPath)
+            )
           : platform === 'steam';
 
         if (effectiveOptions.installAchievements && isSteamPath) {
@@ -210,26 +210,26 @@ export function useInstallation({
           actions:
             effectiveOptions.installAchievements && isSteamPath
               ? [
-                {
-                  label: 'Перезапустити Steam',
-                  onClick: () => {
-                    window.electronAPI.restartSteam();
+                  {
+                    label: 'Перезапустити Steam',
+                    onClick: () => {
+                      window.electronAPI.restartSteam();
+                    },
+                    variant: 'primary',
                   },
-                  variant: 'primary',
-                },
-                {
-                  label: 'Пізніше',
-                  onClick: () => undefined,
-                  variant: 'secondary',
-                },
-              ]
+                  {
+                    label: 'Пізніше',
+                    onClick: () => undefined,
+                    variant: 'secondary',
+                  },
+                ]
               : [
-                {
-                  label: 'Зрозуміло',
-                  onClick: () => undefined,
-                  variant: 'primary',
-                },
-              ],
+                  {
+                    label: 'Зрозуміло',
+                    onClick: () => undefined,
+                    variant: 'primary',
+                  },
+                ],
         });
 
         // Trigger callback for first install (not update)

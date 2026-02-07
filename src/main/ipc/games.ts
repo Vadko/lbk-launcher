@@ -16,9 +16,9 @@ import {
   getAllInstalledSteamGames,
   getEpicLibrary,
   getFirstAvailableGamePath,
-  getGogLibrary,
   getGOGGalaxyClientPath,
   getGOGGameId,
+  getGogLibrary,
   getHeroicEpicAppName,
   getHeroicGOGId,
   getSteamLibraryAppIds,
@@ -26,9 +26,9 @@ import {
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import { launchHeroicGame } from '../utils/heroic-launcher';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
-import { launchHeroicGame } from '../utils/heroic-launcher';
 
 export function setupGamesHandlers(): void {
   // Version

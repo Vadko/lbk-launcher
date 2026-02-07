@@ -2,19 +2,19 @@
  * GOG Galaxy Detection
  */
 
-import Database from "better-sqlite3";
-import { execSync } from "child_process";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
-import { isLinux, isMacOS, isWindows } from "../utils/platform";
+import Database from 'better-sqlite3';
+import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { isLinux, isMacOS, isWindows } from '../utils/platform';
 import {
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
   getHeroicGamePaths,
-} from "./heroic";
+} from './heroic';
 
-const GOG_DB_FILENAME = "galaxy-2.0.db";
+const GOG_DB_FILENAME = 'galaxy-2.0.db';
 
 interface GOGInstalledGame {
   productId?: number;
@@ -33,10 +33,10 @@ function getGOGGalaxyDBPath(): string | null {
       if (programData) {
         const dbPath = path.join(
           programData,
-          "GOG.com",
-          "Galaxy",
-          "storage",
-          GOG_DB_FILENAME,
+          'GOG.com',
+          'Galaxy',
+          'storage',
+          GOG_DB_FILENAME
         );
         if (fs.existsSync(dbPath)) {
           return dbPath;
@@ -45,15 +45,15 @@ function getGOGGalaxyDBPath(): string | null {
     } else if (isMacOS()) {
       const dbPath = path.join(
         os.homedir(),
-        "Library/Application Support/GOG.com/Galaxy/Storage",
-        GOG_DB_FILENAME,
+        'Library/Application Support/GOG.com/Galaxy/Storage',
+        GOG_DB_FILENAME
       );
       if (fs.existsSync(dbPath)) {
         return dbPath;
       }
     }
   } catch (error) {
-    console.warn("[GOG] Error getting Galaxy DB path:", error);
+    console.warn('[GOG] Error getting Galaxy DB path:', error);
   }
   return null;
 }
@@ -61,7 +61,7 @@ function getGOGGalaxyDBPath(): string | null {
 /**
  * Get installed games from GOG Galaxy SQLite database
  */
-export function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
+function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
   const dbPath = getGOGGalaxyDBPath();
   if (!dbPath) return [];
 
@@ -85,7 +85,7 @@ export function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
           JOIN "Product Details View" pdv
             ON ibp.productId = pdv.productId
           WHERE pdv.title IS NOT NULL;
-        `,
+        `
         )
         .all() as Array<GOGInstalledGame>;
     } catch (queryError) {
@@ -97,17 +97,17 @@ export function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
             SELECT DISTINCT title
             FROM Products
             WHERE isInstalled = 1 AND title IS NOT NULL
-          `,
+          `
           )
           .all() as Array<{ title: string }>;
       } catch {
-        console.warn("[GOG] Could not query Galaxy database");
+        console.warn('[GOG] Could not query Galaxy database');
       }
     }
 
     db.close();
   } catch (error) {
-    console.warn("[GOG] Error reading Galaxy database:", error);
+    console.warn('[GOG] Error reading Galaxy database:', error);
   }
 
   return dbData;
@@ -141,16 +141,16 @@ function getAllGamesFromGalaxyDB(): string[] {
             ON CAST(SUBSTR(gp.releaseKey, 5) AS INTEGER) = p.id
           WHERE gp.releaseKey LIKE 'gog_%'
             AND gpt.type = 'originalTitle';
-        `,
+        `
         )
         .all() as Array<GOGInstalledGame>;
     } catch (queryError) {
-      console.warn("[GOG] Could not query Galaxy database");
+      console.warn('[GOG] Could not query Galaxy database');
     }
 
     db.close();
   } catch (error) {
-    console.warn("[GOG] Error reading Galaxy database:", error);
+    console.warn('[GOG] Error reading Galaxy database:', error);
   }
 
   return dbData.map((g) => g.title!.trim()).filter((t) => t);
@@ -165,34 +165,33 @@ export function getGOGGalaxyClientPath(): string | null {
       try {
         const output = execSync(
           'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths" /v client',
-          { encoding: "utf8" },
+          { encoding: 'utf8' }
         );
         const match = output.match(/client\s+REG_SZ\s+(.+)/);
         if (match?.[1]) {
-          const clientPath = path.join(match[1].trim(), "GalaxyClient.exe");
+          const clientPath = path.join(match[1].trim(), 'GalaxyClient.exe');
           if (fs.existsSync(clientPath)) {
             return clientPath;
           }
         }
       } catch {
         // Try default path
-        const defaultPath =
-          "C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe";
+        const defaultPath = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe';
         if (fs.existsSync(defaultPath)) {
           return defaultPath;
         }
       }
     } else if (isMacOS()) {
       const appPath = path.join(
-        "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy",
-        "GalaxyClient.exe",
+        '/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy',
+        'GalaxyClient.exe'
       );
       if (fs.existsSync(appPath)) {
         return appPath;
       }
     }
   } catch (error) {
-    console.error("[GOG] Error detecting Galaxy client path:", error);
+    console.error('[GOG] Error detecting Galaxy client path:', error);
   }
 
   return null;
@@ -205,11 +204,7 @@ export function getGOGGameId(gamePath: string): number | null {
   const installedGames = getInstalledGamesFromGalaxyDB();
 
   for (const game of installedGames) {
-    if (
-      game.installationPath &&
-      game.installationPath === gamePath &&
-      game.productId
-    ) {
+    if (game.installationPath && game.installationPath === gamePath && game.productId) {
       return game.productId;
     }
   }
@@ -225,19 +220,21 @@ export function getHeroicGOGId(gamePath: string): string | null {
 
   try {
     const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, "gog_store/installed.json"),
+      path.join(p, 'gog_store/installed.json')
     );
 
     for (const configPath of configPaths) {
       if (!fs.existsSync(configPath)) continue;
 
-      const content = fs.readFileSync(configPath, "utf8");
+      const content = fs.readFileSync(configPath, 'utf8');
       const data = JSON.parse(content);
-      const games = Array.isArray(data) ? data : (data.installed || []);
+      const games = Array.isArray(data) ? data : data.installed || [];
 
       if (Array.isArray(games)) {
         const game = games.find((g: HeroicGogGame) => {
-          return g.install_path && path.resolve(g.install_path) === path.resolve(gamePath);
+          return (
+            g.install_path && path.resolve(g.install_path) === path.resolve(gamePath)
+          );
         });
 
         if (game && game.appName) {
@@ -250,7 +247,7 @@ export function getHeroicGOGId(gamePath: string): string | null {
       }
     }
   } catch (error) {
-    console.error("[GOG] Error getting Heroic ID:", error);
+    console.error('[GOG] Error getting Heroic ID:', error);
   }
 
   return null;
@@ -291,18 +288,20 @@ export function findGOGGame(gameFolderName: string): string | null {
             }
           }
         }
-      } catch (e) { }
+      } catch {
+        // Safe to ignore
+      }
     }
 
     // Try parsing installed.json
     try {
       const configPaths = getHeroicConfigPaths().map((p) =>
-        path.join(p, "gog_store/installed.json"),
+        path.join(p, 'gog_store/installed.json')
       );
 
       for (const configPath of configPaths) {
         if (fs.existsSync(configPath)) {
-          const content = fs.readFileSync(configPath, "utf8");
+          const content = fs.readFileSync(configPath, 'utf8');
           const games = JSON.parse(content);
           // Heroic GOG installed.json is usually an array of objects with install_path
           if (Array.isArray(games)) {
@@ -320,16 +319,14 @@ export function findGOGGame(gameFolderName: string): string | null {
             });
 
             if (game && game.install_path && fs.existsSync(game.install_path)) {
-              console.log(
-                `[GOG] ✓ Game found via installed.json: ${game.install_path}`,
-              );
+              console.log(`[GOG] ✓ Game found via installed.json: ${game.install_path}`);
               return game.install_path;
             }
           }
         }
       }
     } catch (e) {
-      console.warn("[GOG] Error checking Heroic config:", e);
+      console.warn('[GOG] Error checking Heroic config:', e);
     }
   }
 
@@ -363,14 +360,14 @@ export function getInstalledGOGGamePaths(): string[] {
 
       // Read from installed.json as well
       const configPaths = getHeroicConfigPaths().map((p) =>
-        path.join(p, "gog_store/installed.json"),
+        path.join(p, 'gog_store/installed.json')
       );
 
       for (const configPath of configPaths) {
         if (!fs.existsSync(configPath)) continue;
 
         try {
-          const content = fs.readFileSync(configPath, "utf8");
+          const content = fs.readFileSync(configPath, 'utf8');
           const games = JSON.parse(content);
           if (Array.isArray(games)) {
             for (const game of games as HeroicGogGame[]) {
@@ -394,7 +391,7 @@ export function getInstalledGOGGamePaths(): string[] {
       }
     }
   } catch (error) {
-    console.error("[GOG] Error getting game paths:", error);
+    console.error('[GOG] Error getting game paths:', error);
   }
 
   return paths;
@@ -405,29 +402,25 @@ export function getInstalledGOGGamePaths(): string[] {
  * Returns Map<title, installationPath>
  * Similar to getAllInstalledSteamGames()
  */
-export function getAllInstalledGOGGames(): Map<string, string> {
+function getAllInstalledGOGGames(): Map<string, string> {
   const gamesMap = new Map<string, string>();
 
   // Linux: Use Heroic launcher data
   if (isLinux()) {
     const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, "gog_store/installed.json"),
+      path.join(p, 'gog_store/installed.json')
     );
 
     for (const configPath of configPaths) {
       if (!fs.existsSync(configPath)) continue;
 
       try {
-        const content = fs.readFileSync(configPath, "utf8");
+        const content = fs.readFileSync(configPath, 'utf8');
         const games = JSON.parse(content);
 
         if (Array.isArray(games)) {
           for (const game of games as HeroicGogGame[]) {
-            if (
-              game.title &&
-              game.install_path &&
-              fs.existsSync(game.install_path)
-            ) {
+            if (game.title && game.install_path && fs.existsSync(game.install_path)) {
               gamesMap.set(game.title.toLowerCase(), game.install_path);
             }
           }
@@ -442,11 +435,7 @@ export function getAllInstalledGOGGames(): Map<string, string> {
     const installedGames = getInstalledGamesFromGalaxyDB();
 
     for (const game of installedGames) {
-      if (
-        game.title &&
-        game.installationPath &&
-        fs.existsSync(game.installationPath)
-      ) {
+      if (game.title && game.installationPath && fs.existsSync(game.installationPath)) {
         gamesMap.set(game.title.toLowerCase(), game.installationPath);
       }
     }
@@ -467,7 +456,7 @@ export function getGogLibrary(): string[] {
   // Linux: Use Heroic launcher data
   if (isLinux()) {
     const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, "store_cache/gog_library.json"),
+      path.join(p, 'store_cache/gog_library.json')
     );
 
     const allTitles: string[] = [];
@@ -476,7 +465,7 @@ export function getGogLibrary(): string[] {
       if (!fs.existsSync(configPath)) continue;
 
       try {
-        const content = fs.readFileSync(configPath, "utf8");
+        const content = fs.readFileSync(configPath, 'utf8');
         const data = JSON.parse(content);
         const games = Array.isArray(data) ? data : data.games || [];
 
@@ -484,7 +473,7 @@ export function getGogLibrary(): string[] {
           allTitles.push(
             ...games
               .map((g: HeroicGogGame) => g.title)
-              .filter((title): title is string => !!title),
+              .filter((title): title is string => !!title)
           );
         }
       } catch (error) {

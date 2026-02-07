@@ -34,7 +34,13 @@ function getEpicPath(): string | null {
     if (isWindows()) {
       const programData = process.env.PROGRAMDATA;
       if (!programData) return null;
-      const manifestPath = path.join(programData, 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests');
+      const manifestPath = path.join(
+        programData,
+        'Epic',
+        'EpicGamesLauncher',
+        'Data',
+        'Manifests'
+      );
       if (fs.existsSync(manifestPath)) {
         console.log('[Epic] Manifests found at:', manifestPath);
         return manifestPath;
@@ -185,7 +191,7 @@ export function getInstalledEpicGamePaths(): string[] {
       try {
         const configPaths = getHeroicConfigPaths().flatMap((p) => [
           path.join(p, 'store_cache/legendary_library.json'),
-          path.join(p, 'store_cache/legendary_install_info.json')
+          path.join(p, 'store_cache/legendary_install_info.json'),
         ]);
 
         for (const configPath of configPaths) {
@@ -246,7 +252,7 @@ export function getEpicLibrary(): string[] {
   if (isLinux()) {
     const configPaths = getHeroicConfigPaths().flatMap((p) => [
       path.join(p, 'store_cache/legendary_library.json'),
-      path.join(p, 'store_cache/legendary_install_info.json')
+      path.join(p, 'store_cache/legendary_install_info.json'),
     ]);
 
     try {
@@ -318,7 +324,7 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
   try {
     const configPaths = getHeroicConfigPaths().flatMap((p) => [
       path.join(p, 'store_cache/legendary_library.json'),
-      path.join(p, 'store_cache/legendary_install_info.json')
+      path.join(p, 'store_cache/legendary_install_info.json'),
     ]);
 
     // Helper to normalize strings for comparison (remove special chars, lowercase)
@@ -331,7 +337,9 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
         let data;
         try {
           data = JSON.parse(content);
-        } catch (e) { continue; }
+        } catch (e) {
+          continue;
+        }
 
         let games: any[] = [];
         let gamesById: Record<string, any> = {};
