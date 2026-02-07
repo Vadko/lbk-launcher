@@ -17,6 +17,14 @@ const GAME_TITLE_MAPPING: Record<string, string | string[]> = {
 
   'Kingdom Come Deliverance': 'Kingdom Come: Deliverance',
   'Serious Sam HD: The First Encounter': 'Serious Sam: The First Encounter',
+
+  'Batman: Arkham City - Game of the Year Edition':
+    'Batman™ Arkham City - Game of the Year Edition',
+  'Batman: Arkham Asylum Game of the Year Edition':
+    'Batman™ Arkham Asylum Game of the Year Edition',
+  'Batman™: Arkham Knight': 'Batman™ Arkham Knight',
+  'Darksiders 2: Deathinitive edition': 'Darksiders II Deathinitive Edition',
+  'Tandem: A Tale of Shadows': 'Tandem A Tale of Shadows',
 };
 
 /**
