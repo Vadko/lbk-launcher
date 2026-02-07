@@ -29,7 +29,7 @@ export {
 } from './steam';
 
 // GOG
-export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
+export { getGOGGalaxyClientPath, getGOGGameId, getHeroicGOGId } from './gog';
 
 // ============================================================================
 // Main Detection Logic
@@ -148,5 +148,5 @@ export function getAllInstalledGamePaths(): string[] {
 }
 
 // Heroic Libraries
-export { getEpicLibrary } from './epic';
+export { getEpicLibrary, getHeroicEpicAppName } from './epic';
 export { getGogLibrary } from './gog';

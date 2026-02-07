@@ -19,6 +19,8 @@ import {
   getGogLibrary,
   getGOGGalaxyClientPath,
   getGOGGameId,
+  getHeroicEpicAppName,
+  getHeroicGOGId,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -26,6 +28,7 @@ import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
+import { launchHeroicGame } from '../utils/heroic-launcher';
 
 export function setupGamesHandlers(): void {
   // Version
@@ -273,7 +276,26 @@ export function setupGamesHandlers(): void {
             return { success: true };
           }
         }
-      } else if (gamePath.platform === 'gog') {
+      }
+
+      // Heroic Games Launcher (Linux)
+      if (getPlatform() === 'linux') {
+        // Check for GOG game in Heroic
+        const heroicGogId = getHeroicGOGId(gamePath.path);
+        if (heroicGogId) {
+          const result = await launchHeroicGame(heroicGogId, 'gog');
+          if (result.success) return { success: true };
+        }
+
+        // Check for Epic game in Heroic
+        const heroicEpicAppName = getHeroicEpicAppName(gamePath.path);
+        if (heroicEpicAppName) {
+          const result = await launchHeroicGame(heroicEpicAppName, 'legendary');
+          if (result.success) return { success: true };
+        }
+      }
+
+      if (gamePath.platform === 'gog') {
         // For GOG games, try to launch via GOG Galaxy client
         const clientPath = getGOGGalaxyClientPath();
         const gameId = getGOGGameId(gamePath.path);
