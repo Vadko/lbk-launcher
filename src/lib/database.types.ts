@@ -1119,7 +1119,7 @@ export type Database = {
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
-        Args: { p_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           dau: number
           mau: number
@@ -1190,7 +1190,7 @@ export type Database = {
         }[]
       }
       get_team_statistics: {
-        Args: never
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           ai_count: number
           completed_count: number
