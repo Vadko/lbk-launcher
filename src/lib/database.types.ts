@@ -1116,6 +1116,7 @@ export type Database = {
         Returns: number
       }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
+      each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
         Args: { p_date?: string }

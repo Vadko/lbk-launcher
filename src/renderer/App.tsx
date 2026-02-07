@@ -154,6 +154,8 @@ export const App: React.FC = () => {
     clearSteamGamesCache,
     clearDetectedGamesCache,
     setSelectedGame,
+    syncStatus,
+    setSyncStatus,
   } = useStore();
   const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
     useSettingsStore();
@@ -161,9 +163,6 @@ export const App: React.FC = () => {
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'loading' | 'syncing' | 'ready' | 'error'>(
-    'loading'
-  );
   const [showLoader, setShowLoader] = useState(true);
 
   // Підписка на real-time оновлення ігор
@@ -232,7 +231,7 @@ export const App: React.FC = () => {
       unsubscribe();
       if (hideTimeout) clearTimeout(hideTimeout);
     };
-  }, []);
+  }, [setSyncStatus]);
 
   // Відстеження першого запуску додатку
   useEffect(() => {

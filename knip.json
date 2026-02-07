@@ -2,6 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
     "src/main/index.ts",
+    "src/main/db/db-worker.ts",
     "src/preload/index.ts",
     "src/renderer/main.tsx",
     "electron.vite.config.ts"

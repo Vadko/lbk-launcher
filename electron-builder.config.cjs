@@ -130,7 +130,7 @@ module.exports = {
     gatekeeperAssess: false,
     darkModeSupport: true,
     minimumSystemVersion: '10.13.0',
-    artifactName: '${productName}-${version}-${arch}.${ext}',
+    artifactName: '${productName}-${arch}.${ext}',
     // Підписування: використовує CSC_LINK та CSC_KEY_PASSWORD з env
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',

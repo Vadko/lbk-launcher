@@ -36,6 +36,7 @@ export function useGames({
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
   // AI translations are filtered in SQL via hideAiTranslations param
 
+  const syncStatus = useStore((state) => state.syncStatus);
   const checkSubscribedGamesStatus = useStore(
     (state) => state.checkSubscribedGamesStatus
   );
@@ -293,10 +294,14 @@ export function useGames({
     loadGames();
   }, [loadGames]);
 
-  // Завантажити при зміні параметрів
+  // Завантажити при зміні параметрів (тільки коли sync завершено)
   useEffect(() => {
+    // Чекаємо поки sync завершиться (ready або error)
+    if (syncStatus !== 'ready' && syncStatus !== 'error') {
+      return;
+    }
     loadGames();
-  }, [loadGames]);
+  }, [loadGames, syncStatus]);
 
   // Перевірити статуси підписаних ігор після першого завантаження
   useEffect(() => {
