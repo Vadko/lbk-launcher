@@ -8,12 +8,12 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import { getCleanTitle } from './game-titles';
 import {
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
   getHeroicGamePaths,
 } from './heroic';
-import { getCleanTitle } from './game-titles';
 
 const GOG_DB_FILENAME = 'galaxy-2.0.db';
 
