@@ -14,6 +14,9 @@ const GAME_TITLE_MAPPING: Record<string, string | string[]> = {
 
   'Kingdom: New Lands': 'Kingdom New Lands',
   'Darkest Dungeon': 'Darkest Dungeon®',
+
+  'Kingdom Come Deliverance': 'Kingdom Come: Deliverance',
+  'Serious Sam HD: The First Encounter': 'Serious Sam: The First Encounter',
 };
 
 /**
