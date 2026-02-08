@@ -501,6 +501,13 @@ export const App: React.FC = () => {
         {isGamepadMode ? (
           /* Gamepad layout: Header + Games strip on top, MainContent below */
           <div className="flex flex-col h-full pt-8 relative z-10">
+            {/* Background image */}
+            <img
+              src={mainBg}
+              alt=""
+              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+              aria-hidden="true"
+            />
             {/* Sidebar - hides when in main-content mode */}
             <div
               className={`transition-all duration-300 ease-in-out relative z-20 ${

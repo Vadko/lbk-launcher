@@ -71,7 +71,8 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           onClick={onClick}
           onKeyDown={handleKeyDown}
           data-game-card
-          className={`group glass-card !p-0 flex flex-col items-center`}
+          data-gamepad-card={true}
+          className={`group glass-card !p-0 flex flex-col items-center scroll-m-20`}
         >
           <div className="relative h-56 w-full bg-glass rounded-t-xl overflow-hidden">
             {thumbnailUrl && !imageError ? (
