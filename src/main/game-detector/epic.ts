@@ -269,12 +269,12 @@ export function getEpicLibrary(): string[] {
             const game = item.game || item; // Handle install_info structure
 
             // User reports Epic names are in description
-            if (game?.extra?.about?.description) {
-              titles.add(getCleanTitle(cleanTitle(game.extra.about.description)));
-            } else if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
+            if (game.app_title && !game.app_title.match(/^[0-9a-f]{32}$/)) {
               titles.add(getCleanTitle(cleanTitle(game.app_title)));
             } else if (game.title) {
               titles.add(getCleanTitle(cleanTitle(game.title)));
+            } else if (game?.extra?.about?.description) {
+              titles.add(getCleanTitle(cleanTitle(game.extra.about.description)));
             }
           }
         }
@@ -377,7 +377,15 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
 
         // 2. Fallback: Title match (Folder name matching Game Title)
         const gameByTitle = games.find((g: any) => {
-          const title = g?.title || g?.game?.title; // game.title for install_info
+          let title = null;
+          if (g.app_title && !g.app_title.match(/^[0-9a-f]{32}$/)) {
+            title = g.app_title;
+          } else if (g.title) {
+            title = g.title;
+          } else if (g?.game?.title) {
+            title = g.game.title;
+          }
+
           return title && normalize(title) === targetFolder;
         });
 

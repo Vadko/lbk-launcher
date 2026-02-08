@@ -20,6 +20,9 @@ const GAME_TITLE_MAPPING: Record<string, string | string[]> = {
 
   'Batman: Arkham City - Game of the Year Edition':
     'Batman™ Arkham City - Game of the Year Edition',
+
+
+  'Rustler': 'Rustler - Grand Theft Horse',
   'Batman: Arkham Asylum Game of the Year Edition':
     'Batman™ Arkham Asylum Game of the Year Edition',
   'Batman™: Arkham Knight': 'Batman™ Arkham Knight',
