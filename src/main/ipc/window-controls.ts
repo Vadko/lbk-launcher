@@ -11,11 +11,7 @@ import {
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
-import {
-  getLogFileDirectory,
-  isSaveLogsEnabled,
-  setSaveLogsEnabled,
-} from '../utils/logger';
+import { getLogFileDirectory, setSaveLogsEnabled } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
 import { getIcon } from '../utils/theme';
 import { getMainWindow } from '../window';
@@ -255,8 +251,6 @@ export function setupWindowControls(): void {
     console.log('[Logger] Save logs to file:', enabled ? 'enabled' : 'disabled');
     return { success: true };
   });
-
-  ipcMain.handle('logger:is-enabled', () => isSaveLogsEnabled());
 
   ipcMain.handle('logger:open-logs-folder', async () => {
     try {

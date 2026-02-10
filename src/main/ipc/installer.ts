@@ -23,6 +23,7 @@ import {
   pauseCurrentDownload,
 } from '../installer/download';
 import { trackUninstall } from '../tracking';
+import { createTimer } from '../utils/logger';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {
@@ -74,9 +75,13 @@ export function setupInstallerHandlers(): void {
   );
 
   ipcMain.handle('check-installation', async (_, game: Game) => {
+    const timer = createTimer(`IPC: check-installation (${game.name})`);
     try {
-      return await checkInstallation(game);
+      const result = await checkInstallation(game);
+      timer.end();
+      return result;
     } catch (error) {
+      timer.end();
       console.error('Error checking installation:', error);
       return null;
     }

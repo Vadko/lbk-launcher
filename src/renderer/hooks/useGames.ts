@@ -36,6 +36,7 @@ export function useGames({
   // Note: showAdultGames is handled in UI (blur effect), not filtering here
   // AI translations are filtered in SQL via hideAiTranslations param
 
+  const syncStatus = useStore((state) => state.syncStatus);
   const checkSubscribedGamesStatus = useStore(
     (state) => state.checkSubscribedGamesStatus
   );
@@ -147,6 +148,56 @@ export function useGames({
         return;
       }
 
+      // Special handling for GOG Owned Games
+      if (specialFilter === 'owned-gog-games') {
+        const titles = await window.electronAPI.getGogLibrary();
+
+        if (signal.aborted) return;
+
+        if (titles.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByTitles(
+          titles,
+          searchQuery || undefined,
+          hideAiTranslations
+        );
+
+        if (signal.aborted) return;
+
+        setGames(result.games);
+        setTotal(result.total);
+        return;
+      }
+
+      // Special handling for Epic Owned Games
+      if (specialFilter === 'owned-epic-games') {
+        const titles = await window.electronAPI.getEpicLibrary();
+
+        if (signal.aborted) return;
+
+        if (titles.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByTitles(
+          titles,
+          searchQuery || undefined,
+          hideAiTranslations
+        );
+
+        if (signal.aborted) return;
+
+        setGames(result.games);
+        setTotal(result.total);
+        return;
+      }
+
       // Спеціальна обробка для ігор з перекладом досягнень
       if (specialFilter === 'with-achievements') {
         const params: GetGamesParams = {
@@ -243,10 +294,14 @@ export function useGames({
     loadGames();
   }, [loadGames]);
 
-  // Завантажити при зміні параметрів
+  // Завантажити при зміні параметрів (тільки коли sync завершено)
   useEffect(() => {
+    // Чекаємо поки sync завершиться (ready або error)
+    if (syncStatus !== 'ready' && syncStatus !== 'error') {
+      return;
+    }
     loadGames();
-  }, [loadGames]);
+  }, [loadGames, syncStatus]);
 
   // Перевірити статуси підписаних ігор після першого завантаження
   useEffect(() => {
@@ -306,7 +361,9 @@ export function useGames({
         if (
           specialFilter === 'installed-games' ||
           specialFilter === 'installed-translations' ||
-          specialFilter === 'available-in-steam'
+          specialFilter === 'available-in-steam' ||
+          specialFilter === 'owned-gog-games' ||
+          specialFilter === 'owned-epic-games'
         ) {
           if (index !== -1) {
             // Гра є в списку - оновити дані

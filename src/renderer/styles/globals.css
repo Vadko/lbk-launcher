@@ -634,10 +634,54 @@ body.liquid-glass-enabled .glass-input:focus {
   -webkit-app-region: no-drag;
 }
 
+/* ==========================================================================
+   DISABLE ANIMATIONS MODE
+   Critical for Steam Deck and low-power devices
+   ========================================================================== */
+
 .no-animations,
-.no-animations * {
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
   animation: none !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
   transition: none !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Disable framer-motion animations */
+.no-animations [style*="opacity"],
+.no-animations [style*="transform"] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Disable backdrop blur in no-animations mode for better performance */
+.no-animations .glass-panel,
+.no-animations .glass-card,
+.no-animations .glass-button,
+.no-animations [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Disable hover transforms */
+.no-animations .glass-card:hover,
+.no-animations .glass-button:hover,
+.no-animations .hover-lift:hover {
+  transform: none !important;
+}
+
+/* Disable progress bar glow animation */
+.no-animations .progress-bar {
+  animation: none !important;
+}
+
+/* Disable MUI ripple effects if any */
+.no-animations .MuiTouchRipple-root {
+  display: none !important;
 }
 
 ::selection {

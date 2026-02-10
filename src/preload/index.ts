@@ -41,6 +41,14 @@ const electronAPI: ElectronAPI = {
     ),
   countGamesBySteamAppIds: (steamAppIds: number[]) =>
     ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
+  findGamesByTitles: (
+    titles: string[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean
+  ) =>
+    ipcRenderer.invoke('find-games-by-titles', titles, searchQuery, hideAiTranslations),
+  getGogLibrary: () => ipcRenderer.invoke('get-gog-library'),
+  getEpicLibrary: () => ipcRenderer.invoke('get-epic-library'),
   installTranslation: (
     game: Game,
     platform: string,
@@ -199,7 +207,6 @@ contextBridge.exposeInMainWorld('liquidGlassAPI', {
 // Logger API
 contextBridge.exposeInMainWorld('loggerAPI', {
   setEnabled: (enabled: boolean) => ipcRenderer.invoke('logger:set-enabled', enabled),
-  isEnabled: () => ipcRenderer.invoke('logger:is-enabled'),
   openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
   log: (level: string, message: string, ...args: unknown[]) =>
     ipcRenderer.send('logger:log', level, message, args),

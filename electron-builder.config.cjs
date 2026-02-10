@@ -119,6 +119,10 @@ module.exports = {
         target: 'dmg',
         arch: ['x64', 'arm64'],
       },
+      {
+        target: 'zip',
+        arch: ['x64', 'arm64'],
+      },
     ],
     category: 'public.app-category.utilities',
     icon: 'resources/icon.icns',
@@ -126,7 +130,7 @@ module.exports = {
     gatekeeperAssess: false,
     darkModeSupport: true,
     minimumSystemVersion: '10.13.0',
-    artifactName: '${productName}-${version}-${arch}.${ext}',
+    artifactName: '${productName}-${arch}.${ext}',
     // Підписування: використовує CSC_LINK та CSC_KEY_PASSWORD з env
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',

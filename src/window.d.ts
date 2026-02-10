@@ -6,7 +6,6 @@ interface LiquidGlassAPI {
 
 interface LoggerAPI {
   setEnabled: (enabled: boolean) => Promise<{ success: boolean }>;
-  isEnabled: () => Promise<boolean>;
   openLogsFolder: () => Promise<{ success: boolean; error?: string }>;
   log: (level: string, message: string, ...args: unknown[]) => void;
 }

@@ -33,6 +33,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+    const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
 
     const primaryGame = group.translations[0];
     const isAnySelected = group.translations.some((t) => selectedGameId === t.id);
@@ -155,31 +156,49 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
         </div>
 
         {/* Expanded translations list */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="pl-3 mt-1 space-y-1 border-l-2 border-border ml-3">
-                {group.translations.map((game) => (
-                  <GameListItem
-                    key={game.id}
-                    game={game}
-                    isSelected={selectedGameId === game.id}
-                    onClick={() => onSelectGame(game)}
-                    hasUpdate={gamesWithUpdates.has(game.id)}
-                    isGameDetected={isGameDetected(game.id)}
-                    showTeamName
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {animationsEnabled ? (
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="pl-3 mt-1 space-y-1 border-l-2 border-border ml-3">
+                  {group.translations.map((game) => (
+                    <GameListItem
+                      key={game.id}
+                      game={game}
+                      isSelected={selectedGameId === game.id}
+                      onClick={() => onSelectGame(game)}
+                      hasUpdate={gamesWithUpdates.has(game.id)}
+                      isGameDetected={isGameDetected(game.id)}
+                      showTeamName
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        ) : (
+          isExpanded && (
+            <div className="pl-3 mt-1 space-y-1 border-l-2 border-border ml-3">
+              {group.translations.map((game) => (
+                <GameListItem
+                  key={game.id}
+                  game={game}
+                  isSelected={selectedGameId === game.id}
+                  onClick={() => onSelectGame(game)}
+                  hasUpdate={gamesWithUpdates.has(game.id)}
+                  isGameDetected={isGameDetected(game.id)}
+                  showTeamName
+                />
+              ))}
+            </div>
+          )
+        )}
       </div>
     );
   }

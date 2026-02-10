@@ -180,15 +180,29 @@ function detectSteamPathMacOS(): string | null {
 }
 
 function detectSteamPathLinux(): string | null {
+  const home = os.homedir();
   const linuxPaths = [
-    path.join(os.homedir(), '.steam/steam'),
-    path.join(os.homedir(), '.local/share/Steam'),
-    path.join(os.homedir(), '.var/app/com.valvesoftware.Steam/.steam/steam'),
-    path.join(os.homedir(), '.var/app/com.valvesoftware.Steam/.local/share/Steam'),
+    // Native Steam - standard locations
+    path.join(home, '.steam/steam'),
+    path.join(home, '.steam/Steam'),
+    path.join(home, '.steam/root'),
+    path.join(home, '.steam/debian-installation'),
+    path.join(home, '.local/share/Steam'),
+    path.join(home, '.local/share/steam'),
+    // Flatpak Steam
+    path.join(home, '.var/app/com.valvesoftware.Steam/.steam/steam'),
+    path.join(home, '.var/app/com.valvesoftware.Steam/.steam/Steam'),
+    path.join(home, '.var/app/com.valvesoftware.Steam/.local/share/Steam'),
+    // Snap Steam
+    path.join(home, 'snap/steam/common/.steam/steam'),
+    path.join(home, 'snap/steam/common/.steam/Steam'),
+    path.join(home, 'snap/steam/common/.steam/root'),
+    path.join(home, 'snap/steam/common/.local/share/Steam'),
+    // System-wide installations
     '/usr/share/steam',
     '/usr/local/share/steam',
-    path.join(os.homedir(), 'snap/steam/common/.steam/steam'),
-    path.join(os.homedir(), 'snap/steam/common/.local/share/Steam'),
+    '/usr/lib/steam',
+    '/opt/steam',
   ];
 
   for (const linuxPath of linuxPaths) {

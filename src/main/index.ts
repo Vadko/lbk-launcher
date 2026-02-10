@@ -120,6 +120,10 @@ if (!gotTheLock) {
   // Initialize logger early to capture all logs
   initLogger();
 
+  // Set app ID for Wayland/Flatpak icon matching
+  // This must match the Flatpak app-id and .desktop file name
+  app.setAppUserModelId('com.lbk.launcher');
+
   // Register protocol handler (for development, include the path to electron)
   if (process.defaultApp) {
     if (process.argv.length >= 2) {

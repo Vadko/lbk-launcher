@@ -182,7 +182,9 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
 
               <div className="border-t border-border my-1" />
 
-              {SPECIAL_FILTER_OPTIONS.map((option) => {
+              {SPECIAL_FILTER_OPTIONS.filter(
+                (option) => !counts || counts[option.value] !== 0
+              ).map((option) => {
                 const isSelected = specialFilter === option.value;
                 return (
                   <React.Fragment key={option.value}>
@@ -192,7 +194,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
                     <button
                       onClick={() => handleSpecialFilterSelect(option.value)}
                       data-gamepad-dropdown-item
-                      className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors text-left ${
                         isSelected
                           ? 'bg-glass-hover text-text-main'
                           : 'text-text-muted hover:bg-glass hover:text-text-main'
@@ -224,7 +226,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
                     key={option.value}
                     onClick={() => handleSortChange(option.value)}
                     data-gamepad-dropdown-item
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
                       isSelected
                         ? 'bg-glass-hover text-text-main'
                         : 'text-text-muted hover:bg-glass hover:text-text-main'
