@@ -2,10 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { SortOrderType, SpecialFilterType } from '../components/Sidebar/types';
 
-type ThemeMode = 'light' | 'dark' | 'system';
-
 interface SettingsStore {
-  theme: ThemeMode;
   sortOrder: SortOrderType;
   animationsEnabled: boolean;
   appUpdateNotificationsEnabled: boolean;
@@ -23,7 +20,6 @@ interface SettingsStore {
   selectedAuthors: string[];
   notificationSoundsEnabled: boolean;
   alphabetSidebarEnabled: boolean;
-  setTheme: (theme: ThemeMode) => void;
   setSortOrder: (order: SortOrderType) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
@@ -47,7 +43,6 @@ interface SettingsStore {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      theme: 'dark',
       sortOrder: 'name',
       animationsEnabled: true,
       appUpdateNotificationsEnabled: true,
@@ -65,8 +60,6 @@ export const useSettingsStore = create<SettingsStore>()(
       selectedAuthors: [],
       notificationSoundsEnabled: true,
       alphabetSidebarEnabled: true,
-
-      setTheme: (theme) => set({ theme }),
 
       setSortOrder: (sortOrder) => set({ sortOrder }),
 
@@ -123,7 +116,6 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'lbk-settings',
       partialize: (state) => ({
-        theme: state.theme,
         sortOrder: state.sortOrder,
         animationsEnabled: state.animationsEnabled,
         appUpdateNotificationsEnabled: state.appUpdateNotificationsEnabled,
