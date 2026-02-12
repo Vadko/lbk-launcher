@@ -869,6 +869,12 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "steam_guide_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "steam_guide_status_history_guide_id_fkey"
             columns: ["guide_id"]
             referencedRelation: "steam_guides"
@@ -946,7 +952,14 @@ export type Database = {
           url?: string | null
           views?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "steam_guides_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       steam_guides_sync_state: {
         Row: {
