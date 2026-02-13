@@ -164,7 +164,9 @@ export function useGamepadModeNavigation(enabled = true) {
 
   // Get game cards from DOM
   const getGameCards = useCallback((): HTMLElement[] => {
-    const cards = document.querySelectorAll<HTMLElement>('[data-gamepad-game-list] [data-gamepad-card]');
+    const cards = document.querySelectorAll<HTMLElement>(
+      '[data-gamepad-game-list] [data-gamepad-card]'
+    );
     return Array.from(cards);
   }, []);
 
@@ -469,7 +471,7 @@ export function useGamepadModeNavigation(enabled = true) {
   // Handle main content navigation
   const handleMainContentNavigation = useCallback(
     (gp: Gamepad) => {
-      const actionButtons = selectedGame ? getActionButtons() : getHomeActive();      
+      const actionButtons = selectedGame ? getActionButtons() : getHomeActive();
 
       // Find currently focused button
       const currentFocused = document.activeElement as HTMLElement;
@@ -570,7 +572,7 @@ export function useGamepadModeNavigation(enabled = true) {
       scrollMainContent,
       setNavigationArea,
       getHomeActive,
-      selectedGame
+      selectedGame,
     ]
   );
 
