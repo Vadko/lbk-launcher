@@ -839,6 +839,146 @@ export type Database = {
         }
         Relationships: []
       }
+      steam_guide_status_history: {
+        Row: {
+          changed_by: string | null
+          comment: string | null
+          created_at: string | null
+          guide_id: string
+          id: string
+          new_status: string
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          comment?: string | null
+          created_at?: string | null
+          guide_id: string
+          id?: string
+          new_status: string
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          comment?: string | null
+          created_at?: string | null
+          guide_id?: string
+          id?: string
+          new_status?: string
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_guide_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steam_guide_status_history_guide_id_fkey"
+            columns: ["guide_id"]
+            referencedRelation: "steam_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steam_guides: {
+        Row: {
+          author_name: string | null
+          author_steam_id: string | null
+          comment: string | null
+          created_at_steam: string | null
+          description: string | null
+          discovered_at: string | null
+          favorited: number | null
+          id: string
+          matched_keyword: string | null
+          notified: boolean | null
+          status: string | null
+          status_changed_at: string | null
+          status_changed_by: string | null
+          steam_app_id: number | null
+          steam_app_name: string | null
+          steam_id: string
+          tags: string[] | null
+          title: string | null
+          updated_at_steam: string | null
+          url: string | null
+          views: number | null
+        }
+        Insert: {
+          author_name?: string | null
+          author_steam_id?: string | null
+          comment?: string | null
+          created_at_steam?: string | null
+          description?: string | null
+          discovered_at?: string | null
+          favorited?: number | null
+          id?: string
+          matched_keyword?: string | null
+          notified?: boolean | null
+          status?: string | null
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          steam_app_id?: number | null
+          steam_app_name?: string | null
+          steam_id: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at_steam?: string | null
+          url?: string | null
+          views?: number | null
+        }
+        Update: {
+          author_name?: string | null
+          author_steam_id?: string | null
+          comment?: string | null
+          created_at_steam?: string | null
+          description?: string | null
+          discovered_at?: string | null
+          favorited?: number | null
+          id?: string
+          matched_keyword?: string | null
+          notified?: boolean | null
+          status?: string | null
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          steam_app_id?: number | null
+          steam_app_name?: string | null
+          steam_id?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at_steam?: string | null
+          url?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_guides_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steam_guides_sync_state: {
+        Row: {
+          id: number
+          last_sync_at: string | null
+          total_synced: number | null
+        }
+        Insert: {
+          id?: number
+          last_sync_at?: string | null
+          total_synced?: number | null
+        }
+        Update: {
+          id?: number
+          last_sync_at?: string | null
+          total_synced?: number | null
+        }
+        Relationships: []
+      }
       steam_library_rate_limits: {
         Row: {
           created_at: string
