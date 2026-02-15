@@ -47,8 +47,6 @@ export const SettingsModal: React.FC = () => {
   const { showModal } = useModalStore();
   const isSettingsModalOpen = useSettingsStore((state) => state.isSettingsModalOpen);
   const closeSettingsModal = useSettingsStore((state) => state.closeSettingsModal);
-  const theme = useSettingsStore((state) => state.theme);
-  const setTheme = useSettingsStore((state) => state.setTheme);
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const toggleAnimations = useSettingsStore((state) => state.toggleAnimations);
   const createBackupBeforeInstall = useSettingsStore(
@@ -187,43 +185,6 @@ export const SettingsModal: React.FC = () => {
               <p className="text-xs text-text-muted">Написати нам у Telegram</p>
             </div>
           </a>
-
-          {/* Theme selector */}
-          <div className="p-4 rounded-xl bg-glass border border-border">
-            <h4 className="text-sm font-semibold text-text-main mb-3">Тема</h4>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTheme('light')}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  theme === 'light'
-                    ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
-                    : 'bg-glass border border-border text-text-muted hover:text-text-main hover:border-border-hover'
-                }`}
-              >
-                Світла
-              </button>
-              <button
-                onClick={() => setTheme('dark')}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  theme === 'dark'
-                    ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
-                    : 'bg-glass border border-border text-text-muted hover:text-text-main hover:border-border-hover'
-                }`}
-              >
-                Темна
-              </button>
-              <button
-                onClick={() => setTheme('system')}
-                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  theme === 'system'
-                    ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
-                    : 'bg-glass border border-border text-text-muted hover:text-text-main hover:border-border-hover'
-                }`}
-              >
-                Системна
-              </button>
-            </div>
-          </div>
 
           <SettingItem
             id="animations"

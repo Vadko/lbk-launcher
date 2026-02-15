@@ -157,7 +157,7 @@ export const App: React.FC = () => {
     syncStatus,
     setSyncStatus,
   } = useStore();
-  const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
+  const { animationsEnabled, autoDetectInstalledGames, liquidGlassEnabled } =
     useSettingsStore();
   const { isGamepadMode, setGamepadMode, navigationArea } = useGamepadModeStore();
   const [online, setOnline] = useState(navigator.onLine);
@@ -330,32 +330,6 @@ export const App: React.FC = () => {
 
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
-
-  // Apply theme
-  useEffect(() => {
-    const root = document.documentElement;
-
-    if (theme === 'system') {
-      // Detect system preference
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const appliedTheme = isDark ? 'dark' : 'light';
-      root.setAttribute('data-theme', appliedTheme);
-      console.log('[Theme] Applied system theme:', appliedTheme);
-
-      // Listen for changes in system theme
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = (e: MediaQueryListEvent) => {
-        const newTheme = e.matches ? 'dark' : 'light';
-        root.setAttribute('data-theme', newTheme);
-        console.log('[Theme] System theme changed to:', newTheme);
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    root.setAttribute('data-theme', theme);
-    console.log('[Theme] Applied theme:', theme);
-  }, [theme]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
