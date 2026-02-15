@@ -36,7 +36,7 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
         <img
           src={isDarkTheme ? logo : logoDark}
           alt="LBK logo"
-          className={isCompact ? 'w-8 h-8' : 'w-14 h-14'}
+          className={isCompact ? 'w-16 h-8 object-cover' : 'w-20 h-14  object-cover'}
           draggable={false}
         />
         {!isCompact && (
