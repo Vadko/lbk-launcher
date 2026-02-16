@@ -145,7 +145,10 @@ export async function createMainWindow(): Promise<BrowserWindow> {
       } catch {
         // Use default on parse error
       }
-      console.log('[Window] Applying liquid glass on ready-to-show, preference:', liquidGlassPreference);
+      console.log(
+        '[Window] Applying liquid glass on ready-to-show, preference:',
+        liquidGlassPreference
+      );
       liquidGlassId = await applyLiquidGlass(mainWindow!, liquidGlassPreference);
       console.log('[Window] Liquid glass applied with ID:', liquidGlassId);
     }
