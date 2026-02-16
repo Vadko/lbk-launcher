@@ -40,12 +40,12 @@ export function setupGamesHandlers(): void {
   // Track subscription (subscribe/unsubscribe) from renderer
   ipcMain.handle(
     'track-subscription',
-    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
+    (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
       trackSubscription(gameId, action)
   );
 
   // Track support click
-  ipcMain.handle('track-support-click', async (_, gameId: string) =>
+  ipcMain.handle('track-support-click', (_, gameId: string) =>
     trackSupportClick(gameId)
   );
 
@@ -113,7 +113,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Sync Kurin installed games data
-  ipcMain.handle('sync-kurin-games', async () => {
+  ipcMain.handle('sync-kurin-games', () => {
     try {
       return syncKurinGames();
     } catch (error) {
@@ -123,7 +123,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Get all installed game paths from the system
-  ipcMain.handle('get-all-installed-game-paths', async () => {
+  ipcMain.handle('get-all-installed-game-paths', () => {
     const timer = createTimer('IPC: get-all-installed-game-paths');
     try {
       const result = getAllInstalledGamePaths();
@@ -137,7 +137,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Get all installed Steam games
-  ipcMain.handle('get-all-installed-steam-games', async () => {
+  ipcMain.handle('get-all-installed-steam-games', () => {
     const timer = createTimer('IPC: get-all-installed-steam-games');
     try {
       const steamGames = getAllInstalledSteamGames();
@@ -152,7 +152,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Get all installed Protons
-  ipcMain.handle('get-available-protons', async () => {
+  ipcMain.handle('get-available-protons', () => {
     try {
       return findProtons();
     } catch (error) {
