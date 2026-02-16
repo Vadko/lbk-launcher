@@ -45,9 +45,7 @@ export function setupGamesHandlers(): void {
   );
 
   // Track support click
-  ipcMain.handle('track-support-click', (_, gameId: string) =>
-    trackSupportClick(gameId)
-  );
+  ipcMain.handle('track-support-click', (_, gameId: string) => trackSupportClick(gameId));
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
   ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {

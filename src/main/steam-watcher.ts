@@ -199,8 +199,9 @@ export function startSteamWatcher(mainWindow: BrowserWindow | null): void {
   licensecacheWatcher = watchLicensecache(mainWindow);
 
   console.log(
-    `[SteamWatcher] Watching ${steamappsWatchers.length} steamapps folder(s) + libraryfolders.vdf${ 
-      licensecacheWatcher ? ' + licensecache' : ''}`
+    `[SteamWatcher] Watching ${steamappsWatchers.length} steamapps folder(s) + libraryfolders.vdf${
+      licensecacheWatcher ? ' + licensecache' : ''
+    }`
   );
 }
 
