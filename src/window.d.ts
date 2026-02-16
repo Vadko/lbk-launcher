@@ -17,10 +17,17 @@ interface API {
   clearCache: () => Promise<{ success: boolean; error?: string }>; // Legacy
 }
 
+interface StoreStorageAPI {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+}
+
 interface Window {
   liquidGlassAPI: LiquidGlassAPI;
   loggerAPI: LoggerAPI;
   api: API;
+  storeStorage: StoreStorageAPI;
   windowControls: {
     minimize: () => void;
     maximize: () => void;

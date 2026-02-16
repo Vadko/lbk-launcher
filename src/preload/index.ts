@@ -214,20 +214,13 @@ contextBridge.exposeInMainWorld('api', {
   clearCache: () => ipcRenderer.invoke('clear-all-data-and-restart'),
 });
 
-// Handle liquid glass preference request from main process
-ipcRenderer.on('liquid-glass:get-preference', () => {
-  // Get the preference from localStorage (settings store)
-  const settings = localStorage.getItem('lbk-settings');
-  let enabled = true; // Default to true
-
-  if (settings) {
-    try {
-      const parsed = JSON.parse(settings);
-      enabled = parsed.state?.liquidGlassEnabled ?? true;
-    } catch {
-      // Ignore parse errors
-    }
-  }
-
-  ipcRenderer.send('liquid-glass:get-preference-response', enabled);
+// File-based store storage API (replaces localStorage for Zustand persist)
+contextBridge.exposeInMainWorld('storeStorage', {
+  getItem: (key: string): string | null => ipcRenderer.sendSync('store-storage:get', key),
+  setItem: (key: string, value: string): void => {
+    ipcRenderer.invoke('store-storage:set', key, value);
+  },
+  removeItem: (key: string): void => {
+    ipcRenderer.invoke('store-storage:remove', key);
+  },
 });

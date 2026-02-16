@@ -6,6 +6,7 @@ import {
   removeLiquidGlass,
 } from './liquid-glass';
 import { supportsMacOSLiquidGlass } from './utils/platform';
+import { readStoreFile } from './utils/store-storage';
 import { getIcon } from './utils/theme';
 
 let mainWindow: BrowserWindow | null = null;
@@ -133,9 +134,19 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     console.log('[Window] ready-to-show event fired');
     clearTimeout(showTimeout);
     if (isSupported) {
-      console.log('[Window] Applying liquid glass on ready-to-show');
-      // Apply with default enabled state - user can toggle it later in settings
-      liquidGlassId = await applyLiquidGlass(mainWindow!, true);
+      // Read user preference directly from settings file
+      let liquidGlassPreference = true;
+      try {
+        const settingsRaw = readStoreFile('lbk-settings');
+        if (settingsRaw) {
+          const parsed = JSON.parse(settingsRaw);
+          liquidGlassPreference = parsed.state?.liquidGlassEnabled ?? true;
+        }
+      } catch {
+        // Use default on parse error
+      }
+      console.log('[Window] Applying liquid glass on ready-to-show, preference:', liquidGlassPreference);
+      liquidGlassId = await applyLiquidGlass(mainWindow!, liquidGlassPreference);
       console.log('[Window] Liquid glass applied with ID:', liquidGlassId);
     }
     // Show window after liquid glass is applied (or immediately if not supported)

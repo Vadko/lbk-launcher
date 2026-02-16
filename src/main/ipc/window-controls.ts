@@ -13,6 +13,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { getLogFileDirectory, setSaveLogsEnabled } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
+import { deleteStoreFile } from '../utils/store-storage';
 import { getIcon } from '../utils/theme';
 import { getMainWindow } from '../window';
 
@@ -191,6 +192,11 @@ export function setupWindowControls(): void {
         ],
       });
 
+      // Delete file-based store data
+      deleteStoreFile('lbk-settings');
+      deleteStoreFile('subscriptions-storage');
+      deleteStoreFile('has-launched-before');
+
       // Close database first
       closeDatabase();
 
@@ -227,6 +233,11 @@ export function setupWindowControls(): void {
           'cachestorage',
         ],
       });
+
+      // Delete file-based store data
+      deleteStoreFile('lbk-settings');
+      deleteStoreFile('subscriptions-storage');
+      deleteStoreFile('has-launched-before');
 
       // Close database first
       closeDatabase();

@@ -2,6 +2,7 @@ import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
+import { setupStoreStorageHandlers } from './utils/store-storage';
 
 // Deep link handling
 const PROTOCOL = 'lbk';
@@ -163,6 +164,7 @@ if (!gotTheLock) {
   });
 
   // Setup all IPC handlers
+  setupStoreStorageHandlers();
   setupWindowControls();
   setupGamesHandlers();
   setupInstallerHandlers();
