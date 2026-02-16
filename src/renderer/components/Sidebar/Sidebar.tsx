@@ -1,6 +1,6 @@
-import { AnimatePresence, motion } from 'framer-motion';
 import { SortAsc } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAlphabetNavigation } from '../../hooks/useAlphabetNavigation';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFilterCounts } from '../../hooks/useFilterCounts';
@@ -11,12 +11,10 @@ import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import type { Game } from '../../types/game';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
-import { Loader } from '../ui/Loader';
 import { AlphabetSidebar } from './AlphabetSidebar';
 import { AuthorsFilterDropdown } from './AuthorsFilterDropdown';
-import { GameGroupItem } from './GameGroupItem';
-import { GameListItem } from './GameListItem';
-import { GamepadCard } from './GamepadCard';
+import { AnimatedGameList } from './GameList';
+import { HorizontalGameList } from './HorizontalGameList';
 import { SearchBar } from './SearchBar';
 import { SidebarFooter } from './SidebarFooter';
 import { SidebarHeader } from './SidebarHeader';
@@ -33,6 +31,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = React.memo(
   ({ onOpenHistory, isHorizontal = false }) => {
+    // Use shallow selectors to prevent unnecessary re-renders
     const {
       selectedGame,
       selectedStatuses,
@@ -43,7 +42,19 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       gamesWithUpdates,
       isGameDetected,
       loadInstalledGamesFromSystem,
-    } = useStore();
+    } = useStore(
+      useShallow((state) => ({
+        selectedGame: state.selectedGame,
+        selectedStatuses: state.selectedStatuses,
+        searchQuery: state.searchQuery,
+        setSelectedGame: state.setSelectedGame,
+        setSelectedStatuses: state.setSelectedStatuses,
+        setSearchQuery: state.setSearchQuery,
+        gamesWithUpdates: state.gamesWithUpdates,
+        isGameDetected: state.isGameDetected,
+        loadInstalledGamesFromSystem: state.loadInstalledGamesFromSystem,
+      }))
+    );
     const {
       openSettingsModal,
       sidebarWidth,
@@ -57,7 +68,24 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       sortOrder,
       setSortOrder,
       hideAiTranslations,
-    } = useSettingsStore();
+      animationsEnabled,
+    } = useSettingsStore(
+      useShallow((state) => ({
+        openSettingsModal: state.openSettingsModal,
+        sidebarWidth: state.sidebarWidth,
+        setSidebarWidth: state.setSidebarWidth,
+        specialFilter: state.specialFilter,
+        setSpecialFilter: state.setSpecialFilter,
+        selectedAuthors: state.selectedAuthors,
+        setSelectedAuthors: state.setSelectedAuthors,
+        alphabetSidebarEnabled: state.alphabetSidebarEnabled,
+        toggleAlphabetSidebar: state.toggleAlphabetSidebar,
+        sortOrder: state.sortOrder,
+        setSortOrder: state.setSortOrder,
+        hideAiTranslations: state.hideAiTranslations,
+        animationsEnabled: state.animationsEnabled,
+      }))
+    );
     const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
 
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -235,8 +263,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
     if (isHorizontal) {
       // Horizontal gamepad mode
+      // Disable backdrop-blur when animations are off for performance
+      const headerClass = animationsEnabled
+        ? 'w-full flex flex-col bg-glass/30 backdrop-blur-md'
+        : 'w-full flex flex-col bg-bg-dark/90';
+
       return (
-        <div className="w-full flex flex-col bg-glass/30 backdrop-blur-md">
+        <div className={headerClass}>
           {/* Header bar */}
           <div
             data-gamepad-header
@@ -284,49 +317,17 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             data-gamepad-game-list
             className="px-4 py-3 overflow-x-auto custom-scrollbar"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader size="md" />
-              </div>
-            ) : totalGames === 0 ? (
-              <div className="flex items-center justify-center h-32 text-text-muted">
-                <p>Ігор не знайдено</p>
-              </div>
-            ) : (
-              <div className="flex gap-3">
-                {gameGroups.map((group) => {
-                  const primaryGame = group.translations[0];
-                  const isSelected = group.translations.some(
-                    (t) => selectedGame?.id === t.id
-                  );
-                  const hasUpdate = group.translations.some((t) =>
-                    gamesWithUpdates.has(t.id)
-                  );
-                  const detected = group.translations.some((t) => isGameDetected(t.id));
-
-                  const handleClick = () => {
-                    if (group.translations.length > 1) {
-                      openTranslationPicker(group.translations, group.name);
-                    } else {
-                      setSelectedGame(primaryGame);
-                    }
-                  };
-
-                  return (
-                    <GamepadCard
-                      key={group.slug}
-                      game={primaryGame}
-                      translations={group.translations}
-                      translationIndex={0}
-                      isSelected={isSelected}
-                      hasUpdate={hasUpdate}
-                      isDetected={detected}
-                      onClick={handleClick}
-                    />
-                  );
-                })}
-              </div>
-            )}
+            <HorizontalGameList
+              gameGroups={gameGroups}
+              totalGames={totalGames}
+              isLoading={isLoading}
+              animationsEnabled={animationsEnabled}
+              selectedGameId={selectedGame?.id}
+              gamesWithUpdates={gamesWithUpdates}
+              onSelectGame={setSelectedGame}
+              onOpenTranslationPicker={openTranslationPicker}
+              isGameDetected={isGameDetected}
+            />
           </div>
 
           {/* Translation picker modal */}
@@ -391,79 +392,19 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto p-4 pt-0 custom-scrollbar relative"
           >
-            <AnimatePresence mode="wait">
-              {isLoading ? (
-                <motion.div
-                  key="loader"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="flex items-center justify-center py-12"
-                >
-                  <Loader size="md" />
-                </motion.div>
-              ) : totalGames === 0 ? (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="text-center text-text-muted py-8"
-                >
-                  <p>Ігор не знайдено</p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={`games-${specialFilter}-${selectedStatuses.join(',')}-${selectedAuthors.join(',')}-${debouncedSearchQuery}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className="space-y-2 relative"
-                >
-                  {gameGroups.map((group, index) => {
-                    const hasMultipleTranslations = group.translations.length > 1;
-                    const primaryGame = group.translations[0];
-
-                    return (
-                      <motion.div
-                        key={group.slug}
-                        id={`group-${group.slug}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.4,
-                          delay: Math.min(index * 0.03, 0.5),
-                          ease: [0.25, 0.46, 0.45, 0.94],
-                        }}
-                      >
-                        {hasMultipleTranslations ? (
-                          <GameGroupItem
-                            group={group}
-                            isExpanded={expandedGroups.has(group.slug)}
-                            onToggle={() => toggleGroupExpanded(group.slug)}
-                            selectedGameId={selectedGame?.id}
-                            onSelectGame={setSelectedGame}
-                            gamesWithUpdates={gamesWithUpdates}
-                            isGameDetected={isGameDetected}
-                          />
-                        ) : (
-                          <GameListItem
-                            game={primaryGame}
-                            isSelected={selectedGame?.id === primaryGame.id}
-                            onClick={() => setSelectedGame(primaryGame)}
-                            hasUpdate={gamesWithUpdates.has(primaryGame.id)}
-                            isGameDetected={isGameDetected(primaryGame.id)}
-                          />
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <AnimatedGameList
+              gameGroups={gameGroups}
+              totalGames={totalGames}
+              isLoading={isLoading}
+              animationsEnabled={animationsEnabled}
+              expandedGroups={expandedGroups}
+              selectedGameId={selectedGame?.id}
+              gamesWithUpdates={gamesWithUpdates}
+              listKey={`games-${specialFilter}-${selectedStatuses.join(',')}-${selectedAuthors.join(',')}-${debouncedSearchQuery}`}
+              onToggleGroup={toggleGroupExpanded}
+              onSelectGame={setSelectedGame}
+              isGameDetected={isGameDetected}
+            />
           </div>
 
           {/* Alphabet sidebar - only show when sorting by name */}

@@ -86,6 +86,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_authors_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       game_downloads: {
@@ -120,6 +126,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "game_downloads_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       game_subscriptions: {
@@ -147,6 +159,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_subscriptions_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -395,6 +413,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_versions_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -647,6 +671,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "kurin_imports_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       kurin_skipped: {
@@ -775,6 +805,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "media_upload_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
             foreignKeyName: "media_upload_queue_version_id_fkey"
             columns: ["version_id"]
             referencedRelation: "game_versions"
@@ -800,6 +836,146 @@ export type Database = {
           created_at?: string
           installdir?: string | null
           name?: string
+        }
+        Relationships: []
+      }
+      steam_guide_status_history: {
+        Row: {
+          changed_by: string | null
+          comment: string | null
+          created_at: string | null
+          guide_id: string
+          id: string
+          new_status: string
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          comment?: string | null
+          created_at?: string | null
+          guide_id: string
+          id?: string
+          new_status: string
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          comment?: string | null
+          created_at?: string | null
+          guide_id?: string
+          id?: string
+          new_status?: string
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_guide_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steam_guide_status_history_guide_id_fkey"
+            columns: ["guide_id"]
+            referencedRelation: "steam_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steam_guides: {
+        Row: {
+          author_name: string | null
+          author_steam_id: string | null
+          comment: string | null
+          created_at_steam: string | null
+          description: string | null
+          discovered_at: string | null
+          favorited: number | null
+          id: string
+          matched_keyword: string | null
+          notified: boolean | null
+          status: string | null
+          status_changed_at: string | null
+          status_changed_by: string | null
+          steam_app_id: number | null
+          steam_app_name: string | null
+          steam_id: string
+          tags: string[] | null
+          title: string | null
+          updated_at_steam: string | null
+          url: string | null
+          views: number | null
+        }
+        Insert: {
+          author_name?: string | null
+          author_steam_id?: string | null
+          comment?: string | null
+          created_at_steam?: string | null
+          description?: string | null
+          discovered_at?: string | null
+          favorited?: number | null
+          id?: string
+          matched_keyword?: string | null
+          notified?: boolean | null
+          status?: string | null
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          steam_app_id?: number | null
+          steam_app_name?: string | null
+          steam_id: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at_steam?: string | null
+          url?: string | null
+          views?: number | null
+        }
+        Update: {
+          author_name?: string | null
+          author_steam_id?: string | null
+          comment?: string | null
+          created_at_steam?: string | null
+          description?: string | null
+          discovered_at?: string | null
+          favorited?: number | null
+          id?: string
+          matched_keyword?: string | null
+          notified?: boolean | null
+          status?: string | null
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          steam_app_id?: number | null
+          steam_app_name?: string | null
+          steam_id?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at_steam?: string | null
+          url?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_guides_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steam_guides_sync_state: {
+        Row: {
+          id: number
+          last_sync_at: string | null
+          total_synced: number | null
+        }
+        Insert: {
+          id?: number
+          last_sync_at?: string | null
+          total_synced?: number | null
+        }
+        Update: {
+          id?: number
+          last_sync_at?: string | null
+          total_synced?: number | null
         }
         Relationships: []
       }
@@ -874,6 +1050,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "support_clicks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       translation_playtime: {
@@ -908,6 +1090,12 @@ export type Database = {
             referencedRelation: "games"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "translation_playtime_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
         ]
       }
       translation_uninstalls: {
@@ -935,6 +1123,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "games"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "translation_uninstalls_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -1029,6 +1223,13 @@ export type Database = {
         }
         Relationships: []
       }
+      trending_games_cache: {
+        Row: {
+          downloads: number | null
+          game_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_game_subscription: {
@@ -1055,9 +1256,10 @@ export type Database = {
         Returns: number
       }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
+      each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
-        Args: { p_date?: string }
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           dau: number
           mau: number
@@ -1128,7 +1330,7 @@ export type Database = {
         }[]
       }
       get_team_statistics: {
-        Args: never
+        Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           ai_count: number
           completed_count: number

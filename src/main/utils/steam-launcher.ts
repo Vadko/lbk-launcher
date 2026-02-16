@@ -12,6 +12,49 @@ import { isLinux, isMacOS, isWindows } from './platform';
 const execAsync = promisify(exec);
 
 // ============================================================================
+// Flatpak Detection
+// ============================================================================
+
+/**
+ * Check if we are running inside a Flatpak sandbox
+ */
+function isRunningInFlatpak(): boolean {
+  return !!process.env.FLATPAK_ID;
+}
+
+/**
+ * Execute a command on the host system when running inside Flatpak
+ * Uses flatpak-spawn --host to break out of the sandbox
+ */
+function execOnHost(command: string): Promise<{ stdout: string; stderr: string }> {
+  if (isRunningInFlatpak()) {
+    return execAsync(`flatpak-spawn --host ${command}`);
+  }
+  return execAsync(command);
+}
+
+/**
+ * Spawn a process on the host system when running inside Flatpak
+ */
+function spawnOnHost(command: string, args: string[] = []): ChildProcess {
+  if (isRunningInFlatpak()) {
+    const child = spawn('flatpak-spawn', ['--host', command, ...args], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+    return child;
+  }
+
+  const child = spawn(command, args, {
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+  return child;
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -32,6 +75,8 @@ interface LaunchResult {
 function detectLinuxSteamType(): SteamInstallationType {
   const home = homedir();
 
+  // When running in Flatpak, we need to check the host filesystem
+  // The paths are still accessible via --filesystem permissions
   if (existsSync(`${home}/.var/app/com.valvesoftware.Steam`)) {
     return 'flatpak';
   }
@@ -40,11 +85,26 @@ function detectLinuxSteamType(): SteamInstallationType {
     return 'snap';
   }
 
-  // Check if native steam command exists
+  // Check if native steam command exists on host
   try {
-    execSync('which steam', { stdio: 'ignore' });
+    if (isRunningInFlatpak()) {
+      execSync('flatpak-spawn --host which steam', { stdio: 'ignore' });
+    } else {
+      execSync('which steam', { stdio: 'ignore' });
+    }
     return 'native';
   } catch {
+    // If we're in Flatpak and can't find native steam, check if Flatpak Steam is installed
+    if (isRunningInFlatpak()) {
+      try {
+        execSync('flatpak-spawn --host flatpak info com.valvesoftware.Steam', {
+          stdio: 'ignore',
+        });
+        return 'flatpak';
+      } catch {
+        // Flatpak Steam not installed
+      }
+    }
     return 'unknown';
   }
 }
@@ -61,10 +121,12 @@ async function isSteamRunning(): Promise<boolean> {
     if (isWindows()) {
       await execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe');
       return true;
-    } if (isLinux()) {
-      await execAsync('pgrep -x steam');
+    }
+    if (isLinux()) {
+      await execOnHost('pgrep -x steam');
       return true;
-    } if (isMacOS()) {
+    }
+    if (isMacOS()) {
       await execAsync('pgrep -x Steam');
       return true;
     }
@@ -103,10 +165,9 @@ async function shutdownSteam(): Promise<void> {
   console.log('[Steam] Shutting down Steam...');
 
   if (isWindows()) {
-    // Windows: taskkill
-    await execAsync('taskkill /IM steam.exe').catch(() => 
-      // If graceful fails, force kill
-       execAsync('taskkill /F /IM steam.exe').catch(() => void 0)
+    // Windows: taskkill - if graceful fails, force kill
+    await execAsync('taskkill /IM steam.exe').catch(() =>
+      execAsync('taskkill /F /IM steam.exe').catch(() => void 0)
     );
   } else if (isLinux()) {
     // Linux: try steam -shutdown first (graceful), then pkill
@@ -114,19 +175,21 @@ async function shutdownSteam(): Promise<void> {
 
     try {
       if (steamType === 'flatpak') {
-        await execAsync('flatpak run com.valvesoftware.Steam -shutdown');
+        await execOnHost('flatpak run com.valvesoftware.Steam -shutdown');
       } else if (steamType === 'snap') {
-        await execAsync('snap run steam -shutdown');
+        await execOnHost('snap run steam -shutdown');
       } else {
-        await execAsync('steam -shutdown');
+        await execOnHost('steam -shutdown');
       }
     } catch {
       console.log('[Steam] Graceful shutdown failed, using pkill...');
-      await execAsync('pkill -TERM steam').catch(() => void 0);
+      await execOnHost('pkill -TERM steam').catch(() => void 0);
     }
   } else if (isMacOS()) {
     // macOS: osascript for graceful quit, then pkill
-    await execAsync('osascript -e \'quit app "Steam"\'').catch(() => execAsync('pkill -TERM Steam').catch(() => void 0));
+    await execAsync('osascript -e \'quit app "Steam"\'').catch(() =>
+      execAsync('pkill -TERM Steam').catch(() => void 0)
+    );
   }
 
   // Wait for process to exit
@@ -136,7 +199,7 @@ async function shutdownSteam(): Promise<void> {
     if (isWindows()) {
       await execAsync('taskkill /F /IM steam.exe').catch(() => void 0);
     } else {
-      await execAsync('pkill -9 steam').catch(() => void 0);
+      await execOnHost('pkill -9 steam').catch(() => void 0);
     }
     await waitForSteamExit(3000);
   }
@@ -149,48 +212,38 @@ async function shutdownSteam(): Promise<void> {
 // ============================================================================
 
 /**
- * Spawn a detached process that won't block the app
- */
-function spawnDetached(command: string, args: string[] = []): ChildProcess {
-  const child = spawn(command, args, {
-    detached: true,
-    stdio: 'ignore',
-  });
-  child.unref();
-  return child;
-}
-
-/**
  * Launch Steam with optional URL (e.g., steam://rungameid/123)
  */
 function launchSteamLinux(url?: string): boolean {
   const steamType = detectLinuxSteamType();
   const args = url ? [url] : [];
 
-  console.log(`[Steam] Launching Steam (${steamType})${url ? ` with URL: ${url}` : ''}`);
+  console.log(
+    `[Steam] Launching Steam (${steamType})${url ? ` with URL: ${url}` : ''}${isRunningInFlatpak() ? ' [from Flatpak]' : ''}`
+  );
 
   try {
     switch (steamType) {
       case 'flatpak':
-        spawnDetached('flatpak', ['run', 'com.valvesoftware.Steam', ...args]);
+        spawnOnHost('flatpak', ['run', 'com.valvesoftware.Steam', ...args]);
         return true;
 
       case 'snap':
-        spawnDetached('snap', ['run', 'steam', ...args]);
+        spawnOnHost('snap', ['run', 'steam', ...args]);
         return true;
 
       case 'native':
-        spawnDetached('steam', args);
+        spawnOnHost('steam', args);
         return true;
 
       default:
         // Try native first, then xdg-open as fallback
         try {
-          spawnDetached('steam', args);
+          spawnOnHost('steam', args);
           return true;
         } catch {
           if (url) {
-            spawnDetached('xdg-open', [url]);
+            spawnOnHost('xdg-open', [url]);
             return true;
           }
         }

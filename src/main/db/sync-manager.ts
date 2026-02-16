@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
+import { createTimer } from '../utils/logger';
 import { getDatabase } from './database';
+import { dbWorkerClient } from './db-worker-client';
 import { GamesRepository } from './games-repository';
 
 /**
@@ -47,6 +49,7 @@ export class SyncManager {
 
   /**
    * Повний sync - завантажити всі ігри з Supabase та видалити видалені
+   * Використовує Worker Thread для batch операцій щоб не блокувати main thread
    */
   async fullSync(
     fetchAllGames: () => Promise<Game[]>,
@@ -61,13 +64,22 @@ export class SyncManager {
     console.log('[SyncManager] Starting full sync...');
 
     try {
+      // Ініціалізувати worker перед використанням
+      const workerTimer = createTimer('Worker initialization');
+      await dbWorkerClient.init();
+      workerTimer.end();
+
+      const fetchTimer = createTimer('Fetch games from Supabase');
       const games = await fetchAllGames();
+      fetchTimer.end();
       console.log(`[SyncManager] Fetched ${games.length} games from Supabase`);
 
-      // Batch upsert для продуктивності
+      // Batch upsert через Worker Thread (не блокує main thread)
       if (games.length > 0) {
-        this.gamesRepo.upsertGames(games);
-        console.log(`[SyncManager] Inserted/updated ${games.length} games`);
+        const upsertTimer = createTimer(`Upsert ${games.length} games via worker`);
+        await dbWorkerClient.upsertGames(games);
+        upsertTimer.end();
+        console.log(`[SyncManager] Inserted/updated ${games.length} games via worker`);
       }
 
       // Видалити ігри, які є в deleted_games
@@ -77,9 +89,9 @@ export class SyncManager {
           console.log(
             `[SyncManager] Deleting ${deletedIds.length} games from deleted_games table`
           );
-          for (const gameId of deletedIds) {
-            this.gamesRepo.deleteGame(gameId);
-          }
+          const deleteTimer = createTimer(`Delete ${deletedIds.length} games`);
+          await dbWorkerClient.deleteGames(deletedIds);
+          deleteTimer.end();
         }
       }
 
@@ -97,6 +109,7 @@ export class SyncManager {
 
   /**
    * Delta sync - завантажити тільки оновлені ігри та видалити видалені
+   * Використовує Worker Thread для batch операцій щоб не блокувати main thread
    */
   async deltaSync(
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
@@ -110,6 +123,9 @@ export class SyncManager {
     this.isSyncing = true;
 
     try {
+      // Ініціалізувати worker перед використанням
+      await dbWorkerClient.init();
+
       const lastSync = this.getLastSyncTimestamp();
 
       if (!lastSync) {
@@ -124,9 +140,10 @@ export class SyncManager {
         `[SyncManager] Fetched ${updatedGames.length} updated games from Supabase`
       );
 
+      // Upsert через Worker Thread (не блокує main thread)
       if (updatedGames.length > 0) {
-        this.gamesRepo.upsertGames(updatedGames);
-        console.log(`[SyncManager] Updated ${updatedGames.length} games`);
+        await dbWorkerClient.upsertGames(updatedGames);
+        console.log(`[SyncManager] Updated ${updatedGames.length} games via worker`);
       }
 
       // Видалити ігри, які були видалені на сервері
@@ -136,9 +153,7 @@ export class SyncManager {
           console.log(
             `[SyncManager] Deleting ${deletedIds.length} games removed from server`
           );
-          for (const gameId of deletedIds) {
-            this.gamesRepo.deleteGame(gameId);
-          }
+          await dbWorkerClient.deleteGames(deletedIds);
         }
       }
 

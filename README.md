@@ -58,23 +58,51 @@ Microsoft вимагає, щоб програми були підписані ц
 [![macOS Intel](https://img.shields.io/badge/Intel-завантажити-9333ea?logo=apple&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-1.19.4-x64.dmg)
 
 ### Linux
+[![Flatpak](https://img.shields.io/badge/Flatpak-встановити-22c55e?logo=flatpak&logoColor=white)](https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref)
 [![Linux AppImage](https://img.shields.io/badge/AppImage-завантажити-10b981?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.AppImage)
 [![Linux RPM](https://img.shields.io/badge/RPM-завантажити-059669?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.rpm)
 
+<details>
+<summary>📖 Встановлення через Flatpak</summary>
+
+**Найпростіший спосіб встановлення.** Відкрийте [посилання на flatpakref](https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref) — система запропонує встановити застосунок автоматично.
+
+Або через термінал:
+```bash
+flatpak install --user https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref
+```
+
+</details>
+
 ### Steam Deck
-[![Steam Deck](https://img.shields.io/badge/Steam_Deck-завантажити-1a9fff?logo=steam&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.AppImage)
+[![Steam Deck Flatpak](https://img.shields.io/badge/Flatpak_(рекомендовано)-встановити-22c55e?logo=steam&logoColor=white)](https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref)
+[![Steam Deck AppImage](https://img.shields.io/badge/AppImage-завантажити-1a9fff?logo=steam&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.AppImage)
 
 <details>
 <summary>📖 Інструкція з встановлення на Steam Deck</summary>
 
-**1. Завантаження**
+**Спосіб 1: Flatpak (рекомендовано)**
+
+Найпростіший спосіб — встановити через Flatpak:
+1. Перейди в **Desktop Mode** (утримуй кнопку живлення → Switch to Desktop)
+2. Відкрий **Firefox** і перейди за [посиланням на flatpakref](https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref)
+3. Система автоматично відкриє **Discover** і запропонує встановити LBK Launcher
+4. Натисни **«Install»** і дочекайся завершення
+
+Або через термінал (Konsole):
+```bash
+flatpak install --user https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref
+```
+
+---
+
+**Спосіб 2: AppImage**
 
 1. Перейди в **Desktop Mode** (утримуй кнопку живлення → Switch to Desktop)
 2. Відкрий браузер і завантаж **AppImage** файл з посилання вище
 3. Файл з'явиться в папці `~/Downloads`
 
-**2. Дозвіл на виконання**
-
+*Дозвіл на виконання:*
 1. Відкрий файловий менеджер **Dolphin**
 2. Перейди до папки `Downloads`
 3. Клацни правою кнопкою миші на файл `LBK-Launcher-linux.AppImage`
@@ -83,15 +111,16 @@ Microsoft вимагає, щоб програми були підписані ц
 6. Постав галочку **«Execute: Allow executing file as program»** (Є виконуваним)
 7. Натисни **«OK»**
 
-**3. Додавання до Steam (для запуску в Gaming Mode)**
+---
+
+**Додавання до Steam (для запуску в Gaming Mode)**
 
 1. Відкрий **Steam** в Desktop Mode
 2. Натисни **«Додати гру»** (Add a Game) → **«Додати гру не зі Steam»** (Add a Non-Steam Game)
-3. Натисни **«Огляд»** (Browse) і перейди до папки `Downloads`
-4. Обери файл `LBK-Launcher-linux.AppImage`
-5. Натисни **«Додати вибрані програми»** (Add Selected Programs)
+3. Натисни **«Огляд»** (Browse) і знайди LBK Launcher
+4. Натисни **«Додати вибрані програми»** (Add Selected Programs)
 
-**4. Налаштування контролера (опціонально)**
+**Налаштування контролера (опціонально)**
 LBK Launcher підтримує навігацію геймпадом! Режим навігації ввімкнеться автоматично при натиску на любу кнопку геймпаду.
 > 💡 Тепер можеш запускати LBK Launcher прямо з Gaming Mode!
 

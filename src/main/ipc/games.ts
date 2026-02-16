@@ -19,6 +19,7 @@ import {
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 
@@ -39,20 +40,24 @@ export function setupGamesHandlers(): void {
   // Track subscription (subscribe/unsubscribe) from renderer
   ipcMain.handle(
     'track-subscription',
-(_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
+    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
       trackSubscription(gameId, action)
   );
 
   // Track support click
-  ipcMain.handle('track-support-click', (_, gameId: string) =>
+  ipcMain.handle('track-support-click', async (_, gameId: string) =>
     trackSupportClick(gameId)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
   ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {
+    const timer = createTimer('IPC: fetch-games');
     try {
-      return fetchGames(params);
+      const result = fetchGames(params);
+      timer.end();
+      return result;
     } catch (error) {
+      timer.end();
       console.error('Error fetching games:', error);
       return { games: [], total: 0, hasMore: false };
     }
@@ -108,7 +113,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Sync Kurin installed games data
-  ipcMain.handle('sync-kurin-games', () => {
+  ipcMain.handle('sync-kurin-games', async () => {
     try {
       return syncKurinGames();
     } catch (error) {
@@ -118,29 +123,36 @@ export function setupGamesHandlers(): void {
   });
 
   // Get all installed game paths from the system
-  ipcMain.handle('get-all-installed-game-paths', () => {
+  ipcMain.handle('get-all-installed-game-paths', async () => {
+    const timer = createTimer('IPC: get-all-installed-game-paths');
     try {
-      return getAllInstalledGamePaths();
+      const result = getAllInstalledGamePaths();
+      timer.end();
+      return result;
     } catch (error) {
+      timer.end();
       console.error('Error getting installed game paths:', error);
       return [];
     }
   });
 
   // Get all installed Steam games
-  ipcMain.handle('get-all-installed-steam-games', () => {
+  ipcMain.handle('get-all-installed-steam-games', async () => {
+    const timer = createTimer('IPC: get-all-installed-steam-games');
     try {
       const steamGames = getAllInstalledSteamGames();
       // Convert Map to Object for IPC
+      timer.end();
       return Object.fromEntries(steamGames);
     } catch (error) {
+      timer.end();
       console.error('Error getting installed Steam games:', error);
       return {};
     }
   });
 
   // Get all installed Protons
-  ipcMain.handle('get-available-protons', () => {
+  ipcMain.handle('get-available-protons', async () => {
     try {
       return findProtons();
     } catch (error) {
@@ -164,9 +176,13 @@ export function setupGamesHandlers(): void {
 
   // Get Steam library App IDs (owned games, installed or not)
   ipcMain.handle('get-steam-library-app-ids', async () => {
+    const timer = createTimer('IPC: get-steam-library-app-ids');
     try {
-      return await getSteamLibraryAppIds();
+      const result = await getSteamLibraryAppIds();
+      timer.end();
+      return result;
     } catch (error) {
+      timer.end();
       console.error('Error getting Steam library App IDs:', error);
       return [];
     }

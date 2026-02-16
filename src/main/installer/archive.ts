@@ -37,6 +37,17 @@ function getResourcesBased7zPath(): string {
 }
 
 /**
+ * Get clean environment without Steam's LD_PRELOAD
+ * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
+ */
+function getCleanEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
+  delete env.LD_PRELOAD;
+  return env;
+}
+
+/**
  * Check if system 7z is available (for Linux/Steam Deck compatibility)
  */
 function getSystem7zPath(): string | null {
@@ -49,6 +60,7 @@ function getSystem7zPath(): string | null {
         const result = execSync(`which ${cmd}`, {
           encoding: 'utf-8',
           timeout: 5000,
+          env: getCleanEnv(),
         }).trim();
         if (result) {
           console.log(`[7z] Found system 7z: ${result}`);
@@ -58,7 +70,7 @@ function getSystem7zPath(): string | null {
         // Command not found, try next
       }
     }
-  } catch (error) {
+  } catch {
     console.log('[7z] No system 7z found');
   }
   return null;
@@ -86,6 +98,17 @@ function get7zPath(): string {
 
   console.error(`[7z] 7z binary not found at: ${resourcesPath}`);
   throw new Error(`7z binary not found: ${resourcesPath}`);
+}
+
+/**
+ * Check if error is just a Steam Deck LD_PRELOAD warning (not a real error)
+ */
+function isLdPreloadWarning(errorMessage: string, stderr?: string): boolean {
+  const text = `${errorMessage} ${stderr || ''}`.toLowerCase();
+  return (
+    (text.includes('ld_preload') || text.includes('wrong elf class')) &&
+    text.includes('ignored')
+  );
 }
 
 /**
@@ -117,6 +140,7 @@ export async function extractArchive(
     const stream = extractFull(archivePath, extractPath, {
       $bin: path7z,
       $progress: true,
+      $spawnOptions: isLinux() ? { env: getCleanEnv() } : undefined,
     });
 
     stream.on('data', (data: { file?: string }) => {
@@ -140,8 +164,18 @@ export async function extractArchive(
       resolve();
     });
 
-    stream.on('error', (err: Error) => {
+    stream.on('error', (err: Error & { stderr?: string }) => {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      const stderr = err.stderr || '';
+
+      // Ignore LD_PRELOAD warnings from Steam Deck (not a real error)
+      if (isLdPreloadWarning(errorMessage, stderr)) {
+        console.log(
+          `[Installer] Ignoring LD_PRELOAD warning (Steam Deck): ${errorMessage}`
+        );
+        return;
+      }
+
       console.error(`[Installer] extractArchive failed:`, {
         message: errorMessage,
         archivePath,

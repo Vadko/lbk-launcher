@@ -154,16 +154,15 @@ export const App: React.FC = () => {
     clearSteamGamesCache,
     clearDetectedGamesCache,
     setSelectedGame,
+    syncStatus,
+    setSyncStatus,
   } = useStore();
-  const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
+  const { animationsEnabled, autoDetectInstalledGames, liquidGlassEnabled } =
     useSettingsStore();
   const { isGamepadMode, setGamepadMode, navigationArea } = useGamepadModeStore();
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'loading' | 'syncing' | 'ready' | 'error'>(
-    'loading'
-  );
   const [showLoader, setShowLoader] = useState(true);
 
   // Підписка на real-time оновлення ігор
@@ -232,7 +231,7 @@ export const App: React.FC = () => {
       unsubscribe();
       if (hideTimeout) clearTimeout(hideTimeout);
     };
-  }, []);
+  }, [setSyncStatus]);
 
   // Відстеження першого запуску додатку
   useEffect(() => {
@@ -331,32 +330,6 @@ export const App: React.FC = () => {
 
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
-
-  // Apply theme
-  useEffect(() => {
-    const root = document.documentElement;
-
-    if (theme === 'system') {
-      // Detect system preference
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const appliedTheme = isDark ? 'dark' : 'light';
-      root.setAttribute('data-theme', appliedTheme);
-      console.log('[Theme] Applied system theme:', appliedTheme);
-
-      // Listen for changes in system theme
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = (e: MediaQueryListEvent) => {
-        const newTheme = e.matches ? 'dark' : 'light';
-        root.setAttribute('data-theme', newTheme);
-        console.log('[Theme] System theme changed to:', newTheme);
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    root.setAttribute('data-theme', theme);
-    console.log('[Theme] Applied theme:', theme);
-  }, [theme]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -502,6 +475,13 @@ export const App: React.FC = () => {
         {isGamepadMode ? (
           /* Gamepad layout: Header + Games strip on top, MainContent below */
           <div className="flex flex-col h-full pt-8 relative z-10">
+            {/* Background image */}
+            <img
+              src={mainBg}
+              alt=""
+              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+              aria-hidden="true"
+            />
             {/* Sidebar - hides when in main-content mode */}
             <div
               className={`transition-all duration-300 ease-in-out relative z-20 ${

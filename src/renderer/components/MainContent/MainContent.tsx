@@ -5,17 +5,14 @@ import {
   Play,
   RefreshCw,
   Settings,
-  Star,
   Trash2,
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import type { LaunchGameResult } from '../../../shared/types';
-import {
-  getSpecialTranslatorInfo,
-  isSpecialTranslator,
-} from '../../constants/specialTranslators';
+import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { useInstallation } from '../../hooks/useInstallation';
+import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
@@ -25,7 +22,7 @@ import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
-import { Tooltip } from '../ui/Tooltip';
+import { AuthorsList } from './AuthorsList';
 import { DownloadProgressCard } from './DownloadProgressCard';
 import { FundraisingProgressCard } from './FundraisingProgressCard';
 import { GameHero } from './GameHero';
@@ -213,7 +210,10 @@ export const MainContent: React.FC = () => {
 
   if (!selectedGame) {
     return (
-      <div className="flex-1 grid items-center px-8 overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]">
+      <div
+        data-gamepad-main-content
+        className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'pb-3'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
+      >
         <div className="grid grid-rows-auto gap-10 h-auto">
           <GamesSection title="Новинки" sortOrder="newest" />
           <GamesSection
@@ -422,32 +422,7 @@ export const MainContent: React.FC = () => {
                       ? 'Автори локалізації'
                       : 'Автор локалізації'}
                   </div>
-                  <div className="font-medium text-text-main">
-                    {selectedGame.team.split(',').map((author, index, arr) => {
-                      const trimmedAuthor = author.trim();
-                      const specialInfo = getSpecialTranslatorInfo(trimmedAuthor);
-                      const isSpecial = specialInfo !== null;
-
-                      return (
-                        <span key={trimmedAuthor}>
-                          <span className={isSpecial ? 'text-yellow-400' : ''}>
-                            {trimmedAuthor}
-                            {isSpecial && specialInfo && (
-                              <Tooltip content={specialInfo.description}>
-                                <Star
-                                  size={12}
-                                  className="ml-1 fill-yellow-400 text-yellow-400 cursor-help"
-                                />
-                              </Tooltip>
-                            )}
-                          </span>
-                          {index < arr.length - 1 && (
-                            <span className="text-text-main">, </span>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
+                  <AuthorsList team={selectedGame.team} maxVisible={3} />
                 </div>
               </div>
               <TeamSubscribeButton teamName={selectedGame.team} data-gamepad-action />

@@ -7,10 +7,9 @@ import { saveInstallationInfo } from '../installer/cache';
 
 const KURIN_INSTALL_DATA_PATH = path.join(
   process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'),
-  'Kurin',
+  'Kurin’',
   'installData.json'
 );
-const KURIN_INSTALL_DATA = fs.readFileSync(KURIN_INSTALL_DATA_PATH);
 const KURIN_KEY = import.meta.env.VITE_KURIN_KEY;
 
 type KurinInstalledData = {
@@ -38,6 +37,11 @@ type KurinInstalledData = {
 
 function decryptStore() {
   try {
+    if (!fs.existsSync(KURIN_INSTALL_DATA_PATH)) {
+      return '{"games":{}}';
+    }
+
+    const KURIN_INSTALL_DATA = fs.readFileSync(KURIN_INSTALL_DATA_PATH);
     const iv = KURIN_INSTALL_DATA.subarray(0, 16);
     const encryptedData = KURIN_INSTALL_DATA.subarray(17);
     const password = crypto.pbkdf2Sync(KURIN_KEY, iv.toString(), 10000, 32, 'sha512');
@@ -113,9 +117,11 @@ export async function syncKurinGames() {
 
   if (gameIds.length === 0) {
     console.log('[kurin] No Kurin installed games found.');
-    return;
+    return [];
   }
   const games = fetchGamesByIds(gameIds, undefined, false, true);
+
+  const syncedGameNames: string[] = [];
 
   const syncedGames = games
     .map((game) => {
@@ -125,6 +131,9 @@ export async function syncKurinGames() {
           (team === game.team || team === 'Спільнота')
       );
       if (!kurinGame) return null;
+
+      syncedGameNames.push(`${game.name} (${game.team})`);
+
       return {
         gameId: game.id,
         version: game.version,
@@ -136,4 +145,6 @@ export async function syncKurinGames() {
   await createCacheFiles(syncedGames);
 
   console.log('Synced Kurin games data:', syncedGames);
+
+  return syncedGameNames;
 }
