@@ -423,4 +423,58 @@ export class GamesRepository {
       'with-voice': row.with_voice || 0,
     };
   }
+
+  /**
+   * Знайти ігри за списком назв (exact match, case-insensitive)
+   */
+  findGamesByTitles(
+    titles: string[],
+    searchQuery?: string,
+    hideAiTranslations = false
+  ): GetGamesResult {
+    if (titles.length === 0) {
+      return { games: [], total: 0 };
+    }
+
+    // Trim all titles to remove extra whitespace
+    const trimmedTitles = titles.map((t) => t.trim()).filter((t) => t.length > 0);
+
+    if (trimmedTitles.length === 0) {
+      return { games: [], total: 0 };
+    }
+
+    const whereConditions = ['approved = 1', 'hide = 0'];
+
+    // Create query with parameters for titles
+    const placeholders = trimmedTitles.map(() => '?').join(',');
+    whereConditions.push(`name COLLATE NOCASE IN (${placeholders})`);
+
+    const queryParams: (string | number)[] = [...trimmedTitles];
+
+    // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
+    }
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(
+        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+      );
+      queryParams.push(ftsQuery);
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT *
+      FROM games
+      WHERE ${whereConditions.join(' AND ')}
+      ORDER BY name COLLATE NOCASE ASC
+    `);
+
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const games = rows.map((row) => this.rowToGame(row));
+
+    return { games, total: games.length };
+  }
 }

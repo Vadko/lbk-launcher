@@ -9,16 +9,24 @@ import {
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
 } from '../api';
+import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
+  getEpicLibrary,
   getFirstAvailableGamePath,
+  getGOGGalaxyClientPath,
+  getGOGGameId,
+  getGogLibrary,
+  getHeroicEpicAppName,
+  getHeroicGOGId,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
 import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
@@ -211,6 +219,40 @@ export function setupGamesHandlers(): void {
     }
   });
 
+  // Get GOG library
+  ipcMain.handle('get-gog-library', () => {
+    try {
+      return getGogLibrary();
+    } catch (error) {
+      console.error('Error getting GOG library:', error);
+      return [];
+    }
+  });
+
+  // Find games by titles
+  ipcMain.handle(
+    'find-games-by-titles',
+    (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
+      try {
+        const repo = new GamesRepository();
+        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
+      } catch (error) {
+        console.error('Error finding games by titles:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
+
+  // Get Epic library
+  ipcMain.handle('get-epic-library', async () => {
+    try {
+      return getEpicLibrary();
+    } catch (error) {
+      console.error('Error getting Epic library:', error);
+      return [];
+    }
+  });
+
   // Launch game
   ipcMain.handle('launch-game', async (_, game: Game) => {
     try {
@@ -249,6 +291,52 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
+        }
+      }
+
+      // Heroic Games Launcher (Linux)
+      if (getPlatform() === 'linux') {
+        // Check for GOG game in Heroic
+        const heroicGogId = getHeroicGOGId(gamePath.path);
+        if (heroicGogId) {
+          const result = await launchHeroicGame(heroicGogId, 'gog');
+          if (result.success) return { success: true };
+        }
+
+        // Check for Epic game in Heroic
+        const heroicEpicAppName = getHeroicEpicAppName(gamePath.path);
+        if (heroicEpicAppName) {
+          const result = await launchHeroicGame(heroicEpicAppName, 'legendary');
+          if (result.success) return { success: true };
+        }
+      }
+
+      if (gamePath.platform === 'gog') {
+        // For GOG games, try to launch via GOG Galaxy client
+        const clientPath = getGOGGalaxyClientPath();
+        const gameId = getGOGGameId(gamePath.path);
+
+        if (clientPath && gameId) {
+          try {
+            const { spawn } = await import('child_process');
+            spawn(
+              clientPath,
+              ['/command=runGame', `/gameId=${gameId}`, `/path="${gamePath.path}"`],
+              {
+                detached: true,
+                stdio: 'ignore',
+              }
+            ).unref();
+
+            return { success: true };
+          } catch (error) {
+            console.error('[LaunchGame] Error launching GOG game via Galaxy:', error);
+            // Fall through to direct executable launch
+          }
+        } else {
+          console.warn(
+            '[LaunchGame] GOG Galaxy client or game ID not found, falling back to direct launch'
+          );
         }
       }
 
