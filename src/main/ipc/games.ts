@@ -220,7 +220,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Get GOG library
-  ipcMain.handle('get-gog-library', async () => {
+  ipcMain.handle('get-gog-library', () => {
     try {
       return getGogLibrary();
     } catch (error) {

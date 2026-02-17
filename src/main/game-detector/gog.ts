@@ -104,9 +104,9 @@ function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
       } catch {
         console.warn('[GOG] Could not query Galaxy database');
       }
+    } finally {
+      db.close();
     }
-
-    db.close();
   } catch (error) {
     console.warn('[GOG] Error reading Galaxy database:', error);
   }
