@@ -15,13 +15,6 @@ export function readStoreFile(key: string): string | null {
 }
 
 /**
- * Delete a key from the store (for clear-all-data scenarios).
- */
-export function deleteStoreFile(key: string): void {
-  store.delete(key);
-}
-
-/**
  * Clear all data from the store.
  */
 export function clearStore(): void {

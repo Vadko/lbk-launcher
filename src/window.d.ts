@@ -14,7 +14,6 @@ interface API {
   logError: (message: string, stack: string) => void;
   clearCacheOnly: () => Promise<{ success: boolean; error?: string }>;
   clearAllData: () => Promise<{ success: boolean; error?: string }>;
-  clearCache: () => Promise<{ success: boolean; error?: string }>; // Legacy
 }
 
 interface StoreStorageAPI {
@@ -40,6 +39,5 @@ interface Window {
       gameId?: string;
     }) => Promise<boolean>;
     onNavigateToGame: (callback: (gameId: string) => void) => () => void;
-    clearCacheAndRestart: () => Promise<{ success: boolean; error?: string }>;
   };
 }

@@ -187,7 +187,6 @@ contextBridge.exposeInMainWorld('windowControls', {
     ipcRenderer.on('navigate-to-game', handler);
     return () => ipcRenderer.removeListener('navigate-to-game', handler);
   },
-  clearCacheAndRestart: () => ipcRenderer.invoke('clear-cache-and-restart'),
 });
 
 // Liquid Glass API
@@ -210,8 +209,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.send('logger:log', 'error', message, [stack]),
   clearCacheOnly: () => ipcRenderer.invoke('clear-cache-only'),
   clearAllData: () => ipcRenderer.invoke('clear-all-data-and-restart'),
-  // Legacy - kept for backwards compatibility
-  clearCache: () => ipcRenderer.invoke('clear-all-data-and-restart'),
 });
 
 // Electron-store storage API (replaces localStorage for Zustand persist)
