@@ -211,7 +211,7 @@ if (!gotTheLock) {
       }
     };
 
-    // Запустити синхронізацію (вікно вже відкрите, показує лоадер)
+    // Запустити синхронізацію з retry та загальним таймаутом
     console.log('[Main] Starting sync with Supabase...');
     syncManager = new SyncManager();
 
