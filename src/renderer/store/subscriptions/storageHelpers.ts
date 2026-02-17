@@ -1,5 +1,5 @@
 import { createJSONStorage } from 'zustand/middleware';
-import { fileStorage } from '../fileStorage';
+import { electronStorage } from '../electronStorage';
 import type {
   GameProgress,
   PersistedSubscriptionsState,
@@ -11,7 +11,7 @@ import type {
  * Custom storage with Map/Set serialization
  */
 export const customStorage = createJSONStorage<PersistedSubscriptionsState>(
-  () => fileStorage,
+  () => electronStorage,
   {
     reviver: (_key, value: unknown) => {
       if (value && typeof value === 'object' && '__type' in value) {

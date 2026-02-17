@@ -13,7 +13,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { getLogFileDirectory, setSaveLogsEnabled } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
-import { deleteStoreFile } from '../utils/store-storage';
+import { clearStore } from '../utils/store-storage';
 import { getIcon } from '../utils/theme';
 import { getMainWindow } from '../window';
 
@@ -144,12 +144,12 @@ export function setupWindowControls(): void {
     }
   );
 
-  // Clear only cache (not localStorage) and restart
+  // Clear only cache (not electron-store) and restart
   ipcMain.handle('clear-cache-only', async () => {
     try {
       console.log('[ClearCache] Clearing cache only and restarting...');
 
-      // Clear only cache and temporary data (NOT localStorage)
+      // Clear only cache and temporary data (NOT electron-store)
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
         storages: ['cookies', 'filesystem', 'shadercache', 'cachestorage'],
@@ -172,12 +172,12 @@ export function setupWindowControls(): void {
     }
   });
 
-  // Clear ALL data (including localStorage) and restart
+  // Clear ALL data (including electron-store) and restart
   ipcMain.handle('clear-all-data-and-restart', async () => {
     try {
       console.log('[ClearAllData] Clearing ALL data and restarting...');
 
-      // Clear all session data (cache, storage, cookies, localStorage, etc.)
+      // Clear all session data (cache, storage, cookies, etc.)
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
         storages: [
@@ -192,10 +192,8 @@ export function setupWindowControls(): void {
         ],
       });
 
-      // Delete file-based store data
-      deleteStoreFile('lbk-settings');
-      deleteStoreFile('subscriptions-storage');
-      deleteStoreFile('has-launched-before');
+      // Clear electron-store data
+      clearStore();
 
       // Close database first
       closeDatabase();
@@ -234,10 +232,8 @@ export function setupWindowControls(): void {
         ],
       });
 
-      // Delete file-based store data
-      deleteStoreFile('lbk-settings');
-      deleteStoreFile('subscriptions-storage');
-      deleteStoreFile('has-launched-before');
+      // Clear electron-store data
+      clearStore();
 
       // Close database first
       closeDatabase();

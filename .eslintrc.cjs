@@ -48,7 +48,7 @@ module.exports = {
       'error',
       {
         name: 'localStorage',
-        message: 'Use fileStorage (window.storeStorage) instead of localStorage. See src/renderer/store/fileStorage.ts.',
+        message: 'Use electron-store via window.storeStorage instead of localStorage. See src/renderer/store/electronStorage.ts.',
       },
     ],
 

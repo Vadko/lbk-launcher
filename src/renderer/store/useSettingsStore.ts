@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { SortOrderType, SpecialFilterType } from '../components/Sidebar/types';
-import { fileStorage } from './fileStorage';
+import { electronStorage } from './electronStorage';
 
 interface SettingsStore {
   sortOrder: SortOrderType;
@@ -116,7 +116,7 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'lbk-settings',
-      storage: createJSONStorage(() => fileStorage),
+      storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
         sortOrder: state.sortOrder,
         animationsEnabled: state.animationsEnabled,

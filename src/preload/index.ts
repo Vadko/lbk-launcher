@@ -214,7 +214,7 @@ contextBridge.exposeInMainWorld('api', {
   clearCache: () => ipcRenderer.invoke('clear-all-data-and-restart'),
 });
 
-// File-based store storage API (replaces localStorage for Zustand persist)
+// Electron-store storage API (replaces localStorage for Zustand persist)
 contextBridge.exposeInMainWorld('storeStorage', {
   getItem: (key: string): string | null => ipcRenderer.sendSync('store-storage:get', key),
   setItem: (key: string, value: string): void => {
