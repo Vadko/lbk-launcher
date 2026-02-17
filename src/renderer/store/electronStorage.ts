@@ -21,20 +21,18 @@ export const electronStorage: StateStorage = {
 // One-time migration from localStorage to electron-store.
 // Runs at module import time, before any Zustand store calls getItem.
 /* eslint-disable no-restricted-globals -- intentional: migrating data FROM localStorage */
+const MIGRATION_KEY = '__migration-v1-done';
+
 (function migrateFromLocalStorage() {
+  if (window.storeStorage.getItem(MIGRATION_KEY) !== null) return;
+
   const keysToMigrate = ['lbk-settings', 'subscriptions-storage', 'has-launched-before'];
 
   for (const key of keysToMigrate) {
     try {
-      // Skip if electron-store already has data for this key
-      const existingData = window.storeStorage.getItem(key);
-      if (existingData !== null) continue;
-
-      // Read from localStorage
       const localData = localStorage.getItem(key);
       if (localData === null) continue;
 
-      // Write to electron-store and clean up localStorage
       window.storeStorage.setItem(key, localData);
       localStorage.removeItem(key);
 
@@ -43,5 +41,7 @@ export const electronStorage: StateStorage = {
       console.error(`[Migration] Failed to migrate "${key}":`, error);
     }
   }
+
+  window.storeStorage.setItem(MIGRATION_KEY, '1');
 })();
 /* eslint-enable no-restricted-globals */

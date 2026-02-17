@@ -27,7 +27,7 @@ importers:
         specifier: ^3.2.1
         version: 3.2.1
       electron-store:
-        specifier: '8'
+        specifier: 8.2.0
         version: 8.2.0
       electron-updater:
         specifier: 6.6.2
