@@ -10,10 +10,10 @@ import { getSupabaseCredentials } from './supabase-credentials';
 /** Timeout для запитів до Supabase REST API */
 const REQUEST_TIMEOUT = {
   lookup: 5000,
-  connect: 5000,
-  secureConnect: 5000,
-  socket: 15_000,
-  response: 15_000,
+  connect: 10_000,
+  secureConnect: 10_000,
+  socket: 30_000,
+  response: 30_000,
 };
 
 /**
@@ -123,7 +123,7 @@ function supabaseRequest<T>(
  */
 export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
   const allGames: Game[] = [];
-  const pageSize = 1000;
+  const pageSize = 100;
   let offset = 0;
   let hasMore = true;
 
@@ -156,7 +156,7 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
  */
 export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game[]> {
   const allGames: Game[] = [];
-  const pageSize = 1000;
+  const pageSize = 100;
   let offset = 0;
   let hasMore = true;
 

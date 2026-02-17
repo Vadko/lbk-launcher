@@ -226,14 +226,15 @@ if (!gotTheLock) {
       sendSyncStatus('ready');
     } catch (error) {
       const code = (error as { code?: string }).code;
-      const isNetwork = ['ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'].includes(
-        code ?? ''
-      );
+      const hint: Record<string, string> = {
+        ETIMEDOUT: 'Slow or unstable connection — data transfer timed out',
+        ECONNRESET: 'Connection dropped — unstable network',
+        ECONNREFUSED: 'Server unreachable — check firewall or proxy',
+        ENOTFOUND: 'DNS resolution failed — check internet connection',
+      };
       console.error(
         `[Main] Sync failed${code ? ` (${code})` : ''}:`,
-        isNetwork
-          ? 'Network unreachable — check firewall, proxy, or internet connection'
-          : error
+        (code && hint[code]) || error
       );
       sendSyncStatus('error');
     }
