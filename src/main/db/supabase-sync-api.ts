@@ -1,11 +1,20 @@
+import got from 'got';
 import type { Game } from '../../shared/types';
 import { getSupabaseCredentials } from './supabase-credentials';
 
 /**
  * API для синхронізації з Supabase через REST API
  * Цей модуль викликається ТІЛЬКИ в main process
- * Використовує fetch замість Supabase client для уникнення проблем з ESM/CommonJS
  */
+
+/** Timeout для запитів до Supabase REST API */
+const REQUEST_TIMEOUT = {
+  lookup: 5000,
+  connect: 5000,
+  secureConnect: 5000,
+  socket: 15_000,
+  response: 15_000,
+};
 
 /**
  * Поля, які НЕ потрібно завантажувати (великі file_list та FTS поля)
@@ -87,7 +96,7 @@ const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
 /**
  * Виконати запит до Supabase REST API
  */
-async function supabaseRequest<T>(
+function supabaseRequest<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T[]> {
@@ -97,20 +106,16 @@ async function supabaseRequest<T>(
     url.searchParams.append(key, value);
   });
 
-  const response = await fetch(url.toString(), {
+  return got(url.toString(), {
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Supabase request failed: ${response.status} ${response.statusText}`);
-  }
-
-  return response.json();
+    timeout: REQUEST_TIMEOUT,
+    retry: { limit: 3 },
+  }).json<T[]>();
 }
 
 /**
@@ -222,22 +227,24 @@ export async function fetchTrendingGames(days = 30, limit = 10): Promise<Trendin
 
   console.log(`[SupabaseSync] Fetching trending games for last ${days} days`);
 
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_trending_games`, {
-    method: 'POST',
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ p_days: days, p_limit: limit }),
-  });
+  try {
+    const data = await got
+      .post(`${SUPABASE_URL}/rest/v1/rpc/get_trending_games`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        json: { p_days: days, p_limit: limit },
+        timeout: REQUEST_TIMEOUT,
+        retry: { limit: 3 },
+      })
+      .json<TrendingGame[]>();
 
-  if (!response.ok) {
-    console.error(`[SupabaseSync] Failed to fetch trending games: ${response.status}`);
+    console.log(`[SupabaseSync] Fetched ${data.length} trending games`);
+    return data;
+  } catch (error) {
+    console.error('[SupabaseSync] Failed to fetch trending games:', error);
     return [];
   }
-
-  const data: TrendingGame[] = await response.json();
-  console.log(`[SupabaseSync] Fetched ${data.length} trending games`);
-  return data;
 }

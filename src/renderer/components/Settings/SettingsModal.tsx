@@ -67,9 +67,6 @@ export const SettingsModal: React.FC = () => {
   );
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const toggleLiquidGlass = useSettingsStore((state) => state.toggleLiquidGlass);
-  // Logging settings
-  const saveLogsToFile = useSettingsStore((state) => state.saveLogsToFile);
-  const toggleSaveLogsToFile = useSettingsStore((state) => state.toggleSaveLogsToFile);
   // Sound settings
   const notificationSoundsEnabled = useSettingsStore(
     (state) => state.notificationSoundsEnabled
@@ -126,12 +123,6 @@ export const SettingsModal: React.FC = () => {
   const handleClearAllData = useCallback(async () => {
     await window.api?.clearAllData();
   }, []);
-
-  const handleToggleSaveLogsToFile = useCallback(async () => {
-    const newValue = !saveLogsToFile;
-    toggleSaveLogsToFile();
-    await window.loggerAPI?.setEnabled(newValue);
-  }, [saveLogsToFile, toggleSaveLogsToFile]);
 
   const handleOpenLogsFolder = useCallback(async () => {
     await window.loggerAPI?.openLogsFolder();
@@ -385,32 +376,21 @@ export const SettingsModal: React.FC = () => {
             </div>
           )}
 
-          {/* Logging settings */}
-          <SettingItem
-            id="save-logs"
-            title="Зберігати логи"
-            description="Записувати всі логи у файл для діагностики"
-            enabled={saveLogsToFile}
-            onChange={handleToggleSaveLogsToFile}
-          />
-          {saveLogsToFile && (
-            <button
-              onClick={handleOpenLogsFolder}
-              className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
-            >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-                <FolderOpen size={20} className="text-white" />
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="text-sm font-semibold text-text-main">
-                  Відкрити папку з логами
-                </h4>
-                <p className="text-xs text-text-muted">
-                  Переглянути збережені файли логів
-                </p>
-              </div>
-            </button>
-          )}
+          {/* Logging */}
+          <button
+            onClick={handleOpenLogsFolder}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+              <FolderOpen size={20} className="text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-semibold text-text-main">
+                Відкрити папку з логами
+              </h4>
+              <p className="text-xs text-text-muted">Переглянути збережені файли логів</p>
+            </div>
+          </button>
 
           {/* Legal section */}
           <div className="grid grid-cols-2 gap-3">
