@@ -225,7 +225,16 @@ if (!gotTheLock) {
       console.log('[Main] Initial sync completed');
       sendSyncStatus('ready');
     } catch (error) {
-      console.error('[Main] Error during initial sync:', error);
+      const code = (error as { code?: string }).code;
+      const isNetwork = ['ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET'].includes(
+        code ?? ''
+      );
+      console.error(
+        `[Main] Sync failed${code ? ` (${code})` : ''}:`,
+        isNetwork
+          ? 'Network unreachable — check firewall, proxy, or internet connection'
+          : error
+      );
       sendSyncStatus('error');
     }
 

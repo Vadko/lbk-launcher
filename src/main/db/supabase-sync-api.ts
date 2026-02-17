@@ -12,6 +12,7 @@ const REQUEST_TIMEOUT = {
   lookup: 5000,
   connect: 5000,
   secureConnect: 5000,
+  socket: 15_000,
   response: 15_000,
 };
 

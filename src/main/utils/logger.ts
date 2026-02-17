@@ -43,6 +43,9 @@ function formatMessage(level: string, message: string, ...args: unknown[]): stri
     args.length > 0
       ? ` ${args
           .map((arg) => {
+            if (arg instanceof Error) {
+              return `${arg.message}${arg.stack ? `\n${arg.stack}` : ''}`;
+            }
             if (typeof arg === 'object') {
               try {
                 return JSON.stringify(arg);
