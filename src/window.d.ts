@@ -13,13 +13,19 @@ interface API {
   logError: (message: string, stack: string) => void;
   clearCacheOnly: () => Promise<{ success: boolean; error?: string }>;
   clearAllData: () => Promise<{ success: boolean; error?: string }>;
-  clearCache: () => Promise<{ success: boolean; error?: string }>; // Legacy
+}
+
+interface StoreStorageAPI {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
 }
 
 interface Window {
   liquidGlassAPI: LiquidGlassAPI;
   loggerAPI: LoggerAPI;
   api: API;
+  storeStorage: StoreStorageAPI;
   windowControls: {
     minimize: () => void;
     maximize: () => void;
@@ -32,6 +38,5 @@ interface Window {
       gameId?: string;
     }) => Promise<boolean>;
     onNavigateToGame: (callback: (gameId: string) => void) => () => void;
-    clearCacheAndRestart: () => Promise<{ success: boolean; error?: string }>;
   };
 }

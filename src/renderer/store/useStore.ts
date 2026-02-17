@@ -95,7 +95,7 @@ export const useStore = create<Store>((set, get) => ({
 
   // Installation State
   installedGames: new Map(),
-  detectedGames: new Map(), // Більше не кешується в localStorage
+  detectedGames: new Map(), // Не персиститься
   gamesWithUpdates: new Set(),
   installationProgress: new Map(),
   isCheckingInstallation: new Map(),

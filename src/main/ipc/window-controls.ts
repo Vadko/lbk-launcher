@@ -13,6 +13,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { getLogFileDirectory } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
+import { clearStore } from '../utils/store-storage';
 import { getIcon } from '../utils/theme';
 import { getMainWindow } from '../window';
 
@@ -143,12 +144,12 @@ export function setupWindowControls(): void {
     }
   );
 
-  // Clear only cache (not localStorage) and restart
+  // Clear only cache (not electron-store) and restart
   ipcMain.handle('clear-cache-only', async () => {
     try {
       console.log('[ClearCache] Clearing cache only and restarting...');
 
-      // Clear only cache and temporary data (NOT localStorage)
+      // Clear only cache and temporary data (NOT electron-store)
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
         storages: ['cookies', 'filesystem', 'shadercache', 'cachestorage'],
@@ -171,12 +172,11 @@ export function setupWindowControls(): void {
     }
   });
 
-  // Clear ALL data (including localStorage) and restart
+  // Clear ALL data (including electron-store) and restart
   ipcMain.handle('clear-all-data-and-restart', async () => {
     try {
       console.log('[ClearAllData] Clearing ALL data and restarting...');
 
-      // Clear all session data (cache, storage, cookies, localStorage, etc.)
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
         storages: [
@@ -191,56 +191,16 @@ export function setupWindowControls(): void {
         ],
       });
 
-      // Close database first
+      clearStore();
       closeDatabase();
-
-      // Delete database files to force full re-sync
       deleteDatabaseFile();
 
-      // Relaunch the app
       app.relaunch();
       app.exit(0);
 
       return { success: true };
     } catch (error) {
       console.error('[ClearAllData] Error clearing all data:', error);
-      return { success: false, error: String(error) };
-    }
-  });
-
-  // Clear cache and restart (same as clear-all-data)
-  ipcMain.handle('clear-cache-and-restart', async () => {
-    try {
-      console.log('[ClearCache] Clearing cache and restarting...');
-
-      // Clear all session data
-      await session.defaultSession.clearCache();
-      await session.defaultSession.clearStorageData({
-        storages: [
-          'cookies',
-          'filesystem',
-          'indexdb',
-          'localstorage',
-          'shadercache',
-          'websql',
-          'serviceworkers',
-          'cachestorage',
-        ],
-      });
-
-      // Close database first
-      closeDatabase();
-
-      // Delete database files to force full re-sync
-      deleteDatabaseFile();
-
-      // Relaunch the app
-      app.relaunch();
-      app.exit(0);
-
-      return { success: true };
-    } catch (error) {
-      console.error('[ClearCache] Error clearing cache:', error);
       return { success: false, error: String(error) };
     }
   });

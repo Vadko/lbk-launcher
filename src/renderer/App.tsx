@@ -235,9 +235,9 @@ export const App: React.FC = () => {
 
   // Відстеження першого запуску додатку
   useEffect(() => {
-    const hasLaunchedBefore = localStorage.getItem('has-launched-before');
+    const hasLaunchedBefore = window.storeStorage.getItem('has-launched-before');
     if (!hasLaunchedBefore) {
-      localStorage.setItem('has-launched-before', 'true');
+      window.storeStorage.setItem('has-launched-before', 'true');
       trackEvent('First App Open');
     }
   }, []);

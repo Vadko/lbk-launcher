@@ -38,6 +38,7 @@
     "@tanstack/react-query": "^5.90.17",
     "better-sqlite3": "^12.5.0",
     "cyrillic-to-translit-js": "^3.2.1",
+    "electron-store": "8.2.0",
     "electron-updater": "6.6.2",
     "framer-motion": "^12.23.25",
     "got": "^11.8.6",
