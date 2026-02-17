@@ -42,7 +42,7 @@ module.exports = {
     {
       provider: 'github',
       owner: 'Vadko',
-      repo: 'littlebit-launcher',
+      repo: 'lbk-launcher',
       releaseType: 'release',
     },
   ],
