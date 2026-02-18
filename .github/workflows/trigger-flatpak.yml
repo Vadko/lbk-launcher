@@ -20,7 +20,7 @@ jobs:
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             TAG="${{ github.event.inputs.tag }}"
           else
-            TAG=$(gh api repos/Vadko/littlebit-launcher/releases/latest --jq '.tag_name')
+            TAG=$(gh api repos/Vadko/lbk-launcher/releases/latest --jq '.tag_name')
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Resolved tag: $TAG"
