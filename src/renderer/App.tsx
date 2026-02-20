@@ -235,6 +235,8 @@ export const App: React.FC = () => {
 
   // Відстеження першого запуску додатку
   useEffect(() => {
+    if (!window.storeStorage) return;
+    
     const hasLaunchedBefore = window.storeStorage.getItem('has-launched-before');
     if (!hasLaunchedBefore) {
       window.storeStorage.setItem('has-launched-before', 'true');

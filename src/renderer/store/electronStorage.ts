@@ -9,11 +9,16 @@ import type { StateStorage } from 'zustand/middleware';
  * - removeItem: async (invoke IPC, fire-and-forget)
  */
 export const electronStorage: StateStorage = {
-  getItem: (key: string): string | null => window.storeStorage.getItem(key),
+  getItem: (key: string): string | null => {
+    if (!window.storeStorage) return null;
+    return window.storeStorage.getItem(key);
+  },
   setItem: (key: string, value: string): void => {
+    if (!window.storeStorage) return;
     window.storeStorage.setItem(key, value);
   },
   removeItem: (key: string): void => {
+    if (!window.storeStorage) return;
     window.storeStorage.removeItem(key);
   },
 };
@@ -24,6 +29,12 @@ export const electronStorage: StateStorage = {
 const MIGRATION_KEY = '__migration-v1-done';
 
 (function migrateFromLocalStorage() {
+  // Safety check: ensure storeStorage is available (preload script may not have run yet)
+  if (!window.storeStorage) {
+    console.warn('[Migration] window.storeStorage not available yet, skipping migration');
+    return;
+  }
+  
   if (window.storeStorage.getItem(MIGRATION_KEY) !== null) return;
 
   const keysToMigrate = ['lbk-settings', 'subscriptions-storage', 'has-launched-before'];
