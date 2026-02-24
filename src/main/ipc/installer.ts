@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell } from 'electron';
+import { dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
 import {
@@ -24,6 +24,7 @@ import {
 } from '../installer/download';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
+import { openExternalUrl } from '../utils/open-external';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {
@@ -106,7 +107,7 @@ export function setupInstallerHandlers(): void {
   });
 
   ipcMain.handle('open-external', async (_, url: string) => {
-    await shell.openExternal(url);
+    await openExternalUrl(url);
   });
 
   ipcMain.handle('select-game-folder', async () => {
