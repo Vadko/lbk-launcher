@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get release info
+      - name: Resolve version
         id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -30,26 +30,17 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-          # Download AppImage and compute SHA256
-          gh release download "$TAG" -p "LBK-Launcher-linux.AppImage" -D /tmp
-          SHA256=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
-          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
-
-      - name: Update PKGBUILD
+      - name: Update pkgver in PKGBUILD
         run: |
-          VERSION="${{ steps.release.outputs.version }}"
-          SHA256="${{ steps.release.outputs.sha256 }}"
           cd aur
-          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.release.outputs.version }}/" PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-          # Update first sha256sum (AppImage)
-          sed -i "0,/'[a-fA-F0-9]\{64\}'\|'SKIP'/s//'${SHA256}'/" PKGBUILD
 
-      - name: Generate .SRCINFO
+      - name: Update checksums and generate .SRCINFO
         uses: docker://archlinux:latest
         with:
           entrypoint: bash
-          args: -c "cd aur && makepkg --printsrcinfo > .SRCINFO"
+          args: -c "pacman -Sy --noconfirm pacman-contrib && cd aur && updpkgsums && makepkg --printsrcinfo > .SRCINFO"
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4
