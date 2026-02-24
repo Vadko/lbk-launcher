@@ -1,7 +1,6 @@
 import { dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
-import { openExternalUrl } from '../utils/open-external';
 import {
   abortCurrentDownload,
   checkInstallation,
@@ -25,6 +24,7 @@ import {
 } from '../installer/download';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
+import { openExternalUrl } from '../utils/open-external';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {
