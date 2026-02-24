@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import {
   applyLiquidGlass,
   isLiquidGlassSupported,
   removeLiquidGlass,
 } from './liquid-glass';
+import { openExternalUrl } from './utils/open-external';
 import { supportsMacOSLiquidGlass } from './utils/platform';
 import { readStoreFile } from './utils/store-storage';
 import { getIcon } from './utils/theme';
@@ -65,7 +66,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   // open target="_blank" links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openExternalUrl(url);
     return { action: 'deny' };
   });
 
