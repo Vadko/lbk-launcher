@@ -190,3 +190,17 @@ jobs:
           echo "Triggering Flatpak build for tag: $TAG"
           jq -n --arg tag "$TAG" '{"event_type":"new-release","client_payload":{"tag":$tag}}' | \
             gh api repos/Vadko/lbk-flatpak/dispatches --method POST --input -
+
+  # Trigger AUR package update after all platform builds complete
+  trigger-aur:
+    runs-on: ubuntu-latest
+    needs: release
+    environment: production
+    steps:
+      - name: Trigger AUR package update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "Triggering AUR update for tag: $TAG"
+          gh workflow run update-aur.yml --repo Vadko/lbk-launcher -f app_version="$TAG"

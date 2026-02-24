@@ -1,0 +1,198 @@
+name: Update AUR Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_version:
+        description: 'App version tag (e.g. v2.1.0). Leave empty for latest.'
+        required: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get release info
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.inputs.app_version }}" ]; then
+            TAG="${{ github.event.inputs.app_version }}"
+          else
+            TAG=$(gh api repos/Vadko/lbk-launcher/releases/latest --jq '.tag_name')
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building AUR package for version: $VERSION"
+
+          # Download AppImage and compute SHA256
+          gh release download "$TAG" -p "LBK-Launcher-linux.AppImage" -D /tmp
+          SHA256=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "SHA256: $SHA256"
+
+      - name: Update PKGBUILD
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          SHA256="${{ steps.release.outputs.sha256 }}"
+
+          cd aur
+
+          # Update pkgver
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+
+          # Reset pkgrel to 1 for new version
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+
+          # Update AppImage sha256 (first entry in sha256sums)
+          python3 << EOF
+          import re
+
+          with open('PKGBUILD', 'r') as f:
+              content = f.read()
+
+          # Replace sha256sums array — first hash is the AppImage
+          old_sums = re.search(r"sha256sums=\(\n(.*?)\)", content, re.DOTALL)
+          if old_sums:
+              lines = old_sums.group(1).strip().split('\n')
+              lines[0] = f"    '{SHA256}'"
+              new_sums = "sha256sums=(\n" + "\n".join(lines) + "\n)"
+              content = content[:old_sums.start()] + new_sums + content[old_sums.end():]
+
+          with open('PKGBUILD', 'w') as f:
+              f.write(content)
+          EOF
+
+      - name: Generate .SRCINFO
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y makepkg-template 2>/dev/null || true
+
+          cd aur
+
+          # Generate .SRCINFO from PKGBUILD using a simple parser
+          # (makepkg is not available on Ubuntu, so we parse PKGBUILD manually)
+          python3 << 'PYEOF'
+          import re
+
+          with open('PKGBUILD', 'r') as f:
+              content = f.read()
+
+          def get_val(name):
+              m = re.search(rf'^{name}=(.*)$', content, re.MULTILINE)
+              if m:
+                  val = m.group(1).strip().strip("'\"")
+                  return val
+              return None
+
+          def get_array(name):
+              m = re.search(rf"^{name}=\(\n?(.*?)\)", content, re.DOTALL | re.MULTILINE)
+              if m:
+                  items = []
+                  for line in m.group(1).strip().split('\n'):
+                      line = line.strip().strip("'\"")
+                      if line:
+                          items.append(line)
+                  return items
+              # Single-line array
+              m = re.search(rf"^{name}=\(([^)]*)\)", content, re.MULTILINE)
+              if m:
+                  return [i.strip().strip("'\"") for i in m.group(1).split() if i.strip()]
+              return []
+
+          pkgname = get_val('pkgname')
+          pkgver = get_val('pkgver')
+          pkgrel = get_val('pkgrel')
+          pkgdesc = get_val('pkgdesc')
+          url = get_val('url')
+
+          arch = get_array('arch')
+          license = get_array('license')
+          depends = get_array('depends')
+          optdepends = get_array('optdepends')
+          provides = get_array('provides')
+          conflicts = get_array('conflicts')
+          options = get_array('options')
+          source = get_array('source')
+          sha256sums = get_array('sha256sums')
+
+          lines = []
+          lines.append(f'pkgbase = {pkgname}')
+          lines.append(f'\tpkgdesc = {pkgdesc}')
+          lines.append(f'\tpkgver = {pkgver}')
+          lines.append(f'\tpkgrel = {pkgrel}')
+          lines.append(f'\turl = {url}')
+          for a in arch:
+              lines.append(f'\tarch = {a}')
+          for l in license:
+              lines.append(f'\tlicense = {l}')
+          for d in depends:
+              lines.append(f'\tdepends = {d}')
+          for o in optdepends:
+              lines.append(f'\toptdepends = {o}')
+          for p in provides:
+              lines.append(f'\tprovides = {p}')
+          for c in conflicts:
+              lines.append(f'\tconflicts = {c}')
+          for o in options:
+              lines.append(f'\toptions = {o}')
+          for s in source:
+              lines.append(f'\tsource = {s}')
+          for s in sha256sums:
+              lines.append(f'\tsha256sums = {s}')
+          lines.append('')
+          lines.append(f'pkgname = {pkgname}')
+          lines.append('')
+
+          with open('.SRCINFO', 'w') as f:
+              f.write('\n'.join(lines))
+          PYEOF
+
+      - name: Push to AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          # Setup SSH for AUR
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          echo -e "Host aur.archlinux.org\n  IdentityFile ~/.ssh/aur\n  User aur\n  StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+          # Clone AUR repo
+          git clone ssh://aur@aur.archlinux.org/lbk-launcher-bin.git /tmp/aur-repo || {
+            # If repo doesn't exist yet, init it
+            mkdir -p /tmp/aur-repo
+            cd /tmp/aur-repo
+            git init
+            git remote add origin ssh://aur@aur.archlinux.org/lbk-launcher-bin.git
+          }
+
+          # Copy updated files
+          cp aur/PKGBUILD /tmp/aur-repo/
+          cp aur/.SRCINFO /tmp/aur-repo/
+          cp aur/lbk-launcher.sh /tmp/aur-repo/
+          cp aur/lbk-launcher.desktop /tmp/aur-repo/
+
+          # Commit and push
+          cd /tmp/aur-repo
+          git config user.name "LBK Bot"
+          git config user.email "info@lbklauncher.com"
+          git add PKGBUILD .SRCINFO lbk-launcher.sh lbk-launcher.desktop
+          git commit -m "Update to v${{ steps.release.outputs.version }}" || echo "No changes to commit"
+          git push origin master
+
+      - name: Commit updated PKGBUILD to repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add aur/PKGBUILD aur/.SRCINFO
+          git commit -m "aur: update to v${{ steps.release.outputs.version }}" || echo "No changes to commit"
+          git push
