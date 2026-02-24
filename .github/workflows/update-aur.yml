@@ -1,0 +1,74 @@
+name: Update AUR Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_version:
+        description: 'App version tag (e.g. v2.1.0). Leave empty for latest.'
+        required: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get release info
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.inputs.app_version }}" ]; then
+            TAG="${{ github.event.inputs.app_version }}"
+          else
+            TAG=$(gh api repos/Vadko/lbk-launcher/releases/latest --jq '.tag_name')
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # Download AppImage and compute SHA256
+          gh release download "$TAG" -p "LBK-Launcher-linux.AppImage" -D /tmp
+          SHA256=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Update PKGBUILD
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          SHA256="${{ steps.release.outputs.sha256 }}"
+          cd aur
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          # Update first sha256sum (AppImage)
+          sed -i "0,/'[a-fA-F0-9]\{64\}'\|'SKIP'/s//'${SHA256}'/" PKGBUILD
+
+      - name: Generate .SRCINFO
+        uses: docker://archlinux:latest
+        with:
+          entrypoint: bash
+          args: -c "cd aur && makepkg --printsrcinfo > .SRCINFO"
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4
+        with:
+          pkgname: lbk-launcher-bin
+          pkgbuild: aur/PKGBUILD
+          commit_username: LBK Bot
+          commit_email: info@lbklauncher.com
+          ssh_private_key: ${{ secrets.AUR_SSH_KEY }}
+          commit_message: "Update to v${{ steps.release.outputs.version }}"
+          assets: |
+            aur/lbk-launcher.sh
+            aur/lbk-launcher.desktop
+            aur/.SRCINFO
+
+      - name: Commit updated PKGBUILD to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add aur/PKGBUILD aur/.SRCINFO
+          git commit -m "aur: update to v${{ steps.release.outputs.version }}" || echo "No changes"
+          git push
