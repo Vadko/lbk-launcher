@@ -43,7 +43,7 @@ jobs:
           args: -c "pacman -Sy --noconfirm pacman-contrib && cd aur && updpkgsums && makepkg --printsrcinfo > .SRCINFO"
 
       - name: Publish to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v4
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
         with:
           pkgname: lbk-launcher-bin
           pkgbuild: aur/PKGBUILD
