@@ -51,6 +51,33 @@ export type Database = {
         }
         Relationships: []
       }
+      failed_searches: {
+        Row: {
+          id: string
+          query: string
+          query_normalized: string
+          searched_at: string | null
+          source: string
+          user_identifier: string | null
+        }
+        Insert: {
+          id?: string
+          query: string
+          query_normalized: string
+          searched_at?: string | null
+          source: string
+          user_identifier?: string | null
+        }
+        Update: {
+          id?: string
+          query?: string
+          query_normalized?: string
+          searched_at?: string | null
+          source?: string
+          user_identifier?: string | null
+        }
+        Relationships: []
+      }
       game_authors: {
         Row: {
           author_id: string
@@ -902,6 +929,7 @@ export type Database = {
           steam_id: string
           tags: string[] | null
           title: string | null
+          type: string | null
           updated_at_steam: string | null
           url: string | null
           views: number | null
@@ -925,6 +953,7 @@ export type Database = {
           steam_id: string
           tags?: string[] | null
           title?: string | null
+          type?: string | null
           updated_at_steam?: string | null
           url?: string | null
           views?: number | null
@@ -948,6 +977,7 @@ export type Database = {
           steam_id?: string
           tags?: string[] | null
           title?: string | null
+          type?: string | null
           updated_at_steam?: string | null
           url?: string | null
           views?: number | null
@@ -1272,6 +1302,26 @@ export type Database = {
           downloads_count: number
           percentage: number
           players_count: number
+        }[]
+      }
+      get_failed_searches_statistics: {
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Returns: {
+          last_searched_at: string
+          query_normalized: string
+          search_count: number
+          sources: string[]
+          unique_users: number
+        }[]
+      }
+      get_failed_searches_summary: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          from_launcher: number
+          from_web: number
+          total_failed_searches: number
+          unique_queries: number
+          unique_users_searched: number
         }[]
       }
       get_first_session_downloads: {
