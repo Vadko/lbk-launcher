@@ -71,6 +71,6 @@ jobs:
           git checkout -b "$BRANCH"
           git add aur/PKGBUILD aur/.SRCINFO
           git commit -m "aur: update to v${VERSION}" || exit 0
-          git push -u origin "$BRANCH"
+          git push -u origin "$BRANCH" --force
           PR_URL=$(gh pr create --title "aur: update to v${VERSION}" --body "Auto-update AUR package to v${VERSION}" --base master)
           gh pr merge "$PR_URL" --auto --squash
