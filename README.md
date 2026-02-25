@@ -59,6 +59,7 @@ Microsoft вимагає, щоб програми були підписані ц
 
 ### Linux
 [![Flatpak](https://img.shields.io/badge/Flatpak-встановити-22c55e?logo=flatpak&logoColor=white)](https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref)
+[![AUR](https://img.shields.io/badge/AUR-встановити-1793d1?logo=archlinux&logoColor=white)](https://aur.archlinux.org/packages/lbk-launcher-bin)
 [![Linux AppImage](https://img.shields.io/badge/AppImage-завантажити-10b981?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.AppImage)
 [![Linux RPM](https://img.shields.io/badge/RPM-завантажити-059669?logo=linux&logoColor=white)](https://github.com/Vadko/littlebit-launcher/releases/latest/download/LBK-Launcher-linux.rpm)
 
@@ -70,6 +71,25 @@ Microsoft вимагає, щоб програми були підписані ц
 Або через термінал:
 ```bash
 flatpak install --user https://flatpak.lbklauncher.com/com.lbk.launcher.flatpakref
+```
+
+</details>
+
+<details>
+<summary>📖 Встановлення через AUR (Arch Linux)</summary>
+
+Через AUR-хелпер:
+```bash
+yay -S lbk-launcher-bin
+# або
+paru -S lbk-launcher-bin
+```
+
+Або вручну:
+```bash
+git clone https://aur.archlinux.org/lbk-launcher-bin.git
+cd lbk-launcher-bin
+makepkg -si
 ```
 
 </details>
