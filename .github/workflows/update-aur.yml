@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update:
@@ -59,10 +60,17 @@ jobs:
             aur/lbk-launcher.desktop
             aur/.SRCINFO
 
-      - name: Commit updated PKGBUILD to repo
+      - name: Create PR with updated PKGBUILD
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          BRANCH="aur/v${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add aur/PKGBUILD aur/.SRCINFO
-          git commit -m "aur: update to v${{ steps.release.outputs.version }}" || echo "No changes"
-          git push
+          git commit -m "aur: update to v${VERSION}" || exit 0
+          git push -u origin "$BRANCH"
+          PR_URL=$(gh pr create --title "aur: update to v${VERSION}" --body "Auto-update AUR package to v${VERSION}" --base master)
+          gh pr merge "$PR_URL" --auto --squash
