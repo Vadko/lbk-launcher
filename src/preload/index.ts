@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI, Game, InstallOptions } from '../shared/types';
+import type { DownloadProgress, ElectronAPI, Game, InstallationStatus, InstallOptions } from '../shared/types';
 
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
@@ -83,14 +83,14 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('install-progress', handler);
   },
   onDownloadProgress: (callback) => {
-    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) =>
-      callback(progress);
+    const handler = (_: unknown, gameId: string, progress: DownloadProgress) =>
+      callback(gameId, progress);
     ipcRenderer.on('download-progress', handler);
     return () => ipcRenderer.removeListener('download-progress', handler);
   },
   onInstallationStatus: (callback) => {
-    const handler = (_: unknown, status: Parameters<typeof callback>[0]) =>
-      callback(status);
+    const handler = (_: unknown, gameId: string, status: InstallationStatus) =>
+      callback(gameId, status);
     ipcRenderer.on('installation-status', handler);
     return () => ipcRenderer.removeListener('installation-status', handler);
   },
@@ -99,30 +99,30 @@ const electronAPI: ElectronAPI = {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   onUpdateAvailable: (callback) => {
-    const handler = (_: unknown, info: Parameters<typeof callback>[0]) => callback(info);
+    const handler = (_: unknown, info: unknown) => callback(info);
     ipcRenderer.on('update-available', handler);
     return () => ipcRenderer.removeListener('update-available', handler);
   },
   onUpdateDownloaded: (callback) => {
-    const handler = (_: unknown, info: Parameters<typeof callback>[0]) => callback(info);
+    const handler = (_: unknown, info: unknown) => callback(info);
     ipcRenderer.on('update-downloaded', handler);
     return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
   onUpdateProgress: (callback) => {
-    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) =>
+    const handler = (_: unknown, progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) =>
       callback(progress);
     ipcRenderer.on('update-progress', handler);
     return () => ipcRenderer.removeListener('update-progress', handler);
   },
   onUpdateError: (callback) => {
-    const handler = (_: unknown, error: Parameters<typeof callback>[0]) =>
+    const handler = (_: unknown, error: Error) =>
       callback(error);
     ipcRenderer.on('update-error', handler);
     return () => ipcRenderer.removeListener('update-error', handler);
   },
   // Real-time updates (автоматично керуються в main process)
   onGameUpdated: (callback) => {
-    const handler = (_: unknown, game: Parameters<typeof callback>[0]) => callback(game);
+    const handler = (_: unknown, game: Game) => callback(game);
     ipcRenderer.on('game-updated', handler);
     return () => ipcRenderer.removeListener('game-updated', handler);
   },
