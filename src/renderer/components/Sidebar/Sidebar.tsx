@@ -151,6 +151,21 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       hideAiTranslations,
     });
 
+    // Track failed searches (0 results)
+    const lastTrackedFailedSearch = useRef('');
+    useEffect(() => {
+      if (
+        debouncedSearchQuery &&
+        debouncedSearchQuery.trim().length >= 2 &&
+        !isLoading &&
+        totalGames === 0 &&
+        lastTrackedFailedSearch.current !== debouncedSearchQuery
+      ) {
+        lastTrackedFailedSearch.current = debouncedSearchQuery;
+        window.electronAPI.trackFailedSearch(debouncedSearchQuery);
+      }
+    }, [debouncedSearchQuery, isLoading, totalGames]);
+
     // Group games by slug (games already sorted by SQL)
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();

@@ -393,6 +393,50 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
 }
 
 /**
+ * Track failed search (query with 0 results)
+ */
+export async function trackFailedSearch(query: string): Promise<TrackingResponse> {
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping failed search tracking');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  const trimmed = query.trim();
+  if (trimmed.length < 2) {
+    return { success: false, error: 'Query too short' };
+  }
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    console.log(`[Tracking] Tracking failed search: "${trimmed}"`);
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        type: 'failed_search',
+        query: trimmed,
+        source: 'launcher',
+        userIdentifier: machineId,
+      }),
+    });
+
+    const result = (await response.json()) as TrackingResponse;
+    console.log('[Tracking] Failed search tracking response:', result);
+
+    return result;
+  } catch (error) {
+    console.error('[Tracking] Failed to track failed search:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
  * Check if current session is first session (for download tracking)
  */
 export function isCurrentSessionFirstLaunch(): boolean {
