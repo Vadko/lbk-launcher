@@ -217,6 +217,8 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  // Track failed search (0 results)
+  trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
   // Sync status

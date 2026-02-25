@@ -25,7 +25,12 @@ import {
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
-import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import {
+  getMachineId,
+  trackFailedSearch,
+  trackSubscription,
+  trackSupportClick,
+} from '../tracking';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
@@ -55,6 +60,11 @@ export function setupGamesHandlers(): void {
   // Track support click
   ipcMain.handle('track-support-click', async (_, gameId: string) =>
     trackSupportClick(gameId)
+  );
+
+  // Track failed search (0 results)
+  ipcMain.handle('track-failed-search', async (_, query: string) =>
+    trackFailedSearch(query)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
