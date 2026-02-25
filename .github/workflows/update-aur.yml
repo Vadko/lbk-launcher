@@ -40,7 +40,7 @@ jobs:
         uses: docker://archlinux:latest
         with:
           entrypoint: bash
-          args: -c "pacman -Sy --noconfirm pacman-contrib && cd aur && updpkgsums && makepkg --printsrcinfo > .SRCINFO"
+          args: -c "pacman -Sy --noconfirm pacman-contrib && useradd -m builder && chown -R builder aur && su builder -c 'cd aur && updpkgsums && makepkg --printsrcinfo > .SRCINFO'"
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
