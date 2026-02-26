@@ -1,9 +1,16 @@
+import { motion } from 'framer-motion';
 import React, { useMemo } from 'react';
+import { useListAnimation } from '../../hooks/useListAnimation';
 import { useVirtualizedList } from '../../hooks/useVirtualizedList';
 import type { Game } from '../../types/game';
 import { Loader } from '../ui/Loader';
 import { GamepadCard } from './GamepadCard';
 import type { GameGroup } from './types';
+
+/** How many items to render initially (progressive rendering) */
+const INITIAL_RENDER = 15;
+/** Approximate width of one card in px (w-36 + gap-3 = 156) */
+const ITEM_WIDTH_ESTIMATE = 156;
 
 interface HorizontalGameListProps {
   gameGroups: GameGroup[];
@@ -29,19 +36,33 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     onOpenTranslationPicker,
     isGameDetected,
   }) => {
-    // Progressive rendering for horizontal scroll
+    const slugs = useMemo(() => gameGroups.map((g) => g.slug), [gameGroups]);
+
+    const { getAnimationProps } = useListAnimation({
+      slugs,
+      animationsEnabled,
+      staggerCount: 6,
+      direction: 'x',
+    });
+
     const { renderCount, sentinelRef } = useVirtualizedList({
       totalItems: gameGroups.length,
-      initialRenderCount: 15,
+      initialRenderCount: INITIAL_RENDER,
       incrementCount: 10,
       rootMargin: '100px',
-      enabled: !animationsEnabled,
+      enabled: true,
     });
 
     const visibleGroups = useMemo(
-      () => (animationsEnabled ? gameGroups : gameGroups.slice(0, renderCount)),
-      [gameGroups, renderCount, animationsEnabled]
+      () => gameGroups.slice(0, renderCount),
+      [gameGroups, renderCount]
     );
+
+    const keyPrefix = useMemo(() => {
+      const first = gameGroups[0]?.slug ?? '';
+      const last = gameGroups[gameGroups.length - 1]?.slug ?? '';
+      return `${gameGroups.length}_${first}_${last}`;
+    }, [gameGroups]);
 
     if (isLoading) {
       return (
@@ -61,7 +82,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
 
     return (
       <div className="flex gap-3">
-        {visibleGroups.map((group) => {
+        {visibleGroups.map((group, index) => {
           const primaryGame = group.translations[0];
           const isSelected = group.translations.some((t) => selectedGameId === t.id);
           const hasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
@@ -75,9 +96,8 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
             }
           };
 
-          return (
+          const card = (
             <GamepadCard
-              key={group.slug}
               game={primaryGame}
               translations={group.translations}
               translationIndex={0}
@@ -87,10 +107,31 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
               onClick={handleClick}
             />
           );
+
+          const animProps = getAnimationProps(group.slug, index);
+
+          return (
+            <motion.div
+              key={`${keyPrefix}_${group.slug}`}
+              className="flex-shrink-0"
+              initial={animProps?.initial ?? false}
+              animate={animProps?.animate}
+              transition={animProps?.transition}
+            >
+              {card}
+            </motion.div>
+          );
         })}
-        {/* Sentinel for progressive loading (horizontal) */}
-        {!animationsEnabled && renderCount < gameGroups.length && (
-          <div ref={sentinelRef} className="w-4 flex-shrink-0" aria-hidden="true" />
+
+        {renderCount < gameGroups.length && (
+          <div
+            ref={sentinelRef}
+            className="flex-shrink-0"
+            style={{
+              width: (gameGroups.length - renderCount) * ITEM_WIDTH_ESTIMATE,
+            }}
+            aria-hidden="true"
+          />
         )}
       </div>
     );

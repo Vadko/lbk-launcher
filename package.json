@@ -12,8 +12,9 @@
     "node": ">=22.20.0"
   },
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "pnpm prebuild && electron-vite dev",
     "preview": "electron-vite preview",
+    "prebuild": "node scripts/build-spellfix.js",
     "build": "electron-vite build",
     "dist": "electron-builder --config electron-builder.config.cjs",
     "dist:win": "electron-builder --win --config electron-builder.config.cjs",

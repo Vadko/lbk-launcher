@@ -653,6 +653,89 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_spellfix_words',
+    up: (db) => {
+      // Check if spellfix_words already exists
+      const tableExists = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='spellfix_words'"
+        )
+        .get() as { count: number };
+
+      if (tableExists.count > 0) {
+        return;
+      }
+
+      // Only create if spellfix1 extension is loaded
+      try {
+        db.exec(`
+          CREATE VIRTUAL TABLE IF NOT EXISTS spellfix_words USING spellfix1;
+        `);
+        console.log('[Migrations] Completed: add_spellfix_words');
+      } catch {
+        console.log(
+          '[Migrations] Spellfix1 not available, skipping spellfix_words table'
+        );
+      }
+    },
+  },
+  {
+    name: 'populate_spellfix_words',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_populate_spellfix_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      // Check if spellfix_words table exists
+      const tableExists = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='spellfix_words'"
+        )
+        .get() as { count: number };
+
+      if (tableExists.count === 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: populate_spellfix_words');
+
+      // Inline spellfix population (can't import db-queries due to bundled code)
+      const rows = db
+        .prepare('SELECT name FROM games WHERE approved = 1 AND hide = 0')
+        .all() as { name: string }[];
+
+      const words = new Set<string>();
+      for (const row of rows) {
+        for (const word of row.name.toLowerCase().split(/\s+/)) {
+          const cleaned = word.replace(/[^a-zа-яіїєґ0-9]/gi, '').toLowerCase();
+          if (cleaned.length >= 3) {
+            words.add(cleaned);
+          }
+        }
+      }
+
+      db.exec('DELETE FROM spellfix_words');
+      const insertStmt = db.prepare('INSERT INTO spellfix_words(word) VALUES (?)');
+      for (const word of words) {
+        insertStmt.run(word);
+      }
+      console.log(`[Migrations] Spellfix dictionary: ${words.size} words`);
+
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_populate_spellfix_done', '1', datetime('now'))
+      `);
+
+      console.log('[Migrations] Completed: populate_spellfix_words');
+    },
+  },
 ];
 
 /**

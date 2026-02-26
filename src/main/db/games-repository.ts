@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { getSearchVariations } from '../../shared/search-utils';
 import type { Game, GetGamesParams, GetGamesResult } from '../../shared/types';
-import { getDatabase } from './database';
+import { getDatabase, isSpellfixAvailable } from './database';
 import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-queries';
 
 /**
@@ -67,14 +67,18 @@ export class GamesRepository {
       queryParams.push(...statuses);
     }
 
-    // Filter by search query using FTS5
-    if (searchQuery) {
+    // Filter by search query using FTS5 (min 2 chars to avoid expensive single-char prefix scans)
+    if (searchQuery && searchQuery.trim().length >= 2) {
       const variations = getSearchVariations(searchQuery);
       const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
       whereConditions.push(
         `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
       );
       queryParams.push(ftsQuery);
+    } else if (searchQuery) {
+      // For 1-char queries use simple LIKE (faster than FTS prefix scan)
+      whereConditions.push('name LIKE ?');
+      queryParams.push(`${searchQuery.trim()}%`);
     }
 
     const whereClause = whereConditions.join(' AND ');
@@ -100,6 +104,16 @@ export class GamesRepository {
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
 
+    // Spellfix1 fuzzy fallback when FTS returns 0 results
+    if (searchQuery && games.length === 0 && isSpellfixAvailable()) {
+      games = this.fuzzySearchFallback(
+        searchQuery,
+        whereConditions,
+        queryParams,
+        orderClause
+      );
+    }
+
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
@@ -109,6 +123,52 @@ export class GamesRepository {
     }
 
     return { games, total: games.length };
+  }
+
+  /**
+   * Spellfix1 fuzzy fallback: correct each query word via spellfix_words,
+   * then re-run FTS5 with corrected words
+   */
+  private fuzzySearchFallback(
+    searchQuery: string,
+    _baseConditions: string[],
+    _baseParams: (string | number)[],
+    orderClause: string
+  ): Game[] {
+    try {
+      const queryWords = searchQuery
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 3);
+
+      if (queryWords.length === 0) return [];
+
+      const correctedWords: string[] = [];
+      const spellfixStmt = this.db.prepare(
+        'SELECT word FROM spellfix_words WHERE word MATCH ? AND top=5 ORDER BY score LIMIT 1'
+      );
+
+      for (const word of queryWords) {
+        const result = spellfixStmt.get(word) as { word: string } | undefined;
+        correctedWords.push(result ? result.word : word);
+      }
+
+      // Build FTS query from corrected words
+      const correctedFts = correctedWords.map((w) => `"${w}"*`).join(' OR ');
+
+      const fuzzyStmt = this.db.prepare(`
+        SELECT * FROM games
+        WHERE approved = 1 AND hide = 0
+          AND id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)
+        ORDER BY ${orderClause}
+      `);
+
+      const fuzzyRows = fuzzyStmt.all(correctedFts) as Record<string, unknown>[];
+      return fuzzyRows.map((row) => this.rowToGame(row));
+    } catch (e) {
+      console.warn('[GamesRepository] Spellfix fuzzy fallback error:', e);
+      return [];
+    }
   }
 
   /**
