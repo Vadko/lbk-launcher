@@ -7,7 +7,7 @@ import { runMigrations } from './migrations';
 /**
  * Database Manager - клас для управління локальною базою даних
  */
-export class DatabaseManager {
+class DatabaseManager {
   private static instance: DatabaseManager | null = null;
   private db: Database.Database;
 
