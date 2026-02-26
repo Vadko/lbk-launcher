@@ -1287,6 +1287,25 @@ export type Database = {
       }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
+      fuzzy_search_games: {
+        Args: {
+          limit_val?: number
+          search_query: string
+          search_query_translit?: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          banner_path: string
+          is_adult: boolean
+          latest_updated_at: string
+          name: string
+          name_fts: unknown
+          slug: string
+          thumbnail_path: string
+          translations: Json
+          translations_count: number
+        }[]
+      }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
         Args: { p_end_date?: string; p_start_date?: string }
