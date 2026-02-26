@@ -44,7 +44,11 @@ export function setupInstallerHandlers(): void {
           options,
           customGamePath,
           (downloadProgress) => {
-            getMainWindow()?.webContents.send('download-progress', game.id, downloadProgress);
+            getMainWindow()?.webContents.send(
+              'download-progress',
+              game.id,
+              downloadProgress
+            );
           },
           (status) => {
             getMainWindow()?.webContents.send('installation-status', game.id, status);
@@ -185,7 +189,11 @@ export function setupInstallerHandlers(): void {
       resumeDownload(
         state,
         (downloadProgress) => {
-          getMainWindow()?.webContents.send('download-progress', gameId, downloadProgress);
+          getMainWindow()?.webContents.send(
+            'download-progress',
+            gameId,
+            downloadProgress
+          );
         },
         (status) => {
           getMainWindow()?.webContents.send('installation-status', gameId, status);

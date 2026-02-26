@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { DownloadProgress, ElectronAPI, Game, InstallationStatus, InstallOptions } from '../shared/types';
+import type {
+  DownloadProgress,
+  ElectronAPI,
+  Game,
+  InstallationStatus,
+  InstallOptions,
+} from '../shared/types';
 
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
@@ -109,14 +115,20 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
   onUpdateProgress: (callback) => {
-    const handler = (_: unknown, progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) =>
-      callback(progress);
+    const handler = (
+      _: unknown,
+      progress: {
+        percent: number;
+        bytesPerSecond: number;
+        transferred: number;
+        total: number;
+      }
+    ) => callback(progress);
     ipcRenderer.on('update-progress', handler);
     return () => ipcRenderer.removeListener('update-progress', handler);
   },
   onUpdateError: (callback) => {
-    const handler = (_: unknown, error: Error) =>
-      callback(error);
+    const handler = (_: unknown, error: Error) => callback(error);
     ipcRenderer.on('update-error', handler);
     return () => ipcRenderer.removeListener('update-error', handler);
   },

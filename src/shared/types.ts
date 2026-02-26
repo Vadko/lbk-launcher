@@ -172,8 +172,12 @@ export interface ElectronAPI {
   openExternal: (url: string) => Promise<void>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;
-  onDownloadProgress: (callback: (gameId: string, progress: DownloadProgress) => void) => () => void;
-  onInstallationStatus: (callback: (gameId: string, status: InstallationStatus) => void) => () => void;
+  onDownloadProgress: (
+    callback: (gameId: string, progress: DownloadProgress) => void
+  ) => () => void;
+  onInstallationStatus: (
+    callback: (gameId: string, status: InstallationStatus) => void
+  ) => () => void;
   // Auto-updater
   checkForUpdates: () => Promise<{
     available: boolean;
