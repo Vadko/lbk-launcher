@@ -126,15 +126,17 @@ export function useInstallation({
           statusMessage: null,
         });
 
-        window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
-          setInstallationProgress(selectedGame.id, {
-            progress: progress.percent,
-            downloadProgress: progress,
-          });
-        });
+        window.electronAPI.onDownloadProgress?.(
+          (gameId: string, progress: DownloadProgress) => {
+            setInstallationProgress(gameId, {
+              progress: progress.percent,
+              downloadProgress: progress,
+            });
+          }
+        );
 
-        window.electronAPI.onInstallationStatus?.((status) => {
-          setInstallationProgress(selectedGame.id, {
+        window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
+          setInstallationProgress(gameId, {
             statusMessage: status.message,
           });
         });
@@ -631,15 +633,17 @@ export function useInstallation({
     });
 
     // Set up progress listeners again
-    window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
-      setInstallationProgress(selectedGame.id, {
-        progress: progress.percent,
-        downloadProgress: progress,
-      });
-    });
+    window.electronAPI.onDownloadProgress?.(
+      (gameId: string, progress: DownloadProgress) => {
+        setInstallationProgress(gameId, {
+          progress: progress.percent,
+          downloadProgress: progress,
+        });
+      }
+    );
 
-    window.electronAPI.onInstallationStatus?.((status) => {
-      setInstallationProgress(selectedGame.id, {
+    window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
+      setInstallationProgress(gameId, {
         statusMessage: status.message,
       });
     });
