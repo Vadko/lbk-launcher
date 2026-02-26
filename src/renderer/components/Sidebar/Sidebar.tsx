@@ -1,7 +1,5 @@
-import { SortAsc } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useAlphabetNavigation } from '../../hooks/useAlphabetNavigation';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFilterCounts } from '../../hooks/useFilterCounts';
 import { useGames } from '../../hooks/useGames';
@@ -11,9 +9,8 @@ import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import type { Game } from '../../types/game';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
-import { AlphabetSidebar } from './AlphabetSidebar';
 import { AuthorsFilterDropdown } from './AuthorsFilterDropdown';
-import { AnimatedGameList } from './GameList';
+import { GameList } from './GameList';
 import { HorizontalGameList } from './HorizontalGameList';
 import { SearchBar } from './SearchBar';
 import { SidebarFooter } from './SidebarFooter';
@@ -63,8 +60,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setSpecialFilter: setSpecialFilterRaw,
       selectedAuthors,
       setSelectedAuthors,
-      alphabetSidebarEnabled,
-      toggleAlphabetSidebar,
       sortOrder,
       setSortOrder,
       hideAiTranslations,
@@ -78,8 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         setSpecialFilter: state.setSpecialFilter,
         selectedAuthors: state.selectedAuthors,
         setSelectedAuthors: state.setSelectedAuthors,
-        alphabetSidebarEnabled: state.alphabetSidebarEnabled,
-        toggleAlphabetSidebar: state.toggleAlphabetSidebar,
         sortOrder: state.sortOrder,
         setSortOrder: state.setSortOrder,
         hideAiTranslations: state.hideAiTranslations,
@@ -197,8 +190,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-    const { listRef, sortedAlphabet, activeLetter, handleScroll, handleLetterClick } =
-      useAlphabetNavigation(gameGroups);
+    const listRef = useRef<HTMLDivElement>(null);
 
     // Resize state
     const [isResizing, setIsResizing] = useState(false);
@@ -385,54 +377,24 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             authors={authors}
             isLoading={authorsLoading}
           />
-          {sortOrder === 'name' && (
-            <button
-              onClick={toggleAlphabetSidebar}
-              className={`p-1 flex-shrink-0 transition-all hover:scale-110 ${
-                alphabetSidebarEnabled
-                  ? 'text-[var(--text-main)]'
-                  : 'text-text-muted hover:text-[var(--text-main)]'
-              }`}
-              title={alphabetSidebarEnabled ? 'Сховати алфавіт' : 'Показати алфавіт'}
-            >
-              <SortAsc size={18} />
-            </button>
-          )}
         </div>
 
-        {/* Games list with Alphabet Sidebar */}
-        <div className="flex-1 flex overflow-hidden">
-          <div
-            ref={listRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto p-4 pt-0 custom-scrollbar relative"
-          >
-            <AnimatedGameList
-              gameGroups={gameGroups}
-              totalGames={totalGames}
-              isLoading={isLoading}
-              animationsEnabled={animationsEnabled}
-              expandedGroups={expandedGroups}
-              selectedGameId={selectedGame?.id}
-              gamesWithUpdates={gamesWithUpdates}
-              listKey={`games-${specialFilter}-${selectedStatuses.join(',')}-${selectedAuthors.join(',')}-${debouncedSearchQuery}`}
-              onToggleGroup={toggleGroupExpanded}
-              onSelectGame={setSelectedGame}
-              isGameDetected={isGameDetected}
-            />
-          </div>
-
-          {/* Alphabet sidebar - only show when sorting by name */}
-          {!isLoading &&
-            totalGames > 0 &&
-            alphabetSidebarEnabled &&
-            sortOrder === 'name' && (
-              <AlphabetSidebar
-                alphabet={sortedAlphabet}
-                onLetterClick={handleLetterClick}
-                activeHighlight={activeLetter || undefined}
-              />
-            )}
+        <div
+          ref={listRef}
+          className="flex-1 overflow-y-auto p-4 pt-0 custom-scrollbar relative"
+        >
+          <GameList
+            gameGroups={gameGroups}
+            totalGames={totalGames}
+            isLoading={isLoading}
+            animationsEnabled={animationsEnabled}
+            expandedGroups={expandedGroups}
+            selectedGameId={selectedGame?.id}
+            gamesWithUpdates={gamesWithUpdates}
+            onToggleGroup={toggleGroupExpanded}
+            onSelectGame={setSelectedGame}
+            isGameDetected={isGameDetected}
+          />
         </div>
 
         <SidebarFooter

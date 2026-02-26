@@ -29,6 +29,9 @@ export class DatabaseManager {
     this.db.pragma('synchronous = NORMAL');
     this.db.pragma('foreign_keys = ON');
 
+    // Load spellfix1 extension for fuzzy search
+    this.loadSpellfixExtension();
+
     // Створити таблиці якщо їх немає
     if (!dbExists) {
       this.createTables();
@@ -45,6 +48,25 @@ export class DatabaseManager {
         // Run migrations for existing databases
         runMigrations(this.db);
       }
+    }
+  }
+
+  /**
+   * Load spellfix1 extension for typo-tolerant search
+   */
+  private loadSpellfixExtension(): void {
+    try {
+      const extPath = getSpellfixPath();
+      if (!extPath) {
+        console.log('[Database] Spellfix1 extension not found, fuzzy search disabled');
+        return;
+      }
+      // loadExtension expects path without file extension
+      const extWithoutExt = extPath.replace(/\.(dylib|so|dll)$/, '');
+      this.db.loadExtension(extWithoutExt);
+      console.log('[Database] Spellfix1 extension loaded successfully');
+    } catch (e) {
+      console.warn('[Database] Spellfix1 extension not available:', e);
     }
   }
 
@@ -149,6 +171,15 @@ export class DatabaseManager {
       );
     `);
 
+    // Spellfix1 virtual table for fuzzy search (if extension loaded)
+    try {
+      this.db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS spellfix_words USING spellfix1;
+      `);
+    } catch {
+      console.log('[Database] Spellfix1 not available, skipping spellfix_words table');
+    }
+
     // Таблиця для sync метаданих
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS sync_metadata (
@@ -198,6 +229,47 @@ export function closeDatabase(): void {
 function getDatabasePath(): string {
   const userDataPath = app.getPath('userData');
   return join(userDataPath, 'lbk.db');
+}
+
+/**
+ * Get path to spellfix extension for current platform
+ */
+function getSpellfixPath(): string | null {
+  const ext =
+    process.platform === 'darwin' ? 'dylib' : process.platform === 'win32' ? 'dll' : 'so';
+  const fileName = `spellfix.${ext}`;
+
+  // In production: process.resourcesPath/extensions/spellfix.*
+  // In development: resources/extensions/spellfix.*
+  const paths = [
+    join(process.resourcesPath || '', 'extensions', fileName),
+    join(app.getAppPath(), 'resources', 'extensions', fileName),
+  ];
+
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return p;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if spellfix1 extension is available in the database
+ */
+export function isSpellfixAvailable(): boolean {
+  try {
+    const db = getDatabase();
+    const result = db
+      .prepare(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='spellfix_words'"
+      )
+      .get() as { count: number };
+    return result.count > 0;
+  } catch {
+    return false;
+  }
 }
 
 /**

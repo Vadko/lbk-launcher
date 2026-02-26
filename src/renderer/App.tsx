@@ -163,7 +163,8 @@ export const App: React.FC = () => {
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const [showLoader, setShowLoader] = useState(true);
+  const loaderVisible = useStore((s) => s.loaderVisible);
+  const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
@@ -200,7 +201,7 @@ export const App: React.FC = () => {
       const elapsed = Date.now() - loaderStartTime;
       const remainingTime = Math.max(0, MIN_LOADER_DISPLAY_MS - elapsed);
 
-      hideTimeout = setTimeout(() => setShowLoader(false), remainingTime);
+      hideTimeout = setTimeout(() => setLoaderVisible(false), remainingTime);
     };
 
     if (!window.electronAPI?.getSyncStatus) {
@@ -461,7 +462,9 @@ export const App: React.FC = () => {
   return (
     <>
       {/* Loader overlay with fade animation */}
-      <AnimatePresence>{showLoader && <AppLoader status={syncStatus} />}</AnimatePresence>
+      <AnimatePresence>
+        {loaderVisible && <AppLoader status={syncStatus} />}
+      </AnimatePresence>
 
       <div
         className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}

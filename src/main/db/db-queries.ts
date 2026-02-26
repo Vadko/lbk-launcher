@@ -138,6 +138,60 @@ const UPSERT_GAME_SQL = `
 `;
 
 /**
+ * Check if spellfix_words table exists
+ */
+function hasSpellfixTable(db: Database.Database): boolean {
+  const result = db
+    .prepare(
+      "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='spellfix_words'"
+    )
+    .get() as { count: number };
+  return result.count > 0;
+}
+
+/**
+ * Extract unique words from game names for spellfix dictionary.
+ * Only original words (no transliteration) — FTS handles transliteration separately.
+ */
+function extractUniqueWords(games: Game[]): string[] {
+  const words = new Set<string>();
+  for (const game of games) {
+    for (const word of game.name.toLowerCase().split(/\s+/)) {
+      const cleaned = word.replace(/[^a-zа-яіїєґ0-9]/gi, '').toLowerCase();
+      if (cleaned.length >= 3) {
+        words.add(cleaned);
+      }
+    }
+  }
+  return [...words];
+}
+
+/**
+ * Rebuild spellfix_words dictionary from all approved games
+ */
+function rebuildSpellfixDictionary(db: Database.Database): void {
+  if (!hasSpellfixTable(db)) return;
+
+  try {
+    const rows = db
+      .prepare('SELECT name FROM games WHERE approved = 1 AND hide = 0')
+      .all() as { name: string }[];
+
+    const games = rows.map((r) => ({ name: r.name }) as Game);
+    const words = extractUniqueWords(games);
+
+    db.exec('DELETE FROM spellfix_words');
+    const insertStmt = db.prepare('INSERT INTO spellfix_words(word) VALUES (?)');
+    for (const word of words) {
+      insertStmt.run(word);
+    }
+    console.log(`[Database] Spellfix dictionary rebuilt: ${words.length} words`);
+  } catch (e) {
+    console.warn('[Database] Failed to rebuild spellfix dictionary:', e);
+  }
+}
+
+/**
  * Batch upsert ігор в транзакції
  */
 export function upsertGamesTransaction(db: Database.Database, games: Game[]): void {
@@ -157,6 +211,9 @@ export function upsertGamesTransaction(db: Database.Database, games: Game[]): vo
   });
 
   upsert(games);
+
+  // Rebuild spellfix dictionary after batch upsert
+  rebuildSpellfixDictionary(db);
 }
 
 /**

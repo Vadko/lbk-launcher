@@ -403,7 +403,7 @@ export async function trackFailedSearch(query: string): Promise<TrackingResponse
   }
 
   const trimmed = query.trim();
-  if (trimmed.length < 2) {
+  if (trimmed.length < 3) {
     return { success: false, error: 'Query too short' };
   }
 

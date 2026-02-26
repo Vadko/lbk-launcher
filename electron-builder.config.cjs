@@ -75,6 +75,10 @@ module.exports = {
         to: '7zip/win',
         filter: ['**/*'],
       },
+      {
+        from: 'resources/extensions/spellfix.dll',
+        to: 'extensions/spellfix.dll',
+      },
     ],
   },
 
@@ -94,6 +98,10 @@ module.exports = {
         from: 'node_modules/7zip-bin-full/linux',
         to: '7zip/linux',
         filter: ['**/*'],
+      },
+      {
+        from: 'resources/extensions/spellfix.so',
+        to: 'extensions/spellfix.so',
       },
     ],
   },
@@ -140,6 +148,10 @@ module.exports = {
         from: 'node_modules/7zip-bin-full/mac',
         to: '7zip/mac',
         filter: ['**/*'],
+      },
+      {
+        from: 'resources/extensions/spellfix.dylib',
+        to: 'extensions/spellfix.dylib',
       },
     ],
   },
