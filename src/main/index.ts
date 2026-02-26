@@ -65,6 +65,13 @@ if (isLinux()) {
   // Enable gamepad support
   app.commandLine.appendSwitch('enable-gamepad-extensions');
 
+  // Enable hardware video decoding on Linux
+  app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
+  // Enable WebRTC and media features for video playback
+  app.commandLine.appendSwitch('enable-accelerated-video-decode');
+
   // Prevent double keyboard input from GTK input method module.
   // When GTK_IM_MODULE is set (e.g. 'ibus', 'fcitx'), key events are processed
   // through two paths simultaneously (Wayland text-input + GTK IM module),
@@ -79,7 +86,8 @@ if (isLinux()) {
 
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    app.commandLine.appendSwitch('disable-gpu');
+    // Use disable-gpu-compositing instead of disable-gpu to allow video playback
+    app.commandLine.appendSwitch('disable-gpu-compositing');
   }
 }
 
