@@ -11,6 +11,9 @@ export default defineConfig({
       },
     },
     build: {
+      externalizeDeps: {
+        exclude: ['got'],
+      },
       rollupOptions: {
         input: {
           index: path.resolve(__dirname, 'src/main/index.ts'),

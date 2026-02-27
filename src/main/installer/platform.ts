@@ -5,6 +5,7 @@ import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { runProton } from './proton';
 
 /**
  * Check if file is an executable installer
@@ -130,8 +131,6 @@ export async function runInstaller(
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux if protonPath is provided
       console.log(`[Installer] Launching installer via Proton: ${protonPath}`);
-      const { runProton } = await import('./proton');
-
       // Copy installer path in Wine format to clipboard for user convenience
       const winePath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
       clipboard.writeText(winePath);
