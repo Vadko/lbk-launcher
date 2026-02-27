@@ -1,11 +1,10 @@
 import react from '@vitejs/plugin-react-swc';
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import { defineConfig } from 'electron-vite';
 import path from 'path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -22,7 +21,6 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

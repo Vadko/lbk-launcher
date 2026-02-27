@@ -50,7 +50,8 @@
     "zustand": "^4.5.7"
   },
   "optionalDependencies": {
-    "electron-liquid-glass": "^1.1.1"
+    "electron-liquid-glass": "^1.1.1",
+    "node-gyp-build": "^4.8.4"
   },
   "devDependencies": {
     "7zip-bin-full": "^26.0.1",
@@ -70,7 +71,7 @@
     "electron-builder": "26.8.1",
     "electron-devtools-installer": "^4.0.0",
     "electron-updater": "6.8.3",
-    "electron-vite": "4.0.1",
+    "electron-vite": "5.0.0",
     "env-cmd": "^11.0.0",
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -81,7 +82,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
-    "vite": "^5.4.21",
+    "vite": "^6.4.1",
     "vite-plugin-node-polyfills": "^0.24.0"
   }
 }
