@@ -125,6 +125,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Setup MSVC (Windows)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Install dependencies
         if: steps.should_run.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
