@@ -1,6 +1,7 @@
 import { dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
+import { GamesRepository } from '../db/games-repository';
 import {
   abortCurrentDownload,
   checkInstallation,
@@ -58,6 +59,21 @@ export function setupInstallerHandlers(): void {
         // Note: cache invalidation та installed-games-changed event
         // автоматично відбуваються через InstallationWatcher при зміні файлів
         // Download tracking тепер відбувається в Edge Function при генерації signed URL
+
+        // Locally increment downloads counter (broadcast is skipped for downloads-only changes).
+        // The server counts unique downloads, so the worst case is +1 drift until next sync.
+        if (options.installText) {
+          try {
+            const repo = new GamesRepository();
+            repo.incrementDownloads(game.id);
+            const updatedGame = repo.getGameById(game.id);
+            if (updatedGame) {
+              getMainWindow()?.webContents.send('game-updated', updatedGame);
+            }
+          } catch (err) {
+            console.error('[Installer] Failed to update local downloads count:', err);
+          }
+        }
 
         return { success: true };
       } catch (error) {

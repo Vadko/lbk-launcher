@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FilterCountsResult } from '../../shared/types';
+import { useStore } from '../store/useStore';
 
 export type FilterCounts = FilterCountsResult & {
   'installed-translations': number;
@@ -25,6 +26,7 @@ const INITIAL_COUNTS: FilterCounts = {
 const DEBOUNCE_DELAY = 300;
 
 export function useFilterCounts() {
+  const syncStatus = useStore((state) => state.syncStatus);
   const [counts, setCounts] = useState<FilterCounts>(INITIAL_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +100,13 @@ export function useFilterCounts() {
 
   useEffect(() => {
     isMountedRef.current = true;
+
+    if (syncStatus !== 'ready' && syncStatus !== 'error') {
+      return () => {
+        isMountedRef.current = false;
+      };
+    }
+
     fetchCounts();
 
     const unsubInstalled =
@@ -114,7 +123,7 @@ export function useFilterCounts() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [fetchCounts, debouncedFetchCounts]);
+  }, [fetchCounts, debouncedFetchCounts, syncStatus]);
 
   return { counts, isLoading, refetch: fetchCounts };
 }
