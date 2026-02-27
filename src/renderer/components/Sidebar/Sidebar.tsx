@@ -113,23 +113,29 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setPickerModalOpen(true);
     };
 
-    // Fetch authors list
+    // Fetch authors list (wait for sync to complete)
+    const syncStatus = useStore((state) => state.syncStatus);
     const [authors, setAuthors] = useState<string[]>([]);
     const [authorsLoading, setAuthorsLoading] = useState(true);
 
-    useEffect(() => {
-      const loadAuthors = async () => {
-        try {
-          const fetchedAuthors = await window.electronAPI.fetchTeams();
-          setAuthors(fetchedAuthors);
-        } catch (error) {
-          console.error('[Sidebar] Error fetching authors:', error);
-        } finally {
-          setAuthorsLoading(false);
-        }
-      };
-      loadAuthors();
+    const loadAuthors = useCallback(async () => {
+      try {
+        const fetchedAuthors = await window.electronAPI.fetchTeams();
+        setAuthors(fetchedAuthors);
+      } catch (error) {
+        console.error('[Sidebar] Error fetching authors:', error);
+      } finally {
+        setAuthorsLoading(false);
+      }
     }, []);
+
+    useEffect(() => {
+      if (syncStatus !== 'ready' && syncStatus !== 'error') return;
+      loadAuthors();
+
+      const unsub = window.electronAPI?.onGameUpdated?.(() => loadAuthors());
+      return () => unsub?.();
+    }, [syncStatus, loadAuthors]);
 
     const {
       games: visibleGames,

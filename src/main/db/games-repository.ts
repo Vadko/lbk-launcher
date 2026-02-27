@@ -411,6 +411,16 @@ export class GamesRepository {
   }
 
   /**
+   * Інкрементувати лічильник завантажень для гри в локальній БД
+   */
+  incrementDownloads(gameId: string): void {
+    const stmt = this.db.prepare(
+      'UPDATE games SET downloads = COALESCE(downloads, 0) + 1 WHERE id = ?'
+    );
+    stmt.run(gameId);
+  }
+
+  /**
    * Видалити гру
    */
   deleteGame(gameId: string): void {
