@@ -16,11 +16,11 @@ source=(
     "LBK-Launcher-linux.AppImage::https://github.com/Vadko/lbk-launcher/releases/download/v${pkgver}/LBK-Launcher-linux.AppImage"
     "lbk-launcher.sh"
     "lbk-launcher.desktop"
-    "icon-32.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/master/aur/icons/icon-32.png"
-    "icon-48.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/master/aur/icons/icon-48.png"
-    "icon-64.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/master/aur/icons/icon-64.png"
-    "icon-128.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/master/aur/icons/icon-128.png"
-    "icon-256.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/master/aur/icons/icon-256.png"
+    "icon-32.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-32.png"
+    "icon-48.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-48.png"
+    "icon-64.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-64.png"
+    "icon-128.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-128.png"
+    "icon-256.png::https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-256.png"
 )
 sha256sums=('6d073a09ba8e34c9ad4946a09576352b5cc3c9adb9ef75703b149bc9d8996342'
             'bfdbf1a13225fe5a970dfdca75c4d142a1152f4f1a4e6e0b10f0a6ac659efc5f'
