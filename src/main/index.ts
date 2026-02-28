@@ -86,8 +86,7 @@ if (isLinux()) {
 
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    // Use disable-gpu-compositing instead of disable-gpu to allow video playback
-    app.commandLine.appendSwitch('disable-gpu-compositing');
+    app.commandLine.appendSwitch('disable-gpu');
   }
 }
 
