@@ -1351,6 +1351,15 @@ export type Database = {
           total_first_launches: number
         }[]
       }
+      get_landing_stats: {
+        Args: never
+        Returns: {
+          dau: number
+          total_downloads: number
+          total_playtime_hours: number
+          total_unique_players: number
+        }[]
+      }
       get_players_with_downloads: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
