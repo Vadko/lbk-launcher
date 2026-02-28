@@ -1355,6 +1355,7 @@ export type Database = {
         Args: never
         Returns: {
           dau: number
+          total_creators: number
           total_downloads: number
           total_playtime_hours: number
           total_unique_players: number
