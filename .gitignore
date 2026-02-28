@@ -36,10 +36,9 @@ Thumbs.db
 *.temp
 release/
 
-# Compiled spellfix extensions (built per-platform)
-resources/extensions/*.dylib
-resources/extensions/*.so
-resources/extensions/*.dll
+# Ignore everything in extensions except source files
+resources/extensions/*
+!resources/extensions/*.c
 
 
 .claude/*
