@@ -445,9 +445,13 @@ export function useInstallation({
 
       if (hasInstaller) {
         const isLinux = (await window.electronAPI.getPlatform()) === 'linux';
+        const needsProton =
+          isLinux &&
+          !selectedGame.installation_file_linux_path &&
+          !!selectedGame.installation_file_windows_path;
 
-        if (isLinux) {
-          // Get available Proton versions for Linux
+        if (needsProton) {
+          // Get available Proton versions for Linux (only when no native Linux installer)
           const protons = (await window.electronAPI.getAvailableProtons?.()) || [];
 
           if (protons) {

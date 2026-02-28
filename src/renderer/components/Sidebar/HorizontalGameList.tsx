@@ -115,7 +115,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
               key={`${keyPrefix}_${group.slug}`}
               className="flex-shrink-0"
               initial={animProps?.initial ?? false}
-              animate={animProps?.animate}
+              animate={animProps?.animate ?? { opacity: 1, x: 0 }}
               transition={animProps?.transition}
             >
               {card}
