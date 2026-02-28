@@ -117,7 +117,7 @@ export const GameList: React.FC<GameListProps> = React.memo(
               key={`${keyPrefix}_${group.slug}`}
               id={`group-${group.slug}`}
               initial={animProps?.initial ?? false}
-              animate={animProps?.animate}
+              animate={animProps?.animate ?? { opacity: 1, y: 0 }}
               transition={animProps?.transition}
             >
               {content}

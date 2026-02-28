@@ -135,17 +135,13 @@ function build() {
   const platform = process.platform;
 
   let cmd;
-  let outFile;
   let env;
 
   if (platform === 'darwin') {
-    outFile = join(OUT_DIR, 'spellfix.dylib');
     cmd = `cc -dynamiclib -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
   } else if (platform === 'linux') {
-    outFile = join(OUT_DIR, 'spellfix.so');
     cmd = `cc -shared -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
   } else if (platform === 'win32') {
-    outFile = join(OUT_DIR, 'spellfix.dll');
     const msvc = findMsvcEnv();
     const allInclude = [headersDir, ...msvc.includePaths].join(';');
     const allLib = msvc.libPaths.join(';');
