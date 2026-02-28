@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { clipboard, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
@@ -142,8 +142,31 @@ export async function runInstaller(
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
         if (exitCode === 1) throw new Error('Встановлення не було завершене');
       }
+    } else if (platform === 'linux' || platform === 'macos') {
+      // Execute native Linux/macOS scripts directly
+      console.log(`[Installer] Executing native installer: ${installerPath}`);
+      onStatus?.({ message: 'Запуск інсталятора...' });
+
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, [], {
+          cwd: extractDir,
+          stdio: 'inherit',
+        });
+
+        child.on('exit', (code) => {
+          if (code !== 0 && code !== null) {
+            reject(new Error(`Інсталятор завершився з кодом ${code}`));
+          } else {
+            resolve();
+          }
+        });
+
+        child.on('error', (err) => {
+          reject(err);
+        });
+      });
     } else {
-      // Use Electron's shell.openPath for all platforms
+      // Use Electron's shell.openPath for Windows
       const result = await shell.openPath(installerPath);
 
       if (result) {
