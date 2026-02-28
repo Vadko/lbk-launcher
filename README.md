@@ -309,7 +309,7 @@ LBK Launcher — **відкритий проєкт з відкритим вих�
 ```bash
 # 1. Клонування репозиторію
 git clone https://github.com/Vadko/lbk-launcher.git
-cd littlebit-launcher
+cd lbk-launcher
 
 # 2. Встановлення залежностей
 pnpm install
