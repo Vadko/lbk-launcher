@@ -342,12 +342,13 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               {isVoiceIntegrated && (
                 <span className="text-xs text-purple-400">(разом з текстовою)</span>
               )}
-              {isVoiceInstalled || (isVoiceIntegrated && isReinstall) && (
-                <span className="flex items-center gap-1 text-xs text-green-400">
-                  <Check size={12} />
-                  встановлено
-                </span>
-              )}
+              {isVoiceInstalled ||
+                (isVoiceIntegrated && isReinstall && (
+                  <span className="flex items-center gap-1 text-xs text-green-400">
+                    <Check size={12} />
+                    встановлено
+                  </span>
+                ))}
             </div>
             <div className="text-sm text-text-muted mt-1">
               <p>Українське озвучення.</p>
