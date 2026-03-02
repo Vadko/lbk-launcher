@@ -34,7 +34,7 @@ const MIGRATION_KEY = '__migration-v1-done';
     console.warn('[Migration] window.storeStorage not available yet, skipping migration');
     return;
   }
-  
+
   if (window.storeStorage.getItem(MIGRATION_KEY) !== null) return;
 
   const keysToMigrate = ['lbk-settings', 'subscriptions-storage', 'has-launched-before'];
