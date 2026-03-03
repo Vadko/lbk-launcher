@@ -1,4 +1,4 @@
-import { init as sentryInit, browserTracingIntegration } from '@sentry/electron/renderer';
+import { browserTracingIntegration, init as sentryInit } from '@sentry/electron/renderer';
 import { init as reactInit } from '@sentry/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -19,7 +19,7 @@ sentryInit(
     tracesSampleRate: 1.0,
     enableLogs: true,
   },
-  reactInit,
+  reactInit
 );
 
 // Initialize global error handlers before React renders

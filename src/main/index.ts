@@ -150,9 +150,7 @@ if (!gotTheLock) {
 
   process.on('unhandledRejection', (reason) => {
     console.error('[Main] Unhandled Rejection:', reason);
-    Sentry.captureException(
-      reason instanceof Error ? reason : new Error(String(reason))
-    );
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
   });
 
   // Set app ID for Wayland/Flatpak icon matching
