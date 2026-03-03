@@ -1,7 +1,6 @@
 import {
   Award,
   Bell,
-  Bot,
   Calendar,
   CalendarClock,
   CalendarPlus,

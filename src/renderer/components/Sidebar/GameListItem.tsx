@@ -1,4 +1,4 @@
-import { Bot, EyeOff } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
@@ -6,10 +6,10 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
-import { PopularIcon } from '../Icons/PopularIcon';
-import { Loader } from '../ui/Loader';
 import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';
+import { PopularIcon } from '../Icons/PopularIcon';
+import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
   game: Game | TrendingGameWithDetails;
@@ -122,9 +122,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {(game.ai === 'edited' || game.ai === 'non-edited') && (
               <div
                 className="absolute top-5 right-5 bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]"
-                title={
-                  game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'
-                }
+                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
               >
                 {game.ai === 'edited' ? <PencilIcon /> : <AiIcon />}
               </div>
@@ -240,9 +238,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {(game.ai === 'edited' || game.ai === 'non-edited') && (
               <div
                 className="absolute top-3 right-3 bg-white/80 rounded-full text-text-dark p-[5px] ring-[4px] ring-[rgba(255,255,255,0.15)]"
-                title={
-                  game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'
-                }
+                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
               >
                 {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
               </div>
