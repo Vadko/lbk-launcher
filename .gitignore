@@ -39,6 +39,6 @@ release/
 # Ignore everything in extensions except source files
 resources/extensions/*
 !resources/extensions/*.c
-
+spellfix.obj
 
 .claude/*
