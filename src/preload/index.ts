@@ -1,4 +1,7 @@
+import * as Sentry from '@sentry/electron/renderer';
 import { contextBridge, ipcRenderer } from 'electron';
+
+Sentry.init();
 import type {
   DownloadProgress,
   ElectronAPI,

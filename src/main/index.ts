@@ -1,8 +1,21 @@
+import * as Sentry from '@sentry/electron/main';
 import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import { setupStoreStorageHandlers } from './utils/store-storage';
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  enabled: app.isPackaged,
+  release: __SENTRY_RELEASE__,
+  tracesSampleRate: 1.0,
+  integrations: [
+    Sentry.captureConsoleIntegration({ levels: ['error'] }),
+    Sentry.startupTracingIntegration(),
+  ],
+  enableLogs: true,
+});
 
 // Deep link handling
 const PROTOCOL = 'lbk';
@@ -91,7 +104,7 @@ if (isLinux()) {
   }
 }
 
-import { checkForUpdates, setupAutoUpdater } from './auto-updater';
+import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { closeDatabase, initDatabase } from './db/database';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
@@ -128,6 +141,19 @@ if (!gotTheLock) {
 } else {
   // Initialize logger early to capture all logs
   initLogger();
+
+  // Catch unhandled errors in main process to prevent crashes
+  process.on('uncaughtException', (error) => {
+    console.error('[Main] Uncaught Exception:', error);
+    Sentry.captureException(error);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('[Main] Unhandled Rejection:', reason);
+    Sentry.captureException(
+      reason instanceof Error ? reason : new Error(String(reason))
+    );
+  });
 
   // Set app ID for Wayland/Flatpak icon matching
   // This must match the Flatpak app-id and .desktop file name
@@ -360,6 +386,7 @@ if (!gotTheLock) {
 
   app.on('window-all-closed', () => {
     // Cleanup
+    stopUpdateCheck();
     stopSteamWatcher();
     stopInstallationWatcher();
 

@@ -141,6 +141,11 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
         run: pnpm build
 
       - name: Build dist (Windows)
