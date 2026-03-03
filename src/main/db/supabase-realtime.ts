@@ -60,6 +60,12 @@ export class SupabaseRealtimeManager {
       return;
     }
 
+    // Скасувати попередній retry щоб уникнути каскадних реконнектів
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
+
     const delay = this.getRetryDelay();
     console.log(
       `[SupabaseRealtime] Scheduling retry #${this.retryCount + 1} in ${Math.round(delay)}ms`
@@ -83,9 +89,12 @@ export class SupabaseRealtimeManager {
     console.log('[SupabaseRealtime] Attempting to reconnect...');
 
     // Очистити попереднє підключення та клієнт
+    // Спочатку обнуляємо this.channel, щоб CLOSED callback від unsubscribe
+    // не запланував паразитний retry
     if (this.channel) {
-      this.channel.unsubscribe();
+      const oldChannel = this.channel;
       this.channel = null;
+      oldChannel.unsubscribe();
     }
 
     // Закрити старий Supabase client перед створенням нового
@@ -187,6 +196,11 @@ export class SupabaseRealtimeManager {
         console.log('[SupabaseRealtime] Subscription status:', status);
 
         if (status === 'SUBSCRIBED') {
+          // Скасувати pending retry — з'єднання вже відновлено
+          if (this.retryTimeout) {
+            clearTimeout(this.retryTimeout);
+            this.retryTimeout = null;
+          }
           this.retryCount = 0;
           console.log('[SupabaseRealtime] Successfully connected to broadcast channel');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
@@ -194,6 +208,12 @@ export class SupabaseRealtimeManager {
           this.channel = null;
           this.scheduleRetry();
         } else if (status === 'CLOSED') {
+          // Ігноруємо CLOSED від unsubscribe під час reconnect
+          // (this.channel вже null якщо reconnect обнулив його)
+          if (!this.channel) {
+            console.log('[SupabaseRealtime] Channel already cleaned up, ignoring CLOSED');
+            return;
+          }
           console.log('[SupabaseRealtime] Channel closed, attempting to reconnect...');
           this.channel = null;
           this.scheduleRetry();

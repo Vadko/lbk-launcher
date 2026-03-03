@@ -2,6 +2,8 @@ import { app, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { getMainWindow } from './window';
 
+let updateCheckInterval: NodeJS.Timeout | null = null;
+
 export function setupAutoUpdater(): void {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -22,12 +24,26 @@ export function setupAutoUpdater(): void {
   ipcMain.handle('install-update', () => autoUpdater.quitAndInstall());
 }
 
+function handleUpdateError(error: unknown): void {
+  console.error('[AutoUpdater] Check failed:', error);
+}
+
 export function checkForUpdates(): void {
   if (app.isPackaged) {
     // Initial check after 3 seconds
-    setTimeout(() => autoUpdater.checkForUpdates(), 3000);
+    setTimeout(() => autoUpdater.checkForUpdates().catch(handleUpdateError), 3000);
 
     // Check every 30 minutes
-    setInterval(() => autoUpdater.checkForUpdates(), 1800000);
+    updateCheckInterval = setInterval(
+      () => autoUpdater.checkForUpdates().catch(handleUpdateError),
+      1800000
+    );
+  }
+}
+
+export function stopUpdateCheck(): void {
+  if (updateCheckInterval) {
+    clearInterval(updateCheckInterval);
+    updateCheckInterval = null;
   }
 }

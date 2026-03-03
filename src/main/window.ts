@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/electron/main';
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import {
@@ -99,6 +100,13 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[Window] Render process gone:', details);
+    Sentry.captureMessage(`Render process gone: ${details.reason}`, {
+      level: 'fatal',
+      extra: { exitCode: details.exitCode, reason: details.reason },
+    });
+    if (details.reason !== 'clean-exit') {
+      mainWindow?.reload();
+    }
   });
 
   mainWindow.on('closed', async () => {

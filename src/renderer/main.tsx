@@ -1,3 +1,5 @@
+import { browserTracingIntegration, init as sentryInit } from '@sentry/electron/renderer';
+import { init as reactInit } from '@sentry/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -7,6 +9,18 @@ import { queryClient } from './queries/queryClient';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import './styles/globals.css';
 import './styles/animations.css';
+
+// Initialize Sentry for renderer error reporting with React integration
+sentryInit(
+  {
+    release: __SENTRY_RELEASE__,
+    sendDefaultPii: true,
+    integrations: [browserTracingIntegration()],
+    tracesSampleRate: 1.0,
+    enableLogs: true,
+  },
+  reactInit
+);
 
 // Initialize global error handlers before React renders
 initGlobalErrorHandlers();
