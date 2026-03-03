@@ -845,6 +845,27 @@ export type Database = {
           },
         ]
       }
+      slug_redirects: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_path: string
+          old_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_path: string
+          old_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_path?: string
+          old_path?: string
+        }
+        Relationships: []
+      }
       steam_apps: {
         Row: {
           app_id: number
