@@ -6,7 +6,7 @@ import type {
 } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
 
-const gamesRepo = new GamesRepository();
+const gamesRepo = GamesRepository.getInstance();
 
 export function fetchGames(params: GetGamesParams = {}): GetGamesResult {
   try {

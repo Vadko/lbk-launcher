@@ -369,7 +369,7 @@ export async function getConflictingTranslation(
     }
 
     // Different translation is installed - get game info from DB
-    const gamesRepo = new GamesRepository();
+    const gamesRepo = GamesRepository.getInstance();
     const conflictingGame = gamesRepo.getGameById(info.gameId);
 
     console.log(
