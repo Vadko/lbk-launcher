@@ -199,6 +199,7 @@ export interface ElectronAPI {
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
+  onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;

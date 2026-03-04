@@ -424,6 +424,18 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // [DEV ONLY] Listen for test games changes and broadcast to components
+  useEffect(() => {
+    if (!window.electronAPI?.onTestGamesChanged) return;
+
+    const handleTestGamesChanged = () => {
+      window.dispatchEvent(new Event('test-games-updated'));
+    };
+
+    const unsubscribe = window.electronAPI.onTestGamesChanged(handleTestGamesChanged);
+    return unsubscribe;
+  }, []);
+
   const handleOnlineEvent = () => {
     setOnline(true);
     console.log('[App] Internet connection restored');
