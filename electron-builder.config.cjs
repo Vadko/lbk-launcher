@@ -34,7 +34,7 @@ module.exports = {
 
   electronLanguages: ['en-US', 'uk'],
 
-  artifactName: "${productName}-${os}.${ext}",
+  artifactName: "LBK-Launcher-${os}.${ext}",
 
   compression: 'store',
 
@@ -83,7 +83,7 @@ module.exports = {
   },
 
   portable: {
-    artifactName: "${productName}-${os}-Portable.${ext}",
+    artifactName: "LBK-Launcher-${os}-Portable.${ext}",
   },
 
   linux: {
@@ -113,7 +113,7 @@ module.exports = {
     allowToChangeInstallationDirectory: false,
     deleteAppDataOnUninstall: false,
     differentialPackage: true,
-    artifactName: "${productName}-${os}-Setup.${ext}",
+    artifactName: "LBK-Launcher-${os}-Setup.${ext}",
     language: "1058",
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
@@ -139,7 +139,7 @@ module.exports = {
     gatekeeperAssess: false,
     darkModeSupport: true,
     minimumSystemVersion: '10.13.0',
-    artifactName: '${productName}-${arch}.${ext}',
+    artifactName: 'LBK-Launcher-${arch}.${ext}',
     // Підписування: використовує CSC_LINK та CSC_KEY_PASSWORD з env
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',
@@ -177,6 +177,6 @@ module.exports = {
     },
     icon: 'resources/icon.icns',
     backgroundColor: '#323232',
-    artifactName: '${productName}-${version}-${arch}.${ext}',
+    artifactName: 'LBK-Launcher-${version}-${arch}.${ext}',
   },
 };
