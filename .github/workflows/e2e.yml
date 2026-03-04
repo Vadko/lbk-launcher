@@ -1,13 +1,6 @@
 name: E2E Tests
 
 on:
-  push:
-    paths:
-      - 'e2e/**'
-    branches:
-      - '**'
-    tags-ignore:
-      - '**'
   pull_request:
     paths:
       - 'e2e/**'
@@ -22,12 +15,12 @@ on:
         description: 'Test on Linux'
         required: false
         type: boolean
-        default: false
+        default: true
       macos:
         description: 'Test on macOS'
         required: false
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -57,9 +50,13 @@ jobs:
         id: should_run
         shell: bash
         run: |
-          # On push/PR triggers, run all platforms
-          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            echo "run=true" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # On PR: only Linux runs automatically
+            if [ "${{ matrix.platform }}" = "linux" ]; then
+              echo "run=true" >> $GITHUB_OUTPUT
+            else
+              echo "run=false" >> $GITHUB_OUTPUT
+            fi
           elif [ "${{ matrix.platform }}" = "windows" ] && [ "${{ github.event.inputs.windows }}" = "true" ]; then
             echo "run=true" >> $GITHUB_OUTPUT
           elif [ "${{ matrix.platform }}" = "linux" ] && [ "${{ github.event.inputs.linux }}" = "true" ]; then
