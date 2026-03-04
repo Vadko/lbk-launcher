@@ -64,7 +64,7 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
           ) : (
             visibleGames.map((game, index) => (
               <motion.div
-                key={game.slug}
+                key={`${game.slug}-${index}`}
                 id={`game-${game.slug}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

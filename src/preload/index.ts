@@ -153,6 +153,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('steam-library-changed', handler);
     return () => ipcRenderer.removeListener('steam-library-changed', handler);
   },
+  // [DEV ONLY] Test games hot reload
+  onTestGamesChanged: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('test-games-changed', handler);
+    return () => ipcRenderer.removeListener('test-games-changed', handler);
+  },
   onInstalledGamesChanged: (callback: () => void) => {
     const handler = () => callback();
     ipcRenderer.on('installed-games-changed', handler);

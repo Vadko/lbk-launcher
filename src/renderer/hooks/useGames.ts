@@ -303,6 +303,13 @@ export function useGames({
     loadGames();
   }, [loadGames, syncStatus]);
 
+  // [DEV ONLY] Reload games when test data changes
+  useEffect(() => {
+    const handleTestGamesUpdate = () => loadGames();
+    window.addEventListener('test-games-updated', handleTestGamesUpdate);
+    return () => window.removeEventListener('test-games-updated', handleTestGamesUpdate);
+  }, [loadGames]);
+
   // Перевірити статуси підписаних ігор після першого завантаження
   useEffect(() => {
     if (!isLoading && games.length > 0 && !hasCheckedSubscriptions.current) {

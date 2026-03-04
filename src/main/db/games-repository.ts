@@ -1,4 +1,7 @@
 import type Database from 'better-sqlite3';
+import { BrowserWindow } from 'electron';
+import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
+import { join } from 'node:path';
 import { getSearchVariations } from '../../shared/search-utils';
 import type { Game, GetGamesParams, GetGamesResult } from '../../shared/types';
 import { getDatabase, isSpellfixAvailable } from './database';
@@ -8,10 +11,133 @@ import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-q
  * Repository для роботи з іграми в локальній базі даних
  */
 export class GamesRepository {
+  private static instance: GamesRepository | null = null;
   private db: Database.Database;
+  private testGamesPath: string;
+  private fileWatcher: FSWatcher | null = null;
+  private fileWatchDebounceTimer: NodeJS.Timeout | null = null;
 
-  constructor() {
+  private constructor() {
     this.db = getDatabase();
+    this.testGamesPath = join(__dirname, '../../test/games.json');
+    this.loadTestGamesInDevelopment();
+    this.watchTestGamesFile();
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): GamesRepository {
+    if (!GamesRepository.instance) {
+      GamesRepository.instance = new GamesRepository();
+    }
+    return GamesRepository.instance;
+  }
+
+  /**
+   * Прочитати і розпарсити test/games.json
+   */
+  private readTestGamesFile(): Game[] {
+    if (!existsSync(this.testGamesPath)) {
+      return [];
+    }
+
+    try {
+      const fileContent = readFileSync(this.testGamesPath, 'utf-8');
+      const games = JSON.parse(fileContent);
+      return Array.isArray(games) ? games : [];
+    } catch (error) {
+      console.error('[DEV] Error reading test/games.json:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Відстежувати зміни в test/games.json
+   */
+  private watchTestGamesFile(): void {
+    if (process.env.NODE_ENV !== 'development' || !existsSync(this.testGamesPath)) {
+      return;
+    }
+
+    try {
+      this.fileWatcher = watch(this.testGamesPath, (eventType) => {
+        if (eventType === 'change') {
+          if (this.fileWatchDebounceTimer) {
+            clearTimeout(this.fileWatchDebounceTimer);
+          }
+
+          this.fileWatchDebounceTimer = setTimeout(() => {
+            console.log('[DEV] Test games file changed, reloading...');
+            this.loadTestGamesInDevelopment();
+            this.fileWatchDebounceTimer = null;
+          }, 2000);
+        }
+      });
+
+      process.on('exit', this.cleanup.bind(this));
+    } catch (error) {
+      console.error('[DEV] Failed to setup file watcher:', error);
+    }
+  }
+
+  /**
+   * Cleanup resources
+   */
+  private cleanup(): void {
+    if (this.fileWatcher) {
+      this.fileWatcher.close();
+      this.fileWatcher = null;
+    }
+    if (this.fileWatchDebounceTimer) {
+      clearTimeout(this.fileWatchDebounceTimer);
+      this.fileWatchDebounceTimer = null;
+    }
+  }
+
+  /**
+   * Повідомити renderer процес про зміни в іграх
+   */
+  private notifyGamesChanged(): void {
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      window.webContents.send('test-games-changed');
+    });
+  }
+
+  /**
+   * Завантажити тестові ігри з test/games.json в режимі розробки
+   */
+  private loadTestGamesInDevelopment(): void {
+    if (process.env.NODE_ENV !== 'development') {
+      return;
+    }
+
+    try {
+      const testGames = this.readTestGamesFile();
+      
+      if (testGames.length > 0) {
+        // Delete all test games (any id starting with 'test-')
+        this.db.prepare(`DELETE FROM games WHERE id LIKE 'test-%'`).run();
+
+        // Modify test games to appear at top of list
+        const modifiedTestGames = testGames.map((game, index) => ({
+          ...game,
+          name: `[TEST] ${game.name}`,
+          id: `test-${game.id}`,
+          slug: `test-${game.slug || game.id}`,
+          approved_at: new Date(2099, 11, 31, 23, 59, 59 - index).toISOString(),
+        })) as Game[];
+        
+        this.upsertGames(modifiedTestGames);
+        
+        this.notifyGamesChanged();
+        
+        console.log(`[DEV] Loaded ${modifiedTestGames.length} test game(s)`);
+      }
+    } catch (error) {
+      console.error('[DEV] Error loading test games:', error);
+    }
   }
 
   /**
