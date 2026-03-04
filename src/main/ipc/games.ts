@@ -234,7 +234,7 @@ export function setupGamesHandlers(): void {
     'find-games-by-titles',
     (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
       try {
-        const repo = new GamesRepository();
+        const repo = GamesRepository.getInstance();
         return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error finding games by titles:', error);
