@@ -132,7 +132,11 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <InfoItem
             icon={<Download size={18} />}
             label="Завантажень"
-            value={!game.downloads || game.downloads < 20 ? 'до 20' : game.downloads!.toLocaleString('uk-UA')}
+            value={
+              !game.downloads || game.downloads < 20
+                ? 'до 20'
+                : game.downloads!.toLocaleString('uk-UA')
+            }
           />
         )}
         {game.created_at && (
