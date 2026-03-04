@@ -234,7 +234,7 @@ function getDatabasePath(): string {
 /**
  * Get path to spellfix extension for current platform
  */
-function getSpellfixPath(): string | null {
+export function getSpellfixPath(): string | null {
   const ext =
     process.platform === 'darwin' ? 'dylib' : process.platform === 'win32' ? 'dll' : 'so';
   const fileName = `spellfix.${ext}`;

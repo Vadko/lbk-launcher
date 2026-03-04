@@ -102,13 +102,13 @@ jobs:
         if: steps.should_run.outputs.run == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Setup pnpm
         if: steps.should_run.outputs.run == 'true'
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.7.1
 
       - name: Get pnpm store directory
         if: steps.should_run.outputs.run == 'true'
@@ -192,6 +192,44 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: pnpm dist:mac --publish never
+
+      # --- E2E tests on built app ---
+
+      - name: Install Electron system dependencies (Linux)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libatk1.0-0 libatk-bridge2.0-0 \
+            libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
+            libasound2t64
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Setup virtual display (Linux)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        run: |
+          Xvfb :99 -screen 0 1400x900x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Remove macOS quarantine
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'macos-latest'
+        run: xattr -cr release/*/mac-arm64/*.app || xattr -cr release/*/mac/*.app || true
+
+      - name: Run E2E tests
+        if: steps.should_run.outputs.run == 'true'
+        run: pnpm test:e2e
+        timeout-minutes: 10
+        env:
+          ELECTRON_ENABLE_LOGGING: '1'
+
+      - name: Upload E2E test results
+        if: always() && steps.should_run.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: playwright-report/
+          retention-days: 7
+
+      # --- Upload artifacts to release ---
 
       - name: Upload artifacts to release
         if: steps.should_run.outputs.run == 'true'
