@@ -88,6 +88,7 @@ module.exports = {
 
   linux: {
     target: ['AppImage', 'rpm'],
+    artifactName: 'LBK-Launcher-${os}.${ext}',
     category: 'Utility',
     maintainer: 'LBK UA <info@lbklauncher.com>',
     executableName: 'lbk-launcher',
