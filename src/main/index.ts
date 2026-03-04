@@ -5,6 +5,13 @@ import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import { setupStoreStorageHandlers } from './utils/store-storage';
 
+// E2E: enable remote debugging for packaged apps.
+// Electron 30+ ignores --remote-debugging-port CLI arg for packaged binaries,
+// so we must call appendSwitch() programmatically before app.whenReady().
+if (process.env['LBK_E2E'] === '1') {
+  app.commandLine.appendSwitch('remote-debugging-port', '19222');
+}
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   enabled: app.isPackaged,

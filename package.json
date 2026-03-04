@@ -30,7 +30,8 @@
     "format:check": "biome check --max-diagnostics=200 .",
     "types:generate": "npx --yes supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts",
     "postinstall": "electron-builder install-app-deps",
-    "generate:icns": "bash scripts/generate-icns.sh"
+    "generate:icns": "bash scripts/generate-icns.sh",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts"
   },
   "dependencies": {
     "@node-steam/vdf": "^2.2.0",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "7zip-bin-full": "^26.0.1",
     "@biomejs/biome": "^2.4.4",
+    "@playwright/test": "1.58.2",
     "@sentry/vite-plugin": "^5.1.1",
     "@supabase/supabase-js": "2.98.0",
     "@types/better-sqlite3": "^7.6.13",

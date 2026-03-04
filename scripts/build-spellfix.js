@@ -13,23 +13,12 @@ const ROOT = resolve(__dirname, '..');
 const SRC = join(ROOT, 'resources', 'extensions', 'spellfix.c');
 const OUT_DIR = join(ROOT, 'resources', 'extensions');
 
-// Find better-sqlite3 SQLite headers (works with pnpm hoisted layout)
+// Find better-sqlite3 SQLite headers
 function findSqliteHeaders() {
-  const pnpmDir = join(ROOT, 'node_modules', '.pnpm');
-  if (!existsSync(pnpmDir)) {
-    throw new Error('node_modules/.pnpm not found. Run pnpm install first.');
-  }
-
-  const entries = readdirSync(pnpmDir).filter((e) => e.startsWith('better-sqlite3@'));
-  if (entries.length === 0) {
-    throw new Error('better-sqlite3 not found in node_modules/.pnpm');
-  }
-
-  const depsPath = join(pnpmDir, entries[0], 'node_modules', 'better-sqlite3', 'deps', 'sqlite3');
+  const depsPath = join(ROOT, 'node_modules', 'better-sqlite3', 'deps', 'sqlite3');
   if (!existsSync(join(depsPath, 'sqlite3ext.h'))) {
-    throw new Error(`sqlite3ext.h not found at ${depsPath}`);
+    throw new Error(`sqlite3ext.h not found at ${depsPath}. Run pnpm install first.`);
   }
-
   return depsPath;
 }
 

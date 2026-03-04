@@ -1,0 +1,176 @@
+name: E2E Tests
+
+on:
+  push:
+    paths:
+      - 'e2e/**'
+  pull_request:
+    paths:
+      - 'e2e/**'
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: 'Test on Windows'
+        required: false
+        type: boolean
+        default: false
+      linux:
+        description: 'Test on Linux'
+        required: false
+        type: boolean
+        default: false
+      macos:
+        description: 'Test on macOS'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+
+    steps:
+      - name: Check if should run
+        id: should_run
+        shell: bash
+        run: |
+          # On push/PR triggers, run all platforms
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.platform }}" = "windows" ] && [ "${{ github.event.inputs.windows }}" = "true" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.platform }}" = "linux" ] && [ "${{ github.event.inputs.linux }}" = "true" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [ "${{ matrix.platform }}" = "macos" ] && [ "${{ github.event.inputs.macos }}" = "true" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout code
+        if: steps.should_run.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.should_run.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        if: steps.should_run.outputs.run == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.7.1
+
+      - name: Get pnpm store directory
+        if: steps.should_run.outputs.run == 'true'
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        if: steps.should_run.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+
+      - name: Setup MSVC (Windows)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install dependencies
+        if: steps.should_run.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        if: steps.should_run.outputs.run == 'true'
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
+        run: pnpm build
+
+      - name: Build dist (Windows)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'windows-latest'
+        timeout-minutes: 20
+        run: pnpm dist:win --publish never
+
+      - name: Build dist (Linux)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        timeout-minutes: 20
+        run: pnpm dist:linux --publish never
+
+      - name: Build dist (macOS)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'macos-latest'
+        timeout-minutes: 20
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm dist:mac --publish never
+
+      - name: Install Electron system dependencies (Linux)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libatk1.0-0 libatk-bridge2.0-0 \
+            libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
+            libasound2t64
+          # AppArmor on Ubuntu 24.04 blocks Electron's unprivileged user namespaces
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Setup virtual display (Linux)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        run: |
+          Xvfb :99 -screen 0 1400x900x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Sign spellfix extension and fix quarantine (macOS)
+        if: steps.should_run.outputs.run == 'true' && matrix.os == 'macos-latest'
+        run: |
+          # Sign spellfix.dylib (ad-hoc build skips extraResources dylibs)
+          find release -name "spellfix.dylib" -exec codesign --force --sign - {} \;
+          # Re-sign app bundles with entitlements
+          for APP in release/*/mac-arm64/*.app release/*/mac/*.app; do
+            [ -d "$APP" ] || continue
+            # Deep-sign all code objects (x64 builds may be completely unsigned)
+            codesign --force --deep --sign - "$APP"
+            # Re-sign top-level with entitlements (--deep doesn't preserve them)
+            codesign --force --sign - --entitlements resources/entitlements.mac.plist "$APP"
+          done
+          # Remove quarantine
+          xattr -cr release/*/mac-arm64/*.app || xattr -cr release/*/mac/*.app || true
+
+      - name: Run E2E tests
+        if: steps.should_run.outputs.run == 'true'
+        run: pnpm test:e2e
+        timeout-minutes: 10
+        env:
+          ELECTRON_ENABLE_LOGGING: '1'
+
+      - name: Upload E2E test results
+        if: always() && steps.should_run.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: playwright-report/
+          retention-days: 7
