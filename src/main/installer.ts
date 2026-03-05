@@ -55,6 +55,7 @@ import {
   getSteamAchievementsPath,
   hasExecutableInstaller,
   runInstaller,
+  runUninstaller,
 } from './installer/platform';
 
 const mkdir = promisify(fs.mkdir);
@@ -411,6 +412,7 @@ export async function installTranslation(
         gamePath: gamePath.path,
         hasBackup: false,
         isCustomPath: !!customGamePath,
+        installerPath: path.join(fullTargetPath, installerFileName),
         installedFiles: [],
         components: { text: { installed: true, files: [] } },
       };
@@ -666,6 +668,30 @@ export async function uninstallTranslation(game: Game): Promise<void> {
     }
 
     const gamePath = installInfo.gamePath;
+
+    // If installer was used, run it with /uninstall parameter first
+    if (installInfo.installerPath && fs.existsSync(installInfo.installerPath)) {
+      console.log(`[Installer] Running uninstaller: ${installInfo.installerPath}`);
+      try {
+        await runUninstaller(installInfo.installerPath);
+        console.log(`[Installer] Uninstaller completed successfully`);
+
+        // // After uninstaller completes, clean up installation info and exit
+        // const infoPath = findInstallationInfoFile(gamePath);
+        // if (fs.existsSync(infoPath)) {
+        //   await unlink(infoPath);
+        // }
+        // await deleteCachedInstallationInfo(game.id);
+        
+        // console.log(`[Installer] Translation for ${game.id} uninstalled successfully`);
+        // return;
+      } catch (uninstallerError) {
+        console.error('[Installer] Uninstaller failed:', uninstallerError);
+        // Continue with manual cleanup if uninstaller fails
+        console.log('[Installer] Proceeding with manual cleanup...');
+      }
+    }
+
     const backupDir = findBackupDir(gamePath);
 
     // Collect files to delete

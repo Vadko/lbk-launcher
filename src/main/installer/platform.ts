@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import { clipboard, shell } from 'electron';
+import { exec, spawn } from 'child_process';
+import { clipboard } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
@@ -92,7 +92,7 @@ export function hasExecutableInstaller(game: Game): boolean {
 }
 
 /**
- * Run installer file from extracted archive
+ * Run installer file from extracted archive and wait for it to complete
  */
 export async function runInstaller(
   extractDir: string,
@@ -127,6 +127,8 @@ export async function runInstaller(
       });
     }
 
+    onStatus?.({ message: 'Запуск інсталятора...' });
+
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux if protonPath is provided
       console.log(`[Installer] Launching installer via Proton: ${protonPath}`);
@@ -141,20 +143,32 @@ export async function runInstaller(
       const exitCode = await runProton({ protonPath, filePath: installerPath });
       if (exitCode !== null) {
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
-        if (exitCode === 1) throw new Error('Встановлення не було завершене');
+        if (exitCode === 1) throw new Error('встановлення не було завершене');
       }
     } else {
-      // Use Electron's shell.openPath for all platforms
-      const result = await shell.openPath(installerPath);
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, [], {
+          stdio: 'ignore',
+          detached: false,
+        });
 
-      if (result) {
-        // result is an error string if something went wrong
-        console.error('[Installer] Failed to launch installer:', result);
-        throw new Error(result);
-      }
+        child.on('exit', (code) => {
+          console.log(`[Installer] Installer exited with code: ${code}`);
+          if (code !== null && code !== 0) {
+            reject(new Error(`${code} код помилки`));
+          } else {
+            resolve();
+          }
+        });
+
+        child.on('error', (err) => {
+          console.error('[Installer] Failed to launch installer:', err);
+          reject(err);
+        });
+      });
     }
 
-    console.log('[Installer] Installer launched successfully');
+    console.log('[Installer] Installer completed successfully');
   } catch (error) {
     console.error('[Installer] Error running installer:', error);
     throw new Error(
@@ -184,5 +198,94 @@ export async function getSteamAchievementsPath(): Promise<string | null> {
   } catch (error) {
     console.error('[Installer] Error getting Steam achievements path:', error);
     return null;
+  }
+}
+
+/**
+ * Run uninstaller with /uninstall parameter and wait for it to complete
+ * Then delete the installer file
+ */
+export async function runUninstaller(
+  installerPath: string,
+  protonPath?: string
+): Promise<void> {
+  try {
+    if (!fs.existsSync(installerPath)) {
+      console.warn(`[Installer] Uninstaller file not found: ${installerPath}`);
+      return;
+    }
+
+    console.log(`[Installer] Running uninstaller: ${installerPath}`);
+
+    const platform = getPlatform();
+
+    if (platform === 'linux' && protonPath) {
+      // Use Proton on Linux if protonPath is provided
+      console.log(`[Installer] Launching uninstaller via Proton: ${protonPath}`);
+      const { runProton } = await import('./proton');
+
+      const exitCode = await runProton({ protonPath, filePath: installerPath });
+      console.log(`[Installer] Uninstaller exited with code: ${exitCode}`);
+    } else if (platform === 'windows') {
+      // On Windows, run the installer with /uninstall parameter and wait for it to complete
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, ['/uninstall'], {
+          stdio: 'ignore',
+          detached: false,
+        });
+
+        child.on('exit', (code) => {
+          console.log(`[Installer] Uninstaller exited with code: ${code}`);
+          resolve();
+        });
+
+        child.on('error', (err) => {
+          console.error('[Installer] Uninstaller error:', err);
+          reject(err);
+        });
+      });
+    } else {
+      // For macOS or Linux without Proton, just make executable and run with /uninstall
+      await new Promise<void>((resolve, reject) => {
+        exec(`chmod +x "${installerPath}"`, (error) => {
+          if (error) {
+            console.warn('[Installer] Failed to make uninstaller executable:', error);
+            // Continue anyway
+          }
+
+          const child = spawn(installerPath, ['/uninstall'], {
+            stdio: 'ignore',
+            detached: false,
+          });
+
+          child.on('exit', (code) => {
+            console.log(`[Installer] Uninstaller exited with code: ${code}`);
+            resolve();
+          });
+
+          child.on('error', (err) => {
+            console.error('[Installer] Uninstaller error:', err);
+            reject(err);
+          });
+        });
+      });
+    }
+
+    // Delete the installer file after uninstallation is complete
+    console.log(`[Installer] Deleting uninstaller file: ${installerPath}`);
+    try {
+      await fs.promises.unlink(installerPath);
+      console.log(`[Installer] Uninstaller file deleted successfully`);
+    } catch (deleteError) {
+      console.warn(`[Installer] Failed to delete uninstaller file:`, deleteError);
+      // Don't throw - uninstallation succeeded even if we can't delete the file
+    }
+
+    console.log('[Installer] Uninstaller completed successfully');
+  } catch (error) {
+    console.error('[Installer] Error running uninstaller:', error);
+    throw new Error(
+      `Не вдалося запустити деінсталятор: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }

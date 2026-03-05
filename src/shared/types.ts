@@ -17,6 +17,7 @@ export interface InstallationInfo {
   gamePath: string;
   hasBackup?: boolean;
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
+  installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
   components?: {
     text: InstallationComponent;
