@@ -43,6 +43,15 @@ module.exports = {
       },
     ],
 
+    // === Restricted globals ===
+    'no-restricted-globals': [
+      'error',
+      {
+        name: 'localStorage',
+        message: 'Use electron-store via window.storeStorage instead of localStorage. See src/renderer/store/electronStorage.ts.',
+      },
+    ],
+
     // === Best Practices ===
     'no-console': 'off', // Дозволяємо console для Electron-застосунку
     'no-debugger': 'warn',

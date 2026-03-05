@@ -1,4 +1,4 @@
-import { Bot, EyeOff } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
@@ -6,6 +6,8 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
+import { AiIcon } from '../Icons/AiIcon';
+import { PencilIcon } from '../Icons/PencilIcon';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
 
@@ -71,9 +73,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           onClick={onClick}
           onKeyDown={handleKeyDown}
           data-game-card
-          className={`group glass-card !p-0 flex flex-col items-center`}
+          data-gamepad-card={true}
+          className={`group glass-card !p-0 flex flex-col items-center scroll-m-20`}
         >
-          <div className="relative h-56 w-full bg-glass rounded-t-xl overflow-hidden">
+          <div className="relative aspect-[616/353] w-full bg-glass rounded-t-xl overflow-hidden">
             {thumbnailUrl && !imageError ? (
               <>
                 {imageLoading && (
@@ -115,6 +118,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Indicators */}
             {hasUpdate && (
               <div className="absolute top-2 right-2 w-3 h-3 bg-accent rounded-full animate-pulse" />
+            )}
+            {(game.ai === 'edited' || game.ai === 'non-edited') && (
+              <div
+                className="absolute top-5 right-5 bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]"
+                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+              >
+                {game.ai === 'edited' ? <PencilIcon /> : <AiIcon />}
+              </div>
             )}
             {isGameDetected && (
               <div
@@ -234,12 +245,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
             {(game.ai === 'edited' || game.ai === 'non-edited') && (
               <div
-                className="absolute top-2 left-2 p-1 bg-purple-500/80 rounded"
-                title={
-                  game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'
-                }
+                className="absolute top-3 right-3 bg-white/80 rounded-full text-text-dark p-[5px] ring-[4px] ring-[rgba(255,255,255,0.15)]"
+                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
               >
-                <Bot size={10} className="text-white" />
+                {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
               </div>
             )}
             {isGameDetected && (
@@ -331,14 +340,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {hasUpdate && (
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
           )}
-          {(game.ai === 'edited' || game.ai === 'non-edited') && (
-            <div
-              className="absolute -top-1 -left-1 p-0.5 bg-purple-500 rounded border-2 border-bg-dark z-10"
-              title={game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'}
-            >
-              <Bot size={10} className="text-white" />
-            </div>
-          )}
           {isGameDetected && (
             <div
               className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-dark z-10"
@@ -355,9 +356,17 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm text-text-main mb-1 truncate">
+          <h4 className="font-semibold text-sm text-text-main truncate mb-1">
             {showTeamName ? game.team : game.name}
           </h4>
+          {(game.ai === 'edited' || game.ai === 'non-edited') && (
+            <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
+              <span className="text-text-muted text-xs">
+                {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+              </span>
+              {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
+            </div>
+          )}
           {showTeamName && (
             <p className="text-xs text-text-muted mb-1 truncate">{averageProgress}%</p>
           )}

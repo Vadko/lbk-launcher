@@ -7,6 +7,7 @@ import { app } from 'electron';
 import path from 'path';
 import { Worker } from 'worker_threads';
 import type { Game } from '../../shared/types';
+import { getSpellfixPath } from './database';
 
 type WorkerResponse =
   | { type: 'success'; id: number }
@@ -36,11 +37,12 @@ class DbWorkerClient {
 
     // Шлях до бази даних
     const dbPath = path.join(app.getPath('userData'), 'lbk.db');
+    const spellfixPath = getSpellfixPath();
 
     this.readyPromise = new Promise((resolve, reject) => {
       try {
         this.worker = new Worker(workerPath, {
-          workerData: { dbPath },
+          workerData: { dbPath, spellfixPath },
         });
 
         this.worker.on('message', (message: WorkerResponse) => {

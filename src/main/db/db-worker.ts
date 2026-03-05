@@ -19,6 +19,17 @@ function getDb(): Database.Database {
     }
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
+
+    // Load spellfix1 extension (path passed from main process)
+    const spellfixPath = workerData?.spellfixPath as string | null;
+    if (spellfixPath) {
+      try {
+        const extWithoutExt = spellfixPath.replace(/\.(dylib|so|dll)$/, '');
+        db.loadExtension(extWithoutExt);
+      } catch (e) {
+        console.warn('[DbWorker] Spellfix1 extension not available:', e);
+      }
+    }
   }
   return db;
 }

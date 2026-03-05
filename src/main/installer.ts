@@ -56,6 +56,7 @@ import {
   hasExecutableInstaller,
   runInstaller,
 } from './installer/platform';
+import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -84,8 +85,6 @@ export async function resumeDownload(
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
   console.log(`[Installer] Resuming download for game: ${state.gameId}`);
-
-  const { getSignedDownloadUrl } = await import('./tracking');
 
   // Check if URL might be expired (> 55 minutes since pause - signed URLs expire in 1 hour)
   const pausedTime = new Date(state.pausedAt).getTime();
@@ -271,7 +270,6 @@ export async function installTranslation(
       console.log(`[Installer] ✓ Disk space check passed`);
     }
 
-    const { isCurrentSessionFirstLaunch } = await import('./tracking');
     const extractDir = path.join(downloadDir, `${game.id}_extract`);
 
     // Check if this is first session (for conversion tracking)
@@ -528,8 +526,6 @@ async function downloadAndExtractArchive(
     onStatus,
     downloadContext,
   } = params;
-
-  const { getSignedDownloadUrl } = await import('./tracking');
 
   if (!archivePath) {
     throw new Error(`Архів ${type} не знайдено`);

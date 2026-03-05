@@ -1,7 +1,28 @@
+import * as Sentry from '@sentry/electron/main';
 import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
+import { setupStoreStorageHandlers } from './utils/store-storage';
+
+// E2E: enable remote debugging for packaged apps.
+// Electron 30+ ignores --remote-debugging-port CLI arg for packaged binaries,
+// so we must call appendSwitch() programmatically before app.whenReady().
+if (process.env['LBK_E2E'] === '1') {
+  app.commandLine.appendSwitch('remote-debugging-port', '19222');
+}
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  enabled: app.isPackaged,
+  release: __SENTRY_RELEASE__,
+  tracesSampleRate: 1.0,
+  integrations: [
+    Sentry.captureConsoleIntegration({ levels: ['error'] }),
+    Sentry.startupTracingIntegration(),
+  ],
+  enableLogs: true,
+});
 
 // Deep link handling
 const PROTOCOL = 'lbk';
@@ -64,6 +85,13 @@ if (isLinux()) {
   // Enable gamepad support
   app.commandLine.appendSwitch('enable-gamepad-extensions');
 
+  // Enable hardware video decoding on Linux
+  app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
+  // Enable WebRTC and media features for video playback
+  app.commandLine.appendSwitch('enable-accelerated-video-decode');
+
   // Prevent double keyboard input from GTK input method module.
   // When GTK_IM_MODULE is set (e.g. 'ibus', 'fcitx'), key events are processed
   // through two paths simultaneously (Wayland text-input + GTK IM module),
@@ -78,11 +106,12 @@ if (isLinux()) {
 
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    app.commandLine.appendSwitch('disable-gpu');
+    // Use disable-gpu-compositing instead of disable-gpu to allow video playback
+    app.commandLine.appendSwitch('disable-gpu-compositing');
   }
 }
 
-import { checkForUpdates, setupAutoUpdater } from './auto-updater';
+import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { closeDatabase, initDatabase } from './db/database';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
@@ -119,6 +148,17 @@ if (!gotTheLock) {
 } else {
   // Initialize logger early to capture all logs
   initLogger();
+
+  // Catch unhandled errors in main process to prevent crashes
+  process.on('uncaughtException', (error) => {
+    console.error('[Main] Uncaught Exception:', error);
+    Sentry.captureException(error);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('[Main] Unhandled Rejection:', reason);
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+  });
 
   // Set app ID for Wayland/Flatpak icon matching
   // This must match the Flatpak app-id and .desktop file name
@@ -163,6 +203,7 @@ if (!gotTheLock) {
   });
 
   // Setup all IPC handlers
+  setupStoreStorageHandlers();
   setupWindowControls();
   setupGamesHandlers();
   setupInstallerHandlers();
@@ -211,7 +252,7 @@ if (!gotTheLock) {
       }
     };
 
-    // Запустити синхронізацію (вікно вже відкрите, показує лоадер)
+    // Запустити синхронізацію з retry та загальним таймаутом
     console.log('[Main] Starting sync with Supabase...');
     syncManager = new SyncManager();
 
@@ -225,7 +266,17 @@ if (!gotTheLock) {
       console.log('[Main] Initial sync completed');
       sendSyncStatus('ready');
     } catch (error) {
-      console.error('[Main] Error during initial sync:', error);
+      const code = (error as { code?: string }).code;
+      const hint: Record<string, string> = {
+        ETIMEDOUT: 'Slow or unstable connection — data transfer timed out',
+        ECONNRESET: 'Connection dropped — unstable network',
+        ECONNREFUSED: 'Server unreachable — check firewall or proxy',
+        ENOTFOUND: 'DNS resolution failed — check internet connection',
+      };
+      console.error(
+        `[Main] Sync failed${code ? ` (${code})` : ''}:`,
+        (code && hint[code]) || error
+      );
       sendSyncStatus('error');
     }
 
@@ -340,6 +391,7 @@ if (!gotTheLock) {
 
   app.on('window-all-closed', () => {
     // Cleanup
+    stopUpdateCheck();
     stopSteamWatcher();
     stopInstallationWatcher();
 

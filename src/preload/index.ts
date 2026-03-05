@@ -1,5 +1,15 @@
+import * as Sentry from '@sentry/electron/renderer';
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ElectronAPI, Game, InstallOptions } from '../shared/types';
+
+Sentry.init();
+
+import type {
+  DownloadProgress,
+  ElectronAPI,
+  Game,
+  InstallationStatus,
+  InstallOptions,
+} from '../shared/types';
 
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
@@ -83,14 +93,14 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('install-progress', handler);
   },
   onDownloadProgress: (callback) => {
-    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) =>
-      callback(progress);
+    const handler = (_: unknown, gameId: string, progress: DownloadProgress) =>
+      callback(gameId, progress);
     ipcRenderer.on('download-progress', handler);
     return () => ipcRenderer.removeListener('download-progress', handler);
   },
   onInstallationStatus: (callback) => {
-    const handler = (_: unknown, status: Parameters<typeof callback>[0]) =>
-      callback(status);
+    const handler = (_: unknown, gameId: string, status: InstallationStatus) =>
+      callback(gameId, status);
     ipcRenderer.on('installation-status', handler);
     return () => ipcRenderer.removeListener('installation-status', handler);
   },
@@ -99,30 +109,36 @@ const electronAPI: ElectronAPI = {
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   onUpdateAvailable: (callback) => {
-    const handler = (_: unknown, info: Parameters<typeof callback>[0]) => callback(info);
+    const handler = (_: unknown, info: unknown) => callback(info);
     ipcRenderer.on('update-available', handler);
     return () => ipcRenderer.removeListener('update-available', handler);
   },
   onUpdateDownloaded: (callback) => {
-    const handler = (_: unknown, info: Parameters<typeof callback>[0]) => callback(info);
+    const handler = (_: unknown, info: unknown) => callback(info);
     ipcRenderer.on('update-downloaded', handler);
     return () => ipcRenderer.removeListener('update-downloaded', handler);
   },
   onUpdateProgress: (callback) => {
-    const handler = (_: unknown, progress: Parameters<typeof callback>[0]) =>
-      callback(progress);
+    const handler = (
+      _: unknown,
+      progress: {
+        percent: number;
+        bytesPerSecond: number;
+        transferred: number;
+        total: number;
+      }
+    ) => callback(progress);
     ipcRenderer.on('update-progress', handler);
     return () => ipcRenderer.removeListener('update-progress', handler);
   },
   onUpdateError: (callback) => {
-    const handler = (_: unknown, error: Parameters<typeof callback>[0]) =>
-      callback(error);
+    const handler = (_: unknown, error: Error) => callback(error);
     ipcRenderer.on('update-error', handler);
     return () => ipcRenderer.removeListener('update-error', handler);
   },
   // Real-time updates (автоматично керуються в main process)
   onGameUpdated: (callback) => {
-    const handler = (_: unknown, game: Parameters<typeof callback>[0]) => callback(game);
+    const handler = (_: unknown, game: Game) => callback(game);
     ipcRenderer.on('game-updated', handler);
     return () => ipcRenderer.removeListener('game-updated', handler);
   },
@@ -136,6 +152,12 @@ const electronAPI: ElectronAPI = {
     const handler = () => callback();
     ipcRenderer.on('steam-library-changed', handler);
     return () => ipcRenderer.removeListener('steam-library-changed', handler);
+  },
+  // [DEV ONLY] Test games hot reload
+  onTestGamesChanged: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('test-games-changed', handler);
+    return () => ipcRenderer.removeListener('test-games-changed', handler);
   },
   onInstalledGamesChanged: (callback: () => void) => {
     const handler = () => callback();
@@ -158,6 +180,8 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
+  // Track failed search (0 results)
+  trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
@@ -195,7 +219,6 @@ contextBridge.exposeInMainWorld('windowControls', {
     ipcRenderer.on('navigate-to-game', handler);
     return () => ipcRenderer.removeListener('navigate-to-game', handler);
   },
-  clearCacheAndRestart: () => ipcRenderer.invoke('clear-cache-and-restart'),
 });
 
 // Liquid Glass API
@@ -206,7 +229,6 @@ contextBridge.exposeInMainWorld('liquidGlassAPI', {
 
 // Logger API
 contextBridge.exposeInMainWorld('loggerAPI', {
-  setEnabled: (enabled: boolean) => ipcRenderer.invoke('logger:set-enabled', enabled),
   openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
   log: (level: string, message: string, ...args: unknown[]) =>
     ipcRenderer.send('logger:log', level, message, args),
@@ -218,24 +240,15 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.send('logger:log', 'error', message, [stack]),
   clearCacheOnly: () => ipcRenderer.invoke('clear-cache-only'),
   clearAllData: () => ipcRenderer.invoke('clear-all-data-and-restart'),
-  // Legacy - kept for backwards compatibility
-  clearCache: () => ipcRenderer.invoke('clear-all-data-and-restart'),
 });
 
-// Handle liquid glass preference request from main process
-ipcRenderer.on('liquid-glass:get-preference', () => {
-  // Get the preference from localStorage (settings store)
-  const settings = localStorage.getItem('lbk-settings');
-  let enabled = true; // Default to true
-
-  if (settings) {
-    try {
-      const parsed = JSON.parse(settings);
-      enabled = parsed.state?.liquidGlassEnabled ?? true;
-    } catch {
-      // Ignore parse errors
-    }
-  }
-
-  ipcRenderer.send('liquid-glass:get-preference-response', enabled);
+// Electron-store storage API (replaces localStorage for Zustand persist)
+contextBridge.exposeInMainWorld('storeStorage', {
+  getItem: (key: string): string | null => ipcRenderer.sendSync('store-storage:get', key),
+  setItem: (key: string, value: string): void => {
+    ipcRenderer.invoke('store-storage:set', key, value);
+  },
+  removeItem: (key: string): void => {
+    ipcRenderer.invoke('store-storage:remove', key);
+  },
 });

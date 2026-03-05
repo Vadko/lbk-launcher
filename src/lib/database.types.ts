@@ -51,6 +51,33 @@ export type Database = {
         }
         Relationships: []
       }
+      failed_searches: {
+        Row: {
+          id: string
+          query: string
+          query_normalized: string
+          searched_at: string | null
+          source: string
+          user_identifier: string | null
+        }
+        Insert: {
+          id?: string
+          query: string
+          query_normalized: string
+          searched_at?: string | null
+          source: string
+          user_identifier?: string | null
+        }
+        Update: {
+          id?: string
+          query?: string
+          query_normalized?: string
+          searched_at?: string | null
+          source?: string
+          user_identifier?: string | null
+        }
+        Relationships: []
+      }
       game_authors: {
         Row: {
           author_id: string
@@ -818,6 +845,27 @@ export type Database = {
           },
         ]
       }
+      slug_redirects: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_path: string
+          old_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_path: string
+          old_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_path?: string
+          old_path?: string
+        }
+        Relationships: []
+      }
       steam_apps: {
         Row: {
           app_id: number
@@ -836,6 +884,149 @@ export type Database = {
           created_at?: string
           installdir?: string | null
           name?: string
+        }
+        Relationships: []
+      }
+      steam_guide_status_history: {
+        Row: {
+          changed_by: string | null
+          comment: string | null
+          created_at: string | null
+          guide_id: string
+          id: string
+          new_status: string
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          comment?: string | null
+          created_at?: string | null
+          guide_id: string
+          id?: string
+          new_status: string
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          comment?: string | null
+          created_at?: string | null
+          guide_id?: string
+          id?: string
+          new_status?: string
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_guide_status_history_changed_by_fkey"
+            columns: ["changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steam_guide_status_history_guide_id_fkey"
+            columns: ["guide_id"]
+            referencedRelation: "steam_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steam_guides: {
+        Row: {
+          author_name: string | null
+          author_steam_id: string | null
+          comment: string | null
+          created_at_steam: string | null
+          description: string | null
+          discovered_at: string | null
+          favorited: number | null
+          id: string
+          matched_keyword: string | null
+          notified: boolean | null
+          status: string | null
+          status_changed_at: string | null
+          status_changed_by: string | null
+          steam_app_id: number | null
+          steam_app_name: string | null
+          steam_id: string
+          tags: string[] | null
+          title: string | null
+          type: string | null
+          updated_at_steam: string | null
+          url: string | null
+          views: number | null
+        }
+        Insert: {
+          author_name?: string | null
+          author_steam_id?: string | null
+          comment?: string | null
+          created_at_steam?: string | null
+          description?: string | null
+          discovered_at?: string | null
+          favorited?: number | null
+          id?: string
+          matched_keyword?: string | null
+          notified?: boolean | null
+          status?: string | null
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          steam_app_id?: number | null
+          steam_app_name?: string | null
+          steam_id: string
+          tags?: string[] | null
+          title?: string | null
+          type?: string | null
+          updated_at_steam?: string | null
+          url?: string | null
+          views?: number | null
+        }
+        Update: {
+          author_name?: string | null
+          author_steam_id?: string | null
+          comment?: string | null
+          created_at_steam?: string | null
+          description?: string | null
+          discovered_at?: string | null
+          favorited?: number | null
+          id?: string
+          matched_keyword?: string | null
+          notified?: boolean | null
+          status?: string | null
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          steam_app_id?: number | null
+          steam_app_name?: string | null
+          steam_id?: string
+          tags?: string[] | null
+          title?: string | null
+          type?: string | null
+          updated_at_steam?: string | null
+          url?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_guides_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steam_guides_sync_state: {
+        Row: {
+          id: number
+          last_sync_at: string | null
+          total_synced: number | null
+        }
+        Insert: {
+          id?: number
+          last_sync_at?: string | null
+          total_synced?: number | null
+        }
+        Update: {
+          id?: number
+          last_sync_at?: string | null
+          total_synced?: number | null
         }
         Relationships: []
       }
@@ -1117,6 +1308,25 @@ export type Database = {
       }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
+      fuzzy_search_games: {
+        Args: {
+          limit_val?: number
+          search_query: string
+          search_query_translit?: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          banner_path: string
+          is_adult: boolean
+          latest_updated_at: string
+          name: string
+          name_fts: unknown
+          slug: string
+          thumbnail_path: string
+          translations: Json
+          translations_count: number
+        }[]
+      }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
         Args: { p_end_date?: string; p_start_date?: string }
@@ -1134,12 +1344,42 @@ export type Database = {
           players_count: number
         }[]
       }
+      get_failed_searches_statistics: {
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Returns: {
+          last_searched_at: string
+          query_normalized: string
+          search_count: number
+          sources: string[]
+          unique_users: number
+        }[]
+      }
+      get_failed_searches_summary: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          from_launcher: number
+          from_web: number
+          total_failed_searches: number
+          unique_queries: number
+          unique_users_searched: number
+        }[]
+      }
       get_first_session_downloads: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           conversion_rate: number
           first_session_downloads: number
           total_first_launches: number
+        }[]
+      }
+      get_landing_stats: {
+        Args: never
+        Returns: {
+          dau: number
+          total_creators: number
+          total_downloads: number
+          total_playtime_hours: number
+          total_unique_players: number
         }[]
       }
       get_players_with_downloads: {

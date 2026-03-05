@@ -29,6 +29,7 @@ interface Store {
   selectedStatuses: string[];
   searchQuery: string;
   isInitialLoad: boolean;
+  loaderVisible: boolean;
 
   // Steam State
   steamGames: Map<string, string>; // installdir (lowercase) -> full path
@@ -48,6 +49,7 @@ interface Store {
   setSelectedStatuses: (statuses: string[]) => void;
   setSearchQuery: (query: string) => void;
   setInitialLoadComplete: () => void;
+  setLoaderVisible: (visible: boolean) => void;
 
   // Steam Actions
   loadSteamGames: () => Promise<void>;
@@ -89,13 +91,14 @@ export const useStore = create<Store>((set, get) => ({
   selectedStatuses: [],
   searchQuery: '',
   isInitialLoad: true,
+  loaderVisible: true,
 
   // Steam State
   steamGames: new Map(),
 
   // Installation State
   installedGames: new Map(),
-  detectedGames: new Map(), // Більше не кешується в localStorage
+  detectedGames: new Map(), // Не персиститься
   gamesWithUpdates: new Set(),
   installationProgress: new Map(),
   isCheckingInstallation: new Map(),
@@ -114,6 +117,7 @@ export const useStore = create<Store>((set, get) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
   setInitialLoadComplete: () => set({ isInitialLoad: false }),
+  setLoaderVisible: (loaderVisible) => set({ loaderVisible }),
 
   // Steam Actions
   loadSteamGames: async () => {

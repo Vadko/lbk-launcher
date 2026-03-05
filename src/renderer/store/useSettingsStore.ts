@@ -1,11 +1,9 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { SortOrderType, SpecialFilterType } from '../components/Sidebar/types';
-
-type ThemeMode = 'light' | 'dark' | 'system';
+import { electronStorage } from './electronStorage';
 
 interface SettingsStore {
-  theme: ThemeMode;
   sortOrder: SortOrderType;
   animationsEnabled: boolean;
   appUpdateNotificationsEnabled: boolean;
@@ -17,13 +15,10 @@ interface SettingsStore {
   liquidGlassEnabled: boolean;
   gamepadSoundsEnabled: boolean;
   isSettingsModalOpen: boolean;
-  saveLogsToFile: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
   selectedAuthors: string[];
   notificationSoundsEnabled: boolean;
-  alphabetSidebarEnabled: boolean;
-  setTheme: (theme: ThemeMode) => void;
   setSortOrder: (order: SortOrderType) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
@@ -37,8 +32,6 @@ interface SettingsStore {
   toggleHideAiTranslations: () => void;
   toggleLiquidGlass: () => void;
   toggleGamepadSounds: () => void;
-  toggleSaveLogsToFile: () => void;
-  toggleAlphabetSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
@@ -47,7 +40,6 @@ interface SettingsStore {
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      theme: 'dark',
       sortOrder: 'name',
       animationsEnabled: true,
       appUpdateNotificationsEnabled: true,
@@ -59,15 +51,10 @@ export const useSettingsStore = create<SettingsStore>()(
       liquidGlassEnabled: true,
       gamepadSoundsEnabled: true,
       isSettingsModalOpen: false,
-      saveLogsToFile: false,
       sidebarWidth: 320,
       specialFilter: null,
       selectedAuthors: [],
       notificationSoundsEnabled: true,
-      alphabetSidebarEnabled: true,
-
-      setTheme: (theme) => set({ theme }),
-
       setSortOrder: (sortOrder) => set({ sortOrder }),
 
       toggleNotificationSounds: () =>
@@ -108,12 +95,6 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleGamepadSounds: () =>
         set((state) => ({ gamepadSoundsEnabled: !state.gamepadSoundsEnabled })),
 
-      toggleSaveLogsToFile: () =>
-        set((state) => ({ saveLogsToFile: !state.saveLogsToFile })),
-
-      toggleAlphabetSidebar: () =>
-        set((state) => ({ alphabetSidebarEnabled: !state.alphabetSidebarEnabled })),
-
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
@@ -122,8 +103,8 @@ export const useSettingsStore = create<SettingsStore>()(
     }),
     {
       name: 'lbk-settings',
+      storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
-        theme: state.theme,
         sortOrder: state.sortOrder,
         animationsEnabled: state.animationsEnabled,
         appUpdateNotificationsEnabled: state.appUpdateNotificationsEnabled,
@@ -134,12 +115,10 @@ export const useSettingsStore = create<SettingsStore>()(
         hideAiTranslations: state.hideAiTranslations,
         liquidGlassEnabled: state.liquidGlassEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
-        saveLogsToFile: state.saveLogsToFile,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedAuthors: state.selectedAuthors,
         notificationSoundsEnabled: state.notificationSoundsEnabled,
-        alphabetSidebarEnabled: state.alphabetSidebarEnabled,
       }),
     }
   )

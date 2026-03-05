@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { useInstallation } from '../../hooks/useInstallation';
+import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
@@ -209,7 +210,10 @@ export const MainContent: React.FC = () => {
 
   if (!selectedGame) {
     return (
-      <div className="flex-1 grid items-center px-8 overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]">
+      <div
+        data-gamepad-main-content
+        className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'pb-3'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
+      >
         <div className="grid grid-rows-auto gap-10 h-auto">
           <GamesSection title="Новинки" sortOrder="newest" />
           <GamesSection

@@ -21,5 +21,9 @@
     <!-- Доступ до мережі (клієнт) -->
     <key>com.apple.security.network.client</key>
     <true/>
+
+    <!-- Доступ до мережі (сервер) — потрібно для Chrome DevTools порту -->
+    <key>com.apple.security.network.server</key>
+    <true/>
 </dict>
 </plist>

@@ -1,17 +1,143 @@
+import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
+import { join } from 'node:path';
 import type Database from 'better-sqlite3';
+import { BrowserWindow } from 'electron';
 import { getSearchVariations } from '../../shared/search-utils';
 import type { Game, GetGamesParams, GetGamesResult } from '../../shared/types';
-import { getDatabase } from './database';
+import { getDatabase, isSpellfixAvailable } from './database';
 import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-queries';
 
 /**
  * Repository для роботи з іграми в локальній базі даних
  */
 export class GamesRepository {
+  private static instance: GamesRepository | null = null;
   private db: Database.Database;
+  private testGamesPath: string;
+  private fileWatcher: FSWatcher | null = null;
+  private fileWatchDebounceTimer: NodeJS.Timeout | null = null;
 
-  constructor() {
+  private constructor() {
     this.db = getDatabase();
+    this.testGamesPath = join(__dirname, '../../test/games.json');
+    this.loadTestGamesInDevelopment();
+    this.watchTestGamesFile();
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): GamesRepository {
+    if (!GamesRepository.instance) {
+      GamesRepository.instance = new GamesRepository();
+    }
+    return GamesRepository.instance;
+  }
+
+  /**
+   * Прочитати і розпарсити test/games.json
+   */
+  private readTestGamesFile(): Game[] {
+    if (!existsSync(this.testGamesPath)) {
+      return [];
+    }
+
+    try {
+      const fileContent = readFileSync(this.testGamesPath, 'utf-8');
+      const games = JSON.parse(fileContent);
+      return Array.isArray(games) ? games : [];
+    } catch (error) {
+      console.error('[DEV] Error reading test/games.json:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Відстежувати зміни в test/games.json
+   */
+  private watchTestGamesFile(): void {
+    if (process.env.NODE_ENV !== 'development' || !existsSync(this.testGamesPath)) {
+      return;
+    }
+
+    try {
+      this.fileWatcher = watch(this.testGamesPath, (eventType) => {
+        if (eventType === 'change') {
+          if (this.fileWatchDebounceTimer) {
+            clearTimeout(this.fileWatchDebounceTimer);
+          }
+
+          this.fileWatchDebounceTimer = setTimeout(() => {
+            console.log('[DEV] Test games file changed, reloading...');
+            this.loadTestGamesInDevelopment();
+            this.fileWatchDebounceTimer = null;
+          }, 2000);
+        }
+      });
+
+      process.on('exit', this.cleanup.bind(this));
+    } catch (error) {
+      console.error('[DEV] Failed to setup file watcher:', error);
+    }
+  }
+
+  /**
+   * Cleanup resources
+   */
+  private cleanup(): void {
+    if (this.fileWatcher) {
+      this.fileWatcher.close();
+      this.fileWatcher = null;
+    }
+    if (this.fileWatchDebounceTimer) {
+      clearTimeout(this.fileWatchDebounceTimer);
+      this.fileWatchDebounceTimer = null;
+    }
+  }
+
+  /**
+   * Повідомити renderer процес про зміни в іграх
+   */
+  private notifyGamesChanged(): void {
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      window.webContents.send('test-games-changed');
+    });
+  }
+
+  /**
+   * Завантажити тестові ігри з test/games.json в режимі розробки
+   */
+  private loadTestGamesInDevelopment(): void {
+    if (process.env.NODE_ENV !== 'development') {
+      return;
+    }
+
+    try {
+      const testGames = this.readTestGamesFile();
+
+      if (testGames.length > 0) {
+        // Delete all test games (any id starting with 'test-')
+        this.db.prepare(`DELETE FROM games WHERE id LIKE 'test-%'`).run();
+
+        // Modify test games to appear at top of list
+        const modifiedTestGames = testGames.map((game, index) => ({
+          ...game,
+          name: `[TEST] ${game.name}`,
+          id: `test-${game.id}`,
+          slug: `test-${game.slug || game.id}`,
+          approved_at: new Date(2099, 11, 31, 23, 59, 59 - index).toISOString(),
+        })) as Game[];
+
+        this.upsertGames(modifiedTestGames);
+
+        this.notifyGamesChanged();
+
+        console.log(`[DEV] Loaded ${modifiedTestGames.length} test game(s)`);
+      }
+    } catch (error) {
+      console.error('[DEV] Error loading test games:', error);
+    }
   }
 
   /**
@@ -67,14 +193,18 @@ export class GamesRepository {
       queryParams.push(...statuses);
     }
 
-    // Filter by search query using FTS5
-    if (searchQuery) {
+    // Filter by search query using FTS5 (min 2 chars to avoid expensive single-char prefix scans)
+    if (searchQuery && searchQuery.trim().length >= 2) {
       const variations = getSearchVariations(searchQuery);
       const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
       whereConditions.push(
         `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
       );
       queryParams.push(ftsQuery);
+    } else if (searchQuery) {
+      // For 1-char queries use simple LIKE (faster than FTS prefix scan)
+      whereConditions.push('name LIKE ?');
+      queryParams.push(`${searchQuery.trim()}%`);
     }
 
     const whereClause = whereConditions.join(' AND ');
@@ -100,6 +230,16 @@ export class GamesRepository {
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
 
+    // Spellfix1 fuzzy fallback when FTS returns 0 results
+    if (searchQuery && games.length === 0 && isSpellfixAvailable()) {
+      games = this.fuzzySearchFallback(
+        searchQuery,
+        whereConditions,
+        queryParams,
+        orderClause
+      );
+    }
+
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
@@ -109,6 +249,52 @@ export class GamesRepository {
     }
 
     return { games, total: games.length };
+  }
+
+  /**
+   * Spellfix1 fuzzy fallback: correct each query word via spellfix_words,
+   * then re-run FTS5 with corrected words
+   */
+  private fuzzySearchFallback(
+    searchQuery: string,
+    _baseConditions: string[],
+    _baseParams: (string | number)[],
+    orderClause: string
+  ): Game[] {
+    try {
+      const queryWords = searchQuery
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length >= 3);
+
+      if (queryWords.length === 0) return [];
+
+      const correctedWords: string[] = [];
+      const spellfixStmt = this.db.prepare(
+        'SELECT word FROM spellfix_words WHERE word MATCH ? AND top=5 ORDER BY score LIMIT 1'
+      );
+
+      for (const word of queryWords) {
+        const result = spellfixStmt.get(word) as { word: string } | undefined;
+        correctedWords.push(result ? result.word : word);
+      }
+
+      // Build FTS query from corrected words
+      const correctedFts = correctedWords.map((w) => `"${w}"*`).join(' OR ');
+
+      const fuzzyStmt = this.db.prepare(`
+        SELECT * FROM games
+        WHERE approved = 1 AND hide = 0
+          AND id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)
+        ORDER BY ${orderClause}
+      `);
+
+      const fuzzyRows = fuzzyStmt.all(correctedFts) as Record<string, unknown>[];
+      return fuzzyRows.map((row) => this.rowToGame(row));
+    } catch (e) {
+      console.warn('[GamesRepository] Spellfix fuzzy fallback error:', e);
+      return [];
+    }
   }
 
   /**
@@ -345,6 +531,16 @@ export class GamesRepository {
    */
   upsertGames(games: Game[]): void {
     upsertGamesTransaction(this.db, games);
+  }
+
+  /**
+   * Інкрементувати лічильник завантажень для гри в локальній БД
+   */
+  incrementDownloads(gameId: string): void {
+    const stmt = this.db.prepare(
+      'UPDATE games SET downloads = COALESCE(downloads, 0) + 1 WHERE id = ?'
+    );
+    stmt.run(gameId);
   }
 
   /**

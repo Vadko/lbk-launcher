@@ -1,32 +1,15 @@
 import logo from '@resources/logo.svg';
-import logoDark from '@resources/logo-dark.svg';
-import { useSettingsStore } from '@store/useSettingsStore';
 import { useStore } from '@store/useStore';
 import { Home } from 'lucide-react';
-import React, { useSyncExternalStore } from 'react';
+import React from 'react';
 
 interface SidebarHeaderProps {
   isCompact?: boolean;
 }
 
-const subscribeToMediaQuery = (callback: () => void) => {
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  mediaQuery.addEventListener('change', callback);
-  return () => mediaQuery.removeEventListener('change', callback);
-};
-
-const getSystemDarkMode = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
-
 export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
   ({ isCompact = false }) => {
     const { setSelectedGame } = useStore();
-    const { theme } = useSettingsStore();
-    const systemDarkMode = useSyncExternalStore(
-      subscribeToMediaQuery,
-      getSystemDarkMode,
-      () => true
-    );
-    const isDarkTheme = theme === 'system' ? systemDarkMode : theme === 'dark';
     return (
       <div
         className={`relative flex items-center gap-3 select-none overflow-visible ${
@@ -34,9 +17,9 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
         }`}
       >
         <img
-          src={isDarkTheme ? logo : logoDark}
+          src={logo}
           alt="LBK logo"
-          className={isCompact ? 'w-8 h-8' : 'w-14 h-14'}
+          className={isCompact ? 'w-16 h-8 object-cover' : 'w-20 h-14  object-cover'}
           draggable={false}
         />
         {!isCompact && (

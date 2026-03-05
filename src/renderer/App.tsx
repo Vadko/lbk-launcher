@@ -157,13 +157,14 @@ export const App: React.FC = () => {
     syncStatus,
     setSyncStatus,
   } = useStore();
-  const { animationsEnabled, autoDetectInstalledGames, theme, liquidGlassEnabled } =
+  const { animationsEnabled, autoDetectInstalledGames, liquidGlassEnabled } =
     useSettingsStore();
   const { isGamepadMode, setGamepadMode, navigationArea } = useGamepadModeStore();
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const [showLoader, setShowLoader] = useState(true);
+  const loaderVisible = useStore((s) => s.loaderVisible);
+  const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
@@ -200,7 +201,7 @@ export const App: React.FC = () => {
       const elapsed = Date.now() - loaderStartTime;
       const remainingTime = Math.max(0, MIN_LOADER_DISPLAY_MS - elapsed);
 
-      hideTimeout = setTimeout(() => setShowLoader(false), remainingTime);
+      hideTimeout = setTimeout(() => setLoaderVisible(false), remainingTime);
     };
 
     if (!window.electronAPI?.getSyncStatus) {
@@ -235,9 +236,11 @@ export const App: React.FC = () => {
 
   // Відстеження першого запуску додатку
   useEffect(() => {
-    const hasLaunchedBefore = localStorage.getItem('has-launched-before');
+    if (!window.storeStorage) return;
+
+    const hasLaunchedBefore = window.storeStorage.getItem('has-launched-before');
     if (!hasLaunchedBefore) {
-      localStorage.setItem('has-launched-before', 'true');
+      window.storeStorage.setItem('has-launched-before', 'true');
       trackEvent('First App Open');
     }
   }, []);
@@ -330,32 +333,6 @@ export const App: React.FC = () => {
 
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
-
-  // Apply theme
-  useEffect(() => {
-    const root = document.documentElement;
-
-    if (theme === 'system') {
-      // Detect system preference
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const appliedTheme = isDark ? 'dark' : 'light';
-      root.setAttribute('data-theme', appliedTheme);
-      console.log('[Theme] Applied system theme:', appliedTheme);
-
-      // Listen for changes in system theme
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = (e: MediaQueryListEvent) => {
-        const newTheme = e.matches ? 'dark' : 'light';
-        root.setAttribute('data-theme', newTheme);
-        console.log('[Theme] System theme changed to:', newTheme);
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-    root.setAttribute('data-theme', theme);
-    console.log('[Theme] Applied theme:', theme);
-  }, [theme]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -450,6 +427,18 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // [DEV ONLY] Listen for test games changes and broadcast to components
+  useEffect(() => {
+    if (!window.electronAPI?.onTestGamesChanged) return;
+
+    const handleTestGamesChanged = () => {
+      window.dispatchEvent(new Event('test-games-updated'));
+    };
+
+    const unsubscribe = window.electronAPI.onTestGamesChanged(handleTestGamesChanged);
+    return unsubscribe;
+  }, []);
+
   const handleOnlineEvent = () => {
     setOnline(true);
     console.log('[App] Internet connection restored');
@@ -487,7 +476,9 @@ export const App: React.FC = () => {
   return (
     <>
       {/* Loader overlay with fade animation */}
-      <AnimatePresence>{showLoader && <AppLoader status={syncStatus} />}</AnimatePresence>
+      <AnimatePresence>
+        {loaderVisible && <AppLoader status={syncStatus} />}
+      </AnimatePresence>
 
       <div
         className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
@@ -501,6 +492,13 @@ export const App: React.FC = () => {
         {isGamepadMode ? (
           /* Gamepad layout: Header + Games strip on top, MainContent below */
           <div className="flex flex-col h-full pt-8 relative z-10">
+            {/* Background image */}
+            <img
+              src={mainBg}
+              alt=""
+              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+              aria-hidden="true"
+            />
             {/* Sidebar - hides when in main-content mode */}
             <div
               className={`transition-all duration-300 ease-in-out relative z-20 ${

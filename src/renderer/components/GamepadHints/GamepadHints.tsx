@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
+import { useStore } from '../../store/useStore';
 
 type GamepadType = 'xbox' | 'playstation';
 
@@ -71,6 +72,7 @@ const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) 
 
 export const GamepadHints: React.FC = () => {
   const { isGamepadMode, navigationArea } = useGamepadModeStore();
+  const { selectedGame } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const gamepadType = useMemo(() => detectGamepadType(), []);
 
@@ -117,7 +119,7 @@ export const GamepadHints: React.FC = () => {
     hints = [
       { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
       { button: back.label, label: 'Назад', variant: back.variant },
-      { button: '←→', label: 'Кнопки' },
+      { button: '←→', label: selectedGame ? 'Кнопки' : 'Навігація' },
       { button: '↑↓', label: 'Прокрутка' },
     ];
   }

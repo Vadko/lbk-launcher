@@ -1,0 +1,183 @@
+name: E2E Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: 'Test on Windows'
+        required: false
+        type: boolean
+        default: false
+      linux:
+        description: 'Test on Linux'
+        required: false
+        type: boolean
+        default: true
+      macos:
+        description: 'Test on macOS'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/ci.yml
+
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Build matrix
+        id: matrix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo 'matrix={"include":[{"os":"ubuntu-latest","platform":"linux"}]}' >> $GITHUB_OUTPUT
+          else
+            MATRIX='{"include":['
+            FIRST=true
+            if [ "${{ github.event.inputs.windows }}" = "true" ]; then
+              MATRIX="${MATRIX}{\"os\":\"windows-latest\",\"platform\":\"windows\"}"
+              FIRST=false
+            fi
+            if [ "${{ github.event.inputs.linux }}" = "true" ]; then
+              [ "$FIRST" = false ] && MATRIX="${MATRIX},"
+              MATRIX="${MATRIX}{\"os\":\"ubuntu-latest\",\"platform\":\"linux\"}"
+              FIRST=false
+            fi
+            if [ "${{ github.event.inputs.macos }}" = "true" ]; then
+              [ "$FIRST" = false ] && MATRIX="${MATRIX},"
+              MATRIX="${MATRIX}{\"os\":\"macos-latest\",\"platform\":\"macos\"}"
+            fi
+            MATRIX="${MATRIX}]}"
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          fi
+
+  e2e:
+    needs: [ci, setup]
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.7.1
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+
+      - name: Setup MSVC (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
+        run: pnpm build
+
+      - name: Build dist (Windows)
+        if: matrix.os == 'windows-latest'
+        timeout-minutes: 20
+        run: pnpm dist:win --publish never
+
+      - name: Build dist (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        timeout-minutes: 20
+        run: pnpm dist:linux --publish never
+
+      - name: Build dist (macOS)
+        if: matrix.os == 'macos-latest'
+        timeout-minutes: 20
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm dist:mac --publish never
+
+      - name: Install Electron system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libatk1.0-0 libatk-bridge2.0-0 \
+            libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev libnss3-dev libxss-dev \
+            libasound2t64
+          # AppArmor on Ubuntu 24.04 blocks Electron's unprivileged user namespaces
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Setup virtual display (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          Xvfb :99 -screen 0 1400x900x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Sign spellfix extension and fix quarantine (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # Sign spellfix.dylib (ad-hoc build skips extraResources dylibs)
+          find release -name "spellfix.dylib" -exec codesign --force --sign - {} \;
+          # Re-sign app bundles with entitlements
+          for APP in release/*/mac-arm64/*.app release/*/mac/*.app; do
+            [ -d "$APP" ] || continue
+            # Deep-sign all code objects (x64 builds may be completely unsigned)
+            codesign --force --deep --sign - "$APP"
+            # Re-sign top-level with entitlements (--deep doesn't preserve them)
+            codesign --force --sign - --entitlements resources/entitlements.mac.plist "$APP"
+          done
+          # Remove quarantine
+          xattr -cr release/*/mac-arm64/*.app || xattr -cr release/*/mac/*.app || true
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        timeout-minutes: 10
+        env:
+          ELECTRON_ENABLE_LOGGING: '1'
+
+      - name: Report E2E results
+        if: always() && github.event_name == 'pull_request'
+        uses: daun/playwright-report-summary@v3
+        with:
+          report-file: e2e/results.json
+          report-tag: e2e-${{ matrix.platform }}
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: playwright-report/
+          retention-days: 7

@@ -43,6 +43,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     !isCustomPath
   );
   const hasVoiceArchive = !!game.voice_archive_path;
+  // Voice is integrated in main archive if there's no separate voice archive but voice_progress > 0
+  const isVoiceIntegrated = !hasVoiceArchive && (game.voice_progress ?? 0) > 0;
 
   const isVoiceInstalled = installationInfo?.components?.voice?.installed ?? false;
   const isAchievementsInstalled =
@@ -286,20 +288,30 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 
         {/* Voice archive option */}
         <label
-          className={`flex items-start gap-4 group ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+          className={`flex items-start gap-4 group ${hasVoiceArchive || isVoiceIntegrated ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
         >
           <div className="relative flex items-center justify-center mt-0.5">
             <input
               type="checkbox"
-              checked={hasVoiceArchive && installVoice}
-              onChange={(e) => setInstallVoice(e.target.checked)}
-              disabled={!hasVoiceArchive}
+              checked={
+                (hasVoiceArchive && installVoice) || (isVoiceIntegrated && installText)
+              }
+              onChange={(e) => {
+                if (!isVoiceIntegrated) {
+                  setInstallVoice(e.target.checked);
+                } else {
+                  setInstallText(e.target.checked);
+                }
+              }}
+              disabled={!hasVoiceArchive && !isVoiceIntegrated}
               data-gamepad-modal-item
-              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${hasVoiceArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${hasVoiceArchive || isVoiceIntegrated ? 'cursor-pointer' : 'cursor-not-allowed'}`}
             />
             <svg
               className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
-                hasVoiceArchive && installVoice ? 'opacity-100' : 'opacity-0'
+                (hasVoiceArchive && installVoice) || (isVoiceIntegrated && installText)
+                  ? 'opacity-100'
+                  : 'opacity-0'
               }`}
               viewBox="0 0 24 24"
               fill="none"
@@ -313,22 +325,30 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <div className="flex items-center gap-2">
               <Volume2
                 size={18}
-                className={hasVoiceArchive ? 'text-purple-400' : 'text-text-muted'}
+                className={
+                  hasVoiceArchive || isVoiceIntegrated
+                    ? 'text-purple-400'
+                    : 'text-text-muted'
+                }
               />
               <span
-                className={`font-medium transition-colors ${hasVoiceArchive ? 'text-text-main group-hover:text-purple-400' : 'text-text-muted'}`}
+                className={`font-medium transition-colors ${hasVoiceArchive || isVoiceIntegrated ? 'text-text-main group-hover:text-purple-400' : 'text-text-muted'}`}
               >
                 Озвучення
               </span>
-              {!hasVoiceArchive && (
+              {!hasVoiceArchive && !isVoiceIntegrated && (
                 <span className="text-xs text-text-muted">(недоступно)</span>
               )}
-              {isVoiceInstalled && (
-                <span className="flex items-center gap-1 text-xs text-green-400">
-                  <Check size={12} />
-                  встановлено
-                </span>
+              {isVoiceIntegrated && (
+                <span className="text-xs text-purple-400">(разом з текстовою)</span>
               )}
+              {isVoiceInstalled ||
+                (isVoiceIntegrated && isReinstall && (
+                  <span className="flex items-center gap-1 text-xs text-green-400">
+                    <Check size={12} />
+                    встановлено
+                  </span>
+                ))}
             </div>
             <div className="text-sm text-text-muted mt-1">
               <p>Українське озвучення.</p>

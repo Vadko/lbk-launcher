@@ -25,7 +25,12 @@ import {
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
-import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import {
+  getMachineId,
+  trackFailedSearch,
+  trackSubscription,
+  trackSupportClick,
+} from '../tracking';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
@@ -55,6 +60,11 @@ export function setupGamesHandlers(): void {
   // Track support click
   ipcMain.handle('track-support-click', async (_, gameId: string) =>
     trackSupportClick(gameId)
+  );
+
+  // Track failed search (0 results)
+  ipcMain.handle('track-failed-search', async (_, query: string) =>
+    trackFailedSearch(query)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
@@ -220,7 +230,7 @@ export function setupGamesHandlers(): void {
   });
 
   // Get GOG library
-  ipcMain.handle('get-gog-library', async () => {
+  ipcMain.handle('get-gog-library', () => {
     try {
       return getGogLibrary();
     } catch (error) {
@@ -234,7 +244,7 @@ export function setupGamesHandlers(): void {
     'find-games-by-titles',
     (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
       try {
-        const repo = new GamesRepository();
+        const repo = GamesRepository.getInstance();
         return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error finding games by titles:', error);

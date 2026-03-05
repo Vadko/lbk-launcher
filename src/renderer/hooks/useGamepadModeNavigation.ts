@@ -130,11 +130,13 @@ export function useGamepadModeNavigation(enabled = true) {
     setNavigationArea,
     totalGames,
   } = useGamepadModeStore();
+  const { selectedGame } = useStore();
 
   const prevNavigationAreaRef = useRef<string | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const wasModalOpenRef = useRef<boolean>(false);
   const prevButtonStatesRef = useRef<boolean[]>([]);
+  const ignoreScrollDownRef = useRef<boolean>(false);
 
   // Subscribe to gamepad state
   useGamepads((pads) => setGamepads(pads));
@@ -162,7 +164,9 @@ export function useGamepadModeNavigation(enabled = true) {
 
   // Get game cards from DOM
   const getGameCards = useCallback((): HTMLElement[] => {
-    const cards = document.querySelectorAll<HTMLElement>('[data-gamepad-card]');
+    const cards = document.querySelectorAll<HTMLElement>(
+      '[data-gamepad-game-list] [data-gamepad-card]'
+    );
     return Array.from(cards);
   }, []);
 
@@ -456,10 +460,18 @@ export function useGamepadModeNavigation(enabled = true) {
     return Array.from(buttons);
   }, []);
 
+  // Get home active cards
+  const getHomeActive = useCallback((): HTMLElement[] => {
+    const cardButtons = document.querySelectorAll<HTMLElement>(
+      '[data-gamepad-main-content] [data-gamepad-card]:not([disabled])'
+    );
+    return Array.from(cardButtons);
+  }, []);
+
   // Handle main content navigation
   const handleMainContentNavigation = useCallback(
     (gp: Gamepad) => {
-      const actionButtons = getActionButtons();
+      const actionButtons = selectedGame ? getActionButtons() : getHomeActive();
 
       // Find currently focused button
       const currentFocused = document.activeElement as HTMLElement;
@@ -490,6 +502,11 @@ export function useGamepadModeNavigation(enabled = true) {
         return;
       }
 
+      if (!gp.buttons[BUTTON.DPAD_DOWN]?.pressed) {
+        ignoreScrollDownRef.current = false;
+      }
+      if (ignoreScrollDownRef.current) return;
+
       // Up/Down - scroll content
       const upPressed =
         (gp.buttons[BUTTON.DPAD_UP]?.pressed && canInput('main-up')) ||
@@ -498,12 +515,8 @@ export function useGamepadModeNavigation(enabled = true) {
         (gp.buttons[BUTTON.DPAD_DOWN]?.pressed && canInput('main-down')) ||
         (gp.axes[AXIS.LEFT_Y] > DEADZONE && canInput('main-stick-down'));
 
-      if (upPressed) {
-        scrollMainContent('up');
-      }
-      if (downPressed) {
-        scrollMainContent('down');
-      }
+      if (upPressed) scrollMainContent('up');
+      if (downPressed) scrollMainContent('down');
 
       // Left/Right - navigate between action buttons
       const leftPressed =
@@ -558,6 +571,8 @@ export function useGamepadModeNavigation(enabled = true) {
       getGameCards,
       scrollMainContent,
       setNavigationArea,
+      getHomeActive,
+      selectedGame,
     ]
   );
 
@@ -788,8 +803,8 @@ export function useGamepadModeNavigation(enabled = true) {
 
       // Down - go to games
       const downPressed =
-        (gp.buttons[BUTTON.DPAD_DOWN]?.pressed && canInput('header-down')) ||
-        (gp.axes[AXIS.LEFT_Y] > DEADZONE && canInput('header-stick-down'));
+        (gp.buttons[BUTTON.DPAD_DOWN]?.pressed && canInput('nav-down')) ||
+        (gp.axes[AXIS.LEFT_Y] > DEADZONE && canInput('nav-stick-down'));
 
       if (downPressed) {
         playNavigateSound();
@@ -864,22 +879,23 @@ export function useGamepadModeNavigation(enabled = true) {
 
       // Up - go to header
       const upPressed =
-        (gp.buttons[BUTTON.DPAD_UP]?.pressed && canInput('games-up')) ||
-        (gp.axes[AXIS.LEFT_Y] < -DEADZONE && canInput('games-stick-up'));
+        (gp.buttons[BUTTON.DPAD_UP]?.pressed && canInput('nav-up')) ||
+        (gp.axes[AXIS.LEFT_Y] < -DEADZONE && canInput('nav-stick-up'));
 
       if (upPressed) {
         playNavigateSound();
         setNavigationArea('header');
       }
 
-      // Down - switch to main content scrolling (only if a game is selected)
+      // Down - switch to main content scrolling
       const downPressed =
-        (gp.buttons[BUTTON.DPAD_DOWN]?.pressed && canInput('games-down')) ||
-        (gp.axes[AXIS.LEFT_Y] > DEADZONE && canInput('games-stick-down'));
+        (gp.buttons[BUTTON.DPAD_DOWN]?.pressed && canInput('nav-down')) ||
+        (gp.axes[AXIS.LEFT_Y] > DEADZONE && canInput('nav-stick-down'));
 
-      if (downPressed && useStore.getState().selectedGame) {
+      if (downPressed) {
         playNavigateSound();
         setNavigationArea('main-content');
+        ignoreScrollDownRef.current = true;
       }
 
       // A button - select current game

@@ -5,6 +5,8 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
+import { AiIcon } from '../Icons/AiIcon';
+import { PencilIcon } from '../Icons/PencilIcon';
 
 interface GameHeroProps {
   game: Game;
@@ -172,6 +174,28 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Decorative corner accents */}
+      <AnimatePresence>
+        {(game.ai === 'edited' || game.ai === 'non-edited') && (
+          <motion.div
+            key={game.id}
+            className="absolute top-[90px] right-[90px] w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border-[1px]"
+            initial={{ opacity: 0, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
+            animate={{ opacity: 1, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
+            exit={{ opacity: 0, scale: 0.9, rotate: 45, x: '50%', y: '-50%' }}
+            transition={{
+              duration: 0.3,
+              ease: [0.25, 0.46, 0.45, 0.94],
+            }}
+          >
+            {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
+            <span className="">
+              {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
