@@ -1,7 +1,7 @@
+import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
+import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
-import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
-import { join } from 'node:path';
 import { getSearchVariations } from '../../shared/search-utils';
 import type { Game, GetGamesParams, GetGamesResult } from '../../shared/types';
 import { getDatabase, isSpellfixAvailable } from './database';
@@ -115,7 +115,7 @@ export class GamesRepository {
 
     try {
       const testGames = this.readTestGamesFile();
-      
+
       if (testGames.length > 0) {
         // Delete all test games (any id starting with 'test-')
         this.db.prepare(`DELETE FROM games WHERE id LIKE 'test-%'`).run();
@@ -128,11 +128,11 @@ export class GamesRepository {
           slug: `test-${game.slug || game.id}`,
           approved_at: new Date(2099, 11, 31, 23, 59, 59 - index).toISOString(),
         })) as Game[];
-        
+
         this.upsertGames(modifiedTestGames);
-        
+
         this.notifyGamesChanged();
-        
+
         console.log(`[DEV] Loaded ${modifiedTestGames.length} test game(s)`);
       }
     } catch (error) {

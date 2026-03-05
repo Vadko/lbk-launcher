@@ -28,7 +28,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ci:
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/ci.yml
+
   e2e:
+    needs: [ci]
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
