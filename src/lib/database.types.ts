@@ -1364,7 +1364,9 @@ export type Database = {
           similarity_threshold?: number
         }
         Returns: {
+          approved_at: string
           banner_path: string
+          downloads: number
           is_adult: boolean
           latest_updated_at: string
           name: string
