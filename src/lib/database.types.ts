@@ -1308,7 +1308,9 @@ export type Database = {
     Views: {
       games_grouped: {
         Row: {
+          approved_at: string | null
           banner_path: string | null
+          downloads: number | null
           is_adult: boolean | null
           latest_updated_at: string | null
           name: string | null
