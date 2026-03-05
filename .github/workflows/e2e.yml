@@ -32,68 +32,65 @@ jobs:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/ci.yml
 
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Build matrix
+        id: matrix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo 'matrix={"include":[{"os":"ubuntu-latest","platform":"linux"}]}' >> $GITHUB_OUTPUT
+          else
+            MATRIX='{"include":['
+            FIRST=true
+            if [ "${{ github.event.inputs.windows }}" = "true" ]; then
+              MATRIX="${MATRIX}{\"os\":\"windows-latest\",\"platform\":\"windows\"}"
+              FIRST=false
+            fi
+            if [ "${{ github.event.inputs.linux }}" = "true" ]; then
+              [ "$FIRST" = false ] && MATRIX="${MATRIX},"
+              MATRIX="${MATRIX}{\"os\":\"ubuntu-latest\",\"platform\":\"linux\"}"
+              FIRST=false
+            fi
+            if [ "${{ github.event.inputs.macos }}" = "true" ]; then
+              [ "$FIRST" = false ] && MATRIX="${MATRIX},"
+              MATRIX="${MATRIX}{\"os\":\"macos-latest\",\"platform\":\"macos\"}"
+            fi
+            MATRIX="${MATRIX}]}"
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          fi
+
   e2e:
-    needs: [ci]
+    needs: [ci, setup]
     if: ${{ !failure() && !cancelled() }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: windows
-          - os: ubuntu-latest
-            platform: linux
-          - os: macos-latest
-            platform: macos
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
 
     steps:
-      - name: Check if should run
-        id: should_run
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # On PR: only Linux runs automatically
-            if [ "${{ matrix.platform }}" = "linux" ]; then
-              echo "run=true" >> $GITHUB_OUTPUT
-            else
-              echo "run=false" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ matrix.platform }}" = "windows" ] && [ "${{ github.event.inputs.windows }}" = "true" ]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.platform }}" = "linux" ] && [ "${{ github.event.inputs.linux }}" = "true" ]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-          elif [ "${{ matrix.platform }}" = "macos" ] && [ "${{ github.event.inputs.macos }}" = "true" ]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-          else
-            echo "run=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Checkout code
-        if: steps.should_run.outputs.run == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        if: steps.should_run.outputs.run == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Setup pnpm
-        if: steps.should_run.outputs.run == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 10.7.1
 
       - name: Get pnpm store directory
-        if: steps.should_run.outputs.run == 'true'
         shell: bash
         run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
-        if: steps.should_run.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
@@ -101,15 +98,13 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-store-
 
       - name: Setup MSVC (Windows)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install dependencies
-        if: steps.should_run.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build application
-        if: steps.should_run.outputs.run == 'true'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -117,24 +112,24 @@ jobs:
         run: pnpm build
 
       - name: Build dist (Windows)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         timeout-minutes: 20
         run: pnpm dist:win --publish never
 
       - name: Build dist (Linux)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         timeout-minutes: 20
         run: pnpm dist:linux --publish never
 
       - name: Build dist (macOS)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         timeout-minutes: 20
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: pnpm dist:mac --publish never
 
       - name: Install Electron system dependencies (Linux)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libatk1.0-0 libatk-bridge2.0-0 \
@@ -144,13 +139,13 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Setup virtual display (Linux)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           Xvfb :99 -screen 0 1400x900x24 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Sign spellfix extension and fix quarantine (macOS)
-        if: steps.should_run.outputs.run == 'true' && matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         run: |
           # Sign spellfix.dylib (ad-hoc build skips extraResources dylibs)
           find release -name "spellfix.dylib" -exec codesign --force --sign - {} \;
@@ -166,14 +161,13 @@ jobs:
           xattr -cr release/*/mac-arm64/*.app || xattr -cr release/*/mac/*.app || true
 
       - name: Run E2E tests
-        if: steps.should_run.outputs.run == 'true'
         run: pnpm test:e2e
         timeout-minutes: 10
         env:
           ELECTRON_ENABLE_LOGGING: '1'
 
       - name: Upload E2E test results
-        if: always() && steps.should_run.outputs.run == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-results-${{ matrix.os }}
