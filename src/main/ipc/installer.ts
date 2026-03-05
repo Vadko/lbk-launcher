@@ -64,7 +64,7 @@ export function setupInstallerHandlers(): void {
         // The server counts unique downloads, so the worst case is +1 drift until next sync.
         if (options.installText) {
           try {
-            const repo = new GamesRepository();
+            const repo = GamesRepository.getInstance();
             repo.incrementDownloads(game.id);
             const updatedGame = repo.getGameById(game.id);
             if (updatedGame) {

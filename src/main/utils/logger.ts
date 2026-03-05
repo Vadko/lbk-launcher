@@ -118,14 +118,14 @@ export function getLogFileDirectory(): string {
 
 export function createTimer(label: string): { end: () => number } {
   const start = performance.now();
-  console.log(`[PERF] ⏱️ START: ${label}`);
+  console.log(`[PERF] START: ${label}`);
 
   return {
     end: () => {
       const duration = performance.now() - start;
       const formatted =
         duration < 1000 ? `${duration.toFixed(1)}ms` : `${(duration / 1000).toFixed(2)}s`;
-      console.log(`[PERF] ✅ END: ${label} (${formatted})`);
+      console.log(`[PERF] END: ${label} (${formatted})`);
       return duration;
     },
   };

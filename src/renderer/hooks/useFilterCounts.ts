@@ -109,6 +109,10 @@ export function useFilterCounts() {
 
     fetchCounts();
 
+    // [DEV ONLY] Listen for test games updates
+    const handleTestGamesUpdate = () => debouncedFetchCounts();
+    window.addEventListener('test-games-updated', handleTestGamesUpdate);
+
     const unsubInstalled =
       window.electronAPI?.onInstalledGamesChanged?.(debouncedFetchCounts);
     const unsubSteam = window.electronAPI?.onSteamLibraryChanged?.(debouncedFetchCounts);
@@ -116,6 +120,7 @@ export function useFilterCounts() {
 
     return () => {
       isMountedRef.current = false;
+      window.removeEventListener('test-games-updated', handleTestGamesUpdate);
       unsubInstalled?.();
       unsubSteam?.();
       unsubGame?.();
