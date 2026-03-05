@@ -15,6 +15,7 @@ sentryInit(
   {
     release: __SENTRY_RELEASE__,
     sendDefaultPii: true,
+    enabled: !window.electronAPI?.isE2E?.(),
     integrations: [browserTracingIntegration()],
     tracesSampleRate: 1.0,
     enableLogs: true,

@@ -1,7 +1,8 @@
 import * as Sentry from '@sentry/electron/renderer';
 import { contextBridge, ipcRenderer } from 'electron';
 
-Sentry.init();
+const isE2EMode = process.env['LBK_E2E'] === '1';
+Sentry.init({ enabled: !isE2EMode });
 
 import type {
   DownloadProgress,
@@ -170,6 +171,7 @@ const electronAPI: ElectronAPI = {
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
+  isE2E: () => isE2EMode,
   // Platform
   getPlatform: () => ipcRenderer.sendSync('get-platform'),
   // Machine ID - for subscription tracking

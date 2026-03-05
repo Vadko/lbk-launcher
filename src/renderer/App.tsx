@@ -119,17 +119,21 @@ function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
   return false;
 }
 
-try {
-  const mpToken = import.meta.env.DEV
-    ? import.meta.env.VITE_MIXPANEL_TOKEN_DEV
-    : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
-  if (mpToken) {
-    mixpanel.init(mpToken, {
-      debug: import.meta.env.DEV,
-    });
+const isE2E = window.electronAPI?.isE2E?.() ?? false;
+
+if (!isE2E) {
+  try {
+    const mpToken = import.meta.env.DEV
+      ? import.meta.env.VITE_MIXPANEL_TOKEN_DEV
+      : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
+    if (mpToken) {
+      mixpanel.init(mpToken, {
+        debug: import.meta.env.DEV,
+      });
+    }
+  } catch (err) {
+    console.error('[Analytics] mixpanel.init failed', err);
   }
-} catch (err) {
-  console.error('[Analytics] mixpanel.init failed', err);
 }
 
 // Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично

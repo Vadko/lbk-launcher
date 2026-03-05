@@ -211,6 +211,8 @@ export interface ElectronAPI {
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
+  // E2E test mode — disables analytics/tracking
+  isE2E: () => boolean;
   // Platform
   getPlatform: () => string;
   // Machine ID - for subscription tracking
