@@ -12,9 +12,11 @@ if (process.env['LBK_E2E'] === '1') {
   app.commandLine.appendSwitch('remote-debugging-port', '19222');
 }
 
+const isE2E = process.env['LBK_E2E'] === '1';
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  enabled: app.isPackaged,
+  enabled: app.isPackaged && !isE2E,
   release: __SENTRY_RELEASE__,
   tracesSampleRate: 1.0,
   integrations: [
