@@ -50,7 +50,6 @@ const formatDate = (dateString: string | null | undefined): string => {
 export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   const platformsText = game.platforms.map(getReadablePlatform).join(', ');
   const isPlanned = game.status === 'planned';
-  const hasDownloads = !!game.downloads && game.downloads > 0;
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
   const featuredInfo = getFeaturedInfo(game.slug, game.team);
 
@@ -113,11 +112,15 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             value={game.subscriptions!.toLocaleString('uk-UA')}
           />
         )}
-        {!isPlanned && hasDownloads && (
+        {!isPlanned && (
           <InfoItem
             icon={<Download size={18} />}
             label="Завантажень"
-            value={game.downloads!.toLocaleString('uk-UA')}
+            value={
+              !game.downloads || game.downloads < 20
+                ? 'до 20'
+                : game.downloads!.toLocaleString('uk-UA')
+            }
           />
         )}
         {game.created_at && (
