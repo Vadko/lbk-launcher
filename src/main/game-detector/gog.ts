@@ -154,7 +154,10 @@ function getAllGamesFromGalaxyDB(): string[] {
     console.warn('[GOG] Error reading Galaxy database:', error);
   }
 
-  return dbData.map((g) => getCleanTitle(g.title!.trim())).filter((t) => t);
+  return dbData
+    .filter((g) => g.title != null)
+    .map((g) => getCleanTitle(g.title!.trim()))
+    .filter((t) => t);
 }
 
 /**

@@ -430,11 +430,9 @@ export function useGames({
           // Гра не в списку
           if (!shouldBeInList) return prevGames;
 
-          // Додати гру і відсортувати (латиниця перед кирилицею, як в БД)
-          const newGames = [...prevGames, updatedGame];
-          newGames.sort((a, b) => a.name.localeCompare(b.name));
+          // Додати гру в кінець (точна позиція визначиться при наступному reload)
           setTotal((prev) => prev + 1);
-          return newGames;
+          return [...prevGames, updatedGame];
         }
         // Гра є в списку
         if (!shouldBeInList) {
@@ -443,10 +441,9 @@ export function useGames({
           return prevGames.filter((g) => g.id !== updatedGame.id);
         }
 
-        // Оновити гру і пересортувати (латиниця перед кирилицею, як в БД)
+        // Оновити дані гри in-place, зберігаючи поточний порядок
         const newGames = [...prevGames];
         newGames[index] = updatedGame;
-        newGames.sort((a, b) => a.name.localeCompare(b.name));
         return newGames;
       });
     };
