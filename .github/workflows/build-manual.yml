@@ -214,6 +214,15 @@ jobs:
         env:
           ELECTRON_ENABLE_LOGGING: '1'
 
+      - name: Report E2E results
+        if: always()
+        uses: daun/playwright-report-summary@v3
+        with:
+          report-file: e2e/results.json
+          report-tag: build-${{ matrix.platform }}
+          job-summary: true
+          create-comment: false
+
       - name: Upload E2E test results
         if: always()
         uses: actions/upload-artifact@v4

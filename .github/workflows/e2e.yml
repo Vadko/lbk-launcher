@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -165,6 +166,13 @@ jobs:
         timeout-minutes: 10
         env:
           ELECTRON_ENABLE_LOGGING: '1'
+
+      - name: Report E2E results
+        if: always() && github.event_name == 'pull_request'
+        uses: daun/playwright-report-summary@v3
+        with:
+          report-file: e2e/results.json
+          report-tag: e2e-${{ matrix.platform }}
 
       - name: Upload E2E test results
         if: always()
