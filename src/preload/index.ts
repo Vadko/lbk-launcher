@@ -56,6 +56,8 @@ const electronAPI: ElectronAPI = {
     customGamePath?: string
   ) => ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
+  rerunInstaller: (installerPath: string, protonPath?: string) =>
+    ipcRenderer.invoke('rerun-installer', installerPath, protonPath),
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),

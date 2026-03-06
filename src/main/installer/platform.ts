@@ -289,3 +289,22 @@ export async function runUninstaller(
     );
   }
 }
+
+/**
+ * Re-run existing installer without downloading again
+ * Used when user wants to modify installation without re-downloading
+ */
+export async function rerunInstaller(
+  installerPath: string,
+  protonPath?: string
+): Promise<void> {
+  if (!fs.existsSync(installerPath)) {
+    throw new Error('файл інсталятора не знайдено');
+  }
+
+  const extractDir = path.dirname(installerPath);
+  const installerFileName = path.basename(installerPath);
+  
+  await runInstaller(extractDir, installerFileName, undefined, protonPath);
+}
+

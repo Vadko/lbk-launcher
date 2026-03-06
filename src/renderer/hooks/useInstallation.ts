@@ -35,6 +35,7 @@ interface UseInstallationResult {
     removeOptions: { removeVoice: boolean; removeAchievements: boolean }
   ) => Promise<void>;
   handleUninstall: () => Promise<void>;
+  handleRerunInstaller: () => Promise<void>;
   handlePauseDownload: () => Promise<void>;
   handleResumeDownload: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
@@ -702,6 +703,43 @@ export function useInstallation({
     installationInfo,
   ]);
 
+  const handleRerunInstaller = useCallback(async () => {
+    if (!selectedGame || !installationInfo?.installerPath) {
+      console.warn('[useInstallation] No installer path available');
+      return;
+    }
+
+    try {
+      const result = await window.electronAPI.rerunInstaller(
+        installationInfo.installerPath
+      );
+
+      if (result.success) {
+        showModal({
+          title: 'Інсталятор завершено',
+          message: 'Інсталятор успішно завершив роботу',
+          type: 'success',
+        });
+        
+        // Refresh installation info
+        await checkInstallationStatus(selectedGame.id, selectedGame);
+      } else {
+        showModal({
+          title: 'Помилка',
+          message: result.error?.message || 'Не вдалося запустити інсталятор',
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('[useInstallation] Error re-running installer:', error);
+      showModal({
+        title: 'Помилка',
+        message: 'Не вдалося запустити інсталятор',
+        type: 'error',
+      });
+    }
+  }, [selectedGame, installationInfo, showModal, checkInstallationStatus]);
+
   return {
     isInstalling,
     isUninstalling,
@@ -712,6 +750,7 @@ export function useInstallation({
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handleRerunInstaller,
     handlePauseDownload,
     handleResumeDownload,
     handleCancelDownload,

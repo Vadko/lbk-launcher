@@ -16,6 +16,7 @@ import {
   resumeDownload,
   uninstallTranslation,
 } from '../installer';
+import { rerunInstaller } from '../installer/platform';
 import {
   clearPausedDownloadState,
   getPartialFilePath,
@@ -138,6 +139,21 @@ export function setupInstallerHandlers(): void {
       return { success: true };
     } catch (error) {
       console.error('Error uninstalling translation:', error);
+      return {
+        success: false,
+        error: {
+          message: error instanceof Error ? error.message : 'Невідома помилка',
+        },
+      };
+    }
+  });
+
+  ipcMain.handle('rerun-installer', async (_, installerPath: string, protonPath?: string) => {
+    try {
+      await rerunInstaller(installerPath, protonPath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error re-running installer:', error);
       return {
         success: false,
         error: {

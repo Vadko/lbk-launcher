@@ -154,6 +154,7 @@ export interface ElectronAPI {
     customGamePath?: string
   ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
+  rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
   pauseDownload: (
     gameId: string
