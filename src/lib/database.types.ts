@@ -1209,6 +1209,33 @@ export type Database = {
         }
         Relationships: []
       }
+      steam_price_cache: {
+        Row: {
+          discount_percent: number | null
+          fetched_at: string
+          is_free: boolean | null
+          original_price_uah: number | null
+          price_uah: number | null
+          steam_app_id: number
+        }
+        Insert: {
+          discount_percent?: number | null
+          fetched_at?: string
+          is_free?: boolean | null
+          original_price_uah?: number | null
+          price_uah?: number | null
+          steam_app_id: number
+        }
+        Update: {
+          discount_percent?: number | null
+          fetched_at?: string
+          is_free?: boolean | null
+          original_price_uah?: number | null
+          price_uah?: number | null
+          steam_app_id?: number
+        }
+        Relationships: []
+      }
       steam_sync_metadata: {
         Row: {
           id: number
@@ -1263,6 +1290,106 @@ export type Database = {
             referencedColumns: ["game_id"]
           },
         ]
+      }
+      telegram_channel_queue: {
+        Row: {
+          content_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_text: string
+          metadata: Json | null
+          priority: number
+          retry_count: number | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          telegram_message_id: number | null
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_text: string
+          metadata?: Json | null
+          priority?: number
+          retry_count?: number | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          telegram_message_id?: number | null
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_text?: string
+          metadata?: Json | null
+          priority?: number
+          retry_count?: number | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          telegram_message_id?: number | null
+        }
+        Relationships: []
+      }
+      telegram_channel_sent_games: {
+        Row: {
+          content_type: string
+          game_id: string
+          id: string
+          rotation_cycle: number | null
+          sent_at: string
+        }
+        Insert: {
+          content_type: string
+          game_id: string
+          id?: string
+          rotation_cycle?: number | null
+          sent_at?: string
+        }
+        Update: {
+          content_type?: string
+          game_id?: string
+          id?: string
+          rotation_cycle?: number | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_channel_sent_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_channel_sent_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
+      telegram_channel_state: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       translation_playtime: {
         Row: {
