@@ -33,6 +33,115 @@ export type Database = {
         }
         Relationships: []
       }
+      banner_campaigns: {
+        Row: {
+          button_text: string | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          frequency_cap: number | null
+          icon_path: string | null
+          id: string
+          image_path: string | null
+          is_active: boolean | null
+          link: string | null
+          link_template: string | null
+          name: string
+          placement: Database["public"]["Enums"]["banner_placement"]
+          priority: number | null
+          start_date: string | null
+          subtitle: string | null
+          target_all_games: boolean | null
+          target_game_slugs: string[] | null
+          target_source: string | null
+          title: string | null
+          type: Database["public"]["Enums"]["banner_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          button_text?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          frequency_cap?: number | null
+          icon_path?: string | null
+          id?: string
+          image_path?: string | null
+          is_active?: boolean | null
+          link?: string | null
+          link_template?: string | null
+          name: string
+          placement?: Database["public"]["Enums"]["banner_placement"]
+          priority?: number | null
+          start_date?: string | null
+          subtitle?: string | null
+          target_all_games?: boolean | null
+          target_game_slugs?: string[] | null
+          target_source?: string | null
+          title?: string | null
+          type: Database["public"]["Enums"]["banner_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          button_text?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          frequency_cap?: number | null
+          icon_path?: string | null
+          id?: string
+          image_path?: string | null
+          is_active?: boolean | null
+          link?: string | null
+          link_template?: string | null
+          name?: string
+          placement?: Database["public"]["Enums"]["banner_placement"]
+          priority?: number | null
+          start_date?: string | null
+          subtitle?: string | null
+          target_all_games?: boolean | null
+          target_game_slugs?: string[] | null
+          target_source?: string | null
+          title?: string | null
+          type?: Database["public"]["Enums"]["banner_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      banner_impressions: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          game_slug: string | null
+          id: number
+          impression_type: string
+          machine_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          game_slug?: string | null
+          id?: never
+          impression_type: string
+          machine_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          game_slug?: string | null
+          id?: never
+          impression_type?: string
+          machine_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banner_impressions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            referencedRelation: "banner_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deleted_games: {
         Row: {
           deleted_at: string
@@ -1386,6 +1495,14 @@ export type Database = {
           wau: number
         }[]
       }
+      get_banner_impression_stats: {
+        Args: { p_campaign_ids: string[] }
+        Returns: {
+          campaign_id: string
+          clicks: number
+          views: number
+        }[]
+      }
       get_downloads_per_player: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -1532,6 +1649,7 @@ export type Database = {
           }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
       remove_game_subscription: {
@@ -1553,6 +1671,8 @@ export type Database = {
     }
     Enums: {
       ai_status: "edited" | "non-edited"
+      banner_placement: "game_page" | "global"
+      banner_type: "narrow" | "small_square" | "large_popup"
       game_status: "completed" | "in-progress" | "planned"
       install_source:
         | "steam"
@@ -1693,6 +1813,8 @@ export const Constants = {
   public: {
     Enums: {
       ai_status: ["edited", "non-edited"],
+      banner_placement: ["game_page", "global"],
+      banner_type: ["narrow", "small_square", "large_popup"],
       game_status: ["completed", "in-progress", "planned"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
       user_role: ["admin", "moderator", "translator", "user"],
