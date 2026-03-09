@@ -8,11 +8,12 @@ import { setupStoreStorageHandlers } from './utils/store-storage';
 // E2E: enable remote debugging for packaged apps.
 // Electron 30+ ignores --remote-debugging-port CLI arg for packaged binaries,
 // so we must call appendSwitch() programmatically before app.whenReady().
-if (process.env['LBK_E2E'] === '1') {
+// Check both env var and CLI arg: env var is set by the test runner,
+// CLI arg persists across app.relaunch() (which reuses process.argv).
+const isE2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
+if (isE2E) {
   app.commandLine.appendSwitch('remote-debugging-port', '19222');
 }
-
-const isE2E = process.env['LBK_E2E'] === '1';
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
