@@ -19,10 +19,26 @@ class DatabaseManager {
     const deleteMarkerPath = join(userDataPath, 'lbk.db.delete');
     if (existsSync(deleteMarkerPath)) {
       console.log('[Database] Found delete marker, removing database files...');
-      try { unlinkSync(deleteMarkerPath); } catch { /* ignore */ }
-      try { unlinkSync(dbPath); } catch { /* ignore */ }
-      try { unlinkSync(`${dbPath}-wal`); } catch { /* ignore */ }
-      try { unlinkSync(`${dbPath}-shm`); } catch { /* ignore */ }
+      try {
+        unlinkSync(deleteMarkerPath);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(dbPath);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(`${dbPath}-wal`);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(`${dbPath}-shm`);
+      } catch {
+        /* ignore */
+      }
       console.log('[Database] Database files removed');
     }
 
