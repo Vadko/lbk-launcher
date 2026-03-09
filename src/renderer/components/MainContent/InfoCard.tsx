@@ -44,6 +44,7 @@ const formatDate = (dateString: string | null | undefined): string => {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Europe/Kyiv',
   });
 };
 
@@ -130,11 +131,11 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             value={formatDate(game.created_at)}
           />
         )}
-        {game.updated_at && (
+        {game.translation_updated_at && (
           <InfoItem
             icon={<CalendarClock size={18} />}
             label="Оновлено"
-            value={formatDate(game.updated_at)}
+            value={formatDate(game.translation_updated_at)}
           />
         )}
       </div>

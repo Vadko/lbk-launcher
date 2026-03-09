@@ -1,5 +1,5 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core';
-import { spawn, type ChildProcess } from 'child_process';
+import { execSync, spawn, type ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -145,7 +145,7 @@ export async function launchApp(): Promise<AppInstance> {
 
   const proc = spawn(
     executablePath,
-    ['--no-sandbox', '--disable-gpu-sandbox'],
+    ['--no-sandbox', '--disable-gpu-sandbox', '--e2e'],
     {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ELECTRON_ENABLE_LOGGING: '1', LBK_E2E: '1' },
@@ -200,15 +200,60 @@ export async function launchApp(): Promise<AppInstance> {
 /**
  * Wait for the app to finish Supabase sync and show the main UI.
  * The search bar becoming visible means sync is done and the loader is gone.
+ * Also waits for at least one game item to render in the sidebar.
  */
 export async function waitForAppReady(page: Page) {
   await page
     .getByPlaceholder('Пошук гри...')
     .waitFor({ state: 'visible', timeout: 60_000 });
+
+  // Wait for at least one game item to render (sync data → UI rendering may take a moment)
+  await page
+    .locator('[data-nav-group="game-list"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 30_000 });
+}
+
+/**
+ * Kill any process listening on the given port.
+ */
+export function killProcessOnPort(port: number): void {
+  try {
+    if (process.platform === 'win32') {
+      const output = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, {
+        encoding: 'utf-8',
+      });
+      const pids = new Set(
+        output
+          .split('\n')
+          .map((line) => line.trim().split(/\s+/).pop())
+          .filter(Boolean),
+      );
+      for (const pid of pids) {
+        try {
+          execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
+          console.log(`[CDP] Killed process ${pid} on port ${port}`);
+        } catch { /* already dead */ }
+      }
+    } else {
+      // macOS / Linux: lsof to find PIDs, kill -9
+      const output = execSync(`lsof -ti tcp:${port}`, { encoding: 'utf-8' });
+      const pids = output.trim().split('\n').filter(Boolean);
+      for (const pid of pids) {
+        try {
+          execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
+          console.log(`[CDP] Killed process ${pid} on port ${port}`);
+        } catch { /* already dead */ }
+      }
+    }
+  } catch {
+    // No process found on port — that's fine
+  }
 }
 
 /**
  * Wait until the given port is no longer responding (previous process fully exited).
+ * If still busy after initial wait, forcefully kills the process holding it.
  */
 async function waitForPortFree(port: number, timeout: number): Promise<void> {
   const start = Date.now();
@@ -225,7 +270,22 @@ async function waitForPortFree(port: number, timeout: number): Promise<void> {
       return;
     }
   }
-  console.warn(`[CDP] Port ${port} still in use after ${timeout}ms, proceeding anyway`);
+
+  // Port still busy — force kill whatever is holding it
+  console.warn(`[CDP] Port ${port} still in use after ${timeout}ms, force-killing`);
+  killProcessOnPort(port);
+
+  // Wait a bit for the port to be released after kill
+  const killStart = Date.now();
+  while (Date.now() - killStart < 5_000) {
+    try {
+      await fetch(`http://127.0.0.1:${port}/json/version`);
+      await new Promise((r) => setTimeout(r, 300));
+    } catch {
+      return;
+    }
+  }
+  console.warn(`[CDP] Port ${port} still in use after force-kill, proceeding anyway`);
 }
 
 async function killProcess(proc: ChildProcess): Promise<void> {
@@ -242,4 +302,7 @@ async function killProcess(proc: ChildProcess): Promise<void> {
       resolve();
     });
   });
+
+  // Also kill any Electron helper processes still holding the CDP port
+  killProcessOnPort(CDP_PORT);
 }

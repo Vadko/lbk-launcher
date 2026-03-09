@@ -1,4 +1,4 @@
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
@@ -478,7 +478,7 @@ export const App: React.FC = () => {
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
   return (
-    <>
+    <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
       {/* Loader overlay with fade animation */}
       <AnimatePresence>
         {loaderVisible && <AppLoader status={syncStatus} />}
@@ -554,6 +554,6 @@ export const App: React.FC = () => {
         {/* Gamepad hints */}
         <GamepadHints />
       </div>
-    </>
+    </MotionConfig>
   );
 };
