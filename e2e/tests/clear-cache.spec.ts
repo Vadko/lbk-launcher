@@ -139,25 +139,31 @@ test('clear cache restarts the app and loads games', async () => {
   const modal = page.locator('div[role="dialog"]');
   await expect(modal).toBeVisible({ timeout: 5_000 });
 
-  // 4. Click "Очистити кеш" — use noWaitAfter since the app will exit
+  // 4. Click "Очистити кеш" to open confirmation dialog
   const clearCacheButton = modal.getByText('Очистити кеш');
   await expect(clearCacheButton).toBeVisible();
-  await clearCacheButton.click({ noWaitAfter: true });
+  await clearCacheButton.click();
 
-  // 5. Disconnect Playwright (app is shutting down)
+  // 5. Confirm in the confirmation modal — use noWaitAfter since the app will exit
+  const confirmModal = page.locator('div[role="dialog"]').last();
+  const confirmButton = confirmModal.getByText('Очистити');
+  await expect(confirmButton).toBeVisible({ timeout: 5_000 });
+  await confirmButton.click({ noWaitAfter: true });
+
+  // 7. Disconnect Playwright (app is shutting down)
   try {
     await instance.browser.close();
   } catch {
     /* already closing */
   }
 
-  // 6. Wait for the app to restart (detect by changed WebSocket URL)
+  // 8. Wait for the app to restart (detect by changed WebSocket URL)
   await waitForAppRestart(oldWsUrl, 60_000);
 
-  // 7. Give the restarted app a moment to fully initialize its CDP server
+  // 9. Give the restarted app a moment to fully initialize its CDP server
   await new Promise((r) => setTimeout(r, 3_000));
 
-  // 8. Connect to the restarted app
+  // 10. Connect to the restarted app
   const restarted = await connectToApp();
   const newPage = restarted.page;
 
@@ -176,10 +182,10 @@ test('clear cache restarts the app and loads games', async () => {
   };
   page = newPage;
 
-  // 9. Wait for the app to finish syncing
+  // 11. Wait for the app to finish syncing
   await waitForAppReady(newPage);
 
-  // 10. Verify games are loaded after restart (re-synced from Supabase)
+  // 12. Verify games are loaded after restart (re-synced from Supabase)
   const gamesAfter = newPage.locator('[data-nav-group="game-list"]');
   const countAfter = await gamesAfter.count();
   expect(countAfter).toBeGreaterThan(0);
