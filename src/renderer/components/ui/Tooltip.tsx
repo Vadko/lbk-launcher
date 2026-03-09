@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface TooltipProps {
   content: string;
@@ -24,6 +25,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   className = '',
   align = 'center',
 }) => {
+  const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
   const [arrowPosition, setArrowPosition] = useState(50); // відсоток від лівого краю
@@ -69,7 +71,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           className={`absolute z-50 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-lg pointer-events-none whitespace-nowrap
             ${position === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'}
             ${getAlignClass(align)}
-            animate-fade-in`}
+            ${animationsEnabled ? 'animate-fade-in' : ''}`}
         >
           {content}
           <div

@@ -94,7 +94,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     if (hours < 24) return `${hours} год тому`;
     if (days < 7) return `${days} дн тому`;
 
-    return date.toLocaleDateString('uk-UA');
+    return date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });
   };
 
   const getNotificationIcon = (type: Notification['type']) => {

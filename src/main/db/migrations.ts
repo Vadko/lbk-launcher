@@ -654,6 +654,46 @@ const migrations: Migration[] = [
     },
   },
   {
+    name: 'add_translation_updated_at_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='translation_updated_at'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_translation_updated_at_column');
+        db.exec(`ALTER TABLE games ADD COLUMN translation_updated_at TEXT;`);
+        console.log('[Migrations] Completed: add_translation_updated_at_column');
+      }
+    },
+  },
+  {
+    name: 'resync_for_translation_updated_at',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_translation_updated_at_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_translation_updated_at');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_translation_updated_at_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_translation_updated_at - will resync on next startup'
+      );
+    },
+  },
+  {
     name: 'add_spellfix_words',
     up: (db) => {
       // Check if spellfix_words already exists
