@@ -615,6 +615,7 @@ export type Database = {
           textures_progress: number | null
           thumbnail_path: string | null
           translation_progress: number
+          translation_updated_at: string | null
           twitter: string | null
           updated_at: string
           version: string | null
@@ -683,6 +684,7 @@ export type Database = {
           textures_progress?: number | null
           thumbnail_path?: string | null
           translation_progress?: number
+          translation_updated_at?: string | null
           twitter?: string | null
           updated_at?: string
           version?: string | null
@@ -751,6 +753,7 @@ export type Database = {
           textures_progress?: number | null
           thumbnail_path?: string | null
           translation_progress?: number
+          translation_updated_at?: string | null
           twitter?: string | null
           updated_at?: string
           version?: string | null
