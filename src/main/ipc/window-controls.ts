@@ -161,9 +161,13 @@ export function setupWindowControls(): void {
       // Delete database files to force full re-sync
       deleteDatabaseFile();
 
+      // Tell will-quit handler to skip tracking so relaunch isn't delayed
+      getMainWindow()?.webContents.send('skip-quit-tracking');
+      ipcMain.emit('skip-quit-tracking');
+
       // Relaunch the app
       app.relaunch();
-      app.exit(0);
+      app.quit();
 
       return { success: true };
     } catch (error) {
@@ -195,8 +199,11 @@ export function setupWindowControls(): void {
       closeDatabase();
       deleteDatabaseFile();
 
+      // Tell will-quit handler to skip tracking so relaunch isn't delayed
+      ipcMain.emit('skip-quit-tracking');
+
       app.relaunch();
-      app.exit(0);
+      app.quit();
 
       return { success: true };
     } catch (error) {
