@@ -146,7 +146,7 @@ test('clear cache restarts the app and loads games', async () => {
 
   // 5. Confirm in the confirmation modal — use noWaitAfter since the app will exit
   const confirmModal = page.locator('div[role="dialog"]').last();
-  const confirmButton = confirmModal.getByText('Очистити');
+  const confirmButton = confirmModal.getByText('Очистити', { exact: true });
   await expect(confirmButton).toBeVisible({ timeout: 5_000 });
   await confirmButton.click({ noWaitAfter: true });
 
