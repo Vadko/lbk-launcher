@@ -542,10 +542,10 @@ export const App: React.FC = () => {
         <UpdateNotification />
         <ToastNotifications />
 
-        {/* Global modals */}
-        <GlobalModal />
+        {/* Global modals — GlobalModal last so it renders on top of others */}
         <ConfirmModal />
         <SettingsModal />
+        <GlobalModal />
         <NotificationModal
           isOpen={showNotificationHistory}
           onClose={() => setShowNotificationHistory(false)}

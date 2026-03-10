@@ -358,10 +358,16 @@ if (!gotTheLock) {
 
   // Track session end and playtime before quit
   // Use will-quit with preventDefault to ensure async operations complete
+  // skipQuitTracking is set by clear-cache/clear-all-data to avoid delaying relaunch
   let isQuitting = false;
+  let skipQuitTracking = false;
+
+  ipcMain.on('skip-quit-tracking', () => {
+    skipQuitTracking = true;
+  });
 
   app.on('will-quit', (event) => {
-    if (isQuitting) return; // Already processing quit
+    if (isQuitting || skipQuitTracking) return; // Already processing or skipped by clear-cache
 
     event.preventDefault();
     isQuitting = true;

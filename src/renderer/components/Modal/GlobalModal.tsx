@@ -49,22 +49,32 @@ export const GlobalModal: React.FC = () => {
 
         <div className="flex flex-col gap-2 w-full mt-2">
           {config.actions && config.actions.length > 0 ? (
-            config.actions.map((action, index) => (
+            <>
+              {config.actions.map((action, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    action.onClick();
+                    closeModal();
+                  }}
+                  className={`w-full px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity ${
+                    action.variant === 'danger'
+                      ? 'bg-red-500/80 text-white'
+                      : action.variant === 'secondary'
+                        ? 'bg-glass-heavy text-white'
+                        : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              ))}
               <button
-                key={index}
-                onClick={() => {
-                  action.onClick();
-                  closeModal();
-                }}
-                className={`w-full px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity ${
-                  action.variant === 'secondary'
-                    ? 'bg-glass-heavy text-white'
-                    : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
-                }`}
+                onClick={closeModal}
+                className="w-full px-6 py-3 rounded-xl bg-glass-heavy text-text-muted font-semibold hover:opacity-90 transition-opacity"
               >
-                {action.label}
+                Скасувати
               </button>
-            ))
+            </>
           ) : (
             <button
               onClick={closeModal}
