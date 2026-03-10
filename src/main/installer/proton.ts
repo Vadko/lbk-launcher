@@ -11,7 +11,6 @@ import { getSteamPath } from '../game-detector/steam';
 
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
-const KEEP_PREFIX = false;
 const translitUk = CyrillicToTranslit({ preset: 'uk' });
 
 export function findProtons() {
@@ -65,6 +64,7 @@ export function runProton({
   if (!isLinux() || !protonPath || !filePath) return Promise.resolve(null);
   return new Promise((resolve, reject) => {
     (async () => {
+      let keep_prefix = false;
       const enFilePath = renameFileToTranslit(filePath);
       const appName = path
         .basename(enFilePath, '.exe')
@@ -84,6 +84,7 @@ export function runProton({
         const steamPath = getSteamPath();
         const compatPrefix = path.join(steamPath || '', 'steamapps', 'compatdata', appId);
         if (steamPath && fs.existsSync(compatPrefix)) {
+          keep_prefix = true;
           prefix = compatPrefix;
           console.log(
             `[proton] Found existing Proton prefix for AppID ${appId}: ${prefix}`
@@ -123,12 +124,9 @@ export function runProton({
         stdio: 'inherit',
       });
 
-      child.stdout?.once('data', () => console.log('[proton] Started'));
-      child.stderr?.once('data', () => console.log('[proton] Started'));
-
       child.on('exit', (code) => {
         // Clean up prefix folder unless KEEP_PREFIX is set
-        if (!KEEP_PREFIX && prefix.startsWith(PREFIX_BASE)) {
+        if (!keep_prefix && prefix.startsWith(PREFIX_BASE)) {
           setTimeout(() => {
             try {
               fs.rmSync(prefix, { recursive: true, force: true });
