@@ -1,6 +1,6 @@
+import CyrillicToTranslit from 'cyrillic-to-translit-js';
 import fs from 'fs';
 import path from 'path';
-import CyrillicToTranslit from 'cyrillic-to-translit-js';
 
 const translitUk = CyrillicToTranslit({ preset: 'uk' });
 

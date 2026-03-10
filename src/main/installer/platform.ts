@@ -4,8 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
-import { getPlatform, isLinux, isWindows } from '../utils/platform';
 import { getTransliteratedPath } from '../utils/files';
+import { getPlatform, isLinux, isWindows } from '../utils/platform';
 
 /**
  * Check if file is an executable installer
@@ -238,7 +238,7 @@ export async function runUninstaller(
     } else if (platform === 'windows') {
       // On Windows, run the installer with /uninstall parameter and wait for it to complete
       await new Promise<void>((resolve, reject) => {
-        const child = spawn(installerPath, ['/uninstall'], {
+        const child = spawn(installerPath, ['/uninstall', '/silent', '/SILENT'], {
           stdio: 'ignore',
           detached: false,
         });
@@ -262,7 +262,7 @@ export async function runUninstaller(
             // Continue anyway
           }
 
-          const child = spawn(installerPath, ['/uninstall'], {
+          const child = spawn(installerPath, ['/uninstall', '/silent', '/SILENT'], {
             stdio: 'ignore',
             detached: false,
           });
@@ -311,14 +311,11 @@ export async function rerunInstaller(
     const enFilePath = getTransliteratedPath(installerPath);
     if (fs.existsSync(enFilePath)) {
       installerPath = enFilePath;
-      console.log(
-        `[Installer] Found transliterated uninstaller file: ${installerPath}`
-      );
+      console.log(`[Installer] Found transliterated uninstaller file: ${installerPath}`);
     } else {
       throw new Error('файл інсталятора не знайдено');
     }
   }
-
 
   const extractDir = path.dirname(installerPath);
   const installerFileName = path.basename(installerPath);

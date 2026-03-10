@@ -4,6 +4,7 @@ import {
   Heart,
   Play,
   RefreshCw,
+  ReplaceAllIcon,
   Settings,
   Trash2,
   Users,
@@ -333,12 +334,12 @@ export const MainContent: React.FC = () => {
             {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
               <Button
                 variant="secondary"
-                icon={<Settings size={20} />}
+                icon={<ReplaceAllIcon size={20} />}
                 onClick={handleRerunInstaller}
                 data-gamepad-action
                 title="Запустити інсталятор повторно"
               >
-                Інсталятор
+                Перевстановити
               </Button>
             )}
 

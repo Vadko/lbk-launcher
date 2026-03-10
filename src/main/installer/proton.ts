@@ -4,10 +4,10 @@ import os from 'os';
 import path from 'path';
 
 import { getAllInstalledSteamGames } from '../game-detector';
-import { isLinux } from '../utils/platform';
-import { findSteamAppId } from '../game-launcher';
 import { getSteamPath } from '../game-detector/steam';
+import { findSteamAppId } from '../game-launcher';
 import { renameFileToTranslit } from '../utils/files';
+import { isLinux } from '../utils/platform';
 
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');

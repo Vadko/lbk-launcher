@@ -684,7 +684,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
         //   await unlink(infoPath);
         // }
         // await deleteCachedInstallationInfo(game.id);
-        
+
         // console.log(`[Installer] Translation for ${game.id} uninstalled successfully`);
         // return;
       } catch (uninstallerError) {
