@@ -75,7 +75,7 @@ export function runProton({
       let prefix: string;
       let appId: string | null = null;
       try {
-        appId = await findSteamAppId(enFilePath);
+        appId = await findSteamAppId(path.dirname(protonPath));
       } catch (err) {
         console.error('[proton] Error getting Steam AppID:', err);
       }
