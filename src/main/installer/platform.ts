@@ -102,19 +102,11 @@ export async function runInstaller(
   protonPath?: string
 ): Promise<void> {
   try {
-    let installerPath = path.join(extractDir, installerFileName);
+    const installerPath = path.join(extractDir, installerFileName);
 
     if (!fs.existsSync(installerPath)) {
-      const enFilePath = getTransliteratedPath(installerPath);
-      if (fs.existsSync(enFilePath)) {
-        installerPath = enFilePath;
-        console.log(
-          `[Installer] Found transliterated uninstaller file: ${installerPath}`
-        );
-      } else {
-        console.warn(`[Installer] Installer file not found: ${installerPath}`);
-        return;
-      }
+      console.warn(`[Installer] Installer file not found: ${installerPath}`);
+      return;
     }
 
     console.log(`[Installer] Running installer: ${installerPath}`);
@@ -316,8 +308,17 @@ export async function rerunInstaller(
   protonPath?: string
 ): Promise<void> {
   if (!fs.existsSync(installerPath)) {
-    throw new Error('файл інсталятора не знайдено');
+    const enFilePath = getTransliteratedPath(installerPath);
+    if (fs.existsSync(enFilePath)) {
+      installerPath = enFilePath;
+      console.log(
+        `[Installer] Found transliterated uninstaller file: ${installerPath}`
+      );
+    } else {
+      throw new Error('файл інсталятора не знайдено');
+    }
   }
+
 
   const extractDir = path.dirname(installerPath);
   const installerFileName = path.basename(installerPath);

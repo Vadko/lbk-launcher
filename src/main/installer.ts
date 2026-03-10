@@ -413,6 +413,7 @@ export async function installTranslation(
         gamePath: gamePath.path,
         hasBackup: false,
         isCustomPath: !!customGamePath,
+        protonPath: options.protonPath,
         installerPath: path.join(fullTargetPath, installerFileName),
         installedFiles: [],
         components: { text: { installed: true, files: [] } },
