@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-import CyrillicToTranslit from 'cyrillic-to-translit-js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -8,10 +7,10 @@ import { getAllInstalledSteamGames } from '../game-detector';
 import { isLinux } from '../utils/platform';
 import { findSteamAppId } from '../game-launcher';
 import { getSteamPath } from '../game-detector/steam';
+import { renameFileToTranslit } from '../utils/files';
 
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
-const translitUk = CyrillicToTranslit({ preset: 'uk' });
 
 export function findProtons() {
   if (!isLinux()) return [];
@@ -32,26 +31,6 @@ export function findProtons() {
 
   console.log('[proton] Found protons', result);
   return result;
-}
-
-function renameFileToTranslit(filePath: string) {
-  if (!fs.existsSync(filePath)) {
-    console.error(`[proton] File not found: ${filePath}`);
-  }
-
-  try {
-    const dir = path.dirname(filePath);
-    const ext = path.extname(filePath);
-    const baseName = path.basename(filePath, ext);
-    const transliterated = translitUk.transform(baseName);
-    const newPath = path.join(dir, transliterated + ext);
-    fs.renameSync(filePath, newPath);
-
-    return newPath;
-  } catch (error) {
-    console.error(`[proton] Rename file has error: ${filePath}`);
-    return filePath;
-  }
 }
 
 export function runProton({

@@ -5,6 +5,7 @@ import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { getTransliteratedPath } from '../utils/files';
 
 /**
  * Check if file is an executable installer
@@ -101,11 +102,19 @@ export async function runInstaller(
   protonPath?: string
 ): Promise<void> {
   try {
-    const installerPath = path.join(extractDir, installerFileName);
+    let installerPath = path.join(extractDir, installerFileName);
 
     if (!fs.existsSync(installerPath)) {
-      console.warn(`[Installer] Installer file not found: ${installerPath}`);
-      return;
+      const enFilePath = getTransliteratedPath(installerPath);
+      if (fs.existsSync(enFilePath)) {
+        installerPath = enFilePath;
+        console.log(
+          `[Installer] Found transliterated uninstaller file: ${installerPath}`
+        );
+      } else {
+        console.warn(`[Installer] Installer file not found: ${installerPath}`);
+        return;
+      }
     }
 
     console.log(`[Installer] Running installer: ${installerPath}`);
@@ -211,8 +220,16 @@ export async function runUninstaller(
 ): Promise<void> {
   try {
     if (!fs.existsSync(installerPath)) {
-      console.warn(`[Installer] Uninstaller file not found: ${installerPath}`);
-      return;
+      const enFilePath = getTransliteratedPath(installerPath);
+      if (fs.existsSync(enFilePath)) {
+        installerPath = enFilePath;
+        console.log(
+          `[Installer] Found transliterated uninstaller file: ${installerPath}`
+        );
+      } else {
+        console.warn(`[Installer] Uninstaller file not found: ${installerPath}`);
+        return;
+      }
     }
 
     console.log(`[Installer] Running uninstaller: ${installerPath}`);
@@ -304,7 +321,6 @@ export async function rerunInstaller(
 
   const extractDir = path.dirname(installerPath);
   const installerFileName = path.basename(installerPath);
-  
+
   await runInstaller(extractDir, installerFileName, undefined, protonPath);
 }
-
