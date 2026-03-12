@@ -19,6 +19,7 @@ import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
+import { Placement } from '../Placements';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
@@ -33,7 +34,6 @@ import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { SocialLinksCard } from './SocialLinksCard';
 import { StatusCard } from './StatusCard';
 import { VideoCard } from './VideoCard';
-import { Placement } from '../Placements';
 
 export const MainContent: React.FC = () => {
   const {

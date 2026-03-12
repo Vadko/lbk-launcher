@@ -9,7 +9,7 @@ interface PlacementProps {
   onImpression?: (placementId: string) => void;
   onClick?: (placementId: string) => void;
   className?: string;
-  type?: 'small_square'  | 'narrow' | 'large_popup';
+  type?: 'small_square' | 'narrow' | 'large_popup';
 }
 
 /**
@@ -87,6 +87,7 @@ export const Placement: React.FC<PlacementProps> = ({
       className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between ${className}`}
       onClick={handleClick}
       role="button"
+      data-gamepad-action="true"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -112,7 +113,9 @@ export const Placement: React.FC<PlacementProps> = ({
               </span>
             )}
           </div>
-          {placement.button_text && <Button variant="primary">{placement.button_text}</Button>}
+          {placement.button_text && (
+            <Button variant="primary">{placement.button_text}</Button>
+          )}
         </>
       )}
     </div>

@@ -1,5 +1,5 @@
 export type {
+  PlacementClickEvent,
   PlacementData,
   PlacementImpressionEvent,
-  PlacementClickEvent
 } from '../../shared/types';
