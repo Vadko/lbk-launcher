@@ -109,6 +109,15 @@ html.maximized #root {
   transform: translateY(-2px);
 }
 
+.placement {
+  padding: 0;
+}
+
+.glass-card-gold,
+.glass-card-gold:hover {
+  border-color: rgba(255, 164, 122, 0.8);
+}
+
 .glass-button {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -300,7 +309,11 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-main)));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--color-accent)),
+    rgb(var(--color-main))
+  );
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: content-box;
@@ -309,7 +322,11 @@ body.liquid-glass-enabled .glass-input:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-main)));
+  background: linear-gradient(
+    180deg,
+    rgb(var(--color-accent)),
+    rgb(var(--color-main))
+  );
   background-clip: content-box;
   border: 2px solid transparent;
   box-shadow: 0 0 12px rgba(0, 242, 255, 0.5);
@@ -320,7 +337,11 @@ body.liquid-glass-enabled .glass-input:focus {
    ========================================================================== */
 
 .text-gradient {
-  background: linear-gradient(135deg, rgb(var(--color-accent)), rgb(var(--color-main)));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--color-accent)),
+    rgb(var(--color-main))
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

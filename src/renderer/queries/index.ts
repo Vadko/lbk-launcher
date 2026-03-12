@@ -9,3 +9,10 @@ export {
   useTrendingGames,
   useTrendingGamesList,
 } from './useTrendingGames';
+
+// Placements
+export {
+  placementKeys,
+  usePlacements,
+  FALLBACK_PLACEMENTS,
+} from './usePlacements';

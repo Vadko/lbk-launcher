@@ -8,7 +8,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { useInstallation } from '../../hooks/useInstallation';
@@ -33,6 +33,7 @@ import { InstallationStatusMessage } from './InstallationStatusMessage';
 import { SocialLinksCard } from './SocialLinksCard';
 import { StatusCard } from './StatusCard';
 import { VideoCard } from './VideoCard';
+import { Placement } from '../Placements';
 
 export const MainContent: React.FC = () => {
   const {
@@ -66,6 +67,13 @@ export const MainContent: React.FC = () => {
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
+
+  // Randomly select one of two placements based on game ID
+  const selectedPlacement = useMemo(() => {
+    if (!selectedGame?.id) return 'team';
+
+    return Math.random() > 0.5 ? 'team' : 'kuli';
+  }, [selectedGame?.id]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -430,10 +438,28 @@ export const MainContent: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div
+          className={`grid grid-cols-1 ${selectedPlacement === 'team' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
+        >
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
+          {selectedPlacement === 'team' && (
+            <Placement
+              placementId="team"
+              gameId={selectedGame.id}
+              className="placement"
+            />
+          )}
         </div>
+
+        {selectedPlacement === 'kuli' && (
+          <Placement
+            placementId="kuli"
+            gameId={selectedGame.id}
+            className="placement-long mb-6"
+            type="narrow"
+          />
+        )}
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />
