@@ -150,7 +150,9 @@ export function useGamepadModeNavigation(enabled = true) {
     }
     setGamepads((prev) => {
       // No valid gamepads now and state already empty — keep same reference, skip re-render
-      if (Object.keys(filtered).length === 0 && Object.keys(prev).length === 0) return prev;
+      if (Object.keys(filtered).length === 0 && Object.keys(prev).length === 0) {
+        return prev;
+      }
       return filtered;
     });
   });
