@@ -35,74 +35,56 @@ export type Database = {
       }
       banner_campaigns: {
         Row: {
-          button_text: string | null
           created_at: string | null
           created_by: string | null
           end_date: string | null
           frequency_cap: number | null
-          icon_path: string | null
           id: string
           image_path: string | null
           is_active: boolean | null
           link: string | null
-          link_template: string | null
           name: string
           placement: Database["public"]["Enums"]["banner_placement"]
-          priority: number | null
+          priority: number
           start_date: string | null
-          subtitle: string | null
           target_all_games: boolean | null
           target_game_slugs: string[] | null
-          target_source: string | null
-          title: string | null
           type: Database["public"]["Enums"]["banner_type"]
           updated_at: string | null
         }
         Insert: {
-          button_text?: string | null
           created_at?: string | null
           created_by?: string | null
           end_date?: string | null
           frequency_cap?: number | null
-          icon_path?: string | null
           id?: string
           image_path?: string | null
           is_active?: boolean | null
           link?: string | null
-          link_template?: string | null
           name: string
           placement?: Database["public"]["Enums"]["banner_placement"]
-          priority?: number | null
+          priority?: number
           start_date?: string | null
-          subtitle?: string | null
           target_all_games?: boolean | null
           target_game_slugs?: string[] | null
-          target_source?: string | null
-          title?: string | null
           type: Database["public"]["Enums"]["banner_type"]
           updated_at?: string | null
         }
         Update: {
-          button_text?: string | null
           created_at?: string | null
           created_by?: string | null
           end_date?: string | null
           frequency_cap?: number | null
-          icon_path?: string | null
           id?: string
           image_path?: string | null
           is_active?: boolean | null
           link?: string | null
-          link_template?: string | null
           name?: string
           placement?: Database["public"]["Enums"]["banner_placement"]
-          priority?: number | null
+          priority?: number
           start_date?: string | null
-          subtitle?: string | null
           target_all_games?: boolean | null
           target_game_slugs?: string[] | null
-          target_source?: string | null
-          title?: string | null
           type?: Database["public"]["Enums"]["banner_type"]
           updated_at?: string | null
         }
@@ -615,6 +597,7 @@ export type Database = {
           textures_progress: number | null
           thumbnail_path: string | null
           translation_progress: number
+          translation_updated_at: string
           twitter: string | null
           updated_at: string
           version: string | null
@@ -683,6 +666,7 @@ export type Database = {
           textures_progress?: number | null
           thumbnail_path?: string | null
           translation_progress?: number
+          translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
           version?: string | null
@@ -751,6 +735,7 @@ export type Database = {
           textures_progress?: number | null
           thumbnail_path?: string | null
           translation_progress?: number
+          translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
           version?: string | null
@@ -1799,7 +1784,7 @@ export type Database = {
     Enums: {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
-      banner_type: "narrow" | "small_square" | "large_popup"
+      banner_type: "narrow" | "small_square" | "large_popup" | "wide"
       game_status: "completed" | "in-progress" | "planned"
       install_source:
         | "steam"
@@ -1941,7 +1926,7 @@ export const Constants = {
     Enums: {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
-      banner_type: ["narrow", "small_square", "large_popup"],
+      banner_type: ["narrow", "small_square", "large_popup", "wide"],
       game_status: ["completed", "in-progress", "planned"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
       user_role: ["admin", "moderator", "translator", "user"],
