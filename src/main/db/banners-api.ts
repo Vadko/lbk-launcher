@@ -18,15 +18,26 @@ import { getSupabaseCredentials } from './supabase-credentials';
  *
  * ## Типи банерів
  *
- * - `narrow` (970x90) — горизонтальний банер з іконкою, заголовком, підзаголовком і кнопкою
- *   Поля: icon_path, title, subtitle, button_text, link (розрахований з link_template)
- *   link_template підтримує `{game_slug}` — edge function підставляє автоматично
+ * Всі типи — картинка (image_path) + посилання (link).
  *
- * - `small_square` (300x250) — квадратний банер-картинка з посиланням
- *   Поля: image_path, link
+ * Під гру (placement: 'game_page') — fetchBannersForGame():
+ * - `narrow` (970x90) — горизонтальний банер
+ * - `small_square` (300x250) — квадратний банер
  *
- * - `large_popup` (800x600) — великий pop-up банер з посиланням
- *   Поля: image_path, link
+ * Глобальні (placement: 'global') — fetchGlobalBanners():
+ * - `wide` (800x400) — широкий банер
+ * - `large_popup` (800x600) — великий pop-up банер
+ *
+ * ## Відповідь edge function
+ *
+ * Завжди повертається один банер з найвищим пріоритетом (або null).
+ * Пріоритет визначається на бекенді, клієнт його не бачить.
+ *
+ * fetchBannersForGame() повертає { banner, isKuli }:
+ * - banner — один банер (id, type, image_path, link) або null
+ * - isKuli — чи гра імпортована з Kuli
+ *
+ * fetchGlobalBanner() повертає BannerData | null.
  *
  * ## Типи з database.types.ts
  *
@@ -37,7 +48,7 @@ import { getSupabaseCredentials } from './supabase-credentials';
  *
  * // Enums
  * type BannerType = Database['public']['Enums']['banner_type'];
- *   // 'narrow' | 'small_square' | 'large_popup'
+ *   // 'narrow' | 'small_square' | 'wide' | 'large_popup'
  *
  * type BannerPlacement = Database['public']['Enums']['banner_placement'];
  *   // 'game_page' | 'global'
@@ -52,7 +63,7 @@ import { getSupabaseCredentials } from './supabase-credentials';
  *
  * ## URL зображень
  *
- * Шляхи (icon_path, image_path) — відносні в бакеті `banner-images`.
+ * Шляхи (image_path) — відносні в бакеті `banner-images`.
  * Повний URL: `${SUPABASE_URL}/storage/v1/object/public/banner-images/${path}`
  *
  * ## Frequency capping
@@ -73,23 +84,27 @@ export type BannerPlacement = Database['public']['Enums']['banner_placement'];
 
 /**
  * Дані банера, які повертає edge function `get-banners`.
- *
- * Залежно від типу банера, присутні різні поля:
- * - narrow:       icon_path, title, subtitle, button_text, link
- * - small_square: image_path, link
- * - large_popup:  image_path, link
- *
- * Поля завжди присутні: id, type, priority.
- * Решта — optional, залежать від типу банера.
+ * Всі типи уніфіковані: image_path + link.
+ * Пріоритет визначається на бекенді — повертається один найкращий банер.
  */
-export type BannerData = Pick<BannerCampaignRow, 'id' | 'type' | 'priority'> &
-  Partial<Pick<BannerCampaignRow, 'icon_path' | 'title' | 'subtitle' | 'button_text' | 'link' | 'image_path'>>;
+export type BannerData = Pick<BannerCampaignRow, 'id' | 'type' | 'image_path' | 'link'>;
 
 /** Відповідь edge function get-banners */
 interface GetBannersResponse {
   success: boolean;
-  banners: BannerData[];
+  /** Один банер з найвищим пріоритетом, або null */
+  banner: BannerData | null;
+  /** Чи гра імпортована з Kuli (тільки для game_page запитів) */
+  is_kuli?: boolean;
   error?: string;
+}
+
+/** Результат запиту банерів для гри */
+export interface GameBannersResult {
+  /** Один банер з найвищим пріоритетом, або null */
+  banner: BannerData | null;
+  /** Чи гра імпортована з Kuli */
+  isKuli: boolean;
 }
 
 export type BannerImpressionInsert = Database['public']['Tables']['banner_impressions']['Insert'];
@@ -106,41 +121,32 @@ export type ImpressionType = 'view' | 'click';
  *
  * Edge function виконує:
  * 1. Фільтрує кампанії по is_active, placement, start_date, end_date
- * 2. Фільтрує по таргетуванню (target_all_games, target_game_slugs, target_source)
- * 3. Перевіряє чи гра — з Kuli (для target_source='kuli')
- * 4. Застосовує frequency capping (якщо передано machine_id)
- * 5. Для narrow типу — підставляє game_slug в link_template
+ * 2. Для game_page — фільтрує по таргетуванню (target_all_games, target_game_slugs)
+ * 3. Застосовує frequency capping (якщо передано machine_id)
  *
  * @example
  * ```ts
  * import { getMachineId } from '../tracking';
  *
- * const banners = await fetchBannersForGame({
+ * const { banner, isKuli } = await fetchBannersForGame({
  *   gameSlug: 'the-witcher-3',
  *   gameId: 'abc-123-def',
  *   machineId: getMachineId() ?? undefined,
  * });
  *
- * for (const banner of banners) {
- *   if (banner.type === 'narrow') {
- *     // Показати горизонтальний банер:
- *     // - Іконка: `${storageUrl}/banner-images/${banner.icon_path}`
- *     // - Заголовок: banner.title
- *     // - Підзаголовок: banner.subtitle
- *     // - Кнопка: banner.button_text -> відкрити banner.link
- *   } else {
- *     // small_square або large_popup:
- *     // - Картинка: `${storageUrl}/banner-images/${banner.image_path}`
- *     // - Клік -> відкрити banner.link
- *   }
+ * if (banner) {
+ *   // Картинка: buildBannerImageUrl(SUPABASE_URL, banner.image_path)
+ *   // Клік -> відкрити banner.link
+ *   // Розмір: narrow=970x90, small_square=300x250
  *
- *   // Записати показ
  *   await recordBannerImpression({
  *     campaignId: banner.id,
  *     impressionType: 'view',
  *     gameSlug: 'the-witcher-3',
  *   });
  * }
+ *
+ * // isKuli — чи гра імпортована з Kuli
  * ```
  */
 export async function fetchBannersForGame(params: {
@@ -148,9 +154,7 @@ export async function fetchBannersForGame(params: {
   gameId: string;
   /** Machine ID для frequency capping. Отримати через getMachineId() з tracking.ts */
   machineId?: string;
-  /** Розміщення: 'game_page' (за замовчуванням) або 'global' */
-  placement?: BannerPlacement;
-}): Promise<BannerData[]> {
+}): Promise<GameBannersResult> {
   try {
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
@@ -161,9 +165,6 @@ export async function fetchBannersForGame(params: {
 
     if (params.machineId) {
       searchParams.set('machine_id', params.machineId);
-    }
-    if (params.placement) {
-      searchParams.set('placement', params.placement);
     }
 
     const url = `${SUPABASE_URL}/functions/v1/get-banners?${searchParams.toString()}`;
@@ -183,16 +184,66 @@ export async function fetchBannersForGame(params: {
 
     if (response.body.success) {
       console.log(
-        `[banners-api] Fetched ${response.body.banners.length} banners for game=${params.gameSlug}`
+        `[banners-api] Fetched banner=${response.body.banner?.id ?? 'none'} for game=${params.gameSlug}, kuli=${response.body.is_kuli}`
       );
-      return response.body.banners;
+      return {
+        banner: response.body.banner,
+        isKuli: response.body.is_kuli ?? false,
+      };
     }
 
     console.warn('[banners-api] Failed to fetch banners:', response.body.error);
-    return [];
+    return { banner: null, isKuli: false };
   } catch (error) {
     console.error('[banners-api] Error fetching banners:', error);
-    return [];
+    return { banner: null, isKuli: false };
+  }
+}
+
+/**
+ * Отримати глобальний банер (не привʼязаний до конкретної гри).
+ * Типи: wide (800x400), large_popup (800x600).
+ * Повертає один банер з найвищим пріоритетом, або null.
+ */
+export async function fetchGlobalBanner(params?: {
+  machineId?: string;
+}): Promise<BannerData | null> {
+  try {
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+    const searchParams = new URLSearchParams({ placement: 'global' });
+
+    if (params?.machineId) {
+      searchParams.set('machine_id', params.machineId);
+    }
+
+    const url = `${SUPABASE_URL}/functions/v1/get-banners?${searchParams.toString()}`;
+
+    const response = await got<GetBannersResponse>(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      responseType: 'json',
+      timeout: {
+        connect: 5000,
+        response: 10_000,
+      },
+    });
+
+    if (response.body.success) {
+      console.log(
+        `[banners-api] Fetched global banner=${response.body.banner?.id ?? 'none'}`
+      );
+      return response.body.banner;
+    }
+
+    console.warn('[banners-api] Failed to fetch global banner:', response.body.error);
+    return null;
+  } catch (error) {
+    console.error('[banners-api] Error fetching global banner:', error);
+    return null;
   }
 }
 
@@ -293,8 +344,8 @@ export async function recordBannerImpression(params: {
  * @example
  * ```ts
  * const { SUPABASE_URL } = getSupabaseCredentials();
- * const iconUrl = buildBannerImageUrl(SUPABASE_URL, banner.icon_path);
- * // https://xxx.supabase.co/storage/v1/object/public/banner-images/icons/kuli.webp
+ * const imgUrl = buildBannerImageUrl(SUPABASE_URL, banner.image_path);
+ * // https://xxx.supabase.co/storage/v1/object/public/banner-images/banners/promo.webp
  * ```
  */
 export function buildBannerImageUrl(
