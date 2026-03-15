@@ -3,6 +3,7 @@ import { useGamepads } from 'react-ts-gamepads';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
+import { isValidGamepad } from '../utils/isValidGamepad';
 
 // Gamepad button mapping (Xbox layout)
 const BUTTON = {
@@ -138,8 +139,21 @@ export function useGamepadModeNavigation(enabled = true) {
   const prevButtonStatesRef = useRef<boolean[]>([]);
   const ignoreScrollDownRef = useRef<boolean>(false);
 
-  // Subscribe to gamepad state
-  useGamepads((pads) => setGamepads(pads));
+  // Subscribe to gamepad state, filtering out non-gamepad devices (flight sim joysticks, etc.)
+  // to prevent constant re-renders from their analog axis noise.
+  useGamepads((pads) => {
+    const filtered: Record<number, Gamepad> = {};
+    for (const [key, pad] of Object.entries(pads)) {
+      if (isValidGamepad(pad)) {
+        filtered[Number(key)] = pad;
+      }
+    }
+    setGamepads((prev) => {
+      // No valid gamepads now and state already empty — keep same reference, skip re-render
+      if (Object.keys(filtered).length === 0 && Object.keys(prev).length === 0) return prev;
+      return filtered;
+    });
+  });
 
   // Input debouncing
   const canInput = useCallback((key: string): boolean => {
