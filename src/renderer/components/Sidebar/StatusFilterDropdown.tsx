@@ -105,7 +105,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
               : 'bg-glass text-text-muted border border-transparent hover:bg-glass-hover hover:text-text-main'
           }`}
         >
-          <span className="flex items-center gap-2 truncate">
+          <span className="flex items-center gap-2 truncate" title={currentLabel}>
             <ListFilter size={14} className="flex-shrink-0" />
             <span className="truncate">{currentLabel}</span>
           </span>

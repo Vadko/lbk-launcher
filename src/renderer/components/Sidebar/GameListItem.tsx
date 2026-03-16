@@ -100,9 +100,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl ${
+                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
                   isAdultBlurred ? 'blur-lg' : ''
                 }`}
+                title={game.name}
               >
                 {game.name.charAt(0)}
               </div>
@@ -135,7 +136,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
-            <h3 className="text-lg font-head font-bold">{game.name}</h3>
+            <h3 className="text-lg font-head font-bold truncate" title={game.name}>
+              {game.name}
+            </h3>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">
                 <PopularIcon />
@@ -147,9 +150,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
             {/* Info */}
             <div className="p-3 bg-glass-hover rounded-xl mt-auto">
-              <h4 className="font-semibold mb-2 truncate">{game.team}</h4>
+              <h4 className="font-semibold mb-2 truncate" title={game.team}>
+                {game.team}
+              </h4>
 
-              <div className="flex gap-3 items-center w-full">
+              <div className="flex gap-3 items-center w-full flex-wrap">
                 {game.status && (
                   <StatusBadge
                     status={game.status}
@@ -158,7 +163,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   />
                 )}
                 {game.status !== 'planned' && (
-                  <>
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
                       <div
                         className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
@@ -166,7 +171,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                       />
                     </div>
                     <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -253,7 +258,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
           {/* Info */}
           <div className="p-3 bg-glass-hover rounded-b-xl">
-            <h4 className="font-medium text-sm text-text-main mb-2 truncate">
+            <h4
+              className="font-medium text-sm text-text-main mb-2 truncate"
+              title={game.name}
+            >
               {game.name}
             </h4>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
@@ -332,7 +340,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm text-text-main truncate mb-1">
+          <h4
+            className="font-semibold text-sm text-text-main truncate mb-1"
+            title={showTeamName ? game.team : game.name}
+          >
             {showTeamName ? game.team : game.name}
           </h4>
           {(game.ai === 'edited' || game.ai === 'non-edited') && (
@@ -350,6 +361,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                title={`${averageProgress}%`}
                 style={{ width: `${averageProgress}%` }}
               />
             </div>
