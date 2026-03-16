@@ -195,8 +195,12 @@ export interface ElectronAPI {
   openExternal: (url: string) => Promise<void>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;
-  onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void;
-  onInstallationStatus: (callback: (status: InstallationStatus) => void) => () => void;
+  onDownloadProgress: (
+    callback: (gameId: string, progress: DownloadProgress) => void
+  ) => () => void;
+  onInstallationStatus: (
+    callback: (gameId: string, status: InstallationStatus) => void
+  ) => () => void;
   // Auto-updater
   checkForUpdates: () => Promise<{
     available: boolean;
@@ -222,6 +226,7 @@ export interface ElectronAPI {
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
+  onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
@@ -229,6 +234,8 @@ export interface ElectronAPI {
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
+  // E2E test mode — disables analytics/tracking
+  isE2E: () => boolean;
   // Platform
   getPlatform: () => string;
   // Machine ID - for subscription tracking
@@ -240,6 +247,8 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  // Track failed search (0 results)
+  trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
   // Sync status

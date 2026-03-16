@@ -121,13 +121,37 @@ export const SettingsModal: React.FC = () => {
     }
   }, [showModal, closeSettingsModal]);
 
-  const handleClearCacheOnly = useCallback(async () => {
-    await window.api?.clearCacheOnly();
-  }, []);
+  const handleClearCacheOnly = useCallback(() => {
+    showModal({
+      title: 'Очистити кеш',
+      message:
+        'Буде видалено тимчасові файли та базу даних. Налаштування збережуться. Застосунок перезапуститься.',
+      type: 'info',
+      actions: [
+        {
+          label: 'Очистити',
+          variant: 'primary',
+          onClick: () => window.api?.clearCacheOnly(),
+        },
+      ],
+    });
+  }, [showModal]);
 
-  const handleClearAllData = useCallback(async () => {
-    await window.api?.clearAllData();
-  }, []);
+  const handleClearAllData = useCallback(() => {
+    showModal({
+      title: 'Очистити всі дані',
+      message:
+        'Буде видалено всі дані, включаючи налаштування та підписки. Застосунок перезапуститься.',
+      type: 'error',
+      actions: [
+        {
+          label: 'Видалити все',
+          variant: 'danger',
+          onClick: () => window.api?.clearAllData(),
+        },
+      ],
+    });
+  }, [showModal]);
 
   const handleOpenLogsFolder = useCallback(async () => {
     await window.loggerAPI?.openLogsFolder();

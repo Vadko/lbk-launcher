@@ -1,7 +1,6 @@
 import {
   Award,
   Bell,
-  Bot,
   Calendar,
   CalendarClock,
   CalendarPlus,
@@ -46,13 +45,13 @@ const formatDate = (dateString: string | null | undefined): string => {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Europe/Kyiv',
   });
 };
 
 export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   const platformsText = game.platforms.map(getReadablePlatform).join(', ');
   const isPlanned = game.status === 'planned';
-  const hasDownloads = !!game.downloads && game.downloads > 0;
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
   const featuredInfo = getFeaturedInfo(game.slug, game.team);
   const [compact, setCompact] = useState(false);
@@ -84,21 +83,6 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-head font-semibold text-text-main">Інформація</h3>
         <div className="flex items-center gap-2">
-          {(game.ai === 'edited' || game.ai === 'non-edited') && (
-            <Tooltip
-              content={
-                game.ai === 'edited'
-                  ? 'Переклад зроблено за допомогою ШІ та відредаговано людиною'
-                  : 'Переклад зроблено за допомогою ШІ без редагування'
-              }
-              align="left"
-            >
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/20 rounded text-purple-400 text-xs cursor-help">
-                <Bot size={12} />
-                <span>{game.ai === 'edited' ? 'ШІ (ред.)' : 'ШІ'}</span>
-              </div>
-            </Tooltip>
-          )}
           {featuredInfo && (
             <Tooltip content={featuredInfo.description} align="left">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 rounded text-amber-400 text-xs cursor-help">
@@ -166,11 +150,15 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             compact={compact}
           />
         )}
-        {!isPlanned && hasDownloads && (
+        {!isPlanned && (
           <InfoItem
             icon={<Download size={18} />}
             label="Завантажень"
-            value={game.downloads!.toLocaleString('uk-UA')}
+            value={
+              !game.downloads || game.downloads < 20
+                ? 'до 20'
+                : game.downloads!.toLocaleString('uk-UA')
+            }
             compact={compact}
           />
         )}
@@ -182,11 +170,11 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             compact={compact}
           />
         )}
-        {game.updated_at && (
+        {game.translation_updated_at && (
           <InfoItem
             icon={<CalendarClock size={18} />}
             label="Оновлено"
-            value={formatDate(game.updated_at)}
+            value={formatDate(game.translation_updated_at)}
             compact={compact}
           />
         )}

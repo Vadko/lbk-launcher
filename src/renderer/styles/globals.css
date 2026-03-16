@@ -367,13 +367,6 @@ body.liquid-glass-enabled .glass-input:focus {
   transition-delay: 0s !important;
 }
 
-/* Disable framer-motion animations */
-.no-animations [style*="opacity"],
-.no-animations [style*="transform"] {
-  opacity: 1 !important;
-  transform: none !important;
-}
-
 /* Disable backdrop blur in no-animations mode for better performance */
 .no-animations .glass-panel,
 .no-animations .glass-card,

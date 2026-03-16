@@ -82,6 +82,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     textures_progress: game.textures_progress ?? null,
     thumbnail_path: game.thumbnail_path ?? null,
     translation_progress: game.translation_progress ?? null,
+    translation_updated_at: game.translation_updated_at ?? null,
     twitter: game.twitter ?? null,
     updated_at: game.updated_at ?? null,
     version: game.version ?? null,
@@ -116,7 +117,7 @@ const UPSERT_GAME_SQL = `
     fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
     installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
     name, name_search, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
-    thumbnail_path, translation_progress, twitter, updated_at, version, video_url,
+    thumbnail_path, translation_progress, translation_updated_at, twitter, updated_at, version, video_url,
     voice_archive_hash, voice_archive_path, voice_archive_size,
     voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
     achievements_third_party, additional_path,
@@ -128,7 +129,7 @@ const UPSERT_GAME_SQL = `
     @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
     @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
     @name, @name_search, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
-    @thumbnail_path, @translation_progress, @twitter, @updated_at, @version, @video_url,
+    @thumbnail_path, @translation_progress, @translation_updated_at, @twitter, @updated_at, @version, @video_url,
     @voice_archive_hash, @voice_archive_path, @voice_archive_size,
     @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
     @achievements_third_party, @additional_path,
@@ -136,6 +137,60 @@ const UPSERT_GAME_SQL = `
     @steam_app_id, @website, @youtube, @ai, @hide
   )
 `;
+
+/**
+ * Check if spellfix_words table exists
+ */
+function hasSpellfixTable(db: Database.Database): boolean {
+  const result = db
+    .prepare(
+      "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='spellfix_words'"
+    )
+    .get() as { count: number };
+  return result.count > 0;
+}
+
+/**
+ * Extract unique words from game names for spellfix dictionary.
+ * Only original words (no transliteration) — FTS handles transliteration separately.
+ */
+function extractUniqueWords(games: Game[]): string[] {
+  const words = new Set<string>();
+  for (const game of games) {
+    for (const word of game.name.toLowerCase().split(/\s+/)) {
+      const cleaned = word.replace(/[^a-zа-яіїєґ0-9]/gi, '').toLowerCase();
+      if (cleaned.length >= 3) {
+        words.add(cleaned);
+      }
+    }
+  }
+  return [...words];
+}
+
+/**
+ * Rebuild spellfix_words dictionary from all approved games
+ */
+function rebuildSpellfixDictionary(db: Database.Database): void {
+  if (!hasSpellfixTable(db)) return;
+
+  try {
+    const rows = db
+      .prepare('SELECT name FROM games WHERE approved = 1 AND hide = 0')
+      .all() as { name: string }[];
+
+    const games = rows.map((r) => ({ name: r.name }) as Game);
+    const words = extractUniqueWords(games);
+
+    db.exec('DELETE FROM spellfix_words');
+    const insertStmt = db.prepare('INSERT INTO spellfix_words(word) VALUES (?)');
+    for (const word of words) {
+      insertStmt.run(word);
+    }
+    console.log(`[Database] Spellfix dictionary rebuilt: ${words.length} words`);
+  } catch (e) {
+    console.warn('[Database] Failed to rebuild spellfix dictionary:', e);
+  }
+}
 
 /**
  * Batch upsert ігор в транзакції
@@ -157,6 +212,9 @@ export function upsertGamesTransaction(db: Database.Database, games: Game[]): vo
   });
 
   upsert(games);
+
+  // Rebuild spellfix dictionary after batch upsert
+  rebuildSpellfixDictionary(db);
 }
 
 /**

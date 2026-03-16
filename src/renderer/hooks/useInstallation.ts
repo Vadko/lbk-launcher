@@ -126,15 +126,17 @@ export function useInstallation({
           statusMessage: null,
         });
 
-        window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
-          setInstallationProgress(selectedGame.id, {
-            progress: progress.percent,
-            downloadProgress: progress,
-          });
-        });
+        window.electronAPI.onDownloadProgress?.(
+          (gameId: string, progress: DownloadProgress) => {
+            setInstallationProgress(gameId, {
+              progress: progress.percent,
+              downloadProgress: progress,
+            });
+          }
+        );
 
-        window.electronAPI.onInstallationStatus?.((status) => {
-          setInstallationProgress(selectedGame.id, {
+        window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
+          setInstallationProgress(gameId, {
             statusMessage: status.message,
           });
         });
@@ -443,9 +445,13 @@ export function useInstallation({
 
       if (hasInstaller) {
         const isLinux = (await window.electronAPI.getPlatform()) === 'linux';
+        const needsProton =
+          isLinux &&
+          !selectedGame.installation_file_linux_path &&
+          !!selectedGame.installation_file_windows_path;
 
-        if (isLinux) {
-          // Get available Proton versions for Linux
+        if (needsProton) {
+          // Get available Proton versions for Linux (only when no native Linux installer)
           const protons = (await window.electronAPI.getAvailableProtons?.()) || [];
 
           if (protons) {
@@ -631,15 +637,17 @@ export function useInstallation({
     });
 
     // Set up progress listeners again
-    window.electronAPI.onDownloadProgress?.((progress: DownloadProgress) => {
-      setInstallationProgress(selectedGame.id, {
-        progress: progress.percent,
-        downloadProgress: progress,
-      });
-    });
+    window.electronAPI.onDownloadProgress?.(
+      (gameId: string, progress: DownloadProgress) => {
+        setInstallationProgress(gameId, {
+          progress: progress.percent,
+          downloadProgress: progress,
+        });
+      }
+    );
 
-    window.electronAPI.onInstallationStatus?.((status) => {
-      setInstallationProgress(selectedGame.id, {
+    window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
+      setInstallationProgress(gameId, {
         statusMessage: status.message,
       });
     });

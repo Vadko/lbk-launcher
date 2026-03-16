@@ -36,5 +36,13 @@ Thumbs.db
 *.temp
 release/
 
+# E2E tests
+playwright-report/
+test-results/
+
+# Ignore everything in extensions except source files
+resources/extensions/*
+!resources/extensions/*.c
+spellfix.obj
 
 .claude/*

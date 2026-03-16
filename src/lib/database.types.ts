@@ -33,6 +33,97 @@ export type Database = {
         }
         Relationships: []
       }
+      banner_campaigns: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          frequency_cap: number | null
+          id: string
+          image_path: string | null
+          is_active: boolean | null
+          link: string | null
+          name: string
+          placement: Database["public"]["Enums"]["banner_placement"]
+          priority: number
+          start_date: string | null
+          target_all_games: boolean | null
+          target_game_slugs: string[] | null
+          type: Database["public"]["Enums"]["banner_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          frequency_cap?: number | null
+          id?: string
+          image_path?: string | null
+          is_active?: boolean | null
+          link?: string | null
+          name: string
+          placement?: Database["public"]["Enums"]["banner_placement"]
+          priority?: number
+          start_date?: string | null
+          target_all_games?: boolean | null
+          target_game_slugs?: string[] | null
+          type: Database["public"]["Enums"]["banner_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          frequency_cap?: number | null
+          id?: string
+          image_path?: string | null
+          is_active?: boolean | null
+          link?: string | null
+          name?: string
+          placement?: Database["public"]["Enums"]["banner_placement"]
+          priority?: number
+          start_date?: string | null
+          target_all_games?: boolean | null
+          target_game_slugs?: string[] | null
+          type?: Database["public"]["Enums"]["banner_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      banner_impressions: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          game_slug: string | null
+          id: number
+          impression_type: string
+          machine_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          game_slug?: string | null
+          id?: never
+          impression_type: string
+          machine_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          game_slug?: string | null
+          id?: never
+          impression_type?: string
+          machine_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banner_impressions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            referencedRelation: "banner_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deleted_games: {
         Row: {
           deleted_at: string
@@ -48,6 +139,33 @@ export type Database = {
           deleted_at?: string
           game_id?: string
           id?: string
+        }
+        Relationships: []
+      }
+      failed_searches: {
+        Row: {
+          id: string
+          query: string
+          query_normalized: string
+          searched_at: string | null
+          source: string
+          user_identifier: string | null
+        }
+        Insert: {
+          id?: string
+          query: string
+          query_normalized: string
+          searched_at?: string | null
+          source: string
+          user_identifier?: string | null
+        }
+        Update: {
+          id?: string
+          query?: string
+          query_normalized?: string
+          searched_at?: string | null
+          source?: string
+          user_identifier?: string | null
         }
         Relationships: []
       }
@@ -479,6 +597,7 @@ export type Database = {
           textures_progress: number | null
           thumbnail_path: string | null
           translation_progress: number
+          translation_updated_at: string
           twitter: string | null
           updated_at: string
           version: string | null
@@ -547,6 +666,7 @@ export type Database = {
           textures_progress?: number | null
           thumbnail_path?: string | null
           translation_progress?: number
+          translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
           version?: string | null
@@ -615,6 +735,7 @@ export type Database = {
           textures_progress?: number | null
           thumbnail_path?: string | null
           translation_progress?: number
+          translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
           version?: string | null
@@ -818,6 +939,27 @@ export type Database = {
           },
         ]
       }
+      slug_redirects: {
+        Row: {
+          created_at: string | null
+          id: string
+          new_path: string
+          old_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          new_path: string
+          old_path: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          new_path?: string
+          old_path?: string
+        }
+        Relationships: []
+      }
       steam_apps: {
         Row: {
           app_id: number
@@ -838,6 +980,52 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      steam_curator_sync: {
+        Row: {
+          blurb: string | null
+          game_id: string | null
+          id: number
+          link_url: string | null
+          recommendation_state: number | null
+          status: string | null
+          steam_app_id: number
+          synced_at: string | null
+        }
+        Insert: {
+          blurb?: string | null
+          game_id?: string | null
+          id?: number
+          link_url?: string | null
+          recommendation_state?: number | null
+          status?: string | null
+          steam_app_id: number
+          synced_at?: string | null
+        }
+        Update: {
+          blurb?: string | null
+          game_id?: string | null
+          id?: number
+          link_url?: string | null
+          recommendation_state?: number | null
+          status?: string | null
+          steam_app_id?: number
+          synced_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steam_curator_sync_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steam_curator_sync_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
       }
       steam_guide_status_history: {
         Row: {
@@ -902,6 +1090,7 @@ export type Database = {
           steam_id: string
           tags: string[] | null
           title: string | null
+          type: string | null
           updated_at_steam: string | null
           url: string | null
           views: number | null
@@ -925,6 +1114,7 @@ export type Database = {
           steam_id: string
           tags?: string[] | null
           title?: string | null
+          type?: string | null
           updated_at_steam?: string | null
           url?: string | null
           views?: number | null
@@ -948,6 +1138,7 @@ export type Database = {
           steam_id?: string
           tags?: string[] | null
           title?: string | null
+          type?: string | null
           updated_at_steam?: string | null
           url?: string | null
           views?: number | null
@@ -1000,6 +1191,33 @@ export type Database = {
           request_count?: number
           reset_date?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      steam_price_cache: {
+        Row: {
+          discount_percent: number | null
+          fetched_at: string
+          is_free: boolean | null
+          original_price_uah: number | null
+          price_uah: number | null
+          steam_app_id: number
+        }
+        Insert: {
+          discount_percent?: number | null
+          fetched_at?: string
+          is_free?: boolean | null
+          original_price_uah?: number | null
+          price_uah?: number | null
+          steam_app_id: number
+        }
+        Update: {
+          discount_percent?: number | null
+          fetched_at?: string
+          is_free?: boolean | null
+          original_price_uah?: number | null
+          price_uah?: number | null
+          steam_app_id?: number
         }
         Relationships: []
       }
@@ -1057,6 +1275,106 @@ export type Database = {
             referencedColumns: ["game_id"]
           },
         ]
+      }
+      telegram_channel_queue: {
+        Row: {
+          content_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_text: string
+          metadata: Json | null
+          priority: number
+          retry_count: number | null
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          telegram_message_id: number | null
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_text: string
+          metadata?: Json | null
+          priority?: number
+          retry_count?: number | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          telegram_message_id?: number | null
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_text?: string
+          metadata?: Json | null
+          priority?: number
+          retry_count?: number | null
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          telegram_message_id?: number | null
+        }
+        Relationships: []
+      }
+      telegram_channel_sent_games: {
+        Row: {
+          content_type: string
+          game_id: string
+          id: string
+          rotation_cycle: number | null
+          sent_at: string
+        }
+        Insert: {
+          content_type: string
+          game_id: string
+          id?: string
+          rotation_cycle?: number | null
+          sent_at?: string
+        }
+        Update: {
+          content_type?: string
+          game_id?: string
+          id?: string
+          rotation_cycle?: number | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_channel_sent_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_channel_sent_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
+      telegram_channel_state: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       translation_playtime: {
         Row: {
@@ -1212,6 +1530,8 @@ export type Database = {
       games_grouped: {
         Row: {
           banner_path: string | null
+          created_at: string | null
+          downloads: number | null
           is_adult: boolean | null
           latest_updated_at: string | null
           name: string | null
@@ -1257,6 +1577,27 @@ export type Database = {
       }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
+      fuzzy_search_games: {
+        Args: {
+          limit_val?: number
+          search_query: string
+          search_query_translit?: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          banner_path: string
+          created_at: string
+          downloads: number
+          is_adult: boolean
+          latest_updated_at: string
+          name: string
+          name_fts: unknown
+          slug: string
+          thumbnail_path: string
+          translations: Json
+          translations_count: number
+        }[]
+      }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
         Args: { p_end_date?: string; p_start_date?: string }
@@ -1264,6 +1605,14 @@ export type Database = {
           dau: number
           mau: number
           wau: number
+        }[]
+      }
+      get_banner_impression_stats: {
+        Args: { p_campaign_ids: string[] }
+        Returns: {
+          campaign_id: string
+          clicks: number
+          views: number
         }[]
       }
       get_downloads_per_player: {
@@ -1274,12 +1623,42 @@ export type Database = {
           players_count: number
         }[]
       }
+      get_failed_searches_statistics: {
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Returns: {
+          last_searched_at: string
+          query_normalized: string
+          search_count: number
+          sources: string[]
+          unique_users: number
+        }[]
+      }
+      get_failed_searches_summary: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          from_launcher: number
+          from_web: number
+          total_failed_searches: number
+          unique_queries: number
+          unique_users_searched: number
+        }[]
+      }
       get_first_session_downloads: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
           conversion_rate: number
           first_session_downloads: number
           total_first_launches: number
+        }[]
+      }
+      get_landing_stats: {
+        Args: never
+        Returns: {
+          dau: number
+          total_creators: number
+          total_downloads: number
+          total_playtime_hours: number
+          total_unique_players: number
         }[]
       }
       get_players_with_downloads: {
@@ -1382,6 +1761,7 @@ export type Database = {
           }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
       remove_game_subscription: {
@@ -1403,6 +1783,8 @@ export type Database = {
     }
     Enums: {
       ai_status: "edited" | "non-edited"
+      banner_placement: "game_page" | "global"
+      banner_type: "narrow" | "small_square" | "large_popup" | "wide"
       game_status: "completed" | "in-progress" | "planned"
       install_source:
         | "steam"
@@ -1543,6 +1925,8 @@ export const Constants = {
   public: {
     Enums: {
       ai_status: ["edited", "non-edited"],
+      banner_placement: ["game_page", "global"],
+      banner_type: ["narrow", "small_square", "large_popup", "wide"],
       game_status: ["completed", "in-progress", "planned"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
       user_role: ["admin", "moderator", "translator", "user"],

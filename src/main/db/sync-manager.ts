@@ -15,7 +15,7 @@ export class SyncManager {
 
   constructor() {
     this.db = getDatabase();
-    this.gamesRepo = new GamesRepository();
+    this.gamesRepo = GamesRepository.getInstance();
   }
 
   /**

@@ -23,11 +23,13 @@ interface GetSignedDownloadUrlParams {
   isFirstSession?: boolean;
 }
 
+// Disable all tracking during E2E tests
+const IS_E2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
+
 // Session ID for current launcher session
 let currentSessionId: string | null = null;
 
 // Flag to check if this is the first launch
-let isFirstLaunchChecked = false;
 let isFirstLaunch = false;
 
 interface SignedUrlResult {
@@ -77,6 +79,7 @@ export function getMachineId(): string | null {
 export async function getSignedDownloadUrl(
   params: GetSignedDownloadUrlParams
 ): Promise<GetSignedUrlResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' };
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
@@ -145,6 +148,7 @@ export async function trackSubscription(
   gameId: string,
   action: 'subscribe' | 'unsubscribe'
 ): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping subscription tracking');
@@ -184,6 +188,7 @@ export async function trackSubscription(
  * Track support button click
  */
 export async function trackSupportClick(gameId: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping support click tracking');
@@ -219,54 +224,12 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
 }
 
 /**
- * Check if this is the first launch of the app (no previous sessions)
- */
-async function checkIsFirstLaunch(): Promise<boolean> {
-  if (isFirstLaunchChecked) {
-    return isFirstLaunch;
-  }
-
-  const machineId = getMachineId();
-  if (!machineId) {
-    isFirstLaunchChecked = true;
-    isFirstLaunch = false;
-    return false;
-  }
-
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
-
-  try {
-    // Check if there are any previous sessions for this machine
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/launcher_sessions?user_identifier=eq.${machineId}&limit=1`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-
-    const data = await response.json();
-    isFirstLaunch = !data || data.length === 0;
-    isFirstLaunchChecked = true;
-
-    console.log(`[Tracking] First launch check: ${isFirstLaunch}`);
-    return isFirstLaunch;
-  } catch (error) {
-    console.error('[Tracking] Failed to check first launch:', error);
-    isFirstLaunchChecked = true;
-    isFirstLaunch = false;
-    return false;
-  }
-}
-
-/**
  * Track session start (when launcher opens)
+ * The server determines is_first_launch
+ * and returns it in the response.
  */
 export async function trackSessionStart(appVersion: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping session tracking');
@@ -276,12 +239,7 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   try {
-    // Check if this is the first launch before recording
-    const firstLaunch = await checkIsFirstLaunch();
-
-    console.log(
-      `[Tracking] Starting session, version: ${appVersion}, first launch: ${firstLaunch}`
-    );
+    console.log(`[Tracking] Starting session, version: ${appVersion}`);
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
       method: 'POST',
@@ -293,15 +251,20 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
         type: 'session_start',
         userIdentifier: machineId,
         appVersion,
-        isFirstLaunch: firstLaunch,
       }),
     });
 
-    const result = (await response.json()) as TrackingResponse & { sessionId?: string };
+    const result = (await response.json()) as TrackingResponse & {
+      sessionId?: string;
+      isFirstLaunch?: boolean;
+    };
 
     if (result.success && result.sessionId) {
       currentSessionId = result.sessionId;
-      console.log(`[Tracking] Session started: ${currentSessionId}`);
+      isFirstLaunch = result.isFirstLaunch ?? false;
+      console.log(
+        `[Tracking] Session started: ${currentSessionId}, first launch: ${isFirstLaunch}`
+      );
     }
 
     return result;
@@ -315,6 +278,7 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
  * Track session end (when launcher closes)
  */
 export async function trackSessionEnd(): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   if (!currentSessionId) {
     console.warn('[Tracking] No current session ID, skipping session end tracking');
     return { success: false, error: 'No session ID' };
@@ -358,6 +322,7 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
  * Track translation uninstall
  */
 export async function trackUninstall(gameId: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping uninstall tracking');
@@ -393,6 +358,51 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
 }
 
 /**
+ * Track failed search (query with 0 results)
+ */
+export async function trackFailedSearch(query: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping failed search tracking');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  const trimmed = query.trim();
+  if (trimmed.length < 3) {
+    return { success: false, error: 'Query too short' };
+  }
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    console.log(`[Tracking] Tracking failed search: "${trimmed}"`);
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        type: 'failed_search',
+        query: trimmed,
+        source: 'launcher',
+        userIdentifier: machineId,
+      }),
+    });
+
+    const result = (await response.json()) as TrackingResponse;
+    console.log('[Tracking] Failed search tracking response:', result);
+
+    return result;
+  } catch (error) {
+    console.error('[Tracking] Failed to track failed search:', error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
  * Check if current session is first session (for download tracking)
  */
 export function isCurrentSessionFirstLaunch(): boolean {
@@ -416,6 +426,7 @@ interface PlaytimeData {
 export async function trackPlaytime(
   playtimeData: PlaytimeData[]
 ): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   if (playtimeData.length === 0) {
     return { success: true };
   }
