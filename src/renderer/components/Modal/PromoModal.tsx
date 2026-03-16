@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react';
+import { Bell, Heart } from 'lucide-react';
+import supportBox from '@resources/images/promo-support-box.svg';
 import React, { useEffect, useState } from 'react';
 import { usePromoModalStore } from '../../store/usePromoModalStore';
 import { trackEvent } from '../../utils/analytics';
@@ -87,9 +88,8 @@ export const PromoModal: React.FC = () => {
       <div className="flex flex-col gap-6">
         {/* Картинка */}
         <div className="flex justify-center">
-          <div className="w-32 h-32 bg-gradient-to-br from-color-accent to-color-main rounded-2xl flex items-center justify-center">
-            <span className="text-4xl">🇺🇦</span>
-          </div>
+          <img src={supportBox} alt="Підтримайте український лаунчер!" width={190} height={184} />
+          
         </div>
 
         {/* Текст та опис */}
@@ -107,7 +107,7 @@ export const PromoModal: React.FC = () => {
         </div>
 
         {/* Чекбокс */}
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-background-card/50">
+        <div className="flex items-center justify-center gap-3">
           <Checkbox
             id="dont-show-again"
             checked={dontShowAgain}
@@ -122,12 +122,22 @@ export const PromoModal: React.FC = () => {
         </div>
 
         {/* Кнопки */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="primary" className="flex-1" onClick={handlePrimaryAction}>
-            💳 Задонатити
+        <div className="flex gap-6 justify-center">
+          <Button
+            variant="primary"
+            icon={<Heart size={20} />}
+            onClick={handlePrimaryAction}
+            data-gamepad-action
+          >
+            Задонатити
           </Button>
-          <Button variant="secondary" className="flex-1" onClick={handleSecondaryAction}>
-            📱 Підписатись
+          <Button
+            variant="accent"
+            icon={<Bell size={20} />}
+            onClick={handleSecondaryAction}
+            data-gamepad-action
+          >
+            Підписатись
           </Button>
         </div>
       </div>

@@ -20,8 +20,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         onClick={() => onCheckedChange(!checked)}
         className={`
           relative inline-flex h-5 w-5 items-center justify-center rounded border-2 
-          transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 
-          focus:ring-color-accent focus:ring-offset-2 focus:ring-offset-background
+          transition-colors duration-200 ease-in-out focus:outline-none 
           ${
             checked
               ? 'bg-color-accent border-color-accent text-text-dark'

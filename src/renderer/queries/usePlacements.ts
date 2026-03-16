@@ -1,5 +1,5 @@
-import kuli from '../../../resources/kuli.png';
-import team from '../../../resources/team.svg';
+import kuli from '@resources/kuli.png';
+import team from '@resources/team.svg';
 import { fetchPlacements } from '../api/placements';
 import type { PlacementData } from '../types/placement';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
