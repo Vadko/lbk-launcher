@@ -171,7 +171,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
         {(game.ai === 'edited' || game.ai === 'non-edited') && (
           <motion.div
             key={game.id}
-            className="absolute top-[90px] right-[90px] w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border-[1px]"
+            className="absolute top-[90px] right-[90px] w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border-[1px] rotate-45 translate-x-1/2 translate-y--1/2"
             initial={{ opacity: 0, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             animate={{ opacity: 1, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             exit={{ opacity: 0, scale: 0.9, rotate: 45, x: '50%', y: '-50%' }}
