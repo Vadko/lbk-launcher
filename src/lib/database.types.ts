@@ -763,6 +763,54 @@ export type Database = {
           },
         ]
       }
+      kuli_games: {
+        Row: {
+          game_category_names: string[] | null
+          game_sources: Json | null
+          game_tags: string[] | null
+          is_dlc: boolean
+          is_official: boolean
+          kuli_id: number
+          localizations: Json | null
+          localizations_count: number | null
+          name: string
+          pictures: Json | null
+          short_description: string | null
+          status: string
+          synced_at: string | null
+        }
+        Insert: {
+          game_category_names?: string[] | null
+          game_sources?: Json | null
+          game_tags?: string[] | null
+          is_dlc?: boolean
+          is_official?: boolean
+          kuli_id: number
+          localizations?: Json | null
+          localizations_count?: number | null
+          name: string
+          pictures?: Json | null
+          short_description?: string | null
+          status?: string
+          synced_at?: string | null
+        }
+        Update: {
+          game_category_names?: string[] | null
+          game_sources?: Json | null
+          game_tags?: string[] | null
+          is_dlc?: boolean
+          is_official?: boolean
+          kuli_id?: number
+          localizations?: Json | null
+          localizations_count?: number | null
+          name?: string
+          pictures?: Json | null
+          short_description?: string | null
+          status?: string
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
       kuli_imports: {
         Row: {
           game_id: string
