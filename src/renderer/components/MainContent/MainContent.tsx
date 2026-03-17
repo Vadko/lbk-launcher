@@ -88,10 +88,6 @@ export const MainContent: React.FC = () => {
         if (!isMounted) return;
         console.error('Error loading banner data:', error);
         setBannerData(null);
-      } finally {
-        if (isMounted) {
-          // setIsBannerLoading was removed as it's not used
-        }
       }
     };
 
@@ -119,7 +115,6 @@ export const MainContent: React.FC = () => {
       supportUrl: selectedGame.support_url,
       determinedType: type,
     });
-
 
     return {
       data: bannerData?.banner || null,
@@ -498,25 +493,25 @@ export const MainContent: React.FC = () => {
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
           {bannerInfo.placementType === 'small_square' && (
-              <Placement
-                banner={bannerInfo.data}
-                placementType="small_square"
-                gameId={selectedGame.id}
-                supportUrl={selectedGame.support_url || undefined}
-                className="placement"
-              />
-            )}
+            <Placement
+              banner={bannerInfo.data}
+              placementType="small_square"
+              gameId={selectedGame.id}
+              supportUrl={selectedGame.support_url || undefined}
+              className="placement"
+            />
+          )}
         </div>
 
         {bannerInfo.placementType === 'narrow' && (
-            <Placement
-              banner={bannerInfo.data}
-              placementType="narrow"
-              gameId={selectedGame.id}
-              isKuli={bannerInfo.isKuli}
-              className="placement-long mb-6"
-            />
-          )}
+          <Placement
+            banner={bannerInfo.data}
+            placementType="narrow"
+            gameId={selectedGame.id}
+            isKuli={bannerInfo.isKuli}
+            className="placement-long mb-6"
+          />
+        )}
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />
