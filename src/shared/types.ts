@@ -3,12 +3,6 @@ import type { Database } from '../lib/database.types';
 
 export type { Database };
 
-export interface GameBannersData {
-  /** Один банер з найвищим пріоритетом, або null */
-  banner: BannerData | null;
-  /** Чи гра імпортована з Kuli */
-  isKuli: boolean;
-}
 export type Platform = Database['public']['Enums']['install_source'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
@@ -248,6 +242,11 @@ export interface ElectronAPI {
     gameSlug?: string;
   }) => Promise<boolean>;
   recordBannerImpression: (bannerId: string) => Promise<boolean>;
+}
+
+export interface GameBannersData {
+  banner: BannerData | null;
+  isKuli: boolean;
 }
 
 declare global {
