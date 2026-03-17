@@ -6,20 +6,16 @@ import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 
 interface PlacementProps {
-  banner: BannerData | null; // Готові дані банера або null
+  banner: BannerData | null;
   placementType: 'small_square' | 'narrow';
-  gameId: string; // ID гри для аналітики
-  isKuli?: boolean; // Чи відображати статичний контент Kuli
-  supportUrl?: string; // URL для донату (якщо немає банера)
+  gameId: string;
+  isKuli?: boolean;
+  supportUrl?: string;
   onImpression?: (bannerId: string) => void;
   onClick?: (bannerId: string) => void;
   className?: string;
 }
 
-/**
- * Компонент для відображення банерів, статичного контенту або донатів
- * Отримує готові дані від батьківського компонента
- */
 export const Placement: React.FC<PlacementProps> = ({
   banner,
   placementType,
@@ -32,30 +28,23 @@ export const Placement: React.FC<PlacementProps> = ({
 }) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const hasTrackedImpression = useRef(false);
+  const isNarrowType = placementType === 'narrow';
 
   // Відстеження impression при появі в viewport
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || hasTrackedImpression.current) return;
-
-    // Для статичного контенту (Kuli або донат) не треба реєструвати impression
-    const shouldTrackImpression = banner?.id;
-
-    if (!shouldTrackImpression) return;
+    if (!element || hasTrackedImpression.current || !banner?.id) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasTrackedImpression.current && banner?.id) {
           hasTrackedImpression.current = true;
 
-          // Записуємо impression через API
-          window.electronAPI.recordBannerImpression(banner.id);
-
-          // Відправляємо івент в Mixpanel
-          trackEvent('Banner Viewed', {
+          trackEvent('ads-placement', {
             banner_id: banner.id,
-            placement_type: banner.type,
+            type: banner.type,
             game_id: gameId,
+            action: 'view',
           });
 
           onImpression?.(banner.id);
@@ -70,9 +59,6 @@ export const Placement: React.FC<PlacementProps> = ({
       observer.disconnect();
     };
   }, [banner, gameId, onImpression]);
-
-  // Визначаємо чи це narrow тип для адаптивного рендерингу
-  const isNarrowType = placementType === 'narrow';
 
   const staticBanner = useCallback(
     () => (
@@ -100,17 +86,17 @@ export const Placement: React.FC<PlacementProps> = ({
     [isNarrowType]
   );
 
-  // Не відображаємо компонент, якщо немає контенту
   if (!banner && !isKuli && !supportUrl) {
     return null;
   }
 
   const handleClick = () => {
     if (banner) {
-      trackEvent('Banner Clicked', {
+      trackEvent('ads-placement', {
         banner_id: banner.id,
-        placement_type: banner.type,
+        type: banner.type,
         game_id: gameId,
+        action: 'click',
       });
 
       onClick?.(banner.id);
