@@ -763,25 +763,25 @@ export type Database = {
           },
         ]
       }
-      kurin_imports: {
+      kuli_imports: {
         Row: {
           game_id: string
           imported_at: string
-          kurin_id: number
+          kuli_id: number
           localization_index: number
           localization_name: string | null
         }
         Insert: {
           game_id: string
           imported_at?: string
-          kurin_id: number
+          kuli_id: number
           localization_index?: number
           localization_name?: string | null
         }
         Update: {
           game_id?: string
           imported_at?: string
-          kurin_id?: number
+          kuli_id?: number
           localization_index?: number
           localization_name?: string | null
         }
@@ -800,11 +800,11 @@ export type Database = {
           },
         ]
       }
-      kurin_skipped: {
+      kuli_skipped: {
         Row: {
           game_name: string | null
           id: string
-          kurin_id: number
+          kuli_id: number
           reason: string | null
           skipped_at: string | null
           skipped_by: string | null
@@ -812,7 +812,7 @@ export type Database = {
         Insert: {
           game_name?: string | null
           id?: string
-          kurin_id: number
+          kuli_id: number
           reason?: string | null
           skipped_at?: string | null
           skipped_by?: string | null
@@ -820,7 +820,7 @@ export type Database = {
         Update: {
           game_name?: string | null
           id?: string
-          kurin_id?: number
+          kuli_id?: number
           reason?: string | null
           skipped_at?: string | null
           skipped_by?: string | null
