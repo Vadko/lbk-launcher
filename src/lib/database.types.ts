@@ -774,6 +774,7 @@ export type Database = {
           localizations: Json | null
           localizations_count: number | null
           name: string
+          notified_at: string | null
           pictures: Json | null
           short_description: string | null
           status: string
@@ -789,6 +790,7 @@ export type Database = {
           localizations?: Json | null
           localizations_count?: number | null
           name: string
+          notified_at?: string | null
           pictures?: Json | null
           short_description?: string | null
           status?: string
@@ -804,6 +806,7 @@ export type Database = {
           localizations?: Json | null
           localizations_count?: number | null
           name?: string
+          notified_at?: string | null
           pictures?: Json | null
           short_description?: string | null
           status?: string
@@ -1826,6 +1829,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_steam_apps_cron: { Args: never; Returns: undefined }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
