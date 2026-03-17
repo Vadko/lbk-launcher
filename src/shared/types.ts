@@ -107,29 +107,6 @@ export interface FilterCountsResult {
   'with-voice': number;
 }
 
-export interface PlacementData {
-  id: string;
-  type: 'small_square' | 'narrow';
-  link: string;
-  icon_path?: string; // Додано поле для іконки, якщо потрібно
-  title?: string;
-  subtitle?: string;
-  button_text?: string;
-  image_path?: string;
-}
-
-export interface PlacementImpressionEvent {
-  placementId: string;
-  gameId?: string;
-  timestamp: number;
-}
-
-export interface PlacementClickEvent {
-  placementId: string;
-  gameId?: string;
-  timestamp: number;
-}
-
 export interface DetectedGameInfo {
   platform: Database['public']['Enums']['install_source'];
   path: string;
