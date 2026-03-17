@@ -1,54 +1,64 @@
-import React, { useEffect, useRef } from 'react';
-import { usePlacements } from '../../queries/usePlacements';
+import kuli from '@resources/kuli.png';
+import team from '@resources/team.svg';
+import React, { useCallback, useEffect, useRef } from 'react';
+import type { BannerData } from '@/main/db/banners-api';
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 
 interface PlacementProps {
-  placementId: string;
-  gameId?: string;
-  onImpression?: (placementId: string) => void;
-  onClick?: (placementId: string) => void;
+  banner: BannerData | null; // Готові дані банера або null
+  placementType: 'small_square' | 'narrow';
+  gameId: string; // ID гри для аналітики
+  isKuli?: boolean; // Чи відображати статичний контент Kuli
+  supportUrl?: string; // URL для донату (якщо немає банера)
+  onImpression?: (bannerId: string) => void;
+  onClick?: (bannerId: string) => void;
   className?: string;
-  type?: 'small_square' | 'narrow' | 'large_popup';
 }
 
 /**
- * Компонент для відображення одного placement
- * Отримує дані за ID самостійно
+ * Компонент для відображення банерів, статичного контенту або донатів
+ * Отримує готові дані від батьківського компонента
  */
 export const Placement: React.FC<PlacementProps> = ({
-  placementId,
+  banner,
+  placementType,
   gameId,
+  isKuli = false,
+  supportUrl,
   onImpression,
   onClick,
   className = '',
-  type = 'small_square',
 }) => {
-  const { data: placements } = usePlacements();
   const elementRef = useRef<HTMLDivElement>(null);
-  const impressionTrackedRef = useRef(false);
-
-  // Шукаємо placement за ID
-  const placement = placements?.find((p) => p.id === placementId);
+  const hasTrackedImpression = useRef(false);
 
   // Відстеження impression при появі в viewport
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || !placement || impressionTrackedRef.current) return;
+    if (!element || hasTrackedImpression.current) return;
+
+    // Для статичного контенту (Kuli або донат) не треба реєструвати impression
+    const shouldTrackImpression = banner?.id;
+
+    if (!shouldTrackImpression) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !impressionTrackedRef.current) {
-          impressionTrackedRef.current = true;
+        if (entry.isIntersecting && !hasTrackedImpression.current && banner?.id) {
+          hasTrackedImpression.current = true;
+
+          // Записуємо impression через API
+          window.electronAPI.recordBannerImpression(banner.id);
 
           // Відправляємо івент в Mixpanel
-          trackEvent('Placement Viewed', {
-            placement_id: placement.id,
-            placement_type: placement.type,
-            game_id: gameId || placement.gameId,
+          trackEvent('Banner Viewed', {
+            banner_id: banner.id,
+            placement_type: banner.type,
+            game_id: gameId,
           });
 
-          onImpression?.(placement.id);
+          onImpression?.(banner.id);
         }
       },
       { threshold: 0.5 }
@@ -59,32 +69,71 @@ export const Placement: React.FC<PlacementProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [placement, gameId, onImpression]);
+  }, [banner, gameId, onImpression]);
 
-  // Якщо placement не знайдений, не рендеримо нічого
-  if (!placement) {
+  // Визначаємо чи це narrow тип для адаптивного рендерингу
+  const isNarrowType = placementType === 'narrow';
+
+  const staticBanner = useCallback(
+    () => (
+      <>
+        <img
+          src={isNarrowType ? kuli : team}
+          className={`w-auto h-full object-contain object-top ${!isNarrowType ? 'mx-auto' : ''}`}
+          loading="lazy"
+        />
+        {isNarrowType && (
+          <>
+            <div className="flex">
+              Скільки вже зіграли з цим перекладом годин:
+              {' '}
+              <span className="text-color-mixed">
+                {`З цим перекладом вже награли ${100} годин`}
+              </span>
+            </div>
+
+            <Button variant="primary">Перейти на KULI →</Button>
+          </>
+        )}
+      </>
+    ),
+    [isNarrowType]
+  );
+
+  // Не відображаємо компонент, якщо немає контенту
+  if (!banner && !isKuli && !supportUrl) {
     return null;
   }
 
   const handleClick = () => {
-    // Відправляємо івент в Mixpanel
-    trackEvent('Placement Clicked', {
-      placement_id: placement.id,
-      placement_type: placement.type,
-      game_id: gameId || placement.gameId,
-      target_url: placement.link,
-    });
+    if (banner) {
+      trackEvent('Banner Clicked', {
+        banner_id: banner.id,
+        placement_type: banner.type,
+        game_id: gameId,
+      });
 
-    onClick?.(placement.id);
+      onClick?.(banner.id);
+    }
 
-    // Відкриваємо посилання
-    window.electronAPI.openExternal(placement.link);
+    let link: string;
+    if (banner?.link) {
+      link = banner.link;
+    } else if (isKuli) {
+      link = 'https://kuli.com.ua/';
+    } else if (supportUrl) {
+      link = supportUrl;
+    } else {
+      return;
+    }
+
+    window.electronAPI.openExternal(link);
   };
 
   return (
     <div
       ref={elementRef}
-      className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between ${className}`}
+      className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between overflow-hidden ${isNarrowType ? 'max-h-[90px]' : ''} ${banner ? '!p-0' : ''} ${className}`}
       onClick={handleClick}
       role="button"
       data-gamepad-action="true"
@@ -96,27 +145,15 @@ export const Placement: React.FC<PlacementProps> = ({
         }
       }}
     >
-      <img
-        src={placement.image_path || placement.icon_path}
-        alt={placement.title}
-        className={`w-auto h-full object-contain object-top ${type === 'small_square' ? 'mx-auto' : ''}`}
-        loading="lazy"
-      />
-      {type === 'narrow' && (
-        <>
-          <div className="flex">
-            {placement.title}
-            {' '}
-            {placement.subtitle && (
-              <span className="text-color-mixed">
-                {placement.subtitle.replace('{number}', '100')}
-              </span>
-            )}
-          </div>
-          {placement.button_text && (
-            <Button variant="primary">{placement.button_text}</Button>
-          )}
-        </>
+      {banner?.image_path ? (
+        <img
+          src={banner.image_path}
+          className={`w-full h-full object-cover object-top ${!isNarrowType ? 'mx-auto' : ''}`}
+          loading="lazy"
+          alt="Banner"
+        />
+      ) : (
+        staticBanner()
       )}
     </div>
   );

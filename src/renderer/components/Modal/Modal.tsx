@@ -41,8 +41,8 @@ export const Modal: React.FC<ModalProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"
-          className={`relative max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content 
-            ${styleModal === 'promo' ? 'glass-card glass-card-gold' : 'bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl '}`}
+          className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content 
+            ${styleModal === 'promo' ? 'glass-card glass-card-gold !p-0 overflow-hidden min-h-[400px]' : 'bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl '}`}
           onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -95,7 +95,7 @@ export const Modal: React.FC<ModalProps> = ({
                 </button>
               )}
               {/* Content */}
-              <div className="p-6 overflow-y-auto break-words flex-1">{children}</div>
+              <div className="overflow-y-auto break-words flex-1">{children}</div>
             </>
           )}
         </motion.div>

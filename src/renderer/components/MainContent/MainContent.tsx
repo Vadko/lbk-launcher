@@ -9,7 +9,7 @@ import {
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { LaunchGameResult } from '../../../shared/types';
+import type { GameBannersData, LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { useInstallation } from '../../hooks/useInstallation';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
@@ -51,6 +51,7 @@ export const MainContent: React.FC = () => {
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
+  const [bannerData, setBannerData] = useState<GameBannersData | null>(null);
 
   const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
   const isCheckingInstallation = selectedGame
@@ -68,12 +69,65 @@ export const MainContent: React.FC = () => {
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
 
-  // Randomly select one of two placements based on game ID
-  const selectedPlacement = useMemo(() => {
-    if (!selectedGame?.id) return 'team';
+  // Load banner data for selected game
+  useEffect(() => {
+    let isMounted = true;
 
-    return Math.random() > 0.5 ? 'team' : 'kuli';
+    const loadBannerData = async () => {
+      if (!selectedGame?.id) {
+        setBannerData(null);
+        return;
+      }
+
+      try {
+        const result = await window.electronAPI.fetchBannersForGame(selectedGame.id);
+        if (!isMounted) return;
+
+        setBannerData(result);
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Error loading banner data:', error);
+        setBannerData(null);
+      } finally {
+        if (isMounted) {
+          // setIsBannerLoading was removed as it's not used
+        }
+      }
+    };
+
+    loadBannerData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedGame?.id]);
+
+  const bannerInfo = useMemo(() => {
+    if (!selectedGame) {
+      return { data: null };
+    }
+
+    const type =
+      bannerData?.banner?.type ||
+      (bannerData?.isKuli ? 'narrow' : null) ||
+      (selectedGame.support_url ? 'small_square' : null) ||
+      null;
+
+    console.log('[MainContent] Banner info:', {
+      banner: bannerData?.banner,
+      isKuli: bannerData?.isKuli,
+      supportUrl: selectedGame.support_url,
+      determinedType: type,
+    });
+
+
+    return {
+      data: bannerData?.banner || null,
+      isKuli: bannerData?.isKuli || false,
+      support_url: selectedGame?.support_url || null,
+      placementType: type,
+    };
+  }, [selectedGame, bannerData]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -439,27 +493,30 @@ export const MainContent: React.FC = () => {
         )}
 
         <div
-          className={`grid grid-cols-1 ${selectedPlacement === 'team' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
+          className={`grid grid-cols-1 ${bannerInfo.placementType === 'small_square' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
         >
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
-          {selectedPlacement === 'team' && (
-            <Placement
-              placementId="team"
-              gameId={selectedGame.id}
-              className="placement"
-            />
-          )}
+          {bannerInfo.placementType === 'small_square' && (
+              <Placement
+                banner={bannerInfo.data}
+                placementType="small_square"
+                gameId={selectedGame.id}
+                supportUrl={selectedGame.support_url || undefined}
+                className="placement"
+              />
+            )}
         </div>
 
-        {selectedPlacement === 'kuli' && (
-          <Placement
-            placementId="kuli"
-            gameId={selectedGame.id}
-            className="placement-long mb-6"
-            type="narrow"
-          />
-        )}
+        {bannerInfo.placementType === 'narrow' && (
+            <Placement
+              banner={bannerInfo.data}
+              placementType="narrow"
+              gameId={selectedGame.id}
+              isKuli={bannerInfo.isKuli}
+              className="placement-long mb-6"
+            />
+          )}
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />

@@ -4,6 +4,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
+import type { ImpressionType } from '@/main/db/banners-api';
 import type {
   DownloadProgress,
   ElectronAPI,
@@ -199,6 +200,17 @@ const electronAPI: ElectronAPI = {
   },
   getSyncStatus: () =>
     ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
+  // Banner API
+  fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
+  fetchBannersForGame: (gameId: string) =>
+    ipcRenderer.invoke('fetch-banners-for-game', gameId),
+  recordPromoBannerImpression: (params: {
+    campaignId: string;
+    impressionType: ImpressionType;
+    gameSlug?: string;
+  }) => ipcRenderer.invoke('record-promo-banner-impression', params),
+  recordBannerImpression: (bannerId: string) =>
+    ipcRenderer.invoke('record-banner-impression', bannerId),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

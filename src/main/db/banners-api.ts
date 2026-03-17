@@ -107,7 +107,8 @@ export interface GameBannersResult {
   isKuli: boolean;
 }
 
-export type BannerImpressionInsert = Database['public']['Tables']['banner_impressions']['Insert'];
+export type BannerImpressionInsert =
+  Database['public']['Tables']['banner_impressions']['Insert'];
 
 /** Тип імпрешену: 'view' = показ, 'click' = клік */
 export type ImpressionType = 'view' | 'click';
@@ -344,14 +345,13 @@ export async function recordBannerImpression(params: {
  * @example
  * ```ts
  * const { SUPABASE_URL } = getSupabaseCredentials();
- * const imgUrl = buildBannerImageUrl(SUPABASE_URL, banner.image_path);
+ * const imgUrl = buildBannerImageUrl(banner.image_path);
  * // https://xxx.supabase.co/storage/v1/object/public/banner-images/banners/promo.webp
  * ```
  */
-export function buildBannerImageUrl(
-  supabaseUrl: string,
-  path: string | null | undefined
-): string | null {
+export function buildBannerImageUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  return `${supabaseUrl}/storage/v1/object/public/banner-images/${path}`;
+  const { SUPABASE_URL } = getSupabaseCredentials();
+
+  return `${SUPABASE_URL}/storage/v1/object/public/banner-images/${path}`;
 }

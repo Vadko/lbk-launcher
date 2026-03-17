@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron';
-import type { Game, GetGamesParams } from '../../shared/types';
+import type { Game, GameBannersData, GetGamesParams } from '../../shared/types';
 import {
   countGamesBySteamAppIds,
   fetchFilterCounts,
@@ -9,6 +9,14 @@ import {
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
 } from '../api';
+import {
+  type BannerData,
+  buildBannerImageUrl,
+  fetchBannersForGame,
+  fetchGlobalBanner,
+  type ImpressionType,
+  recordBannerImpression,
+} from '../db/banners-api';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
@@ -366,4 +374,134 @@ export function setupGamesHandlers(): void {
 
   // Restart Steam
   ipcMain.handle('restart-steam', () => restartSteam());
+
+  // ---------------------------------------------------------------------------
+  // Banner API handlers - all banner functionality consolidated here
+  // Low level API functions are in: src/main/db/banners-api.ts
+  // ---------------------------------------------------------------------------
+
+  // Fetch promo banner
+  ipcMain.handle('fetch-promo-banner', async (): Promise<BannerData | null> => {
+    try {
+      const machineId = getMachineId();
+      const promoBanner = await fetchGlobalBanner({ machineId: machineId || undefined });
+
+      if (!promoBanner) {
+        return null;
+      }
+
+      // Convert API banner data to frontend format
+      const banner: BannerData = {
+        id: promoBanner.id,
+        type: promoBanner.type,
+        image_path: buildBannerImageUrl(promoBanner.image_path) || '',
+        link: promoBanner.link || '',
+      };
+
+      return banner;
+    } catch (error) {
+      console.error('[IPC] Error fetching promo banner:', error);
+      return null;
+    }
+  });
+
+  // Record banner impression
+  ipcMain.handle(
+    'record-promo-banner-impression',
+    async (
+      _,
+      params: {
+        campaignId: string;
+        impressionType: ImpressionType;
+        gameSlug?: string;
+      }
+    ): Promise<boolean> => {
+      try {
+        const machineId = getMachineId();
+
+        return await recordBannerImpression({
+          campaignId: params.campaignId,
+          impressionType: params.impressionType,
+          machineId,
+          gameSlug: params.gameSlug,
+        });
+      } catch (error) {
+        console.error('[IPC] Error recording banner impression:', error);
+        return false;
+      }
+    }
+  );
+
+  // Build banner image URL
+  ipcMain.handle(
+    'build-promo-banner-image-url',
+    (_, imagePath: string | null): string | null => {
+      try {
+        if (!imagePath) return null;
+        return buildBannerImageUrl(imagePath);
+      } catch (error) {
+        console.error('[IPC] Error building banner image URL:', error);
+        return null;
+      }
+    }
+  );
+
+  // Fetch banners for game
+  ipcMain.handle(
+    'fetch-banners-for-game',
+    async (_, gameId: string): Promise<GameBannersData> => {
+      try {
+        const machineId = getMachineId();
+        const result = await fetchBannersForGame({
+          gameId,
+          gameSlug: gameId, // Use gameId as gameSlug for simplicity
+          machineId: machineId || undefined,
+        });
+
+        if (!result.banner) {
+          return {
+            banner: null,
+            isKuli: result.isKuli,
+          };
+        }
+
+        // Convert API banner data to frontend format
+        const banner: BannerData = {
+          id: result.banner.id,
+          type: result.banner.type,
+          image_path: buildBannerImageUrl(result.banner.image_path) || '',
+          link: result.banner.link || '',
+        };
+        return {
+          banner,
+          isKuli: result.isKuli,
+        };
+      } catch (error) {
+        console.error('[IPC] Error fetching banners for game:', error);
+        return {
+          banner: null,
+          isKuli: false,
+        };
+      }
+    }
+  );
+
+  // Record banner impression for placement banners
+  ipcMain.handle(
+    'record-banner-impression',
+    async (_, bannerId: string): Promise<boolean> => {
+      try {
+        const machineId = getMachineId();
+        await recordBannerImpression({
+          campaignId: bannerId,
+          impressionType: 'view' as ImpressionType,
+          machineId,
+        });
+        return true;
+      } catch (error) {
+        console.error('[IPC] Error recording banner impression:', error);
+        return false;
+      }
+    }
+  );
 }
