@@ -202,8 +202,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
   // Banner API
   fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
-  fetchBannersForGame: (gameId: string) =>
-    ipcRenderer.invoke('fetch-banners-for-game', gameId),
+  fetchBannersForGame: (gameId: string, gameSlug: string) =>
+    ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

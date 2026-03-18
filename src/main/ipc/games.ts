@@ -433,29 +433,15 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Build banner image URL
-  ipcMain.handle(
-    'build-promo-banner-image-url',
-    (_, imagePath: string | null): string | null => {
-      try {
-        if (!imagePath) return null;
-        return buildBannerImageUrl(imagePath);
-      } catch (error) {
-        console.error('[IPC] Error building banner image URL:', error);
-        return null;
-      }
-    }
-  );
-
   // Fetch banners for game
   ipcMain.handle(
     'fetch-banners-for-game',
-    async (_, gameId: string): Promise<GameBannersResult> => {
+    async (_, gameId: string, gameSlug: string): Promise<GameBannersResult> => {
       try {
         const machineId = getMachineId();
         const result = await fetchBannersForGame({
           gameId,
-          gameSlug: gameId, // Use gameId as gameSlug for simplicity
+          gameSlug,
           machineId: machineId || undefined,
         });
 

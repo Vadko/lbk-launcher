@@ -239,7 +239,7 @@ export interface ElectronAPI {
   getSyncStatus: () => Promise<'syncing' | 'ready' | 'error'>;
   // Banner API
   fetchPromoBanner: () => Promise<BannerData | null>;
-  fetchBannersForGame: (gameId: string) => Promise<GameBannersResult>;
+  fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

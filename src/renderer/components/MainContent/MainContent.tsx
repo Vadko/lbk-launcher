@@ -81,7 +81,7 @@ export const MainContent: React.FC = () => {
       }
 
       try {
-        const result = await window.electronAPI.fetchBannersForGame(selectedGame.id);
+        const result = await window.electronAPI.fetchBannersForGame(selectedGame.id, selectedGame.slug);
         if (!isMounted) return;
 
         setBannerData(result);
@@ -97,7 +97,7 @@ export const MainContent: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedGame?.id]);
+  }, [selectedGame?.id, selectedGame?.slug]);
 
   const bannerInfo = useMemo(() => {
     if (!selectedGame) {
@@ -105,17 +105,10 @@ export const MainContent: React.FC = () => {
     }
 
     const type =
-      bannerData?.banner?.type ||
-      (bannerData?.isKuli ? 'narrow' : null) ||
-      (selectedGame.support_url ? 'small_square' : null) ||
+      bannerData?.banner?.type ??
+      (bannerData?.isKuli ? 'narrow' : null) ??
+      (selectedGame.support_url ? 'small_square' : null) ??
       null;
-
-    console.log('[MainContent] Banner info:', {
-      banner: bannerData?.banner,
-      isKuli: bannerData?.isKuli,
-      supportUrl: selectedGame.support_url,
-      determinedType: type,
-    });
 
     return {
       data: bannerData?.banner || null,

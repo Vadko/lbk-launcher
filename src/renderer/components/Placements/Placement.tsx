@@ -70,11 +70,11 @@ export const Placement: React.FC<PlacementProps> = ({
         />
         {isNarrowType && (
           <>
-            <div className="flex">
-              Скільки вже зіграли з цим перекладом годин:
-              {' '}
+            <div>
+              Переклад наявний за підтримки KULI
               <span className="text-color-mixed">
-                {`З цим перекладом вже награли ${100} годин`}
+                Будь <span className="font-semibold">першим</span>, хто зіграє з
+                перекладом!
               </span>
             </div>
 

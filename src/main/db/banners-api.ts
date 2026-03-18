@@ -2,81 +2,6 @@ import got from 'got';
 import type { Database } from '../../lib/database.types';
 import { getSupabaseCredentials } from './supabase-credentials';
 
-/**
- * ============================================================================
- * BANNER CAMPAIGNS API
- * ============================================================================
- *
- * Модуль для роботи з рекламними банерами. Викликається ТІЛЬКИ в main process.
- *
- * ## Архітектура
- *
- * 1. Адмін створює кампанію через адмін-панель (lbk-admin /admin/banners)
- * 2. Зображення зберігаються в Supabase Storage (бакет `banner-images`)
- * 3. Лаунчер запитує банери через edge function `get-banners`
- * 4. Лаунчер записує покази/кліки через `recordBannerImpression()`
- *
- * ## Типи банерів
- *
- * Всі типи — картинка (image_path) + посилання (link).
- *
- * Під гру (placement: 'game_page') — fetchBannersForGame():
- * - `narrow` (970x90) — горизонтальний банер
- * - `small_square` (300x250) — квадратний банер
- *
- * Глобальні (placement: 'global') — fetchGlobalBanners():
- * - `wide` (800x400) — широкий банер
- * - `large_popup` (800x600) — великий pop-up банер
- *
- * ## Відповідь edge function
- *
- * Завжди повертається один банер з найвищим пріоритетом (або null).
- * Пріоритет визначається на бекенді, клієнт його не бачить.
- *
- * fetchBannersForGame() повертає { banner, isKuli }:
- * - banner — один банер (id, type, image_path, link) або null
- * - isKuli — чи гра імпортована з Kuli
- *
- * fetchGlobalBanner() повертає BannerData | null.
- *
- * ## Типи з database.types.ts
- *
- * Автогенеровані типи доступні з `../../lib/database.types`:
- *
- * ```ts
- * import type { Database } from '../../lib/database.types';
- *
- * // Enums
- * type BannerType = Database['public']['Enums']['banner_type'];
- *   // 'narrow' | 'small_square' | 'wide' | 'large_popup'
- *
- * type BannerPlacement = Database['public']['Enums']['banner_placement'];
- *   // 'game_page' | 'global'
- *
- * // Повний рядок з таблиці banner_campaigns
- * type BannerCampaignRow = Database['public']['Tables']['banner_campaigns']['Row'];
- *
- * // Для запису імпрешенів
- * type BannerImpressionInsert = Database['public']['Tables']['banner_impressions']['Insert'];
- *   // { campaign_id: string, impression_type: string, machine_id?: string, game_slug?: string }
- * ```
- *
- * ## URL зображень
- *
- * Шляхи (image_path) — відносні в бакеті `banner-images`.
- * Повний URL: `${SUPABASE_URL}/storage/v1/object/public/banner-images/${path}`
- *
- * ## Frequency capping
- *
- * Edge function автоматично фільтрує кампанії з frequency_cap якщо передати machine_id.
- * Наприклад, frequency_cap=3 — максимум 3 покази на день для одного machine_id.
- * Без machine_id — frequency capping не працює.
- */
-
-// ---------------------------------------------------------------------------
-// Types (derived from database.types.ts)
-// ---------------------------------------------------------------------------
-
 type BannerCampaignRow = Database['public']['Tables']['banner_campaigns']['Row'];
 
 /**
@@ -106,8 +31,6 @@ export interface GameBannersResult {
 
 type BannerImpressionInsert =
   Database['public']['Tables']['banner_impressions']['Insert'];
-
-/** Тип імпрешену: 'view' = показ, 'click' = клік */
 export type ImpressionType = 'view' | 'click';
 
 // ---------------------------------------------------------------------------
