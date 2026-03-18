@@ -81,7 +81,7 @@ function getLutrisGOGInstallations(): Array<{
                 }
               }
             } catch (e) {
-              // Ignore errors reading subdirs
+              console.warn(`[Lutris] Error reading GOG prefix ${gamePrefixPath}:`, e);
             }
           }
         }
@@ -134,7 +134,7 @@ function getLutrisEpicInstallations(): Array<{
             let folderName = details?.customAttributes?.FolderName?.value;
             // E.g 'DarkestDungeon'
 
-            if (!folderName && details.appName) {
+            if (!folderName && details?.appName) {
               folderName = details.appName;
             }
 
@@ -204,22 +204,15 @@ export function getLutrisGOGDirs(): string[] {
   return Array.from(dirs);
 }
 
-export function getLutrisEpicGamePaths(): string[] {
-  // Only return the game installation paths, we get it directly internally
+export function getLutrisEpicGameDirNames(): string[] {
   const installs = getLutrisEpicInstallations();
-  // Return relative dir names since getInstalledEpicGamePaths() expects basenames
   return installs.map((i) => path.basename(i.path));
 }
 
-export function getLutrisGogId(gamePath: string): string | null {
-  const installs = getLutrisGOGInstallations();
-  const found = installs.find((i) => path.resolve(i.path) === path.resolve(gamePath));
-  return found ? found.slug : null;
-}
-
-export function getLutrisEpicAppName(gamePath: string): string | null {
-  const installs = getLutrisEpicInstallations();
-  const found = installs.find((i) => path.resolve(i.path) === path.resolve(gamePath));
+export function getLutrisSlug(gamePath: string): string | null {
+  const resolved = path.resolve(gamePath);
+  const allInstalls = [...getLutrisGOGInstallations(), ...getLutrisEpicInstallations()];
+  const found = allInstalls.find((i) => path.resolve(i.path) === resolved);
   return found ? found.slug : null;
 }
 

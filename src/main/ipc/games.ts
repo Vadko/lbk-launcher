@@ -19,10 +19,8 @@ import {
   getGOGGalaxyClientPath,
   getGOGGameId,
   getGogLibrary,
-  getHeroicEpicAppName,
-  getHeroicGOGId,
-  getLutrisEpicAppName,
-  getLutrisGogId,
+  getHeroicGame,
+  getLutrisSlug,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -306,35 +304,20 @@ export function setupGamesHandlers(): void {
         }
       }
 
-      // Heroic Games Launcher (Linux)
+      // Heroic / Lutris Games Launcher (Linux)
       if (getPlatform() === 'linux') {
-        // Check for GOG game in Lutris
-        const lutrisGogId = getLutrisGogId(gamePath.path);
-        if (lutrisGogId) {
+        // Check for GOG/Epic game in Heroic
+        const heroicGame = getHeroicGame(gamePath.path);
+        if (heroicGame) {
+          const result = await launchHeroicGame(heroicGame.appName, heroicGame.runner);
+          if (result.success) return { success: true };
+        }
+
+        // Check for GOG/Epic game in Lutris
+        const lutrisSlug = getLutrisSlug(gamePath.path);
+        if (lutrisSlug) {
           const { launchLutrisGame } = await import('../utils/lutris-launcher');
-          const result = await launchLutrisGame(lutrisGogId);
-          if (result.success) return { success: true };
-        }
-
-        // Check for Epic game in Lutris
-        const lutrisEpicAppName = getLutrisEpicAppName(gamePath.path);
-        if (lutrisEpicAppName) {
-          const { launchLutrisGame } = await import('../utils/lutris-launcher');
-          const result = await launchLutrisGame(lutrisEpicAppName);
-          if (result.success) return { success: true };
-        }
-
-        // Check for GOG game in Heroic
-        const heroicGogId = getHeroicGOGId(gamePath.path);
-        if (heroicGogId) {
-          const result = await launchHeroicGame(heroicGogId, 'gog');
-          if (result.success) return { success: true };
-        }
-
-        // Check for Epic game in Heroic
-        const heroicEpicAppName = getHeroicEpicAppName(gamePath.path);
-        if (heroicEpicAppName) {
-          const result = await launchHeroicGame(heroicEpicAppName, 'legendary');
+          const result = await launchLutrisGame(lutrisSlug);
           if (result.success) return { success: true };
         }
       }

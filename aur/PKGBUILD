@@ -8,7 +8,8 @@ arch=('x86_64')
 url="https://lbklauncher.com"
 license=('GPL-3.0-or-later')
 depends=('gtk3' 'nss' 'alsa-lib' 'libxss' 'libnotify')
-optdepends=('libappindicator-gtk3: system tray support')
+optdepends=('libappindicator-gtk3: system tray support'
+            'lutris: Lutris game launcher integration')
 provides=('lbk-launcher')
 conflicts=('lbk-launcher')
 options=(!strip !debug)

@@ -13,22 +13,29 @@ import {
   getHeroicConfigPaths,
 } from './heroic';
 import {
-  getLutrisEpicAppName,
-  getLutrisEpicGamePaths,
+  getLutrisEpicGameDirNames,
   getLutrisEpicLibrary,
   getLutrisInstalledEpicPathsFull,
 } from './lutris';
 
 interface HeroicLegendaryGame {
-  app_title: string;
-  title: string;
+  app_title?: string;
+  title?: string;
+  app_name?: string;
+  appName?: string;
+  install_path?: string;
   install?: {
-    install_path: string;
+    install_path?: string;
   };
   extra?: {
     about?: {
       description?: string;
     };
+  };
+  game?: {
+    title?: string;
+    app_name?: string;
+    app_title?: string;
   };
   [key: string]: unknown;
 }
@@ -238,7 +245,7 @@ export function getInstalledEpicGamePaths(): string[] {
       }
 
       // Get paths from Lutris
-      paths.push(...getLutrisEpicGamePaths());
+      paths.push(...getLutrisEpicGameDirNames());
     }
 
     const epicManifestPath = getEpicPath();
@@ -290,7 +297,7 @@ export function getEpicLibrary(): string[] {
           // Legendary library structure: { library: [...] }
           const games = Array.isArray(data) ? data : data.library || Object.values(data);
 
-          for (const item of games as any[]) {
+          for (const item of games as HeroicLegendaryGame[]) {
             const game = item.game || item; // Handle install_info structure
 
             // User reports Epic names are in description
@@ -298,8 +305,8 @@ export function getEpicLibrary(): string[] {
               titles.add(getCleanTitle(cleanTitle(game.app_title)));
             } else if (game.title) {
               titles.add(getCleanTitle(cleanTitle(game.title)));
-            } else if (game?.extra?.about?.description) {
-              titles.add(getCleanTitle(cleanTitle(game.extra.about.description)));
+            } else if (item.extra?.about?.description) {
+              titles.add(getCleanTitle(cleanTitle(item.extra.about.description)));
             }
           }
         }
@@ -373,8 +380,8 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
           continue;
         }
 
-        let games: any[] = [];
-        let gamesById: Record<string, any> = {};
+        let games: HeroicLegendaryGame[] = [];
+        let gamesById: Record<string, HeroicLegendaryGame> = {};
 
         if (Array.isArray(data)) {
           games = data;
@@ -387,7 +394,7 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
         }
 
         // 1. Try exact path match
-        const game = games.find((g: any) => {
+        const game = games.find((g: HeroicLegendaryGame) => {
           const installPath = g?.install?.install_path || g?.install_path;
           return installPath && path.resolve(installPath) === path.resolve(gamePath);
         });
@@ -399,15 +406,14 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
 
         // 1.5 Try path match in Object keys loop (if gamesById was populated)
         for (const [appName, g] of Object.entries(gamesById)) {
-          const val = g as any;
-          const installPath = val?.install?.install_path || val?.install_path;
+          const installPath = g?.install?.install_path || g?.install_path;
           if (installPath && path.resolve(installPath) === path.resolve(gamePath)) {
             return appName;
           }
         }
 
         // 2. Fallback: Title match (Folder name matching Game Title)
-        const gameByTitle = games.find((g: any) => {
+        const gameByTitle = games.find((g: HeroicLegendaryGame) => {
           let title = null;
           if (g.app_title && !g.app_title.match(/^[0-9a-f]{32}$/)) {
             title = g.app_title;
@@ -428,8 +434,7 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
 
         // Check object items by Title
         for (const [appName, g] of Object.entries(gamesById)) {
-          const val = g as any;
-          const title = val?.title || val?.game?.title;
+          const title = g?.title || g?.game?.title;
           if (title && normalize(title) === targetFolder) {
             return appName;
           }
@@ -444,9 +449,6 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
   } catch (error) {
     console.error('[Epic] Error getting Heroic AppName:', error);
   }
-
-  const lutrisAppName = getLutrisEpicAppName(gamePath);
-  if (lutrisAppName) return lutrisAppName;
 
   return null;
 }

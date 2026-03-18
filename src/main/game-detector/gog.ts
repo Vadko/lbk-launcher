@@ -14,7 +14,7 @@ import {
   getHeroicConfigPaths,
   getHeroicGamePaths,
 } from './heroic';
-import { getLutrisGOGDirs, getLutrisGogId, getLutrisGogLibrary } from './lutris';
+import { getLutrisGOGDirs, getLutrisGogLibrary } from './lutris';
 
 const GOG_DB_FILENAME = 'galaxy-2.0.db';
 
@@ -254,9 +254,6 @@ export function getHeroicGOGId(gamePath: string): string | null {
   } catch (error) {
     console.error('[GOG] Error getting Heroic ID:', error);
   }
-
-  const lutrisId = getLutrisGogId(gamePath);
-  if (lutrisId) return lutrisId;
 
   return null;
 }

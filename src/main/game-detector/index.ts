@@ -15,7 +15,7 @@ import type { GamePath } from './types'; // Used locally
 // ============================================================================
 
 // GOG
-export { getGOGGalaxyClientPath, getGOGGameId, getHeroicGOGId } from './gog';
+export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
 // Steam
 export {
   getAllInstalledSteamGames,
@@ -147,6 +147,25 @@ export function getAllInstalledGamePaths(): string[] {
 }
 
 // Heroic Libraries
-export { getEpicLibrary, getHeroicEpicAppName } from './epic';
+export { getEpicLibrary } from './epic';
 export { getGogLibrary } from './gog';
-export { getLutrisEpicAppName, getLutrisGogId } from './lutris';
+export { getLutrisSlug } from './lutris';
+
+// Heroic unified lookup
+import { getHeroicEpicAppName } from './epic';
+import { getHeroicGOGId } from './gog';
+
+export interface HeroicGameInfo {
+  appName: string;
+  runner: 'gog' | 'legendary';
+}
+
+export function getHeroicGame(gamePath: string): HeroicGameInfo | null {
+  const gogId = getHeroicGOGId(gamePath);
+  if (gogId) return { appName: gogId, runner: 'gog' };
+
+  const epicAppName = getHeroicEpicAppName(gamePath);
+  if (epicAppName) return { appName: epicAppName, runner: 'legendary' };
+
+  return null;
+}
