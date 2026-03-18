@@ -280,7 +280,7 @@ export function findGOGGame(gameFolderName: string): string | null {
     // Check Heroic and Lutris directories (fuzzy match)
     const heroicDirs = [
       ...getHeroicGamePaths(), // Flatpak + Native
-      ...getLutrisGOGDirs(),   // Lutris GOG base directories
+      ...getLutrisGOGDirs(), // Lutris GOG base directories
     ];
 
     for (const dir of heroicDirs) {
@@ -364,19 +364,19 @@ export function getInstalledGOGGamePaths(): string[] {
     // Linux (Heroic) support
     if (isLinux()) {
       // Get all game folders from Heroic directories
-        paths.push(...getAllHeroicGameFolders());
+      paths.push(...getAllHeroicGameFolders());
 
       // Get game folders from Lutris directories (each subdir in drive_c/GOG Games is a game installation)
       const lutrisDirs = getLutrisGOGDirs();
       for (const dir of lutrisDirs) {
-          if (fs.existsSync(dir)) {
-             try {
-                 const subdirs = fs.readdirSync(dir);
-                 paths.push(...subdirs);
-             } catch (e) {
-                 // ignore
-             }
+        if (fs.existsSync(dir)) {
+          try {
+            const subdirs = fs.readdirSync(dir);
+            paths.push(...subdirs);
+          } catch (e) {
+            // ignore
           }
+        }
       }
 
       // Read from installed.json as well
@@ -454,18 +454,18 @@ function getAllInstalledGOGGames(): Map<string, string> {
     // Include Lutris GOG installations mapped via db directly (we can leverage fuzzy matching folders too)
     const lutrisDirs = getLutrisGOGDirs();
     for (const dir of lutrisDirs) {
-        if (!fs.existsSync(dir)) continue;
-        try {
-            const subdirs = fs.readdirSync(dir);
-            for (const subdir of subdirs) {
-                const gamePath = path.join(dir, subdir);
-                if (fs.statSync(gamePath).isDirectory()) {
-                    gamesMap.set(getCleanTitle(subdir).toLowerCase(), gamePath);
-                }
-            }
-        } catch (e) {
-            // Safe to ignore
+      if (!fs.existsSync(dir)) continue;
+      try {
+        const subdirs = fs.readdirSync(dir);
+        for (const subdir of subdirs) {
+          const gamePath = path.join(dir, subdir);
+          if (fs.statSync(gamePath).isDirectory()) {
+            gamesMap.set(getCleanTitle(subdir).toLowerCase(), gamePath);
+          }
         }
+      } catch (e) {
+        // Safe to ignore
+      }
     }
   }
   // Windows/macOS: Use native GOG Galaxy detection

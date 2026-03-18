@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess, exec } from 'child_process';
+import { type ChildProcess, exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { isLinux } from './platform';
 
@@ -11,7 +11,9 @@ const FLATPAK_LUTRIS_ID = 'net.lutris.Lutris';
  */
 async function isFlatpakLutrisInstalled(): Promise<boolean> {
   try {
-    const { stdout } = await execAsync(`flatpak-spawn --host flatpak info ${FLATPAK_LUTRIS_ID}`);
+    const { stdout } = await execAsync(
+      `flatpak-spawn --host flatpak info ${FLATPAK_LUTRIS_ID}`
+    );
     return stdout.includes(FLATPAK_LUTRIS_ID);
   } catch (error) {
     // Expected to throw if Flatpak wrapper isn't installed
@@ -28,7 +30,7 @@ function spawnOnHost(command: string, args: string[] = []): ChildProcess {
     detached: true,
     stdio: 'ignore',
   });
-  
+
   // Unref to let the parent process exit while this child keeps running
   child.unref();
   return child;
@@ -49,19 +51,20 @@ export async function launchLutrisGame(
     const lutrisUri = `lutris:rungame/${gameSlug}`;
 
     if (isFlatpakMode) {
-      console.log(`[LutrisLauncher] Launching via flatpak-spawn (Flatpak -> Host Flatpak) ${lutrisUri}...`);
-      
+      console.log(
+        `[LutrisLauncher] Launching via flatpak-spawn (Flatpak -> Host Flatpak) ${lutrisUri}...`
+      );
+
       const hasFlatpakLutris = await isFlatpakLutrisInstalled();
-      
+
       if (hasFlatpakLutris) {
-         spawnOnHost('flatpak', ['run', FLATPAK_LUTRIS_ID, lutrisUri]);
+        spawnOnHost('flatpak', ['run', FLATPAK_LUTRIS_ID, lutrisUri]);
       } else {
-         spawnOnHost('lutris', [lutrisUri]);
+        spawnOnHost('lutris', [lutrisUri]);
       }
-      
     } else {
       console.log(`[LutrisLauncher] Launching directly via native lutris: ${lutrisUri}`);
-      
+
       // Try launching natively via xdg-open if the custom URI schema is registered, or pass specifically CLI
       const child = spawn('lutris', [lutrisUri], {
         detached: true,
@@ -71,8 +74,11 @@ export async function launchLutrisGame(
 
       // Simple fallback if 'lutris' binary isn't perfectly configured in $PATH but flatpak is available
       child.on('error', (err) => {
-         console.warn('[LutrisLauncher] Native spawn failed, trying fallback xdg-open/flatpak', err);
-         spawn('xdg-open', [lutrisUri], { detached: true, stdio: 'ignore' }).unref();
+        console.warn(
+          '[LutrisLauncher] Native spawn failed, trying fallback xdg-open/flatpak',
+          err
+        );
+        spawn('xdg-open', [lutrisUri], { detached: true, stdio: 'ignore' }).unref();
       });
     }
 
@@ -81,7 +87,8 @@ export async function launchLutrisGame(
     console.error('[LutrisLauncher] Error launching game:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Не вдалося запустити гру через Lutris',
+      error:
+        error instanceof Error ? error.message : 'Не вдалося запустити гру через Lutris',
     };
   }
 }

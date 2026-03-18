@@ -12,7 +12,12 @@ import {
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
 } from './heroic';
-import { getLutrisEpicAppName, getLutrisEpicGamePaths, getLutrisEpicLibrary, getLutrisInstalledEpicPathsFull } from './lutris';
+import {
+  getLutrisEpicAppName,
+  getLutrisEpicGamePaths,
+  getLutrisEpicLibrary,
+  getLutrisInstalledEpicPathsFull,
+} from './lutris';
 
 interface HeroicLegendaryGame {
   app_title: string;
@@ -139,21 +144,21 @@ export function findEpicGame(gameFolderName: string): string | null {
     } catch (e) {
       console.warn('[Epic] Error checking Legendary config:', e);
     }
-    
+
     // Check Lutris installations
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const targetFolder = normalize(gameFolderName);
-    
+
     const lutrisPaths = getLutrisInstalledEpicPathsFull();
     for (const lutrisGame of lutrisPaths) {
-       // Support exact or fuzzy matching on the end directory name
-       const dirName = path.basename(lutrisGame.path);
-       if (normalize(dirName) === targetFolder) {
-          if (fs.existsSync(lutrisGame.path)) {
-              console.log(`[Epic] ✓ Game found (Lutris): ${lutrisGame.path}`);
-              return lutrisGame.path;
-          }
-       }
+      // Support exact or fuzzy matching on the end directory name
+      const dirName = path.basename(lutrisGame.path);
+      if (normalize(dirName) === targetFolder) {
+        if (fs.existsSync(lutrisGame.path)) {
+          console.log(`[Epic] ✓ Game found (Lutris): ${lutrisGame.path}`);
+          return lutrisGame.path;
+        }
+      }
     }
   }
 
@@ -231,7 +236,7 @@ export function getInstalledEpicGamePaths(): string[] {
       } catch (e) {
         console.warn('[Epic] Error reading Legendary config:', e);
       }
-      
+
       // Get paths from Lutris
       paths.push(...getLutrisEpicGamePaths());
     }
@@ -302,11 +307,11 @@ export function getEpicLibrary(): string[] {
     } catch (error) {
       console.error('[Epic] Error reading Heroic/Legendary library:', error);
     }
-    
+
     // Add games from Lutris EGS library
     const lutrisTitles = getLutrisEpicLibrary();
-    for(const title of lutrisTitles) {
-        titles.add(title);
+    for (const title of lutrisTitles) {
+      titles.add(title);
     }
   }
 

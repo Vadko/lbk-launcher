@@ -42,7 +42,11 @@ interface LutrisGame {
  * Get installed GOG games from Lutris
  * Returns their Wine prefix with /drive_c/GOG Games appended, and the appname
  */
-function getLutrisGOGInstallations(): Array<{ path: string; appName: string; slug: string }> {
+function getLutrisGOGInstallations(): Array<{
+  path: string;
+  appName: string;
+  slug: string;
+}> {
   const dbPath = getLutrisDBPath();
   if (!dbPath) return [];
 
@@ -50,7 +54,7 @@ function getLutrisGOGInstallations(): Array<{ path: string; appName: string; slu
 
   try {
     const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-    
+
     try {
       // Get all GOG games
       const dbGames = db
@@ -67,13 +71,17 @@ function getLutrisGOGInstallations(): Array<{ path: string; appName: string; slu
             try {
               const subdirs = fs.readdirSync(gamePrefixPath);
               for (const subdir of subdirs) {
-                  const fullPath = path.join(gamePrefixPath, subdir);
-                  if (fs.statSync(fullPath).isDirectory()) {
-                       results.push({ path: fullPath, appName: game.service_id, slug: game.slug });
-                  }
+                const fullPath = path.join(gamePrefixPath, subdir);
+                if (fs.statSync(fullPath).isDirectory()) {
+                  results.push({
+                    path: fullPath,
+                    appName: game.service_id,
+                    slug: game.slug,
+                  });
+                }
               }
             } catch (e) {
-                // Ignore errors reading subdirs
+              // Ignore errors reading subdirs
             }
           }
         }
@@ -92,7 +100,11 @@ function getLutrisGOGInstallations(): Array<{ path: string; appName: string; slu
  * Get installed Epic games from Lutris
  * Returns their installation path and the appName
  */
-function getLutrisEpicInstallations(): Array<{ path: string; appName: string; slug: string }> {
+function getLutrisEpicInstallations(): Array<{
+  path: string;
+  appName: string;
+  slug: string;
+}> {
   const dbPath = getLutrisDBPath();
   if (!dbPath) return [];
 
@@ -121,9 +133,9 @@ function getLutrisEpicInstallations(): Array<{ path: string; appName: string; sl
             // Epic details often have 'FolderName', or 'appName'
             let folderName = details?.customAttributes?.FolderName?.value;
             // E.g 'DarkestDungeon'
-            
+
             if (!folderName && details.appName) {
-                folderName = details.appName;
+              folderName = details.appName;
             }
 
             if (folderName) {
@@ -133,11 +145,15 @@ function getLutrisEpicInstallations(): Array<{ path: string; appName: string; sl
                 folderName
               );
               if (fs.existsSync(gamePath)) {
-                results.push({ path: gamePath, appName: details.appName || game.service_id, slug: game.slug });
+                results.push({
+                  path: gamePath,
+                  appName: details.appName || game.service_id,
+                  slug: game.slug,
+                });
               }
             }
           } catch (e) {
-             console.warn('[Lutris] Error parsing Epic game details', e);
+            console.warn('[Lutris] Error parsing Epic game details', e);
           }
         }
       }
@@ -156,7 +172,7 @@ function getLutrisEpicInstallations(): Array<{ path: string; appName: string; sl
  */
 
 export function getLutrisGOGDirs(): string[] {
-  // We return unique GOG Games directories paths 
+  // We return unique GOG Games directories paths
   // e.g. /home/user/Games/gog/game_prefix/drive_c/GOG Games
   const dirs = new Set<string>();
   const dbPath = getLutrisDBPath();
@@ -164,7 +180,7 @@ export function getLutrisGOGDirs(): string[] {
 
   try {
     const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-    
+
     try {
       const dbGames = db
         .prepare(`SELECT directory FROM games WHERE service='gog'`)
@@ -174,7 +190,7 @@ export function getLutrisGOGDirs(): string[] {
         if (game.directory) {
           const gamePrefixPath = path.join(game.directory, 'drive_c/GOG Games');
           if (fs.existsSync(gamePrefixPath)) {
-             dirs.add(gamePrefixPath);
+            dirs.add(gamePrefixPath);
           }
         }
       }
@@ -184,92 +200,100 @@ export function getLutrisGOGDirs(): string[] {
   } catch (error) {
     console.error('[Lutris] Error reading database for GOG dirs:', error);
   }
-  
+
   return Array.from(dirs);
 }
 
 export function getLutrisEpicGamePaths(): string[] {
-    // Only return the game installation paths, we get it directly internally
-    const installs = getLutrisEpicInstallations();
-    // Return relative dir names since getInstalledEpicGamePaths() expects basenames
-    return installs.map(i => path.basename(i.path));
+  // Only return the game installation paths, we get it directly internally
+  const installs = getLutrisEpicInstallations();
+  // Return relative dir names since getInstalledEpicGamePaths() expects basenames
+  return installs.map((i) => path.basename(i.path));
 }
 
 export function getLutrisGogId(gamePath: string): string | null {
-   const installs = getLutrisGOGInstallations();
-   const found = installs.find(i => path.resolve(i.path) === path.resolve(gamePath));
-   return found ? found.slug : null;
+  const installs = getLutrisGOGInstallations();
+  const found = installs.find((i) => path.resolve(i.path) === path.resolve(gamePath));
+  return found ? found.slug : null;
 }
 
 export function getLutrisEpicAppName(gamePath: string): string | null {
-   const installs = getLutrisEpicInstallations();
-   const found = installs.find(i => path.resolve(i.path) === path.resolve(gamePath));
-   return found ? found.slug : null;
+  const installs = getLutrisEpicInstallations();
+  const found = installs.find((i) => path.resolve(i.path) === path.resolve(gamePath));
+  return found ? found.slug : null;
 }
 
 /**
  * Provide complete Lutris GOG Library
  */
 export function getLutrisGogLibrary(): string[] {
-    const titles = new Set<string>();
-    const dbPath = getLutrisDBPath();
-    if (!dbPath) return [];
+  const titles = new Set<string>();
+  const dbPath = getLutrisDBPath();
+  if (!dbPath) return [];
 
+  try {
+    const db = new Database(dbPath, { readonly: true, fileMustExist: true });
     try {
-        const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-        try {
-            const dbGames = db.prepare(`SELECT name FROM games WHERE service='gog'`).all() as { name: string }[];
-            for (const game of dbGames) {
-                if (game.name) {
-                    titles.add(getCleanTitle(game.name.trim()));
-                }
-            }
-        } finally {
-            db.close();
+      const dbGames = db.prepare(`SELECT name FROM games WHERE service='gog'`).all() as {
+        name: string;
+      }[];
+      for (const game of dbGames) {
+        if (game.name) {
+          titles.add(getCleanTitle(game.name.trim()));
         }
-    } catch(e) {
-         console.error('[Lutris] Error reading GOG library:', e);
+      }
+    } finally {
+      db.close();
     }
-    
-    return Array.from(titles);
+  } catch (e) {
+    console.error('[Lutris] Error reading GOG library:', e);
+  }
+
+  return Array.from(titles);
 }
 
 /**
  * Provide complete Lutris Epic Library
  */
 export function getLutrisEpicLibrary(): string[] {
-    const titles = new Set<string>();
-    const dbPath = getLutrisDBPath();
-    if (!dbPath) return [];
+  const titles = new Set<string>();
+  const dbPath = getLutrisDBPath();
+  if (!dbPath) return [];
 
+  try {
+    const db = new Database(dbPath, { readonly: true, fileMustExist: true });
     try {
-        const db = new Database(dbPath, { readonly: true, fileMustExist: true });
-        try {
-             // Use service_games to get a more unified library, or both
-            const dbGames = db.prepare(`
+      // Use service_games to get a more unified library, or both
+      const dbGames = db
+        .prepare(`
                 SELECT name FROM games WHERE service='egs'
                 UNION 
                 SELECT name FROM service_games WHERE service='egs'
-            `).all() as { name: string }[];
-            
-            for (const game of dbGames) {
-                if (game.name) {
-                    titles.add(getCleanTitle(game.name.trim()));
-                }
-            }
-        } finally {
-            db.close();
+            `)
+        .all() as { name: string }[];
+
+      for (const game of dbGames) {
+        if (game.name) {
+          titles.add(getCleanTitle(game.name.trim()));
         }
-    } catch(e) {
-         console.error('[Lutris] Error reading Epic library:', e);
+      }
+    } finally {
+      db.close();
     }
-    
-    return Array.from(titles);
+  } catch (e) {
+    console.error('[Lutris] Error reading Epic library:', e);
+  }
+
+  return Array.from(titles);
 }
 
 /**
  * Full installed path maps for exact matching
  */
-export function getLutrisInstalledEpicPathsFull(): {path: string, appName: string, slug: string}[] {
-    return getLutrisEpicInstallations();
+export function getLutrisInstalledEpicPathsFull(): {
+  path: string;
+  appName: string;
+  slug: string;
+}[] {
+  return getLutrisEpicInstallations();
 }
