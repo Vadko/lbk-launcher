@@ -151,7 +151,7 @@ export { getEpicLibrary } from './epic';
 export { getGogLibrary } from './gog';
 export { getLutrisSlug } from './lutris';
 
-export interface HeroicGameInfo {
+interface HeroicGameInfo {
   appName: string;
   runner: 'gog' | 'legendary';
 }
