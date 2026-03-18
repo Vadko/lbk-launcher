@@ -134,7 +134,7 @@ export const PromoModal: React.FC = () => {
     // Open banner link or fallback to default donation link
     if (window.electronAPI) {
       window.electronAPI.openExternal(
-        banner?.link || 'https://send.monobank.ua/jar/48WhXBAEsM'
+        banner?.link || 'https://donatello.to/atlantDeMaPeine?g=pidtrimka-roboti-lbk-launcher'
       );
     }
 
