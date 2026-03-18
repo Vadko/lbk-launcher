@@ -9,7 +9,8 @@ import {
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { GameBannersData, LaunchGameResult } from '../../../shared/types';
+import type { GameBannersResult } from '@/main/db/banners-api';
+import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { useInstallation } from '../../hooks/useInstallation';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
@@ -51,7 +52,7 @@ export const MainContent: React.FC = () => {
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
-  const [bannerData, setBannerData] = useState<GameBannersData | null>(null);
+  const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
 
   const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
   const isCheckingInstallation = selectedGame

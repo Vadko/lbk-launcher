@@ -1,4 +1,8 @@
-import type { BannerData, ImpressionType } from '@/main/db/banners-api';
+import type {
+  BannerData,
+  GameBannersResult,
+  ImpressionType,
+} from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
 
 export type { Database };
@@ -235,18 +239,13 @@ export interface ElectronAPI {
   getSyncStatus: () => Promise<'syncing' | 'ready' | 'error'>;
   // Banner API
   fetchPromoBanner: () => Promise<BannerData | null>;
-  fetchBannersForGame: (gameId: string) => Promise<GameBannersData>;
+  fetchBannersForGame: (gameId: string) => Promise<GameBannersResult>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => Promise<boolean>;
   recordBannerImpression: (bannerId: string) => Promise<boolean>;
-}
-
-export interface GameBannersData {
-  banner: BannerData | null;
-  isKuli: boolean;
 }
 
 declare global {

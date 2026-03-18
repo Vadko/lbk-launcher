@@ -79,9 +79,6 @@ import { getSupabaseCredentials } from './supabase-credentials';
 
 type BannerCampaignRow = Database['public']['Tables']['banner_campaigns']['Row'];
 
-export type BannerType = Database['public']['Enums']['banner_type'];
-export type BannerPlacement = Database['public']['Enums']['banner_placement'];
-
 /**
  * Дані банера, які повертає edge function `get-banners`.
  * Всі типи уніфіковані: image_path + link.
@@ -107,7 +104,7 @@ export interface GameBannersResult {
   isKuli: boolean;
 }
 
-export type BannerImpressionInsert =
+type BannerImpressionInsert =
   Database['public']['Tables']['banner_impressions']['Insert'];
 
 /** Тип імпрешену: 'view' = показ, 'click' = клік */

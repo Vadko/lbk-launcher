@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron';
-import type { Game, GameBannersData, GetGamesParams } from '../../shared/types';
+import type { Game, GetGamesParams } from '../../shared/types';
 import {
   countGamesBySteamAppIds,
   fetchFilterCounts,
@@ -14,6 +14,7 @@ import {
   buildBannerImageUrl,
   fetchBannersForGame,
   fetchGlobalBanner,
+  type GameBannersResult,
   type ImpressionType,
   recordBannerImpression,
 } from '../db/banners-api';
@@ -449,7 +450,7 @@ export function setupGamesHandlers(): void {
   // Fetch banners for game
   ipcMain.handle(
     'fetch-banners-for-game',
-    async (_, gameId: string): Promise<GameBannersData> => {
+    async (_, gameId: string): Promise<GameBannersResult> => {
       try {
         const machineId = getMachineId();
         const result = await fetchBannersForGame({
