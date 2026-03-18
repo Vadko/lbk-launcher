@@ -10,7 +10,7 @@ import {
   Trophy,
   Volume2,
 } from 'lucide-react';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import type { Game } from '../../types/game';
