@@ -21,6 +21,8 @@ import {
   getGogLibrary,
   getHeroicEpicAppName,
   getHeroicGOGId,
+  getLutrisEpicAppName,
+  getLutrisGogId,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -306,6 +308,22 @@ export function setupGamesHandlers(): void {
 
       // Heroic Games Launcher (Linux)
       if (getPlatform() === 'linux') {
+        // Check for GOG game in Lutris
+        const lutrisGogId = getLutrisGogId(gamePath.path);
+        if (lutrisGogId) {
+          const { launchLutrisGame } = await import('../utils/lutris-launcher');
+          const result = await launchLutrisGame(lutrisGogId);
+          if (result.success) return { success: true };
+        }
+
+        // Check for Epic game in Lutris
+        const lutrisEpicAppName = getLutrisEpicAppName(gamePath.path);
+        if (lutrisEpicAppName) {
+          const { launchLutrisGame } = await import('../utils/lutris-launcher');
+          const result = await launchLutrisGame(lutrisEpicAppName);
+          if (result.success) return { success: true };
+        }
+
         // Check for GOG game in Heroic
         const heroicGogId = getHeroicGOGId(gamePath.path);
         if (heroicGogId) {

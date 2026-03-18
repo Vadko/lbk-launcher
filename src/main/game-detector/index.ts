@@ -149,3 +149,4 @@ export function getAllInstalledGamePaths(): string[] {
 // Heroic Libraries
 export { getEpicLibrary, getHeroicEpicAppName } from './epic';
 export { getGogLibrary } from './gog';
+export { getLutrisEpicAppName, getLutrisGogId } from './lutris';

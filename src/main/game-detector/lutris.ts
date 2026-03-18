@@ -34,6 +34,7 @@ interface LutrisGame {
   name: string;
   directory: string;
   service_id: string;
+  slug: string;
   details?: string;
 }
 
@@ -41,11 +42,11 @@ interface LutrisGame {
  * Get installed GOG games from Lutris
  * Returns their Wine prefix with /drive_c/GOG Games appended, and the appname
  */
-function getLutrisGOGInstallations(): Array<{ path: string; appName: string }> {
+function getLutrisGOGInstallations(): Array<{ path: string; appName: string; slug: string }> {
   const dbPath = getLutrisDBPath();
   if (!dbPath) return [];
 
-  const results: Array<{ path: string; appName: string }> = [];
+  const results: Array<{ path: string; appName: string; slug: string }> = [];
 
   try {
     const db = new Database(dbPath, { readonly: true, fileMustExist: true });
@@ -54,7 +55,7 @@ function getLutrisGOGInstallations(): Array<{ path: string; appName: string }> {
       // Get all GOG games
       const dbGames = db
         .prepare(
-          `SELECT name, directory, service_id FROM games WHERE service='gog'`
+          `SELECT name, directory, service_id, slug FROM games WHERE service='gog'`
         )
         .all() as LutrisGame[];
 
@@ -68,7 +69,7 @@ function getLutrisGOGInstallations(): Array<{ path: string; appName: string }> {
               for (const subdir of subdirs) {
                   const fullPath = path.join(gamePrefixPath, subdir);
                   if (fs.statSync(fullPath).isDirectory()) {
-                       results.push({ path: fullPath, appName: game.service_id });
+                       results.push({ path: fullPath, appName: game.service_id, slug: game.slug });
                   }
               }
             } catch (e) {
@@ -91,11 +92,11 @@ function getLutrisGOGInstallations(): Array<{ path: string; appName: string }> {
  * Get installed Epic games from Lutris
  * Returns their installation path and the appName
  */
-function getLutrisEpicInstallations(): Array<{ path: string; appName: string }> {
+function getLutrisEpicInstallations(): Array<{ path: string; appName: string; slug: string }> {
   const dbPath = getLutrisDBPath();
   if (!dbPath) return [];
 
-  const results: Array<{ path: string; appName: string }> = [];
+  const results: Array<{ path: string; appName: string; slug: string }> = [];
 
   try {
     const db = new Database(dbPath, { readonly: true, fileMustExist: true });
@@ -105,7 +106,7 @@ function getLutrisEpicInstallations(): Array<{ path: string; appName: string }> 
       const dbGames = db
         .prepare(
           `
-          SELECT g.name, g.directory, g.service_id, sg.details 
+          SELECT g.name, g.directory, g.service_id, g.slug, sg.details 
           FROM games g 
           LEFT JOIN service_games sg ON g.service_id = sg.appid 
           WHERE g.service='egs'
@@ -132,7 +133,7 @@ function getLutrisEpicInstallations(): Array<{ path: string; appName: string }> 
                 folderName
               );
               if (fs.existsSync(gamePath)) {
-                results.push({ path: gamePath, appName: details.appName || game.service_id });
+                results.push({ path: gamePath, appName: details.appName || game.service_id, slug: game.slug });
               }
             }
           } catch (e) {
@@ -197,13 +198,13 @@ export function getLutrisEpicGamePaths(): string[] {
 export function getLutrisGogId(gamePath: string): string | null {
    const installs = getLutrisGOGInstallations();
    const found = installs.find(i => path.resolve(i.path) === path.resolve(gamePath));
-   return found ? found.appName : null;
+   return found ? found.slug : null;
 }
 
 export function getLutrisEpicAppName(gamePath: string): string | null {
    const installs = getLutrisEpicInstallations();
    const found = installs.find(i => path.resolve(i.path) === path.resolve(gamePath));
-   return found ? found.appName : null;
+   return found ? found.slug : null;
 }
 
 /**
@@ -269,6 +270,6 @@ export function getLutrisEpicLibrary(): string[] {
 /**
  * Full installed path maps for exact matching
  */
-export function getLutrisInstalledEpicPathsFull(): {path: string, appName: string}[] {
+export function getLutrisInstalledEpicPathsFull(): {path: string, appName: string, slug: string}[] {
     return getLutrisEpicInstallations();
 }
