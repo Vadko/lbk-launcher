@@ -12,6 +12,7 @@ import {
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
 } from './heroic';
+import { getLutrisEpicAppName, getLutrisEpicGamePaths, getLutrisEpicLibrary, getLutrisInstalledEpicPathsFull } from './lutris';
 
 interface HeroicLegendaryGame {
   app_title: string;
@@ -138,6 +139,22 @@ export function findEpicGame(gameFolderName: string): string | null {
     } catch (e) {
       console.warn('[Epic] Error checking Legendary config:', e);
     }
+    
+    // Check Lutris installations
+    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetFolder = normalize(gameFolderName);
+    
+    const lutrisPaths = getLutrisInstalledEpicPathsFull();
+    for (const lutrisGame of lutrisPaths) {
+       // Support exact or fuzzy matching on the end directory name
+       const dirName = path.basename(lutrisGame.path);
+       if (normalize(dirName) === targetFolder) {
+          if (fs.existsSync(lutrisGame.path)) {
+              console.log(`[Epic] ✓ Game found (Lutris): ${lutrisGame.path}`);
+              return lutrisGame.path;
+          }
+       }
+    }
   }
 
   const epicManifestPath = getEpicPath();
@@ -149,7 +166,7 @@ export function findEpicGame(gameFolderName: string): string | null {
   try {
     const manifestFiles = fs
       .readdirSync(epicManifestPath)
-      .filter((f) => f.endsWith('.item'));
+      .filter((f: string) => f.endsWith('.item'));
 
     for (const manifestFile of manifestFiles) {
       const manifestFullPath = path.join(epicManifestPath, manifestFile);
@@ -214,13 +231,16 @@ export function getInstalledEpicGamePaths(): string[] {
       } catch (e) {
         console.warn('[Epic] Error reading Legendary config:', e);
       }
+      
+      // Get paths from Lutris
+      paths.push(...getLutrisEpicGamePaths());
     }
 
     const epicManifestPath = getEpicPath();
     if (epicManifestPath && fs.existsSync(epicManifestPath)) {
       const manifestFiles = fs
         .readdirSync(epicManifestPath)
-        .filter((f) => f.endsWith('.item'));
+        .filter((f: string) => f.endsWith('.item'));
 
       for (const manifestFile of manifestFiles) {
         const manifestFullPath = path.join(epicManifestPath, manifestFile);
@@ -282,6 +302,12 @@ export function getEpicLibrary(): string[] {
     } catch (error) {
       console.error('[Epic] Error reading Heroic/Legendary library:', error);
     }
+    
+    // Add games from Lutris EGS library
+    const lutrisTitles = getLutrisEpicLibrary();
+    for(const title of lutrisTitles) {
+        titles.add(title);
+    }
   }
 
   // Windows/macOS: Use native Epic Games Launcher manifests
@@ -292,7 +318,7 @@ export function getEpicLibrary(): string[] {
       try {
         const manifestFiles = fs
           .readdirSync(epicManifestPath)
-          .filter((f) => f.endsWith('.item'));
+          .filter((f: string) => f.endsWith('.item'));
 
         for (const manifestFile of manifestFiles) {
           const manifestFullPath = path.join(epicManifestPath, manifestFile);
@@ -413,6 +439,9 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
   } catch (error) {
     console.error('[Epic] Error getting Heroic AppName:', error);
   }
+
+  const lutrisAppName = getLutrisEpicAppName(gamePath);
+  if (lutrisAppName) return lutrisAppName;
 
   return null;
 }
