@@ -4,8 +4,8 @@
  */
 
 import type { InstallPath } from '../../shared/types';
-import { findEpicGame, getInstalledEpicGamePaths } from './epic';
-import { findGOGGame, getInstalledGOGGamePaths } from './gog';
+import { findEpicGame, getHeroicEpicAppName, getInstalledEpicGamePaths } from './epic';
+import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
 import { findSteamGame, getInstalledSteamGamePaths } from './steam';
 import type { GamePath } from './types'; // Used locally
@@ -150,10 +150,6 @@ export function getAllInstalledGamePaths(): string[] {
 export { getEpicLibrary } from './epic';
 export { getGogLibrary } from './gog';
 export { getLutrisSlug } from './lutris';
-
-// Heroic unified lookup
-import { getHeroicEpicAppName } from './epic';
-import { getHeroicGOGId } from './gog';
 
 export interface HeroicGameInfo {
   appName: string;
