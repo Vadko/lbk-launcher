@@ -262,6 +262,21 @@ LBK Launcher:
 
 ---
 
+## 🎮 Підтримувані ігрові платформи та лаунчери
+
+| Платформа / Лаунчер | Windows | macOS | Linux |
+|---|:---:|:---:|:---:|
+| **Steam** | + | + | + |
+| **GOG Galaxy** | + | + | - |
+| **Epic Games Launcher** | + | + | - |
+| **Rockstar Games Launcher** | + | - | - |
+| **Heroic Games Launcher** | - | - | + |
+| **Lutris** | - | - | + |
+
+> На Linux ігри GOG та Epic автоматично виявляються через Heroic Games Launcher та Lutris.
+
+---
+
 ## 🧱 Технологічний стек
 
 LBK Launcher — **відкритий проєкт з відкритим вихідним кодом**, побудований на сучасних інструментах:
