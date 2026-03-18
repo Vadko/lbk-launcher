@@ -109,6 +109,15 @@ html.maximized #root {
   transform: translateY(-2px);
 }
 
+.placement {
+  padding: 0;
+}
+
+.glass-card-gold,
+.glass-card-gold:hover {
+  border-color: rgba(255, 164, 122, 0.8);
+}
+
 .glass-button {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);

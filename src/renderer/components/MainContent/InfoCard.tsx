@@ -10,7 +10,7 @@ import {
   Trophy,
   Volume2,
 } from 'lucide-react';
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import type { Game } from '../../types/game';
@@ -24,13 +24,14 @@ interface InfoItemProps {
   icon: React.ReactNode;
   label: string;
   value: string;
+  compact?: boolean;
 }
 
-const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value }) => (
+const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value, compact }) => (
   <div className="flex items-start gap-3">
     <div className="text-color-main mt-0.5">{icon}</div>
-    <div>
-      <div className="text-xs text-text-muted mb-1">{label}</div>
+    <div className={`flex gap-1 ${compact ? 'items-center' : 'flex-col'}`}>
+      <div className="text-xs text-text-muted">{label}</div>
       <div className="text-sm font-medium text-text-main">{value}</div>
     </div>
   </div>
@@ -53,9 +54,32 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   const isPlanned = game.status === 'planned';
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
   const featuredInfo = getFeaturedInfo(game.slug, game.team);
+  const [compact, setCompact] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Update compact mode based on card width
+  useLayoutEffect(() => {
+    const updateCompactMode = () => {
+      if (cardRef.current) {
+        const width = cardRef.current.offsetWidth;
+        setCompact(width < 500);
+      }
+    };
+
+    updateCompactMode();
+
+    const resizeObserver = new ResizeObserver(updateCompactMode);
+    if (cardRef.current) {
+      resizeObserver.observe(cardRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   return (
-    <div className="glass-card">
+    <div ref={cardRef} className="glass-card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-head font-semibold text-text-main">Інформація</h3>
         <div className="flex items-center gap-2">
@@ -69,16 +93,27 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <InfoItem icon={<Gamepad2 size={18} />} label="Платформи" value={platformsText} />
+      <div className={`grid ${compact ? 'grid-cols-1 gap-3' : 'grid-cols-2 gap-4'}`}>
+        <InfoItem
+          icon={<Gamepad2 size={18} />}
+          label="Платформи"
+          value={platformsText}
+          compact={compact}
+        />
         {game.version && (
-          <InfoItem icon={<Calendar size={18} />} label="Версія" value={game.version} />
+          <InfoItem
+            icon={<Calendar size={18} />}
+            label="Версія"
+            value={game.version}
+            compact={compact}
+          />
         )}
         {game.archive_size && (
           <InfoItem
             icon={<HardDrive size={18} />}
             label="Розмір"
             value={game.archive_size}
+            compact={compact}
           />
         )}
         {game.voice_archive_size && (
@@ -86,6 +121,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             icon={<Volume2 size={18} />}
             label="Озвучення"
             value={game.voice_archive_size}
+            compact={compact}
           />
         )}
         {game.achievements_archive_size && (
@@ -93,8 +129,8 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             <div className="text-neon-blue mt-0.5">
               <Trophy size={18} />
             </div>
-            <div>
-              <div className="text-xs text-text-muted mb-1">Досягнення</div>
+            <div className={`flex gap-1 ${compact ? 'items-center' : 'flex-col'}`}>
+              <div className="text-xs text-text-muted">Досягнення</div>
               <div className="text-sm font-medium text-text-main">
                 {game.achievements_archive_size}
               </div>
@@ -111,6 +147,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             icon={<Bell size={18} />}
             label="Підписників"
             value={game.subscriptions!.toLocaleString('uk-UA')}
+            compact={compact}
           />
         )}
         {!isPlanned && (
@@ -122,6 +159,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
                 ? 'до 20'
                 : game.downloads!.toLocaleString('uk-UA')
             }
+            compact={compact}
           />
         )}
         {game.created_at && (
@@ -129,6 +167,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             icon={<CalendarPlus size={18} />}
             label="Створено"
             value={formatDate(game.created_at)}
+            compact={compact}
           />
         )}
         {game.translation_updated_at && (
@@ -136,6 +175,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
             icon={<CalendarClock size={18} />}
             label="Оновлено"
             value={formatDate(game.translation_updated_at)}
+            compact={compact}
           />
         )}
       </div>

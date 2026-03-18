@@ -1,6 +1,12 @@
+import type {
+  BannerData,
+  GameBannersResult,
+  ImpressionType,
+} from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
 
 export type { Database };
+
 export type Platform = Database['public']['Enums']['install_source'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
@@ -231,6 +237,15 @@ export interface ElectronAPI {
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => () => void;
   getSyncStatus: () => Promise<'syncing' | 'ready' | 'error'>;
+  // Banner API
+  fetchPromoBanner: () => Promise<BannerData | null>;
+  fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
+  recordPromoBannerImpression: (params: {
+    campaignId: string;
+    impressionType: ImpressionType;
+    gameSlug?: string;
+  }) => Promise<boolean>;
+  recordBannerImpression: (bannerId: string) => Promise<boolean>;
 }
 
 declare global {

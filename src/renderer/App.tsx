@@ -10,6 +10,7 @@ import { TitleBar } from './components/Layout/TitleBar';
 import { MainContent } from './components/MainContent/MainContent';
 import { ConfirmModal } from './components/Modal/ConfirmModal';
 import { GlobalModal } from './components/Modal/GlobalModal';
+import { PromoModal } from './components/Modal/PromoModal';
 import { NotificationModal } from './components/Notifications/NotificationModal';
 import { ToastNotifications } from './components/Notifications/ToastNotifications';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -458,6 +459,7 @@ export const App: React.FC = () => {
           isOpen={showNotificationHistory}
           onClose={() => setShowNotificationHistory(false)}
         />
+        <PromoModal />
 
         {/* Gamepad hints */}
         <GamepadHints />
