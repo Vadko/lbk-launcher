@@ -95,14 +95,17 @@ export const usePromoModalStore = create<PromoModalStore>()(
 
       checkAndResetNeverShow: () => {
         const state = get();
-        
+
         // Скидаємо neverShowAgain якщо пройшло 20 днів
-        if (state.neverShowAgain && state.lastShownAt && 
-            Date.now() - state.lastShownAt >= TWENTY_DAYS_MS) {
+        if (
+          state.neverShowAgain &&
+          state.lastShownAt &&
+          Date.now() - state.lastShownAt >= TWENTY_DAYS_MS
+        ) {
           set({ neverShowAgain: false });
           return true; // Повертаємо true якщо скинули
         }
-        
+
         return false;
       },
 

@@ -81,7 +81,10 @@ export const MainContent: React.FC = () => {
       }
 
       try {
-        const result = await window.electronAPI.fetchBannersForGame(selectedGame.id, selectedGame.slug);
+        const result = await window.electronAPI.fetchBannersForGame(
+          selectedGame.id,
+          selectedGame.slug
+        );
         if (!isMounted) return;
 
         setBannerData(result);

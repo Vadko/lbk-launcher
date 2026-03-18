@@ -37,8 +37,8 @@ const SupportContent: React.FC<SupportContentProps> = ({
         Трохи підтримки для лаунчера?
       </h2>
       <p>
-        Ми розвиваємо цей лаунчер, щоб вам було зручно знаходити та завантажувати
-        ігри. Покращуємо швидкість, стабільність і додаємо нові функції.
+        Ми розвиваємо цей лаунчер, щоб вам було зручно знаходити та завантажувати ігри.
+        Покращуємо швидкість, стабільність і додаємо нові функції.
       </p>
       <div className="text-text-muted">Навіть маленький внесок має значення ✨</div>
     </div>
@@ -50,10 +50,7 @@ const SupportContent: React.FC<SupportContentProps> = ({
         checked={dontShowAgain}
         onCheckedChange={setDontShowAgain}
       />
-      <label
-        htmlFor="dont-show-again"
-        className="text-sm text-text-muted cursor-pointer"
-      >
+      <label htmlFor="dont-show-again" className="text-sm text-text-muted cursor-pointer">
         Більше не показувати
       </label>
     </div>
@@ -73,11 +70,12 @@ const SupportContent: React.FC<SupportContentProps> = ({
 );
 
 export const PromoModal: React.FC = () => {
-  const { isOpen, closeModal, shouldShowModal, checkAndResetNeverShow, openModal } = usePromoModalStore();
+  const { isOpen, closeModal, shouldShowModal, checkAndResetNeverShow, openModal } =
+    usePromoModalStore();
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [banner, setBanner] = useState<BannerData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Ref для відстеження чи вже записано view impression для поточної сесії
   const viewImpressionRecorded = useRef(false);
 
@@ -123,7 +121,7 @@ export const PromoModal: React.FC = () => {
 
     // Перш ніж перевіряти shouldShowModal, скидаємо neverShow якщо потрібно
     checkAndResetNeverShow();
-    
+
     if (!shouldShowModal()) return;
 
     // Listen to dev mode changes and close modal if set to 'never'
@@ -135,13 +133,13 @@ export const PromoModal: React.FC = () => {
 
     // Determine delay based on dev mode
     const getDelay = () => {
-      if (devMode === 'always') return 1000; // 1 second for testing  
+      if (devMode === 'always') return 1000; // 1 second for testing
       if (devMode === 'normal') return 10000; // 10 seconds for normal use
       return 0;
     };
 
     const delay = getDelay();
-    
+
     if (delay > 0) {
       const timer = setTimeout(async () => {
         // Double-check conditions before showing
@@ -169,12 +167,12 @@ export const PromoModal: React.FC = () => {
       viewImpressionRecorded.current = false;
       return;
     }
-    
+
     // Якщо вже записали impression для цієї сесії - не записуємо знову
     if (viewImpressionRecorded.current) return;
-    
+
     viewImpressionRecorded.current = true;
-    
+
     if (banner) {
       recordImpression('view');
       trackEvent('ads-placement', {
@@ -216,7 +214,8 @@ export const PromoModal: React.FC = () => {
     // Open banner link or fallback to default donation link
     if (window.electronAPI) {
       window.electronAPI.openExternal(
-        banner?.link || 'https://donatello.to/atlantDeMaPeine?g=pidtrimka-roboti-lbk-launcher'
+        banner?.link ||
+          'https://donatello.to/atlantDeMaPeine?g=pidtrimka-roboti-lbk-launcher'
       );
     }
 
