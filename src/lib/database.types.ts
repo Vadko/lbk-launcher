@@ -856,6 +856,8 @@ export type Database = {
           game_name: string | null
           id: string
           kuli_id: number
+          localization_index: number
+          localization_name: string | null
           reason: string | null
           skipped_at: string | null
           skipped_by: string | null
@@ -864,6 +866,8 @@ export type Database = {
           game_name?: string | null
           id?: string
           kuli_id: number
+          localization_index?: number
+          localization_name?: string | null
           reason?: string | null
           skipped_at?: string | null
           skipped_by?: string | null
@@ -872,6 +876,8 @@ export type Database = {
           game_name?: string | null
           id?: string
           kuli_id?: number
+          localization_index?: number
+          localization_name?: string | null
           reason?: string | null
           skipped_at?: string | null
           skipped_by?: string | null
