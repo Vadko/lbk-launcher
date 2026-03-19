@@ -366,10 +366,6 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
       path.join(p, 'store_cache/legendary_install_info.json'),
     ]);
 
-    // Helper to normalize strings for comparison (remove special chars, lowercase)
-    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const targetFolder = normalize(path.basename(gamePath));
-
     for (const configPath of configPaths) {
       if (fs.existsSync(configPath)) {
         const content = fs.readFileSync(configPath, 'utf8');
@@ -409,39 +405,6 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
           const installPath = g?.install?.install_path || g?.install_path;
           if (installPath && path.resolve(installPath) === path.resolve(gamePath)) {
             return appName;
-          }
-        }
-
-        // 2. Fallback: Title match (Folder name matching Game Title)
-        const gameByTitle = games.find((g: HeroicLegendaryGame) => {
-          let title = null;
-          if (g.app_title && !g.app_title.match(/^[0-9a-f]{32}$/)) {
-            title = g.app_title;
-          } else if (g.title) {
-            title = g.title;
-          } else if (g?.game?.title) {
-            title = g.game.title;
-          }
-
-          return title && normalize(title) === targetFolder;
-        });
-
-        if (gameByTitle) {
-          if (gameByTitle.app_name) return gameByTitle.app_name;
-          if (gameByTitle.appName) return gameByTitle.appName;
-          if (gameByTitle.game?.app_name) return gameByTitle.game.app_name;
-        }
-
-        // Check object items by Title
-        for (const [appName, g] of Object.entries(gamesById)) {
-          const title = g?.title || g?.game?.title;
-          if (title && normalize(title) === targetFolder) {
-            return appName;
-          }
-          // Also check if appName itself is the key (already handled by iteration logic if needed?)
-          // Usually gamesById has appName as key.
-          if (Object.keys(gamesById).includes(appName)) {
-            // Double check if this entry is the one we want via Title
           }
         }
       }

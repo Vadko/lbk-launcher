@@ -31,6 +31,10 @@ function spawnOnHost(command: string, args: string[] = []): ChildProcess {
     stdio: 'ignore',
   });
 
+  child.on('error', (err) => {
+    console.error(`[LutrisLauncher] Error spawning ${command} on host:`, err);
+  });
+
   // Unref to let the parent process exit while this child keeps running
   child.unref();
   return child;
@@ -78,7 +82,14 @@ export async function launchLutrisGame(
           '[LutrisLauncher] Native spawn failed, trying fallback xdg-open/flatpak',
           err
         );
-        spawn('xdg-open', [lutrisUri], { detached: true, stdio: 'ignore' }).unref();
+        const fallbackChild = spawn('xdg-open', [lutrisUri], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        fallbackChild.on('error', (fallbackErr) => {
+          console.error('[LutrisLauncher] Fallback xdg-open spawn failed:', fallbackErr);
+        });
+        fallbackChild.unref();
       });
     }
 

@@ -42,6 +42,9 @@ function spawnOnHost(command: string, args: string[] = []): ChildProcess {
       detached: true,
       stdio: 'ignore',
     });
+    child.on('error', (err) => {
+      console.error(`[Steam] Error spawning flatpak-spawn for ${command}:`, err);
+    });
     child.unref();
     return child;
   }
@@ -49,6 +52,9 @@ function spawnOnHost(command: string, args: string[] = []): ChildProcess {
   const child = spawn(command, args, {
     detached: true,
     stdio: 'ignore',
+  });
+  child.on('error', (err) => {
+    console.error(`[Steam] Error spawning ${command}:`, err);
   });
   child.unref();
   return child;
