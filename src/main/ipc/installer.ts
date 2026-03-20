@@ -1,6 +1,7 @@
-import { dialog, ipcMain, shell } from 'electron';
+import { dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
+import { GamesRepository } from '../db/games-repository';
 import {
   abortCurrentDownload,
   checkInstallation,
@@ -25,6 +26,7 @@ import {
 import { rerunInstaller } from '../installer/platform';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
+import { openExternalUrl } from '../utils/open-external';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {
@@ -44,16 +46,35 @@ export function setupInstallerHandlers(): void {
           options,
           customGamePath,
           (downloadProgress) => {
-            getMainWindow()?.webContents.send('download-progress', downloadProgress);
+            getMainWindow()?.webContents.send(
+              'download-progress',
+              game.id,
+              downloadProgress
+            );
           },
           (status) => {
-            getMainWindow()?.webContents.send('installation-status', status);
+            getMainWindow()?.webContents.send('installation-status', game.id, status);
           }
         );
 
         // Note: cache invalidation та installed-games-changed event
         // автоматично відбуваються через InstallationWatcher при зміні файлів
         // Download tracking тепер відбувається в Edge Function при генерації signed URL
+
+        // Locally increment downloads counter (broadcast is skipped for downloads-only changes).
+        // The server counts unique downloads, so the worst case is +1 drift until next sync.
+        if (options.installText) {
+          try {
+            const repo = GamesRepository.getInstance();
+            repo.incrementDownloads(game.id);
+            const updatedGame = repo.getGameById(game.id);
+            if (updatedGame) {
+              getMainWindow()?.webContents.send('game-updated', updatedGame);
+            }
+          } catch (err) {
+            console.error('[Installer] Failed to update local downloads count:', err);
+          }
+        }
 
         return { success: true };
       } catch (error) {
@@ -107,7 +128,7 @@ export function setupInstallerHandlers(): void {
   });
 
   ipcMain.handle('open-external', async (_, url: string) => {
-    await shell.openExternal(url);
+    await openExternalUrl(url);
   });
 
   ipcMain.handle('select-game-folder', async () => {
@@ -203,10 +224,14 @@ export function setupInstallerHandlers(): void {
       resumeDownload(
         state,
         (downloadProgress) => {
-          getMainWindow()?.webContents.send('download-progress', downloadProgress);
+          getMainWindow()?.webContents.send(
+            'download-progress',
+            gameId,
+            downloadProgress
+          );
         },
         (status) => {
-          getMainWindow()?.webContents.send('installation-status', status);
+          getMainWindow()?.webContents.send('installation-status', gameId, status);
         }
       ).catch((error) => {
         console.error('Error during resumed download:', error);

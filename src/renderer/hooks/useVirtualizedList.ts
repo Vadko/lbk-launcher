@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 
 interface UseVirtualizedListOptions {
   /** Total number of items */
@@ -22,6 +22,35 @@ interface UseVirtualizedListResult {
   reset: () => void;
 }
 
+interface RenderState {
+  count: number;
+  prevTotal: number;
+}
+
+type RenderAction =
+  | { type: 'increment'; by: number; max: number }
+  | { type: 'total_changed'; total: number; initial: number }
+  | { type: 'reset'; initial: number };
+
+function renderReducer(state: RenderState, action: RenderAction): RenderState {
+  switch (action.type) {
+    case 'increment':
+      return {
+        ...state,
+        count: Math.min(state.count + action.by, action.max),
+      };
+    case 'total_changed': {
+      // Reset when list content changes (search, filter, etc.)
+      if (action.total !== state.prevTotal) {
+        return { prevTotal: action.total, count: action.initial };
+      }
+      return state;
+    }
+    case 'reset':
+      return { ...state, count: action.initial };
+  }
+}
+
 /**
  * Hook for progressive rendering of long lists using IntersectionObserver.
  * Instead of rendering all items at once, it starts with a small batch
@@ -34,12 +63,24 @@ export function useVirtualizedList({
   rootMargin = '200px',
   enabled = true,
 }: UseVirtualizedListOptions): UseVirtualizedListResult {
-  const [renderCount, setRenderCount] = useState(initialRenderCount);
+  const [state, dispatch] = useReducer(renderReducer, {
+    count: initialRenderCount,
+    prevTotal: totalItems,
+  });
   const sentinelRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
+  // Track totalItems changes for auto-reset
+  useEffect(() => {
+    dispatch({
+      type: 'total_changed',
+      total: totalItems,
+      initial: initialRenderCount,
+    });
+  }, [totalItems, initialRenderCount]);
+
   // Clamp renderCount to actual totalItems (handles filter changes automatically)
-  const actualRenderCount = enabled ? Math.min(renderCount, totalItems) : totalItems;
+  const actualRenderCount = enabled ? Math.min(state.count, totalItems) : totalItems;
 
   // Setup IntersectionObserver
   useEffect(() => {
@@ -54,7 +95,11 @@ export function useVirtualizedList({
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          setRenderCount((prev) => Math.min(prev + incrementCount, totalItems));
+          dispatch({
+            type: 'increment',
+            by: incrementCount,
+            max: totalItems,
+          });
         }
       },
       { rootMargin }
@@ -68,7 +113,7 @@ export function useVirtualizedList({
   }, [enabled, actualRenderCount, totalItems, incrementCount, rootMargin]);
 
   const reset = useCallback(() => {
-    setRenderCount(initialRenderCount);
+    dispatch({ type: 'reset', initial: initialRenderCount });
   }, [initialRenderCount]);
 
   return {

@@ -115,7 +115,9 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           onClick={handleToggle}
           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
         >
-          <span className="text-text-main truncate">{displayText}</span>
+          <span className="text-text-main truncate" title={displayText}>
+            {displayText}
+          </span>
           <ChevronDown
             size={16}
             className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
@@ -164,6 +166,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
                             ? 'bg-glass-hover text-text-main'
                             : 'text-text-muted hover:bg-glass hover:text-text-main'
                         }`}
+                        title={option.name}
                       >
                         <span className="truncate">{option.name}</span>
                         {isSelected && (

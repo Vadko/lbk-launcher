@@ -1,11 +1,12 @@
 import { exec, spawn } from 'child_process';
-import { clipboard } from 'electron';
+import { clipboard, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getTransliteratedPath } from '../utils/files';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { runProton } from './proton';
 
 /**
  * Check if file is an executable installer
@@ -133,8 +134,6 @@ export async function runInstaller(
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux if protonPath is provided
       console.log(`[Installer] Launching installer via Proton: ${protonPath}`);
-      const { runProton } = await import('./proton');
-
       // Copy installer path in Wine format to clipboard for user convenience
       const winePath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
       clipboard.writeText(winePath);
@@ -146,6 +145,29 @@ export async function runInstaller(
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
         if (exitCode === 1) throw new Error('встановлення не було завершене');
       }
+    } else if (platform === 'linux' || platform === 'macos') {
+      // Execute native Linux/macOS scripts directly
+      console.log(`[Installer] Executing native installer: ${installerPath}`);
+      onStatus?.({ message: 'Запуск інсталятора...' });
+
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, [], {
+          cwd: extractDir,
+          stdio: 'inherit',
+        });
+
+        child.on('exit', (code) => {
+          if (code !== 0 && code !== null) {
+            reject(new Error(`Інсталятор завершився з кодом ${code}`));
+          } else {
+            resolve();
+          }
+        });
+
+        child.on('error', (err) => {
+          reject(err);
+        });
+      });
     } else {
       await new Promise<void>((resolve, reject) => {
         const child = spawn(installerPath, [], {

@@ -34,7 +34,7 @@ module.exports = {
 
   electronLanguages: ['en-US', 'uk'],
 
-  artifactName: "${productName}-${os}.${ext}",
+  artifactName: "LBK-Launcher-${os}.${ext}",
 
   compression: 'store',
 
@@ -75,15 +75,20 @@ module.exports = {
         to: '7zip/win',
         filter: ['**/*'],
       },
+      {
+        from: 'resources/extensions/spellfix.dll',
+        to: 'extensions/spellfix.dll',
+      },
     ],
   },
 
   portable: {
-    artifactName: "${productName}-${os}-Portable.${ext}",
+    artifactName: "LBK-Launcher-${os}-Portable.${ext}",
   },
 
   linux: {
     target: ['AppImage', 'rpm'],
+    artifactName: 'LBK-Launcher-${os}.${ext}',
     category: 'Utility',
     maintainer: 'LBK UA <info@lbklauncher.com>',
     executableName: 'lbk-launcher',
@@ -95,6 +100,10 @@ module.exports = {
         to: '7zip/linux',
         filter: ['**/*'],
       },
+      {
+        from: 'resources/extensions/spellfix.so',
+        to: 'extensions/spellfix.so',
+      },
     ],
   },
 
@@ -104,7 +113,7 @@ module.exports = {
     allowToChangeInstallationDirectory: false,
     deleteAppDataOnUninstall: false,
     differentialPackage: true,
-    artifactName: "${productName}-${os}-Setup.${ext}",
+    artifactName: "LBK-Launcher-${os}-Setup.${ext}",
     language: "1058",
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
@@ -130,7 +139,7 @@ module.exports = {
     gatekeeperAssess: false,
     darkModeSupport: true,
     minimumSystemVersion: '10.13.0',
-    artifactName: '${productName}-${arch}.${ext}',
+    artifactName: 'LBK-Launcher-${arch}.${ext}',
     // Підписування: використовує CSC_LINK та CSC_KEY_PASSWORD з env
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',
@@ -140,6 +149,10 @@ module.exports = {
         from: 'node_modules/7zip-bin-full/mac',
         to: '7zip/mac',
         filter: ['**/*'],
+      },
+      {
+        from: 'resources/extensions/spellfix.dylib',
+        to: 'extensions/spellfix.dylib',
       },
     ],
   },
@@ -164,6 +177,6 @@ module.exports = {
     },
     icon: 'resources/icon.icns',
     backgroundColor: '#323232',
-    artifactName: '${productName}-${version}-${arch}.${ext}',
+    artifactName: 'LBK-Launcher-${version}-${arch}.${ext}',
   },
 };

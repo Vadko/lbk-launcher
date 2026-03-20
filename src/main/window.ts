@@ -1,10 +1,12 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import * as Sentry from '@sentry/electron/main';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import {
   applyLiquidGlass,
   isLiquidGlassSupported,
   removeLiquidGlass,
 } from './liquid-glass';
+import { openExternalUrl } from './utils/open-external';
 import { supportsMacOSLiquidGlass } from './utils/platform';
 import { readStoreFile } from './utils/store-storage';
 import { getIcon } from './utils/theme';
@@ -65,7 +67,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   // open target="_blank" links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openExternalUrl(url);
     return { action: 'deny' };
   });
 
@@ -98,6 +100,13 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[Window] Render process gone:', details);
+    Sentry.captureMessage(`Render process gone: ${details.reason}`, {
+      level: 'fatal',
+      extra: { exitCode: details.exitCode, reason: details.reason },
+    });
+    if (details.reason !== 'clean-exit') {
+      mainWindow?.reload();
+    }
   });
 
   mainWindow.on('closed', async () => {

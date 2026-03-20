@@ -1,8 +1,31 @@
+import * as Sentry from '@sentry/electron/main';
 import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import { setupStoreStorageHandlers } from './utils/store-storage';
+
+// E2E: enable remote debugging for packaged apps.
+// Electron 30+ ignores --remote-debugging-port CLI arg for packaged binaries,
+// so we must call appendSwitch() programmatically before app.whenReady().
+// Check both env var and CLI arg: env var is set by the test runner,
+// CLI arg persists across app.relaunch() (which reuses process.argv).
+const isE2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
+if (isE2E) {
+  app.commandLine.appendSwitch('remote-debugging-port', '19222');
+}
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  enabled: app.isPackaged && !isE2E,
+  release: __SENTRY_RELEASE__,
+  tracesSampleRate: 1.0,
+  integrations: [
+    Sentry.captureConsoleIntegration({ levels: ['error'] }),
+    Sentry.startupTracingIntegration(),
+  ],
+  enableLogs: true,
+});
 
 // Deep link handling
 const PROTOCOL = 'lbk';
@@ -65,6 +88,13 @@ if (isLinux()) {
   // Enable gamepad support
   app.commandLine.appendSwitch('enable-gamepad-extensions');
 
+  // Enable hardware video decoding on Linux
+  app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoEncoder');
+  app.commandLine.appendSwitch('ignore-gpu-blocklist');
+
+  // Enable WebRTC and media features for video playback
+  app.commandLine.appendSwitch('enable-accelerated-video-decode');
+
   // Prevent double keyboard input from GTK input method module.
   // When GTK_IM_MODULE is set (e.g. 'ibus', 'fcitx'), key events are processed
   // through two paths simultaneously (Wayland text-input + GTK IM module),
@@ -79,11 +109,12 @@ if (isLinux()) {
 
   if (isGamingMode) {
     console.log('[Main] Detected Gaming Mode (Gamescope), applying optimizations');
-    app.commandLine.appendSwitch('disable-gpu');
+    // Use disable-gpu-compositing instead of disable-gpu to allow video playback
+    app.commandLine.appendSwitch('disable-gpu-compositing');
   }
 }
 
-import { checkForUpdates, setupAutoUpdater } from './auto-updater';
+import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { closeDatabase, initDatabase } from './db/database';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
@@ -120,6 +151,17 @@ if (!gotTheLock) {
 } else {
   // Initialize logger early to capture all logs
   initLogger();
+
+  // Catch unhandled errors in main process to prevent crashes
+  process.on('uncaughtException', (error) => {
+    console.error('[Main] Uncaught Exception:', error);
+    Sentry.captureException(error);
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('[Main] Unhandled Rejection:', reason);
+    Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
+  });
 
   // Set app ID for Wayland/Flatpak icon matching
   // This must match the Flatpak app-id and .desktop file name
@@ -316,10 +358,16 @@ if (!gotTheLock) {
 
   // Track session end and playtime before quit
   // Use will-quit with preventDefault to ensure async operations complete
+  // skipQuitTracking is set by clear-cache/clear-all-data to avoid delaying relaunch
   let isQuitting = false;
+  let skipQuitTracking = false;
+
+  ipcMain.on('skip-quit-tracking', () => {
+    skipQuitTracking = true;
+  });
 
   app.on('will-quit', (event) => {
-    if (isQuitting) return; // Already processing quit
+    if (isQuitting || skipQuitTracking) return; // Already processing or skipped by clear-cache
 
     event.preventDefault();
     isQuitting = true;
@@ -352,6 +400,7 @@ if (!gotTheLock) {
 
   app.on('window-all-closed', () => {
     // Cleanup
+    stopUpdateCheck();
     stopSteamWatcher();
     stopInstallationWatcher();
 

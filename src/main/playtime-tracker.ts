@@ -13,6 +13,7 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getDatabase } from './db/database';
 import { getSteamPlaytimesForApps } from './game-detector/steam';
 import { getAllInstalledGameIds } from './installer';
 
@@ -119,8 +120,6 @@ async function getInstalledGamesWithSteamIds(): Promise<InstalledGameWithSteamId
       return result;
     }
 
-    // Import database to get steam_app_id for each game
-    const { getDatabase } = await import('./db/database');
     const db = getDatabase();
 
     for (const gameId of installedGameIds) {

@@ -1,4 +1,4 @@
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { useGamepads } from 'react-ts-gamepads';
@@ -10,6 +10,7 @@ import { TitleBar } from './components/Layout/TitleBar';
 import { MainContent } from './components/MainContent/MainContent';
 import { ConfirmModal } from './components/Modal/ConfirmModal';
 import { GlobalModal } from './components/Modal/GlobalModal';
+import { PromoModal } from './components/Modal/PromoModal';
 import { NotificationModal } from './components/Notifications/NotificationModal';
 import { ToastNotifications } from './components/Notifications/ToastNotifications';
 import { SettingsModal } from './components/Settings/SettingsModal';
@@ -22,114 +23,26 @@ import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
 import { trackEvent } from './utils/analytics';
+import { isValidGamepad } from './utils/isValidGamepad';
 
 // Higher deadzone for mode switching to prevent accidental triggers from stick drift
 const MODE_SWITCH_DEADZONE = 0.8;
 
-/**
- * Validate that the gamepad is a real controller, not a phantom device.
- * Some USB devices (multimedia keyboards, special mice, racing wheels without proper drivers, etc.)
- * can be incorrectly detected as gamepads by the browser.
- */
-function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
-  if (!gp) return false;
+const isE2E = window.electronAPI?.isE2E?.() ?? false;
 
-  // Must have standard button layout (at least 12 buttons like Xbox/PS controllers)
-  if (gp.buttons.length < 12) return false;
-
-  // Must have at least 2 axes (left stick)
-  if (gp.axes.length < 2) return false;
-
-  // Filter out known phantom/non-standard devices by checking ID
-  const id = gp.id.toLowerCase();
-
-  // Blacklist: devices that are NOT gamepads (joysticks, HOTAS, racing wheels, etc.)
-  const nonGamepadPatterns = [
-    // Flight sim devices
-    'joystick',
-    'stick',
-    'flight',
-    'hotas',
-    'throttle',
-    'rudder',
-    'pedals',
-    'yoke',
-    't16000', // Thrustmaster T.16000M
-    't.16000',
-    // Flight sim brands (primarily make non-gamepad controllers)
-    'thrustmaster',
-    'saitek',
-    'ch products',
-    'vkb',
-    'virpil',
-    'winwing',
-    // Racing wheels
-    'wheel',
-    'racing',
-    'fanatec',
-    'moza',
-  ];
-
-  if (nonGamepadPatterns.some((pattern) => id.includes(pattern))) {
-    console.log('[Gamepad] Rejecting non-gamepad device:', gp.id);
-    return false;
+if (!isE2E) {
+  try {
+    const mpToken = import.meta.env.DEV
+      ? import.meta.env.VITE_MIXPANEL_TOKEN_DEV
+      : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
+    if (mpToken) {
+      mixpanel.init(mpToken, {
+        debug: import.meta.env.DEV,
+      });
+    }
+  } catch (err) {
+    console.error('[Analytics] mixpanel.init failed', err);
   }
-
-  // Known valid gamepad patterns (brands and types)
-  const validGamepadPatterns = [
-    'xbox',
-    'xinput',
-    'playstation',
-    'dualshock',
-    'dualsense',
-    'switch',
-    'nintendo',
-    'sony',
-    'microsoft',
-    '8bitdo',
-    'logitech gamepad',
-    'logitech dual',
-    'steelseries',
-    'razer',
-    'hori',
-    'powera',
-    'pdp',
-    'hyperkin',
-    'mayflash',
-    'brook',
-    'gamesir',
-  ];
-
-  // Check if it matches a known gamepad brand
-  if (validGamepadPatterns.some((pattern) => id.includes(pattern))) {
-    return true;
-  }
-
-  // For generic devices, check if they have typical gamepad characteristics
-  // Standard gamepads have 4 axes (2 sticks) and 16+ buttons
-  if (gp.axes.length >= 4 && gp.buttons.length >= 16) {
-    return true;
-  }
-
-  // Reject unknown devices that don't match gamepad patterns
-  console.log('[Gamepad] Rejecting unrecognized device:', gp.id, {
-    buttons: gp.buttons.length,
-    axes: gp.axes.length,
-  });
-  return false;
-}
-
-try {
-  const mpToken = import.meta.env.DEV
-    ? import.meta.env.VITE_MIXPANEL_TOKEN_DEV
-    : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
-  if (mpToken) {
-    mixpanel.init(mpToken, {
-      debug: import.meta.env.DEV,
-    });
-  }
-} catch (err) {
-  console.error('[Analytics] mixpanel.init failed', err);
 }
 
 // Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично
@@ -163,7 +76,8 @@ export const App: React.FC = () => {
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const [showLoader, setShowLoader] = useState(true);
+  const loaderVisible = useStore((s) => s.loaderVisible);
+  const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
@@ -200,7 +114,7 @@ export const App: React.FC = () => {
       const elapsed = Date.now() - loaderStartTime;
       const remainingTime = Math.max(0, MIN_LOADER_DISPLAY_MS - elapsed);
 
-      hideTimeout = setTimeout(() => setShowLoader(false), remainingTime);
+      hideTimeout = setTimeout(() => setLoaderVisible(false), remainingTime);
     };
 
     if (!window.electronAPI?.getSyncStatus) {
@@ -235,6 +149,8 @@ export const App: React.FC = () => {
 
   // Відстеження першого запуску додатку
   useEffect(() => {
+    if (!window.storeStorage) return;
+
     const hasLaunchedBefore = window.storeStorage.getItem('has-launched-before');
     if (!hasLaunchedBefore) {
       window.storeStorage.setItem('has-launched-before', 'true');
@@ -424,6 +340,18 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // [DEV ONLY] Listen for test games changes and broadcast to components
+  useEffect(() => {
+    if (!window.electronAPI?.onTestGamesChanged) return;
+
+    const handleTestGamesChanged = () => {
+      window.dispatchEvent(new Event('test-games-updated'));
+    };
+
+    const unsubscribe = window.electronAPI.onTestGamesChanged(handleTestGamesChanged);
+    return unsubscribe;
+  }, []);
+
   const handleOnlineEvent = () => {
     setOnline(true);
     console.log('[App] Internet connection restored');
@@ -459,9 +387,11 @@ export const App: React.FC = () => {
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
   return (
-    <>
+    <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
       {/* Loader overlay with fade animation */}
-      <AnimatePresence>{showLoader && <AppLoader status={syncStatus} />}</AnimatePresence>
+      <AnimatePresence>
+        {loaderVisible && <AppLoader status={syncStatus} />}
+      </AnimatePresence>
 
       <div
         className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
@@ -521,18 +451,19 @@ export const App: React.FC = () => {
         <UpdateNotification />
         <ToastNotifications />
 
-        {/* Global modals */}
-        <GlobalModal />
+        {/* Global modals — GlobalModal last so it renders on top of others */}
         <ConfirmModal />
         <SettingsModal />
+        <GlobalModal />
         <NotificationModal
           isOpen={showNotificationHistory}
           onClose={() => setShowNotificationHistory(false)}
         />
+        <PromoModal />
 
         {/* Gamepad hints */}
         <GamepadHints />
       </div>
-    </>
+    </MotionConfig>
   );
 };

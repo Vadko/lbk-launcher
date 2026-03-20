@@ -6,13 +6,14 @@ import {
   MessageCircle,
   Play,
   RefreshCw,
+  Settings2,
   Shield,
   Trash2,
-  Volume2,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
+import { type DevModeType, usePromoModalStore } from '../../store/usePromoModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import {
   playBackSound,
@@ -23,6 +24,7 @@ import { playNotificationSound } from '../../utils/notificationSounds';
 import { Modal } from '../Modal/Modal';
 import { PrivacyPolicyModal } from '../Modal/PrivacyPolicyModal';
 import { TermsOfServiceModal } from '../Modal/TermsOfServiceModal';
+import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
 
 const SettingItem = React.memo<{
@@ -77,6 +79,9 @@ export const SettingsModal: React.FC = () => {
   const gamepadSoundsEnabled = useSettingsStore((state) => state.gamepadSoundsEnabled);
   const toggleGamepadSounds = useSettingsStore((state) => state.toggleGamepadSounds);
 
+  // Promo modal dev settings
+  const { devMode, setDevMode } = usePromoModalStore();
+
   // Check if liquid glass is supported
   const [isLiquidGlassSupported, setIsLiquidGlassSupported] = useState(false);
 
@@ -116,13 +121,37 @@ export const SettingsModal: React.FC = () => {
     }
   }, [showModal, closeSettingsModal]);
 
-  const handleClearCacheOnly = useCallback(async () => {
-    await window.api?.clearCacheOnly();
-  }, []);
+  const handleClearCacheOnly = useCallback(() => {
+    showModal({
+      title: 'Очистити кеш',
+      message:
+        'Буде видалено тимчасові файли та базу даних. Налаштування збережуться. Застосунок перезапуститься.',
+      type: 'info',
+      actions: [
+        {
+          label: 'Очистити',
+          variant: 'primary',
+          onClick: () => window.api?.clearCacheOnly(),
+        },
+      ],
+    });
+  }, [showModal]);
 
-  const handleClearAllData = useCallback(async () => {
-    await window.api?.clearAllData();
-  }, []);
+  const handleClearAllData = useCallback(() => {
+    showModal({
+      title: 'Очистити всі дані',
+      message:
+        'Буде видалено всі дані, включаючи налаштування та підписки. Застосунок перезапуститься.',
+      type: 'error',
+      actions: [
+        {
+          label: 'Видалити все',
+          variant: 'danger',
+          onClick: () => window.api?.clearAllData(),
+        },
+      ],
+    });
+  }, [showModal]);
 
   const handleOpenLogsFolder = useCallback(async () => {
     await window.loggerAPI?.openLogsFolder();
@@ -294,10 +323,8 @@ export const SettingsModal: React.FC = () => {
           {import.meta.env.DEV && (
             <div className="p-4 rounded-xl bg-glass border border-border">
               <div className="flex items-center gap-2 mb-3">
-                <Volume2 size={18} className="text-color-accent" />
-                <h4 className="text-sm font-semibold text-text-main">
-                  Тест звуків (Dev)
-                </h4>
+                <Settings2 size={18} className="text-color-accent" />
+                <h4 className="text-sm font-semibold text-text-main">Dev налаштування</h4>
               </div>
               <div className="space-y-3">
                 <div>
@@ -371,6 +398,21 @@ export const SettingsModal: React.FC = () => {
                       Назад
                     </button>
                   </div>
+                </div>
+                <div>
+                  <p className="text-xs text-text-muted mb-2">
+                    Режим показу промо банера:
+                  </p>
+                  <SelectDropdown
+                    options={[
+                      { name: 'Звичайний (24 год + галочка)', value: 'normal' },
+                      { name: 'Завжди показувати', value: 'always' },
+                      { name: 'Ніколи не показувати', value: 'never' },
+                    ]}
+                    selectedValue={devMode}
+                    onSelectionChange={(value) => setDevMode(value as DevModeType)}
+                    placeholder="Оберіть режим"
+                  />
                 </div>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { Bot, EyeOff } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
@@ -6,6 +6,8 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
+import { AiIcon } from '../Icons/AiIcon';
+import { PencilIcon } from '../Icons/PencilIcon';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
 
@@ -74,7 +76,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           data-gamepad-card={true}
           className={`group glass-card !p-0 flex flex-col items-center scroll-m-20`}
         >
-          <div className="relative h-56 w-full bg-glass rounded-t-xl overflow-hidden">
+          <div className="relative aspect-[616/353] w-full bg-glass rounded-t-xl overflow-hidden">
             {thumbnailUrl && !imageError ? (
               <>
                 {imageLoading && (
@@ -98,9 +100,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl ${
+                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
                   isAdultBlurred ? 'blur-lg' : ''
                 }`}
+                title={game.name}
               >
                 {game.name.charAt(0)}
               </div>
@@ -117,6 +120,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {hasUpdate && (
               <div className="absolute top-2 right-2 w-3 h-3 bg-accent rounded-full animate-pulse" />
             )}
+            {(game.ai === 'edited' || game.ai === 'non-edited') && (
+              <div
+                className="absolute top-5 right-5 bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]"
+                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+              >
+                {game.ai === 'edited' ? <PencilIcon /> : <AiIcon />}
+              </div>
+            )}
             {isGameDetected && (
               <div
                 className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
@@ -125,7 +136,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
-            <h3 className="text-lg font-head font-bold">{game.name}</h3>
+            <h3 className="text-lg font-head font-bold truncate" title={game.name}>
+              {game.name}
+            </h3>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">
                 <PopularIcon />
@@ -137,9 +150,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
             {/* Info */}
             <div className="p-3 bg-glass-hover rounded-xl mt-auto">
-              <h4 className="font-semibold mb-2 truncate">{game.team}</h4>
+              <h4 className="font-semibold mb-2 truncate" title={game.team}>
+                {game.team}
+              </h4>
 
-              <div className="flex gap-3 items-center w-full">
+              <div className="flex gap-3 items-center w-full flex-wrap">
                 {game.status && (
                   <StatusBadge
                     status={game.status}
@@ -148,7 +163,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   />
                 )}
                 {game.status !== 'planned' && (
-                  <>
+                  <div className="flex items-center gap-3 flex-1">
                     <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
                       <div
                         className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
@@ -156,7 +171,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                       />
                     </div>
                     <span className="text-text-main font-bold">{`${averageProgress}%`}</span>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -227,12 +242,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
             {(game.ai === 'edited' || game.ai === 'non-edited') && (
               <div
-                className="absolute top-2 left-2 p-1 bg-purple-500/80 rounded"
-                title={
-                  game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'
-                }
+                className="absolute top-3 right-3 bg-white/80 rounded-full text-text-dark p-[5px] ring-[4px] ring-[rgba(255,255,255,0.15)]"
+                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
               >
-                <Bot size={10} className="text-white" />
+                {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
               </div>
             )}
             {isGameDetected && (
@@ -245,7 +258,10 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
           {/* Info */}
           <div className="p-3 bg-glass-hover rounded-b-xl">
-            <h4 className="font-medium text-sm text-text-main mb-2 truncate">
+            <h4
+              className="font-medium text-sm text-text-main mb-2 truncate"
+              title={game.name}
+            >
               {game.name}
             </h4>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
@@ -316,14 +332,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {hasUpdate && (
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
           )}
-          {(game.ai === 'edited' || game.ai === 'non-edited') && (
-            <div
-              className="absolute -top-1 -left-1 p-0.5 bg-purple-500 rounded border-2 border-bg-dark z-10"
-              title={game.ai === 'edited' ? 'ШІ-переклад (відредаговано)' : 'ШІ-переклад'}
-            >
-              <Bot size={10} className="text-white" />
-            </div>
-          )}
           {isGameDetected && (
             <div
               className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-dark z-10"
@@ -332,9 +340,20 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm text-text-main mb-1 truncate">
+          <h4
+            className="font-semibold text-sm text-text-main truncate mb-1"
+            title={showTeamName ? game.team : game.name}
+          >
             {showTeamName ? game.team : game.name}
           </h4>
+          {(game.ai === 'edited' || game.ai === 'non-edited') && (
+            <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
+              <span className="text-text-muted text-xs">
+                {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+              </span>
+              {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
+            </div>
+          )}
           {showTeamName && (
             <p className="text-xs text-text-muted mb-1 truncate">{averageProgress}%</p>
           )}
@@ -342,6 +361,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                title={`${averageProgress}%`}
                 style={{ width: `${averageProgress}%` }}
               />
             </div>

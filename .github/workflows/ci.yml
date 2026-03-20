@@ -1,10 +1,9 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [master]
   push:
-    branches: [master]
+    branches: [main]
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -25,7 +24,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.7.1
 
       - name: Get pnpm store directory
         shell: bash

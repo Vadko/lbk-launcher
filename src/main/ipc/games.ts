@@ -9,6 +9,15 @@ import {
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
 } from '../api';
+import {
+  type BannerData,
+  buildBannerImageUrl,
+  fetchBannersForGame,
+  fetchGlobalBanner,
+  type GameBannersResult,
+  type ImpressionType,
+  recordBannerImpression,
+} from '../db/banners-api';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
@@ -25,7 +34,12 @@ import {
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
-import { getMachineId, trackSubscription, trackSupportClick } from '../tracking';
+import {
+  getMachineId,
+  trackFailedSearch,
+  trackSubscription,
+  trackSupportClick,
+} from '../tracking';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
@@ -55,6 +69,11 @@ export function setupGamesHandlers(): void {
   // Track support click
   ipcMain.handle('track-support-click', async (_, gameId: string) =>
     trackSupportClick(gameId)
+  );
+
+  // Track failed search (0 results)
+  ipcMain.handle('track-failed-search', async (_, query: string) =>
+    trackFailedSearch(query)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
@@ -234,7 +253,7 @@ export function setupGamesHandlers(): void {
     'find-games-by-titles',
     (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
       try {
-        const repo = new GamesRepository();
+        const repo = GamesRepository.getInstance();
         return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
       } catch (error) {
         console.error('Error finding games by titles:', error);
@@ -356,4 +375,120 @@ export function setupGamesHandlers(): void {
 
   // Restart Steam
   ipcMain.handle('restart-steam', () => restartSteam());
+
+  // ---------------------------------------------------------------------------
+  // Banner API handlers - all banner functionality consolidated here
+  // Low level API functions are in: src/main/db/banners-api.ts
+  // ---------------------------------------------------------------------------
+
+  // Fetch promo banner
+  ipcMain.handle('fetch-promo-banner', async (): Promise<BannerData | null> => {
+    try {
+      const machineId = getMachineId();
+      const promoBanner = await fetchGlobalBanner({ machineId: machineId || undefined });
+
+      if (!promoBanner) {
+        return null;
+      }
+
+      // Convert API banner data to frontend format
+      const banner: BannerData = {
+        id: promoBanner.id,
+        type: promoBanner.type,
+        image_path: buildBannerImageUrl(promoBanner.image_path) || '',
+        link: promoBanner.link || '',
+      };
+
+      return banner;
+    } catch (error) {
+      console.error('[IPC] Error fetching promo banner:', error);
+      return null;
+    }
+  });
+
+  // Record banner impression
+  ipcMain.handle(
+    'record-promo-banner-impression',
+    async (
+      _,
+      params: {
+        campaignId: string;
+        impressionType: ImpressionType;
+        gameSlug?: string;
+      }
+    ): Promise<boolean> => {
+      try {
+        const machineId = getMachineId();
+
+        return await recordBannerImpression({
+          campaignId: params.campaignId,
+          impressionType: params.impressionType,
+          machineId,
+          gameSlug: params.gameSlug,
+        });
+      } catch (error) {
+        console.error('[IPC] Error recording banner impression:', error);
+        return false;
+      }
+    }
+  );
+
+  // Fetch banners for game
+  ipcMain.handle(
+    'fetch-banners-for-game',
+    async (_, gameId: string, gameSlug: string): Promise<GameBannersResult> => {
+      try {
+        const machineId = getMachineId();
+        const result = await fetchBannersForGame({
+          gameId,
+          gameSlug,
+          machineId: machineId || undefined,
+        });
+
+        if (!result.banner) {
+          return {
+            banner: null,
+            isKuli: result.isKuli,
+          };
+        }
+
+        // Convert API banner data to frontend format
+        const banner: BannerData = {
+          id: result.banner.id,
+          type: result.banner.type,
+          image_path: buildBannerImageUrl(result.banner.image_path) || '',
+          link: result.banner.link || '',
+        };
+        return {
+          banner,
+          isKuli: result.isKuli,
+        };
+      } catch (error) {
+        console.error('[IPC] Error fetching banners for game:', error);
+        return {
+          banner: null,
+          isKuli: false,
+        };
+      }
+    }
+  );
+
+  // Record banner impression for placement banners
+  ipcMain.handle(
+    'record-banner-impression',
+    async (_, bannerId: string): Promise<boolean> => {
+      try {
+        const machineId = getMachineId();
+        await recordBannerImpression({
+          campaignId: bannerId,
+          impressionType: 'view' as ImpressionType,
+          machineId,
+        });
+        return true;
+      } catch (error) {
+        console.error('[IPC] Error recording banner impression:', error);
+        return false;
+      }
+    }
+  );
 }
