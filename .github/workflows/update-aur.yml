@@ -56,17 +56,24 @@ jobs:
           done
 
           # Rebuild sha256sums block in PKGBUILD
-          SUMS="sha256sums=('${HASHES[0]}'"
-          for h in "${HASHES[@]:1}"; do
-            SUMS+="\n            '${h}'"
-          done
-          SUMS+=")"
-          sed -i '/^sha256sums=(/,/^)/c\'"$(echo -e "$SUMS")" PKGBUILD
+          {
+            echo "sha256sums=('${HASHES[0]}'"
+            for h in "${HASHES[@]:1}"; do
+              echo "            '${h}'"
+            done
+            echo ")"
+          } > /tmp/newsums.txt
+          START=$(grep -n '^sha256sums=(' PKGBUILD | cut -d: -f1)
+          END=$(tail -n +"$START" PKGBUILD | grep -n ')$' | head -1 | cut -d: -f1)
+          END=$((START + END - 1))
+          head -n $((START - 1)) PKGBUILD > PKGBUILD.tmp
+          cat /tmp/newsums.txt >> PKGBUILD.tmp
+          tail -n +$((END + 1)) PKGBUILD >> PKGBUILD.tmp
+          mv PKGBUILD.tmp PKGBUILD
 
           # Rebuild .SRCINFO
           sed -i "s/pkgver = .*/pkgver = ${VERSION}/" .SRCINFO
           sed -i "s|download/v[^/]*/LBK|download/v${VERSION}/LBK|" .SRCINFO
-          # Remove old sha256sums and append new ones
           sed -i '/^\tsha256sums = /d' .SRCINFO
           INSERT_AFTER=$(grep -n 'source = icon-256' .SRCINFO | cut -d: -f1)
           for i in $(seq $((${#HASHES[@]} - 1)) -1 0); do
