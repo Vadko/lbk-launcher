@@ -42,11 +42,12 @@ jobs:
           args: >-
             bash -c "
               pacman -Sy --noconfirm pacman-contrib &&
+              useradd -m builder &&
               cd aur &&
               sed -i \"s/^pkgver=.*/pkgver=${VERSION}/\" PKGBUILD &&
               sed -i \"s/^pkgrel=.*/pkgrel=1/\" PKGBUILD &&
-              updpkgsums &&
-              makepkg --printsrcinfo > .SRCINFO
+              chown -R builder: . &&
+              su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO'
             "
 
       - name: Publish to AUR
