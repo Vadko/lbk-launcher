@@ -34,7 +34,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Update PKGBUILD version and checksum
+      - name: Update PKGBUILD version and checksums
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -43,16 +43,35 @@ jobs:
           cd aur
           sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-          # Download AppImage (authenticated, works with draft releases)
+
+          # Download all remote sources and compute sha256sums in source order
           gh release download "$TAG" -p "LBK-Launcher-linux.AppImage" -D /tmp --repo Vadko/lbk-launcher
-          SHA256=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
-          # Update first sha256sum (AppImage hash)
-          sed -i "0,/sha256sums=(/{ /sha256sums=(/{n; s/'[^']*'/'${SHA256}'/; } }" PKGBUILD
-          # Update .SRCINFO
+          HASH_APPIMAGE=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
+          HASH_SH=$(sha256sum lbk-launcher.sh | cut -d' ' -f1)
+          HASH_DESKTOP=$(sha256sum lbk-launcher.desktop | cut -d' ' -f1)
+          HASHES=("$HASH_APPIMAGE" "$HASH_SH" "$HASH_DESKTOP")
+          for size in 32 48 64 128 256; do
+            curl -sL "https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-${size}.png" -o "/tmp/icon-${size}.png"
+            HASHES+=("$(sha256sum "/tmp/icon-${size}.png" | cut -d' ' -f1)")
+          done
+
+          # Rebuild sha256sums block in PKGBUILD
+          SUMS="sha256sums=('${HASHES[0]}'"
+          for h in "${HASHES[@]:1}"; do
+            SUMS+="\n            '${h}'"
+          done
+          SUMS+=")"
+          sed -i '/^sha256sums=(/,/^)/c\'"$(echo -e "$SUMS")" PKGBUILD
+
+          # Rebuild .SRCINFO
           sed -i "s/pkgver = .*/pkgver = ${VERSION}/" .SRCINFO
           sed -i "s|download/v[^/]*/LBK|download/v${VERSION}/LBK|" .SRCINFO
-          OLD_HASH=$(grep -m1 'sha256sums = ' .SRCINFO | sed 's/.*= //')
-          sed -i "0,/sha256sums = ${OLD_HASH}/s/sha256sums = ${OLD_HASH}/sha256sums = ${SHA256}/" .SRCINFO
+          # Remove old sha256sums and append new ones
+          sed -i '/^\tsha256sums = /d' .SRCINFO
+          INSERT_AFTER=$(grep -n 'source = icon-256' .SRCINFO | cut -d: -f1)
+          for i in $(seq $((${#HASHES[@]} - 1)) -1 0); do
+            sed -i "${INSERT_AFTER}a\\\\tsha256sums = ${HASHES[$i]}" .SRCINFO
+          done
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
