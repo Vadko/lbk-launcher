@@ -34,51 +34,20 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Update PKGBUILD version and checksums
+      - name: Update PKGBUILD version, checksums and .SRCINFO
+        uses: docker://archlinux:base-devel
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ steps.release.outputs.tag }}"
-          VERSION="${{ steps.release.outputs.version }}"
-          cd aur
-          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
-          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-
-          # Download all remote sources and compute sha256sums in source order
-          gh release download "$TAG" -p "LBK-Launcher-linux.AppImage" -D /tmp --repo Vadko/lbk-launcher
-          HASH_APPIMAGE=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
-          HASH_SH=$(sha256sum lbk-launcher.sh | cut -d' ' -f1)
-          HASH_DESKTOP=$(sha256sum lbk-launcher.desktop | cut -d' ' -f1)
-          HASHES=("$HASH_APPIMAGE" "$HASH_SH" "$HASH_DESKTOP")
-          for size in 32 48 64 128 256; do
-            curl -sL "https://raw.githubusercontent.com/Vadko/lbk-launcher/main/aur/icons/icon-${size}.png" -o "/tmp/icon-${size}.png"
-            HASHES+=("$(sha256sum "/tmp/icon-${size}.png" | cut -d' ' -f1)")
-          done
-
-          # Rebuild sha256sums block in PKGBUILD
-          {
-            echo "sha256sums=('${HASHES[0]}'"
-            for h in "${HASHES[@]:1}"; do
-              echo "            '${h}'"
-            done
-            echo ")"
-          } > /tmp/newsums.txt
-          START=$(grep -n '^sha256sums=(' PKGBUILD | cut -d: -f1)
-          END=$(tail -n +"$START" PKGBUILD | grep -n ')$' | head -1 | cut -d: -f1)
-          END=$((START + END - 1))
-          head -n $((START - 1)) PKGBUILD > PKGBUILD.tmp
-          cat /tmp/newsums.txt >> PKGBUILD.tmp
-          tail -n +$((END + 1)) PKGBUILD >> PKGBUILD.tmp
-          mv PKGBUILD.tmp PKGBUILD
-
-          # Rebuild .SRCINFO
-          sed -i "s/pkgver = .*/pkgver = ${VERSION}/" .SRCINFO
-          sed -i "s|download/v[^/]*/LBK|download/v${VERSION}/LBK|" .SRCINFO
-          sed -i '/^\tsha256sums = /d' .SRCINFO
-          INSERT_AFTER=$(grep -n 'source = icon-256' .SRCINFO | cut -d: -f1)
-          for i in $(seq $((${#HASHES[@]} - 1)) -1 0); do
-            sed -i "${INSERT_AFTER}a\\\\tsha256sums = ${HASHES[$i]}" .SRCINFO
-          done
+          VERSION: ${{ steps.release.outputs.version }}
+        with:
+          args: >-
+            bash -c "
+              pacman -Sy --noconfirm pacman-contrib &&
+              cd aur &&
+              sed -i \"s/^pkgver=.*/pkgver=${VERSION}/\" PKGBUILD &&
+              sed -i \"s/^pkgrel=.*/pkgrel=1/\" PKGBUILD &&
+              updpkgsums &&
+              makepkg --printsrcinfo > .SRCINFO
+            "
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
