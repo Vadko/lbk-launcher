@@ -366,33 +366,33 @@ export async function runUninstaller(
       if (fs.existsSync(enFilePath)) {
         installerPath = enFilePath;
         console.log(
-          `[Installer] Found transliterated uninstaller file: ${installerPath}`
+          `[Uninstaller] Found transliterated uninstaller file: ${installerPath}`
         );
       } else {
-        console.warn(`[Installer] Uninstaller file not found: ${installerPath}`);
+        console.warn(`[Uninstaller] Uninstaller file not found: ${installerPath}`);
         return;
       }
     }
 
-    console.log(`[Installer] Running uninstaller: ${installerPath}`);
+    console.log(`[Uninstaller] Running uninstaller: ${installerPath}`);
 
     const platform = getPlatform();
 
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux if protonPath is provided
-      console.log(`[Installer] Launching uninstaller via Proton: ${protonPath}`);
-      const args = ['/uninstall'];
+      console.log(`[Uninstaller] Launching uninstaller via Proton: ${protonPath}`);
+      const args = ['/uninstall', '/SILENT', '/silent'];
       const exitCode = await runProton({ protonPath, filePath: installerPath, args });
 
       if (exitCode !== null && exitCode !== 0) {
-        console.log(`[Installer] Uninstaller exited with code: ${exitCode}`);
+        console.log(`[Uninstaller] Uninstaller exited with code: ${exitCode}`);
       }
     } else if (platform === 'linux' || platform === 'macos') {
       // Execute natively on Linux/macOS - make executable first
       await new Promise<void>((resolve, reject) => {
         exec(`chmod +x "${installerPath}"`, (error) => {
           if (error) {
-            console.error('[Installer] Failed to make uninstaller executable:', error);
+            console.error('[Uninstaller] Failed to make uninstaller executable:', error);
             reject(error);
             return;
           }
@@ -401,35 +401,35 @@ export async function runUninstaller(
       });
 
       await new Promise<void>((resolve, reject) => {
-        const child = spawn(installerPath, ['/uninstall'], {
+        const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
           stdio: 'inherit',
         });
 
         child.on('exit', (code) => {
-          console.log(`[Installer] Uninstaller exited with code: ${code}`);
+          console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);
           resolve();
         });
 
         child.on('error', (err) => {
-          console.error('[Installer] Failed to run uninstaller:', err);
+          console.error('[Uninstaller] Failed to run uninstaller:', err);
           reject(err);
         });
       });
     } else {
       // Windows
       await new Promise<void>((resolve, reject) => {
-        const child = spawn(installerPath, ['/uninstall'], {
+        const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
           stdio: 'ignore',
           detached: false,
         });
 
         child.on('exit', (code) => {
-          console.log(`[Installer] Uninstaller exited with code: ${code}`);
+          console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);
           resolve();
         });
 
         child.on('error', (err) => {
-          console.error('[Installer] Failed to run uninstaller:', err);
+          console.error('[Uninstaller] Failed to run uninstaller:', err);
           reject(err);
         });
       });
@@ -438,14 +438,14 @@ export async function runUninstaller(
     // Delete the uninstaller file after successful execution
     try {
       fs.unlinkSync(installerPath);
-      console.log(`[Installer] Deleted uninstaller file: ${installerPath}`);
+      console.log(`[Uninstaller] Deleted uninstaller file: ${installerPath}`);
     } catch (deleteError) {
-      console.warn(`[Installer] Failed to delete uninstaller file: ${deleteError}`);
+      console.warn(`[Uninstaller] Failed to delete uninstaller file: ${deleteError}`);
     }
 
-    console.log('[Installer] Uninstaller completed successfully');
+    console.log('[Uninstaller] Uninstaller completed successfully');
   } catch (error) {
-    console.error('[Installer] Error running uninstaller:', error);
+    console.error('[Uninstaller] Error running uninstaller:', error);
     throw new Error(
       `Не вдалося запустити деінсталятор: ${
         error instanceof Error ? error.message : 'Unknown error'
@@ -466,9 +466,7 @@ export async function rerunInstaller(
       const enFilePath = getTransliteratedPath(installerPath);
       if (fs.existsSync(enFilePath)) {
         installerPath = enFilePath;
-        console.log(
-          `[Installer] Found transliterated uninstaller file: ${installerPath}`
-        );
+        console.log(`[Installer] Found transliterated installer file: ${installerPath}`);
       } else {
         throw new Error(`файл інсталятора не знайдено: ${installerPath}`);
       }

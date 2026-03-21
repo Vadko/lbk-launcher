@@ -669,10 +669,10 @@ export async function uninstallTranslation(game: Game): Promise<void> {
 
     // If installer was used, run it with /uninstall parameter first
     if (installInfo.installerPath && fs.existsSync(installInfo.installerPath)) {
-      console.log(`[Installer] Running uninstaller: ${installInfo.installerPath}`);
+      console.log(`[Uninstaller] Running uninstaller: ${installInfo.installerPath}`);
       try {
-        await runUninstaller(installInfo.installerPath);
-        console.log(`[Installer] Uninstaller completed successfully`);
+        await runUninstaller(installInfo.installerPath, installInfo.protonPath);
+        console.log(`[Uninstaller] Uninstaller completed successfully`);
 
         // // After uninstaller completes, clean up installation info and exit
         // const infoPath = findInstallationInfoFile(gamePath);
