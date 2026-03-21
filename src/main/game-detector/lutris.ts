@@ -56,16 +56,16 @@ class LutrisDBManager {
    */
   private getConnection(): Database.Database | null {
     const now = Date.now();
-    
+
     // Check if we need to update database path
     if (!this.dbPath || now - this.lastChecked > this.CHECK_INTERVAL) {
       const newDbPath = getLutrisDBPath();
-      
+
       // Close old connection if path changed
       if (this.db && this.dbPath && newDbPath !== this.dbPath) {
         this.close();
       }
-      
+
       this.dbPath = newDbPath;
       this.lastChecked = now;
     }
@@ -215,9 +215,9 @@ function getLutrisEpicInstallations(): Array<{
 
   // Get all Epic games with their details using cached DB connection
   const dbGames = dbManager.query<LutrisGame>(`
-    SELECT g.name, g.directory, g.service_id, g.slug, sg.details 
-    FROM games g 
-    LEFT JOIN service_games sg ON g.service_id = sg.appid 
+    SELECT g.name, g.directory, g.service_id, g.slug, sg.details
+    FROM games g
+    LEFT JOIN service_games sg ON g.service_id = sg.appid
     WHERE g.service='egs'
   `);
 
@@ -306,7 +306,7 @@ export function getLutrisGogLibrary(): string[] {
   const dbGames = dbManager.query<{ name: string }>(
     `SELECT name FROM games WHERE service='gog'`
   );
-  
+
   for (const game of dbGames) {
     if (game.name) {
       titles.add(getCleanTitle(game.name.trim()));
@@ -326,7 +326,7 @@ export function getLutrisEpicLibrary(): string[] {
   const dbGames = dbManager.query<{ name: string }>(`
     SELECT DISTINCT name FROM (
       SELECT name FROM games WHERE service='egs'
-      UNION 
+      UNION
       SELECT name FROM service_games WHERE service='egs'
     )
   `);
