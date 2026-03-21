@@ -277,11 +277,11 @@ export function findProtons() {
 export function runProton({
   protonPath,
   filePath,
-  installPath,
+  args,
 }: {
   protonPath: string | undefined;
   filePath: string | undefined;
-  installPath?: string;
+  args?: string[];
 }): Promise<number | null> {
   if (!isLinux() || !protonPath || !filePath) return Promise.resolve(null);
   return new Promise((resolve, reject) => {
@@ -319,17 +319,7 @@ export function runProton({
         STEAM_COMPAT_LIBRARY_PATHS: steamPath,
       };
 
-      // Prepare installer arguments
-      const installerArgs = ['run', enFilePath];
-      if (installPath) {
-        const flags = [
-          `/installpath=${installPath}`,
-          `/DIR=${installPath}`,
-          `/INSTALLDIR=${installPath}`,
-        ];
-        installerArgs.push(...flags);
-      }
-
+      const installerArgs = ['run', enFilePath, ...(args || [])];
       const child = spawn(protonPath, installerArgs, {
         env,
         stdio: 'inherit',

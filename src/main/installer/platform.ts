@@ -249,10 +249,16 @@ export async function runInstaller(
 
       onStatus?.({ message: 'Налаштування та запуск Proton' });
 
+      const args = [
+        `/installpath=${installPath}`,
+        `/DIR=${installPath}`,
+        `/INSTALLDIR=${installPath}`,
+      ];
+
       const exitCode = await runProton({
         protonPath,
         filePath: installerPath,
-        installPath,
+        args,
       });
       if (exitCode !== null) {
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
@@ -375,8 +381,8 @@ export async function runUninstaller(
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux if protonPath is provided
       console.log(`[Installer] Launching uninstaller via Proton: ${protonPath}`);
-      const result = await runProton({ protonPath, filePath: installerPath });
-      const exitCode = result.exitCode;
+      const args = ['/uninstall'];
+      const exitCode = await runProton({ protonPath, filePath: installerPath, args });
 
       if (exitCode !== null && exitCode !== 0) {
         console.log(`[Installer] Uninstaller exited with code: ${exitCode}`);
