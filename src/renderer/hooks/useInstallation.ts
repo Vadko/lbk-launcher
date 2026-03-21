@@ -719,6 +719,7 @@ export function useInstallation({
       }
       const button = event.currentTarget;
       button.setAttribute('disabled', 'true');
+      button.classList.add('cursor-loading');
 
       try {
         const result = await window.electronAPI.rerunInstaller(
@@ -751,6 +752,7 @@ export function useInstallation({
         });
       } finally {
         button.removeAttribute('disabled');
+        button.classList.remove('cursor-loading');
       }
     },
     [selectedGame, installationInfo, showModal, checkInstallationStatus]
