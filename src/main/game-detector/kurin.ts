@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import type { InstallationInfo } from '../../shared/types';
 import { fetchGamesByIds } from '../api';
 import { saveInstallationInfo } from '../installer/cache';
 
@@ -100,12 +101,11 @@ function getKurinInstalledData() {
   });
 }
 
-async function createCacheFiles(games: any) {
-  if (!games || games.length === 0) return;
+async function createCacheFiles(games: InstallationInfo[]) {
+  if (games.length === 0) return;
 
   for (const game of games) {
-    const gamePath = game.gamePath;
-    await saveInstallationInfo(gamePath, game);
+    await saveInstallationInfo(game.gamePath, game);
   }
 }
 
@@ -140,9 +140,9 @@ export async function syncKurinGames() {
         ...kurinGame.data,
       };
     })
-    .filter(Boolean);
+    .filter(<T>(g: T | null): g is T => g !== null);
 
-  await createCacheFiles(syncedGames);
+  await createCacheFiles(syncedGames as InstallationInfo[]);
 
   console.log('Synced Kurin games data:', syncedGames);
 

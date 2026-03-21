@@ -23,7 +23,7 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
 
     // === TypeScript ===
-    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/no-unused-vars': 'off', // Використовуємо unused-imports замість цього
     '@typescript-eslint/no-empty-function': 'warn',
     '@typescript-eslint/no-empty-interface': 'warn',
