@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGames } from '@/renderer/hooks/useGames';
+import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
@@ -21,8 +23,16 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
   showTrendsGames = false,
   sortOrder = 'name',
 }) => {
+  const { hideAiTranslations } = useSettingsStore(
+    useShallow((state) => ({
+      hideAiTranslations: state.hideAiTranslations,
+    }))
+  );
   const { setSelectedGame } = useStore();
-  const { games: allGames, isLoading: isLoadingAll } = useGames({ sortOrder });
+  const { games: allGames, isLoading: isLoadingAll } = useGames({
+    sortOrder,
+    hideAiTranslations,
+  });
   const { data: trendingGames, isLoading: isLoadingTrends } = useTrendingGames(
     30,
     showLimit
