@@ -158,7 +158,11 @@ export async function runInstaller(
         });
 
         child.stderr?.on('data', (data) => {
-          console.error(`[Installer stderr] ${data.toString().trim()}`);
+          const line = data.toString().trim();
+          // Filter out quickbms spinner characters (/-\|)
+          if (line && !/^[-\\|/]+$/.test(line)) {
+            console.error(`[Installer stderr] ${line}`);
+          }
         });
 
         child.on('exit', (code) => {
