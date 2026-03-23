@@ -1,12 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGames } from '@/renderer/hooks/useGames';
+import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
-import { useSettingsStore } from '@/renderer/store/useSettingsStore';
-import { useShallow } from 'zustand/react/shallow';
 
 interface GamesSectionProps {
   title: string;
