@@ -1,3 +1,31 @@
+import { exec, spawn } from 'child_process';
+import { clipboard } from 'electron';
+import fs from 'fs';
+import path from 'path';
+import type { Game, InstallationStatus } from '../../shared/types';
+import { getSteamPath } from '../game-detector';
+import { getTransliteratedPath } from '../utils/files';
+import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { runProton } from './proton';
+
+/**
+ * Check if file is an executable installer
+ */
+function isExecutableInstaller(fileName: string): boolean {
+  const executableExtensions = [
+    '.exe',
+    '.msi',
+    '.bat',
+    '.cmd',
+    '.sh',
+    '.run',
+    '.bin',
+    '.appimage',
+  ];
+  const lowerName = fileName.toLowerCase();
+  return executableExtensions.some((ext) => lowerName.endsWith(ext));
+}
+
 /**
  * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
  * If new key's DisplayName contains target words, print UninstallString.
@@ -70,34 +98,6 @@ async function checkNewUninstallRegistryKeys(
   } catch (e) {
     console.warn('[Installer] Failed to read registry keys after installer launch:', e);
   }
-}
-
-import { exec, spawn } from 'child_process';
-import { clipboard } from 'electron';
-import fs from 'fs';
-import path from 'path';
-import type { Game, InstallationStatus } from '../../shared/types';
-import { getSteamPath } from '../game-detector';
-import { getTransliteratedPath } from '../utils/files';
-import { getPlatform, isLinux, isWindows } from '../utils/platform';
-import { runProton } from './proton';
-
-/**
- * Check if file is an executable installer
- */
-function isExecutableInstaller(fileName: string): boolean {
-  const executableExtensions = [
-    '.exe',
-    '.msi',
-    '.bat',
-    '.cmd',
-    '.sh',
-    '.run',
-    '.bin',
-    '.appimage',
-  ];
-  const lowerName = fileName.toLowerCase();
-  return executableExtensions.some((ext) => lowerName.endsWith(ext));
 }
 
 /**

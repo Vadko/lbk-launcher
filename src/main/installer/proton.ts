@@ -352,7 +352,7 @@ export function runProton({
         STEAM_COMPAT_DATA_PATH: prefix,
         STEAM_COMPAT_CLIENT_INSTALL_PATH: steamPath,
         STEAM_COMPAT_LIBRARY_PATHS: steamPath,
-        STEAM_ROOT_PATH: `Z:${steamPath.replace(/\//g, '\\')}`
+        STEAM_ROOT_PATH: `Z:${steamPath.replace(/\//g, '\\')}`,
       };
 
       const installerArgs = ['run', enFilePath, ...(args || [])];

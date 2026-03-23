@@ -54,7 +54,6 @@ import {
   getInstallerFileName,
   getSteamAchievementsPath,
   hasExecutableInstaller,
-  rerunInstaller,
   runInstaller,
   runUninstaller,
 } from './installer/platform';
