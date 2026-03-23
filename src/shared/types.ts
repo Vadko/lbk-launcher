@@ -22,7 +22,9 @@ export interface InstallationInfo {
   installedAt: string;
   gamePath: string;
   hasBackup?: boolean;
+  protonPath?: string; // For Linux Proton installations
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
+  installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
   components?: {
     text: InstallationComponent;
@@ -159,6 +161,7 @@ export interface ElectronAPI {
     customGamePath?: string
   ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
+  rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
   pauseDownload: (
     gameId: string

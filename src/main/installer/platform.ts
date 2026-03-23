@@ -1,9 +1,10 @@
 import { exec, spawn } from 'child_process';
-import { clipboard, shell } from 'electron';
+import { clipboard } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
+import { getTransliteratedPath } from '../utils/files';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
 import { runProton } from './proton';
 
@@ -23,6 +24,80 @@ function isExecutableInstaller(fileName: string): boolean {
   ];
   const lowerName = fileName.toLowerCase();
   return executableExtensions.some((ext) => lowerName.endsWith(ext));
+}
+
+/**
+ * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
+ * If new key's DisplayName contains target words, print UninstallString.
+ */
+async function checkNewUninstallRegistryKeys(
+  beforeHKLM: Set<string>,
+  beforeHKCU: Set<string>
+): Promise<void> {
+  try {
+    const { execSync } = await import('child_process');
+
+    const checkKey = (key: string, label: string) => {
+      try {
+        const displayName = execSync(`reg query "${key}" /v DisplayName`).toString();
+        const uninstallString = execSync(
+          `reg query "${key}" /v UninstallString`
+        ).toString();
+        const nameMatch = displayName.match(/DisplayName\s+REG_SZ\s+(.+)/);
+        const uninstallMatch = uninstallString.match(/UninstallString\s+REG_SZ\s+(.+)/);
+        const name = nameMatch ? nameMatch[1].toLowerCase() : '';
+        if (
+          name.includes('українізатор') ||
+          name.includes('українською') ||
+          name.includes('localization') ||
+          name.includes('ukrainizator')
+        ) {
+          const uninstallVal = uninstallMatch ? uninstallMatch[1] : '(not found)';
+          console.log(`[Installer] New Uninstall registry key detected (${label}):`, key);
+          console.log(
+            '[Installer]   DisplayName:',
+            nameMatch ? nameMatch[1] : '(not found)'
+          );
+          console.log('[Installer]   UninstallString:', uninstallVal);
+        }
+      } catch (e) {
+        // If DisplayName or UninstallString not found, skip
+      }
+    };
+
+    // HKLM
+    const outputHKLM = execSync(
+      'reg query "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
+    ).toString();
+    const uninstallKeysAfterHKLM = new Set(
+      outputHKLM
+        .split('\r\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && line.startsWith('HKEY'))
+    );
+    for (const key of uninstallKeysAfterHKLM) {
+      if (!beforeHKLM.has(key)) {
+        checkKey(key, 'HKLM');
+      }
+    }
+    // HKCU
+    const outputHKCU = execSync(
+      'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
+    ).toString();
+    const uninstallKeysAfterHKCU = new Set(
+      outputHKCU
+        .split('\r\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && line.startsWith('HKEY'))
+    );
+    for (const key of uninstallKeysAfterHKCU) {
+      if (!beforeHKCU.has(key)) {
+        checkKey(key, 'HKCU');
+      }
+    }
+  } catch (e) {
+    console.warn('[Installer] Failed to read registry keys after installer launch:', e);
+  }
 }
 
 /**
@@ -93,7 +168,7 @@ export function hasExecutableInstaller(game: Game): boolean {
 }
 
 /**
- * Run installer file from extracted archive
+ * Run installer file from extracted archive and wait for it to complete
  */
 export async function runInstaller(
   extractDir: string,
@@ -111,8 +186,42 @@ export async function runInstaller(
 
     console.log(`[Installer] Running installer: ${installerPath}`);
 
-    // Determine platform and run installer
     const platform = getPlatform();
+
+    // Windows registry tracking (only for Windows platform)
+    let uninstallKeysBeforeHKLM: Set<string> | undefined = undefined;
+    let uninstallKeysBeforeHKCU: Set<string> | undefined = undefined;
+
+    if (platform === 'windows') {
+      try {
+        const { execSync } = await import('child_process');
+        // HKLM
+        const outputHKLM = execSync(
+          'reg query "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
+        ).toString();
+        uninstallKeysBeforeHKLM = new Set(
+          outputHKLM
+            .split('\r\n')
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0 && line.startsWith('HKEY'))
+        );
+        // HKCU
+        const outputHKCU = execSync(
+          'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
+        ).toString();
+        uninstallKeysBeforeHKCU = new Set(
+          outputHKCU
+            .split('\r\n')
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0 && line.startsWith('HKEY'))
+        );
+      } catch (e) {
+        console.warn(
+          '[Installer] Failed to read registry keys before installer launch:',
+          e
+        );
+      }
+    }
 
     if (platform === 'macos' || platform === 'linux') {
       // macOS or Linux - make executable first
@@ -128,19 +237,32 @@ export async function runInstaller(
       });
     }
 
+    onStatus?.({ message: 'Запуск інсталятора...' });
+
     if (platform === 'linux' && protonPath) {
-      // Use Proton on Linux if protonPath is provided
+      // Use Proton on Linux - Wine registry tracking is handled inside runProton
       console.log(`[Installer] Launching installer via Proton: ${protonPath}`);
+
       // Copy installer path in Wine format to clipboard for user convenience
-      const winePath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
-      clipboard.writeText(winePath);
+      const installPath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
+      clipboard.writeText(installPath);
 
       onStatus?.({ message: 'Налаштування та запуск Proton' });
 
-      const exitCode = await runProton({ protonPath, filePath: installerPath });
+      const args = [
+        `/installpath=${installPath}`,
+        `/DIR=${installPath}`,
+        `/INSTALLDIR=${installPath}`,
+      ];
+
+      const exitCode = await runProton({
+        protonPath,
+        filePath: installerPath,
+        args,
+      });
       if (exitCode !== null) {
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
-        if (exitCode === 1) throw new Error('Встановлення не було завершене');
+        if (exitCode === 1) throw new Error('встановлення не було завершене');
       }
     } else if (platform === 'linux' || platform === 'macos') {
       // Execute native Linux/macOS scripts directly
@@ -178,17 +300,38 @@ export async function runInstaller(
         });
       });
     } else {
-      // Use Electron's shell.openPath for Windows
-      const result = await shell.openPath(installerPath);
+      // Windows platform
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, [], {
+          stdio: 'ignore',
+          detached: false,
+        });
 
-      if (result) {
-        // result is an error string if something went wrong
-        console.error('[Installer] Failed to launch installer:', result);
-        throw new Error(result);
-      }
+        child.on('exit', (code) => {
+          console.log(`[Installer] Installer exited with code: ${code}`);
+          if (code !== null && code !== 0) {
+            reject(new Error(`${code} код помилки`));
+          } else {
+            resolve();
+          }
+        });
+
+        child.on('error', (err) => {
+          console.error('[Installer] Failed to launch installer:', err);
+          reject(err);
+        });
+      });
     }
 
-    console.log('[Installer] Installer launched successfully');
+    // Check for new Windows registry keys after installer launch
+    if (platform === 'windows' && uninstallKeysBeforeHKLM && uninstallKeysBeforeHKCU) {
+      await checkNewUninstallRegistryKeys(
+        uninstallKeysBeforeHKLM,
+        uninstallKeysBeforeHKCU
+      );
+    }
+
+    console.log('[Installer] Installer completed successfully');
   } catch (error) {
     console.error('[Installer] Error running installer:', error);
     throw new Error(
@@ -218,5 +361,137 @@ export async function getSteamAchievementsPath(): Promise<string | null> {
   } catch (error) {
     console.error('[Installer] Error getting Steam achievements path:', error);
     return null;
+  }
+}
+
+/**
+ * Run uninstaller with /uninstall parameter and wait for it to complete
+ * Then delete the installer file
+ */
+export async function runUninstaller(
+  installerPath: string,
+  protonPath?: string
+): Promise<void> {
+  try {
+    if (!fs.existsSync(installerPath)) {
+      const enFilePath = getTransliteratedPath(installerPath);
+      if (fs.existsSync(enFilePath)) {
+        installerPath = enFilePath;
+        console.log(
+          `[Uninstaller] Found transliterated uninstaller file: ${installerPath}`
+        );
+      } else {
+        console.warn(`[Uninstaller] Uninstaller file not found: ${installerPath}`);
+        return;
+      }
+    }
+
+    console.log(`[Uninstaller] Running uninstaller: ${installerPath}`);
+
+    const platform = getPlatform();
+
+    if (platform === 'linux' && protonPath) {
+      // Use Proton on Linux if protonPath is provided
+      console.log(`[Uninstaller] Launching uninstaller via Proton: ${protonPath}`);
+      const args = ['/uninstall', '/SILENT', '/silent'];
+      const exitCode = await runProton({ protonPath, filePath: installerPath, args });
+
+      if (exitCode !== null && exitCode !== 0) {
+        console.log(`[Uninstaller] Uninstaller exited with code: ${exitCode}`);
+      }
+    } else if (platform === 'linux' || platform === 'macos') {
+      // Execute natively on Linux/macOS - make executable first
+      await new Promise<void>((resolve, reject) => {
+        exec(`chmod +x "${installerPath}"`, (error) => {
+          if (error) {
+            console.error('[Uninstaller] Failed to make uninstaller executable:', error);
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
+          stdio: 'inherit',
+        });
+
+        child.on('exit', (code) => {
+          console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);
+          resolve();
+        });
+
+        child.on('error', (err) => {
+          console.error('[Uninstaller] Failed to run uninstaller:', err);
+          reject(err);
+        });
+      });
+    } else {
+      // Windows
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
+          stdio: 'ignore',
+          detached: false,
+        });
+
+        child.on('exit', (code) => {
+          console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);
+          resolve();
+        });
+
+        child.on('error', (err) => {
+          console.error('[Uninstaller] Failed to run uninstaller:', err);
+          reject(err);
+        });
+      });
+    }
+
+    // Delete the uninstaller file after successful execution
+    try {
+      fs.unlinkSync(installerPath);
+      console.log(`[Uninstaller] Deleted uninstaller file: ${installerPath}`);
+    } catch (deleteError) {
+      console.warn(`[Uninstaller] Failed to delete uninstaller file: ${deleteError}`);
+    }
+
+    console.log('[Uninstaller] Uninstaller completed successfully');
+  } catch (error) {
+    console.error('[Uninstaller] Error running uninstaller:', error);
+    throw new Error(
+      `Не вдалося запустити деінсталятор: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
+  }
+}
+
+/**
+ * Rerun installer from a specific path (used for manual installer reruns)
+ */
+export async function rerunInstaller(
+  installerPath: string,
+  protonPath?: string
+): Promise<void> {
+  try {
+    if (!fs.existsSync(installerPath)) {
+      const enFilePath = getTransliteratedPath(installerPath);
+      if (fs.existsSync(enFilePath)) {
+        installerPath = enFilePath;
+        console.log(`[Installer] Found transliterated installer file: ${installerPath}`);
+      } else {
+        throw new Error(`файл інсталятора не знайдено: ${installerPath}`);
+      }
+    }
+
+    const extractDir = path.dirname(installerPath);
+    const installerFileName = path.basename(installerPath);
+
+    await runInstaller(extractDir, installerFileName, undefined, protonPath);
+  } catch (error) {
+    console.error('[Installer] Error re-running installer:', error);
+    throw new Error(
+      `Не вдалося повторно запустити інсталятор: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }

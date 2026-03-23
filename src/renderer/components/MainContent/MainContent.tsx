@@ -4,6 +4,7 @@ import {
   Heart,
   Play,
   RefreshCw,
+  ReplaceAllIcon,
   Settings,
   Trash2,
   Users,
@@ -146,6 +147,7 @@ export const MainContent: React.FC = () => {
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handleRerunInstaller,
     handlePauseDownload,
     handleResumeDownload,
     handleCancelDownload,
@@ -348,7 +350,7 @@ export const MainContent: React.FC = () => {
             {/* Primary actions */}
             {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
               <Button
-                variant="green"
+                variant="primary"
                 icon={<Play size={20} />}
                 onClick={handleLaunchGame}
                 disabled={isLaunching || isInstalling || isUninstalling}
@@ -381,6 +383,17 @@ export const MainContent: React.FC = () => {
                 data-gamepad-action
               >
                 {isUninstalling ? 'Видалення...' : 'Видалити'}
+              </Button>
+            )}
+            {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
+              <Button
+                variant="secondary"
+                icon={<ReplaceAllIcon size={20} />}
+                onClick={handleRerunInstaller}
+                data-gamepad-action
+                title="Запустити інсталятор повторно"
+              >
+                Перевстановити
               </Button>
             )}
 

@@ -35,6 +35,7 @@ interface UseInstallationResult {
     removeOptions: { removeVoice: boolean; removeAchievements: boolean }
   ) => Promise<void>;
   handleUninstall: () => Promise<void>;
+  handleRerunInstaller: (event: React.MouseEvent<HTMLButtonElement>) => Promise<void>;
   handlePauseDownload: () => Promise<void>;
   handleResumeDownload: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
@@ -713,7 +714,7 @@ export function useInstallation({
       return `Оновити до v${selectedGame?.version}`;
     }
     if (installationInfo) {
-      return `Перевстановити (v${installationInfo.version})`;
+      return `Перезавантажити (v${installationInfo.version})`;
     }
     return 'Встановити українізатор';
   }, [
@@ -727,6 +728,53 @@ export function useInstallation({
     installationInfo,
   ]);
 
+  const handleRerunInstaller = useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (!selectedGame || !installationInfo?.installerPath) {
+        console.warn('[useInstallation] No installer path available');
+        return;
+      }
+      const button = event.currentTarget;
+      button.setAttribute('disabled', 'true');
+      button.classList.add('cursor-loading');
+
+      try {
+        const result = await window.electronAPI.rerunInstaller(
+          installationInfo.installerPath,
+          installationInfo.protonPath
+        );
+
+        if (result.success) {
+          showModal({
+            title: 'Інсталятор завершено',
+            message: 'Інсталятор успішно завершив роботу',
+            type: 'success',
+          });
+
+          // Refresh installation info
+          await checkInstallationStatus(selectedGame.id, selectedGame);
+        } else {
+          showModal({
+            title: 'Помилка',
+            message: result.error?.message || 'Не вдалося запустити інсталятор',
+            type: 'error',
+          });
+        }
+      } catch (error) {
+        console.error('[useInstallation] Error re-running installer:', error);
+        showModal({
+          title: 'Помилка',
+          message: 'Не вдалося запустити інсталятор',
+          type: 'error',
+        });
+      } finally {
+        button.removeAttribute('disabled');
+        button.classList.remove('cursor-loading');
+      }
+    },
+    [selectedGame, installationInfo, showModal, checkInstallationStatus]
+  );
+
   return {
     isInstalling,
     isUninstalling,
@@ -737,6 +785,7 @@ export function useInstallation({
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handleRerunInstaller,
     handlePauseDownload,
     handleResumeDownload,
     handleCancelDownload,
