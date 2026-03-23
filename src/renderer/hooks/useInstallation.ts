@@ -126,7 +126,7 @@ export function useInstallation({
           statusMessage: null,
         });
 
-        window.electronAPI.onDownloadProgress?.(
+        const unsubDownloadProgress = window.electronAPI.onDownloadProgress?.(
           (gameId: string, progress: DownloadProgress) => {
             setInstallationProgress(gameId, {
               progress: progress.percent,
@@ -135,18 +135,26 @@ export function useInstallation({
           }
         );
 
-        window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
-          setInstallationProgress(gameId, {
-            statusMessage: status.message,
-          });
-        });
-
-        const result: InstallResult = await window.electronAPI.installTranslation(
-          selectedGame,
-          platform,
-          effectiveOptions,
-          customGamePath
+        const unsubInstallationStatus = window.electronAPI.onInstallationStatus?.(
+          (gameId: string, status) => {
+            setInstallationProgress(gameId, {
+              statusMessage: status.message,
+            });
+          }
         );
+
+        let result: InstallResult;
+        try {
+          result = await window.electronAPI.installTranslation(
+            selectedGame,
+            platform,
+            effectiveOptions,
+            customGamePath
+          );
+        } finally {
+          unsubDownloadProgress?.();
+          unsubInstallationStatus?.();
+        }
 
         // Handle pause - not an error, just stop without clearing progress
         if (result.paused) {
@@ -637,7 +645,7 @@ export function useInstallation({
     });
 
     // Set up progress listeners again
-    window.electronAPI.onDownloadProgress?.(
+    const unsubDownloadProgressResume = window.electronAPI.onDownloadProgress?.(
       (gameId: string, progress: DownloadProgress) => {
         setInstallationProgress(gameId, {
           progress: progress.percent,
@@ -646,13 +654,22 @@ export function useInstallation({
       }
     );
 
-    window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
-      setInstallationProgress(gameId, {
-        statusMessage: status.message,
-      });
-    });
+    const unsubInstallationStatusResume = window.electronAPI.onInstallationStatus?.(
+      (gameId: string, status) => {
+        setInstallationProgress(gameId, {
+          statusMessage: status.message,
+        });
+      }
+    );
 
-    const result = await window.electronAPI.resumeDownload(selectedGame.id);
+    let result: Awaited<ReturnType<typeof window.electronAPI.resumeDownload>>;
+    try {
+      result = await window.electronAPI.resumeDownload(selectedGame.id);
+    } finally {
+      unsubDownloadProgressResume?.();
+      unsubInstallationStatusResume?.();
+    }
+
     if (!result.success) {
       showModal({
         title: 'Помилка',

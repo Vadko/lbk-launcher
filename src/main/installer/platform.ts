@@ -150,7 +150,19 @@ export async function runInstaller(
       await new Promise<void>((resolve, reject) => {
         const child = spawn(installerPath, [], {
           cwd: extractDir,
-          stdio: 'inherit',
+          stdio: ['inherit', 'pipe', 'pipe'],
+        });
+
+        child.stdout?.on('data', (data) => {
+          console.log(`[Installer stdout] ${data.toString().trim()}`);
+        });
+
+        child.stderr?.on('data', (data) => {
+          const line = data.toString().trim();
+          // Filter out quickbms spinner characters (/-\|)
+          if (line && !/^[-\\|/]+$/.test(line)) {
+            console.error(`[Installer stderr] ${line}`);
+          }
         });
 
         child.on('exit', (code) => {

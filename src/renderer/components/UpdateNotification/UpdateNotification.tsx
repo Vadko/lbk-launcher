@@ -19,7 +19,7 @@ export const UpdateNotification = () => {
     if (!window.electronAPI) return;
 
     // Listen for update events
-    window.electronAPI.onUpdateAvailable(async (info) => {
+    const unsubAvailable = window.electronAPI.onUpdateAvailable(async (info) => {
       console.log('Update available:', info);
       if (appUpdateNotificationsEnabled) {
         setUpdateAvailable(true);
@@ -45,20 +45,27 @@ export const UpdateNotification = () => {
       }
     });
 
-    window.electronAPI.onUpdateDownloaded((info) => {
+    const unsubDownloaded = window.electronAPI.onUpdateDownloaded((info) => {
       console.log('Update downloaded:', info);
       setUpdateDownloaded(true);
       setDownloading(false);
     });
 
-    window.electronAPI.onUpdateProgress((progressInfo) => {
+    const unsubProgress = window.electronAPI.onUpdateProgress((progressInfo) => {
       setProgress(Math.round(progressInfo.percent || 0));
     });
 
-    window.electronAPI.onUpdateError((error) => {
+    const unsubError = window.electronAPI.onUpdateError((error) => {
       console.error('Update error:', error);
       setDownloading(false);
     });
+
+    return () => {
+      unsubAvailable?.();
+      unsubDownloaded?.();
+      unsubProgress?.();
+      unsubError?.();
+    };
   }, []);
 
   const handleDownload = async () => {
