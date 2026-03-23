@@ -240,7 +240,7 @@ function ensureTempDirectory(prefix: string): void {
   }
 }
 
-export async function findOrCreateProtonPrefix(
+async function findOrCreateProtonPrefix(
   protonPath: string,
   appName: string
 ): Promise<{ prefix: string; keepPrefix: boolean }> {
