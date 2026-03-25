@@ -103,7 +103,7 @@ export const Placement: React.FC<PlacementProps> = ({
     }
 
     let link: string;
-    if (banner?.link) {
+    if (banner?.link && banner?.image_path) {
       link = banner.link;
     } else if (isKuli) {
       link = 'https://kuli.com.ua/';
