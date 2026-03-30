@@ -266,10 +266,11 @@ export async function runInstaller(
       }
     } else if (platform === 'linux' || platform === 'macos') {
       // Check if this is a Windows-specific file that requires Proton
-      const isWindowsFile = installerPath.toLowerCase().endsWith('.bat') || 
-                            installerPath.toLowerCase().endsWith('.cmd') ||
-                            installerPath.toLowerCase().endsWith('.exe') ||
-                            installerPath.toLowerCase().endsWith('.msi');
+      const isWindowsFile =
+        installerPath.toLowerCase().endsWith('.bat') ||
+        installerPath.toLowerCase().endsWith('.cmd') ||
+        installerPath.toLowerCase().endsWith('.exe') ||
+        installerPath.toLowerCase().endsWith('.msi');
 
       if (isWindowsFile) {
         throw new Error('Windows інсталятор (.bat/.cmd/.exe/.msi) потребує Proton.');
@@ -312,14 +313,15 @@ export async function runInstaller(
     } else {
       // Windows platform
       await new Promise<void>((resolve, reject) => {
-        const isWindowsBatchFile = installerPath.toLowerCase().endsWith('.bat') || 
-                                   installerPath.toLowerCase().endsWith('.cmd');
-        
-        const child = isWindowsBatchFile 
+        const isWindowsBatchFile =
+          installerPath.toLowerCase().endsWith('.bat') ||
+          installerPath.toLowerCase().endsWith('.cmd');
+
+        const child = isWindowsBatchFile
           ? spawn(installerPath, [], {
               stdio: ['ignore', 'pipe', 'pipe'],
               detached: false,
-              shell: true
+              shell: true,
             })
           : spawn(installerPath, [], {
               stdio: 'ignore',
@@ -461,10 +463,11 @@ export async function runUninstaller(
       // Windows
       await new Promise<void>((resolve, reject) => {
         const args = ['/uninstall', '/SILENT', '/silent'];
-        const isWindowsBatchFile = installerPath.toLowerCase().endsWith('.bat') || 
-                                   installerPath.toLowerCase().endsWith('.cmd');
-        
-        const child = isWindowsBatchFile 
+        const isWindowsBatchFile =
+          installerPath.toLowerCase().endsWith('.bat') ||
+          installerPath.toLowerCase().endsWith('.cmd');
+
+        const child = isWindowsBatchFile
           ? spawn(installerPath, args, {
               stdio: 'ignore',
               detached: false,
