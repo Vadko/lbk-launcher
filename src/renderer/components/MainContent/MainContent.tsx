@@ -137,7 +137,7 @@ export const MainContent: React.FC = () => {
 
     // Check cache directly to avoid flickering when switching between cached games
     const cachedData = bannerCacheRef.current.get(selectedGame.id);
-    
+
     // If we have cached data for this game, use it immediately
     if (cachedData) {
       const type =

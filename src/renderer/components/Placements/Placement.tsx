@@ -78,7 +78,9 @@ export const Placement: React.FC<PlacementProps> = ({
               </span>
             </div>
 
-            <Button variant="primary" className="flex-shrink-0">Перейти на KULI →</Button>
+            <Button variant="primary" className="flex-shrink-0">
+              Перейти на KULI →
+            </Button>
           </>
         )}
       </>
