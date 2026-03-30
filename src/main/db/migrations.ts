@@ -835,7 +835,9 @@ const migrations: Migration[] = [
         VALUES ('migration_search_keywords_fts_done', '1', datetime('now'))
       `);
 
-      console.log(`[Migrations] Completed: add_search_keywords_to_fts (${games.length} games reindexed, full re-sync scheduled)`);
+      console.log(
+        `[Migrations] Completed: add_search_keywords_to_fts (${games.length} games reindexed, full re-sync scheduled)`
+      );
     },
   },
 ];

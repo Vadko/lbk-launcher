@@ -228,11 +228,9 @@ export function upsertGameSingle(db: Database.Database, game: Game): void {
 
   // Sync FTS
   db.prepare('DELETE FROM games_fts WHERE game_id = ?').run(game.id);
-  db.prepare('INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)').run(
-    game.id,
-    params.name_search,
-    params.search_keywords
-  );
+  db.prepare(
+    'INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)'
+  ).run(game.id, params.name_search, params.search_keywords);
 }
 
 /**
