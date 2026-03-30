@@ -367,6 +367,7 @@ export type Database = {
           logo_path: string | null
           name: string
           platforms: string[]
+          search_keywords: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           support_url: string | null
@@ -430,6 +431,7 @@ export type Database = {
           logo_path?: string | null
           name: string
           platforms?: string[]
+          search_keywords?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           support_url?: string | null
@@ -493,6 +495,7 @@ export type Database = {
           logo_path?: string | null
           name?: string
           platforms?: string[]
+          search_keywords?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           support_url?: string | null
@@ -587,6 +590,7 @@ export type Database = {
           name_search: string | null
           platforms: string[]
           project_id: string | null
+          search_keywords: string | null
           slug: string
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
@@ -656,6 +660,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          search_keywords?: string | null
           slug: string
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
@@ -725,6 +730,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          search_keywords?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
