@@ -9,7 +9,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameBannersResult } from '@/main/db/banners-api';
 import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
@@ -54,6 +54,8 @@ export const MainContent: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
+  const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
+  const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
 
   const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
   const isCheckingInstallation = selectedGame
@@ -71,15 +73,28 @@ export const MainContent: React.FC = () => {
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
 
-  // Load banner data for selected game
+  // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
     let isMounted = true;
+    let showTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const loadBannerData = async () => {
       if (!selectedGame?.id) {
         setBannerData(null);
+        setLoadedBannerGameId(null);
         return;
       }
+
+      // Check cache first - show immediately from cache
+      const cachedData = bannerCacheRef.current.get(selectedGame.id);
+      if (cachedData) {
+        setBannerData(cachedData);
+        setLoadedBannerGameId(selectedGame.id);
+        return;
+      }
+
+      setBannerData(null);
+      setLoadedBannerGameId(null);
 
       try {
         const result = await window.electronAPI.fetchBannersForGame(
@@ -88,11 +103,20 @@ export const MainContent: React.FC = () => {
         );
         if (!isMounted) return;
 
-        setBannerData(result);
+        // Cache the result
+        bannerCacheRef.current.set(selectedGame.id, result);
+
+        showTimeout = setTimeout(() => {
+          if (isMounted) {
+            setBannerData(result);
+            setLoadedBannerGameId(selectedGame.id);
+          }
+        }, 500);
       } catch (error) {
         if (!isMounted) return;
         console.error('Error loading banner data:', error);
         setBannerData(null);
+        setLoadedBannerGameId(selectedGame.id);
       }
     };
 
@@ -100,12 +124,44 @@ export const MainContent: React.FC = () => {
 
     return () => {
       isMounted = false;
+      if (showTimeout) {
+        clearTimeout(showTimeout);
+      }
     };
   }, [selectedGame?.id, selectedGame?.slug]);
 
   const bannerInfo = useMemo(() => {
     if (!selectedGame) {
       return { data: null };
+    }
+
+    // Check cache directly to avoid flickering when switching between cached games
+    const cachedData = bannerCacheRef.current.get(selectedGame.id);
+    
+    // If we have cached data for this game, use it immediately
+    if (cachedData) {
+      const type =
+        cachedData.banner?.type ??
+        (cachedData.isKuli ? 'narrow' : null) ??
+        (selectedGame.support_url ? 'small_square' : null) ??
+        null;
+
+      return {
+        data: cachedData.banner || null,
+        isKuli: cachedData.isKuli || false,
+        support_url: selectedGame?.support_url || null,
+        placementType: type,
+      };
+    }
+
+    // If not in cache and not loaded for this game yet, show nothing
+    if (loadedBannerGameId !== selectedGame.id) {
+      return {
+        data: null,
+        isKuli: false,
+        support_url: null,
+        placementType: null,
+      };
     }
 
     const type =
@@ -120,7 +176,7 @@ export const MainContent: React.FC = () => {
       support_url: selectedGame?.support_url || null,
       placementType: type,
     };
-  }, [selectedGame, bannerData]);
+  }, [selectedGame, bannerData, loadedBannerGameId]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {

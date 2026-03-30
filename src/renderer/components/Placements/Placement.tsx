@@ -71,14 +71,14 @@ export const Placement: React.FC<PlacementProps> = ({
         {isNarrowType && (
           <>
             <div>
-              Переклад наявний за підтримки KULI
+              <span>Переклад наявний за підтримки KULI</span>{' '}
               <span className="text-color-mixed">
                 Будь <span className="font-semibold">першим</span>, хто зіграє з
                 перекладом!
               </span>
             </div>
 
-            <Button variant="primary">Перейти на KULI →</Button>
+            <Button variant="primary" className="flex-shrink-0">Перейти на KULI →</Button>
           </>
         )}
       </>
@@ -119,7 +119,7 @@ export const Placement: React.FC<PlacementProps> = ({
   return (
     <div
       ref={elementRef}
-      className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between overflow-hidden ${isNarrowType ? 'max-h-[90px]' : ''} ${banner ? '!p-0' : ''} ${className}`}
+      className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between overflow-hidden gap-3 ${isNarrowType ? 'max-h-[90px]' : ''} ${banner ? '!p-0' : ''} ${className}`}
       onClick={handleClick}
       role="button"
       data-gamepad-action="true"
