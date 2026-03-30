@@ -1,4 +1,4 @@
-import { Check, Globe, Send, Share2, Youtube } from 'lucide-react';
+import { Globe, Send, Share2, Youtube } from 'lucide-react';
 import React, { useState } from 'react';
 import { teamToSlug } from '../../../shared/search-utils';
 import type { Game } from '../../types/game';
@@ -7,6 +7,7 @@ import { EpicIcon } from '../Icons/EpicIcon';
 import { GOGIcon } from '../Icons/GOGIcon';
 import { SteamIcon } from '../Icons/SteamIcon';
 import { XIcon } from '../Icons/XIcon';
+import { ShareModal } from '../Modal/ShareModal';
 
 interface SocialLinksCardProps {
   game: Game;
@@ -95,57 +96,34 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
 };
 
 const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleShare = async () => {
-    if (!game.slug || !game.team) return;
-
-    const teamSlug = teamToSlug(game.team);
-    const shareUrl = `https://lbklauncher.com/open/${game.slug}/${teamSlug}`;
-
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-      const textArea = document.createElement('textarea');
-      textArea.value = shareUrl;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (!game.slug || !game.team) return null;
 
+  const teamSlug = teamToSlug(game.team);
+
   return (
-    <button
-      onClick={handleShare}
-      data-nav-group="main-links"
-      className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border transition-all duration-300 ${
-        copied
-          ? 'border-green-500/60 text-green-400'
-          : 'border-border hover:border-neon-purple/60'
-      }`}
-      title="Скопіювати посилання"
-    >
-      <div
-        className={`transition-all duration-300 ${
-          copied ? 'text-green-400' : 'text-neon-purple group-hover:brightness-125'
-        }`}
+    <>
+      <button
+        onClick={() => setIsModalOpen(true)}
+        data-nav-group="main-links"
+        className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-neon-purple/60 transition-all duration-300"
+        title="Поділитися"
       >
-        {copied ? <Check size={18} /> : <Share2 size={18} />}
-      </div>
-      <span className="text-sm font-medium">
-        {copied ? 'Скопійовано!' : 'Поділитись'}
-      </span>
-    </button>
+        <div className="text-neon-purple group-hover:brightness-125 transition-all duration-300">
+          <Share2 size={18} />
+        </div>
+        <span className="text-sm font-medium">Поділитись</span>
+      </button>
+      <ShareModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        gameSlug={game.slug}
+        teamSlug={teamSlug}
+        gameName={game.name}
+        teamName={game.team}
+      />
+    </>
   );
 };
 
