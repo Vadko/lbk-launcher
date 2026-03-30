@@ -265,6 +265,16 @@ export async function runInstaller(
         if (exitCode === 1) throw new Error('встановлення не було завершене');
       }
     } else if (platform === 'linux' || platform === 'macos') {
+      // Check if this is a Windows-specific file that requires Proton
+      const isWindowsFile = installerPath.toLowerCase().endsWith('.bat') || 
+                            installerPath.toLowerCase().endsWith('.cmd') ||
+                            installerPath.toLowerCase().endsWith('.exe') ||
+                            installerPath.toLowerCase().endsWith('.msi');
+
+      if (isWindowsFile) {
+        throw new Error('Windows інсталятор (.bat/.cmd/.exe/.msi) потребує Proton.');
+      }
+
       // Execute native Linux/macOS scripts directly
       console.log(`[Installer] Executing native installer: ${installerPath}`);
       onStatus?.({ message: 'Запуск інсталятора...' });
@@ -302,10 +312,30 @@ export async function runInstaller(
     } else {
       // Windows platform
       await new Promise<void>((resolve, reject) => {
-        const child = spawn(installerPath, [], {
-          stdio: 'ignore',
-          detached: false,
-        });
+        const isWindowsBatchFile = installerPath.toLowerCase().endsWith('.bat') || 
+                                   installerPath.toLowerCase().endsWith('.cmd');
+        
+        const child = isWindowsBatchFile 
+          ? spawn(installerPath, [], {
+              stdio: ['ignore', 'pipe', 'pipe'],
+              detached: false,
+              shell: true
+            })
+          : spawn(installerPath, [], {
+              stdio: 'ignore',
+              detached: false,
+            });
+
+        // Add output capturing for batch files
+        if (isWindowsBatchFile) {
+          child.stdout?.on('data', (data) => {
+            console.log(`[Installer stdout] ${data.toString('utf8').trim()}`);
+          });
+
+          child.stderr?.on('data', (data) => {
+            console.error(`[Installer stderr] ${data.toString('utf8').trim()}`);
+          });
+        }
 
         child.on('exit', (code) => {
           console.log(`[Installer] Installer exited with code: ${code}`);
@@ -430,10 +460,20 @@ export async function runUninstaller(
     } else {
       // Windows
       await new Promise<void>((resolve, reject) => {
-        const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
-          stdio: 'ignore',
-          detached: false,
-        });
+        const args = ['/uninstall', '/SILENT', '/silent'];
+        const isWindowsBatchFile = installerPath.toLowerCase().endsWith('.bat') || 
+                                   installerPath.toLowerCase().endsWith('.cmd');
+        
+        const child = isWindowsBatchFile 
+          ? spawn(installerPath, args, {
+              stdio: 'ignore',
+              detached: false,
+              shell: true,
+            })
+          : spawn(installerPath, args, {
+              stdio: 'ignore',
+              detached: false,
+            });
 
         child.on('exit', (code) => {
           console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);
