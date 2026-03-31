@@ -28,11 +28,12 @@ jobs:
           if [ -n "${{ github.event.inputs.app_version }}" ]; then
             TAG="${{ github.event.inputs.app_version }}"
           else
-            TAG=$(gh api repos/Vadko/lbk-launcher/releases/latest --jq '.tag_name')
+            TAG=$(gh api repos/Vadko/lbk-launcher/releases --jq 'first | .tag_name')
           fi
           VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved: $TAG"
 
       - name: Download AppImage via gh CLI (supports draft releases)
         env:
