@@ -34,6 +34,15 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Download AppImage via gh CLI (supports draft releases)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ steps.release.outputs.tag }}" \
+            --repo Vadko/lbk-launcher \
+            --pattern "LBK-Launcher-linux.AppImage" \
+            --dir aur/
+
       - name: Update PKGBUILD version, checksums and .SRCINFO
         uses: docker://archlinux:base-devel
         env:
@@ -49,6 +58,9 @@ jobs:
               chown -R builder: . &&
               su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO'
             "
+
+      - name: Remove downloaded AppImage (not needed in repo)
+        run: rm -f aur/LBK-Launcher-linux.AppImage
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
