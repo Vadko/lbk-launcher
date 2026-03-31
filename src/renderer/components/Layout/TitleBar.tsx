@@ -32,7 +32,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
 
   return (
     <div
-      className={`drag-region fixed top-0 left-0 right-0 h-8 flex items-center justify-between px-4 z-[9999] ${
+      className={`drag-region fixed top-0 left-0 right-0 h-8 flex items-center justify-between pl-4 z-[9999] ${
         online ? '' : 'bg-red-500/20'
       } transition-colors`}
     >
