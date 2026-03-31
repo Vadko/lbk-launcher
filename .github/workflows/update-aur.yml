@@ -56,8 +56,7 @@ jobs:
               sed -i \"s/^pkgver=.*/pkgver=${VERSION}/\" PKGBUILD &&
               sed -i \"s/^pkgrel=.*/pkgrel=1/\" PKGBUILD &&
               chown -R builder: . &&
-              su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO' &&
-              rm -f LBK-Launcher-linux.AppImage
+              su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO'
             "
 
       - name: Publish to AUR
