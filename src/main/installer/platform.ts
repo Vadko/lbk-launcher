@@ -318,7 +318,7 @@ export async function runInstaller(
           installerPath.toLowerCase().endsWith('.cmd');
 
         const child = isWindowsBatchFile
-          ? spawn(installerPath, [], {
+          ? spawn(`"${installerPath}"`, [], {
               stdio: ['ignore', 'pipe', 'pipe'],
               detached: false,
               shell: true,
