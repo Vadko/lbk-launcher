@@ -56,11 +56,9 @@ jobs:
               sed -i \"s/^pkgver=.*/pkgver=${VERSION}/\" PKGBUILD &&
               sed -i \"s/^pkgrel=.*/pkgrel=1/\" PKGBUILD &&
               chown -R builder: . &&
-              su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO'
+              su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO' &&
+              rm -f LBK-Launcher-linux.AppImage
             "
-
-      - name: Remove downloaded AppImage (not needed in repo)
-        run: rm -f aur/LBK-Launcher-linux.AppImage
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
