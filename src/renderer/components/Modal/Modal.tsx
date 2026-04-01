@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface ModalProps {
   footer?: React.ReactNode;
   showCloseButton?: boolean;
   styleModal?: 'normal' | 'promo';
+  usePortal?: boolean;
+  classNames?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -20,13 +23,16 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   showCloseButton = true,
   styleModal = 'normal',
-}) => (
-  <AnimatePresence>
-    {isOpen && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center"
-        onClick={onClose}
-      >
+  usePortal = false,
+  classNames = '',
+}) => {
+  const content = (
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={onClose}
+        >
         {/* Backdrop with blur */}
         <motion.div
           className={`absolute inset-0  backdrop-blur-xl modal-backdrop ${styleModal === 'promo' ? 'bg-black/90' : 'bg-black/60'}`}
@@ -42,6 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
           aria-modal="true"
           aria-labelledby="modal-title"
           className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content 
+            ${classNames}
             ${styleModal === 'promo' ? 'glass-card glass-card-gold !p-0 overflow-hidden min-h-[400px]' : 'bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl '}`}
           onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -98,8 +105,11 @@ export const Modal: React.FC<ModalProps> = ({
               <div className="overflow-y-auto break-words flex-1">{children}</div>
             </>
           )}
-        </motion.div>
-      </div>
-    )}
-  </AnimatePresence>
-);
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
+  return usePortal ? createPortal(content, document.body) : content;
+};

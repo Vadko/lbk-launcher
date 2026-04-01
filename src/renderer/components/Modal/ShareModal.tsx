@@ -1,13 +1,14 @@
-import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Copy, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { DiscordIcon } from '../Icons/DiscordIcon';
+import { Check, Copy } from 'lucide-react';
+import React, { useState } from 'react';
+import { Button } from '../ui/Button';
 import { SignalIcon } from '../Icons/SignalIcon';
 import { TelegramIcon } from '../Icons/TelegramIcon';
 import { ThreadsIcon } from '../Icons/ThreadsIcon';
-import { ViberIcon } from '../Icons/ViberIcon';
+import { WhatsAppIcon } from '../Icons/WhatsAppIcon';
+import { FacebookIcon } from '../Icons/FacebookIcon';
+import { RedditIcon } from '../Icons/RedditIcon';
 import { XIcon } from '../Icons/XIcon';
-import { YouTubeIcon } from '../Icons/YouTubeIcon';
+import { Modal } from './Modal';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -36,30 +37,30 @@ const createSocialPlatforms = (): SocialPlatform[] => [
       `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}&type=custom_url&app_absent=0`,
   },
   {
-    key: 'viber',
-    name: 'Viber',
-    icon: <ViberIcon size={24} />,
-    color: 'text-[#7360f2] hover:bg-[#7360f2]/20',
+    key: 'whatsapp',
+    name: 'WhatsApp',
+    icon: <WhatsAppIcon size={24} />,
+    color: 'text-[#25D366] hover:bg-[#25D366]/20',
     getShareUrl: (shareUrl, shareText) =>
-      `viber://forward?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
+      `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
   },
   {
-    key: 'discord',
-    name: 'Discord',
-    icon: <DiscordIcon size={24} />,
-    color: 'text-[#5865F2] hover:bg-[#5865F2]/20',
-    // Discord doesn't have a direct share URL, just opens DMs
+    key: 'reddit',
+    name: 'Reddit',
+    icon: <RedditIcon size={24} />,
+    color: 'text-[#FF4500] hover:bg-[#FF4500]/20',
+    // Reddit share URL
     getShareUrl: (shareUrl, shareText) =>
-      `https://discord.com/channels/@me?message=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`,
+      `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`,
   },
   {
-    key: 'youtube',
-    name: 'YouTube',
-    icon: <YouTubeIcon size={24} />,
-    color: 'text-[#FF0000] hover:bg-[#FF0000]/20',
-    // YouTube Community post
+    key: 'facebook',
+    name: 'Facebook',
+    icon: <FacebookIcon size={24} />,
+    color: 'text-[#1877F2] hover:bg-[#1877F2]/20',
+    // Facebook share URL
     getShareUrl: (shareUrl, shareText) =>
-      `https://www.youtube.com/post_create?content=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`,
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`,
   },
   {
     key: 'signal',
@@ -102,13 +103,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = shareUrl;
+      textArea.value = `${shareText}\n${shareUrl}`;
       textArea.style.position = 'fixed';
       textArea.style.opacity = '0';
       document.body.appendChild(textArea);
@@ -125,120 +126,54 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
-
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={onClose}
-        >
-          {/* Backdrop with blur */}
-          <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-xl modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-          />
-
-          {/* Modal content */}
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="share-modal-title"
-            className="relative max-w-[480px] w-full mx-4 bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl backdrop-blur-xl"
-            onClick={(e) => e.stopPropagation()}
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{
-              duration: 0.2,
-              ease: [0.23, 1, 0.32, 1],
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h3
-                id="share-modal-title"
-                className="text-lg font-semibold text-text-main"
-              >
-                Поширити
-              </h3>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Поширити"
+      classNames="w-[514px]"
+      usePortal
+    >
+      <div className="space-y-6">
+        {/* Social platforms */}
+        <div>
+          <p className="text-sm text-text-muted mb-4">Поділитися в:</p>
+          <div className="flex flex-wrap gap-3">
+            {socialPlatforms.map((platform) => (
               <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-glass-hover transition-colors"
+                key={platform.key}
+                onClick={() => handleShare(platform)}
+                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 ${platform.color}`}
+                title={platform.name}
               >
-                <X size={18} className="text-text-muted" />
+                {platform.icon}
               </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Social platforms */}
-              <div>
-                <p className="text-sm text-text-muted mb-4">Поділитися в:</p>
-                <div className="flex flex-wrap gap-3">
-                  {socialPlatforms.map((platform) => (
-                    <button
-                      key={platform.key}
-                      onClick={() => handleShare(platform)}
-                      className={`w-12 h-12 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 ${platform.color}`}
-                      title={platform.name}
-                    >
-                      {platform.icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Copy link */}
-              <div>
-                <p className="text-sm text-text-muted mb-3">Або скопіюйте посилання:</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={shareUrl}
-                    readOnly
-                    className="flex-1 px-4 py-3 bg-glass border border-border rounded-xl text-sm text-text-main focus:outline-none focus:border-border-hover cursor-text"
-                    onClick={(e) => e.currentTarget.select()}
-                  />
-                  <button
-                    onClick={handleCopy}
-                    className={`px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 flex items-center gap-2 min-w-[140px] justify-center ${
-                      copied
-                        ? 'bg-green-500/20 text-green-400 border border-green-500/40'
-                        : 'bg-neon-purple/20 text-neon-purple border border-neon-purple/40 hover:bg-neon-purple/30'
-                    }`}
-                  >
-                    {copied ? (
-                      <>
-                        <Check size={18} />
-                        Скопійовано!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={18} />
-                        Копіювати
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+            ))}
+          </div>
         </div>
-      )}
-    </AnimatePresence>
+
+        {/* Copy link */}
+        <div>
+          <p className="text-sm text-text-muted mb-3">Або скопіюйте посилання:</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={shareUrl}
+              readOnly
+              className="flex-1 px-4 py-3 bg-glass border border-border rounded-xl text-sm text-text-main focus:outline-none focus:border-border-hover cursor-text"
+              onClick={(e) => e.currentTarget.select()}
+            />
+            <Button
+              onClick={handleCopy}
+              variant={copied ? 'accent' : 'primary'}
+              icon={copied ? <Check size={18} /> : <Copy size={18} />}
+              className="min-w-[140px] !px-4 !py-3 !text-sm"
+            >
+              {copied ? 'Скопійовано!' : 'Копіювати текст'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 };
