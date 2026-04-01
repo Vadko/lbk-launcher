@@ -17,10 +17,10 @@ export const StatusCard: React.FC<StatusCardProps> = ({ game }) => (
       {game.fonts_progress != null && game.fonts_progress > 0 && (
         <ProgressBar label="Шрифти" value={game.fonts_progress} color="#FDA0B2" />
       )}
-      {game.textures_progress != null && game.textures_progress > 0 && (
+      {game.textures_progress != null && (
         <ProgressBar label="Текстури" value={game.textures_progress} color="#BDFC9F" />
       )}
-      {game.voice_progress != null && game.voice_progress > 0 && (
+      {game.voice_progress != null && (
         <ProgressBar label="Озвучення" value={game.voice_progress} color="#06b6d4" />
       )}
     </div>
