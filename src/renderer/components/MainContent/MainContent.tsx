@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Download,
   EyeOff,
@@ -553,30 +554,51 @@ export const MainContent: React.FC = () => {
           </div>
         )}
 
-        {bannerInfo.placementType === 'narrow' && (
-          <Placement
-            banner={bannerInfo.data}
-            placementType="narrow"
-            gameId={selectedGame.id}
-            isKuli={bannerInfo.isKuli}
-            className="placement-long mb-6"
-          />
-        )}
+        <AnimatePresence mode="wait">
+          {bannerInfo.placementType === 'narrow' && (
+            <motion.div
+              key={`narrow-${selectedGame.id}`}
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-6"
+            >
+              <Placement
+                banner={bannerInfo.data}
+                placementType="narrow"
+                gameId={selectedGame.id}
+                isKuli={bannerInfo.isKuli}
+                className="placement-long"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div
           className={`grid grid-cols-1 ${bannerInfo.placementType === 'small_square' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
         >
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
-          {bannerInfo.placementType === 'small_square' && (
-            <Placement
-              banner={bannerInfo.data}
-              placementType="small_square"
-              gameId={selectedGame.id}
-              supportUrl={selectedGame.support_url || undefined}
-              className="placement"
-            />
-          )}
+          <AnimatePresence>
+            {bannerInfo.placementType === 'small_square' && (
+              <motion.div
+                key={`small-square-${selectedGame.id}`}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <Placement
+                  banner={bannerInfo.data}
+                  placementType="small_square"
+                  gameId={selectedGame.id}
+                  supportUrl={selectedGame.support_url || undefined}
+                  className="placement h-full"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="mb-6">
