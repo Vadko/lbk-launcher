@@ -1,4 +1,4 @@
-import { Check, Globe, Send, Share2, Youtube } from 'lucide-react';
+import { Book, Check, Globe, Send, Share2, Youtube } from 'lucide-react';
 import React, { useState } from 'react';
 import { teamToSlug } from '../../../shared/search-utils';
 import type { Game } from '../../types/game';
@@ -152,8 +152,12 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
 export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   const links = [
     game.website && {
-      icon: <Globe size={18} />,
-      label: 'Вебсайт',
+      icon: game.website.includes('steamcommunity.com') ? (
+        <Book size={18} />
+      ) : (
+        <Globe size={18} />
+      ),
+      label: game.website.includes('steamcommunity.com/sharedfiles/filedetails') ? 'Steam посібник' : 'Вебсайт',
       url: game.website,
       color: 'text-color-accent',
     },

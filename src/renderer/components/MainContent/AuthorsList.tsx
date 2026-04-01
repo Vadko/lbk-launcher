@@ -1,6 +1,7 @@
 import { Star } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { Tooltip } from '../ui/Tooltip';
 
 interface AuthorsListProps {
@@ -13,10 +14,18 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  const setSelectedAuthors = useSettingsStore((state) => state.setSelectedAuthors);
+  const setSpecialFilter = useSettingsStore((state) => state.setSpecialFilter);
+
   const authors = team.split(',').map((a) => a.trim());
   const visibleAuthors = authors.slice(0, maxVisible);
   const hiddenAuthors = authors.slice(maxVisible);
   const hasMore = hiddenAuthors.length > 0;
+
+  const handleAuthorClick = (author: string) => {
+    setSpecialFilter(null);
+    setSelectedAuthors([author]);
+  };
 
   const renderAuthor = (author: string, showComma: boolean) => {
     const specialInfo = getSpecialTranslatorInfo(author);
@@ -24,17 +33,21 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
 
     return (
       <span key={author}>
-        <span className={isSpecial ? 'text-yellow-400' : ''}>
+        <button
+          type="button"
+          onClick={() => handleAuthorClick(author)}
+          className={`hover:underline cursor-pointer ${isSpecial ? 'text-yellow-400' : ''}`}
+        >
           {author}
-          {isSpecial && specialInfo && (
-            <Tooltip content={specialInfo.description}>
-              <Star
-                size={12}
-                className="ml-1 fill-yellow-400 text-yellow-400 cursor-help"
-              />
-            </Tooltip>
-          )}
-        </span>
+        </button>
+        {isSpecial && specialInfo && (
+          <Tooltip content={specialInfo.description}>
+            <Star
+              size={12}
+              className="ml-1 fill-yellow-400 text-yellow-400 cursor-help inline-block"
+            />
+          </Tooltip>
+        )}
         {showComma && <span className="text-text-main">, </span>}
       </span>
     );
@@ -76,9 +89,16 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
 
                   return (
                     <div key={author} className="flex items-center gap-1">
-                      <span className={isSpecial ? 'text-yellow-400' : 'text-text-main'}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleAuthorClick(author);
+                          setShowPopover(false);
+                        }}
+                        className={`hover:underline cursor-pointer ${isSpecial ? 'text-yellow-400' : 'text-text-main'}`}
+                      >
                         {author}
-                      </span>
+                      </button>
                       {isSpecial && specialInfo && (
                         <Tooltip content={specialInfo.description}>
                           <Star
