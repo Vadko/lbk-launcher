@@ -610,6 +610,7 @@ export const MainContent: React.FC = () => {
             <FundraisingProgressCard
               current={selectedGame.fundraising_current || 0}
               goal={selectedGame.fundraising_goal}
+              supportUrl={selectedGame.support_url}
             />
           </div>
         )}

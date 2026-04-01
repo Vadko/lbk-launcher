@@ -33,6 +33,7 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => (
     target="_blank"
     href={url}
     rel="noopener noreferrer"
+    data-gamepad-action="true"
   >
     <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>
       {icon}
@@ -79,6 +80,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
   return (
     <a
       data-nav-group="main-links"
+      data-gamepad-action="true"
       className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border ${config.hoverColor} hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 ease-out`}
       title={`Відкрити в ${config.title}`}
       href={config.url}
@@ -128,6 +130,7 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
     <button
       onClick={handleShare}
       data-nav-group="main-links"
+      data-gamepad-action="true"
       className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border transition-all duration-300 ${
         copied
           ? 'border-green-500/60 text-green-400'
