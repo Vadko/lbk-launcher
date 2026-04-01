@@ -553,6 +553,16 @@ export const MainContent: React.FC = () => {
           </div>
         )}
 
+        {bannerInfo.placementType === 'narrow' && (
+          <Placement
+            banner={bannerInfo.data}
+            placementType="narrow"
+            gameId={selectedGame.id}
+            isKuli={bannerInfo.isKuli}
+            className="placement-long mb-6"
+          />
+        )}
+
         <div
           className={`grid grid-cols-1 ${bannerInfo.placementType === 'small_square' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
         >
@@ -568,16 +578,6 @@ export const MainContent: React.FC = () => {
             />
           )}
         </div>
-
-        {bannerInfo.placementType === 'narrow' && (
-          <Placement
-            banner={bannerInfo.data}
-            placementType="narrow"
-            gameId={selectedGame.id}
-            isKuli={bannerInfo.isKuli}
-            className="placement-long mb-6"
-          />
-        )}
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />

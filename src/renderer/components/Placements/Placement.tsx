@@ -65,17 +65,17 @@ export const Placement: React.FC<PlacementProps> = ({
       <>
         <img
           src={isNarrowType ? kuli : team}
-          className={`w-auto h-full object-contain object-top ${!isNarrowType ? 'mx-auto' : ''}`}
+          className={`w-auto h-full ${isNarrowType ? 'max-h-11' : ''} object-contain object-top ${!isNarrowType ? 'mx-auto' : ''}`}
           loading="lazy"
         />
         {isNarrowType && (
           <>
             <div>
-              <span>Переклад наявний за підтримки KULI</span>{' '}
-              <span className="text-color-mixed">
+              <p>Переклад наявний за підтримки KULI</p>{' '}
+              <p className="text-color-mixed">
                 Будь <span className="font-semibold">першим</span>, хто зіграє з
                 перекладом!
-              </span>
+              </p>
             </div>
 
             <Button variant="primary" className="flex-shrink-0">
@@ -102,6 +102,11 @@ export const Placement: React.FC<PlacementProps> = ({
       });
 
       onClick?.(banner.id);
+    } else {
+      trackEvent('ads-placement', {
+        game_id: gameId,
+        action: 'click',
+      });
     }
 
     let link: string;
