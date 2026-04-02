@@ -484,8 +484,7 @@ export const MainContent: React.FC = () => {
           </div>
 
           {(() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const langHint = getLanguageHint((selectedGame as any).source_language);
+            const langHint = getLanguageHint(selectedGame.source_language);
             return langHint ? (
               <div className="flex gap-2">
                 <span className="w-0 h-auto border-l border-border-hover" />
