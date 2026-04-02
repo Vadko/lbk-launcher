@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import {
   Award,
   Bell,
@@ -11,7 +12,6 @@ import {
   Volume2,
 } from 'lucide-react';
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import type { Game } from '../../types/game';
