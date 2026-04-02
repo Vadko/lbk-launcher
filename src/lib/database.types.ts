@@ -368,6 +368,7 @@ export type Database = {
           name: string
           platforms: string[]
           search_keywords: string | null
+          source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           support_url: string | null
@@ -432,6 +433,7 @@ export type Database = {
           name: string
           platforms?: string[]
           search_keywords?: string | null
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           support_url?: string | null
@@ -496,6 +498,7 @@ export type Database = {
           name?: string
           platforms?: string[]
           search_keywords?: string | null
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           support_url?: string | null
@@ -592,6 +595,7 @@ export type Database = {
           project_id: string | null
           search_keywords: string | null
           slug: string
+          source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           subscriptions: number | null
@@ -662,6 +666,7 @@ export type Database = {
           project_id?: string | null
           search_keywords?: string | null
           slug: string
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           subscriptions?: number | null
@@ -732,6 +737,7 @@ export type Database = {
           project_id?: string | null
           search_keywords?: string | null
           slug?: string
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           subscriptions?: number | null
@@ -1849,7 +1855,7 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
-      game_status: "completed" | "in-progress" | "planned"
+      game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
         | "steam"
         | "gog"
@@ -1991,7 +1997,7 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
-      game_status: ["completed", "in-progress", "planned"],
+      game_status: ["completed", "in-progress", "planned", "tech-improvement"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
       user_role: ["admin", "moderator", "translator", "user"],
     },
