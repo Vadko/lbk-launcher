@@ -89,6 +89,9 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'ai',
   'hide',
   'additional_path',
+  'translation_updated_at',
+  'source_language',
+  'search_keywords',
 ];
 
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');

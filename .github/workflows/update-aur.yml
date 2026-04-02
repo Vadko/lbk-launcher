@@ -28,31 +28,37 @@ jobs:
           if [ -n "${{ github.event.inputs.app_version }}" ]; then
             TAG="${{ github.event.inputs.app_version }}"
           else
-            TAG=$(gh api repos/Vadko/lbk-launcher/releases/latest --jq '.tag_name')
+            TAG=$(gh api repos/Vadko/lbk-launcher/releases --jq 'first | .tag_name')
           fi
           VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved: $TAG"
 
-      - name: Update PKGBUILD version and checksum
+      - name: Download AppImage via gh CLI (supports draft releases)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ steps.release.outputs.tag }}"
-          VERSION="${{ steps.release.outputs.version }}"
-          cd aur
-          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
-          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-          # Download AppImage (authenticated, works with draft releases)
-          gh release download "$TAG" -p "LBK-Launcher-linux.AppImage" -D /tmp --repo Vadko/lbk-launcher
-          SHA256=$(sha256sum /tmp/LBK-Launcher-linux.AppImage | cut -d' ' -f1)
-          # Update first sha256sum (AppImage hash)
-          sed -i "0,/sha256sums=(/{ /sha256sums=(/{n; s/'[^']*'/'${SHA256}'/; } }" PKGBUILD
-          # Update .SRCINFO
-          sed -i "s/pkgver = .*/pkgver = ${VERSION}/" .SRCINFO
-          sed -i "s|download/v[^/]*/LBK|download/v${VERSION}/LBK|" .SRCINFO
-          OLD_HASH=$(grep -m1 'sha256sums = ' .SRCINFO | sed 's/.*= //')
-          sed -i "0,/sha256sums = ${OLD_HASH}/s/sha256sums = ${OLD_HASH}/sha256sums = ${SHA256}/" .SRCINFO
+          gh release download "${{ steps.release.outputs.tag }}" \
+            --repo Vadko/lbk-launcher \
+            --pattern "LBK-Launcher-linux.AppImage" \
+            --dir aur/
+
+      - name: Update PKGBUILD version, checksums and .SRCINFO
+        uses: docker://archlinux:base-devel
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        with:
+          args: >-
+            bash -c "
+              pacman -Sy --noconfirm pacman-contrib &&
+              useradd -m builder &&
+              cd aur &&
+              sed -i \"s/^pkgver=.*/pkgver=${VERSION}/\" PKGBUILD &&
+              sed -i \"s/^pkgrel=.*/pkgrel=1/\" PKGBUILD &&
+              chown -R builder: . &&
+              su builder -c 'updpkgsums && makepkg --printsrcinfo > .SRCINFO'
+            "
 
       - name: Publish to AUR
         uses: KSXGitHub/github-actions-deploy-aur@v4.1.1

@@ -144,29 +144,42 @@ export function setupWindowControls(): void {
     }
   );
 
+  // Guard against multiple clear cache calls (user spamming the button)
+  let isClearingCache = false;
+
   // Clear only cache (not electron-store) and restart
   ipcMain.handle('clear-cache-only', async () => {
+    if (isClearingCache) {
+      console.log('[ClearCache] Already clearing cache, ignoring...');
+      return { success: true };
+    }
+    isClearingCache = true;
+
     try {
       console.log('[ClearCache] Clearing cache only and restarting...');
 
-      // Clear only cache and temporary data (NOT electron-store)
+      // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
         storages: ['cookies', 'filesystem', 'shadercache', 'cachestorage'],
       });
 
-      // Close database first
+      // Close database and mark for deletion right before exit
+      // to avoid "database connection is not open" errors from IPC handlers
       closeDatabase();
-
-      // Delete database files to force full re-sync
       deleteDatabaseFile();
+
+      // Tell will-quit handler to skip tracking so relaunch isn't delayed
+      getMainWindow()?.webContents.send('skip-quit-tracking');
+      ipcMain.emit('skip-quit-tracking');
 
       // Relaunch the app
       app.relaunch();
-      app.exit(0);
+      app.quit();
 
       return { success: true };
     } catch (error) {
+      isClearingCache = false;
       console.error('[ClearCache] Error clearing cache:', error);
       return { success: false, error: String(error) };
     }
@@ -174,9 +187,16 @@ export function setupWindowControls(): void {
 
   // Clear ALL data (including electron-store) and restart
   ipcMain.handle('clear-all-data-and-restart', async () => {
+    if (isClearingCache) {
+      console.log('[ClearAllData] Already clearing data, ignoring...');
+      return { success: true };
+    }
+    isClearingCache = true;
+
     try {
       console.log('[ClearAllData] Clearing ALL data and restarting...');
 
+      // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
         storages: [
@@ -191,15 +211,20 @@ export function setupWindowControls(): void {
         ],
       });
 
-      clearStore();
+      // Close database and clean up right before exit
       closeDatabase();
       deleteDatabaseFile();
+      clearStore();
+
+      // Tell will-quit handler to skip tracking so relaunch isn't delayed
+      ipcMain.emit('skip-quit-tracking');
 
       app.relaunch();
-      app.exit(0);
+      app.quit();
 
       return { success: true };
     } catch (error) {
+      isClearingCache = false;
       console.error('[ClearAllData] Error clearing all data:', error);
       return { success: false, error: String(error) };
     }
@@ -213,7 +238,10 @@ export function setupWindowControls(): void {
       if (!existsSync(logsDir)) {
         mkdirSync(logsDir, { recursive: true });
       }
-      const result = await shell.openPath(logsDir);
+      const result = await Promise.race([
+        shell.openPath(logsDir),
+        new Promise<string>((resolve) => setTimeout(() => resolve(''), 3000)),
+      ]);
       // shell.openPath returns an empty string on success, or an error message
       if (result) {
         console.error('[Logger] Failed to open logs folder:', result);

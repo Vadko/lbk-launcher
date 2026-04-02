@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { app } from 'electron';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { runMigrations } from './migrations';
 
@@ -14,6 +14,34 @@ class DatabaseManager {
   private constructor() {
     const userDataPath = app.getPath('userData');
     const dbPath = join(userDataPath, 'lbk.db');
+
+    // Check if DB was marked for deletion on previous run (clear cache)
+    const deleteMarkerPath = join(userDataPath, 'lbk.db.delete');
+    if (existsSync(deleteMarkerPath)) {
+      console.log('[Database] Found delete marker, removing database files...');
+      try {
+        unlinkSync(deleteMarkerPath);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(dbPath);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(`${dbPath}-wal`);
+      } catch {
+        /* ignore */
+      }
+      try {
+        unlinkSync(`${dbPath}-shm`);
+      } catch {
+        /* ignore */
+      }
+      console.log('[Database] Database files removed');
+    }
+
     const dbExists = existsSync(dbPath);
 
     if (dbExists) {
@@ -132,6 +160,7 @@ class DatabaseManager {
         textures_progress INTEGER,
         thumbnail_path TEXT,
         translation_progress INTEGER NOT NULL DEFAULT 0,
+        translation_updated_at TEXT,
         twitter TEXT,
         updated_at TEXT NOT NULL,
         version TEXT,
@@ -152,7 +181,9 @@ class DatabaseManager {
         epic_archive_path TEXT,
         epic_archive_size TEXT,
         ai TEXT,
-        hide INTEGER NOT NULL DEFAULT 0
+        hide INTEGER NOT NULL DEFAULT 0,
+        search_keywords TEXT,
+        source_language TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
@@ -167,6 +198,7 @@ class DatabaseManager {
       CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
         game_id UNINDEXED,
         name_search,
+        search_keywords,
         tokenize='unicode61'
       );
     `);
@@ -195,7 +227,14 @@ class DatabaseManager {
    */
   public close(): void {
     if (this.db) {
+      try {
+        // Checkpoint WAL to ensure all data is written to main DB file
+        this.db.pragma('wal_checkpoint(TRUNCATE)');
+      } catch {
+        // Ignore checkpoint errors
+      }
       this.db.close();
+      this.db = null as unknown as Database.Database;
       DatabaseManager.instance = null;
       console.log('[Database] Database connection closed');
     }
@@ -273,28 +312,30 @@ export function isSpellfixAvailable(): boolean {
 }
 
 /**
- * Delete database file completely (for full reset)
+ * Mark database for deletion on next startup.
+ * On Windows, SQLite WAL mode keeps files locked even after close(),
+ * so we create a marker file and delete on next app launch when files are unlocked.
  */
 export function deleteDatabaseFile(): void {
   const dbPath = getDatabasePath();
-  const walPath = `${dbPath}-wal`;
-  const shmPath = `${dbPath}-shm`;
+  const markerPath = `${dbPath}.delete`;
 
-  // Delete main DB file
-  if (existsSync(dbPath)) {
-    unlinkSync(dbPath);
-    console.log('[Database] Deleted database file:', dbPath);
+  // Try immediate deletion first (works on macOS/Linux)
+  let immediateDeleteSucceeded = true;
+  for (const filePath of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) {
+    try {
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+        console.log('[Database] Deleted file:', filePath);
+      }
+    } catch {
+      immediateDeleteSucceeded = false;
+    }
   }
 
-  // Delete WAL file
-  if (existsSync(walPath)) {
-    unlinkSync(walPath);
-    console.log('[Database] Deleted WAL file:', walPath);
-  }
-
-  // Delete SHM file
-  if (existsSync(shmPath)) {
-    unlinkSync(shmPath);
-    console.log('[Database] Deleted SHM file:', shmPath);
+  // If immediate delete failed (Windows), create marker for deletion on next startup
+  if (!immediateDeleteSucceeded) {
+    console.log('[Database] Files still locked, marking for deletion on next startup');
+    writeFileSync(markerPath, '');
   }
 }

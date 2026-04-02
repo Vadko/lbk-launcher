@@ -94,7 +94,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     if (hours < 24) return `${hours} год тому`;
     if (days < 7) return `${days} дн тому`;
 
-    return date.toLocaleDateString('uk-UA');
+    return date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });
   };
 
   const getNotificationIcon = (type: Notification['type']) => {
@@ -174,7 +174,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" showCloseButton={false}>
-      <div className="p-6 max-w-2xl w-full relative">
+      <div className="p-6 w-full relative">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {showSettings ? (
@@ -325,7 +325,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                               {!notification.read && (
                                 <span className="w-2 h-2 bg-color-accent rounded-full animate-pulse flex-shrink-0" />
                               )}
-                              <h3 className="font-semibold text-text-main truncate">
+                              <h3
+                                className="font-semibold text-text-main truncate"
+                                title={notification.gameName}
+                              >
                                 {notification.gameName}
                               </h3>
                             </div>

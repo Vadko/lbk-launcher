@@ -62,6 +62,9 @@ export async function launchHeroicGame(
           stdio: 'ignore',
         }
       );
+      child.on('error', (err) => {
+        console.error('[HeroicLauncher] Error spawning flatpak-spawn:', err);
+      });
       child.unref();
       return { success: true };
     }
@@ -98,6 +101,9 @@ export async function launchHeroicGame(
           stdio: 'ignore',
         }
       );
+      child.on('error', (err) => {
+        console.error('[HeroicLauncher] Error spawning flatpak:', err);
+      });
       child.unref();
       return { success: true };
     }

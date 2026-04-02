@@ -23,6 +23,9 @@ interface GetSignedDownloadUrlParams {
   isFirstSession?: boolean;
 }
 
+// Disable all tracking during E2E tests
+const IS_E2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
+
 // Session ID for current launcher session
 let currentSessionId: string | null = null;
 
@@ -76,6 +79,7 @@ export function getMachineId(): string | null {
 export async function getSignedDownloadUrl(
   params: GetSignedDownloadUrlParams
 ): Promise<GetSignedUrlResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' };
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
@@ -144,6 +148,7 @@ export async function trackSubscription(
   gameId: string,
   action: 'subscribe' | 'unsubscribe'
 ): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping subscription tracking');
@@ -183,6 +188,7 @@ export async function trackSubscription(
  * Track support button click
  */
 export async function trackSupportClick(gameId: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping support click tracking');
@@ -223,6 +229,7 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
  * and returns it in the response.
  */
 export async function trackSessionStart(appVersion: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping session tracking');
@@ -271,6 +278,7 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
  * Track session end (when launcher closes)
  */
 export async function trackSessionEnd(): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   if (!currentSessionId) {
     console.warn('[Tracking] No current session ID, skipping session end tracking');
     return { success: false, error: 'No session ID' };
@@ -314,6 +322,7 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
  * Track translation uninstall
  */
 export async function trackUninstall(gameId: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping uninstall tracking');
@@ -352,6 +361,7 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
  * Track failed search (query with 0 results)
  */
 export async function trackFailedSearch(query: string): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping failed search tracking');
@@ -416,6 +426,7 @@ interface PlaytimeData {
 export async function trackPlaytime(
   playtimeData: PlaytimeData[]
 ): Promise<TrackingResponse> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
   if (playtimeData.length === 0) {
     return { success: true };
   }

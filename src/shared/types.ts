@@ -1,6 +1,12 @@
+import type {
+  BannerData,
+  GameBannersResult,
+  ImpressionType,
+} from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
 
 export type { Database };
+
 export type Platform = Database['public']['Enums']['install_source'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
@@ -16,7 +22,9 @@ export interface InstallationInfo {
   installedAt: string;
   gamePath: string;
   hasBackup?: boolean;
+  protonPath?: string; // For Linux Proton installations
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
+  installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
   components?: {
     text: InstallationComponent;
@@ -95,6 +103,7 @@ export interface FilterCountsResult {
   planned: number;
   'in-progress': number;
   completed: number;
+  'tech-improvement': number;
   'with-achievements': number;
   'with-voice': number;
 }
@@ -153,6 +162,7 @@ export interface ElectronAPI {
     customGamePath?: string
   ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
+  rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
   pauseDownload: (
     gameId: string
@@ -211,6 +221,8 @@ export interface ElectronAPI {
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
   // Version
   getVersion: () => string;
+  // E2E test mode — disables analytics/tracking
+  isE2E: () => boolean;
   // Platform
   getPlatform: () => string;
   // Machine ID - for subscription tracking
@@ -229,6 +241,15 @@ export interface ElectronAPI {
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => () => void;
   getSyncStatus: () => Promise<'syncing' | 'ready' | 'error'>;
+  // Banner API
+  fetchPromoBanner: () => Promise<BannerData | null>;
+  fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
+  recordPromoBannerImpression: (params: {
+    campaignId: string;
+    impressionType: ImpressionType;
+    gameSlug?: string;
+  }) => Promise<boolean>;
+  recordBannerImpression: (bannerId: string) => Promise<boolean>;
 }
 
 declare global {

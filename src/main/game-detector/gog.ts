@@ -14,6 +14,7 @@ import {
   getHeroicConfigPaths,
   getHeroicGamePaths,
 } from './heroic';
+import { getLutrisGOGDirs, getLutrisGogLibrary } from './lutris';
 
 const GOG_DB_FILENAME = 'galaxy-2.0.db';
 
@@ -154,7 +155,10 @@ function getAllGamesFromGalaxyDB(): string[] {
     console.warn('[GOG] Error reading Galaxy database:', error);
   }
 
-  return dbData.map((g) => getCleanTitle(g.title!.trim())).filter((t) => t);
+  return dbData
+    .filter((g) => g.title != null)
+    .map((g) => getCleanTitle(g.title!.trim()))
+    .filter((t) => t);
 }
 
 /**
@@ -270,10 +274,10 @@ export function findGOGGame(gameFolderName: string): string | null {
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const targetFolder = normalize(gameFolderName);
 
-    // Check Heroic directories (fuzzy match)
+    // Check Heroic and Lutris directories (fuzzy match)
     const heroicDirs = [
       ...getHeroicGamePaths(), // Flatpak + Native
-      // Add other possible library paths if needed (usually handled by getHeroicGamePaths)
+      ...getLutrisGOGDirs(), // Lutris GOG base directories
     ];
 
     for (const dir of heroicDirs) {
@@ -359,6 +363,19 @@ export function getInstalledGOGGamePaths(): string[] {
       // Get all game folders from Heroic directories
       paths.push(...getAllHeroicGameFolders());
 
+      // Get game folders from Lutris directories (each subdir in drive_c/GOG Games is a game installation)
+      const lutrisDirs = getLutrisGOGDirs();
+      for (const dir of lutrisDirs) {
+        if (fs.existsSync(dir)) {
+          try {
+            const subdirs = fs.readdirSync(dir);
+            paths.push(...subdirs);
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+
       // Read from installed.json as well
       const configPaths = getHeroicConfigPaths().map((p) =>
         path.join(p, 'gog_store/installed.json')
@@ -430,6 +447,23 @@ function getAllInstalledGOGGames(): Map<string, string> {
         console.error(`[GOG] Error reading ${configPath}:`, error);
       }
     }
+
+    // Include Lutris GOG installations mapped via db directly (we can leverage fuzzy matching folders too)
+    const lutrisDirs = getLutrisGOGDirs();
+    for (const dir of lutrisDirs) {
+      if (!fs.existsSync(dir)) continue;
+      try {
+        const subdirs = fs.readdirSync(dir);
+        for (const subdir of subdirs) {
+          const gamePath = path.join(dir, subdir);
+          if (fs.statSync(gamePath).isDirectory()) {
+            gamesMap.set(getCleanTitle(subdir).toLowerCase(), gamePath);
+          }
+        }
+      } catch (e) {
+        // Safe to ignore
+      }
+    }
   }
   // Windows/macOS: Use native GOG Galaxy detection
   else if (isWindows() || isMacOS()) {
@@ -482,9 +516,9 @@ export function getGogLibrary(): string[] {
       }
     }
 
-    const result = [...new Set(allTitles)];
+    const result = [...new Set([...allTitles, ...getLutrisGogLibrary()])];
     if (result.length > 0) {
-      console.log(`[GOG] Found ${result.length} games in Heroic library`);
+      console.log(`[GOG] Found ${result.length} games in Heroic/Lutris library`);
     }
     return result;
   }

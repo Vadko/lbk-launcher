@@ -1,6 +1,5 @@
 // Query client
 export { queryClient } from './queryClient';
-
 // Trending games
 export {
   type TrendingGameData,

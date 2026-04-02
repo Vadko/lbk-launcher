@@ -94,7 +94,7 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
               : 'bg-glass text-text-muted border border-transparent hover:bg-glass-hover hover:text-text-main'
           }`}
         >
-          <span className="flex items-center gap-2 truncate">
+          <span className="flex items-center gap-2 truncate" title={currentLabel}>
             <Users size={14} className="flex-shrink-0" />
             <span className="truncate">{currentLabel}</span>
           </span>
@@ -199,6 +199,7 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                                 ? 'bg-glass-hover text-text-main'
                                 : 'text-text-muted hover:bg-glass hover:text-text-main'
                             }`}
+                            title={author}
                           >
                             <span
                               className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
@@ -225,7 +226,7 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                 <div className="px-3 py-2 border-t border-border text-xs text-text-muted text-center">
                   {search
                     ? `Знайдено: ${filteredAuthors.length}`
-                    : `Всього: ${authors.length}`}
+                    : `Усього: ${authors.length}`}
                 </div>
               )}
             </motion.div>

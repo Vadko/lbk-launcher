@@ -1,16 +1,20 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Download,
   EyeOff,
   Heart,
   Play,
   RefreshCw,
+  ReplaceAllIcon,
   Settings,
   Trash2,
   Users,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { GameBannersResult } from '@/main/db/banners-api';
 import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
+import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
@@ -19,6 +23,7 @@ import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
+import { Placement } from '../Placements';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
@@ -50,6 +55,9 @@ export const MainContent: React.FC = () => {
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
+  const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
+  const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
+  const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
 
   const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
   const isCheckingInstallation = selectedGame
@@ -66,6 +74,111 @@ export const MainContent: React.FC = () => {
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
+
+  // Load banner data for selected game with delay to prevent flickering
+  useEffect(() => {
+    let isMounted = true;
+    let showTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const loadBannerData = async () => {
+      if (!selectedGame?.id) {
+        setBannerData(null);
+        setLoadedBannerGameId(null);
+        return;
+      }
+
+      // Check cache first - show immediately from cache
+      const cachedData = bannerCacheRef.current.get(selectedGame.id);
+      if (cachedData) {
+        setBannerData(cachedData);
+        setLoadedBannerGameId(selectedGame.id);
+        return;
+      }
+
+      setBannerData(null);
+      setLoadedBannerGameId(null);
+
+      try {
+        const result = await window.electronAPI.fetchBannersForGame(
+          selectedGame.id,
+          selectedGame.slug
+        );
+        if (!isMounted) return;
+
+        // Cache the result
+        bannerCacheRef.current.set(selectedGame.id, result);
+
+        showTimeout = setTimeout(() => {
+          if (isMounted) {
+            setBannerData(result);
+            setLoadedBannerGameId(selectedGame.id);
+          }
+        }, 500);
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Error loading banner data:', error);
+        setBannerData(null);
+        setLoadedBannerGameId(selectedGame.id);
+      }
+    };
+
+    loadBannerData();
+
+    return () => {
+      isMounted = false;
+      if (showTimeout) {
+        clearTimeout(showTimeout);
+      }
+    };
+  }, [selectedGame?.id, selectedGame?.slug]);
+
+  const bannerInfo = useMemo(() => {
+    if (!selectedGame) {
+      return { data: null };
+    }
+
+    // Check cache directly to avoid flickering when switching between cached games
+    const cachedData = bannerCacheRef.current.get(selectedGame.id);
+
+    // If we have cached data for this game, use it immediately
+    if (cachedData) {
+      const type =
+        cachedData.banner?.type ??
+        (cachedData.isKuli ? 'narrow' : null) ??
+        (selectedGame.support_url ? 'small_square' : null) ??
+        null;
+
+      return {
+        data: cachedData.banner || null,
+        isKuli: cachedData.isKuli || false,
+        support_url: selectedGame?.support_url || null,
+        placementType: type,
+      };
+    }
+
+    // If not in cache and not loaded for this game yet, show nothing
+    if (loadedBannerGameId !== selectedGame.id) {
+      return {
+        data: null,
+        isKuli: false,
+        support_url: null,
+        placementType: null,
+      };
+    }
+
+    const type =
+      bannerData?.banner?.type ??
+      (bannerData?.isKuli ? 'narrow' : null) ??
+      (selectedGame.support_url ? 'small_square' : null) ??
+      null;
+
+    return {
+      data: bannerData?.banner || null,
+      isKuli: bannerData?.isKuli || false,
+      support_url: selectedGame?.support_url || null,
+      placementType: type,
+    };
+  }, [selectedGame, bannerData, loadedBannerGameId]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -92,6 +205,7 @@ export const MainContent: React.FC = () => {
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handleRerunInstaller,
     handlePauseDownload,
     handleResumeDownload,
     handleCancelDownload,
@@ -289,12 +403,12 @@ export const MainContent: React.FC = () => {
         <GameHero game={selectedGame} />
 
         {/* Actions block */}
-        <div className="glass-card mb-6">
+        <div className="glass-card mb-6 grid gap-6">
           <div className="flex flex-wrap items-center gap-3">
             {/* Primary actions */}
             {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
               <Button
-                variant="green"
+                variant="primary"
                 icon={<Play size={20} />}
                 onClick={handleLaunchGame}
                 disabled={isLaunching || isInstalling || isUninstalling}
@@ -329,6 +443,17 @@ export const MainContent: React.FC = () => {
                 {isUninstalling ? 'Видалення...' : 'Видалити'}
               </Button>
             )}
+            {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
+              <Button
+                variant="secondary"
+                icon={<ReplaceAllIcon size={20} />}
+                onClick={handleRerunInstaller}
+                data-gamepad-action
+                title="Запустити інсталятор повторно"
+              >
+                Перевстановити
+              </Button>
+            )}
 
             {/* Separator */}
             <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
@@ -343,17 +468,33 @@ export const MainContent: React.FC = () => {
                 data-gamepad-action
               />
             )}
-            {selectedGame.support_url && (
-              <Button
-                variant="accent"
-                icon={<Heart size={20} />}
-                onClick={handleSupport}
-                data-gamepad-action
-              >
-                Підтримати переклад
-              </Button>
-            )}
+            {selectedGame.support_url &&
+              bannerInfo.placementType &&
+              !(bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id) && (
+                <Button
+                  variant="accent"
+                  icon={<Heart size={20} />}
+                  onClick={handleSupport}
+                  data-gamepad-action
+                  className="support-button"
+                >
+                  Підтримати переклад
+                </Button>
+              )}
           </div>
+
+          {(() => {
+            const langHint = getLanguageHint(selectedGame.source_language);
+            return langHint ? (
+              <div className="flex gap-2">
+                <span className="w-0 h-auto border-l border-border-hover" />
+                <span className="text-sm">
+                  В налаштуваннях гри оберіть{' '}
+                  <span className="text-color-accent">{langHint} мову</span>
+                </span>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         <div className="space-y-4 mb-6">
@@ -430,9 +571,51 @@ export const MainContent: React.FC = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <AnimatePresence mode="wait">
+          {bannerInfo.placementType === 'narrow' && (
+            <motion.div
+              key={`narrow-${selectedGame.id}`}
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-6"
+            >
+              <Placement
+                banner={bannerInfo.data}
+                placementType="narrow"
+                gameId={selectedGame.id}
+                isKuli={bannerInfo.isKuli}
+                className="placement-long"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div
+          className={`grid grid-cols-1 ${bannerInfo.placementType === 'small_square' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
+        >
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
+          <AnimatePresence>
+            {bannerInfo.placementType === 'small_square' && (
+              <motion.div
+                key={`small-square-${selectedGame.id}`}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <Placement
+                  banner={bannerInfo.data}
+                  placementType="small_square"
+                  gameId={selectedGame.id}
+                  supportUrl={selectedGame.support_url || undefined}
+                  className="placement h-full"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="mb-6">
@@ -444,6 +627,7 @@ export const MainContent: React.FC = () => {
             <FundraisingProgressCard
               current={selectedGame.fundraising_current || 0}
               goal={selectedGame.fundraising_goal}
+              supportUrl={selectedGame.support_url}
             />
           </div>
         )}

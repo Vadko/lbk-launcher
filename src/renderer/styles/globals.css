@@ -109,6 +109,15 @@ html.maximized #root {
   transform: translateY(-2px);
 }
 
+.placement {
+  padding: 0;
+}
+
+.glass-card-gold,
+.glass-card-gold:hover {
+  border-color: rgba(255, 164, 122, 0.8);
+}
+
 .glass-button {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -305,14 +314,12 @@ body.liquid-glass-enabled .glass-input:focus {
   border: 3px solid transparent;
   background-clip: content-box;
   transition: all 0.3s ease;
-  box-shadow: 0 0 8px rgba(0, 242, 255, 0.3);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-main)));
   background-clip: content-box;
   border: 2px solid transparent;
-  box-shadow: 0 0 12px rgba(0, 242, 255, 0.5);
 }
 
 /* ==========================================================================
@@ -356,13 +363,6 @@ body.liquid-glass-enabled .glass-input:focus {
   transition: none !important;
   transition-duration: 0s !important;
   transition-delay: 0s !important;
-}
-
-/* Disable framer-motion animations */
-.no-animations [style*="opacity"],
-.no-animations [style*="transform"] {
-  opacity: 1 !important;
-  transform: none !important;
 }
 
 /* Disable backdrop blur in no-animations mode for better performance */

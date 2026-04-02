@@ -23,6 +23,7 @@ import {
   getPausedDownloadState,
   pauseCurrentDownload,
 } from '../installer/download';
+import { rerunInstaller } from '../installer/platform';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
@@ -167,6 +168,24 @@ export function setupInstallerHandlers(): void {
       };
     }
   });
+
+  ipcMain.handle(
+    'rerun-installer',
+    async (_, installerPath: string, protonPath?: string) => {
+      try {
+        await rerunInstaller(installerPath, protonPath);
+        return { success: true };
+      } catch (error) {
+        console.error('Error re-running installer:', error);
+        return {
+          success: false,
+          error: {
+            message: error instanceof Error ? error.message : 'Невідома помилка',
+          },
+        };
+      }
+    }
+  );
 
   ipcMain.handle('abort-download', async (_, reason?: string) => {
     try {

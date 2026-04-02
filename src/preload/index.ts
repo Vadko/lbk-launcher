@@ -1,8 +1,10 @@
 import * as Sentry from '@sentry/electron/renderer';
 import { contextBridge, ipcRenderer } from 'electron';
 
-Sentry.init();
+const isE2EMode = process.env['LBK_E2E'] === '1';
+Sentry.init({ enabled: !isE2EMode });
 
+import type { ImpressionType } from '@/main/db/banners-api';
 import type {
   DownloadProgress,
   ElectronAPI,
@@ -66,6 +68,8 @@ const electronAPI: ElectronAPI = {
     customGamePath?: string
   ) => ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
+  rerunInstaller: (installerPath: string, protonPath?: string) =>
+    ipcRenderer.invoke('rerun-installer', installerPath, protonPath),
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),
@@ -170,6 +174,7 @@ const electronAPI: ElectronAPI = {
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
+  isE2E: () => isE2EMode,
   // Platform
   getPlatform: () => ipcRenderer.sendSync('get-platform'),
   // Machine ID - for subscription tracking
@@ -197,6 +202,17 @@ const electronAPI: ElectronAPI = {
   },
   getSyncStatus: () =>
     ipcRenderer.invoke('get-sync-status') as Promise<'syncing' | 'ready' | 'error'>,
+  // Banner API
+  fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
+  fetchBannersForGame: (gameId: string, gameSlug: string) =>
+    ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
+  recordPromoBannerImpression: (params: {
+    campaignId: string;
+    impressionType: ImpressionType;
+    gameSlug?: string;
+  }) => ipcRenderer.invoke('record-promo-banner-impression', params),
+  recordBannerImpression: (bannerId: string) =>
+    ipcRenderer.invoke('record-banner-impression', bannerId),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

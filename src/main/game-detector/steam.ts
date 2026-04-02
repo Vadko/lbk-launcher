@@ -378,12 +378,30 @@ function getSteamLibraryFolders(steamPath: string): string[] {
       const content = fs.readFileSync(libraryFoldersPath, 'utf8');
       const libraryPaths = parseLibraryFolders(content);
 
+      // Resolve real paths of existing folders to avoid symlink duplicates
+      const resolvedFolders = folders.map((f) => {
+        try {
+          return fs.realpathSync(f);
+        } catch {
+          return f;
+        }
+      });
+
       for (const libraryPath of libraryPaths) {
         const normalizedPath = libraryPath.replace(/\\\\/g, '\\');
         const steamappsPath = path.join(normalizedPath, 'steamapps');
-        if (fs.existsSync(steamappsPath) && !folders.includes(steamappsPath)) {
-          console.log('[Steam] Additional library found:', steamappsPath);
-          folders.push(steamappsPath);
+        if (fs.existsSync(steamappsPath)) {
+          let realSteamappsPath: string;
+          try {
+            realSteamappsPath = fs.realpathSync(steamappsPath);
+          } catch {
+            realSteamappsPath = steamappsPath;
+          }
+          if (!resolvedFolders.includes(realSteamappsPath)) {
+            resolvedFolders.push(realSteamappsPath);
+            console.log('[Steam] Additional library found:', steamappsPath);
+            folders.push(steamappsPath);
+          }
         }
       }
     }

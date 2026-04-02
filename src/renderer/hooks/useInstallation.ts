@@ -35,6 +35,7 @@ interface UseInstallationResult {
     removeOptions: { removeVoice: boolean; removeAchievements: boolean }
   ) => Promise<void>;
   handleUninstall: () => Promise<void>;
+  handleRerunInstaller: (event: React.MouseEvent<HTMLButtonElement>) => Promise<void>;
   handlePauseDownload: () => Promise<void>;
   handleResumeDownload: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
@@ -126,7 +127,7 @@ export function useInstallation({
           statusMessage: null,
         });
 
-        window.electronAPI.onDownloadProgress?.(
+        const unsubDownloadProgress = window.electronAPI.onDownloadProgress?.(
           (gameId: string, progress: DownloadProgress) => {
             setInstallationProgress(gameId, {
               progress: progress.percent,
@@ -135,18 +136,26 @@ export function useInstallation({
           }
         );
 
-        window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
-          setInstallationProgress(gameId, {
-            statusMessage: status.message,
-          });
-        });
-
-        const result: InstallResult = await window.electronAPI.installTranslation(
-          selectedGame,
-          platform,
-          effectiveOptions,
-          customGamePath
+        const unsubInstallationStatus = window.electronAPI.onInstallationStatus?.(
+          (gameId: string, status) => {
+            setInstallationProgress(gameId, {
+              statusMessage: status.message,
+            });
+          }
         );
+
+        let result: InstallResult;
+        try {
+          result = await window.electronAPI.installTranslation(
+            selectedGame,
+            platform,
+            effectiveOptions,
+            customGamePath
+          );
+        } finally {
+          unsubDownloadProgress?.();
+          unsubInstallationStatus?.();
+        }
 
         // Handle pause - not an error, just stop without clearing progress
         if (result.paused) {
@@ -637,7 +646,7 @@ export function useInstallation({
     });
 
     // Set up progress listeners again
-    window.electronAPI.onDownloadProgress?.(
+    const unsubDownloadProgressResume = window.electronAPI.onDownloadProgress?.(
       (gameId: string, progress: DownloadProgress) => {
         setInstallationProgress(gameId, {
           progress: progress.percent,
@@ -646,13 +655,22 @@ export function useInstallation({
       }
     );
 
-    window.electronAPI.onInstallationStatus?.((gameId: string, status) => {
-      setInstallationProgress(gameId, {
-        statusMessage: status.message,
-      });
-    });
+    const unsubInstallationStatusResume = window.electronAPI.onInstallationStatus?.(
+      (gameId: string, status) => {
+        setInstallationProgress(gameId, {
+          statusMessage: status.message,
+        });
+      }
+    );
 
-    const result = await window.electronAPI.resumeDownload(selectedGame.id);
+    let result: Awaited<ReturnType<typeof window.electronAPI.resumeDownload>>;
+    try {
+      result = await window.electronAPI.resumeDownload(selectedGame.id);
+    } finally {
+      unsubDownloadProgressResume?.();
+      unsubInstallationStatusResume?.();
+    }
+
     if (!result.success) {
       showModal({
         title: 'Помилка',
@@ -696,7 +714,7 @@ export function useInstallation({
       return `Оновити до v${selectedGame?.version}`;
     }
     if (installationInfo) {
-      return `Перевстановити (v${installationInfo.version})`;
+      return `Перезавантажити (v${installationInfo.version})`;
     }
     return 'Встановити українізатор';
   }, [
@@ -710,6 +728,53 @@ export function useInstallation({
     installationInfo,
   ]);
 
+  const handleRerunInstaller = useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (!selectedGame || !installationInfo?.installerPath) {
+        console.warn('[useInstallation] No installer path available');
+        return;
+      }
+      const button = event.currentTarget;
+      button.setAttribute('disabled', 'true');
+      button.classList.add('cursor-loading');
+
+      try {
+        const result = await window.electronAPI.rerunInstaller(
+          installationInfo.installerPath,
+          installationInfo.protonPath
+        );
+
+        if (result.success) {
+          showModal({
+            title: 'Інсталятор завершено',
+            message: 'Інсталятор успішно завершив роботу',
+            type: 'success',
+          });
+
+          // Refresh installation info
+          await checkInstallationStatus(selectedGame.id, selectedGame);
+        } else {
+          showModal({
+            title: 'Помилка',
+            message: result.error?.message || 'Не вдалося запустити інсталятор',
+            type: 'error',
+          });
+        }
+      } catch (error) {
+        console.error('[useInstallation] Error re-running installer:', error);
+        showModal({
+          title: 'Помилка',
+          message: 'Не вдалося запустити інсталятор',
+          type: 'error',
+        });
+      } finally {
+        button.removeAttribute('disabled');
+        button.classList.remove('cursor-loading');
+      }
+    },
+    [selectedGame, installationInfo, showModal, checkInstallationStatus]
+  );
+
   return {
     isInstalling,
     isUninstalling,
@@ -720,6 +785,7 @@ export function useInstallation({
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
+    handleRerunInstaller,
     handlePauseDownload,
     handleResumeDownload,
     handleCancelDownload,
