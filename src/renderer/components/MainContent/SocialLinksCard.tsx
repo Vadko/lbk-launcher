@@ -160,7 +160,9 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
       ) : (
         <Globe size={18} />
       ),
-      label: game.website.includes('steamcommunity.com/sharedfiles/filedetails') ? 'Steam посібник' : 'Вебсайт',
+      label: game.website.includes('steamcommunity.com/sharedfiles/filedetails')
+        ? 'Steam посібник'
+        : 'Вебсайт',
       url: game.website,
       color: 'text-color-accent',
     },

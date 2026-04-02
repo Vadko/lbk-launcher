@@ -40,16 +40,18 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       data-gamepad-action="true"
-      onKeyDown={isClickable ? (e) => (e.key === 'Enter' || e.key === ' ') && handleClick() : undefined}
+      onKeyDown={
+        isClickable
+          ? (e) => (e.key === 'Enter' || e.key === ' ') && handleClick()
+          : undefined
+      }
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <DollarSign size={20} className="text-neon-green" />
           <h3 className="text-lg font-head font-semibold text-text-main">Збір коштів</h3>
         </div>
-        {isClickable && (
-          <ExternalLink size={16} className="text-text-muted" />
-        )}
+        {isClickable && <ExternalLink size={16} className="text-text-muted" />}
       </div>
 
       <div className="space-y-3">
