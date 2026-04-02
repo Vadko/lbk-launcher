@@ -1,13 +1,14 @@
 import { Check, Copy } from 'lucide-react';
 import React, { useState } from 'react';
-import { Button } from '../ui/Button';
+import { trackEvent } from '@/renderer/utils/analytics';
+import { FacebookIcon } from '../Icons/FacebookIcon';
+import { RedditIcon } from '../Icons/RedditIcon';
 import { SignalIcon } from '../Icons/SignalIcon';
 import { TelegramIcon } from '../Icons/TelegramIcon';
 import { ThreadsIcon } from '../Icons/ThreadsIcon';
 import { WhatsAppIcon } from '../Icons/WhatsAppIcon';
-import { FacebookIcon } from '../Icons/FacebookIcon';
-import { RedditIcon } from '../Icons/RedditIcon';
 import { XIcon } from '../Icons/XIcon';
+import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
 interface ShareModalProps {
@@ -32,7 +33,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'telegram',
     name: 'Telegram',
     icon: <TelegramIcon size={24} />,
-    color: 'text-[#0088cc] hover:bg-[#0088cc]/20',
+    color: 'focus:text-[#0088cc] focus:bg-[#0088cc]/15 focus:border-[#0088cc]',
     getShareUrl: (shareUrl, shareText) =>
       `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}&type=custom_url&app_absent=0`,
   },
@@ -40,7 +41,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'whatsapp',
     name: 'WhatsApp',
     icon: <WhatsAppIcon size={24} />,
-    color: 'text-[#25D366] hover:bg-[#25D366]/20',
+    color: 'focus:text-[#25D366] focus:bg-[#25D366]/15 focus:border-[#25D366]',
     getShareUrl: (shareUrl, shareText) =>
       `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
   },
@@ -48,8 +49,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'reddit',
     name: 'Reddit',
     icon: <RedditIcon size={24} />,
-    color: 'text-[#FF4500] hover:bg-[#FF4500]/20',
-    // Reddit share URL
+    color: 'focus:text-[#FF4500] focus:bg-[#FF4500]/15 focus:border-[#FF4500]',
     getShareUrl: (shareUrl, shareText) =>
       `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`,
   },
@@ -57,8 +57,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'facebook',
     name: 'Facebook',
     icon: <FacebookIcon size={24} />,
-    color: 'text-[#1877F2] hover:bg-[#1877F2]/20',
-    // Facebook share URL
+    color: 'focus:text-[#1877F2] focus:bg-[#1877F2]/15 focus:border-[#1877F2]',
     getShareUrl: (shareUrl, shareText) =>
       `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`,
   },
@@ -66,7 +65,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'signal',
     name: 'Signal',
     icon: <SignalIcon size={24} />,
-    color: 'text-[#3a76f0] hover:bg-[#3a76f0]/20',
+    color: 'focus:text-[#3a76f0] focus:bg-[#3a76f0]/15 focus:border-[#3a76f0]',
     getShareUrl: (shareUrl, shareText) =>
       `https://signal.me/#p/${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
   },
@@ -74,7 +73,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'threads',
     name: 'Threads',
     icon: <ThreadsIcon size={24} />,
-    color: 'text-white hover:bg-white/20',
+    color: 'focus:text-white focus:bg-white/20 focus:border-white',
     getShareUrl: (shareUrl, shareText) =>
       `https://www.threads.net/intent/post?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`,
   },
@@ -82,7 +81,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
     key: 'x',
     name: 'X',
     icon: <XIcon size={24} />,
-    color: 'text-white hover:bg-white/20',
+    color: 'focus:text-white focus:bg-white/20 focus:border-white',
     getShareUrl: (shareUrl, shareText) =>
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
   },
@@ -101,28 +100,26 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const shareText = `${gameName} з українською локалізацією від ${teamName} можна зручно встановити у LBK Launcher`;
   const socialPlatforms = createSocialPlatforms();
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = `${shareText}\n${shareUrl}`;
-      textArea.style.position = 'fixed';
-      textArea.style.opacity = '0';
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleCopy = () => {
+    const textArea = document.createElement('textarea');
+    textArea.value = `${shareText}\n${shareUrl}`;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = (platform: SocialPlatform) => {
     const url = platform.getShareUrl(shareUrl, shareText);
+    trackEvent('Share', {
+      platform: platform.name,
+      game: gameName,
+      team: teamName,
+    });
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -131,19 +128,18 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Поширити"
-      classNames="w-[514px]"
+      classNames="max-w-[514px]"
       usePortal
     >
-      <div className="space-y-6">
-        {/* Social platforms */}
+      <div className="space-y-14">
         <div>
-          <p className="text-sm text-text-muted mb-4">Поділитися в:</p>
+          <p className="text-sm text-text-muted mb-3">Поділитися в:</p>
           <div className="flex flex-wrap gap-3">
             {socialPlatforms.map((platform) => (
               <button
                 key={platform.key}
                 onClick={() => handleShare(platform)}
-                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 ${platform.color}`}
+                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 text-[#939296] hover:border-[#939296] hover:bg-white/15 ${platform.color}`}
                 title={platform.name}
               >
                 {platform.icon}
@@ -151,11 +147,11 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             ))}
           </div>
         </div>
-
-        {/* Copy link */}
         <div>
-          <p className="text-sm text-text-muted mb-3">Або скопіюйте посилання:</p>
-          <div className="flex gap-2">
+          <p className="text-sm text-text-muted mb-3">
+            Або скопіюйте посилання чи текст:
+          </p>
+          <div className="flex gap-4">
             <input
               type="text"
               value={shareUrl}
