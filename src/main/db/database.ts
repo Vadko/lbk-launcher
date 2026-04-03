@@ -182,7 +182,8 @@ class DatabaseManager {
         epic_archive_size TEXT,
         ai TEXT,
         hide INTEGER NOT NULL DEFAULT 0,
-        search_keywords TEXT
+        search_keywords TEXT,
+        source_language TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);

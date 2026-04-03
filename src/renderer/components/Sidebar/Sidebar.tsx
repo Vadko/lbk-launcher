@@ -387,7 +387,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto p-4 pt-0 custom-scrollbar relative"
+          className="flex-1 overflow-y-auto pl-4 pr-2 mr-2 pt-0 custom-scrollbar relative"
         >
           <GameList
             gameGroups={gameGroups}

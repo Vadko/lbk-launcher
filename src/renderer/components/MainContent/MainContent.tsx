@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Download,
   EyeOff,
@@ -13,6 +14,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GameBannersResult } from '@/main/db/banners-api';
 import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
+import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
@@ -401,7 +403,7 @@ export const MainContent: React.FC = () => {
         <GameHero game={selectedGame} />
 
         {/* Actions block */}
-        <div className="glass-card mb-6">
+        <div className="glass-card mb-6 grid gap-6">
           <div className="flex flex-wrap items-center gap-3">
             {/* Primary actions */}
             {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
@@ -466,17 +468,33 @@ export const MainContent: React.FC = () => {
                 data-gamepad-action
               />
             )}
-            {selectedGame.support_url && (
-              <Button
-                variant="accent"
-                icon={<Heart size={20} />}
-                onClick={handleSupport}
-                data-gamepad-action
-              >
-                Підтримати переклад
-              </Button>
-            )}
+            {selectedGame.support_url &&
+              bannerInfo.placementType &&
+              !(bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id) && (
+                <Button
+                  variant="accent"
+                  icon={<Heart size={20} />}
+                  onClick={handleSupport}
+                  data-gamepad-action
+                  className="support-button"
+                >
+                  Підтримати переклад
+                </Button>
+              )}
           </div>
+
+          {(() => {
+            const langHint = getLanguageHint(selectedGame.source_language);
+            return langHint ? (
+              <div className="flex gap-2">
+                <span className="w-0 h-auto border-l border-border-hover" />
+                <span className="text-sm">
+                  В налаштуваннях гри оберіть{' '}
+                  <span className="text-color-accent">{langHint} мову</span>
+                </span>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         <div className="space-y-4 mb-6">
@@ -553,31 +571,52 @@ export const MainContent: React.FC = () => {
           </div>
         )}
 
+        <AnimatePresence mode="wait">
+          {bannerInfo.placementType === 'narrow' && (
+            <motion.div
+              key={`narrow-${selectedGame.id}`}
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-6"
+            >
+              <Placement
+                banner={bannerInfo.data}
+                placementType="narrow"
+                gameId={selectedGame.id}
+                isKuli={bannerInfo.isKuli}
+                className="placement-long"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div
           className={`grid grid-cols-1 ${bannerInfo.placementType === 'small_square' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
         >
           <StatusCard game={selectedGame} />
           <InfoCard game={selectedGame} />
-          {bannerInfo.placementType === 'small_square' && (
-            <Placement
-              banner={bannerInfo.data}
-              placementType="small_square"
-              gameId={selectedGame.id}
-              supportUrl={selectedGame.support_url || undefined}
-              className="placement"
-            />
-          )}
+          <AnimatePresence>
+            {bannerInfo.placementType === 'small_square' && (
+              <motion.div
+                key={`small-square-${selectedGame.id}`}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <Placement
+                  banner={bannerInfo.data}
+                  placementType="small_square"
+                  gameId={selectedGame.id}
+                  supportUrl={selectedGame.support_url || undefined}
+                  className="placement h-full"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-
-        {bannerInfo.placementType === 'narrow' && (
-          <Placement
-            banner={bannerInfo.data}
-            placementType="narrow"
-            gameId={selectedGame.id}
-            isKuli={bannerInfo.isKuli}
-            className="placement-long mb-6"
-          />
-        )}
 
         <div className="mb-6">
           <SocialLinksCard game={selectedGame} />
@@ -588,6 +627,7 @@ export const MainContent: React.FC = () => {
             <FundraisingProgressCard
               current={selectedGame.fundraising_current || 0}
               goal={selectedGame.fundraising_goal}
+              supportUrl={selectedGame.support_url}
             />
           </div>
         )}

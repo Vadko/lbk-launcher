@@ -103,6 +103,7 @@ export interface FilterCountsResult {
   planned: number;
   'in-progress': number;
   completed: number;
+  'tech-improvement': number;
   'with-achievements': number;
   'with-voice': number;
 }
