@@ -281,9 +281,17 @@ export async function runInstaller(
       onStatus?.({ message: 'Запуск інсталятора...' });
 
       await new Promise<void>((resolve, reject) => {
+        // AppImage needs APPIMAGE_EXTRACT_AND_RUN=1 to bypass FUSE
+        // (e.g. on Steam Deck or when launched from another AppImage)
+        const isAppImage = installerPath.toLowerCase().endsWith('.appimage');
+        const env = isAppImage
+          ? { ...process.env, APPIMAGE_EXTRACT_AND_RUN: '1' }
+          : undefined;
+
         const child = spawn(installerPath, [], {
           cwd: extractDir,
           stdio: ['inherit', 'pipe', 'pipe'],
+          ...(env && { env }),
         });
 
         child.stdout?.on('data', (data) => {
