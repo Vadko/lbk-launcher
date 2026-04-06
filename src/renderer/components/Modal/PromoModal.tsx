@@ -178,22 +178,22 @@ export const PromoModal: React.FC = () => {
       trackEvent('ads-placement', {
         type: 'pop-up_',
         action: 'view',
-        bannerCampaignId: banner?.id,
+        banner_id: banner?.id,
       });
     } else {
-      trackEvent('ads-placement', { type: 'pop-up_', action: 'view' });
+      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'view' });
     }
-  }, [isOpen]);
+  }, [isOpen, banner, recordImpression]);
 
   const handleClose = () => {
     if (banner) {
       trackEvent('ads-placement', {
         type: 'pop-up_',
         action: 'skip',
-        bannerCampaignId: banner?.id,
+        banner_id: banner?.id,
       });
     } else {
-      trackEvent('ads-placement', { type: 'pop-up_', action: 'skip' });
+      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'skip' });
     }
     closeModal(dontShowAgain);
   };
@@ -205,10 +205,10 @@ export const PromoModal: React.FC = () => {
       trackEvent('ads-placement', {
         type: 'pop-up_',
         action: 'click',
-        bannerCampaignId: banner?.id,
+        banner_id: banner?.id,
       });
     } else {
-      trackEvent('ads-placement', { type: 'pop-up_', action: 'click' });
+      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'click' });
     }
 
     // Open banner link or fallback to default donation link

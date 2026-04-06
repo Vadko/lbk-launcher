@@ -40,14 +40,23 @@ export const Placement: React.FC<PlacementProps> = ({
         if (entry.isIntersecting && !hasTrackedImpression.current && banner?.id) {
           hasTrackedImpression.current = true;
 
-          trackEvent('ads-placement', {
-            banner_id: banner.id,
-            type: banner.type,
-            game_id: gameId,
-            action: 'view',
-          });
+          if (banner) {
+            trackEvent('ads-placement', {
+              banner_id: banner.id,
+              type: placementType,
+              game_id: gameId,
+              action: 'view',
+            });
 
-          onImpression?.(banner.id);
+            onImpression?.(banner.id);
+          } else {
+            trackEvent('ads-placement', {
+              ads: isKuli ? 'kuli' : 'support_link',
+              type: placementType,
+              game_id: gameId,
+              action: 'view',
+            });
+          }
         }
       },
       { threshold: 0.5 }
@@ -58,7 +67,7 @@ export const Placement: React.FC<PlacementProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [banner, gameId, onImpression]);
+  }, [banner, gameId, onImpression, placementType, isKuli]);
 
   const staticBanner = useCallback(
     () => (
@@ -96,7 +105,7 @@ export const Placement: React.FC<PlacementProps> = ({
     if (banner) {
       trackEvent('ads-placement', {
         banner_id: banner.id,
-        type: banner.type,
+        type: placementType,
         game_id: gameId,
         action: 'click',
       });
@@ -104,6 +113,8 @@ export const Placement: React.FC<PlacementProps> = ({
       onClick?.(banner.id);
     } else {
       trackEvent('ads-placement', {
+        ads: isKuli ? 'kuli' : 'support_link',
+        type: placementType,
         game_id: gameId,
         action: 'click',
       });
