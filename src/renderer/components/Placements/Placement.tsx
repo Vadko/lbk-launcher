@@ -51,7 +51,7 @@ export const Placement: React.FC<PlacementProps> = ({
             onImpression?.(banner.id);
           } else {
             trackEvent('ads-placement', {
-              ads: isKuli ? 'kuli' : 'support_link',
+              ads: isKuli ? 'kuli' : 'support',
               type: placementType,
               game_id: gameId,
               action: 'view',
@@ -113,7 +113,7 @@ export const Placement: React.FC<PlacementProps> = ({
       onClick?.(banner.id);
     } else {
       trackEvent('ads-placement', {
-        ads: isKuli ? 'kuli' : 'support_link',
+        ads: isKuli ? 'kuli' : 'support',
         type: placementType,
         game_id: gameId,
         action: 'click',
