@@ -90,7 +90,7 @@ export interface GetGamesParams {
   authors?: string[];
   showAdultGames?: boolean;
   hideAiTranslations?: boolean;
-  sortOrder?: 'name' | 'downloads' | 'newest';
+  sortOrder?: 'name' | 'downloads' | 'newest' | 'updated';
 }
 
 export interface GetGamesResult {

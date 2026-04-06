@@ -215,6 +215,8 @@ export class GamesRepository {
     if (sortOrder === 'downloads') {
       orderClause = `downloads DESC NULLS LAST, ${nameSortExpr} ASC`;
     } else if (sortOrder === 'newest') {
+      orderClause = `created_at DESC NULLS LAST, ${nameSortExpr} ASC`;
+    } else if (sortOrder === 'updated') {
       orderClause = `approved_at DESC NULLS LAST, ${nameSortExpr} ASC`;
     } else {
       orderClause = `${nameSortExpr} ASC`;

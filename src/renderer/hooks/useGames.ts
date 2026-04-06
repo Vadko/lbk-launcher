@@ -9,7 +9,7 @@ interface UseGamesParams {
   selectedAuthors?: string[];
   specialFilter?: SpecialFilterType | null;
   searchQuery?: string;
-  sortOrder?: 'name' | 'downloads' | 'newest';
+  sortOrder?: 'name' | 'downloads' | 'newest' | 'updated';
   hideAiTranslations?: boolean;
 }
 
