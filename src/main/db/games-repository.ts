@@ -3,7 +3,12 @@ import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
 import { getSearchVariations } from '../../shared/search-utils';
-import type { Game, GetGamesParams, GetGamesResult } from '../../shared/types';
+import type {
+  Game,
+  GetGamesParams,
+  GetGamesResult,
+  SortOrderType,
+} from '../../shared/types';
 import { getDatabase, isSpellfixAvailable } from './database';
 import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-queries';
 
@@ -141,6 +146,26 @@ export class GamesRepository {
   }
 
   /**
+   * Побудувати ORDER BY clause для сортування ігор
+   */
+  private buildOrderClause(sortOrder: SortOrderType): string {
+    // LTRIM видаляє цифри та символи з початку назви для сортування
+    // Наприклад "112 Operator" сортується як "Operator", "[Chilla's Art]" як "Chilla's Art"
+    const nameSortExpr = `LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE`;
+
+    if (sortOrder === 'downloads') {
+      return `downloads DESC NULLS LAST, ${nameSortExpr} ASC`;
+    }
+    if (sortOrder === 'newest') {
+      return `created_at DESC NULLS LAST, ${nameSortExpr} ASC`;
+    }
+    if (sortOrder === 'updated') {
+      return `approved_at DESC NULLS LAST, ${nameSortExpr} ASC`;
+    }
+    return `${nameSortExpr} ASC`;
+  }
+
+  /**
    * Конвертувати row з SQLite в Game
    * Тільки для полів platforms та install_paths потрібен JSON.parse
    */
@@ -208,19 +233,7 @@ export class GamesRepository {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    // LTRIM видаляє цифри та символи з початку назви для сортування
-    // Наприклад "112 Operator" сортується як "Operator", "[Chilla's Art]" як "Chilla's Art"
-    const nameSortExpr = `LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE`;
-    let orderClause: string;
-    if (sortOrder === 'downloads') {
-      orderClause = `downloads DESC NULLS LAST, ${nameSortExpr} ASC`;
-    } else if (sortOrder === 'newest') {
-      orderClause = `created_at DESC NULLS LAST, ${nameSortExpr} ASC`;
-    } else if (sortOrder === 'updated') {
-      orderClause = `approved_at DESC NULLS LAST, ${nameSortExpr} ASC`;
-    } else {
-      orderClause = `${nameSortExpr} ASC`;
-    }
+    const orderClause = this.buildOrderClause(sortOrder);
 
     const gamesStmt = this.db.prepare(`
       SELECT *
@@ -335,7 +348,8 @@ export class GamesRepository {
     gameIds: string[],
     searchQuery?: string,
     hideAiTranslations = false,
-    useSteamIdField = false
+    useSteamIdField = false,
+    sortOrder: SortOrderType = 'name'
   ): Game[] {
     if (gameIds.length === 0) return [];
 
@@ -364,7 +378,7 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE ASC
+      ORDER BY ${this.buildOrderClause(sortOrder)}
     `);
 
     const rows = stmt.all(...queryParams) as Record<string, unknown>[];
@@ -377,7 +391,8 @@ export class GamesRepository {
   findGamesByInstallPaths(
     installPaths: string[],
     searchQuery?: string,
-    hideAiTranslations = false
+    hideAiTranslations = false,
+    sortOrder: SortOrderType = 'name'
   ): GetGamesResult {
     if (installPaths.length === 0) {
       return { games: [], total: 0 };
@@ -404,6 +419,7 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
+      ORDER BY ${this.buildOrderClause(sortOrder)}
     `);
 
     const rows = stmt.all(...queryParams) as Record<string, unknown>[];
@@ -444,10 +460,6 @@ export class GamesRepository {
       });
     });
 
-    matchedGames.sort((a, b) =>
-      a.name.localeCompare(b.name, 'uk', { sensitivity: 'base' })
-    );
-
     // Count unique games by slug (not total translations)
     const uniqueCount = new Set(matchedGames.map((g) => g.slug || g.id)).size;
 
@@ -461,7 +473,8 @@ export class GamesRepository {
   findGamesBySteamAppIds(
     steamAppIds: number[],
     searchQuery?: string,
-    hideAiTranslations = false
+    hideAiTranslations = false,
+    sortOrder: SortOrderType = 'name'
   ): GetGamesResult {
     if (steamAppIds.length === 0) {
       return { games: [], total: 0 };
@@ -493,7 +506,7 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE ASC
+      ORDER BY ${this.buildOrderClause(sortOrder)}
     `);
 
     const rows = stmt.all(...queryParams) as Record<string, unknown>[];
@@ -628,7 +641,8 @@ export class GamesRepository {
   findGamesByTitles(
     titles: string[],
     searchQuery?: string,
-    hideAiTranslations = false
+    hideAiTranslations = false,
+    sortOrder: SortOrderType = 'name'
   ): GetGamesResult {
     if (titles.length === 0) {
       return { games: [], total: 0 };
@@ -667,7 +681,7 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY name COLLATE NOCASE ASC
+      ORDER BY ${this.buildOrderClause(sortOrder)}
     `);
 
     const rows = stmt.all(...queryParams) as Record<string, unknown>[];

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { SortOrderType, SpecialFilterType } from '../components/Sidebar/types';
+import type { SortOrderType } from '../../shared/types';
+import type { SpecialFilterType } from '../components/Sidebar/types';
 import { electronStorage } from './electronStorage';
 
 interface SettingsStore {

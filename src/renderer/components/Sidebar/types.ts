@@ -1,4 +1,5 @@
 import type { Database } from '../../../lib/database.types';
+import type { SortOrderType } from '../../../shared/types';
 import type { Game } from '../../types/game';
 
 export interface GameGroup {
@@ -19,8 +20,6 @@ export type SpecialFilterType =
   | 'owned-epic-games'
   | 'with-achievements'
   | 'with-voice';
-
-export type SortOrderType = 'name' | 'downloads' | 'newest';
 
 interface StatusFilterOption {
   label: string;

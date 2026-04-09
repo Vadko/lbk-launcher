@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron';
-import type { Game, GetGamesParams } from '../../shared/types';
+import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   countGamesBySteamAppIds,
   fetchFilterCounts,
@@ -93,9 +93,21 @@ export function setupGamesHandlers(): void {
   // Fetch games by IDs - SYNC
   ipcMain.handle(
     'fetch-games-by-ids',
-    (_, gameIds: string[], searchQuery?: string, hideAiTranslations = false) => {
+    (
+      _,
+      gameIds: string[],
+      searchQuery?: string,
+      hideAiTranslations = false,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
-        return fetchGamesByIds(gameIds, searchQuery, hideAiTranslations);
+        return fetchGamesByIds(
+          gameIds,
+          searchQuery,
+          hideAiTranslations,
+          false,
+          sortOrder
+        );
       } catch (error) {
         console.error('Error fetching games by IDs:', error);
         return [];
@@ -191,9 +203,20 @@ export function setupGamesHandlers(): void {
   // Find games by install paths - SYNC
   ipcMain.handle(
     'find-games-by-install-paths',
-    (_, installPaths: string[], searchQuery?: string, hideAiTranslations = false) => {
+    (
+      _,
+      installPaths: string[],
+      searchQuery?: string,
+      hideAiTranslations = false,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
-        return findGamesByInstallPaths(installPaths, searchQuery, hideAiTranslations);
+        return findGamesByInstallPaths(
+          installPaths,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
       } catch (error) {
         console.error('Error finding games by install paths:', error);
         return { games: [], total: 0 };
@@ -218,9 +241,20 @@ export function setupGamesHandlers(): void {
   // Find games by Steam App IDs
   ipcMain.handle(
     'find-games-by-steam-app-ids',
-    (_, steamAppIds: number[], searchQuery?: string, hideAiTranslations = false) => {
+    (
+      _,
+      steamAppIds: number[],
+      searchQuery?: string,
+      hideAiTranslations = false,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
-        return findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations);
+        return findGamesBySteamAppIds(
+          steamAppIds,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
       } catch (error) {
         console.error('Error finding games by Steam App IDs:', error);
         return { games: [], total: 0 };
@@ -251,10 +285,16 @@ export function setupGamesHandlers(): void {
   // Find games by titles
   ipcMain.handle(
     'find-games-by-titles',
-    (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
+    (
+      _,
+      titles: string[],
+      searchQuery?: string,
+      hideAiTranslations?: boolean,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
         const repo = GamesRepository.getInstance();
-        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
+        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations, sortOrder);
       } catch (error) {
         console.error('Error finding games by titles:', error);
         return { games: [], total: 0 };

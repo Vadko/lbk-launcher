@@ -33,6 +33,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   const { games: allInstalledGames, isLoading } = useGames({
     specialFilter: 'installed-games',
     hideAiTranslations,
+    sortOrder: 'newest',
   });
 
   // Filter to show only games WITHOUT translations installed
