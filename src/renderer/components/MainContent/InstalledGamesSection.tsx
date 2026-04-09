@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Filter } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGames } from '@/renderer/hooks/useGames';
@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
+import { Button } from '../ui/Button';
 
 interface InstalledGamesSectionProps {
   title?: string;
@@ -37,14 +38,14 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   });
 
   // Filter to show only games WITHOUT translations installed
-  const gamesWithoutTranslations = useMemo(
+  const gamesWithoutInstalls = useMemo(
     () => allInstalledGames.filter((game) => !installedGames.has(game.id)),
     [allInstalledGames, installedGames]
   );
 
   const visibleGames = useMemo(
-    () => gamesWithoutTranslations.slice(0, showLimit),
-    [gamesWithoutTranslations, showLimit]
+    () => gamesWithoutInstalls.slice(0, showLimit),
+    [gamesWithoutInstalls, showLimit]
   );
 
   const handleViewAll = () => {
@@ -53,7 +54,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   };
 
   // Don't show section if no games found
-  if (!isLoading && gamesWithoutTranslations.length === 0) {
+  if (!isLoading && gamesWithoutInstalls.length === 0) {
     return null;
   }
 
@@ -62,13 +63,11 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       {/* Header with button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        {gamesWithoutTranslations.length > showLimit && (
-          <button
-            onClick={handleViewAll}
-            className="inline-flex items-center gap-2 px-6 py-2 rounded-xl font-medium transition-all bg-surface-elevated text-text-main hover:bg-surface-elevated/80"
-          >
-            Показати всі ({gamesWithoutTranslations.length})
-          </button>
+        {gamesWithoutInstalls.length > showLimit && (
+          <Button variant="ghost" onClick={handleViewAll}>
+            Переглянути всі
+            <ArrowRight size={24} />
+          </Button>
         )}
       </div>
 

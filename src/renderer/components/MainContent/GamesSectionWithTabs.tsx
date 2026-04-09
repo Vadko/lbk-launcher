@@ -56,7 +56,7 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
   );
 
   const games = useMemo(
-    () => (activeTab?.showTrendsGames ? trendingGames ?? [] : allGames),
+    () => (activeTab?.showTrendsGames ? (trendingGames ?? []) : allGames),
     [activeTab?.showTrendsGames, trendingGames, allGames]
   );
   const isLoading = activeTab?.showTrendsGames ? isLoadingTrends : isLoadingAll;
@@ -86,7 +86,7 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
 
       {/* Content */}
       <div className="grid grid-cols-3 gap-8">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait" initial={false}>
           {isLoading ? (
             <motion.div
               key="loader"
@@ -116,10 +116,11 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
                 id={`game-${game.slug}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
                 transition={{
-                  duration: 0.4,
-                  delay: Math.min(index * 0.03, 0.5),
-                  ease: [0.25, 0.46, 0.45, 0.94],
+                  duration: 0.3,
+                  delay: index * 0.05,
+                  ease: 'easeInOut',
                 }}
               >
                 <GameListItem

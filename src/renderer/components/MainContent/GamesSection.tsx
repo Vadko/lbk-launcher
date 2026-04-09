@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGames } from '@/renderer/hooks/useGames';
@@ -7,6 +8,7 @@ import { useStore } from '@/renderer/store/useStore';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
+import { Button } from '../ui/Button';
 
 interface GamesSectionProps {
   title: string;
@@ -14,6 +16,7 @@ interface GamesSectionProps {
   showDownloadCounter?: boolean;
   showTrendsGames?: boolean;
   sortOrder?: 'downloads' | 'name' | 'newest' | 'updated';
+  onViewAll?: () => void;
 }
 
 export const GamesSection: React.FC<GamesSectionProps> = ({
@@ -22,6 +25,7 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
   showDownloadCounter = false,
   showTrendsGames = false,
   sortOrder = 'name',
+  onViewAll,
 }) => {
   const { hideAiTranslations } = useSettingsStore(
     useShallow((state) => ({
@@ -46,7 +50,16 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
 
   return (
     <div className="text-left w-full max-w-[1317px]">
-      <h2 className="text-4xl font-head font-semibold text-text-main mb-8">{title}</h2>
+      {/* Header with view all button */}
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
+        {onViewAll && (
+          <Button variant="ghost" onClick={onViewAll}>
+            Переглянути всі
+            <ArrowRight size={24} />
+          </Button>
+        )}
+      </div>
       <div className={`grid grid-cols-3 gap-8`}>
         <AnimatePresence mode="popLayout">
           {isLoading ? (
