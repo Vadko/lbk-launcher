@@ -18,7 +18,6 @@ import { getPlatform, isLinux, isMacOS, isWindows } from '../utils/platform';
 import {
   parseAppManifest,
   parseLibraryFolders,
-  parseLocalConfigApps,
   parseLocalConfigPlaytime,
   parseMostRecentUser,
   type SteamAppPlaytime,
