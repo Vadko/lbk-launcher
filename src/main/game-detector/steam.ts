@@ -661,7 +661,9 @@ function getSteamLibraryAppIdsFallback(): number[] {
       }
     }
 
-    console.log(`[Steam] Library: using librarycache folder fallback (${appIds.length} apps)`);
+    console.log(
+      `[Steam] Library: using librarycache folder fallback (${appIds.length} apps)`
+    );
     cache.libraryAppIds = appIds;
     return appIds;
   } catch {
