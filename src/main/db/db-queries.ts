@@ -105,6 +105,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     ai: game.ai ?? null,
     hide: game.hide ? 1 : 0,
     search_keywords: game.search_keywords ?? null,
+    source_language: game.source_language ?? null,
   };
 }
 
@@ -123,7 +124,7 @@ const UPSERT_GAME_SQL = `
     voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
     achievements_third_party, additional_path,
     epic_archive_hash, epic_archive_path, epic_archive_size,
-    steam_app_id, website, youtube, ai, hide, search_keywords
+    steam_app_id, website, youtube, ai, hide, search_keywords, source_language
   ) VALUES (
     @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
     @banner_path, @capsule_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
@@ -135,7 +136,7 @@ const UPSERT_GAME_SQL = `
     @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
     @achievements_third_party, @additional_path,
     @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-    @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords
+    @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
   )
 `;
 
