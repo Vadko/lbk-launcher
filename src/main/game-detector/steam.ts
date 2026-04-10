@@ -642,15 +642,32 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
 }
 
 function getSteamLibraryAppIdsFallback(): number[] {
-  const content = readLocalConfigContent();
-  if (!content) {
+  try {
+    const libraryCachePath = getUserConfigPath('librarycache');
+    if (!libraryCachePath || !fs.existsSync(libraryCachePath)) {
+      return [];
+    }
+
+    const files = fs.readdirSync(libraryCachePath);
+    const appIds: number[] = [];
+
+    for (const file of files) {
+      // Check if filename is a number (app ID) with .json extension
+      const match = file.match(/^(\d+)\.json$/);
+      if (match) {
+        const appId = Number.parseInt(match[1], 10);
+        if (!Number.isNaN(appId)) {
+          appIds.push(appId);
+        }
+      }
+    }
+
+    console.log(`[Steam] Library: using librarycache folder fallback (${appIds.length} apps)`);
+    cache.libraryAppIds = appIds;
+    return appIds;
+  } catch {
     return [];
   }
-
-  const appIds = parseLocalConfigApps(content);
-  console.log(`[Steam] Library: using localconfig.vdf fallback (${appIds.length} apps)`);
-  cache.libraryAppIds = appIds;
-  return appIds;
 }
 
 // ============================================================================
