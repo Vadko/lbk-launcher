@@ -21,6 +21,7 @@ const INITIAL_COUNTS: FilterCounts = {
   planned: 0,
   'in-progress': 0,
   completed: 0,
+  'tech-improvement': 0,
 };
 
 const DEBOUNCE_DELAY = 300;
