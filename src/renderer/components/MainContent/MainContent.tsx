@@ -621,10 +621,11 @@ export const MainContent: React.FC = () => {
               animate={{
                 width: bannerInfo.placementType === 'small_square' ? 320 : 0,
                 opacity: bannerInfo.placementType === 'small_square' ? 1 : 0,
+                display: bannerInfo.placementType === 'small_square' ? 'block' : 'none',
               }}
               initial={false}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-hidden flex-shrink-0 hidden lg:block"
+              className="overflow-hidden flex-shrink-0"
             >
               <div className="w-[320px] h-full">
                 <Placement

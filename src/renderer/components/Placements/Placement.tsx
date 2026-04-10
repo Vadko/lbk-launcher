@@ -75,7 +75,7 @@ export const Placement: React.FC<PlacementProps> = ({
       <>
         <img
           src={isNarrowType ? kuli : team}
-          className={`w-auto h-full ${isNarrowType ? 'max-h-11' : 'mx-auto support-banner'} object-contain object-top`}
+          className={`${isNarrowType ? 'w-auto h-full max-h-11' : 'h-auto w-full mx-auto mb-auto support-banner'} object-contain object-top`}
           loading="lazy"
         />
         {isNarrowType && (
