@@ -78,7 +78,6 @@ export const MainContent: React.FC = () => {
   // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
     let isMounted = true;
-    let showTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const loadBannerData = async () => {
       if (!selectedGame?.id) {
@@ -105,12 +104,10 @@ export const MainContent: React.FC = () => {
         // Cache the result
         bannerCacheRef.current.set(selectedGame.id, result);
 
-        showTimeout = setTimeout(() => {
-          if (isMounted) {
-            setBannerData(result);
-            setLoadedBannerGameId(selectedGame.id);
-          }
-        }, 500);
+        if (isMounted) {
+          setBannerData(result);
+          setLoadedBannerGameId(selectedGame.id);
+        }
       } catch (error) {
         if (!isMounted) return;
         console.error('Error loading banner data:', error);
@@ -123,22 +120,25 @@ export const MainContent: React.FC = () => {
 
     return () => {
       isMounted = false;
-      if (showTimeout) {
-        clearTimeout(showTimeout);
-      }
     };
   }, [selectedGame?.id, selectedGame?.slug]);
 
   const prevBannerInfoRef = useRef<{
     data: BannerData | null;
-    isKuli?: boolean;
-    support_url?: string | null;
-    placementType?: string | null;
-  }>({ data: null });
+    isKuli: boolean;
+    support_url: string | null;
+    placementType: string | null;
+  }>({ data: null, isKuli: false, support_url: null, placementType: null });
 
   const bannerInfo = useMemo(() => {
     if (!selectedGame) {
-      return { data: null, placementType: null };
+      prevBannerInfoRef.current = {
+        data: null,
+        isKuli: false,
+        support_url: null,
+        placementType: null,
+      };
+      return prevBannerInfoRef.current;
     }
 
     // Check cache directly to avoid flickering when switching between cached games
@@ -152,16 +152,18 @@ export const MainContent: React.FC = () => {
         (selectedGame.support_url ? 'small_square' : null) ??
         null;
 
-      return {
+      const info = {
         data: cachedData.banner || null,
         isKuli: cachedData.isKuli || false,
         support_url: selectedGame?.support_url || null,
         placementType: type,
       };
+      prevBannerInfoRef.current = info;
+      return info;
     }
 
-    // If not in cache and not loaded for this game yet — keep previous banner info
-    // to avoid unmount/remount flicker when banner type stays the same
+    // If not in cache and not loaded for this game yet,
+    // keep previous banner to avoid flicker
     if (loadedBannerGameId !== selectedGame.id) {
       return prevBannerInfoRef.current;
     }
@@ -172,23 +174,15 @@ export const MainContent: React.FC = () => {
       (selectedGame.support_url ? 'small_square' : null) ??
       null;
 
-    return {
+    const info = {
       data: bannerData?.banner || null,
       isKuli: bannerData?.isKuli || false,
       support_url: selectedGame?.support_url || null,
       placementType: type,
     };
+    prevBannerInfoRef.current = info;
+    return info;
   }, [selectedGame, bannerData, loadedBannerGameId]);
-
-  // Track previous banner info for loading state
-  useEffect(() => {
-    if (
-      loadedBannerGameId === selectedGame?.id ||
-      bannerCacheRef.current.has(selectedGame?.id ?? '')
-    ) {
-      prevBannerInfoRef.current = bannerInfo;
-    }
-  }, [bannerInfo, loadedBannerGameId, selectedGame?.id]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -623,28 +617,25 @@ export const MainContent: React.FC = () => {
               <StatusCard game={selectedGame} />
               <InfoCard game={selectedGame} />
             </div>
-            <AnimatePresence>
-              {bannerInfo.placementType === 'small_square' && (
-                <motion.div
-                  key="small-square"
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 320 }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="overflow-hidden flex-shrink-0 hidden lg:block"
-                >
-                  <div className="w-[320px] h-full">
-                    <Placement
-                      banner={bannerInfo.data}
-                      placementType="small_square"
-                      gameId={selectedGame.id}
-                      supportUrl={selectedGame.support_url || undefined}
-                      className="placement h-full"
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <motion.div
+              animate={{
+                width: bannerInfo.placementType === 'small_square' ? 320 : 0,
+                opacity: bannerInfo.placementType === 'small_square' ? 1 : 0,
+              }}
+              initial={false}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-hidden flex-shrink-0 hidden lg:block"
+            >
+              <div className="w-[320px] h-full">
+                <Placement
+                  banner={bannerInfo.data}
+                  placementType="small_square"
+                  gameId={selectedGame.id}
+                  supportUrl={selectedGame.support_url || undefined}
+                  className="placement h-full"
+                />
+              </div>
+            </motion.div>
           </div>
 
           <motion.div
