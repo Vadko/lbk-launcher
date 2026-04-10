@@ -410,6 +410,9 @@ body.liquid-glass-enabled .glass-input:focus {
 /* ==========================================================================
    10. GAMEPAD FOCUS STYLES
    ========================================================================== */
+[data-gamepad-mode] {
+  cursor: none !important;
+}
 
 [data-gamepad-mode] button:focus,
 [data-gamepad-mode] a:focus,

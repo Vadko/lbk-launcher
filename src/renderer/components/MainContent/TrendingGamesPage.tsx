@@ -21,9 +21,11 @@ export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) 
       <Button
         variant="ghost"
         onClick={onBack}
-        className="flex items-center gap-2"
+        data-gamepad-action
+        data-gamepad-primary-action
+        className="flex items-center gap-2 sticky"
       >
-        <ArrowLeft size={20} />
+        <ArrowLeft size={24} />
         Назад
       </Button>
     </div>

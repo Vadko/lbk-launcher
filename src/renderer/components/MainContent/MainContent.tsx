@@ -14,7 +14,6 @@ import type { GameBannersResult } from '@/main/db/banners-api';
 import type { LaunchGameResult } from '../../../shared/types';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { useInstallation } from '../../hooks/useInstallation';
-import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';

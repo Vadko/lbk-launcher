@@ -72,6 +72,7 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
             <button
               key={tab.sortOrder}
               onClick={() => setActiveTabSortOrder(tab.sortOrder)}
+              data-gamepad-action
               className={`px-6 py-2 rounded-xl font-medium transition-all ${
                 activeTabSortOrder === tab.sortOrder
                   ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
@@ -110,28 +111,30 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
               <p>Ігор не знайдено</p>
             </motion.div>
           ) : (
-            visibleGames.map((game, index) => (
-              <motion.div
-                key={`${game.id}-${activeTabSortOrder}`}
-                id={`game-${game.slug}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.05,
-                  ease: 'easeInOut',
-                }}
-              >
-                <GameListItem
-                  game={game}
-                  isSelected={false}
-                  isCardStyle={true}
-                  showDownloadCounter={activeTab?.showDownloadCounter}
-                  onClick={() => setSelectedGame(game)}
-                />
-              </motion.div>
-            ))
+            <React.Fragment key={`games-${activeTabSortOrder}`}>
+              {visibleGames.map((game, index) => (
+                <motion.div
+                  key={`${game.id}-${activeTabSortOrder}`}
+                  id={`game-${game.slug}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: index * 0.05,
+                    ease: 'easeInOut',
+                  }}
+                >
+                  <GameListItem
+                    game={game}
+                    isSelected={false}
+                    isCardStyle={true}
+                    showDownloadCounter={activeTab?.showDownloadCounter}
+                    onClick={() => setSelectedGame(game)}
+                  />
+                </motion.div>
+              ))}
+            </React.Fragment>
           )}
         </AnimatePresence>
       </div>

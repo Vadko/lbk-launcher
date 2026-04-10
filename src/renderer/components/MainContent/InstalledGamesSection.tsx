@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGames } from '@/renderer/hooks/useGames';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
+import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 import { Button } from '../ui/Button';
@@ -51,6 +52,12 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   const handleViewAll = () => {
     // Activate installed-games filter in sidebar
     useSettingsStore.getState().setSpecialFilter('installed-games');
+
+    // For gamepad mode, switch to games navigation area
+    if (useGamepadModeStore.getState().isGamepadMode) {
+      useGamepadModeStore.getState().setNavigationArea('games');
+      useGamepadModeStore.getState().setFocusedGameIndex(0);
+    }
   };
 
   // Don't show section if no games found
@@ -63,8 +70,13 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       {/* Header with button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        {gamesWithoutInstalls.length > showLimit && (
-          <Button variant="ghost" onClick={handleViewAll}>
+        {allInstalledGames.length > showLimit && (
+          <Button
+            variant="ghost"
+            data-gamepad-action
+            data-gamepad-primary-action
+            onClick={handleViewAll}
+          >
             Переглянути всі
             <ArrowRight size={24} />
           </Button>

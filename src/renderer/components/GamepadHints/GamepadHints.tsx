@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 
 type GamepadType = 'xbox' | 'playstation';
 
-type ButtonVariant = 'green' | 'red' | 'blue' | 'default';
+type ButtonVariant = 'green' | 'red' | 'blue' | 'yellow' | 'default';
 
 interface HintItem {
   button: string;
@@ -18,15 +18,18 @@ const BUTTON_CONFIG: Record<
   {
     confirm: { label: string; variant: ButtonVariant };
     back: { label: string; variant: ButtonVariant };
+    home: { label: string; variant: ButtonVariant };
   }
 > = {
   xbox: {
     confirm: { label: 'A', variant: 'green' },
     back: { label: 'B', variant: 'red' },
+    home: { label: 'Y', variant: 'yellow' },
   },
   playstation: {
     confirm: { label: '✕', variant: 'blue' }, // PlayStation Cross - blue
     back: { label: '○', variant: 'red' }, // PlayStation Circle - red
+    home: { label: '△', variant: 'green' }, // PlayStation Triangle - yellow
   },
 };
 
@@ -55,6 +58,7 @@ const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) 
     green: 'bg-green-500/20 border-green-500/50 text-green-400',
     red: 'bg-red-500/20 border-red-500/50 text-red-400',
     blue: 'bg-blue-500/20 border-blue-500/50 text-blue-400', // PlayStation Cross
+    yellow: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400', // Xbox/Y
     default: 'bg-white/10 border-white/20 text-white',
   };
 
@@ -93,7 +97,7 @@ export const GamepadHints: React.FC = () => {
 
   if (!isGamepadMode) return null;
 
-  const { confirm, back } = BUTTON_CONFIG[gamepadType];
+  const { confirm, back, home } = BUTTON_CONFIG[gamepadType];
   let hints: HintItem[] = [];
 
   if (isModalOpen) {
@@ -105,12 +109,14 @@ export const GamepadHints: React.FC = () => {
   } else if (navigationArea === 'header') {
     hints = [
       { button: confirm.label, label: 'Відкрити', variant: confirm.variant },
+      { button: home.label, label: 'Головна', variant: home.variant },
       { button: '←→', label: 'Елементи' },
       { button: '↓', label: 'До ігор' },
     ];
   } else if (navigationArea === 'games') {
     hints = [
       { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
+      { button: home.label, label: 'Головна', variant: home.variant },
       { button: '←→', label: 'Ігри' },
       { button: '↑', label: 'Пошук' },
       { button: '↓', label: 'Контент' },
@@ -119,6 +125,7 @@ export const GamepadHints: React.FC = () => {
     hints = [
       { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
       { button: back.label, label: 'Назад', variant: back.variant },
+      ...(selectedGame ? [{ button: home.label, label: 'Головна', variant: home.variant }] : []),
       { button: '←→', label: selectedGame ? 'Кнопки' : 'Навігація' },
       { button: '↑↓', label: 'Прокрутка' },
     ];

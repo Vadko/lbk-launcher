@@ -54,7 +54,11 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
         {onViewAll && (
-          <Button variant="ghost" onClick={onViewAll}>
+          <Button
+            variant="ghost"
+            onClick={onViewAll}
+            data-gamepad-action
+          >
             Переглянути всі
             <ArrowRight size={24} />
           </Button>
