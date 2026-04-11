@@ -4,14 +4,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { trackEvent } from '../../utils/analytics';
 import { Modal } from './Modal';
 
+import type { FeedbackErrorType } from '@/shared/types';
+
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_SCREENSHOTS = 5;
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
-type ErrorType = 'missing_translation' | 'translation_error' | 'technical';
-
 const ERROR_TYPES: {
-  value: ErrorType;
+  value: FeedbackErrorType;
   label: string;
   sublabel: string;
   icon: React.ReactNode;
@@ -56,7 +56,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   gameId,
   gameName,
 }) => {
-  const [errorType, setErrorType] = useState<ErrorType>('missing_translation');
+  const [errorType, setFeedbackErrorType] = useState<FeedbackErrorType>('missing_translation');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +68,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setErrorType('missing_translation');
+      setFeedbackErrorType('missing_translation');
       setMessage('');
       setScreenshots([]);
       setIsSubmitting(false);
@@ -161,19 +161,15 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         }
 
         uploadedPaths = [];
-        for (let i = 0; i < urlsResult.uploadUrls.length; i++) {
-          const { signedUrl, path } = urlsResult.uploadUrls[i];
-          const screenshot = screenshots[i];
-
-          // Upload directly from renderer via fetch
+        for (const [i, { signedUrl, path }] of urlsResult.uploadUrls.entries()) {
           const response = await fetch(signedUrl, {
             method: 'PUT',
-            headers: { 'Content-Type': screenshot.type },
-            body: screenshot.file,
+            headers: { 'Content-Type': screenshots[i].type },
+            body: screenshots[i].file,
           });
 
           if (!response.ok) {
-            setError(`Помилка завантаження скріншоту: ${screenshot.name}`);
+            setError(`Помилка завантаження скріншоту: ${screenshots[i].name}`);
             setIsSubmitting(false);
             return;
           }
@@ -241,7 +237,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             {ERROR_TYPES.map((type) => (
               <button
                 key={type.value}
-                onClick={() => setErrorType(type.value)}
+                onClick={() => setFeedbackErrorType(type.value)}
                 data-gamepad-modal-item
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-lg border transition-all ${
                   errorType === type.value

@@ -8,6 +8,7 @@ import type { Database } from '../lib/database.types';
 export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
+export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 
@@ -239,7 +240,7 @@ export interface ElectronAPI {
   // Submit feedback for a game translation
   submitFeedback: (
     gameId: string,
-    errorType: 'missing_translation' | 'translation_error' | 'technical',
+    errorType: FeedbackErrorType,
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
