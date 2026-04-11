@@ -188,8 +188,12 @@ const electronAPI: ElectronAPI = {
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
   // Submit feedback for a game translation
-  submitFeedback: (gameId: string, errorType: string, message: string, screenshotPaths?: string[]) =>
-    ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  submitFeedback: (
+    gameId: string,
+    errorType: string,
+    message: string,
+    screenshotPaths?: string[]
+  ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
   getFeedbackUploadUrls: (fileNames: string[]) =>
     ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
   uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>

@@ -464,9 +464,7 @@ export async function submitFeedback(
 /**
  * Get signed upload URLs for feedback screenshots
  */
-export async function getFeedbackUploadUrls(
-  fileNames: string[]
-): Promise<{
+export async function getFeedbackUploadUrls(fileNames: string[]): Promise<{
   success: boolean;
   uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
   error?: string;
@@ -494,7 +492,10 @@ export async function getFeedbackUploadUrls(
 
     return { success: true, uploadUrls: result.uploadUrls };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
   }
 }
 
@@ -522,7 +523,10 @@ export async function uploadFileToSignedUrl(
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : 'Upload error' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload error',
+    };
   }
 }
 

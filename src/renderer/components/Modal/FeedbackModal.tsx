@@ -1,10 +1,9 @@
 import { motion } from 'framer-motion';
 import { AlertTriangle, Ban, CheckCircle, ImageIcon, Wrench, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { FeedbackErrorType } from '@/shared/types';
 import { trackEvent } from '../../utils/analytics';
 import { Modal } from './Modal';
-
-import type { FeedbackErrorType } from '@/shared/types';
 
 const MAX_MESSAGE_LENGTH = 1000;
 const MAX_SCREENSHOTS = 5;
@@ -56,7 +55,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   gameId,
   gameName,
 }) => {
-  const [errorType, setFeedbackErrorType] = useState<FeedbackErrorType>('missing_translation');
+  const [errorType, setFeedbackErrorType] =
+    useState<FeedbackErrorType>('missing_translation');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -221,7 +221,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             <CheckCircle size={56} className="text-green-400" />
           </motion.div>
           <p className="text-lg font-semibold text-text-main">Дякуємо за звіт!</p>
-          <p className="text-sm text-text-muted">Ваш звіт було надіслано автору перекладу</p>
+          <p className="text-sm text-text-muted">
+            Ваш звіт було надіслано автору перекладу
+          </p>
         </div>
       </Modal>
     );

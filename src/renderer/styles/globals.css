@@ -194,7 +194,7 @@ body.liquid-glass-enabled .glass-card {
 }
 
 .modal-gradient-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -1px;
   border-radius: inherit;

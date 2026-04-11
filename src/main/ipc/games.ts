@@ -82,8 +82,13 @@ export function setupGamesHandlers(): void {
   // Submit feedback for a game translation
   ipcMain.handle(
     'submit-feedback',
-    async (_, gameId: string, errorType: string, message: string, screenshotPaths?: string[]) =>
-      submitFeedback(gameId, errorType, message, screenshotPaths)
+    async (
+      _,
+      gameId: string,
+      errorType: string,
+      message: string,
+      screenshotPaths?: string[]
+    ) => submitFeedback(gameId, errorType, message, screenshotPaths)
   );
 
   // Get signed upload URLs for feedback screenshots

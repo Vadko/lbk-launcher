@@ -245,9 +245,11 @@ export interface ElectronAPI {
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
   // Get signed upload URLs for feedback screenshots
-  getFeedbackUploadUrls: (
-    fileNames: string[]
-  ) => Promise<{ success: boolean; uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[]; error?: string }>;
+  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
+    success: boolean;
+    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
+    error?: string;
+  }>;
   // Upload a file to a signed URL
   uploadFileToSignedUrl: (
     signedUrl: string,
