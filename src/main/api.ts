@@ -71,6 +71,7 @@ export function fetchFilterCounts(): FilterCountsResult {
       planned: 0,
       'in-progress': 0,
       completed: 0,
+      'tech-improvement': 0,
       'with-achievements': 0,
       'with-voice': 0,
     };

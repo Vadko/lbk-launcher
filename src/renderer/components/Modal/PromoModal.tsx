@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { Modal } from './Modal';
 
-// Окремий компонент для контенту підтримки
+// Separate component for support content
 interface SupportContentProps {
   dontShowAgain: boolean;
   setDontShowAgain: (value: boolean) => void;
@@ -76,7 +76,7 @@ export const PromoModal: React.FC = () => {
   const [banner, setBanner] = useState<BannerData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Ref для відстеження чи вже записано view impression для поточної сесії
+  // Ref to track if view impression was already recorded for current session
   const viewImpressionRecorded = useRef(false);
 
   // Fetch banner data
@@ -117,58 +117,51 @@ export const PromoModal: React.FC = () => {
   useEffect(() => {
     const { devMode } = usePromoModalStore.getState();
 
-    if (devMode === 'never') return;
+    // Dev mode only works in development
+    if (import.meta.env.DEV && devMode === 'never') return;
 
-    // Перш ніж перевіряти shouldShowModal, скидаємо neverShow якщо потрібно
+    // Reset neverShowAgain if needed before checking shouldShowModal
     checkAndResetNeverShow();
 
-    if (!shouldShowModal()) return;
+    // Basic check (ignore checkbox - we don't know yet if there's a banner)
+    // Full check with checkbox will be in setTimeout after fetch
+    if (!shouldShowModal(true)) return;
 
-    // Listen to dev mode changes and close modal if set to 'never'
+    // Listen to dev mode changes and close modal if set to 'never' (dev only)
     const unsubscribe = usePromoModalStore.subscribe((state) => {
-      if (state.devMode === 'never' && state.isOpen) {
+      if (import.meta.env.DEV && state.devMode === 'never' && state.isOpen) {
         state.closeModal(false);
       }
     });
 
-    // Determine delay based on dev mode
-    const getDelay = () => {
-      if (devMode === 'always') return 1000; // 1 second for testing
-      if (devMode === 'normal') return 10000; // 10 seconds for normal use
-      return 0;
+    const delay = import.meta.env.DEV && devMode === 'always' ? 1000 : 10000;
+
+    const timer = setTimeout(async () => {
+      // Fetch banner first to know if we have ad content
+      const bannerData = await fetchBanner();
+      const hasBanner = !!(bannerData?.image_path && bannerData?.link);
+
+      // For ad banners - ignore "don't show again" checkbox
+      // For SupportContent - respect the checkbox
+      if (shouldShowModal(hasBanner)) {
+        openModal();
+      }
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
     };
-
-    const delay = getDelay();
-
-    if (delay > 0) {
-      const timer = setTimeout(async () => {
-        // Double-check conditions before showing
-        if (shouldShowModal()) {
-          const bannerData = await fetchBanner();
-          const { devMode: currentDevMode } = usePromoModalStore.getState();
-          if (bannerData || currentDevMode === 'always') {
-            openModal();
-          }
-        }
-      }, delay);
-
-      return () => {
-        clearTimeout(timer);
-        unsubscribe();
-      };
-    }
-
-    return unsubscribe;
-  }, [shouldShowModal, openModal, fetchBanner]);
+  }, [shouldShowModal, openModal, fetchBanner, checkAndResetNeverShow]);
   // Record view impression when modal opens - only once per session
   useEffect(() => {
     if (!isOpen) {
-      // Скидаємо флаг при закритті модалки
+      // Reset flag when modal closes
       viewImpressionRecorded.current = false;
       return;
     }
 
-    // Якщо вже записали impression для цієї сесії - не записуємо знову
+    // If already recorded impression for this session - don't record again
     if (viewImpressionRecorded.current) return;
 
     viewImpressionRecorded.current = true;
@@ -178,22 +171,22 @@ export const PromoModal: React.FC = () => {
       trackEvent('ads-placement', {
         type: 'pop-up_',
         action: 'view',
-        bannerCampaignId: banner?.id,
+        banner_id: banner?.id,
       });
     } else {
-      trackEvent('ads-placement', { type: 'pop-up_', action: 'view' });
+      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'view' });
     }
-  }, [isOpen]);
+  }, [isOpen, banner, recordImpression]);
 
   const handleClose = () => {
     if (banner) {
       trackEvent('ads-placement', {
         type: 'pop-up_',
         action: 'skip',
-        bannerCampaignId: banner?.id,
+        banner_id: banner?.id,
       });
     } else {
-      trackEvent('ads-placement', { type: 'pop-up_', action: 'skip' });
+      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'skip' });
     }
     closeModal(dontShowAgain);
   };
@@ -205,10 +198,10 @@ export const PromoModal: React.FC = () => {
       trackEvent('ads-placement', {
         type: 'pop-up_',
         action: 'click',
-        bannerCampaignId: banner?.id,
+        banner_id: banner?.id,
       });
     } else {
-      trackEvent('ads-placement', { type: 'pop-up_', action: 'click' });
+      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'click' });
     }
 
     // Open banner link or fallback to default donation link

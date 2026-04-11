@@ -104,6 +104,8 @@ function gameToInsertParams(game: Game): GameInsertParams {
     youtube: game.youtube ?? null,
     ai: game.ai ?? null,
     hide: game.hide ? 1 : 0,
+    search_keywords: game.search_keywords ?? null,
+    source_language: game.source_language ?? null,
   };
 }
 
@@ -122,7 +124,7 @@ const UPSERT_GAME_SQL = `
     voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
     achievements_third_party, additional_path,
     epic_archive_hash, epic_archive_path, epic_archive_size,
-    steam_app_id, website, youtube, ai, hide
+    steam_app_id, website, youtube, ai, hide, search_keywords, source_language
   ) VALUES (
     @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
     @banner_path, @capsule_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
@@ -134,7 +136,7 @@ const UPSERT_GAME_SQL = `
     @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
     @achievements_third_party, @additional_path,
     @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-    @steam_app_id, @website, @youtube, @ai, @hide
+    @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
   )
 `;
 
@@ -200,14 +202,14 @@ export function upsertGamesTransaction(db: Database.Database, games: Game[]): vo
     const gameStmt = db.prepare(UPSERT_GAME_SQL);
     const ftsDeleteStmt = db.prepare('DELETE FROM games_fts WHERE game_id = ?');
     const ftsInsertStmt = db.prepare(
-      'INSERT INTO games_fts (game_id, name_search) VALUES (?, ?)'
+      'INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)'
     );
 
     for (const game of gamesToInsert) {
       const params = gameToInsertParams(game);
       gameStmt.run(params);
       ftsDeleteStmt.run(game.id);
-      ftsInsertStmt.run(game.id, params.name_search);
+      ftsInsertStmt.run(game.id, params.name_search, params.search_keywords);
     }
   });
 
@@ -227,10 +229,9 @@ export function upsertGameSingle(db: Database.Database, game: Game): void {
 
   // Sync FTS
   db.prepare('DELETE FROM games_fts WHERE game_id = ?').run(game.id);
-  db.prepare('INSERT INTO games_fts (game_id, name_search) VALUES (?, ?)').run(
-    game.id,
-    params.name_search
-  );
+  db.prepare(
+    'INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)'
+  ).run(game.id, params.name_search, params.search_keywords);
 }
 
 /**

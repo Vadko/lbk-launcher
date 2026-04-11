@@ -181,7 +181,9 @@ class DatabaseManager {
         epic_archive_path TEXT,
         epic_archive_size TEXT,
         ai TEXT,
-        hide INTEGER NOT NULL DEFAULT 0
+        hide INTEGER NOT NULL DEFAULT 0,
+        search_keywords TEXT,
+        source_language TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
@@ -196,6 +198,7 @@ class DatabaseManager {
       CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
         game_id UNINDEXED,
         name_search,
+        search_keywords,
         tokenize='unicode61'
       );
     `);

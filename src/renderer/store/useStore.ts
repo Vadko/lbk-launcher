@@ -566,6 +566,7 @@ export const useStore = create<Store>((set, get) => ({
       planned: 'Заплановано',
       'in-progress': 'Ранній доступ',
       completed: 'Завершено',
+      'tech-improvement': 'Технічна доробка',
     };
 
     if (oldGame) {

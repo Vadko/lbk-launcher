@@ -1,4 +1,4 @@
-import { Globe, Send, Share2, Youtube } from 'lucide-react';
+import { Book, Globe, Send, Share2, Youtube } from 'lucide-react';
 import React, { useState } from 'react';
 import { teamToSlug } from '../../../shared/search-utils';
 import type { Game } from '../../types/game';
@@ -34,6 +34,7 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => (
     target="_blank"
     href={url}
     rel="noopener noreferrer"
+    data-gamepad-action="true"
   >
     <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>
       {icon}
@@ -80,6 +81,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
   return (
     <a
       data-nav-group="main-links"
+      data-gamepad-action="true"
       className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border ${config.hoverColor} hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 ease-out`}
       title={`Відкрити в ${config.title}`}
       href={config.url}
@@ -107,6 +109,7 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
       <button
         onClick={() => setIsModalOpen(true)}
         data-nav-group="main-links"
+        data-gamepad-action="true"
         className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-neon-purple/60 transition-all duration-300"
         title="Поділитися"
       >
@@ -130,8 +133,14 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
 export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   const links = [
     game.website && {
-      icon: <Globe size={18} />,
-      label: 'Вебсайт',
+      icon: game.website.includes('steamcommunity.com') ? (
+        <Book size={18} />
+      ) : (
+        <Globe size={18} />
+      ),
+      label: game.website.includes('steamcommunity.com/sharedfiles/filedetails')
+        ? 'Steam посібник'
+        : 'Вебсайт',
       url: game.website,
       color: 'text-color-accent',
     },

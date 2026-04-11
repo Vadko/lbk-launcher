@@ -776,6 +776,86 @@ const migrations: Migration[] = [
       console.log('[Migrations] Completed: populate_spellfix_words');
     },
   },
+  {
+    name: 'add_search_keywords_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='search_keywords'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_search_keywords_column');
+        db.exec('ALTER TABLE games ADD COLUMN search_keywords TEXT;');
+        console.log('[Migrations] Completed: add_search_keywords_column');
+      }
+    },
+  },
+  {
+    name: 'add_search_keywords_to_fts',
+    up: (db) => {
+      // Check if already done
+      const done = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_search_keywords_fts_done'"
+        )
+        .get() as { count: number };
+
+      if (done.count > 0) return;
+
+      console.log('[Migrations] Running: add_search_keywords_to_fts');
+
+      // FTS5 tables can't be ALTERed, need to recreate
+      db.exec(`
+        DROP TABLE IF EXISTS games_fts;
+        CREATE VIRTUAL TABLE games_fts USING fts5(
+          game_id UNINDEXED,
+          name_search,
+          search_keywords,
+          tokenize='unicode61'
+        );
+      `);
+
+      // Repopulate FTS from games table
+      const games = db
+        .prepare('SELECT id, name_search, search_keywords FROM games')
+        .all() as { id: string; name_search: string; search_keywords: string | null }[];
+      const insertStmt = db.prepare(
+        'INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)'
+      );
+      for (const game of games) {
+        insertStmt.run(game.id, game.name_search, game.search_keywords);
+      }
+
+      // Force full re-sync to fetch search_keywords from Supabase
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_search_keywords_fts_done', '1', datetime('now'))
+      `);
+
+      console.log(
+        `[Migrations] Completed: add_search_keywords_to_fts (${games.length} games reindexed, full re-sync scheduled)`
+      );
+    },
+  },
+  {
+    name: 'add_source_language_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='source_language'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_source_language_column');
+        db.exec('ALTER TABLE games ADD COLUMN source_language TEXT;');
+        console.log('[Migrations] Completed: add_source_language_column');
+      }
+    },
+  },
 ];
 
 /**

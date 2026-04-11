@@ -169,6 +169,55 @@ export type Database = {
         }
         Relationships: []
       }
+      feedbacks: {
+        Row: {
+          admin_note: string | null
+          contact: string | null
+          created_at: string
+          game_id: string
+          id: string
+          machine_id: string
+          message: string
+          status: Database["public"]["Enums"]["feedback_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          contact?: string | null
+          created_at?: string
+          game_id: string
+          id?: string
+          machine_id: string
+          message: string
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          contact?: string | null
+          created_at?: string
+          game_id?: string
+          id?: string
+          machine_id?: string
+          message?: string
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       game_authors: {
         Row: {
           author_id: string
@@ -367,6 +416,8 @@ export type Database = {
           logo_path: string | null
           name: string
           platforms: string[]
+          search_keywords: string | null
+          source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           support_url: string | null
@@ -430,6 +481,8 @@ export type Database = {
           logo_path?: string | null
           name: string
           platforms?: string[]
+          search_keywords?: string | null
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           support_url?: string | null
@@ -493,6 +546,8 @@ export type Database = {
           logo_path?: string | null
           name?: string
           platforms?: string[]
+          search_keywords?: string | null
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           support_url?: string | null
@@ -587,7 +642,9 @@ export type Database = {
           name_search: string | null
           platforms: string[]
           project_id: string | null
+          search_keywords: string | null
           slug: string
+          source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           subscriptions: number | null
@@ -656,7 +713,9 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          search_keywords?: string | null
           slug: string
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           subscriptions?: number | null
@@ -725,7 +784,9 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          search_keywords?: string | null
           slug?: string
+          source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           subscriptions?: number | null
@@ -1542,6 +1603,7 @@ export type Database = {
           created_at: string
           email: string
           email_notifications: boolean
+          feedback_email_notifications: boolean
           full_name: string | null
           id: string
           password_hash: string
@@ -1557,6 +1619,7 @@ export type Database = {
           created_at?: string
           email: string
           email_notifications?: boolean
+          feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
           password_hash: string
@@ -1572,6 +1635,7 @@ export type Database = {
           created_at?: string
           email?: string
           email_notifications?: boolean
+          feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
           password_hash?: string
@@ -1843,7 +1907,8 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
-      game_status: "completed" | "in-progress" | "planned"
+      feedback_status: "new" | "in_progress" | "fixed" | "rejected"
+      game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
         | "steam"
         | "gog"
@@ -1985,7 +2050,8 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
-      game_status: ["completed", "in-progress", "planned"],
+      feedback_status: ["new", "in_progress", "fixed", "rejected"],
+      game_status: ["completed", "in-progress", "planned", "tech-improvement"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
       user_role: ["admin", "moderator", "translator", "user"],
     },

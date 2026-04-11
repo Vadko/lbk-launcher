@@ -28,11 +28,21 @@ jobs:
           if [ -n "${{ github.event.inputs.app_version }}" ]; then
             TAG="${{ github.event.inputs.app_version }}"
           else
-            TAG=$(gh api repos/Vadko/lbk-launcher/releases/latest --jq '.tag_name')
+            TAG=$(gh api repos/Vadko/lbk-launcher/releases --jq 'first | .tag_name')
           fi
           VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved: $TAG"
+
+      - name: Download AppImage via gh CLI (supports draft releases)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ steps.release.outputs.tag }}" \
+            --repo Vadko/lbk-launcher \
+            --pattern "LBK-Launcher-linux.AppImage" \
+            --dir aur/
 
       - name: Update PKGBUILD version, checksums and .SRCINFO
         uses: docker://archlinux:base-devel
@@ -51,7 +61,7 @@ jobs:
             "
 
       - name: Publish to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
         with:
           pkgname: lbk-launcher-bin
           pkgbuild: aur/PKGBUILD
