@@ -1,8 +1,8 @@
+import type { BannerData } from '@/main/db/banners-api';
 import kuli from '@resources/kuli.png';
 import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef } from 'react';
-import type { BannerData } from '@/main/db/banners-api';
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 
@@ -10,6 +10,7 @@ interface PlacementProps {
   banner: BannerData | null;
   placementType: 'small_square' | 'narrow';
   gameId: string;
+  gameName: string;
   isKuli?: boolean;
   supportUrl?: string;
   onImpression?: (bannerId: string) => void;
@@ -21,6 +22,7 @@ export const Placement: React.FC<PlacementProps> = ({
   banner,
   placementType,
   gameId,
+  gameName,
   isKuli = false,
   supportUrl,
   onImpression,
@@ -34,29 +36,24 @@ export const Placement: React.FC<PlacementProps> = ({
   // Відстеження impression при появі в viewport
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || hasTrackedImpression.current || !banner?.id) return;
+    if (!element || hasTrackedImpression.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasTrackedImpression.current && banner?.id) {
+        if (entry.isIntersecting && !hasTrackedImpression.current) {
           hasTrackedImpression.current = true;
 
-          if (banner) {
-            trackEvent('ads-placement', {
-              banner_id: banner.id,
-              type: placementType,
-              game_id: gameId,
-              action: 'view',
-            });
+          trackEvent('ads-placement', {
+            ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+            Content: banner?.id ? 'ads' : isKuli ? 'kuli' : 'support',
+            Type: placementType,
+            'Game Name': gameName,
+            'Game Id': gameId,
+            Action: 'view',
+          });
 
+          if (banner?.id) {
             onImpression?.(banner.id);
-          } else {
-            trackEvent('ads-placement', {
-              ads: isKuli ? 'kuli' : 'support',
-              type: placementType,
-              game_id: gameId,
-              action: 'view',
-            });
           }
         }
       },
@@ -68,7 +65,7 @@ export const Placement: React.FC<PlacementProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [banner, gameId, onImpression, placementType, isKuli]);
+  }, [banner, gameId, gameName, onImpression, placementType, isKuli]);
 
   const staticBanner = useCallback(
     () => (
@@ -103,22 +100,17 @@ export const Placement: React.FC<PlacementProps> = ({
   }
 
   const handleClick = () => {
-    if (banner) {
-      trackEvent('ads-placement', {
-        banner_id: banner.id,
-        type: placementType,
-        game_id: gameId,
-        action: 'click',
-      });
+    trackEvent('ads-placement', {
+      ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+      Content: banner?.id ? 'ads' : isKuli ? 'kuli' : 'support',
+      Type: placementType,
+      'Game Name': gameName,
+      'Game Id': gameId,
+      Action: 'click',
+    });
 
+    if (banner?.id) {
       onClick?.(banner.id);
-    } else {
-      trackEvent('ads-placement', {
-        ads: isKuli ? 'kuli' : 'support',
-        type: placementType,
-        game_id: gameId,
-        action: 'click',
-      });
     }
 
     let link: string;
