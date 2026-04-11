@@ -1,5 +1,6 @@
 import { EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
+import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -17,6 +18,7 @@ interface GameListItemProps {
   onClick: () => void;
   hasUpdate?: boolean;
   isGameDetected?: boolean;
+  isInstalled?: boolean;
   showTeamName?: boolean;
   isHorizontalMode?: boolean;
   isCardStyle?: boolean;
@@ -30,6 +32,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     onClick,
     hasUpdate = false,
     isGameDetected = false,
+    isInstalled = false,
     showTeamName = false,
     isHorizontalMode = false,
     isCardStyle = false,
@@ -117,23 +120,13 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
 
             {/* Indicators */}
-            {hasUpdate && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-accent rounded-full animate-pulse" />
-            )}
-            {(game.ai === 'edited' || game.ai === 'non-edited') && (
-              <div
-                className="absolute top-5 right-5 bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]"
-                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
-              >
-                {game.ai === 'edited' ? <PencilIcon /> : <AiIcon />}
-              </div>
-            )}
-            {isGameDetected && (
-              <div
-                className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
-                title="Гра встановлена"
-              />
-            )}
+            <StatusIcons
+              hasUpdate={hasUpdate}
+              isGameDetected={isGameDetected}
+              isInstalled={isInstalled}
+              aiType={game.ai}
+              floatPosition={true}
+            />
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
             <h3 className="text-lg font-head font-bold truncate" title={game.name}>
@@ -329,15 +322,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </div>
             )}
           </div>
-          {hasUpdate && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
-          )}
-          {isGameDetected && (
-            <div
-              className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-dark z-10"
-              title="Гра встановлена"
-            />
-          )}
         </div>
         <div className="flex-1 min-w-0">
           <h4
@@ -346,14 +330,18 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           >
             {showTeamName ? game.team : game.name}
           </h4>
-          {(game.ai === 'edited' || game.ai === 'non-edited') && (
-            <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
-              <span className="text-text-muted text-xs">
-                {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
-              </span>
-              {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
-            </div>
-          )}
+          <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
+            <span className="text-text-muted text-xs">
+              {(game.ai === 'edited' || game.ai === 'non-edited') &&
+                (game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ')}
+            </span>
+            <StatusIcons
+              hasUpdate={hasUpdate}
+              isGameDetected={isGameDetected}
+              isInstalled={isInstalled}
+              aiType={game.ai}
+            />
+          </div>
           {showTeamName && (
             <p className="text-xs text-text-muted mb-1 truncate">{averageProgress}%</p>
           )}

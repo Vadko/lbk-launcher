@@ -265,6 +265,17 @@ export const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [loadSteamGames]);
 
+  // Завантажити встановлені українізатори при старті
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const timer = setTimeout(async () => {
+      await useStore.getState().loadInstalledGamesFromSystem();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Детекція встановлених ігор на початку (якщо увімкнено)
   useEffect(() => {
     if (!autoDetectInstalledGames || !window.electronAPI) return;

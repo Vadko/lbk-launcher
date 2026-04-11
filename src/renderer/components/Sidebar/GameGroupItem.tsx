@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
+import type { InstallationInfo } from '../../../shared/types';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -16,6 +17,7 @@ interface GameGroupItemProps {
   onSelectGame: (game: Game) => void;
   gamesWithUpdates: Set<string>;
   isGameDetected: (gameId: string) => boolean;
+  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
   isHorizontalMode?: boolean;
 }
 
@@ -28,6 +30,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     onSelectGame,
     gamesWithUpdates,
     isGameDetected,
+    getInstallationInfo,
     isHorizontalMode = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
@@ -178,6 +181,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       onClick={() => onSelectGame(game)}
                       hasUpdate={gamesWithUpdates.has(game.id)}
                       isGameDetected={isGameDetected(game.id)}
+                      isInstalled={!!getInstallationInfo(game.id)}
                       showTeamName
                     />
                   ))}
@@ -196,6 +200,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   onClick={() => onSelectGame(game)}
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
+                  isInstalled={!!getInstallationInfo(game.id)}
                   showTeamName
                 />
               ))}
