@@ -128,7 +128,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Поширити"
-      classNames="max-w-[514px]"
+      classNames="!max-w-[514px]"
       usePortal
     >
       <div className="space-y-14">
