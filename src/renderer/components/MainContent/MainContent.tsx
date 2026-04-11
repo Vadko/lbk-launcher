@@ -605,6 +605,7 @@ export const MainContent: React.FC = () => {
                   banner={bannerInfo.data}
                   placementType="narrow"
                   gameId={selectedGame.id}
+                  gameName={selectedGame.name}
                   isKuli={bannerInfo.isKuli}
                   className="placement-long"
                 />
@@ -625,13 +626,14 @@ export const MainContent: React.FC = () => {
               }}
               initial={false}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-hidden flex-shrink-0"
+              className="overflow-x-clip flex-shrink-0"
             >
               <div className="w-[320px] h-full">
                 <Placement
                   banner={bannerInfo.data}
                   placementType="small_square"
                   gameId={selectedGame.id}
+                  gameName={selectedGame.name}
                   supportUrl={selectedGame.support_url || undefined}
                   className="placement h-full"
                 />
