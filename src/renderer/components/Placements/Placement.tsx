@@ -1,8 +1,8 @@
-import type { BannerData } from '@/main/db/banners-api';
 import kuli from '@resources/kuli.png';
 import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef } from 'react';
+import type { BannerData } from '@/main/db/banners-api';
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 
