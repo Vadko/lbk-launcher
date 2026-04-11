@@ -37,8 +37,8 @@ const SupportContent: React.FC<SupportContentProps> = ({
         Трохи підтримки для лаунчера?
       </h2>
       <p>
-        Ми розвиваємо цей лаунчер, щоб вам було зручно знаходити та завантажувати ігри.
-        Покращуємо швидкість, стабільність і додаємо нові функції.
+        Ми розвиваємо цей лаунчер, щоб вам було зручно знаходити та завантажувати
+        переклади. Покращуємо швидкість, стабільність і додаємо нові функції.
       </p>
       <div className="text-text-muted">Навіть маленький внесок має значення ✨</div>
     </div>
@@ -168,26 +168,22 @@ export const PromoModal: React.FC = () => {
 
     if (banner) {
       recordImpression('view');
-      trackEvent('ads-placement', {
-        type: 'pop-up_',
-        action: 'view',
-        banner_id: banner?.id,
-      });
-    } else {
-      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'view' });
     }
+    trackEvent('ads-placement', {
+      ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+      Content: banner?.id ? 'ads' : 'promo',
+      Type: 'pop-up_',
+      Action: 'view',
+    });
   }, [isOpen, banner, recordImpression]);
 
   const handleClose = () => {
-    if (banner) {
-      trackEvent('ads-placement', {
-        type: 'pop-up_',
-        action: 'skip',
-        banner_id: banner?.id,
-      });
-    } else {
-      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'skip' });
-    }
+    trackEvent('ads-placement', {
+      ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+      Content: banner?.id ? 'ads' : 'promo',
+      Type: 'pop-up_',
+      Action: 'skip',
+    });
     closeModal(dontShowAgain);
   };
 
@@ -195,14 +191,13 @@ export const PromoModal: React.FC = () => {
     // Record click impression first
     if (banner) {
       await recordImpression('click');
-      trackEvent('ads-placement', {
-        type: 'pop-up_',
-        action: 'click',
-        banner_id: banner?.id,
-      });
-    } else {
-      trackEvent('ads-placement', { type: 'pop-up_', ads: 'promo', action: 'click' });
     }
+    trackEvent('ads-placement', {
+      ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+      Content: banner?.id ? 'ads' : 'promo',
+      Type: 'pop-up_',
+      Action: 'click',
+    });
 
     // Open banner link or fallback to default donation link
     if (window.electronAPI) {
