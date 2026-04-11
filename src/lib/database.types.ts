@@ -172,34 +172,37 @@ export type Database = {
       feedbacks: {
         Row: {
           admin_note: string | null
-          contact: string | null
           created_at: string
+          error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id: string
           machine_id: string
           message: string
+          screenshot_paths: string[] | null
           status: Database["public"]["Enums"]["feedback_status"]
           updated_at: string
         }
         Insert: {
           admin_note?: string | null
-          contact?: string | null
           created_at?: string
+          error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id?: string
           machine_id: string
           message: string
+          screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
         }
         Update: {
           admin_note?: string | null
-          contact?: string | null
           created_at?: string
+          error_type?: Database["public"]["Enums"]["feedback_error_type"]
           game_id?: string
           id?: string
           machine_id?: string
           message?: string
+          screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
         }
@@ -1907,6 +1910,10 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
+      feedback_error_type:
+        | "missing_translation"
+        | "translation_error"
+        | "technical"
       feedback_status: "new" | "in_progress" | "fixed" | "rejected"
       game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
@@ -2050,6 +2057,11 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
+      feedback_error_type: [
+        "missing_translation",
+        "translation_error",
+        "technical",
+      ],
       feedback_status: ["new", "in_progress", "fixed", "rejected"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],
       install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
