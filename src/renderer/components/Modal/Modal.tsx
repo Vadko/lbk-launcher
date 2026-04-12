@@ -47,9 +47,9 @@ export const Modal: React.FC<ModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
-            className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content 
+            className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
             ${classNames}
-            ${styleModal === 'promo' ? 'glass-card glass-card-gold !p-0 overflow-hidden min-h-[400px]' : 'bg-[rgba(10,20,30,0.95)] border border-border rounded-2xl shadow-2xl '}`}
+            ${styleModal === 'promo' ? 'glass-card glass-card-gold !p-0 overflow-hidden min-h-[400px]' : 'bg-[rgb(15,15,16)] rounded-[16px] modal-gradient-border'}`}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -63,7 +63,7 @@ export const Modal: React.FC<ModalProps> = ({
               <>
                 {/* Header */}
                 {(title || showCloseButton) && (
-                  <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
+                  <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
                     <h3
                       id="modal-title"
                       className="text-lg font-semibold text-text-main break-words"

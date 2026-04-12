@@ -5,6 +5,7 @@ import { useStore } from '@store/useStore.ts';
 import { useSubscriptionsStore } from '@store/useSubscriptionsStore.ts';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
+  AlertTriangle,
   Download,
   EyeOff,
   Heart,
@@ -22,6 +23,7 @@ import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
+import { FeedbackModal } from '../Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Placement } from '../Placements';
 import { Button } from '../ui/Button';
@@ -55,6 +57,7 @@ export const MainContent: React.FC = () => {
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
@@ -400,6 +403,16 @@ export const MainContent: React.FC = () => {
         />
       )}
 
+      {/* Feedback Modal */}
+      {selectedGame && (
+        <FeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          gameId={selectedGame.id}
+          gameName={selectedGame.name}
+        />
+      )}
+
       <div
         data-gamepad-main-content
         className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar"
@@ -408,11 +421,7 @@ export const MainContent: React.FC = () => {
           <GameHero game={selectedGame} />
 
           {/* Actions block */}
-          <motion.div
-            layout="position"
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="glass-card mb-6 grid gap-6"
-          >
+          <div className="glass-card mb-6 grid gap-6">
             <div className="flex flex-wrap items-center gap-3">
               {/* Primary actions */}
               {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
@@ -508,13 +517,9 @@ export const MainContent: React.FC = () => {
                 </div>
               ) : null;
             })()}
-          </motion.div>
+          </div>
 
-          <motion.div
-            layout="position"
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="space-y-4 mb-6"
-          >
+          <div className="space-y-4 mb-6">
             {installationInfo && !isCheckingInstallation && !isInstalling && (
               <InstallationStatusBadge
                 isUpdateAvailable={!!isUpdateAvailable}
@@ -555,15 +560,11 @@ export const MainContent: React.FC = () => {
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
 
           {/* Author card */}
           {selectedGame.team && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card mb-6"
-            >
+            <div className="glass-card mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
@@ -589,7 +590,7 @@ export const MainContent: React.FC = () => {
                 </div>
                 <TeamSubscribeButton teamName={selectedGame.team} data-gamepad-action />
               </div>
-            </motion.div>
+            </div>
           )}
 
           <AnimatePresence mode="wait">
@@ -644,9 +645,36 @@ export const MainContent: React.FC = () => {
           <motion.div
             layout="position"
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="mb-6"
+            className="flex gap-4 mb-6"
           >
-            <SocialLinksCard game={selectedGame} />
+            <div className="flex-1 min-w-0">
+              <SocialLinksCard game={selectedGame} />
+            </div>
+            <AnimatePresence>
+              {isTranslationInstalled && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 320, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="overflow-visible flex-shrink-0"
+                >
+                  <div className="glass-card h-full flex flex-col justify-center gap-4 w-[320px] p-6">
+                    <h3 className="text-base font-semibold text-text-main">
+                      Знайшли помилку?
+                    </h3>
+                    <button
+                      onClick={() => setShowFeedbackModal(true)}
+                      data-gamepad-action
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-text-main hover:bg-glass-hover transition-colors"
+                    >
+                      <AlertTriangle size={16} />
+                      Повідомити про помилку
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (

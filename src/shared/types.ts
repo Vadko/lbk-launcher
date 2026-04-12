@@ -8,6 +8,7 @@ import type { Database } from '../lib/database.types';
 export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
+export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 
@@ -236,6 +237,25 @@ export interface ElectronAPI {
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
+  // Submit feedback for a game translation
+  submitFeedback: (
+    gameId: string,
+    errorType: FeedbackErrorType,
+    message: string,
+    screenshotPaths?: string[]
+  ) => Promise<{ success: boolean; error?: string }>;
+  // Get signed upload URLs for feedback screenshots
+  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
+    success: boolean;
+    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
+    error?: string;
+  }>;
+  // Upload a file to a signed URL
+  uploadFileToSignedUrl: (
+    signedUrl: string,
+    filePath: string,
+    contentType: string
+  ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
   // Sync status

@@ -65,16 +65,16 @@ const unlink = promisify(fs.unlink);
 
 // Re-export utilities for external use
 export {
-  ManualSelectionError,
-  RateLimitError,
-  PausedSignal,
   abortCurrentDownload,
-  checkPlatformCompatibility,
   checkInstallation,
-  invalidateInstalledGameIdsCache,
-  removeOrphanedInstallationMetadata,
+  checkPlatformCompatibility,
   getAllInstalledGameIds,
   getConflictingTranslation,
+  invalidateInstalledGameIdsCache,
+  ManualSelectionError,
+  PausedSignal,
+  RateLimitError,
+  removeOrphanedInstallationMetadata,
 };
 
 /**

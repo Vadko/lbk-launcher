@@ -187,6 +187,17 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('track-support-click', gameId),
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
+  // Submit feedback for a game translation
+  submitFeedback: (
+    gameId: string,
+    errorType: string,
+    message: string,
+    screenshotPaths?: string[]
+  ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  getFeedbackUploadUrls: (fileNames: string[]) =>
+    ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
+  uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
+    ipcRenderer.invoke('upload-file-to-signed-url', signedUrl, filePath, contentType),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
