@@ -49,7 +49,7 @@ export const Modal: React.FC<ModalProps> = ({
             aria-labelledby="modal-title"
             className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
             ${classNames}
-            ${styleModal === 'promo' ? 'glass-card glass-card-gold !p-0 overflow-hidden min-h-[400px]' : 'bg-[rgb(15,15,16)] rounded-[16px] shadow-[inset_0px_4px_22px_0px_rgba(168,207,150,0.15)] modal-gradient-border'}`}
+            ${styleModal === 'promo' ? 'glass-card glass-card-gold !p-0 overflow-hidden min-h-[400px]' : 'bg-[rgb(15,15,16)] rounded-[16px] modal-gradient-border'}`}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

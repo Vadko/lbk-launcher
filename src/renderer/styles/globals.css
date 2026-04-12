@@ -199,7 +199,7 @@ body.liquid-glass-enabled .glass-card {
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, #a8cf96, #ffa47a);
+  background: linear-gradient(135deg, rgba(168, 207, 150, 0.4), rgba(255, 164, 122, 0.4));
   mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
