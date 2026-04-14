@@ -1611,6 +1611,9 @@ export type Database = {
           id: string
           password_hash: string
           role: Database["public"]["Enums"]["user_role"]
+          telegram_chat_id: number | null
+          telegram_link_token: string | null
+          telegram_notifications: boolean
           unsubscribe_token: string
           updated_at: string
           verified_user: boolean
@@ -1627,6 +1630,9 @@ export type Database = {
           id?: string
           password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
+          telegram_chat_id?: number | null
+          telegram_link_token?: string | null
+          telegram_notifications?: boolean
           unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
@@ -1643,6 +1649,9 @@ export type Database = {
           id?: string
           password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
+          telegram_chat_id?: number | null
+          telegram_link_token?: string | null
+          telegram_notifications?: boolean
           unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
