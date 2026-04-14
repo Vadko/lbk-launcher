@@ -114,7 +114,7 @@ function detectSteamPathWindows(): string | null {
   try {
     const output = execSync(
       `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v InstallPath`,
-      { encoding: 'utf8' }
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
     );
     const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
     if (match?.[1]) {
@@ -129,7 +129,7 @@ function detectSteamPathWindows(): string | null {
     try {
       const output = execSync(
         `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam" /v InstallPath`,
-        { encoding: 'utf8' }
+        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
       );
       const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
       if (match?.[1]) {
