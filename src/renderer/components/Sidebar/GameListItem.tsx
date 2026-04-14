@@ -7,8 +7,6 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
-import { AiIcon } from '../Icons/AiIcon';
-import { PencilIcon } from '../Icons/PencilIcon';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
 
@@ -118,13 +116,15 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
 
             {/* Indicators */}
-            <StatusIcons
-              hasUpdate={hasUpdate}
-              isGameDetected={isGameDetected}
-              isInstalled={isInstalled}
-              aiType={game.ai}
-              floatPosition={true}
-            />
+            {!isAdultBlurred && (
+              <StatusIcons
+                hasUpdate={hasUpdate}
+                isGameDetected={isGameDetected}
+                isInstalled={isInstalled}
+                aiType={game.ai}
+                floatPosition="default"
+              />
+            )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
             <h3 className="text-lg font-head font-bold truncate" title={game.name}>
@@ -234,10 +234,13 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {showTeamName ? game.team : game.name}
           </h4>
           <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
-            <span className="text-text-muted text-xs">
-              {(game.ai === 'edited' || game.ai === 'non-edited') &&
-                (game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ')}
-            </span>
+            <div className="text-text-muted text-xs">
+              {(game.ai === 'edited' || game.ai === 'non-edited') && (
+                <p>{game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}</p>
+              )}
+              {showTeamName && <p className="truncate">{averageProgress}%</p>}
+            </div>
+
             <StatusIcons
               hasUpdate={hasUpdate}
               isGameDetected={isGameDetected}
@@ -245,9 +248,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               aiType={game.ai}
             />
           </div>
-          {showTeamName && (
-            <p className="text-xs text-text-muted mb-1 truncate">{averageProgress}%</p>
-          )}
+
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div

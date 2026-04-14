@@ -10,7 +10,7 @@ interface StatusIconsProps {
   isGameDetected?: boolean;
   isInstalled?: boolean;
   aiType?: string | null;
-  floatPosition?: boolean;
+  floatPosition?: 'default' | 'compact' | null;
 }
 
 export const StatusIcons: React.FC<StatusIconsProps> = ({
@@ -18,7 +18,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   isGameDetected = false,
   isInstalled = false,
   aiType = null,
-  floatPosition = false,
+  floatPosition = null,
 }) => {
   let statusIcon = null;
   let aiIcon = null;
@@ -26,7 +26,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   if (hasUpdate) {
     statusIcon = (
       <RefreshIcon
-        size={floatPosition ? 20 : 18}
+        size={floatPosition === 'default' ? 20 : 18}
         className={`${floatPosition ? 'text-text-dark' : 'text-color-accent'}`}
         title="Є оновлення перекладу"
       />
@@ -34,7 +34,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   } else if (isInstalled) {
     statusIcon = (
       <CheckIcon
-        size={floatPosition ? 20 : 18}
+        size={floatPosition === 'default' ? 20 : 18}
         className={`${floatPosition ? 'text-text-dark' : 'text-color-main'}`}
         title="Переклад актуальний"
       />
@@ -42,7 +42,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   } else if (isGameDetected) {
     statusIcon = (
       <DownloadIcon
-        size={floatPosition ? 20 : 18}
+        size={floatPosition === 'default' ? 20 : 18}
         className={`${floatPosition ? 'text-text-dark' : ''}`}
         title="Переклад доступний для встановлення"
       />
@@ -52,7 +52,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   if (aiType === 'edited') {
     aiIcon = (
       <PencilIcon
-        size={floatPosition ? 20 : 18}
+        size={floatPosition === 'default' ? 20 : 18}
         className={`${floatPosition ? 'text-text-dark' : 'text-color-main'}`}
         title="ШІ + редактура людиною"
       />
@@ -60,7 +60,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   } else if (aiType === 'non-edited') {
     aiIcon = (
       <AiIcon
-        size={floatPosition ? 20 : 18}
+        size={floatPosition === 'default' ? 20 : 18}
         className={`${floatPosition ? 'text-text-dark' : 'text-color-main'}`}
         title="Переклад ШІ"
       />
@@ -75,7 +75,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   // Show both icons if available, or just one
   return (
     <div
-      className={`flex gap-2 ${floatPosition ? 'absolute top-5 right-5 bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]' : ''}`}
+      className={`flex gap-2 ${floatPosition ? 'absolute bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]' : ''} ${floatPosition === 'default' ? 'top-5 right-5' : floatPosition === 'compact' ? 'top-3 right-3' : ''}`}
     >
       {statusIcon}
       {aiIcon}

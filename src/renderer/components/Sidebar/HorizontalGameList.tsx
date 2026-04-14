@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useVirtualizedList } from '../../hooks/useVirtualizedList';
 import type { Game } from '../../types/game';
+import type { InstallationInfo } from '../../../shared/types';
 import { Loader } from '../ui/Loader';
 import { GamepadCard } from './GamepadCard';
 import type { GameGroup } from './types';
@@ -22,6 +23,7 @@ interface HorizontalGameListProps {
   onSelectGame: (game: Game) => void;
   onOpenTranslationPicker: (translations: Game[], gameName: string) => void;
   isGameDetected: (gameId: string) => boolean;
+  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
 }
 
 export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
@@ -35,6 +37,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     onSelectGame,
     onOpenTranslationPicker,
     isGameDetected,
+    getInstallationInfo,
   }) => {
     const slugs = useMemo(() => gameGroups.map((g) => g.slug), [gameGroups]);
 
@@ -96,18 +99,6 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
             }
           };
 
-          const card = (
-            <GamepadCard
-              game={primaryGame}
-              translations={group.translations}
-              translationIndex={0}
-              isSelected={isSelected}
-              hasUpdate={hasUpdate}
-              isDetected={detected}
-              onClick={handleClick}
-            />
-          );
-
           const animProps = getAnimationProps(group.slug, index);
 
           return (
@@ -118,7 +109,16 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
               animate={animProps?.animate ?? { opacity: 1, x: 0 }}
               transition={animProps?.transition}
             >
-              {card}
+              <GamepadCard
+                game={primaryGame}
+                translations={group.translations}
+                translationIndex={0}
+                isSelected={isSelected}
+                hasUpdate={hasUpdate}
+                isDetected={detected}
+                isInstalled={!!getInstallationInfo(primaryGame.id)}
+                onClick={handleClick}
+              />
             </motion.div>
           );
         })}

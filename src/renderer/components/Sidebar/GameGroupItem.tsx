@@ -8,6 +8,7 @@ import { getGameImageUrl } from '../../utils/imageUrl';
 import { Loader } from '../ui/Loader';
 import { GameListItem } from './GameListItem';
 import type { GameGroup } from './types';
+import { StatusIcons } from '../Elements/StatusIcons';
 
 interface GameGroupItemProps {
   group: GameGroup;
@@ -40,6 +41,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const isAnySelected = group.translations.some((t) => selectedGameId === t.id);
     const anyHasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
+    const anyGameInstalled = group.translations.some((t) => !!getInstallationInfo(t.id));
 
     // Use thumbnail from the first translation
     const thumbnailUrl = getGameImageUrl(primaryGame.thumbnail_path);
@@ -114,15 +116,6 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                 </div>
               )}
             </div>
-            {anyHasUpdate && !isAdultBlurred && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
-            )}
-            {anyGameDetected && !isAdultBlurred && (
-              <div
-                className="absolute -bottom-1 -right-1 w-4 h-4 bg-color-main rounded-full border-2 border-bg-dark z-10"
-                title="Гра встановлена"
-              />
-            )}
           </div>
 
           {/* Content */}
@@ -133,6 +126,13 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             >
               {group.name}
             </h4>
+            <div className="flex flex-1 justify-end items-center gap-2  mb-1 -mt-1">
+              <StatusIcons
+                hasUpdate={anyHasUpdate}
+                isGameDetected={anyGameDetected}
+                isInstalled={anyGameInstalled}
+              />
+            </div>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"

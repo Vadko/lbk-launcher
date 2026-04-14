@@ -342,6 +342,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
               onSelectGame={setSelectedGame}
               onOpenTranslationPicker={openTranslationPicker}
               isGameDetected={isGameDetected}
+              getInstallationInfo={getInstallationInfo}
             />
           </div>
 
