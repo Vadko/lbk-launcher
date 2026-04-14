@@ -20,7 +20,6 @@ interface GameListItemProps {
   isGameDetected?: boolean;
   isInstalled?: boolean;
   showTeamName?: boolean;
-  isHorizontalMode?: boolean;
   isCardStyle?: boolean;
   showDownloadCounter?: boolean;
 }
@@ -34,7 +33,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     isGameDetected = false,
     isInstalled = false,
     showTeamName = false,
-    isHorizontalMode = false,
     isCardStyle = false,
     showDownloadCounter = false,
   }) => {
@@ -167,101 +165,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Horizontal compact mode for gamepad
-    if (isHorizontalMode) {
-      return (
-        <div
-          ref={preloadRef}
-          role="button"
-          tabIndex={0}
-          onClick={onClick}
-          onKeyDown={handleKeyDown}
-          data-gamepad-card
-          className={`game-list-item relative w-[200px] rounded-xl cursor-pointer transition-all duration-300 outline-none ${
-            isSelected
-              ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.4)]'
-              : 'ring-1 ring-white/10 hover:ring-white/30'
-          }`}
-        >
-          {/* Thumbnail */}
-          <div className="relative h-24 bg-glass rounded-t-xl overflow-hidden">
-            {thumbnailUrl && !imageError ? (
-              <>
-                {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-glass">
-                    <Loader size="sm" />
-                  </div>
-                )}
-                <img
-                  src={thumbnailUrl}
-                  alt={game.name}
-                  draggable={false}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imageLoading ? 'opacity-0' : 'opacity-100'
-                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoading(false);
-                  }}
-                />
-              </>
-            ) : (
-              <div
-                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${
-                  isAdultBlurred ? 'blur-lg' : ''
-                }`}
-              >
-                {game.name.charAt(0)}
-              </div>
-            )}
-
-            {/* Adult content indicator */}
-            {isAdultBlurred && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOff size={20} className="text-white/80" />
-              </div>
-            )}
-
-            {/* Indicators */}
-            {hasUpdate && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse" />
-            )}
-            {(game.ai === 'edited' || game.ai === 'non-edited') && (
-              <div
-                className="absolute top-3 right-3 bg-white/80 rounded-full text-text-dark p-[5px] ring-[4px] ring-[rgba(255,255,255,0.15)]"
-                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
-              >
-                {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
-              </div>
-            )}
-            {isGameDetected && (
-              <div
-                className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
-                title="Гра встановлена"
-              />
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="p-3 bg-glass-hover rounded-b-xl">
-            <h4
-              className="font-medium text-sm text-text-main mb-2 truncate"
-              title={game.name}
-            >
-              {game.name}
-            </h4>
-            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
-                style={{ width: `${averageProgress}%` }}
-              />
             </div>
           </div>
         </div>

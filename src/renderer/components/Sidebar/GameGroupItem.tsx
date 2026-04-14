@@ -18,7 +18,6 @@ interface GameGroupItemProps {
   gamesWithUpdates: Set<string>;
   isGameDetected: (gameId: string) => boolean;
   getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
-  isHorizontalMode?: boolean;
 }
 
 export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
@@ -31,7 +30,6 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     gamesWithUpdates,
     isGameDetected,
     getInstallationInfo,
-    isHorizontalMode = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -70,9 +68,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
               onToggle();
             }
           }}
-          {...(isHorizontalMode ? { 'data-gamepad-card': true } : {})}
-          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-none ${
-            isHorizontalMode ? 'w-[200px] flex-col' : ''
+          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-none 
           } ${
             isAnySelected
               ? 'border border-[rgba(255,164,122,0.5)] shadow-[0_0_20px_rgba(255,164,122,0.2)]'
