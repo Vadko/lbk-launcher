@@ -880,6 +880,7 @@ export type Database = {
       }
       kuli_imports: {
         Row: {
+          data_hash: string | null
           game_id: string
           imported_at: string
           kuli_id: number
@@ -887,6 +888,7 @@ export type Database = {
           localization_name: string | null
         }
         Insert: {
+          data_hash?: string | null
           game_id: string
           imported_at?: string
           kuli_id: number
@@ -894,6 +896,7 @@ export type Database = {
           localization_name?: string | null
         }
         Update: {
+          data_hash?: string | null
           game_id?: string
           imported_at?: string
           kuli_id?: number
