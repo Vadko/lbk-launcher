@@ -11,7 +11,11 @@ export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
   { name: 'Владислав', team: 'Sent_DeZ', description: SPECIAL_DESCRIPTION },
   { name: 'Вена', team: 'Ліниві ШІ', description: SPECIAL_DESCRIPTION },
   { name: 'Євгеній', team: 'kurasagi', description: SPECIAL_DESCRIPTION },
-  { name: 'Костянтин', team: 'KostyanChek8', description: SPECIAL_DESCRIPTION },
+  {
+    name: 'Костянтин',
+    team: 'Перекладач Патріотів (KostyanChek8)',
+    description: SPECIAL_DESCRIPTION,
+  },
   {
     name: 'GameGlobe Localization',
     team: 'GameGlobe Localization',
