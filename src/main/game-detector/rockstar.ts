@@ -93,7 +93,7 @@ function getRockstarGamePaths(): Map<string, string> {
       try {
         const output = execSync(
           `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\${game.registry}" /v InstallFolder`,
-          { encoding: 'utf8', timeout: 5000 }
+          { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'ignore'] }
         );
         const match = output.match(/InstallFolder\s+REG_SZ\s+(.+)/);
         if (match?.[1]) {
@@ -108,7 +108,7 @@ function getRockstarGamePaths(): Map<string, string> {
         try {
           const output = execSync(
             `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Rockstar Games\\${game.registry}" /v InstallFolder`,
-            { encoding: 'utf8', timeout: 5000 }
+            { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'ignore'] }
           );
           const match = output.match(/InstallFolder\s+REG_SZ\s+(.+)/);
           if (match?.[1]) {
