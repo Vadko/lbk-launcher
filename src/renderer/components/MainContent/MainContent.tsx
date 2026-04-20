@@ -524,6 +524,7 @@ export const MainContent: React.FC = () => {
               <InstallationStatusBadge
                 isUpdateAvailable={!!isUpdateAvailable}
                 installedVersion={installationInfo.version}
+                hasInstallError={installationInfo.hasInstallError}
                 newVersion={selectedGame?.version}
               />
             )}

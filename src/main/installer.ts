@@ -401,8 +401,6 @@ export async function installTranslation(
       onStatus?.({ message: 'Очищення тимчасових файлів...' });
       await cleanupDownloadDir(downloadDir);
 
-      await runInstaller(fullTargetPath, installerFileName, onStatus, options.protonPath);
-
       const installationInfo: InstallationInfo = {
         gameId: game.id,
         version: game.version || '1.0.0',
@@ -415,7 +413,23 @@ export async function installTranslation(
         installedFiles: [],
         components: { text: { installed: true, files: [] } },
       };
-      await saveInstallationInfo(gamePath.path, installationInfo);
+
+      try {
+        await runInstaller(
+          fullTargetPath,
+          installerFileName,
+          onStatus,
+          options.protonPath
+        );
+
+        await saveInstallationInfo(gamePath.path, installationInfo);
+      } catch (error) {
+        await saveInstallationInfo(gamePath.path, {
+          ...installationInfo,
+          hasInstallError: true,
+        });
+        throw error;
+      }
       return;
     }
 
@@ -646,7 +660,7 @@ function handleInstallationError(error: unknown): never {
       );
     }
 
-    throw new Error(`Помилка встановлення: ${error.message}`);
+    throw new Error(error.message);
   }
 
   throw new Error('Невідома помилка встановлення.\n\nСпробуйте ще раз.');

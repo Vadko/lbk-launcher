@@ -327,11 +327,13 @@ export async function runInstaller(
 
         const child = isWindowsBatchFile
           ? spawn(`"${installerPath}"`, [], {
+              cwd: path.dirname(installerPath),
               stdio: ['ignore', 'pipe', 'pipe'],
               detached: false,
               shell: true,
             })
           : spawn(installerPath, [], {
+              cwd: path.dirname(installerPath),
               stdio: 'ignore',
               detached: false,
             });
@@ -454,6 +456,7 @@ export async function runUninstaller(
 
       await new Promise<void>((resolve, reject) => {
         const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
+          cwd: path.dirname(installerPath),
           stdio: 'inherit',
         });
 
@@ -477,11 +480,13 @@ export async function runUninstaller(
 
         const child = isWindowsBatchFile
           ? spawn(installerPath, args, {
+              cwd: path.dirname(installerPath),
               stdio: 'ignore',
               detached: false,
               shell: true,
             })
           : spawn(installerPath, args, {
+              cwd: path.dirname(installerPath),
               stdio: 'ignore',
               detached: false,
             });
