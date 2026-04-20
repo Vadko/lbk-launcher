@@ -710,7 +710,11 @@ export function useInstallation({
     if (isInstalling) {
       return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
     }
-    if (installationInfo?.hasInstallError && isUpdateAvailable && !isCheckingInstallation) {
+    if (
+      installationInfo?.hasInstallError &&
+      isUpdateAvailable &&
+      !isCheckingInstallation
+    ) {
       return `Перезавантажити (v${selectedGame?.version})`;
     }
     if (isUpdateAvailable && !isCheckingInstallation) {

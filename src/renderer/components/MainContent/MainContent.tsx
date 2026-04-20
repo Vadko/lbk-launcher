@@ -69,7 +69,9 @@ export const MainContent: React.FC = () => {
 
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
   const isTranslationInstalled =
-    installationInfo && !installationInfo.hasInstallError && installationInfo.gameId === selectedGame?.id;
+    installationInfo &&
+    !installationInfo.hasInstallError &&
+    installationInfo.gameId === selectedGame?.id;
   const isUpdateAvailable =
     installationInfo &&
     selectedGame &&
