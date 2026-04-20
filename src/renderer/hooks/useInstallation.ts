@@ -167,7 +167,7 @@ export function useInstallation({
           if (result.error.needsManualSelection) {
             showConfirm({
               title: 'Гру не знайдено',
-              message: `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`,
+              message: `${result.error.message}\n\nСпробуйте вибрати папку гри самостійно`,
               confirmText: 'Вибрати папку',
               cancelText: 'Скасувати',
               onConfirm: async () => {
@@ -709,6 +709,9 @@ export function useInstallation({
     }
     if (isInstalling) {
       return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
+    }
+    if (installationInfo?.hasInstallError && isUpdateAvailable && !isCheckingInstallation) {
+      return `Перезавантажити (v${selectedGame?.version})`;
     }
     if (isUpdateAvailable && !isCheckingInstallation) {
       return `Оновити до v${selectedGame?.version}`;
