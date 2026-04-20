@@ -5,10 +5,10 @@ import type { InstallationInfo } from '../../../shared/types';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
+import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
 import { GameListItem } from './GameListItem';
 import type { GameGroup } from './types';
-import { StatusIcons } from '../Elements/StatusIcons';
 
 interface GameGroupItemProps {
   group: GameGroup;

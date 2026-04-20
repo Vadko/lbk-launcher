@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
 import React, { useMemo } from 'react';
+import type { InstallationInfo } from '../../../shared/types';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useVirtualizedList } from '../../hooks/useVirtualizedList';
 import type { Game } from '../../types/game';
-import type { InstallationInfo } from '../../../shared/types';
 import { Loader } from '../ui/Loader';
 import { GamepadCard } from './GamepadCard';
 import type { GameGroup } from './types';
