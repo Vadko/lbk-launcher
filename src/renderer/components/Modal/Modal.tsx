@@ -28,7 +28,7 @@ export const Modal: React.FC<ModalProps> = ({
   classNames = '',
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Enable gamepad scrolling with right stick
   useGamepadModalScroll(isOpen, scrollContainerRef);
 
@@ -89,7 +89,12 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Content */}
-                <div ref={scrollContainerRef} className="p-6 overflow-y-auto break-words flex-1">{children}</div>
+                <div
+                  ref={scrollContainerRef}
+                  className="p-6 overflow-y-auto break-words flex-1"
+                >
+                  {children}
+                </div>
 
                 {/* Footer */}
                 {footer && (
@@ -108,7 +113,12 @@ export const Modal: React.FC<ModalProps> = ({
                   </button>
                 )}
                 {/* Content */}
-                <div ref={scrollContainerRef} className="overflow-y-auto break-words flex-1">{children}</div>
+                <div
+                  ref={scrollContainerRef}
+                  className="overflow-y-auto break-words flex-1"
+                >
+                  {children}
+                </div>
               </>
             )}
           </motion.div>
