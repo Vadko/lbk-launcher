@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from './Modal';
+import { trackEvent } from '../../utils/analytics';
 
 interface SendLogsModalProps {
   isOpen: boolean;
@@ -47,10 +48,6 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
       return;
     }
 
-    if (!message.trim() || message.trim().length < 10) {
-      return;
-    }
-
     setIsSending(true);
     setSendStatus('idle');
 
@@ -59,6 +56,11 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
 
       if (result?.success) {
         setSendStatus('success');
+
+        // Track event
+        trackEvent('Tech Log Sent', {
+          has_comment: !!message.trim(),
+        });
 
         // Update counter
         const today = new Date().toDateString();
@@ -161,7 +163,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/30">
             <div className="w-2 h-2 rounded-full bg-green-500" />
             <p className="text-sm text-green-400">
-              Логи успішно відправлено! Дякуємо за звернення.
+              Дякуємо! Файл успішно відправлено
             </p>
           </div>
         )}
@@ -170,7 +172,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30">
             <div className="w-2 h-2 rounded-full bg-red-500" />
             <p className="text-sm text-red-400">
-              Помилка відправки. Спробуйте пізніше або зверніться до підтримки.
+              Щось пішло не так, спробуйте пізніше
             </p>
           </div>
         )}
