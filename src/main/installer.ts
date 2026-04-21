@@ -94,7 +94,10 @@ export async function resumeDownload(
 
   let downloadUrl = state.url;
   if (now - pausedTime > fiftyFiveMinutes) {
-    onStatus?.({ message: 'Оновлення посилання на завантаження...' });
+    onStatus?.({
+      message: 'Оновлення посилання на завантаження...',
+      phase: 'download',
+    });
     console.log('[Installer] Signed URL might be expired, getting new one...');
 
     // Extract archive path from the original URL or use a fallback approach
@@ -135,7 +138,7 @@ export async function resumeDownload(
   setDownloadAbortController(abortController);
 
   try {
-    onStatus?.({ message: 'Продовження завантаження...' });
+    onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
 
     await downloadFile(
       downloadUrl,

@@ -236,6 +236,7 @@ export async function downloadFile(
         console.log(`[Downloader] Retry attempt ${attempt}/${maxRetries}`);
         onStatus?.({
           message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.`,
+          phase: 'download',
         });
         // Wait before retry (exponential backoff)
         await new Promise((resolve) =>
@@ -247,9 +248,9 @@ export async function downloadFile(
           throw new Error('Завантаження скасовано');
         }
       } else if (currentStartByte > 0) {
-        onStatus?.({ message: 'Продовження завантаження...' });
+        onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
       } else {
-        onStatus?.({ message: 'Завантаження українізатора...' });
+        onStatus?.({ message: 'Завантаження українізатора...', phase: 'download' });
       }
 
       await downloadFileAttempt(
@@ -291,7 +292,10 @@ export async function downloadFile(
           error.message.toLowerCase().includes('econnreset'));
 
       if (isNetworkError && attempt < maxRetries) {
-        onStatus?.({ message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...` });
+        onStatus?.({
+          message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...`,
+          phase: 'download',
+        });
         // Don't clean up partial file on network error - we can resume
       }
 
@@ -413,7 +417,10 @@ async function downloadFileAttempt(
             '[Downloader] Server does not support range requests, restarting from beginning'
           );
           serverSupportsRange = false;
-          onStatus?.({ message: 'Сервер не підтримує продовження, перезапуск...' });
+          onStatus?.({
+            message: 'Сервер не підтримує продовження, перезапуск...',
+            phase: 'download',
+          });
         } else if (response.statusCode === 416) {
           // Range not satisfiable - file may have changed on server
           console.error('[Downloader] Range not satisfiable (416)');

@@ -54,6 +54,7 @@ export interface DownloadProgress {
 export interface InstallationStatus {
   message: string;
   progress?: number;
+  phase?: 'download' | 'install';
 }
 
 export interface InstallResult {

@@ -497,17 +497,25 @@ export async function runUninstaller(
           installerPath.toLowerCase().endsWith('.cmd');
 
         const child = isWindowsBatchFile
-          ? spawn(installerPath, args, {
+          ? spawn(`"${installerPath}"`, args, {
               cwd: path.dirname(installerPath),
-              stdio: 'ignore',
+              stdio: 'pipe',
               detached: false,
               shell: true,
             })
           : spawn(installerPath, args, {
               cwd: path.dirname(installerPath),
-              stdio: 'ignore',
+              stdio: 'pipe',
               detached: false,
             });
+
+        child.stdin?.end();
+        child.stdout?.on('data', (data) => {
+          console.log(`[Uninstaller stdout] ${data.toString().trimEnd()}`);
+        });
+        child.stderr?.on('data', (data) => {
+          console.error(`[Uninstaller stderr] ${data.toString().trimEnd()}`);
+        });
 
         child.on('exit', (code) => {
           console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);
