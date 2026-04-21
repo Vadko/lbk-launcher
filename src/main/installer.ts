@@ -94,7 +94,10 @@ export async function resumeDownload(
 
   let downloadUrl = state.url;
   if (now - pausedTime > fiftyFiveMinutes) {
-    onStatus?.({ message: 'Оновлення посилання на завантаження...' });
+    onStatus?.({
+      message: 'Оновлення посилання на завантаження...',
+      phase: 'download',
+    });
     console.log('[Installer] Signed URL might be expired, getting new one...');
 
     // Extract archive path from the original URL or use a fallback approach
@@ -135,7 +138,7 @@ export async function resumeDownload(
   setDownloadAbortController(abortController);
 
   try {
-    onStatus?.({ message: 'Продовження завантаження...' });
+    onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
 
     await downloadFile(
       downloadUrl,
@@ -150,7 +153,7 @@ export async function resumeDownload(
     // Download complete - clear paused state
     clearPausedDownloadState(state.gameId);
 
-    onStatus?.({ message: 'Завантаження завершено!' });
+    onStatus?.({ message: 'Завантаження завершено!', phase: 'install' });
     console.log('[Installer] Resume download completed successfully');
   } catch (error) {
     // If paused again, don't treat as error
@@ -314,7 +317,8 @@ export async function installTranslation(
         extractDir: voiceExtractDir,
         isFirstSession,
         onDownloadProgress,
-        onStatus: (status) => onStatus?.({ message: `Озвучення: ${status.message}` }),
+        onStatus: (status) =>
+          onStatus?.({ message: `Озвучення: ${status.message}`, phase: status.phase }),
       });
       // Copy voice files to main extract directory
       await copyDirectory(voiceExtractDir, extractDir);
@@ -343,13 +347,14 @@ export async function installTranslation(
         extractDir: achievementsExtractDir,
         isFirstSession,
         onDownloadProgress,
-        onStatus: (status) => onStatus?.({ message: `Досягнення: ${status.message}` }),
+        onStatus: (status) =>
+          onStatus?.({ message: `Досягнення: ${status.message}`, phase: status.phase }),
       });
 
       achievementsInstallPath = await getSteamAchievementsPath();
       if (achievementsInstallPath) {
         console.log(`[Installer] Installing achievements to: ${achievementsInstallPath}`);
-        onStatus?.({ message: 'Копіювання перекладу ачівок...' });
+        onStatus?.({ message: 'Копіювання перекладу ачівок...', phase: 'install' });
         await mkdir(achievementsInstallPath, { recursive: true });
 
         // Find all achievement files (ignore folder structure from archive)
@@ -394,10 +399,10 @@ export async function installTranslation(
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...' });
+      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
 
-      onStatus?.({ message: 'Очищення тимчасових файлів...' });
+      onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
       await cleanupDownloadDir(downloadDir);
 
       const installationInfo: InstallationInfo = {
@@ -453,16 +458,16 @@ export async function installTranslation(
       }
 
       if (createBackup) {
-        onStatus?.({ message: 'Створення резервної копії...' });
+        onStatus?.({ message: 'Створення резервної копії...', phase: 'install' });
         await backupFiles(extractDir, fullTargetPath);
       }
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...' });
+      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
     }
 
     // 8. Cleanup
-    onStatus?.({ message: 'Очищення тимчасових файлів...' });
+    onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
@@ -551,7 +556,7 @@ async function downloadAndExtractArchive(
   const archiveExt = path.extname(archivePath) || '.zip';
   const archiveFilePath = path.join(downloadDir, `${game.id}_${type}${archiveExt}`);
 
-  onStatus?.({ message: 'Отримання посилання для завантаження...' });
+  onStatus?.({ message: 'Отримання посилання для завантаження...', phase: 'download' });
   const urlResult = await getSignedDownloadUrl({
     gameId: game.id,
     archivePath,
@@ -606,7 +611,7 @@ async function downloadAndExtractArchive(
 
   // Verify hash if available
   if (archiveHash) {
-    onStatus?.({ message: 'Перевірка цілісності файлу...' });
+    onStatus?.({ message: 'Перевірка цілісності файлу...', phase: 'install' });
     const isValid = await verifyFileHash(archiveFilePath, archiveHash);
     if (!isValid) {
       if (fs.existsSync(archiveFilePath)) {

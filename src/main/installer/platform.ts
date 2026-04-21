@@ -249,7 +249,7 @@ export async function runInstaller(
       });
     }
 
-    onStatus?.({ message: 'Запуск інсталятора...' });
+    onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
 
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux - Wine registry tracking is handled inside runProton
@@ -259,7 +259,7 @@ export async function runInstaller(
       const installPath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
       clipboard.writeText(installPath);
 
-      onStatus?.({ message: 'Налаштування та запуск Proton' });
+      onStatus?.({ message: 'Налаштування та запуск Proton', phase: 'install' });
 
       const args = [
         `/installpath=${installPath}`,
@@ -290,7 +290,7 @@ export async function runInstaller(
 
       // Execute native Linux/macOS scripts directly
       console.log(`[Installer] Executing native installer: ${installerPath}`);
-      onStatus?.({ message: 'Запуск інсталятора...' });
+      onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
 
       await new Promise<void>((resolve, reject) => {
         // AppImage needs APPIMAGE_EXTRACT_AND_RUN=1 to bypass FUSE
@@ -497,17 +497,25 @@ export async function runUninstaller(
           installerPath.toLowerCase().endsWith('.cmd');
 
         const child = isWindowsBatchFile
-          ? spawn(installerPath, args, {
+          ? spawn(`"${installerPath}"`, args, {
               cwd: path.dirname(installerPath),
-              stdio: 'ignore',
+              stdio: 'pipe',
               detached: false,
               shell: true,
             })
           : spawn(installerPath, args, {
               cwd: path.dirname(installerPath),
-              stdio: 'ignore',
+              stdio: 'pipe',
               detached: false,
             });
+
+        child.stdin?.end();
+        child.stdout?.on('data', (data) => {
+          console.log(`[Uninstaller stdout] ${data.toString().trimEnd()}`);
+        });
+        child.stderr?.on('data', (data) => {
+          console.error(`[Uninstaller stderr] ${data.toString().trimEnd()}`);
+        });
 
         child.on('exit', (code) => {
           console.log(`[Uninstaller] Uninstaller exited with code: ${code}`);

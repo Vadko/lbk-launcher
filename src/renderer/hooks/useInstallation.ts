@@ -140,6 +140,12 @@ export function useInstallation({
           (gameId: string, status) => {
             setInstallationProgress(gameId, {
               statusMessage: status.message,
+              // When we leave the download phase, clear download progress so UI
+              // switches from DownloadProgressCard to InstallationStatusMessage
+              ...(status.phase !== 'download' && {
+                downloadProgress: null,
+                progress: 0,
+              }),
             });
           }
         );
@@ -659,6 +665,10 @@ export function useInstallation({
       (gameId: string, status) => {
         setInstallationProgress(gameId, {
           statusMessage: status.message,
+          ...(status.phase !== 'download' && {
+            downloadProgress: null,
+            progress: 0,
+          }),
         });
       }
     );
