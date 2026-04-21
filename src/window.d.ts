@@ -7,6 +7,7 @@ interface LiquidGlassAPI {
 interface LoggerAPI {
   openLogsFolder: () => Promise<{ success: boolean; error?: string }>;
   log: (level: string, message: string, ...args: unknown[]) => void;
+  sendLogs: (message: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 interface API {

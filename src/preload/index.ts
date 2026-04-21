@@ -257,6 +257,7 @@ contextBridge.exposeInMainWorld('liquidGlassAPI', {
 // Logger API
 contextBridge.exposeInMainWorld('loggerAPI', {
   openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
+  sendLogs: (message: string) => ipcRenderer.invoke('logger:send-logs', message),
   log: (level: string, message: string, ...args: unknown[]) =>
     ipcRenderer.send('logger:log', level, message, args),
 });
