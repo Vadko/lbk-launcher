@@ -7,8 +7,8 @@ import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
-import { Loader } from '../ui/Loader';
 import { Button } from '../ui/Button';
+import { Loader } from '../ui/Loader';
 
 interface GamesSectionProps {
   title: string;
@@ -54,11 +54,7 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
         {onViewAll && (
-          <Button
-            variant="ghost"
-            onClick={onViewAll}
-            data-gamepad-action
-          >
+          <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
             Переглянути всі
             <ArrowRight size={24} />
           </Button>

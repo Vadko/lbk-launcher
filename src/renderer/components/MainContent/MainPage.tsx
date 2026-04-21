@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, Activity } from 'react';
+import React, { Activity, useEffect, useRef, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { GamesSection } from './GamesSection';
 import { GamesSectionWithTabs, type TabConfig } from './GamesSectionWithTabs';
@@ -44,10 +44,8 @@ export const MainPage: React.FC = () => {
       className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
     >
       {/* Main page */}
-      <Activity mode={currentView === 'main' ? 'visible' : 'hidden'} >
-        <div
-          className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}
-        >
+      <Activity mode={currentView === 'main' ? 'visible' : 'hidden'}>
+        <div className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}>
           <InstalledGamesSection showLimit={3} />
           <GamesSectionWithTabs
             title="Новинки"
@@ -65,9 +63,7 @@ export const MainPage: React.FC = () => {
       </Activity>
       {/* Trending games page */}
       <Activity mode={currentView === 'trending' ? 'visible' : 'hidden'}>
-        <div
-          className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}
-        >
+        <div className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}>
           <TrendingGamesPage onBack={() => setCurrentView('main')} />
         </div>
       </Activity>

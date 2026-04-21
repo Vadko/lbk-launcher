@@ -125,7 +125,9 @@ export const GamepadHints: React.FC = () => {
     hints = [
       { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
       { button: back.label, label: 'Назад', variant: back.variant },
-      ...(selectedGame ? [{ button: home.label, label: 'Головна', variant: home.variant }] : []),
+      ...(selectedGame
+        ? [{ button: home.label, label: 'Головна', variant: home.variant }]
+        : []),
       { button: '←→', label: selectedGame ? 'Кнопки' : 'Навігація' },
       { button: '↑↓', label: 'Прокрутка' },
     ];

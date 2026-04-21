@@ -3,12 +3,13 @@ import { ArrowRight } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGames } from '@/renderer/hooks/useGames';
+import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
-import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
+import { WarningFillIcon } from '../Icons/WarningFillIcon';
 import { GameListItem } from '../Sidebar/GameListItem';
-import { Loader } from '../ui/Loader';
 import { Button } from '../ui/Button';
+import { Loader } from '../ui/Loader';
 
 interface InstalledGamesSectionProps {
   title?: string;
@@ -60,9 +61,36 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }
   };
 
-  // Don't show section if no games found
+  // Show banner instead of section when no games found
   if (!isLoading && gamesWithoutInstalls.length === 0) {
-    return null;
+    return (
+      <div className="text-left w-full max-w-[1317px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="empty-banner"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+          >
+            <div className="glass-card-no-motion !p-4 flex gap-6 items-center">
+              <WarningFillIcon size={32} />
+              <div className="flex-1">
+                <h3 className="text-2xl font-head font-bold text-color-mixed mb-1">
+                  Не можемо знайти ваші ігри
+                </h3>
+                <p className="text-sm">
+                  От халепа... Ми не змогли знайти встановлені ігри на девайсі.
+                  <br />
+                  Будь ласка, переконайтеся, що ви маєте хоча б одну завантажену гру у
+                  лаунчерах — Steam, GOG, EGS.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    );
   }
 
   return (
@@ -96,17 +124,6 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
               className="flex items-center justify-center py-12"
             >
               <Loader size="md" />
-            </motion.div>
-          ) : visibleGames.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="text-center text-text-muted py-8"
-            >
-              <p>Ігор не знайдено</p>
             </motion.div>
           ) : (
             visibleGames.map((game, index) => (

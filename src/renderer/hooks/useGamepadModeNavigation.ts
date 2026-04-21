@@ -478,7 +478,9 @@ export function useGamepadModeNavigation(enabled = true) {
 
   // Get home active cards and action buttons
   const getHomeActive = useCallback((): HTMLElement[] => {
-    const allElements = document.querySelectorAll<HTMLElement>('[data-gamepad-main-content] .main-page:not([style*="display: none"]) :is([data-gamepad-action], [data-gamepad-card]):not([disabled])');
+    const allElements = document.querySelectorAll<HTMLElement>(
+      '[data-gamepad-main-content] .main-page:not([style*="display: none"]) :is([data-gamepad-action], [data-gamepad-card]):not([disabled])'
+    );
     return Array.from(allElements);
   }, []);
 
