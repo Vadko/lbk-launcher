@@ -154,13 +154,14 @@ export async function extractArchive(
         onStatus?.({
           message: `Розпакування файлів... ${percent}%`,
           progress: percent,
+          phase: 'install',
         });
       }
     });
 
     stream.on('end', () => {
       console.log(`[Installer] Extracted archive to: ${extractPath}`);
-      onStatus?.({ message: 'Розпакування завершено' });
+      onStatus?.({ message: 'Розпакування завершено', phase: 'install' });
       resolve();
     });
 

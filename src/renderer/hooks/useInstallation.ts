@@ -140,6 +140,12 @@ export function useInstallation({
           (gameId: string, status) => {
             setInstallationProgress(gameId, {
               statusMessage: status.message,
+              // When we leave the download phase, clear download progress so UI
+              // switches from DownloadProgressCard to InstallationStatusMessage
+              ...(status.phase !== 'download' && {
+                downloadProgress: null,
+                progress: 0,
+              }),
             });
           }
         );
@@ -167,7 +173,7 @@ export function useInstallation({
           if (result.error.needsManualSelection) {
             showConfirm({
               title: 'Гру не знайдено',
-              message: `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`,
+              message: `${result.error.message}\n\nСпробуйте вибрати папку гри самостійно`,
               confirmText: 'Вибрати папку',
               cancelText: 'Скасувати',
               onConfirm: async () => {
@@ -659,6 +665,10 @@ export function useInstallation({
       (gameId: string, status) => {
         setInstallationProgress(gameId, {
           statusMessage: status.message,
+          ...(status.phase !== 'download' && {
+            downloadProgress: null,
+            progress: 0,
+          }),
         });
       }
     );
@@ -709,6 +719,13 @@ export function useInstallation({
     }
     if (isInstalling) {
       return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
+    }
+    if (
+      installationInfo?.hasInstallError &&
+      isUpdateAvailable &&
+      !isCheckingInstallation
+    ) {
+      return `Перезавантажити (v${selectedGame?.version})`;
     }
     if (isUpdateAvailable && !isCheckingInstallation) {
       return `Оновити до v${selectedGame?.version}`;

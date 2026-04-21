@@ -23,6 +23,7 @@ export interface InstallationInfo {
   installedAt: string;
   gamePath: string;
   hasBackup?: boolean;
+  hasInstallError?: boolean; // True if installation was attempted but failed
   protonPath?: string; // For Linux Proton installations
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
   installerPath?: string; // Path to the installer executable (if used)
@@ -53,6 +54,7 @@ export interface DownloadProgress {
 export interface InstallationStatus {
   message: string;
   progress?: number;
+  phase?: 'download' | 'install';
 }
 
 export interface InstallResult {

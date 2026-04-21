@@ -28,7 +28,15 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
       hideAiTranslations: state.hideAiTranslations,
     }))
   );
-  const { setSelectedGame } = useStore();
+  const { setSelectedGame, gamesWithUpdates, isGameDetected, getInstallationInfo } =
+    useStore(
+      useShallow((state) => ({
+        setSelectedGame: state.setSelectedGame,
+        gamesWithUpdates: state.gamesWithUpdates,
+        isGameDetected: state.isGameDetected,
+        getInstallationInfo: state.getInstallationInfo,
+      }))
+    );
   const { games: allGames, isLoading: isLoadingAll } = useGames({
     sortOrder,
     hideAiTranslations,
@@ -89,6 +97,9 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
                   isSelected={false}
                   isCardStyle={true}
                   showDownloadCounter={showDownloadCounter}
+                  hasUpdate={gamesWithUpdates.has(game.id)}
+                  isGameDetected={isGameDetected(game.id)}
+                  isInstalled={!!getInstallationInfo(game.id)}
                   onClick={() => setSelectedGame(game)}
                 />
               </motion.div>

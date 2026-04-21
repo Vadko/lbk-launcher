@@ -1,9 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
+import type { InstallationInfo } from '../../../shared/types';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
+import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
 import { GameListItem } from './GameListItem';
 import type { GameGroup } from './types';
@@ -16,7 +18,7 @@ interface GameGroupItemProps {
   onSelectGame: (game: Game) => void;
   gamesWithUpdates: Set<string>;
   isGameDetected: (gameId: string) => boolean;
-  isHorizontalMode?: boolean;
+  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
 }
 
 export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
@@ -28,7 +30,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     onSelectGame,
     gamesWithUpdates,
     isGameDetected,
-    isHorizontalMode = false,
+    getInstallationInfo,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -39,6 +41,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const isAnySelected = group.translations.some((t) => selectedGameId === t.id);
     const anyHasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
+    const anyGameInstalled = group.translations.some((t) => !!getInstallationInfo(t.id));
 
     // Use thumbnail from the first translation
     const thumbnailUrl = getGameImageUrl(primaryGame.thumbnail_path);
@@ -67,9 +70,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
               onToggle();
             }
           }}
-          {...(isHorizontalMode ? { 'data-gamepad-card': true } : {})}
-          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-none ${
-            isHorizontalMode ? 'w-[200px] flex-col' : ''
+          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-none 
           } ${
             isAnySelected
               ? 'border border-[rgba(255,164,122,0.5)] shadow-[0_0_20px_rgba(255,164,122,0.2)]'
@@ -115,15 +116,6 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                 </div>
               )}
             </div>
-            {anyHasUpdate && !isAdultBlurred && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
-            )}
-            {anyGameDetected && !isAdultBlurred && (
-              <div
-                className="absolute -bottom-1 -right-1 w-4 h-4 bg-color-main rounded-full border-2 border-bg-dark z-10"
-                title="Гра встановлена"
-              />
-            )}
           </div>
 
           {/* Content */}
@@ -134,6 +126,13 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             >
               {group.name}
             </h4>
+            <div className="flex flex-1 justify-end items-center gap-2  mb-1 -mt-1">
+              <StatusIcons
+                hasUpdate={anyHasUpdate}
+                isGameDetected={anyGameDetected}
+                isInstalled={anyGameInstalled}
+              />
+            </div>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
@@ -178,6 +177,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       onClick={() => onSelectGame(game)}
                       hasUpdate={gamesWithUpdates.has(game.id)}
                       isGameDetected={isGameDetected(game.id)}
+                      isInstalled={!!getInstallationInfo(game.id)}
                       showTeamName
                     />
                   ))}
@@ -196,6 +196,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   onClick={() => onSelectGame(game)}
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
+                  isInstalled={!!getInstallationInfo(game.id)}
                   showTeamName
                 />
               ))}

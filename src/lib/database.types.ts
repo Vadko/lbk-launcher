@@ -880,6 +880,7 @@ export type Database = {
       }
       kuli_imports: {
         Row: {
+          data_hash: string | null
           game_id: string
           imported_at: string
           kuli_id: number
@@ -887,6 +888,7 @@ export type Database = {
           localization_name: string | null
         }
         Insert: {
+          data_hash?: string | null
           game_id: string
           imported_at?: string
           kuli_id: number
@@ -894,6 +896,7 @@ export type Database = {
           localization_name?: string | null
         }
         Update: {
+          data_hash?: string | null
           game_id?: string
           imported_at?: string
           kuli_id?: number
@@ -1611,7 +1614,7 @@ export type Database = {
           id: string
           password_hash: string
           role: Database["public"]["Enums"]["user_role"]
-          telegram_chat_id: number | null
+          telegram_chat_ids: number[] | null
           telegram_link_token: string | null
           telegram_notifications: boolean
           unsubscribe_token: string
@@ -1630,7 +1633,7 @@ export type Database = {
           id?: string
           password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
-          telegram_chat_id?: number | null
+          telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
           telegram_notifications?: boolean
           unsubscribe_token?: string
@@ -1649,7 +1652,7 @@ export type Database = {
           id?: string
           password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
-          telegram_chat_id?: number | null
+          telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
           telegram_notifications?: boolean
           unsubscribe_token?: string
