@@ -167,6 +167,18 @@ export function hasExecutableInstaller(game: Game): boolean {
   return isExecutableInstaller(installerFileName);
 }
 
+function formatInstallerExitError(code: number, stderrLines: string[]): string {
+  const knownCodes: Record<number, string> = {
+    1: 'Встановлення завершилось з помилкою або було скасовано',
+    2: 'Встановлення скасовано',
+  };
+
+  const description = knownCodes[code] ?? `Інсталятор завершився з кодом ${code}`;
+  const stderr =
+    stderrLines.length > 0 ? `\n\nВивід інсталятора:\n${stderrLines.join('\n')}` : '';
+  return `${description}${stderr}`;
+}
+
 /**
  * Run installer file from extracted archive and wait for it to complete
  */
@@ -327,30 +339,38 @@ export async function runInstaller(
 
         const child = isWindowsBatchFile
           ? spawn(`"${installerPath}"`, [], {
+              cwd: path.dirname(installerPath),
               stdio: ['ignore', 'pipe', 'pipe'],
               detached: false,
               shell: true,
             })
           : spawn(installerPath, [], {
+              cwd: path.dirname(installerPath),
               stdio: 'ignore',
               detached: false,
             });
 
+        const stderrLines: string[] = [];
         // Add output capturing for batch files
         if (isWindowsBatchFile) {
           child.stdout?.on('data', (data) => {
-            console.log(`[Installer stdout] ${data.toString('utf8').trim()}`);
+            const line = data.toString('utf8').trim();
+            if (line) console.log(`[Installer stdout] ${line}`);
           });
 
           child.stderr?.on('data', (data) => {
-            console.error(`[Installer stderr] ${data.toString('utf8').trim()}`);
+            const line = data.toString('utf8').trim();
+            if (line) {
+              console.error(`[Installer stderr] ${line}`);
+              stderrLines.push(line);
+            }
           });
         }
 
         child.on('exit', (code) => {
           console.log(`[Installer] Installer exited with code: ${code}`);
           if (code !== null && code !== 0) {
-            reject(new Error(`${code} код помилки`));
+            reject(new Error(formatInstallerExitError(code, stderrLines)));
           } else {
             resolve();
           }
@@ -454,6 +474,7 @@ export async function runUninstaller(
 
       await new Promise<void>((resolve, reject) => {
         const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
+          cwd: path.dirname(installerPath),
           stdio: 'inherit',
         });
 
@@ -477,11 +498,13 @@ export async function runUninstaller(
 
         const child = isWindowsBatchFile
           ? spawn(installerPath, args, {
+              cwd: path.dirname(installerPath),
               stdio: 'ignore',
               detached: false,
               shell: true,
             })
           : spawn(installerPath, args, {
+              cwd: path.dirname(installerPath),
               stdio: 'ignore',
               detached: false,
             });
@@ -542,7 +565,7 @@ export async function rerunInstaller(
   } catch (error) {
     console.error('[Installer] Error re-running installer:', error);
     throw new Error(
-      `Не вдалося повторно запустити інсталятор: ${error instanceof Error ? error.message : 'Unknown error'}`
+      error instanceof Error ? error.message : 'Повторний запуск інсталятора не вдався'
     );
   }
 }

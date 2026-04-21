@@ -217,14 +217,13 @@ export async function installTranslation(
       if (game.license_only) {
         throw new Error(
           `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-            `Гру не знайдено автоматично. Переконайтеся, що ліцензійна версія гри встановлена через Steam, GOG чи Epic Games.`
+            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через Steam, GOG чи Epic Games.`
         );
       }
 
       throw new ManualSelectionError(
-        `Гру не знайдено автоматично.\n\n` +
-          `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
-          `Виберіть папку з грою вручну.`
+        `Гру не знайдено\n\n` +
+          `Ми не змогли автоматично визначити шлях до папки: ${platformPath || 'не вказано'}`
       );
     }
 
@@ -401,8 +400,6 @@ export async function installTranslation(
       onStatus?.({ message: 'Очищення тимчасових файлів...' });
       await cleanupDownloadDir(downloadDir);
 
-      await runInstaller(fullTargetPath, installerFileName, onStatus, options.protonPath);
-
       const installationInfo: InstallationInfo = {
         gameId: game.id,
         version: game.version || '1.0.0',
@@ -415,7 +412,23 @@ export async function installTranslation(
         installedFiles: [],
         components: { text: { installed: true, files: [] } },
       };
-      await saveInstallationInfo(gamePath.path, installationInfo);
+
+      try {
+        await runInstaller(
+          fullTargetPath,
+          installerFileName,
+          onStatus,
+          options.protonPath
+        );
+
+        await saveInstallationInfo(gamePath.path, installationInfo);
+      } catch (error) {
+        await saveInstallationInfo(gamePath.path, {
+          ...installationInfo,
+          hasInstallError: true,
+        });
+        throw error;
+      }
       return;
     }
 
@@ -646,7 +659,7 @@ function handleInstallationError(error: unknown): never {
       );
     }
 
-    throw new Error(`Помилка встановлення: ${error.message}`);
+    throw new Error(error.message);
   }
 
   throw new Error('Невідома помилка встановлення.\n\nСпробуйте ще раз.');
