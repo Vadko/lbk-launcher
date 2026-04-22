@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { trackEvent } from '../../utils/analytics';
-import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
 interface SendLogsModalProps {
