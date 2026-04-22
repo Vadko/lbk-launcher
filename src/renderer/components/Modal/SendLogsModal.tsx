@@ -75,10 +75,10 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
             data-gamepad-confirm
             data-gamepad-modal-item
             disabled={isSubmitting}
-            className={`w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 ${
+            className={`w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark ${
               isSubmitting
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-color-main text-bg-dark hover:opacity-90'
+                : 'bg-color-main hover:opacity-90'
             }`}
           >
             {isSubmitting ? (
