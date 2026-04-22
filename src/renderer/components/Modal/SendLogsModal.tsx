@@ -67,7 +67,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
       isOpen={isOpen}
       onClose={onClose}
       title="Відправити логи"
-      classNames="max-w-[520px]"
+      classNames="!max-w-[520px]"
       footer={
         <div className="grid gap-4">
           <button
