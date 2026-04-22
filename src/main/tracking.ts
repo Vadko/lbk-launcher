@@ -10,9 +10,13 @@
  * Machine ID використовується для ідентифікації користувача
  */
 
+import { app } from 'electron';
+import { existsSync, readFileSync } from 'fs';
 import { machineIdSync } from 'node-machine-id';
+import { join } from 'path';
 import type { TrackingResponse } from '../shared/api-config';
 import { getSupabaseCredentials } from './db/supabase-credentials';
+import { getLogFileDirectory } from './utils/logger';
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
 
@@ -454,6 +458,76 @@ export async function submitFeedback(
     return { success: true };
   } catch (error) {
     console.error('[Tracking] Failed to submit feedback:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+/**
+ * Submit logs
+ */
+export async function submitLogs(
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping logs submission');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    console.log('[Tracking] Submitting logs');
+
+    // Read the log file
+    const logsDir = getLogFileDirectory();
+    const logFilePath = join(
+      logsDir,
+      `lbk-${new Date().toISOString().split('T')[0]}.log`
+    );
+
+    let logContent = '';
+    if (existsSync(logFilePath)) {
+      logContent = readFileSync(logFilePath, 'utf-8');
+    }
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        machineId,
+        message,
+        logs: logContent,
+        timestamp: new Date().toISOString(),
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.status === 429) {
+      console.warn('[Tracking] Logs submission rate limit exceeded');
+      return { success: false, error: 'rate_limit' };
+    }
+
+    if (!response.ok || !result.success) {
+      console.error('[Tracking] Logs submission failed:', result);
+      return { success: false, error: result.error || 'Unknown error' };
+    }
+
+    console.log('[Tracking] Logs submitted successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('[Tracking] Failed to submit logs:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Network error',

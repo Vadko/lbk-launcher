@@ -246,6 +246,7 @@ export interface ElectronAPI {
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
+  submitLogs: (message: string) => Promise<{ success: boolean; error?: string }>;
   // Get signed upload URLs for feedback screenshots
   getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
     success: boolean;

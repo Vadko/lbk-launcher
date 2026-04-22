@@ -9,8 +9,7 @@ import {
   shell,
   Tray,
 } from 'electron';
-import { existsSync, mkdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { getLogFileDirectory } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
@@ -251,52 +250,6 @@ export function setupWindowControls(): void {
       return { success: true };
     } catch (error) {
       console.error('[Logger] Failed to open logs folder:', error);
-      return { success: false, error: String(error) };
-    }
-  });
-
-  // Send logs handler
-  ipcMain.handle('logger:send-logs', async (_, message: string) => {
-    try {
-      const logsDir = getLogFileDirectory();
-      const logFilePath = join(
-        logsDir,
-        `lbk-${new Date().toISOString().split('T')[0]}.log`
-      );
-
-      // Read the log file
-      let logContent = '';
-      if (existsSync(logFilePath)) {
-        logContent = readFileSync(logFilePath, 'utf-8');
-      }
-
-      // Prepare the payload
-      const payload = {
-        message,
-        logs: logContent,
-        timestamp: new Date().toISOString(),
-        version: app.getVersion(),
-        platform: process.platform,
-        arch: process.arch,
-      };
-
-      // Send to server (replace with your actual endpoint)
-      const response = await fetch('https://api.lbk.org.ua/logs/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      console.log('[Logger] Logs sent successfully');
-      return { success: true };
-    } catch (error) {
-      console.error('[Logger] Failed to send logs:', error);
       return { success: false, error: String(error) };
     }
   });

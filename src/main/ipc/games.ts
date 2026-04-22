@@ -38,6 +38,7 @@ import {
   getFeedbackUploadUrls,
   getMachineId,
   submitFeedback,
+  submitLogs,
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
@@ -90,6 +91,9 @@ export function setupGamesHandlers(): void {
       screenshotPaths?: string[]
     ) => submitFeedback(gameId, errorType, message, screenshotPaths)
   );
+
+  // Send logs handler
+  ipcMain.handle('submit-logs', async (_, message: string) => submitLogs(message));
 
   // Get signed upload URLs for feedback screenshots
   ipcMain.handle('get-feedback-upload-urls', async (_, fileNames: string[]) =>

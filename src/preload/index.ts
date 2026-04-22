@@ -194,6 +194,7 @@ const electronAPI: ElectronAPI = {
     message: string,
     screenshotPaths?: string[]
   ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  submitLogs: (message: string) => ipcRenderer.invoke('submit-logs', message),
   getFeedbackUploadUrls: (fileNames: string[]) =>
     ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
   uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
@@ -257,7 +258,6 @@ contextBridge.exposeInMainWorld('liquidGlassAPI', {
 // Logger API
 contextBridge.exposeInMainWorld('loggerAPI', {
   openLogsFolder: () => ipcRenderer.invoke('logger:open-logs-folder'),
-  sendLogs: (message: string) => ipcRenderer.invoke('logger:send-logs', message),
   log: (level: string, message: string, ...args: unknown[]) =>
     ipcRenderer.send('logger:log', level, message, args),
 });

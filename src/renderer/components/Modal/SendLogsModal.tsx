@@ -1,60 +1,36 @@
 import React, { useEffect, useState } from 'react';
+import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Modal } from './Modal';
-import { trackEvent } from '../../utils/analytics';
 
 interface SendLogsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const MAX_REPORTS_PER_DAY = 3;
-const STORAGE_KEY = 'logs_sent_count';
-const STORAGE_DATE_KEY = 'logs_sent_date';
-
 export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose }) => {
   const [message, setMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [remainingReports, setRemainingReports] = useState(MAX_REPORTS_PER_DAY);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      checkRemainingReports();
       setSendStatus('idle');
+      setError(null);
       setMessage('');
     }
   }, [isOpen]);
 
-  const checkRemainingReports = () => {
-    const today = new Date().toDateString();
-    const storedDate = window.storeStorage?.getItem(STORAGE_DATE_KEY);
-    const storedCount = window.storeStorage?.getItem(STORAGE_KEY);
-
-    if (storedDate === today && storedCount) {
-      const count = parseInt(storedCount, 10);
-      setRemainingReports(Math.max(0, MAX_REPORTS_PER_DAY - count));
-    } else {
-      // New day, reset counter
-      window.storeStorage?.setItem(STORAGE_DATE_KEY, today);
-      window.storeStorage?.setItem(STORAGE_KEY, '0');
-      setRemainingReports(MAX_REPORTS_PER_DAY);
-    }
-  };
-
-  const handleSend = async () => {
-    if (remainingReports <= 0) {
-      setSendStatus('error');
-      return;
-    }
-
-    setIsSending(true);
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
     setSendStatus('idle');
+    setError(null);
 
     try {
-      const result = await window.loggerAPI?.sendLogs?.(message.trim());
+      const result = await window.electronAPI.submitLogs(message.trim());
 
-      if (result?.success) {
+      if (result.success) {
         setSendStatus('success');
 
         // Track event
@@ -62,32 +38,30 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
           has_comment: !!message.trim(),
         });
 
-        // Update counter
-        const today = new Date().toDateString();
-        const storedCount = window.storeStorage?.getItem(STORAGE_KEY);
-        const newCount = storedCount ? parseInt(storedCount, 10) + 1 : 1;
-        window.storeStorage?.setItem(STORAGE_KEY, newCount.toString());
-        window.storeStorage?.setItem(STORAGE_DATE_KEY, today);
-        setRemainingReports(Math.max(0, MAX_REPORTS_PER_DAY - newCount));
-
         // Close modal after success
         setTimeout(() => {
           onClose();
           setMessage('');
           setSendStatus('idle');
+          setError(null);
         }, 2000);
-      } else {
+      } else if (result.error === 'rate_limit') {
+        setError('Зачекайте кілька хвилин перед наступною відправкою');
         setSendStatus('error');
+        trackEvent('Tech Log Rate Limited');
+      } else {
+        setError(result.error || 'Не вдалося надіслати логи');
+        setSendStatus('error');
+        trackEvent('Tech Log Error', { Error: result.error });
       }
-    } catch (error) {
-      console.error('Failed to send logs:', error);
+    } catch (err) {
+      console.error('Failed to send logs:', err);
+      setError('Помилка мережі. Спробуйте пізніше');
       setSendStatus('error');
     } finally {
-      setIsSending(false);
+      setIsSubmitting(false);
     }
   };
-
-  const canSend = !isSending && remainingReports > 0;
 
   return (
     <Modal
@@ -97,21 +71,26 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
       classNames="max-w-[520px]"
       footer={
         <div className="grid gap-4">
-          <Button
-            onClick={handleSend}
-            variant="primary"
-            className="flex-1"
-            disabled={!canSend}
+          <button
+            onClick={handleSubmit}
+            data-gamepad-confirm
+            data-gamepad-modal-item
+            disabled={isSubmitting}
+            className={`w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 ${
+              isSubmitting
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-color-main text-bg-dark hover:opacity-90'
+            }`}
           >
-            {isSending ? (
+            {isSubmitting ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Відправлення...
+                <div className="w-5 h-5 border-2 border-bg-dark border-t-transparent rounded-full animate-spin" />
+                Надсилання...
               </>
             ) : (
               <>Надіслати логи</>
             )}
-          </Button>
+          </button>
           <p className="text-xs text-text-muted">
             Надіславши логи, ви погоджуєтеся на обробку ваших персональних даних.
           </p>
@@ -119,23 +98,6 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
       }
     >
       <div className="space-y-4">
-        {/* Remaining reports counter */}
-        {remainingReports > 0 ? (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-glass border border-border">
-            <div className="w-2 h-2 rounded-full bg-color-main" />
-            <p className="text-xs text-text-muted">
-              Залишилось відправок сьогодні: {remainingReports} з {MAX_REPORTS_PER_DAY}
-            </p>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30">
-            <div className="w-2 h-2 rounded-full bg-red-500" />
-            <p className="text-xs text-red-400">
-              Ви вичерпали ліміт відправок на сьогодні. Спробуйте завтра.
-            </p>
-          </div>
-        )}
-
         {/* Textarea */}
         <div>
           <label
@@ -151,7 +113,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
             placeholder="Опишіть що сталося, щоб ми могли швидше розібратися..."
             rows={4}
             maxLength={500}
-            disabled={isSending || remainingReports <= 0}
+            disabled={isSubmitting}
             data-gamepad-modal-item
             className="w-full p-4 rounded-xl bg-glass border border-border text-text-main placeholder-text-muted resize-none focus:outline-none focus:border-color-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           />
@@ -162,18 +124,14 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
         {sendStatus === 'success' && (
           <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/30">
             <div className="w-2 h-2 rounded-full bg-green-500" />
-            <p className="text-sm text-green-400">
-              Дякуємо! Файл успішно відправлено
-            </p>
+            <p className="text-sm text-green-400">Дякуємо! Файл успішно відправлено</p>
           </div>
         )}
 
-        {sendStatus === 'error' && (
-          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30">
-            <div className="w-2 h-2 rounded-full bg-red-500" />
-            <p className="text-sm text-red-400">
-              Щось пішло не так, спробуйте пізніше
-            </p>
+        {/* Error message */}
+        {error && (
+          <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            {error}
           </div>
         )}
       </div>
