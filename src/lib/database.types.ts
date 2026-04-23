@@ -951,6 +951,42 @@ export type Database = {
         }
         Relationships: []
       }
+      launcher_logs: {
+        Row: {
+          app_version: string | null
+          arch: string | null
+          crash_reason: string | null
+          created_at: string
+          id: string
+          logs: string | null
+          machine_id: string
+          message: string | null
+          platform: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          arch?: string | null
+          crash_reason?: string | null
+          created_at?: string
+          id?: string
+          logs?: string | null
+          machine_id: string
+          message?: string | null
+          platform?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          arch?: string | null
+          crash_reason?: string | null
+          created_at?: string
+          id?: string
+          logs?: string | null
+          machine_id?: string
+          message?: string | null
+          platform?: string | null
+        }
+        Relationships: []
+      }
       launcher_sessions: {
         Row: {
           app_version: string | null
