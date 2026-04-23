@@ -8,7 +8,11 @@ interface SendLogsModalProps {
   crashReason?: string;
 }
 
-export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose, crashReason }) => {
+export const SendLogsModal: React.FC<SendLogsModalProps> = ({
+  isOpen,
+  onClose,
+  crashReason,
+}) => {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');

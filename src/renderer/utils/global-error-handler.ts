@@ -216,11 +216,19 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
   const clearCacheOnlyBtn = errorScreen.querySelector('#clear-cache-only-btn');
   const clearAllDataBtn = errorScreen.querySelector('#clear-all-data-btn');
 
-  const sendLogsBtn = errorScreen.querySelector('#send-logs-btn') as HTMLButtonElement | null;
+  const sendLogsBtn = errorScreen.querySelector(
+    '#send-logs-btn'
+  ) as HTMLButtonElement | null;
   const sendLogsForm = errorScreen.querySelector('#send-logs-form') as HTMLElement | null;
-  const sendLogsMessage = errorScreen.querySelector('#send-logs-message') as HTMLTextAreaElement | null;
-  const sendLogsSubmit = errorScreen.querySelector('#send-logs-submit') as HTMLButtonElement | null;
-  const sendLogsStatus = errorScreen.querySelector('#send-logs-status') as HTMLElement | null;
+  const sendLogsMessage = errorScreen.querySelector(
+    '#send-logs-message'
+  ) as HTMLTextAreaElement | null;
+  const sendLogsSubmit = errorScreen.querySelector(
+    '#send-logs-submit'
+  ) as HTMLButtonElement | null;
+  const sendLogsStatus = errorScreen.querySelector(
+    '#send-logs-status'
+  ) as HTMLElement | null;
 
   sendLogsBtn?.addEventListener('click', () => {
     if (sendLogsForm) sendLogsForm.style.display = 'block';
@@ -244,9 +252,10 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
         sendLogsSubmit.style.display = 'none';
       } else {
         sendLogsStatus.style.color = '#ff6b6b';
-        sendLogsStatus.textContent = result?.error === 'rate_limit'
-          ? 'Зачекайте кілька хвилин'
-          : 'Помилка надсилання. Спробуйте пізніше';
+        sendLogsStatus.textContent =
+          result?.error === 'rate_limit'
+            ? 'Зачекайте кілька хвилин'
+            : 'Помилка надсилання. Спробуйте пізніше';
         sendLogsSubmit.disabled = false;
         sendLogsSubmit.textContent = 'Надіслати';
       }

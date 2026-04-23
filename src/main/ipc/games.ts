@@ -510,7 +510,11 @@ export function setupGamesHandlers(): void {
   // Record banner impression for placement banners (view or click)
   ipcMain.handle(
     'record-banner-impression',
-    async (_, bannerId: string, impressionType: ImpressionType = 'view'): Promise<boolean> => {
+    async (
+      _,
+      bannerId: string,
+      impressionType: ImpressionType = 'view'
+    ): Promise<boolean> => {
       try {
         const machineId = getMachineId();
         await recordBannerImpression({
