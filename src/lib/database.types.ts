@@ -958,7 +958,7 @@ export type Database = {
           crash_reason: string | null
           created_at: string
           id: string
-          logs: string | null
+          log_path: string | null
           machine_id: string
           message: string | null
           platform: string | null
@@ -969,7 +969,7 @@ export type Database = {
           crash_reason?: string | null
           created_at?: string
           id?: string
-          logs?: string | null
+          log_path?: string | null
           machine_id: string
           message?: string | null
           platform?: string | null
@@ -980,7 +980,7 @@ export type Database = {
           crash_reason?: string | null
           created_at?: string
           id?: string
-          logs?: string | null
+          log_path?: string | null
           machine_id?: string
           message?: string | null
           platform?: string | null
