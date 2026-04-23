@@ -3,18 +3,18 @@ import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
-import { trackEvent } from '../../utils/analytics';
+import type { BannerType } from '@/shared/types';
 import { Button } from '../ui/Button';
 
 interface PlacementProps {
   banner: BannerData | null;
-  placementType: 'small_square' | 'narrow';
+  placementType: BannerType;
   gameId: string;
   gameName: string;
   isKuli?: boolean;
   supportUrl?: string;
-  onImpression?: (bannerId: string) => void;
-  onClick?: (bannerId: string) => void;
+  onView?: () => void;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -25,36 +25,24 @@ export const Placement: React.FC<PlacementProps> = ({
   gameName,
   isKuli = false,
   supportUrl,
-  onImpression,
+  onView,
   onClick,
   className = '',
 }) => {
   const elementRef = useRef<HTMLDivElement>(null);
-  const hasTrackedImpression = useRef(false);
+  const hasTrackedView = useRef(false);
   const isNarrowType = placementType === 'narrow';
 
-  // Відстеження impression при появі в viewport
+  // Record view when element appears in viewport
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || hasTrackedImpression.current) return;
+    if (!element || hasTrackedView.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasTrackedImpression.current) {
-          hasTrackedImpression.current = true;
-
-          trackEvent('ads-placement', {
-            ...(banner?.id ? { 'Banner Id': banner.id } : {}),
-            Content: banner?.id ? 'ads' : isKuli ? 'kuli' : 'support',
-            Type: placementType,
-            'Game Name': gameName,
-            'Game Id': gameId,
-            Action: 'view',
-          });
-
-          if (banner?.id) {
-            onImpression?.(banner.id);
-          }
+        if (entry.isIntersecting && !hasTrackedView.current) {
+          hasTrackedView.current = true;
+          onView?.();
         }
       },
       { threshold: 0.5 }
@@ -65,7 +53,7 @@ export const Placement: React.FC<PlacementProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [banner, gameId, gameName, onImpression, placementType, isKuli]);
+  }, [banner, gameId, gameName, onView, placementType, isKuli]);
 
   const staticBanner = useCallback(
     () => (
@@ -100,18 +88,7 @@ export const Placement: React.FC<PlacementProps> = ({
   }
 
   const handleClick = () => {
-    trackEvent('ads-placement', {
-      ...(banner?.id ? { 'Banner Id': banner.id } : {}),
-      Content: banner?.id ? 'ads' : isKuli ? 'kuli' : 'support',
-      Type: placementType,
-      'Game Name': gameName,
-      'Game Id': gameId,
-      Action: 'click',
-    });
-
-    if (banner?.id) {
-      onClick?.(banner.id);
-    }
+    onClick?.();
 
     let link: string;
     if (banner?.link && banner?.image_path) {

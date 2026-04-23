@@ -8,6 +8,7 @@ import type { Database } from '../lib/database.types';
 export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
+export type BannerType = Database['public']['Enums']['banner_type'];
 export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
@@ -246,6 +247,10 @@ export interface ElectronAPI {
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
+  submitLogs: (
+    message: string,
+    crashReason?: string
+  ) => Promise<{ success: boolean; error?: string }>;
   // Get signed upload URLs for feedback screenshots
   getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
     success: boolean;
@@ -271,7 +276,10 @@ export interface ElectronAPI {
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => Promise<boolean>;
-  recordBannerImpression: (bannerId: string) => Promise<boolean>;
+  recordBannerImpression: (
+    bannerId: string,
+    impressionType?: ImpressionType
+  ) => Promise<boolean>;
 }
 
 declare global {

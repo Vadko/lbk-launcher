@@ -38,6 +38,7 @@ import {
   getFeedbackUploadUrls,
   getMachineId,
   submitFeedback,
+  submitLogs,
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
@@ -89,6 +90,11 @@ export function setupGamesHandlers(): void {
       message: string,
       screenshotPaths?: string[]
     ) => submitFeedback(gameId, errorType, message, screenshotPaths)
+  );
+
+  // Send logs handler
+  ipcMain.handle('submit-logs', async (_, message: string, crashReason?: string) =>
+    submitLogs(message, crashReason)
   );
 
   // Get signed upload URLs for feedback screenshots
@@ -501,15 +507,19 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Record banner impression for placement banners
+  // Record banner impression for placement banners (view or click)
   ipcMain.handle(
     'record-banner-impression',
-    async (_, bannerId: string): Promise<boolean> => {
+    async (
+      _,
+      bannerId: string,
+      impressionType: ImpressionType = 'view'
+    ): Promise<boolean> => {
       try {
         const machineId = getMachineId();
         await recordBannerImpression({
           campaignId: bannerId,
-          impressionType: 'view' as ImpressionType,
+          impressionType,
           machineId,
         });
         return true;

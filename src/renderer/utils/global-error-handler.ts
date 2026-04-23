@@ -59,8 +59,55 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
         margin-bottom: 24px;
         line-height: 1.5;
       ">
-        На жаль, сталася критична помилка. Спробуйте один з варіантів нижче:
+        На жаль, сталася критична помилка. Надішліть звіт, щоб ми могли виправити це швидше.
       </p>
+
+      <button id="send-logs-btn" style="
+        padding: 14px 24px;
+        font-size: 14px;
+        font-weight: bold;
+        background-color: #a8cf96;
+        color: #121213;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        width: 100%;
+        margin-bottom: 24px;
+      ">Надіслати звіт про помилку</button>
+
+      <div id="send-logs-form" style="display: none; margin-bottom: 24px;">
+        <textarea id="send-logs-message" placeholder="Опишіть що сталося (необов'язково)..." style="
+          width: 100%;
+          padding: 12px;
+          background-color: #0f1419;
+          border: 1px solid #1e2530;
+          border-radius: 8px;
+          color: #e0e0e0;
+          font-size: 14px;
+          resize: none;
+          height: 80px;
+          margin-bottom: 12px;
+          box-sizing: border-box;
+        "></textarea>
+        <button id="send-logs-submit" style="
+          padding: 12px 24px;
+          font-size: 14px;
+          font-weight: bold;
+          background-color: #a8cf96;
+          color: #121213;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          width: 100%;
+        ">Надіслати</button>
+        <p id="send-logs-status" style="
+          font-size: 12px;
+          margin-top: 8px;
+          text-align: center;
+          color: #939296;
+        "></p>
+      </div>
 
       <div style="
         display: flex;
@@ -168,6 +215,57 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
   const reloadBtn = errorScreen.querySelector('#reload-btn');
   const clearCacheOnlyBtn = errorScreen.querySelector('#clear-cache-only-btn');
   const clearAllDataBtn = errorScreen.querySelector('#clear-all-data-btn');
+
+  const sendLogsBtn = errorScreen.querySelector(
+    '#send-logs-btn'
+  ) as HTMLButtonElement | null;
+  const sendLogsForm = errorScreen.querySelector('#send-logs-form') as HTMLElement | null;
+  const sendLogsMessage = errorScreen.querySelector(
+    '#send-logs-message'
+  ) as HTMLTextAreaElement | null;
+  const sendLogsSubmit = errorScreen.querySelector(
+    '#send-logs-submit'
+  ) as HTMLButtonElement | null;
+  const sendLogsStatus = errorScreen.querySelector(
+    '#send-logs-status'
+  ) as HTMLElement | null;
+
+  sendLogsBtn?.addEventListener('click', () => {
+    if (sendLogsForm) sendLogsForm.style.display = 'block';
+    sendLogsBtn.style.display = 'none';
+  });
+
+  sendLogsSubmit?.addEventListener('click', async () => {
+    if (!sendLogsSubmit || !sendLogsStatus) return;
+    sendLogsSubmit.disabled = true;
+    sendLogsSubmit.textContent = 'Надсилання...';
+    sendLogsStatus.textContent = '';
+
+    try {
+      const crashReason = `${title}: ${message}${stack ? '\n' + stack : ''}`;
+      const userMessage = sendLogsMessage?.value?.trim() || '';
+      const result = await window.electronAPI?.submitLogs(userMessage, crashReason);
+
+      if (result?.success) {
+        sendLogsStatus.style.color = '#a8cf96';
+        sendLogsStatus.textContent = '✅ Звіт надіслано. Дякуємо!';
+        sendLogsSubmit.style.display = 'none';
+      } else {
+        sendLogsStatus.style.color = '#ff6b6b';
+        sendLogsStatus.textContent =
+          result?.error === 'rate_limit'
+            ? 'Зачекайте кілька хвилин'
+            : 'Помилка надсилання. Спробуйте пізніше';
+        sendLogsSubmit.disabled = false;
+        sendLogsSubmit.textContent = 'Надіслати';
+      }
+    } catch {
+      sendLogsStatus.style.color = '#ff6b6b';
+      sendLogsStatus.textContent = 'Помилка мережі';
+      sendLogsSubmit.disabled = false;
+      sendLogsSubmit.textContent = 'Надіслати';
+    }
+  });
 
   reloadBtn?.addEventListener('click', () => {
     window.location.reload();

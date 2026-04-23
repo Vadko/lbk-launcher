@@ -194,6 +194,8 @@ const electronAPI: ElectronAPI = {
     message: string,
     screenshotPaths?: string[]
   ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  submitLogs: (message: string, crashReason?: string) =>
+    ipcRenderer.invoke('submit-logs', message, crashReason),
   getFeedbackUploadUrls: (fileNames: string[]) =>
     ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
   uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
@@ -222,8 +224,8 @@ const electronAPI: ElectronAPI = {
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => ipcRenderer.invoke('record-promo-banner-impression', params),
-  recordBannerImpression: (bannerId: string) =>
-    ipcRenderer.invoke('record-banner-impression', bannerId),
+  recordBannerImpression: (bannerId: string, impressionType: ImpressionType = 'view') =>
+    ipcRenderer.invoke('record-banner-impression', bannerId, impressionType),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

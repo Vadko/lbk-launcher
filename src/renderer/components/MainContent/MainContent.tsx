@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
-import type { LaunchGameResult } from '@/shared/types.ts';
+import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
+import { trackEvent } from '../../utils/analytics';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { FeedbackModal } from '../Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
@@ -132,7 +133,7 @@ export const MainContent: React.FC = () => {
     data: BannerData | null;
     isKuli: boolean;
     support_url: string | null;
-    placementType: string | null;
+    placementType: BannerType | null;
   }>({ data: null, isKuli: false, support_url: null, placementType: null });
 
   const bannerInfo = useMemo(() => {
@@ -188,6 +189,36 @@ export const MainContent: React.FC = () => {
     prevBannerInfoRef.current = info;
     return info;
   }, [selectedGame, bannerData, loadedBannerGameId]);
+
+  // Record banner impression: Mixpanel + Supabase together
+  const trackBannerImpression = useCallback(
+    (action: 'view' | 'click') => {
+      const banner = bannerInfo?.data;
+      const content = banner?.id ? 'ads' : bannerInfo?.isKuli ? 'kuli' : 'support';
+
+      trackEvent('ads-placement', {
+        ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+        Content: content,
+        Type: bannerInfo?.placementType ?? 'unknown',
+        'Game Name': selectedGame?.name ?? '',
+        'Game Id': selectedGame?.id ?? '',
+        Action: action,
+      });
+
+      if (banner?.id) {
+        window.electronAPI?.recordBannerImpression?.(banner.id, action);
+      }
+    },
+    [bannerInfo, selectedGame]
+  );
+
+  const handleBannerView = useCallback(() => {
+    trackBannerImpression('view');
+  }, [trackBannerImpression]);
+
+  const handleBannerClick = useCallback(() => {
+    trackBannerImpression('click');
+  }, [trackBannerImpression]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -611,6 +642,8 @@ export const MainContent: React.FC = () => {
                   gameId={selectedGame.id}
                   gameName={selectedGame.name}
                   isKuli={bannerInfo.isKuli}
+                  onView={handleBannerView}
+                  onClick={handleBannerClick}
                   className="placement-long"
                 />
               </motion.div>
@@ -639,6 +672,8 @@ export const MainContent: React.FC = () => {
                   gameId={selectedGame.id}
                   gameName={selectedGame.name}
                   supportUrl={selectedGame.support_url || undefined}
+                  onView={handleBannerView}
+                  onClick={handleBannerClick}
                   className="placement h-full"
                 />
               </div>
