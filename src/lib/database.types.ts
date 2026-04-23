@@ -953,6 +953,7 @@ export type Database = {
       }
       launcher_logs: {
         Row: {
+          admin_note: string | null
           app_version: string | null
           arch: string | null
           crash_reason: string | null
@@ -962,8 +963,11 @@ export type Database = {
           machine_id: string
           message: string | null
           platform: string | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          updated_at: string
         }
         Insert: {
+          admin_note?: string | null
           app_version?: string | null
           arch?: string | null
           crash_reason?: string | null
@@ -973,8 +977,11 @@ export type Database = {
           machine_id: string
           message?: string | null
           platform?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
         }
         Update: {
+          admin_note?: string | null
           app_version?: string | null
           arch?: string | null
           crash_reason?: string | null
@@ -984,6 +991,8 @@ export type Database = {
           machine_id?: string
           message?: string | null
           platform?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
         }
         Relationships: []
       }
