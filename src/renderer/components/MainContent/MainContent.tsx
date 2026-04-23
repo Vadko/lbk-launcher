@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
-import type { LaunchGameResult } from '@/shared/types.ts';
+import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
@@ -133,7 +133,7 @@ export const MainContent: React.FC = () => {
     data: BannerData | null;
     isKuli: boolean;
     support_url: string | null;
-    placementType: string | null;
+    placementType: BannerType | null;
   }>({ data: null, isKuli: false, support_url: null, placementType: null });
 
   const bannerInfo = useMemo(() => {

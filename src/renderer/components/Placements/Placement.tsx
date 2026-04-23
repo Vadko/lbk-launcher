@@ -3,13 +3,12 @@ import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
+import type { BannerType } from '@/shared/types';
 import { Button } from '../ui/Button';
-
-export type PlacementType = 'small_square' | 'narrow';
 
 interface PlacementProps {
   banner: BannerData | null;
-  placementType: PlacementType;
+  placementType: BannerType;
   gameId: string;
   gameName: string;
   isKuli?: boolean;

@@ -8,6 +8,7 @@ import type { Database } from '../lib/database.types';
 export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
+export type BannerType = Database['public']['Enums']['banner_type'];
 export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
