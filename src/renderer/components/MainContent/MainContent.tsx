@@ -26,6 +26,7 @@ import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { FeedbackModal } from '../Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Placement } from '../Placements';
+import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { SubscribeButton } from '../ui/SubscribeButton';
 import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
@@ -188,6 +189,36 @@ export const MainContent: React.FC = () => {
     prevBannerInfoRef.current = info;
     return info;
   }, [selectedGame, bannerData, loadedBannerGameId]);
+
+  // Record banner impression: Mixpanel + Supabase together
+  const trackBannerImpression = useCallback(
+    (action: 'view' | 'click') => {
+      const banner = bannerInfo?.data;
+      const content = banner?.id ? 'ads' : bannerInfo?.isKuli ? 'kuli' : 'support';
+
+      trackEvent('ads-placement', {
+        ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+        Content: content,
+        Type: bannerInfo?.placementType ?? 'unknown',
+        'Game Name': selectedGame?.name ?? '',
+        'Game Id': selectedGame?.id ?? '',
+        Action: action,
+      });
+
+      if (banner?.id) {
+        window.electronAPI?.recordBannerImpression?.(banner.id, action);
+      }
+    },
+    [bannerInfo, selectedGame]
+  );
+
+  const handleBannerView = useCallback(() => {
+    trackBannerImpression('view');
+  }, [trackBannerImpression]);
+
+  const handleBannerClick = useCallback(() => {
+    trackBannerImpression('click');
+  }, [trackBannerImpression]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -611,6 +642,8 @@ export const MainContent: React.FC = () => {
                   gameId={selectedGame.id}
                   gameName={selectedGame.name}
                   isKuli={bannerInfo.isKuli}
+                  onView={handleBannerView}
+                  onClick={handleBannerClick}
                   className="placement-long"
                 />
               </motion.div>
@@ -639,6 +672,8 @@ export const MainContent: React.FC = () => {
                   gameId={selectedGame.id}
                   gameName={selectedGame.name}
                   supportUrl={selectedGame.support_url || undefined}
+                  onView={handleBannerView}
+                  onClick={handleBannerClick}
                   className="placement h-full"
                 />
               </div>

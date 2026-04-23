@@ -246,7 +246,7 @@ export interface ElectronAPI {
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
-  submitLogs: (message: string) => Promise<{ success: boolean; error?: string }>;
+  submitLogs: (message: string, crashReason?: string) => Promise<{ success: boolean; error?: string }>;
   // Get signed upload URLs for feedback screenshots
   getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
     success: boolean;
@@ -272,7 +272,7 @@ export interface ElectronAPI {
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => Promise<boolean>;
-  recordBannerImpression: (bannerId: string) => Promise<boolean>;
+  recordBannerImpression: (bannerId: string, impressionType?: ImpressionType) => Promise<boolean>;
 }
 
 declare global {

@@ -93,7 +93,9 @@ export function setupGamesHandlers(): void {
   );
 
   // Send logs handler
-  ipcMain.handle('submit-logs', async (_, message: string) => submitLogs(message));
+  ipcMain.handle('submit-logs', async (_, message: string, crashReason?: string) =>
+    submitLogs(message, crashReason)
+  );
 
   // Get signed upload URLs for feedback screenshots
   ipcMain.handle('get-feedback-upload-urls', async (_, fileNames: string[]) =>
@@ -505,15 +507,15 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Record banner impression for placement banners
+  // Record banner impression for placement banners (view or click)
   ipcMain.handle(
     'record-banner-impression',
-    async (_, bannerId: string): Promise<boolean> => {
+    async (_, bannerId: string, impressionType: ImpressionType = 'view'): Promise<boolean> => {
       try {
         const machineId = getMachineId();
         await recordBannerImpression({
           campaignId: bannerId,
-          impressionType: 'view' as ImpressionType,
+          impressionType,
           machineId,
         });
         return true;

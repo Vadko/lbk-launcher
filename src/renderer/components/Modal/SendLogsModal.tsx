@@ -5,9 +5,10 @@ import { Modal } from './Modal';
 interface SendLogsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  crashReason?: string;
 }
 
-export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose }) => {
+export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose, crashReason }) => {
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -27,7 +28,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
     setError(null);
 
     try {
-      const result = await window.electronAPI.submitLogs(message.trim());
+      const result = await window.electronAPI.submitLogs(message.trim(), crashReason);
 
       if (result.success) {
         setSendStatus('success');
@@ -66,7 +67,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Відправити логи"
+      title={crashReason ? 'Звіт про помилку' : 'Відправити логи'}
       classNames="!max-w-[520px]"
       footer={
         <div className="grid gap-4">
@@ -97,6 +98,14 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({ isOpen, onClose })
       }
     >
       <div className="space-y-4">
+        {/* Crash reason */}
+        {crashReason && (
+          <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p className="text-xs font-medium text-red-400 mb-1">Причина помилки:</p>
+            <p className="text-xs text-red-300 font-mono break-all">{crashReason}</p>
+          </div>
+        )}
+
         {/* Textarea */}
         <div>
           <label

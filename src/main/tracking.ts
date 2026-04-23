@@ -469,7 +469,8 @@ export async function submitFeedback(
  * Submit logs
  */
 export async function submitLogs(
-  message: string
+  message: string,
+  crashReason?: string
 ): Promise<{ success: boolean; error?: string }> {
   if (IS_E2E) return { success: false, error: 'E2E mode' };
   const machineId = getMachineId();
@@ -490,11 +491,41 @@ export async function submitLogs(
       `lbk-${new Date().toISOString().split('T')[0]}.log`
     );
 
-    let logContent = '';
+    // Upload log file to Storage via signed URL
+    let logPath: string | undefined;
     if (existsSync(logFilePath)) {
-      logContent = readFileSync(logFilePath, 'utf-8');
+      const fileName = `lbk-${new Date().toISOString().split('T')[0]}.log`;
+
+      // Get signed upload URL
+      const urlResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/submit-logs?action=upload-url`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({ machineId, fileName }),
+        }
+      );
+
+      const urlResult = await urlResponse.json();
+      if (urlResult.success && urlResult.signedUrl) {
+        // Upload the file
+        const fileBuffer = readFileSync(logFilePath);
+        const uploadResponse = await fetch(urlResult.signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'text/plain' },
+          body: fileBuffer,
+        });
+
+        if (uploadResponse.ok) {
+          logPath = urlResult.path;
+          console.log(`[Tracking] Log file uploaded: ${logPath}`);
+        } else {
+          console.warn('[Tracking] Log file upload failed, continuing without file');
+        }
+      }
     }
 
+    // Submit log entry
     const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-logs`, {
       method: 'POST',
       headers: {
@@ -504,8 +535,8 @@ export async function submitLogs(
       body: JSON.stringify({
         machineId,
         message,
-        logs: logContent,
-        timestamp: new Date().toISOString(),
+        ...(crashReason && { crashReason }),
+        ...(logPath && { logPath }),
         version: app.getVersion(),
         platform: process.platform,
         arch: process.arch,
