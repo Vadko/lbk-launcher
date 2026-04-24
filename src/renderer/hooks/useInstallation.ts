@@ -785,8 +785,6 @@ export function useInstallation({
       // Abort active download
       await window.electronAPI.abortDownload();
     }
-    // isWaitingForNetwork: no backend call needed — .part file in .lbk-temp/
-    // will be cleaned up on next successful install or overwritten on retry
 
     clearInstallationProgress(selectedGame.id);
   }, [selectedGame, isPaused, isInstalling, clearInstallationProgress]);

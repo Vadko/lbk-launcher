@@ -274,7 +274,6 @@ export const MainContent: React.FC = () => {
     const handleOnline = () => {
       setIsOnline(true);
       console.log('[MainContent] Internet connection restored');
-      // Auto-retry is handled by useInstallation's useEffect watching isOnline
     };
 
     const handleOffline = async () => {
