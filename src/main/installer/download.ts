@@ -9,6 +9,7 @@ import type {
   InstallOptions,
   PausedDownloadState,
 } from '../../shared/types';
+import { NetworkError } from './errors';
 
 const unlink = promisify(fs.unlink);
 
@@ -226,8 +227,14 @@ export async function downloadFile(
   console.log(`[Downloader] Expected total bytes from HEAD: ${expectedTotalBytes}`);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    // Check if cancelled
+    // Check if cancelled/network lost
     if (signal?.aborted) {
+      if (signal.reason === 'NETWORK_LOST') {
+        lastError = new NetworkError(
+          "З'єднання втрачено. Перевірте підключення до Інтернету."
+        );
+        break;
+      }
       throw new Error('Завантаження скасовано');
     }
 
@@ -243,8 +250,14 @@ export async function downloadFile(
           setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000))
         );
 
-        // Check if cancelled during wait
+        // Check if cancelled/network lost during wait
         if (signal?.aborted) {
+          if (signal.reason === 'NETWORK_LOST') {
+            lastError = new NetworkError(
+              "З'єднання втрачено. Перевірте підключення до Інтернету."
+            );
+            break;
+          }
           throw new Error('Завантаження скасовано');
         }
       } else if (currentStartByte > 0) {
@@ -284,19 +297,18 @@ export async function downloadFile(
       }
 
       // Show user that error occurred
-      const isNetworkError =
-        error instanceof Error &&
-        (error.message.toLowerCase().includes('network') ||
-          error.message.toLowerCase().includes('enotfound') ||
-          error.message.toLowerCase().includes('etimedout') ||
-          error.message.toLowerCase().includes('econnreset'));
-
-      if (isNetworkError && attempt < maxRetries) {
+      if (error instanceof NetworkError && attempt < maxRetries) {
         onStatus?.({
           message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...`,
           phase: 'download',
         });
         // Don't clean up partial file on network error - we can resume
+      }
+
+      // Network lost abort — stop immediately, preserve .part for retry
+      if (error instanceof NetworkError && signal?.reason === 'NETWORK_LOST') {
+        lastError = error;
+        break;
       }
 
       // Don't retry on certain errors
@@ -339,7 +351,17 @@ export async function downloadFile(
     }
   }
 
-  // All retries failed - clean up any partial file
+  // All retries failed
+  // If it's a network error — preserve .part file for retry
+  if (lastError instanceof NetworkError) {
+    const partialSize = fs.existsSync(partialPath) ? fs.statSync(partialPath).size : 0;
+    console.log(
+      `[Downloader] Network error after ${maxRetries} retries. Preserving .part file (${partialSize} bytes) for retry.`
+    );
+    throw lastError;
+  }
+
+  // Non-network error — clean up partial file
   if (fs.existsSync(partialPath)) {
     try {
       await unlink(partialPath);
@@ -569,7 +591,7 @@ async function downloadFileAttempt(
 
       if (message.includes('enotfound') || message.includes('getaddrinfo')) {
         onStatus?.({ message: '❌ Відсутнє підключення до Інтернету' });
-        throw new Error(
+        throw new NetworkError(
           'Не вдалося підключитися до сервера. Перевірте підключення до Інтернету.'
         );
       }
@@ -578,19 +600,28 @@ async function downloadFileAttempt(
         onStatus?.({
           message: '❌ Час очікування вичерпано. Перевірте підключення до Інтернету.',
         });
-        throw new Error('Час очікування вичерпано. Перевірте підключення до Інтернету.');
+        throw new NetworkError(
+          'Час очікування вичерпано. Перевірте підключення до Інтернету.'
+        );
       }
 
       if (message.includes('econnreset') || message.includes('socket hang up')) {
         onStatus?.({
           message: "❌ З'єднання розірвано. Перевірте підключення до Інтернету.",
         });
-        throw new Error("З'єднання розірвано. Перевірте підключення до Інтернету.");
+        throw new NetworkError(
+          "З'єднання розірвано. Перевірте підключення до Інтернету."
+        );
       }
 
       if (message.includes('econnrefused')) {
         onStatus?.({ message: '❌ Сервер недоступний' });
-        throw new Error('Сервер недоступний. Спробуйте пізніше.');
+        throw new NetworkError('Сервер недоступний. Спробуйте пізніше.');
+      }
+
+      // Network lost abort from offline detection
+      if (message === 'network_lost') {
+        throw new NetworkError("З'єднання втрачено. Перевірте підключення до Інтернету.");
       }
     }
 

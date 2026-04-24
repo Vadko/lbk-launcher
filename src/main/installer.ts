@@ -41,7 +41,12 @@ import {
   setCurrentDownloadState,
   setDownloadAbortController,
 } from './installer/download';
-import { ManualSelectionError, PausedSignal, RateLimitError } from './installer/errors';
+import {
+  ManualSelectionError,
+  NetworkError,
+  PausedSignal,
+  RateLimitError,
+} from './installer/errors';
 import {
   cleanupDownloadDir,
   copyDirectory,
@@ -72,6 +77,7 @@ export {
   getConflictingTranslation,
   invalidateInstalledGameIdsCache,
   ManualSelectionError,
+  NetworkError,
   PausedSignal,
   RateLimitError,
   removeOrphanedInstallationMetadata,
@@ -632,7 +638,11 @@ async function downloadAndExtractArchive(
  * Handle installation errors with user-friendly messages
  */
 function handleInstallationError(error: unknown): never {
-  if (error instanceof ManualSelectionError || error instanceof RateLimitError) {
+  if (
+    error instanceof ManualSelectionError ||
+    error instanceof RateLimitError ||
+    error instanceof NetworkError
+  ) {
     throw error;
   }
 

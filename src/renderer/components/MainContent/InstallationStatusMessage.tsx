@@ -20,7 +20,17 @@ const getStatusIconAndColor = (
       colorClass: 'text-red-400',
     };
   }
-  if (message?.includes('Спроба')) {
+  if (message?.includes("З'єднання втрачено")) {
+    return {
+      icon: (
+        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center">
+          <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+        </div>
+      ),
+      colorClass: 'text-amber-400',
+    };
+  }
+  if (message?.includes('Спроба') || message?.includes('Підключення відновлено')) {
     return {
       icon: (
         <div className="w-5 h-5 rounded-full bg-yellow-500/20 flex items-center justify-center">
