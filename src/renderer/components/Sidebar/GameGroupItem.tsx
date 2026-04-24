@@ -182,7 +182,9 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       hasUpdate={gamesWithUpdates.has(game.id)}
                       isGameDetected={isGameDetected(game.id)}
                       isInstalled={!!getInstallationInfo(game.id)}
-                      isTranslationAvailable={game.status !== 'planned' && game.status !== 'tech-improvement'}
+                      isTranslationAvailable={
+                        game.status !== 'planned' && game.status !== 'tech-improvement'
+                      }
                       showTeamName
                     />
                   ))}
@@ -202,7 +204,9 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
                   isInstalled={!!getInstallationInfo(game.id)}
-                  isTranslationAvailable={game.status !== 'planned' && game.status !== 'tech-improvement'}
+                  isTranslationAvailable={
+                    game.status !== 'planned' && game.status !== 'tech-improvement'
+                  }
                   showTeamName
                 />
               ))}

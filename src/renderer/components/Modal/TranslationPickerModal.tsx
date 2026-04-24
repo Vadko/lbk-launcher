@@ -86,7 +86,8 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 const hasUpdate = gamesWithUpdates.has(game.id);
                 const progress = game.translation_progress ?? 0;
                 const logoUrl = getGameImageUrl(game.logo_path);
-                const isTranslationAvailable = game.status !== 'planned' && game.status !== 'tech-improvement';
+                const isTranslationAvailable =
+                  game.status !== 'planned' && game.status !== 'tech-improvement';
 
                 return (
                   <button

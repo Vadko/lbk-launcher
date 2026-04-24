@@ -100,7 +100,9 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
                   isInstalled={!!getInstallationInfo(game.id)}
-                  isTranslationAvailable={game.status !== 'planned' && game.status !== 'tech-improvement'}
+                  isTranslationAvailable={
+                    game.status !== 'planned' && game.status !== 'tech-improvement'
+                  }
                   onClick={() => setSelectedGame(game)}
                 />
               </motion.div>

@@ -112,7 +112,10 @@ export const GameList: React.FC<GameListProps> = React.memo(
               hasUpdate={gamesWithUpdates.has(primaryGame.id)}
               isGameDetected={isGameDetected(primaryGame.id)}
               isInstalled={!!getInstallationInfo(primaryGame.id)}
-              isTranslationAvailable={primaryGame.status !== 'planned' && primaryGame.status !== 'tech-improvement'}
+              isTranslationAvailable={
+                primaryGame.status !== 'planned' &&
+                primaryGame.status !== 'tech-improvement'
+              }
             />
           );
 
