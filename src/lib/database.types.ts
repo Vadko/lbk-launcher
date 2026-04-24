@@ -172,36 +172,45 @@ export type Database = {
       feedbacks: {
         Row: {
           admin_note: string | null
+          app_version: string | null
+          arch: string | null
           created_at: string
           error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id: string
           machine_id: string
           message: string
+          platform: string | null
           screenshot_paths: string[] | null
           status: Database["public"]["Enums"]["feedback_status"]
           updated_at: string
         }
         Insert: {
           admin_note?: string | null
+          app_version?: string | null
+          arch?: string | null
           created_at?: string
           error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id?: string
           machine_id: string
           message: string
+          platform?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
         }
         Update: {
           admin_note?: string | null
+          app_version?: string | null
+          arch?: string | null
           created_at?: string
           error_type?: Database["public"]["Enums"]["feedback_error_type"]
           game_id?: string
           id?: string
           machine_id?: string
           message?: string
+          platform?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
