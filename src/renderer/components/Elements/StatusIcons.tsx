@@ -11,6 +11,7 @@ interface StatusIconsProps {
   isInstalled?: boolean;
   aiType?: string | null;
   floatPosition?: 'default' | 'compact' | null;
+  isTranslationAvailable?: boolean;
 }
 
 export const StatusIcons: React.FC<StatusIconsProps> = ({
@@ -19,6 +20,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   isInstalled = false,
   aiType = null,
   floatPosition = null,
+  isTranslationAvailable = true,
 }) => {
   let statusIcon = null;
   let aiIcon = null;
@@ -39,7 +41,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
         title="Переклад актуальний"
       />
     );
-  } else if (isGameDetected) {
+  } else if (isGameDetected && isTranslationAvailable) {
     statusIcon = (
       <DownloadIcon
         size={floatPosition === 'default' ? 20 : 18}

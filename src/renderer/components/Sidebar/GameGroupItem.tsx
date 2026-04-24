@@ -42,6 +42,9 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const anyHasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
     const anyGameInstalled = group.translations.some((t) => !!getInstallationInfo(t.id));
+    const anyTranslationAvailable = group.translations.some(
+      (t) => t.status !== 'planned' && t.status !== 'tech-improvement'
+    );
 
     // Use thumbnail from the first translation
     const thumbnailUrl = getGameImageUrl(primaryGame.thumbnail_path);
@@ -131,6 +134,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                 hasUpdate={anyHasUpdate}
                 isGameDetected={anyGameDetected}
                 isInstalled={anyGameInstalled}
+                isTranslationAvailable={anyTranslationAvailable}
               />
             </div>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
@@ -178,6 +182,9 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       hasUpdate={gamesWithUpdates.has(game.id)}
                       isGameDetected={isGameDetected(game.id)}
                       isInstalled={!!getInstallationInfo(game.id)}
+                      isTranslationAvailable={
+                        game.status !== 'planned' && game.status !== 'tech-improvement'
+                      }
                       showTeamName
                     />
                   ))}
@@ -197,6 +204,9 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
                   isInstalled={!!getInstallationInfo(game.id)}
+                  isTranslationAvailable={
+                    game.status !== 'planned' && game.status !== 'tech-improvement'
+                  }
                   showTeamName
                 />
               ))}

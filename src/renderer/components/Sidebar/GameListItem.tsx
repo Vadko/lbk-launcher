@@ -20,6 +20,7 @@ interface GameListItemProps {
   showTeamName?: boolean;
   isCardStyle?: boolean;
   showDownloadCounter?: boolean;
+  isTranslationAvailable?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -33,6 +34,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     showTeamName = false,
     isCardStyle = false,
     showDownloadCounter = false,
+    isTranslationAvailable = true,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -123,6 +125,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 isInstalled={isInstalled}
                 aiType={game.ai}
                 floatPosition="default"
+                isTranslationAvailable={isTranslationAvailable}
               />
             )}
           </div>
@@ -246,6 +249,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               isGameDetected={isGameDetected}
               isInstalled={isInstalled}
               aiType={game.ai}
+              isTranslationAvailable={isTranslationAvailable}
             />
           </div>
 
