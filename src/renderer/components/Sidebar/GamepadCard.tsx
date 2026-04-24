@@ -31,6 +31,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [useBanner, setUseBanner] = useState(false);
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+  const isTranslationAvailable = game.status !== 'planned' && game.status !== 'tech-improvement';
 
   const thumbnailUrl = getGameImageUrl(game.thumbnail_path);
   const bannerUrl = getGameImageUrl(game.banner_path);
@@ -155,6 +156,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
             isInstalled={isInstalled}
             aiType={game.ai}
             floatPosition="compact"
+            isTranslationAvailable={isTranslationAvailable}
           />
         )}
         {/* Game name and team */}
