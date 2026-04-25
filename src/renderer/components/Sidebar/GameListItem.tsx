@@ -1,13 +1,12 @@
 import { EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
+import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
-import { AiIcon } from '../Icons/AiIcon';
-import { PencilIcon } from '../Icons/PencilIcon';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
 
@@ -17,10 +16,11 @@ interface GameListItemProps {
   onClick: () => void;
   hasUpdate?: boolean;
   isGameDetected?: boolean;
+  isInstalled?: boolean;
   showTeamName?: boolean;
-  isHorizontalMode?: boolean;
   isCardStyle?: boolean;
   showDownloadCounter?: boolean;
+  isTranslationAvailable?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -30,10 +30,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     onClick,
     hasUpdate = false,
     isGameDetected = false,
+    isInstalled = false,
     showTeamName = false,
-    isHorizontalMode = false,
     isCardStyle = false,
     showDownloadCounter = false,
+    isTranslationAvailable = true,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -117,21 +118,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
 
             {/* Indicators */}
-            {hasUpdate && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-accent rounded-full animate-pulse" />
-            )}
-            {(game.ai === 'edited' || game.ai === 'non-edited') && (
-              <div
-                className="absolute top-5 right-5 bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]"
-                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
-              >
-                {game.ai === 'edited' ? <PencilIcon /> : <AiIcon />}
-              </div>
-            )}
-            {isGameDetected && (
-              <div
-                className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
-                title="Гра встановлена"
+            {!isAdultBlurred && (
+              <StatusIcons
+                hasUpdate={hasUpdate}
+                isGameDetected={isGameDetected}
+                isInstalled={isInstalled}
+                aiType={game.ai}
+                floatPosition="default"
+                isTranslationAvailable={isTranslationAvailable}
               />
             )}
           </div>
@@ -174,101 +168,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Horizontal compact mode for gamepad
-    if (isHorizontalMode) {
-      return (
-        <div
-          ref={preloadRef}
-          role="button"
-          tabIndex={0}
-          onClick={onClick}
-          onKeyDown={handleKeyDown}
-          data-gamepad-card
-          className={`game-list-item relative w-[200px] rounded-xl cursor-pointer transition-all duration-300 outline-none ${
-            isSelected
-              ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.4)]'
-              : 'ring-1 ring-white/10 hover:ring-white/30'
-          }`}
-        >
-          {/* Thumbnail */}
-          <div className="relative h-24 bg-glass rounded-t-xl overflow-hidden">
-            {thumbnailUrl && !imageError ? (
-              <>
-                {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-glass">
-                    <Loader size="sm" />
-                  </div>
-                )}
-                <img
-                  src={thumbnailUrl}
-                  alt={game.name}
-                  draggable={false}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imageLoading ? 'opacity-0' : 'opacity-100'
-                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoading(false);
-                  }}
-                />
-              </>
-            ) : (
-              <div
-                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-2xl ${
-                  isAdultBlurred ? 'blur-lg' : ''
-                }`}
-              >
-                {game.name.charAt(0)}
-              </div>
-            )}
-
-            {/* Adult content indicator */}
-            {isAdultBlurred && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOff size={20} className="text-white/80" />
-              </div>
-            )}
-
-            {/* Indicators */}
-            {hasUpdate && (
-              <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse" />
-            )}
-            {(game.ai === 'edited' || game.ai === 'non-edited') && (
-              <div
-                className="absolute top-3 right-3 bg-white/80 rounded-full text-text-dark p-[5px] ring-[4px] ring-[rgba(255,255,255,0.15)]"
-                title={game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
-              >
-                {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
-              </div>
-            )}
-            {isGameDetected && (
-              <div
-                className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full"
-                title="Гра встановлена"
-              />
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="p-3 bg-glass-hover rounded-b-xl">
-            <h4
-              className="font-medium text-sm text-text-main mb-2 truncate"
-              title={game.name}
-            >
-              {game.name}
-            </h4>
-            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
-                style={{ width: `${averageProgress}%` }}
-              />
             </div>
           </div>
         </div>
@@ -329,15 +228,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </div>
             )}
           </div>
-          {hasUpdate && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-color-accent rounded-full border-2 border-bg-dark animate-pulse z-10" />
-          )}
-          {isGameDetected && (
-            <div
-              className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-bg-dark z-10"
-              title="Гра встановлена"
-            />
-          )}
         </div>
         <div className="flex-1 min-w-0">
           <h4
@@ -346,17 +236,23 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           >
             {showTeamName ? game.team : game.name}
           </h4>
-          {(game.ai === 'edited' || game.ai === 'non-edited') && (
-            <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
-              <span className="text-text-muted text-xs">
-                {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
-              </span>
-              {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
+          <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
+            <div className="text-text-muted text-xs">
+              {(game.ai === 'edited' || game.ai === 'non-edited') && (
+                <p>{game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}</p>
+              )}
+              {showTeamName && <p className="truncate">{averageProgress}%</p>}
             </div>
-          )}
-          {showTeamName && (
-            <p className="text-xs text-text-muted mb-1 truncate">{averageProgress}%</p>
-          )}
+
+            <StatusIcons
+              hasUpdate={hasUpdate}
+              isGameDetected={isGameDetected}
+              isInstalled={isInstalled}
+              aiType={game.ai}
+              isTranslationAvailable={isTranslationAvailable}
+            />
+          </div>
+
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div

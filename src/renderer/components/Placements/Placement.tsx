@@ -1,18 +1,20 @@
 import kuli from '@resources/kuli.png';
 import team from '@resources/team.svg';
+import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
-import { trackEvent } from '../../utils/analytics';
+import type { BannerType } from '@/shared/types';
 import { Button } from '../ui/Button';
 
 interface PlacementProps {
   banner: BannerData | null;
-  placementType: 'small_square' | 'narrow';
+  placementType: BannerType;
   gameId: string;
+  gameName: string;
   isKuli?: boolean;
   supportUrl?: string;
-  onImpression?: (bannerId: string) => void;
-  onClick?: (bannerId: string) => void;
+  onView?: () => void;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -20,34 +22,27 @@ export const Placement: React.FC<PlacementProps> = ({
   banner,
   placementType,
   gameId,
+  gameName,
   isKuli = false,
   supportUrl,
-  onImpression,
+  onView,
   onClick,
   className = '',
 }) => {
   const elementRef = useRef<HTMLDivElement>(null);
-  const hasTrackedImpression = useRef(false);
+  const hasTrackedView = useRef(false);
   const isNarrowType = placementType === 'narrow';
 
-  // Відстеження impression при появі в viewport
+  // Record view when element appears in viewport
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || hasTrackedImpression.current || !banner?.id) return;
+    if (!element || hasTrackedView.current) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasTrackedImpression.current && banner?.id) {
-          hasTrackedImpression.current = true;
-
-          trackEvent('ads-placement', {
-            banner_id: banner.id,
-            type: banner.type,
-            game_id: gameId,
-            action: 'view',
-          });
-
-          onImpression?.(banner.id);
+        if (entry.isIntersecting && !hasTrackedView.current) {
+          hasTrackedView.current = true;
+          onView?.();
         }
       },
       { threshold: 0.5 }
@@ -58,24 +53,24 @@ export const Placement: React.FC<PlacementProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [banner, gameId, onImpression]);
+  }, [banner, gameId, gameName, onView, placementType, isKuli]);
 
   const staticBanner = useCallback(
     () => (
       <>
         <img
           src={isNarrowType ? kuli : team}
-          className={`w-auto h-full object-contain object-top ${!isNarrowType ? 'mx-auto' : ''}`}
+          className={`${isNarrowType ? 'w-auto h-full max-h-11' : 'h-auto w-full mx-auto mb-auto support-banner'} object-contain object-top`}
           loading="lazy"
         />
         {isNarrowType && (
           <>
             <div>
-              <span>Переклад наявний за підтримки KULI</span>{' '}
-              <span className="text-color-mixed">
+              <p>Переклад наявний за підтримки KULI</p>{' '}
+              <p className="text-color-mixed">
                 Будь <span className="font-semibold">першим</span>, хто зіграє з
                 перекладом!
-              </span>
+              </p>
             </div>
 
             <Button variant="primary" className="flex-shrink-0">
@@ -93,16 +88,7 @@ export const Placement: React.FC<PlacementProps> = ({
   }
 
   const handleClick = () => {
-    if (banner) {
-      trackEvent('ads-placement', {
-        banner_id: banner.id,
-        type: banner.type,
-        game_id: gameId,
-        action: 'click',
-      });
-
-      onClick?.(banner.id);
-    }
+    onClick?.();
 
     let link: string;
     if (banner?.link && banner?.image_path) {
@@ -133,16 +119,27 @@ export const Placement: React.FC<PlacementProps> = ({
         }
       }}
     >
-      {banner?.image_path ? (
-        <img
-          src={banner.image_path}
-          className={`w-full h-full object-cover object-top ${!isNarrowType ? 'mx-auto' : ''}`}
-          loading="lazy"
-          alt="Banner"
-        />
-      ) : (
-        staticBanner()
-      )}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={banner?.id ?? (isKuli ? 'kuli' : 'support')}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className={`${banner?.image_path ? '' : 'flex items-center justify-between gap-3'} w-full h-full`}
+        >
+          {banner?.image_path ? (
+            <img
+              src={banner.image_path}
+              className={`w-full h-full object-cover object-top ${!isNarrowType ? 'mx-auto' : ''}`}
+              loading="lazy"
+              alt="Banner"
+            />
+          ) : (
+            staticBanner()
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

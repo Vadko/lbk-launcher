@@ -36,6 +36,7 @@ export const STATUS_OPTIONS: StatusFilterOption[] = [
   { label: 'Заплановано', value: 'planned' },
   { label: 'Ранній доступ', value: 'in-progress' },
   { label: 'Готово', value: 'completed' },
+  { label: 'Технічна доробка', value: 'tech-improvement' },
 ];
 
 // Special filter options (single-select, separate from statuses)

@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Users, X } from 'lucide-react';
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useStore } from '../../store/useStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
+import { StatusIcons } from '../Elements/StatusIcons';
 
 interface TranslationPickerModalProps {
   isOpen: boolean;
@@ -32,7 +34,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div
@@ -84,6 +86,8 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 const hasUpdate = gamesWithUpdates.has(game.id);
                 const progress = game.translation_progress ?? 0;
                 const logoUrl = getGameImageUrl(game.logo_path);
+                const isTranslationAvailable =
+                  game.status !== 'planned' && game.status !== 'tech-improvement';
 
                 return (
                   <button
@@ -129,16 +133,12 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                         <span className="font-medium text-text-main truncate">
                           {game.team || 'Невідомий автор'}
                         </span>
-                        {isInstalled && (
-                          <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-green-500/20 text-green-400 rounded">
-                            Встановлено
-                          </span>
-                        )}
-                        {hasUpdate && (
-                          <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-color-accent/20 text-color-accent rounded">
-                            Оновлення
-                          </span>
-                        )}
+                        <StatusIcons
+                          hasUpdate={hasUpdate}
+                          isInstalled={isInstalled}
+                          aiType={game.ai}
+                          isTranslationAvailable={isTranslationAvailable}
+                        />
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
                         <span
@@ -177,6 +177,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

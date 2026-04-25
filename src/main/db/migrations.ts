@@ -840,6 +840,22 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_source_language_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='source_language'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_source_language_column');
+        db.exec('ALTER TABLE games ADD COLUMN source_language TEXT;');
+        console.log('[Migrations] Completed: add_source_language_column');
+      }
+    },
+  },
 ];
 
 /**

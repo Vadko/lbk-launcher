@@ -174,7 +174,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" showCloseButton={false}>
-      <div className="p-6 max-w-2xl w-full relative">
+      <div className="p-6 w-full relative">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             {showSettings ? (

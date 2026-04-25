@@ -8,6 +8,8 @@ import type { Database } from '../lib/database.types';
 export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
+export type BannerType = Database['public']['Enums']['banner_type'];
+export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated';
@@ -23,6 +25,7 @@ export interface InstallationInfo {
   installedAt: string;
   gamePath: string;
   hasBackup?: boolean;
+  hasInstallError?: boolean; // True if installation was attempted but failed
   protonPath?: string; // For Linux Proton installations
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
   installerPath?: string; // Path to the installer executable (if used)
@@ -53,6 +56,7 @@ export interface DownloadProgress {
 export interface InstallationStatus {
   message: string;
   progress?: number;
+  phase?: 'download' | 'install';
 }
 
 export interface InstallResult {
@@ -62,6 +66,7 @@ export interface InstallResult {
     message: string;
     needsManualSelection?: boolean;
     isRateLimit?: boolean;
+    isNetworkError?: boolean;
   };
 }
 
@@ -104,6 +109,7 @@ export interface FilterCountsResult {
   planned: number;
   'in-progress': number;
   completed: number;
+  'tech-improvement': number;
   'with-achievements': number;
   'with-voice': number;
 }
@@ -240,6 +246,29 @@ export interface ElectronAPI {
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
+  // Submit feedback for a game translation
+  submitFeedback: (
+    gameId: string,
+    errorType: FeedbackErrorType,
+    message: string,
+    screenshotPaths?: string[]
+  ) => Promise<{ success: boolean; error?: string }>;
+  submitLogs: (
+    message: string,
+    crashReason?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  // Get signed upload URLs for feedback screenshots
+  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
+    success: boolean;
+    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
+    error?: string;
+  }>;
+  // Upload a file to a signed URL
+  uploadFileToSignedUrl: (
+    signedUrl: string,
+    filePath: string,
+    contentType: string
+  ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
   // Sync status
@@ -253,7 +282,10 @@ export interface ElectronAPI {
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => Promise<boolean>;
-  recordBannerImpression: (bannerId: string) => Promise<boolean>;
+  recordBannerImpression: (
+    bannerId: string,
+    impressionType?: ImpressionType
+  ) => Promise<boolean>;
 }
 
 declare global {

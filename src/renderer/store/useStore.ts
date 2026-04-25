@@ -13,6 +13,7 @@ interface InstallationProgress {
   isInstalling: boolean;
   isUninstalling: boolean;
   isPaused: boolean;
+  isWaitingForNetwork: boolean;
   progress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
@@ -298,6 +299,7 @@ export const useStore = create<Store>((set, get) => ({
         isInstalling: false,
         isUninstalling: false,
         isPaused: false,
+        isWaitingForNetwork: false,
         progress: 0,
         downloadProgress: null,
         statusMessage: null,
@@ -566,6 +568,7 @@ export const useStore = create<Store>((set, get) => ({
       planned: 'Заплановано',
       'in-progress': 'Ранній доступ',
       completed: 'Завершено',
+      'tech-improvement': 'Технічна доробка',
     };
 
     if (oldGame) {

@@ -10,9 +10,13 @@
  * Machine ID використовується для ідентифікації користувача
  */
 
+import { app } from 'electron';
+import { existsSync, readFileSync } from 'fs';
 import { machineIdSync } from 'node-machine-id';
+import { join } from 'path';
 import type { TrackingResponse } from '../shared/api-config';
 import { getSupabaseCredentials } from './db/supabase-credentials';
+import { getLogFileDirectory } from './utils/logger';
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
 
@@ -399,6 +403,238 @@ export async function trackFailedSearch(query: string): Promise<TrackingResponse
   } catch (error) {
     console.error('[Tracking] Failed to track failed search:', error);
     return { success: false, error: String(error) };
+  }
+}
+
+/**
+ * Submit feedback for a game translation
+ */
+export async function submitFeedback(
+  gameId: string,
+  errorType: string,
+  message: string,
+  screenshotPaths?: string[]
+): Promise<{ success: boolean; error?: string }> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping feedback submission');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    console.log(`[Tracking] Submitting feedback for game: ${gameId}`);
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        gameId,
+        machineId,
+        errorType,
+        message,
+        ...(screenshotPaths?.length && { screenshotPaths }),
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.status === 429) {
+      console.warn('[Tracking] Feedback rate limit exceeded');
+      return { success: false, error: 'rate_limit' };
+    }
+
+    if (!response.ok || !result.success) {
+      console.error('[Tracking] Feedback submission failed:', result);
+      return { success: false, error: result.error || 'Unknown error' };
+    }
+
+    console.log('[Tracking] Feedback submitted successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('[Tracking] Failed to submit feedback:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+/**
+ * Submit logs
+ */
+export async function submitLogs(
+  message: string,
+  crashReason?: string
+): Promise<{ success: boolean; error?: string }> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping logs submission');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    console.log('[Tracking] Submitting logs');
+
+    // Read the log file
+    const logsDir = getLogFileDirectory();
+    const logFilePath = join(
+      logsDir,
+      `lbk-${new Date().toISOString().split('T')[0]}.log`
+    );
+
+    // Upload log file to Storage via signed URL
+    let logPath: string | undefined;
+    if (existsSync(logFilePath)) {
+      const fileName = `lbk-${new Date().toISOString().split('T')[0]}.log`;
+
+      // Get signed upload URL
+      const urlResponse = await fetch(
+        `${SUPABASE_URL}/functions/v1/submit-logs?action=upload-url`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({ machineId, fileName }),
+        }
+      );
+
+      const urlResult = await urlResponse.json();
+      if (urlResult.success && urlResult.signedUrl) {
+        // Upload the file
+        const fileBuffer = readFileSync(logFilePath);
+        const uploadResponse = await fetch(urlResult.signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'text/plain' },
+          body: fileBuffer,
+        });
+
+        if (uploadResponse.ok) {
+          logPath = urlResult.path;
+          console.log(`[Tracking] Log file uploaded: ${logPath}`);
+        } else {
+          console.warn('[Tracking] Log file upload failed, continuing without file');
+        }
+      }
+    }
+
+    // Submit log entry
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({
+        machineId,
+        message,
+        ...(crashReason && { crashReason }),
+        ...(logPath && { logPath }),
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.status === 429) {
+      console.warn('[Tracking] Logs submission rate limit exceeded');
+      return { success: false, error: 'rate_limit' };
+    }
+
+    if (!response.ok || !result.success) {
+      console.error('[Tracking] Logs submission failed:', result);
+      return { success: false, error: result.error || 'Unknown error' };
+    }
+
+    console.log('[Tracking] Logs submitted successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('[Tracking] Failed to submit logs:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+/**
+ * Get signed upload URLs for feedback screenshots
+ */
+export async function getFeedbackUploadUrls(fileNames: string[]): Promise<{
+  success: boolean;
+  uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
+  error?: string;
+}> {
+  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  const machineId = getMachineId();
+  if (!machineId) return { success: false, error: 'Machine ID not available' };
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/submit-feedback?action=upload-urls`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ machineId, fileNames }),
+      }
+    );
+
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      return { success: false, error: result.error || 'Failed to get upload URLs' };
+    }
+
+    return { success: true, uploadUrls: result.uploadUrls };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
+}
+
+/**
+ * Upload a local file to a signed URL
+ */
+export async function uploadFileToSignedUrl(
+  signedUrl: string,
+  filePath: string,
+  contentType: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const fs = await import('node:fs');
+    const fileBuffer = fs.readFileSync(filePath);
+
+    const response = await fetch(signedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: fileBuffer,
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `Upload failed: ${response.status}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload error',
+    };
   }
 }
 

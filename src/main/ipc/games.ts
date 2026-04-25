@@ -35,10 +35,14 @@ import {
 import { syncKurinGames } from '../game-detector/kurin';
 import { findProtons } from '../installer/proton';
 import {
+  getFeedbackUploadUrls,
   getMachineId,
+  submitFeedback,
+  submitLogs,
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
+  uploadFileToSignedUrl,
 } from '../tracking';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
@@ -74,6 +78,35 @@ export function setupGamesHandlers(): void {
   // Track failed search (0 results)
   ipcMain.handle('track-failed-search', async (_, query: string) =>
     trackFailedSearch(query)
+  );
+
+  // Submit feedback for a game translation
+  ipcMain.handle(
+    'submit-feedback',
+    async (
+      _,
+      gameId: string,
+      errorType: string,
+      message: string,
+      screenshotPaths?: string[]
+    ) => submitFeedback(gameId, errorType, message, screenshotPaths)
+  );
+
+  // Send logs handler
+  ipcMain.handle('submit-logs', async (_, message: string, crashReason?: string) =>
+    submitLogs(message, crashReason)
+  );
+
+  // Get signed upload URLs for feedback screenshots
+  ipcMain.handle('get-feedback-upload-urls', async (_, fileNames: string[]) =>
+    getFeedbackUploadUrls(fileNames)
+  );
+
+  // Upload file to signed URL
+  ipcMain.handle(
+    'upload-file-to-signed-url',
+    async (_, signedUrl: string, filePath: string, contentType: string) =>
+      uploadFileToSignedUrl(signedUrl, filePath, contentType)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
@@ -514,15 +547,19 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Record banner impression for placement banners
+  // Record banner impression for placement banners (view or click)
   ipcMain.handle(
     'record-banner-impression',
-    async (_, bannerId: string): Promise<boolean> => {
+    async (
+      _,
+      bannerId: string,
+      impressionType: ImpressionType = 'view'
+    ): Promise<boolean> => {
       try {
         const machineId = getMachineId();
         await recordBannerImpression({
           campaignId: bannerId,
-          impressionType: 'view' as ImpressionType,
+          impressionType,
           machineId,
         });
         return true;

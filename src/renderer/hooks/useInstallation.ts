@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ConflictingTranslation,
   DownloadProgress,
@@ -26,6 +26,7 @@ interface UseInstallationResult {
   isInstalling: boolean;
   isUninstalling: boolean;
   isPaused: boolean;
+  isWaitingForNetwork: boolean;
   installProgress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
@@ -78,11 +79,19 @@ export function useInstallation({
   const isInstalling = gameProgress?.isInstalling || false;
   const isUninstalling = gameProgress?.isUninstalling || false;
   const isPaused = gameProgress?.isPaused || false;
+  const isWaitingForNetwork = gameProgress?.isWaitingForNetwork || false;
   const installProgress = gameProgress?.progress || 0;
   const downloadProgress = gameProgress?.downloadProgress || null;
   const statusMessage = gameProgress?.statusMessage || null;
 
   const isPlanned = selectedGame?.status === 'planned';
+
+  // Retry context for auto-retry when network is restored
+  const networkRetryRef = useRef<{
+    customGamePath?: string;
+    options: InstallOptions;
+    autoRetried: boolean;
+  } | null>(null);
 
   const performInstallation = useCallback(
     async (customGamePath?: string, options?: InstallOptions) => {
@@ -140,6 +149,12 @@ export function useInstallation({
           (gameId: string, status) => {
             setInstallationProgress(gameId, {
               statusMessage: status.message,
+              // When we leave the download phase, clear download progress so UI
+              // switches from DownloadProgressCard to InstallationStatusMessage
+              ...(status.phase !== 'download' && {
+                downloadProgress: null,
+                progress: 0,
+              }),
             });
           }
         );
@@ -167,7 +182,7 @@ export function useInstallation({
           if (result.error.needsManualSelection) {
             showConfirm({
               title: 'Гру не знайдено',
-              message: `${result.error.message}\n\nБажаєте вибрати папку з грою вручну?`,
+              message: `${result.error.message}\n\nСпробуйте вибрати папку гри самостійно`,
               confirmText: 'Вибрати папку',
               cancelText: 'Скасувати',
               onConfirm: async () => {
@@ -183,6 +198,42 @@ export function useInstallation({
               message: result.error.message,
               type: 'info',
             });
+          } else if (result.error.isNetworkError) {
+            // Check if this was already an auto-retry — show modal for manual retry
+            if (networkRetryRef.current?.autoRetried) {
+              networkRetryRef.current = null;
+              showModal({
+                title: "З'єднання перервано",
+                message:
+                  'Не вдалося відновити завантаження автоматично.\n\n' +
+                  'Перевірте підключення до Інтернету та спробуйте знову.\n' +
+                  'Прогрес завантаження збережено.',
+                type: 'error',
+                actions: [
+                  {
+                    label: 'Спробувати знову',
+                    onClick: () => performInstallation(customGamePath, effectiveOptions),
+                    variant: 'primary',
+                  },
+                ],
+              });
+              clearInstallationProgress(selectedGame.id);
+            } else {
+              // First network failure — wait for reconnection and auto-retry
+              networkRetryRef.current = {
+                customGamePath,
+                options: effectiveOptions,
+                autoRetried: false,
+              };
+              setInstallationProgress(selectedGame.id, {
+                isInstalling: true,
+                isWaitingForNetwork: true,
+                downloadProgress: null,
+                statusMessage:
+                  "З'єднання втрачено. Завантаження продовжиться автоматично після відновлення з'єднання...",
+              });
+            }
+            return;
           } else {
             showModal({
               title: 'Помилка встановлення',
@@ -193,6 +244,9 @@ export function useInstallation({
           clearInstallationProgress(selectedGame.id);
           return;
         }
+
+        // Clear network retry context on success
+        networkRetryRef.current = null;
 
         setPendingInstallOptions(undefined);
         useStore.getState().clearGameUpdate(selectedGame.id);
@@ -271,6 +325,33 @@ export function useInstallation({
       onFirstInstallComplete,
     ]
   );
+
+  // Auto-retry download when network is restored (or immediately if still online)
+  useEffect(() => {
+    if (!isOnline || !isWaitingForNetwork || !networkRetryRef.current || !selectedGame)
+      return;
+
+    const retryContext = networkRetryRef.current;
+    retryContext.autoRetried = true;
+
+    // Small delay to let the network stabilize
+    const timer = setTimeout(() => {
+      console.log('[useInstallation] Auto-retrying download for:', selectedGame.id);
+      setInstallationProgress(selectedGame.id, {
+        isWaitingForNetwork: false,
+        statusMessage: 'Відновлення завантаження...',
+      });
+      performInstallation(retryContext.customGamePath, retryContext.options);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [
+    isOnline,
+    isWaitingForNetwork,
+    selectedGame,
+    performInstallation,
+    setInstallationProgress,
+  ]);
 
   const handleConflictingTranslation = useCallback(
     async (conflict: ConflictingTranslation): Promise<boolean> =>
@@ -659,6 +740,10 @@ export function useInstallation({
       (gameId: string, status) => {
         setInstallationProgress(gameId, {
           statusMessage: status.message,
+          ...(status.phase !== 'download' && {
+            downloadProgress: null,
+            progress: 0,
+          }),
         });
       }
     );
@@ -690,8 +775,11 @@ export function useInstallation({
   const handleCancelDownload = useCallback(async () => {
     if (!selectedGame) return;
 
+    // Clear network retry context
+    networkRetryRef.current = null;
+
     if (isPaused) {
-      // Cancel paused download
+      // Cancel paused download (clears paused state + .part file)
       await window.electronAPI.cancelPausedDownload(selectedGame.id);
     } else if (isInstalling) {
       // Abort active download
@@ -704,11 +792,21 @@ export function useInstallation({
   const getInstallButtonText = useCallback((): string => {
     if (!isOnline) return '❌ Немає інтернету';
     if (isPlanned) return 'Заплановано';
+    if (isWaitingForNetwork) {
+      return "Очікування з'єднання...";
+    }
     if (isPaused) {
       return 'Призупинено';
     }
     if (isInstalling) {
       return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
+    }
+    if (
+      installationInfo?.hasInstallError &&
+      isUpdateAvailable &&
+      !isCheckingInstallation
+    ) {
+      return `Перезавантажити (v${selectedGame?.version})`;
     }
     if (isUpdateAvailable && !isCheckingInstallation) {
       return `Оновити до v${selectedGame?.version}`;
@@ -721,6 +819,7 @@ export function useInstallation({
     isOnline,
     isPlanned,
     isPaused,
+    isWaitingForNetwork,
     isInstalling,
     isUpdateAvailable,
     isCheckingInstallation,
@@ -779,6 +878,7 @@ export function useInstallation({
     isInstalling,
     isUninstalling,
     isPaused,
+    isWaitingForNetwork,
     installProgress,
     downloadProgress,
     statusMessage,

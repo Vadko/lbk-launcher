@@ -604,6 +604,7 @@ export class GamesRepository {
     planned: number;
     'in-progress': number;
     completed: number;
+    'tech-improvement': number;
     'with-achievements': number;
     'with-voice': number;
   } {
@@ -612,6 +613,7 @@ export class GamesRepository {
         COUNT(DISTINCT CASE WHEN status = 'planned' THEN COALESCE(slug, id) END) as planned,
         COUNT(DISTINCT CASE WHEN status = 'in-progress' THEN COALESCE(slug, id) END) as in_progress,
         COUNT(DISTINCT CASE WHEN status = 'completed' THEN COALESCE(slug, id) END) as completed,
+        COUNT(DISTINCT CASE WHEN status = 'tech-improvement' THEN COALESCE(slug, id) END) as tech_improvement,
         COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
         COUNT(DISTINCT CASE WHEN voice_archive_path IS NOT NULL AND voice_archive_path != '' THEN COALESCE(slug, id) END) as with_voice
       FROM games
@@ -622,6 +624,7 @@ export class GamesRepository {
       planned: number;
       in_progress: number;
       completed: number;
+      tech_improvement: number;
       with_achievements: number;
       with_voice: number;
     };
@@ -630,6 +633,7 @@ export class GamesRepository {
       planned: row.planned || 0,
       'in-progress': row.in_progress || 0,
       completed: row.completed || 0,
+      'tech-improvement': row.tech_improvement || 0,
       'with-achievements': row.with_achievements || 0,
       'with-voice': row.with_voice || 0,
     };

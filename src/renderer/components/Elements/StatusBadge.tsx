@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface StatusBadgeProps {
-  status: 'completed' | 'in-progress' | 'planned';
+  status: 'completed' | 'in-progress' | 'planned' | 'tech-improvement';
   className?: string;
   style?: 'capsule' | 'text';
 }
@@ -26,6 +26,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       textLabel: 'Заплановано',
       capsuleColor: 'bg-[rgba(239,238,173,0.25)]',
       textColor: 'text-color-mixed',
+    },
+    'tech-improvement': {
+      textLabel: 'Технічна доробка',
+      capsuleColor: 'bg-[rgba(148,163,184,0.25)]',
+      textColor: 'text-[rgb(148,163,184)]',
     },
   };
 

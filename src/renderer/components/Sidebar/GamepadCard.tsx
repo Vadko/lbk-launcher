@@ -3,6 +3,7 @@ import { getGameImageUrl } from '@renderer/utils/imageUrl';
 import { useSettingsStore } from '@store/useSettingsStore';
 import { EyeOff } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
 
 interface GamepadCardProps {
@@ -12,6 +13,7 @@ interface GamepadCardProps {
   isSelected: boolean;
   hasUpdate: boolean;
   isDetected: boolean;
+  isInstalled: boolean;
   onClick: () => void;
 }
 
@@ -21,6 +23,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   isSelected,
   hasUpdate,
   isDetected,
+  isInstalled,
   onClick,
 }) => {
   const hasMultipleTranslations = translations.length > 1;
@@ -28,6 +31,8 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   const [imageError, setImageError] = useState(false);
   const [useBanner, setUseBanner] = useState(false);
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+  const isTranslationAvailable =
+    game.status !== 'planned' && game.status !== 'tech-improvement';
 
   const thumbnailUrl = getGameImageUrl(game.thumbnail_path);
   const bannerUrl = getGameImageUrl(game.banner_path);
@@ -135,17 +140,34 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
           </div>
         )}
 
-        {/* Gradient overlay at bottom */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/80 to-transparent" />
+        {/* Translations count badge */}
+        {hasMultipleTranslations && !isAdultBlurred && (
+          <div className="absolute top-2 left-2 min-w-[20px] h-5 px-1.5 bg-color-main rounded-full flex items-center justify-center">
+            <span className="text-[10px] font-bold text-text-dark">
+              {translations.length}
+            </span>
+          </div>
+        )}
 
+        {/* Indicators */}
+        {!isAdultBlurred && (
+          <StatusIcons
+            hasUpdate={hasUpdate}
+            isGameDetected={isDetected}
+            isInstalled={isInstalled}
+            aiType={game.ai}
+            floatPosition="compact"
+            isTranslationAvailable={isTranslationAvailable}
+          />
+        )}
         {/* Game name and team */}
-        <div className="absolute inset-x-0 bottom-0 p-2">
+        <div className="absolute inset-x-0 bottom-0 p-2 h-16 bg-gradient-to-t from-black/80 to-transparent grid content-end">
           <p
             className={`text-xs font-medium text-white line-clamp-1 ${isAdultBlurred ? 'blur-sm' : ''}`}
           >
             {game.name}
           </p>
-          {hasMultipleTranslations && (
+          {!hasMultipleTranslations && (
             <p
               className={`text-[10px] text-color-accent truncate ${isAdultBlurred ? 'blur-sm' : ''}`}
             >
@@ -153,25 +175,6 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
             </p>
           )}
         </div>
-
-        {/* Translations count badge */}
-        {hasMultipleTranslations && !isAdultBlurred && (
-          <div className="absolute top-2 right-2 min-w-[20px] h-5 px-1.5 bg-color-main/90 rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(168,207,150,0.6)]">
-            <span className="text-[10px] font-bold text-white">
-              {translations.length}
-            </span>
-          </div>
-        )}
-
-        {/* Update indicator */}
-        {hasUpdate && !isAdultBlurred && !hasMultipleTranslations && (
-          <div className="absolute top-2 right-2 w-3 h-3 bg-color-accent rounded-full animate-pulse shadow-[0_0_8px_rgba(255,164,122,0.8)]" />
-        )}
-
-        {/* Installed indicator */}
-        {isDetected && !isAdultBlurred && (
-          <div className="absolute top-2 left-2 w-3 h-3 bg-color-main rounded-full shadow-[0_0_8px_rgba(168,207,150,0.8)]" />
-        )}
       </div>
     </div>
   );
