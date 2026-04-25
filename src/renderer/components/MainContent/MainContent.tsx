@@ -49,7 +49,6 @@ export const MainContent: React.FC = () => {
     isCheckingInstallationStatus,
     isGameDetected,
     installedGames,
-    setInstallationProgress,
   } = useStore();
   const { showModal } = useModalStore();
   const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
@@ -239,6 +238,7 @@ export const MainContent: React.FC = () => {
     isInstalling,
     isUninstalling,
     isPaused,
+    isWaitingForNetwork,
     installProgress,
     downloadProgress,
     statusMessage,
@@ -274,28 +274,16 @@ export const MainContent: React.FC = () => {
     const handleOnline = () => {
       setIsOnline(true);
       console.log('[MainContent] Internet connection restored');
-
-      if (selectedGame && isInstalling) {
-        setInstallationProgress(selectedGame.id, {
-          statusMessage: 'Підключення відновлено. Спроба продовжити...',
-        });
-      }
     };
 
     const handleOffline = async () => {
       setIsOnline(false);
       console.log('[MainContent] Internet connection lost');
 
-      // Don't abort if paused - download is already stopped
-      if (selectedGame && isInstalling && !isPaused) {
+      // Don't abort if paused or already waiting — download is already stopped
+      if (selectedGame && isInstalling && !isPaused && !isWaitingForNetwork) {
         console.log('[MainContent] Aborting download due to connection loss');
-        await window.electronAPI?.abortDownload(
-          'Завантаження скасовано через відсутність підключення до Інтернету'
-        );
-        setInstallationProgress(selectedGame.id, {
-          statusMessage:
-            '❌ Завантаження скасовано через відсутність підключення до Інтернету',
-        });
+        await window.electronAPI?.abortDownload('NETWORK_LOST');
       }
     };
 
@@ -306,7 +294,7 @@ export const MainContent: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [selectedGame, isInstalling, isPaused, setInstallationProgress]);
+  }, [selectedGame, isInstalling, isPaused, isWaitingForNetwork]);
 
   const handleSupport = useCallback(() => {
     if (!selectedGame?.support_url) return;
@@ -562,7 +550,7 @@ export const MainContent: React.FC = () => {
               />
             )}
 
-            {(isInstalling || isPaused) && (
+            {(isInstalling || isPaused || isWaitingForNetwork) && (
               <div className="glass-card">
                 {downloadProgress && downloadProgress.totalBytes > 0 ? (
                   <DownloadProgressCard
@@ -574,12 +562,24 @@ export const MainContent: React.FC = () => {
                     onCancel={handleCancelDownload}
                   />
                 ) : (
-                  <InstallationStatusMessage
-                    statusMessage={statusMessage}
-                    isUpdateAvailable={!!isUpdateAvailable}
-                    isOnline={isOnline}
-                    isInstalling={isInstalling}
-                  />
+                  <div>
+                    <InstallationStatusMessage
+                      statusMessage={statusMessage}
+                      isUpdateAvailable={!!isUpdateAvailable}
+                      isOnline={isOnline}
+                      isInstalling={isInstalling}
+                    />
+                    {isWaitingForNetwork && (
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={handleCancelDownload}
+                          className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                        >
+                          Скасувати
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

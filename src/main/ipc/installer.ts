@@ -10,6 +10,7 @@ import {
   getConflictingTranslation,
   installTranslation,
   ManualSelectionError,
+  NetworkError,
   PausedSignal,
   RateLimitError,
   removeComponents,
@@ -90,6 +91,7 @@ export function setupInstallerHandlers(): void {
             message: error instanceof Error ? error.message : 'Невідома помилка',
             needsManualSelection: error instanceof ManualSelectionError,
             isRateLimit: error instanceof RateLimitError,
+            isNetworkError: error instanceof NetworkError,
           },
         };
       }

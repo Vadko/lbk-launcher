@@ -65,6 +65,7 @@ export interface InstallResult {
     message: string;
     needsManualSelection?: boolean;
     isRateLimit?: boolean;
+    isNetworkError?: boolean;
   };
 }
 

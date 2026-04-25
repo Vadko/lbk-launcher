@@ -439,6 +439,9 @@ export async function submitFeedback(
         errorType,
         message,
         ...(screenshotPaths?.length && { screenshotPaths }),
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
       }),
     });
 
