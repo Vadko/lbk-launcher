@@ -600,7 +600,7 @@ export class GamesRepository {
         COUNT(DISTINCT CASE WHEN status = 'completed' THEN COALESCE(slug, id) END) as completed,
         COUNT(DISTINCT CASE WHEN status = 'tech-improvement' THEN COALESCE(slug, id) END) as tech_improvement,
         COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
-        COUNT(DISTINCT CASE WHEN voice_archive_path IS NOT NULL AND voice_archive_path != '' THEN COALESCE(slug, id) END) as with_voice
+        COUNT(DISTINCT CASE WHEN (voice_archive_path IS NOT NULL AND voice_archive_path != '') OR voice_progress IS NOT NULL THEN COALESCE(slug, id) END) as with_voice
       FROM games
       WHERE approved = 1 AND hide = 0
     `);

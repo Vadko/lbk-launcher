@@ -238,8 +238,11 @@ export function useGames({
         // Перевірити чи запит ще актуальний
         if (signal.aborted) return;
 
-        // Filter games that have voice archive
-        const withVoice = result.games.filter((game) => !!game.voice_archive_path);
+        // Фільтр ігор з озвучкою: показувати якщо є voice_archive_path АБО voice_progress не null
+        // (запланована озвучка, в процесі або готова)
+        const withVoice = result.games.filter(
+          (game) => !!game.voice_archive_path || game.voice_progress !== null
+        );
 
         setGames(withVoice);
         setTotal(withVoice.length);
@@ -395,7 +398,11 @@ export function useGames({
         }
 
         if (specialFilter === 'with-voice') {
-          if (!updatedGame.voice_archive_path) {
+          // Перевірити чи гра відповідає фільтру: має voice_archive_path АБО voice_progress не null
+          const hasVoice =
+            !!updatedGame.voice_archive_path || updatedGame.voice_progress !== null;
+
+          if (!hasVoice) {
             // Якщо у гри зникло озвучення - видалити зі списку
             if (index !== -1) {
               setTotal((prev) => prev - 1);

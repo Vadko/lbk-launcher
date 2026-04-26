@@ -207,6 +207,7 @@ export const SettingsModal: React.FC = () => {
             href="https://t.me/lbk_launcher_bot"
             target="_blank"
             rel="noopener noreferrer"
+            data-gamepad-modal-item
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">

@@ -531,7 +531,7 @@ export const MainContent: React.FC = () => {
               return langHint ? (
                 <div className="flex gap-2">
                   <span className="w-0 h-auto border-l border-border-hover" />
-                  <span className="text-sm">
+                  <span className="text-sm text-text-muted">
                     В налаштуваннях гри оберіть{' '}
                     <span className="text-color-accent">{langHint} мову</span>
                   </span>

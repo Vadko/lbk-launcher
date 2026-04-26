@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import React from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useGamepadModalScroll } from '../../hooks/useGamepadModalScroll';
 
 interface ModalProps {
   isOpen: boolean;
@@ -26,6 +27,11 @@ export const Modal: React.FC<ModalProps> = ({
   usePortal = false,
   classNames = '',
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Enable gamepad scrolling with right stick
+  useGamepadModalScroll(isOpen, scrollContainerRef);
+
   const content = (
     <AnimatePresence>
       {isOpen && (
@@ -83,7 +89,12 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto break-words flex-1">{children}</div>
+                <div
+                  ref={scrollContainerRef}
+                  className="p-6 overflow-y-auto break-words flex-1"
+                >
+                  {children}
+                </div>
 
                 {/* Footer */}
                 {footer && (
@@ -102,7 +113,12 @@ export const Modal: React.FC<ModalProps> = ({
                   </button>
                 )}
                 {/* Content */}
-                <div className="overflow-y-auto break-words flex-1">{children}</div>
+                <div
+                  ref={scrollContainerRef}
+                  className="overflow-y-auto break-words flex-1"
+                >
+                  {children}
+                </div>
               </>
             )}
           </motion.div>
