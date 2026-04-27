@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useGames } from '@/renderer/hooks/useGames';
+import { useInstalledGamesForHome } from '@/renderer/queries/useHomePageGames';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
@@ -32,12 +32,11 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }))
   );
 
-  // Load all installed games (from system)
-  const { games: allInstalledGames, isLoading } = useGames({
-    specialFilter: 'installed-games',
+  // Load all installed games (from system) with caching
+  const { data: allInstalledGames = [], isLoading } = useInstalledGamesForHome(
     hideAiTranslations,
-    sortOrder: 'newest',
-  });
+    'newest'
+  );
 
   // Filter to show only games WITHOUT translations installed
   const gamesWithoutInstalls = useMemo(

@@ -1,10 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useMemo, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useGames } from '@/renderer/hooks/useGames';
+import { useNewGames, useUpdatedGames } from '@/renderer/queries/useHomePageGames';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
-import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
@@ -15,14 +14,14 @@ export interface TabConfig {
   showTrendsGames?: boolean;
 }
 
-interface GamesSectionWithTabsProps {
+interface NewGamesSectionProps {
   title: string;
   tabs: TabConfig[];
   defaultTabSortOrder?: 'newest' | 'updated' | 'downloads' | 'name';
   showLimit?: number;
 }
 
-export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
+export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
   title,
   tabs,
   defaultTabSortOrder,
@@ -45,21 +44,25 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
     [tabs, activeTabSortOrder]
   );
 
-  // Load games based on active tab configuration
-  const { games: allGames, isLoading: isLoadingAll } = useGames({
-    sortOrder: activeTab?.sortOrder || 'name',
-    hideAiTranslations,
-  });
-  const { data: trendingGames, isLoading: isLoadingTrends } = useTrendingGames(
-    30,
-    showLimit
-  );
+  // Load games based on active tab configuration with caching
+  const { data: newestGames = [], isLoading: isLoadingNewest } =
+    useNewGames(hideAiTranslations);
+  const { data: updatedGames = [], isLoading: isLoadingUpdated } =
+    useUpdatedGames(hideAiTranslations);
 
-  const games = useMemo(
-    () => (activeTab?.showTrendsGames ? (trendingGames ?? []) : allGames),
-    [activeTab?.showTrendsGames, trendingGames, allGames]
-  );
-  const isLoading = activeTab?.showTrendsGames ? isLoadingTrends : isLoadingAll;
+  // Select games based on active tab
+  const games = useMemo(() => {
+    if (activeTab?.sortOrder === 'newest') return newestGames;
+    if (activeTab?.sortOrder === 'updated') return updatedGames;
+    return [];
+  }, [activeTab, newestGames, updatedGames]);
+
+  const isLoading = useMemo(() => {
+    if (activeTab?.sortOrder === 'newest') return isLoadingNewest;
+    if (activeTab?.sortOrder === 'updated') return isLoadingUpdated;
+    return false;
+  }, [activeTab, isLoadingNewest, isLoadingUpdated]);
+
   const visibleGames = useMemo(() => games.slice(0, showLimit), [games, showLimit]);
 
   return (
@@ -118,7 +121,6 @@ export const GamesSectionWithTabs: React.FC<GamesSectionWithTabsProps> = ({
                   id={`game-${game.slug}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
                   transition={{
                     duration: 0.3,
                     delay: index * 0.05,

@@ -1,9 +1,9 @@
-import React, { Activity, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
-import { GamesSection } from './GamesSection';
-import { GamesSectionWithTabs, type TabConfig } from './GamesSectionWithTabs';
 import { InstalledGamesSection } from './InstalledGamesSection';
+import { NewGamesSection, type TabConfig } from './NewGamesSection';
 import { TrendingGamesPage } from './TrendingGamesPage';
+import { TrendGamesSection } from './TrendsGamesSection';
 
 type PageView = 'main' | 'trending';
 
@@ -44,29 +44,28 @@ export const MainPage: React.FC = () => {
       className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
     >
       {/* Main page */}
-      <Activity mode={currentView === 'main' ? 'visible' : 'hidden'}>
+      {currentView === 'main' && (
         <div className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}>
           <InstalledGamesSection showLimit={3} />
-          <GamesSectionWithTabs
+          <NewGamesSection
             title="Новинки"
             tabs={newsTabsConfig}
             defaultTabSortOrder="newest"
             showLimit={3}
           />
-          <GamesSection
+          <TrendGamesSection
             title="Популярне у гравців"
             showDownloadCounter={true}
-            showTrendsGames={true}
             onViewAll={() => setCurrentView('trending')}
           />
         </div>
-      </Activity>
+      )}
       {/* Trending games page */}
-      <Activity mode={currentView === 'trending' ? 'visible' : 'hidden'}>
+      {currentView === 'trending' && (
         <div className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}>
           <TrendingGamesPage onBack={() => setCurrentView('main')} />
         </div>
-      </Activity>
+      )}
     </div>
   );
 };

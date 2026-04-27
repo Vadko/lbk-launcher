@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import React from 'react';
 import { Button } from '../ui/Button';
-import { GamesSection } from './GamesSection';
+import { TrendGamesSection } from './TrendsGamesSection';
 
 interface TrendingGamesPageProps {
   onBack: () => void;
@@ -31,10 +31,9 @@ export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) 
     </div>
 
     {/* Reuse GamesSection with higher limit */}
-    <GamesSection
+    <TrendGamesSection
       title="Популярне у гравців"
       showDownloadCounter={true}
-      showTrendsGames={true}
       showLimit={30}
     />
   </motion.div>
