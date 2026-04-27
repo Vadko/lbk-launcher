@@ -1,33 +1,26 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useGames } from '@/renderer/hooks/useGames';
-import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
+import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
 interface GamesSectionProps {
   title: string;
   showLimit?: number;
   showDownloadCounter?: boolean;
-  showTrendsGames?: boolean;
-  sortOrder?: 'downloads' | 'name' | 'newest';
+  onViewAll?: () => void;
 }
 
-export const GamesSection: React.FC<GamesSectionProps> = ({
+export const TrendGamesSection: React.FC<GamesSectionProps> = ({
   title,
   showLimit = 3,
   showDownloadCounter = false,
-  showTrendsGames = false,
-  sortOrder = 'name',
+  onViewAll,
 }) => {
-  const { hideAiTranslations } = useSettingsStore(
-    useShallow((state) => ({
-      hideAiTranslations: state.hideAiTranslations,
-    }))
-  );
   const { setSelectedGame, gamesWithUpdates, isGameDetected, getInstallationInfo } =
     useStore(
       useShallow((state) => ({
@@ -37,24 +30,24 @@ export const GamesSection: React.FC<GamesSectionProps> = ({
         getInstallationInfo: state.getInstallationInfo,
       }))
     );
-  const { games: allGames, isLoading: isLoadingAll } = useGames({
-    sortOrder,
-    hideAiTranslations,
-  });
-  const { data: trendingGames, isLoading: isLoadingTrends } = useTrendingGames(
-    30,
-    showLimit
+  const { data: trendingGames, isLoading } = useTrendingGames(30);
+  const visibleGames = useMemo(
+    () => (trendingGames ?? []).slice(0, showLimit),
+    [trendingGames, showLimit]
   );
-  const games = useMemo(
-    () => (showTrendsGames ? (trendingGames ?? []) : allGames),
-    [showTrendsGames, trendingGames, allGames]
-  );
-  const isLoading = showTrendsGames ? isLoadingTrends : isLoadingAll;
-  const visibleGames = useMemo(() => games.slice(0, showLimit), [games, showLimit]);
 
   return (
     <div className="text-left w-full max-w-[1317px]">
-      <h2 className="text-4xl font-head font-semibold text-text-main mb-8">{title}</h2>
+      {/* Header with view all button */}
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
+        {onViewAll && (
+          <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
+            Переглянути всі
+            <ArrowRight size={24} />
+          </Button>
+        )}
+      </div>
       <div className={`grid grid-cols-3 gap-8`}>
         <AnimatePresence mode="popLayout">
           {isLoading ? (

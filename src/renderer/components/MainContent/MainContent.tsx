@@ -1,8 +1,3 @@
-import { useGamepadModeStore } from '@store/useGamepadModeStore.ts';
-import { useModalStore } from '@store/useModalStore.ts';
-import { useSettingsStore } from '@store/useSettingsStore.ts';
-import { useStore } from '@store/useStore.ts';
-import { useSubscriptionsStore } from '@store/useSubscriptionsStore.ts';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -22,6 +17,10 @@ import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
+import { useModalStore } from '../../store/useModalStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { useStore } from '../../store/useStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { trackEvent } from '../../utils/analytics';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { FeedbackModal } from '../Modal/FeedbackModal';
@@ -34,10 +33,10 @@ import { AuthorsList } from './AuthorsList';
 import { DownloadProgressCard } from './DownloadProgressCard';
 import { FundraisingProgressCard } from './FundraisingProgressCard';
 import { GameHero } from './GameHero';
-import { GamesSection } from './GamesSection';
 import { InfoCard } from './InfoCard';
 import { InstallationStatusBadge } from './InstallationStatusBadge';
 import { InstallationStatusMessage } from './InstallationStatusMessage';
+import { MainPage } from './MainPage';
 import { SocialLinksCard } from './SocialLinksCard';
 import { StatusCard } from './StatusCard';
 import { VideoCard } from './VideoCard';
@@ -351,21 +350,7 @@ export const MainContent: React.FC = () => {
   ]);
 
   if (!selectedGame) {
-    return (
-      <div
-        data-gamepad-main-content
-        className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'pb-3'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
-      >
-        <div className="grid grid-rows-auto gap-10 h-auto">
-          <GamesSection title="Новинки" sortOrder="newest" />
-          <GamesSection
-            title="Популярне у гравців"
-            showDownloadCounter={true}
-            showTrendsGames={true}
-          />
-        </div>
-      </div>
-    );
+    return <MainPage />;
   }
 
   // Adult content overlay - show when adult game is selected but setting is off
