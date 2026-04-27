@@ -1,8 +1,3 @@
-import { useGamepadModeStore } from '@store/useGamepadModeStore.ts';
-import { useModalStore } from '@store/useModalStore.ts';
-import { useSettingsStore } from '@store/useSettingsStore.ts';
-import { useStore } from '@store/useStore.ts';
-import { useSubscriptionsStore } from '@store/useSubscriptionsStore.ts';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
   AlertTriangle,

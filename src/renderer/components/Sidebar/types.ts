@@ -2,6 +2,8 @@ import type { Database } from '../../../lib/database.types';
 import type { SortOrderType } from '../../../shared/types';
 import type { Game } from '../../types/game';
 
+export type { SortOrderType };
+
 export interface GameGroup {
   slug: string;
   name: string;
