@@ -62,12 +62,12 @@ async function connectToApp() {
   );
   const context = browser.contexts()[0];
 
-  let page: Page;
+  const page: Page =
   const deadline = Date.now() + 30_000;
   while (context.pages().length === 0 && Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 200));
   }
-  page =
+  const page: Page =
     context.pages().length > 0
       ? context.pages()[0]
       : await context.waitForEvent('page', { timeout: 10_000 });

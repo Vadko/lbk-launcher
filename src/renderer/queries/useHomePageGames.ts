@@ -7,7 +7,7 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 /**
  * Query keys для ігор головної сторінки
  */
-export const homeGamesKeys = {
+const homeGamesKeys = {
   all: ['home-games'] as const,
   newest: (hideAi: boolean) => [...homeGamesKeys.all, 'newest', hideAi] as const,
   updated: (hideAi: boolean) => [...homeGamesKeys.all, 'updated', hideAi] as const,
