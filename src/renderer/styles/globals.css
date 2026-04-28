@@ -109,6 +109,15 @@ html.maximized #root {
   transform: translateY(-2px);
 }
 
+.glass-card-no-motion {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 8px;
+}
+
 .placement {
   padding: 0;
 }
@@ -422,6 +431,9 @@ body.liquid-glass-enabled .glass-input:focus {
 /* ==========================================================================
    10. GAMEPAD FOCUS STYLES
    ========================================================================== */
+[data-gamepad-mode] {
+  cursor: none !important;
+}
 
 [data-gamepad-mode] button:focus,
 [data-gamepad-mode] a:focus,

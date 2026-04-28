@@ -11,6 +11,7 @@ import type {
   Game,
   InstallationStatus,
   InstallOptions,
+  SortOrderType,
 } from '../shared/types';
 
 const electronAPI: ElectronAPI = {
@@ -22,8 +23,16 @@ const electronAPI: ElectronAPI = {
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
-  ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, hideAiTranslations),
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
+  ) =>
+    ipcRenderer.invoke(
+      'fetch-games-by-ids',
+      gameIds,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    ),
   syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
@@ -31,34 +40,45 @@ const electronAPI: ElectronAPI = {
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) =>
     ipcRenderer.invoke(
       'find-games-by-install-paths',
       installPaths,
       searchQuery,
-      hideAiTranslations
+      hideAiTranslations,
+      sortOrder
     ),
   getSteamLibraryAppIds: () => ipcRenderer.invoke('get-steam-library-app-ids'),
   findGamesBySteamAppIds: (
     steamAppIds: number[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) =>
     ipcRenderer.invoke(
       'find-games-by-steam-app-ids',
       steamAppIds,
       searchQuery,
-      hideAiTranslations
+      hideAiTranslations,
+      sortOrder
     ),
   countGamesBySteamAppIds: (steamAppIds: number[]) =>
     ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) =>
-    ipcRenderer.invoke('find-games-by-titles', titles, searchQuery, hideAiTranslations),
+    ipcRenderer.invoke(
+      'find-games-by-titles',
+      titles,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    ),
   getGogLibrary: () => ipcRenderer.invoke('get-gog-library'),
   getEpicLibrary: () => ipcRenderer.invoke('get-epic-library'),
   installTranslation: (

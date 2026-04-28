@@ -18,19 +18,18 @@ export interface TrendingGameWithDetails extends Game {
  */
 export const trendingKeys = {
   all: ['trending'] as const,
-  list: (days: number, limit: number) =>
-    [...trendingKeys.all, 'list', days, limit] as const,
-  withDetails: (days: number, limit: number) =>
-    [...trendingKeys.all, 'details', days, limit] as const,
+  list: (days: number) => [...trendingKeys.all, 'list', days] as const,
+  withDetails: (days: number) => [...trendingKeys.all, 'details', days] as const,
 };
 
 /**
  * Отримати trending ігри (ID + кількість завантажень)
+ * Завжди завантажує максимум 30 ігор для кешування
  */
-export function useTrendingGamesList(days = 30, limit = 10) {
+export function useTrendingGamesList(days = 30) {
   return useQuery({
-    queryKey: trendingKeys.list(days, limit),
-    queryFn: () => window.electronAPI.fetchTrendingGames(days, limit),
+    queryKey: trendingKeys.list(days),
+    queryFn: () => window.electronAPI.fetchTrendingGames(days, 30),
     staleTime: ONE_DAY,
     gcTime: ONE_DAY,
   });
@@ -38,12 +37,13 @@ export function useTrendingGamesList(days = 30, limit = 10) {
 
 /**
  * Отримати trending ігри з повними даними
+ * Завжди завантажує максимум 30 ігор, slice робиться на UI рівні
  */
-export function useTrendingGames(days = 30, limit = 10) {
+export function useTrendingGames(days = 30) {
   return useSyncAwareQuery({
-    queryKey: trendingKeys.withDetails(days, limit),
+    queryKey: trendingKeys.withDetails(days),
     queryFn: async (): Promise<TrendingGameWithDetails[]> => {
-      const trending = await window.electronAPI.fetchTrendingGames(days, limit);
+      const trending = await window.electronAPI.fetchTrendingGames(days, 30);
       if (!trending || trending.length === 0) return [];
 
       const gameIds = trending.map((t) => t.game_id);

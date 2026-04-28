@@ -56,18 +56,46 @@ async function waitForAppRestart(
 /**
  * Connect to an already-running app via CDP and return a Page.
  */
+
+async function dismissSupportPopupIfPresent(page: Page) {
+  const popupHeading = page.getByText('Трохи підтримки для лаунчера?');
+  const visible = await popupHeading.isVisible().catch(() => false);
+
+  if (!visible) {
+    return;
+  }
+
+  const popupDialog = page.locator('div[role="dialog"]', {
+    has: popupHeading,
+  });
+
+  const closeButton = popupDialog
+    .locator('button')
+    .filter({ has: page.locator('svg.lucide-x') })
+    .first();
+
+  if (await closeButton.isVisible().catch(() => false)) {
+    await closeButton.click();
+    await expect(popupDialog).toBeHidden({ timeout: 5_000 });
+    return;
+  }
+
+  await page.keyboard.press('Escape').catch(() => undefined);
+  await expect(popupDialog).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
+}
+
 async function connectToApp() {
   const browser = await chromium.connectOverCDP(
     `http://127.0.0.1:${CDP_PORT}`
   );
   const context = browser.contexts()[0];
 
-  let page: Page;
   const deadline = Date.now() + 30_000;
   while (context.pages().length === 0 && Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 200));
   }
-  page =
+
+  const page: Page =
     context.pages().length > 0
       ? context.pages()[0]
       : await context.waitForEvent('page', { timeout: 10_000 });
@@ -139,7 +167,10 @@ test('clear cache restarts the app and loads games', async () => {
   const modal = page.locator('div[role="dialog"]');
   await expect(modal).toBeVisible({ timeout: 5_000 });
 
-  // 4. Click "Очистити кеш" to open confirmation dialog
+  // 4. Dismiss support popup if it appeared above settings modal
+  await dismissSupportPopupIfPresent(page);
+
+  // 5. Click "Очистити кеш" to open confirmation dialog
   const clearCacheButton = modal.getByText('Очистити кеш');
   await expect(clearCacheButton).toBeVisible();
   await clearCacheButton.click();

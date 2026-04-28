@@ -3,6 +3,7 @@ import type {
   Game,
   GetGamesParams,
   GetGamesResult,
+  SortOrderType,
 } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
 
@@ -21,14 +22,16 @@ export function fetchGamesByIds(
   gameIds: string[],
   searchQuery?: string,
   hideAiTranslations = false,
-  useSteamIdField = false
+  useSteamIdField = false,
+  sortOrder: SortOrderType = 'name'
 ): Game[] {
   try {
     return gamesRepo.getGamesByIds(
       gameIds,
       searchQuery,
       hideAiTranslations,
-      useSteamIdField
+      useSteamIdField,
+      sortOrder
     );
   } catch (error) {
     console.error('[API] Error fetching games by IDs:', error);
@@ -39,13 +42,15 @@ export function fetchGamesByIds(
 export function findGamesByInstallPaths(
   installPaths: string[],
   searchQuery?: string,
-  hideAiTranslations = false
+  hideAiTranslations = false,
+  sortOrder: SortOrderType = 'name'
 ): GetGamesResult {
   try {
     return gamesRepo.findGamesByInstallPaths(
       installPaths,
       searchQuery,
-      hideAiTranslations
+      hideAiTranslations,
+      sortOrder
     );
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);
@@ -81,10 +86,16 @@ export function fetchFilterCounts(): FilterCountsResult {
 export function findGamesBySteamAppIds(
   steamAppIds: number[],
   searchQuery?: string,
-  hideAiTranslations = false
+  hideAiTranslations = false,
+  sortOrder: SortOrderType = 'name'
 ): GetGamesResult {
   try {
-    return gamesRepo.findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations);
+    return gamesRepo.findGamesBySteamAppIds(
+      steamAppIds,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    );
   } catch (error) {
     console.error('[API] Error finding games by Steam App IDs:', error);
     return { games: [], total: 0 };

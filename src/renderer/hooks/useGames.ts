@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { SortOrderType } from '../../shared/types';
 import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
@@ -9,7 +10,7 @@ interface UseGamesParams {
   selectedAuthors?: string[];
   specialFilter?: SpecialFilterType | null;
   searchQuery?: string;
-  sortOrder?: 'name' | 'downloads' | 'newest';
+  sortOrder?: SortOrderType;
   hideAiTranslations?: boolean;
 }
 
@@ -81,7 +82,8 @@ export function useGames({
         const installedGames = await window.electronAPI.fetchGamesByIds(
           installedGameIds,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         // Перевірити чи запит ще актуальний
@@ -109,7 +111,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesByInstallPaths(
           installPaths,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         // Перевірити чи запит ще актуальний
@@ -137,7 +140,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesBySteamAppIds(
           steamLibraryAppIds,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         // Перевірити чи запит ще актуальний
@@ -163,7 +167,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesByTitles(
           titles,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         if (signal.aborted) return;
@@ -188,7 +193,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesByTitles(
           titles,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         if (signal.aborted) return;
