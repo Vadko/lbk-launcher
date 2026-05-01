@@ -15,6 +15,7 @@ interface SelectDropdownProps {
   onSelectionChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  maxHeight?: number; // Maximum height in pixels, 'auto' means no limit (uses available space)
 }
 
 export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
@@ -24,9 +25,10 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
     onSelectionChange,
     placeholder = 'Оберіть варіант',
     className = '',
+    maxHeight: customMaxHeight = 300, // Default 300px instead of 120px
   }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [maxHeight, setMaxHeight] = useState(120); // Start with smaller default
+    const [maxHeight, setMaxHeight] = useState(customMaxHeight); // Use prop value as default
     const [isReady, setIsReady] = useState(false); // Track if calculations are done
     const [dropdownPosition, setDropdownPosition] = useState<'above' | 'below'>('below');
     const menuRef = useRef<HTMLDivElement>(null);
@@ -64,7 +66,10 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
         // Use space below, but if not enough, use the larger of the two spaces
         const availableSpace =
           spaceBelow > 80 ? spaceBelow : Math.max(spaceBelow, spaceAbove);
-        const calculatedMaxHeight = Math.min(120, Math.max(60, availableSpace));
+        const calculatedMaxHeight = Math.min(
+          customMaxHeight,
+          Math.max(60, availableSpace)
+        );
         const position = spaceBelow >= 80 ? 'below' : 'above';
 
         // Use requestAnimationFrame to batch state updates and avoid cascading renders
@@ -78,7 +83,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           setIsReady(false);
         });
       }
-    }, [isOpen]);
+    }, [isOpen, customMaxHeight]); // Add customMaxHeight to dependencies
 
     // Close menu on outside click
     useEffect(() => {

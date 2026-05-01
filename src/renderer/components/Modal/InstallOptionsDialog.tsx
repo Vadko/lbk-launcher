@@ -199,7 +199,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     const firstExisting = supportedPlatforms.find((p) => p.exists);
     const options: SelectOption[] = [
       {
-        name: `Автоматично (${firstExisting ? getReadablePlatform(firstExisting.platform) : 'перший доступний'})`,
+        name: firstExisting ? `Автоматично(${getReadablePlatform(firstExisting.platform)})` : 'Ручний вибір (не знайдено автоматично)',
         value: 'auto',
       },
     ];
@@ -266,6 +266,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 setSelectedPlatform(value as Platform | 'auto')
               }
               placeholder="Оберіть платформу"
+              maxHeight={500}
             />
           </div>
         )}
