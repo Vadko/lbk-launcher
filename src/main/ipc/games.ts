@@ -21,6 +21,7 @@ import {
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
+  detectGamePaths,
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
   getEpicLibrary,
@@ -229,6 +230,16 @@ export function setupGamesHandlers(): void {
       return findProtons();
     } catch (error) {
       console.error('Error getting available Protons:', error);
+      return [];
+    }
+  });
+
+  // Detect available platforms for a game
+  ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
+    try {
+      return detectGamePaths(game.install_paths || []);
+    } catch (error) {
+      console.error('Error detecting game platforms:', error);
       return [];
     }
   });

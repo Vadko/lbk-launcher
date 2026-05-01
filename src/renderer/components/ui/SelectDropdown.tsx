@@ -2,8 +2,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-interface SelectOption {
+export interface SelectOption {
   name: string;
+  children?: React.ReactNode;
+  isDisabled?: boolean;
   value: string;
 }
 
@@ -159,18 +161,27 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
                     return (
                       <button
                         key={option.value}
-                        onClick={() => handleOptionSelect(option.value)}
+                        onClick={
+                          option.isDisabled
+                            ? undefined
+                            : () => handleOptionSelect(option.value)
+                        }
                         data-gamepad-dropdown-item
-                        className={`w-full flex items-center px-3 py-2 text-sm text-left transition-colors ${
+                        disabled={option.isDisabled}
+                        className={`w-full flex items-center px-3 py-2 text-sm gap-1 text-left transition-colors ${
                           isSelected
                             ? 'bg-glass-hover text-text-main'
                             : 'text-text-muted hover:bg-glass hover:text-text-main'
                         }`}
                         title={option.name}
                       >
-                        <span className="truncate">{option.name}</span>
+                        <span
+                          className={`flex flex-1 gap-2 truncate ${!isSelected ? 'mr-4' : ''}`}
+                        >
+                          {option.children || option.name}
+                        </span>
                         {isSelected && (
-                          <span className="ml-auto text-color-accent">✓</span>
+                          <span className="ml-auto text-color-accent w-3">✓</span>
                         )}
                       </button>
                     );

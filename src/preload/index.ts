@@ -81,12 +81,9 @@ const electronAPI: ElectronAPI = {
     ),
   getGogLibrary: () => ipcRenderer.invoke('get-gog-library'),
   getEpicLibrary: () => ipcRenderer.invoke('get-epic-library'),
-  installTranslation: (
-    game: Game,
-    platform: string,
-    options: InstallOptions,
-    customGamePath?: string
-  ) => ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
+  detectGamePlatforms: (game: Game) => ipcRenderer.invoke('detect-game-platforms', game),
+  installTranslation: (game: Game, options: InstallOptions, customGamePath?: string) =>
+    ipcRenderer.invoke('install-translation', game, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
   rerunInstaller: (installerPath: string, protonPath?: string) =>
     ipcRenderer.invoke('rerun-installer', installerPath, protonPath),

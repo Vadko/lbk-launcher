@@ -14,6 +14,12 @@ export type InstallPath = Database['public']['CompositeTypes']['install_path_ent
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated';
 
+export interface GamePath {
+  platform: Platform;
+  path: string;
+  exists: boolean;
+}
+
 interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
@@ -75,6 +81,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  platform: Platform | 'auto';
   protonPath?: string;
 }
 
@@ -165,9 +172,9 @@ export interface ElectronAPI {
   ) => Promise<GetGamesResult>;
   getGogLibrary: () => Promise<string[]>;
   getEpicLibrary: () => Promise<string[]>;
+  detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
   installTranslation: (
     game: Game,
-    platform: string,
     options: InstallOptions,
     customGamePath?: string
   ) => Promise<InstallResult>;

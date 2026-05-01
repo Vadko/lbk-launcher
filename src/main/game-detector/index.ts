@@ -34,63 +34,69 @@ export {
 // Main Detection Logic
 // ============================================================================
 
+export function detectGamePath(
+  installPath: InstallPath | null | undefined
+): GamePath | null {
+  if (!installPath || !installPath.type || !installPath.path) return null;
+
+  let foundPath: string | null = null;
+
+  switch (installPath.type) {
+    case 'steam':
+      foundPath = findSteamGame(installPath.path);
+      return {
+        platform: 'steam',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'gog':
+      foundPath = findGOGGame(installPath.path);
+      return {
+        platform: 'gog',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'epic':
+      foundPath = findEpicGame(installPath.path);
+      return {
+        platform: 'epic',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'rockstar':
+      foundPath = findRockstarGame(installPath.path);
+      return {
+        platform: 'rockstar',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'emulator':
+    case 'other':
+      // These platforms require manual path selection
+      return {
+        platform: installPath.type,
+        path: '',
+        exists: false,
+      };
+  }
+
+  return null;
+}
+
 /**
  * Detect all possible paths for a game
  */
-function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
+export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
   const results: GamePath[] = [];
 
   for (const installPath of installPaths) {
-    if (!installPath.type || !installPath.path) continue;
-
-    let foundPath: string | null = null;
-
-    switch (installPath.type) {
-      case 'steam':
-        foundPath = findSteamGame(installPath.path);
-        results.push({
-          platform: 'steam',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'gog':
-        foundPath = findGOGGame(installPath.path);
-        results.push({
-          platform: 'gog',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'epic':
-        foundPath = findEpicGame(installPath.path);
-        results.push({
-          platform: 'epic',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'rockstar':
-        foundPath = findRockstarGame(installPath.path);
-        results.push({
-          platform: 'rockstar',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'emulator':
-      case 'other':
-        // These platforms require manual path selection
-        results.push({
-          platform: installPath.type,
-          path: '',
-          exists: false,
-        });
-        break;
+    const gamePath = detectGamePath(installPath);
+    if (gamePath) {
+      results.push(gamePath);
     }
   }
 
