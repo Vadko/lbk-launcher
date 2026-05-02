@@ -8,6 +8,7 @@ export type FilterCounts = FilterCountsResult & {
   'available-in-steam': number;
   'owned-gog-games': number;
   'owned-epic-games': number;
+  'installed-xbox-games': number;
 };
 
 const INITIAL_COUNTS: FilterCounts = {
@@ -16,6 +17,7 @@ const INITIAL_COUNTS: FilterCounts = {
   'available-in-steam': 0,
   'owned-gog-games': 0,
   'owned-epic-games': 0,
+  'installed-xbox-games': 0,
   'with-achievements': 0,
   'with-voice': 0,
   planned: 0,
@@ -42,6 +44,7 @@ export function useFilterCounts() {
         steamLibraryAppIds,
         gogTitles,
         epicTitles,
+        xboxFolderNames,
       ] = await Promise.all([
         window.electronAPI.fetchFilterCounts(),
         window.electronAPI.getAllInstalledGameIds(),
@@ -49,6 +52,7 @@ export function useFilterCounts() {
         window.electronAPI.getSteamLibraryAppIds(),
         window.electronAPI.getGogLibrary(),
         window.electronAPI.getEpicLibrary(),
+        window.electronAPI.getXboxInstalledPaths(),
       ]);
 
       if (!isMountedRef.current) return;
@@ -58,6 +62,7 @@ export function useFilterCounts() {
         steamLibraryCount,
         gogLibraryResult,
         epicLibraryResult,
+        xboxLibraryResult,
       ] = await Promise.all([
         installedPaths.length > 0
           ? window.electronAPI.findGamesByInstallPaths(installedPaths)
@@ -71,6 +76,9 @@ export function useFilterCounts() {
         epicTitles.length > 0
           ? window.electronAPI.findGamesByTitles(epicTitles)
           : Promise.resolve({ games: [], total: 0 }),
+        xboxFolderNames.length > 0
+          ? window.electronAPI.findGamesByXboxPaths(xboxFolderNames)
+          : Promise.resolve({ games: [], total: 0 }),
       ]);
 
       if (!isMountedRef.current) return;
@@ -82,6 +90,7 @@ export function useFilterCounts() {
         'available-in-steam': steamLibraryCount,
         'owned-gog-games': gogLibraryResult.total,
         'owned-epic-games': epicLibraryResult.total,
+        'installed-xbox-games': xboxLibraryResult.total,
       });
     } catch (err) {
       console.error('[useFilterCounts] Error:', err);
