@@ -1,6 +1,6 @@
 /**
  * Game Detector - Main Entry Point
- * Detects installed games from various platforms (Steam, Epic, GOG, Rockstar)
+ * Detects installed games from various platforms (Steam, Epic, GOG, Rockstar, Xbox)
  */
 
 import type { InstallPath } from '../../shared/types';
@@ -9,6 +9,7 @@ import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
 import { findSteamGame, getInstalledSteamGamePaths } from './steam';
 import type { GamePath } from './types'; // Used locally
+import { findXboxGame, getInstalledXboxGamePaths } from './xbox';
 
 // ============================================================================
 // Re-exports
@@ -82,6 +83,15 @@ function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
         });
         break;
 
+      case 'xbox':
+        foundPath = findXboxGame(installPath.path);
+        results.push({
+          platform: 'xbox',
+          path: foundPath || '',
+          exists: !!foundPath,
+        });
+        break;
+
       case 'emulator':
       case 'other':
         // These platforms require manual path selection
@@ -140,6 +150,13 @@ export function getAllInstalledGamePaths(): string[] {
     console.error('[GameDetector] Error getting Rockstar games:', error);
   }
 
+  // Xbox games
+  try {
+    installedPaths.push(...getInstalledXboxGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting Xbox games:', error);
+  }
+
   console.log(
     `[GameDetector] Found ${installedPaths.length} installed game paths on system`
   );
@@ -150,6 +167,8 @@ export function getAllInstalledGamePaths(): string[] {
 export { getEpicLibrary } from './epic';
 export { getGogLibrary } from './gog';
 export { getLutrisSlug } from './lutris';
+// Xbox installed-games (no library API; only what's on disk)
+export { getInstalledXboxGamePaths } from './xbox';
 
 interface HeroicGameInfo {
   appName: string;
