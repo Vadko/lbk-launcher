@@ -24,6 +24,8 @@ type ExcludedFields =
   | 'voice_archive_file_list'
   | 'achievements_archive_file_list'
   | 'epic_archive_file_list'
+  | 'gog_archive_file_list'
+  | 'xbox_archive_file_list'
   | 'name_fts'
   | 'name_search';
 
@@ -86,6 +88,12 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'epic_archive_path',
   'epic_archive_hash',
   'epic_archive_size',
+  'gog_archive_path',
+  'gog_archive_hash',
+  'gog_archive_size',
+  'xbox_archive_path',
+  'xbox_archive_hash',
+  'xbox_archive_size',
   'ai',
   'hide',
   'additional_path',

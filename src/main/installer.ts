@@ -245,11 +245,15 @@ export async function installTranslation(
     // 4. Check available disk space
     let requiredSpace = 0;
     if (installText) {
-      // Use epic_archive_size if platform is 'epic' and epic_archive is available
-      const textArchiveSize =
-        gamePath.platform === 'epic' && game.epic_archive_size
-          ? game.epic_archive_size
-          : game.archive_size;
+      // Use platform-specific archive size if available, otherwise fall back to default
+      let textArchiveSize: string | null | undefined = game.archive_size;
+      if (gamePath.platform === 'epic' && game.epic_archive_size) {
+        textArchiveSize = game.epic_archive_size;
+      } else if (gamePath.platform === 'gog' && game.gog_archive_size) {
+        textArchiveSize = game.gog_archive_size;
+      } else if (gamePath.platform === 'xbox' && game.xbox_archive_size) {
+        textArchiveSize = game.xbox_archive_size;
+      }
       if (textArchiveSize) {
         requiredSpace += parseSizeToBytes(textArchiveSize);
       }
@@ -287,13 +291,22 @@ export async function installTranslation(
     // 5.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
-      // Use epic_archive if platform is 'epic' and epic_archive is available
-      const useEpicArchive = gamePath.platform === 'epic' && game.epic_archive_path;
-      const archivePath = useEpicArchive ? game.epic_archive_path : game.archive_path;
-      const archiveHash = useEpicArchive ? game.epic_archive_hash : game.archive_hash;
+      // Use platform-specific archive if available, otherwise fall back to default
+      let archivePath = game.archive_path;
+      let archiveHash = game.archive_hash;
 
-      if (useEpicArchive) {
+      if (gamePath.platform === 'epic' && game.epic_archive_path) {
+        archivePath = game.epic_archive_path;
+        archiveHash = game.epic_archive_hash;
         console.log('[Installer] Using Epic-specific archive');
+      } else if (gamePath.platform === 'gog' && game.gog_archive_path) {
+        archivePath = game.gog_archive_path;
+        archiveHash = game.gog_archive_hash;
+        console.log('[Installer] Using GOG-specific archive');
+      } else if (gamePath.platform === 'xbox' && game.xbox_archive_path) {
+        archivePath = game.xbox_archive_path;
+        archiveHash = game.xbox_archive_hash;
+        console.log('[Installer] Using Xbox-specific archive');
       }
 
       textFiles = await downloadAndExtractArchive({

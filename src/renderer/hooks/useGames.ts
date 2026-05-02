@@ -204,6 +204,32 @@ export function useGames({
         return;
       }
 
+      // Special handling for Xbox-installed games (parsed from .GamingRoot)
+      if (specialFilter === 'installed-xbox-games') {
+        const folderNames = await window.electronAPI.getXboxInstalledPaths();
+
+        if (signal.aborted) return;
+
+        if (folderNames.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByXboxPaths(
+          folderNames,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        if (signal.aborted) return;
+
+        setGames(result.games);
+        setTotal(result.total);
+        return;
+      }
+
       // Спеціальна обробка для ігор з перекладом досягнень
       if (specialFilter === 'with-achievements') {
         const params: GetGamesParams = {
@@ -379,7 +405,8 @@ export function useGames({
           specialFilter === 'installed-translations' ||
           specialFilter === 'available-in-steam' ||
           specialFilter === 'owned-gog-games' ||
-          specialFilter === 'owned-epic-games'
+          specialFilter === 'owned-epic-games' ||
+          specialFilter === 'installed-xbox-games'
         ) {
           if (index !== -1) {
             // Гра є в списку - оновити дані
