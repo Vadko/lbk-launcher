@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ListFilter } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useInstalledGamesForHome } from '@/renderer/queries/useHomePageGames';
@@ -105,7 +105,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             onClick={handleViewAll}
           >
             Переглянути всі
-            <ArrowRight size={24} />
+            <ListFilter size={14} />
           </Button>
         )}
       </div>
