@@ -415,6 +415,10 @@ export type Database = {
           fundraising_goal: number | null
           game_description: string | null
           game_id: string
+          gog_archive_file_list: Json | null
+          gog_archive_hash: string | null
+          gog_archive_path: string | null
+          gog_archive_size: string | null
           hide: boolean
           id: string
           install_paths:
@@ -448,6 +452,10 @@ export type Database = {
           voice_archive_size: string | null
           voice_progress: number | null
           website: string | null
+          xbox_archive_file_list: Json | null
+          xbox_archive_hash: string | null
+          xbox_archive_path: string | null
+          xbox_archive_size: string | null
           youtube: string | null
         }
         Insert: {
@@ -480,6 +488,10 @@ export type Database = {
           fundraising_goal?: number | null
           game_description?: string | null
           game_id: string
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -513,6 +525,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Update: {
@@ -545,6 +561,10 @@ export type Database = {
           fundraising_goal?: number | null
           game_description?: string | null
           game_id?: string
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -578,6 +598,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -639,6 +663,10 @@ export type Database = {
           fundraising_current: number | null
           fundraising_goal: number | null
           game_description: string | null
+          gog_archive_file_list: Json | null
+          gog_archive_hash: string | null
+          gog_archive_path: string | null
+          gog_archive_size: string | null
           hide: boolean
           id: string
           install_paths:
@@ -677,6 +705,10 @@ export type Database = {
           voice_archive_size: string | null
           voice_progress: number | null
           website: string | null
+          xbox_archive_file_list: Json | null
+          xbox_archive_hash: string | null
+          xbox_archive_path: string | null
+          xbox_archive_size: string | null
           youtube: string | null
         }
         Insert: {
@@ -710,6 +742,10 @@ export type Database = {
           fundraising_current?: number | null
           fundraising_goal?: number | null
           game_description?: string | null
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -748,6 +784,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Update: {
@@ -781,6 +821,10 @@ export type Database = {
           fundraising_current?: number | null
           fundraising_goal?: number | null
           game_description?: string | null
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -819,6 +863,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -1989,6 +2037,7 @@ export type Database = {
         | "epic"
         | "rockstar"
         | "other"
+        | "xbox"
       user_role: "admin" | "moderator" | "translator" | "user"
     }
     CompositeTypes: {
@@ -2130,7 +2179,15 @@ export const Constants = {
       ],
       feedback_status: ["new", "in_progress", "fixed", "rejected"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],
-      install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
+      install_source: [
+        "steam",
+        "gog",
+        "emulator",
+        "epic",
+        "rockstar",
+        "other",
+        "xbox",
+      ],
       user_role: ["admin", "moderator", "translator", "user"],
     },
   },
