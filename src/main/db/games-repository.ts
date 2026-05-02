@@ -640,6 +640,63 @@ export class GamesRepository {
   }
 
   /**
+   * Знайти ігри за списком назв папок Xbox-інсталяцій. Метчимо проти
+   * `install_paths` JSON-поля (елементи `{type: 'xbox', path: 'FolderName'}`).
+   * SQLite не вміє JSON-аррей-індекси, тож використовуємо json_each для
+   * розгортання install_paths і LIKE-патерн для пошуку відповідного запису.
+   */
+  findGamesByXboxPaths(
+    folderNames: string[],
+    searchQuery?: string,
+    hideAiTranslations = false,
+    sortOrder: SortOrderType = 'name'
+  ): GetGamesResult {
+    const trimmed = folderNames.map((f) => f.trim()).filter((f) => f.length > 0);
+    if (trimmed.length === 0) {
+      return { games: [], total: 0 };
+    }
+
+    const whereConditions = ['approved = 1', 'hide = 0'];
+    const placeholders = trimmed.map(() => '?').join(',');
+    // Кожен елемент install_paths — JSON {type, path}. Шукаємо такі де
+    // type='xbox' і path COLLATE NOCASE IN (folderNames).
+    whereConditions.push(`
+      EXISTS (
+        SELECT 1
+        FROM json_each(games.install_paths)
+        WHERE json_extract(json_each.value, '$.type') = 'xbox'
+          AND json_extract(json_each.value, '$.path') COLLATE NOCASE IN (${placeholders})
+      )
+    `);
+
+    const queryParams: (string | number)[] = [...trimmed];
+
+    if (hideAiTranslations) {
+      whereConditions.push('ai IS NULL');
+    }
+
+    if (searchQuery) {
+      const variations = getSearchVariations(searchQuery);
+      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
+      whereConditions.push(
+        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+      );
+      queryParams.push(ftsQuery);
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT *
+      FROM games
+      WHERE ${whereConditions.join(' AND ')}
+      ORDER BY ${this.buildOrderClause(sortOrder)}
+    `);
+
+    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const games = rows.map((row) => this.rowToGame(row));
+    return { games, total: games.length };
+  }
+
+  /**
    * Знайти ігри за списком назв (exact match, case-insensitive)
    */
   findGamesByTitles(
