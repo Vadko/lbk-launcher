@@ -3,6 +3,7 @@ import { Check, Users, X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -24,6 +25,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
 }) => {
   const { selectedGame, setSelectedGame, installedGames, gamesWithUpdates } = useStore();
   const { isGamepadMode, setNavigationArea } = useGamepadModeStore();
+  const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
   const handleSelect = (game: Game) => {
     setSelectedGame(game);
@@ -138,6 +140,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                           isInstalled={isInstalled}
                           aiType={game.ai}
                           isTranslationAvailable={isTranslationAvailable}
+                          isFavorite={isFavoriteGame(game.id)}
                         />
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">

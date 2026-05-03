@@ -63,6 +63,36 @@ export function useGames({
     setError(null);
 
     try {
+      // Спеціальна обробка для улюблених перекладів
+      if (specialFilter === 'favorite-translations') {
+        const { useSettingsStore } = await import('../store/useSettingsStore');
+        const favoriteGameIds = useSettingsStore.getState().favoriteGameIds;
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        if (favoriteGameIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Отримати улюблені ігри (з SQL фільтрацією пошуку та AI)
+        const favoriteGames = await window.electronAPI.fetchGamesByIds(
+          favoriteGameIds,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        setGames(favoriteGames);
+        setTotal(favoriteGames.length);
+        return;
+      }
+
       // Спеціальна обробка для встановлених українізаторів
       if (specialFilter === 'installed-translations') {
         const installedGameIds = [

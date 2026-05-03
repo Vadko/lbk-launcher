@@ -19,11 +19,14 @@ interface SettingsStore {
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
   selectedAuthors: string[];
+  favoriteGameIds: string[];
   notificationSoundsEnabled: boolean;
   setSortOrder: (order: SortOrderType) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
   setSelectedAuthors: (authors: string[]) => void;
+  toggleFavoriteGame: (gameId: string) => void;
+  isFavoriteGame: (gameId: string) => boolean;
   toggleAnimations: () => void;
   toggleAppUpdateNotifications: () => void;
   toggleGameUpdateNotifications: () => void;
@@ -40,7 +43,7 @@ interface SettingsStore {
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       sortOrder: 'name',
       animationsEnabled: true,
       appUpdateNotificationsEnabled: true,
@@ -55,6 +58,7 @@ export const useSettingsStore = create<SettingsStore>()(
       sidebarWidth: 320,
       specialFilter: null,
       selectedAuthors: [],
+      favoriteGameIds: [],
       notificationSoundsEnabled: true,
       setSortOrder: (sortOrder) => set({ sortOrder }),
 
@@ -64,6 +68,16 @@ export const useSettingsStore = create<SettingsStore>()(
       setSpecialFilter: (specialFilter) => set({ specialFilter }),
 
       setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
+
+      toggleFavoriteGame: (gameId) =>
+        set((state) => {
+          const favoriteGameIds = state.favoriteGameIds.includes(gameId)
+            ? state.favoriteGameIds.filter((id) => id !== gameId)
+            : [...state.favoriteGameIds, gameId];
+          return { favoriteGameIds };
+        }),
+
+      isFavoriteGame: (gameId) => get().favoriteGameIds.includes(gameId),
 
       toggleAnimations: () =>
         set((state) => ({ animationsEnabled: !state.animationsEnabled })),
@@ -119,6 +133,7 @@ export const useSettingsStore = create<SettingsStore>()(
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedAuthors: state.selectedAuthors,
+        favoriteGameIds: state.favoriteGameIds,
         notificationSoundsEnabled: state.notificationSoundsEnabled,
       }),
     }

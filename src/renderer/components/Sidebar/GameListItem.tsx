@@ -39,9 +39,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+    const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
+    const isFavorite = isFavoriteGame(game.id);
 
     const averageProgress = Math.round(
       (game.translation_progress + game.editing_progress) / 2
@@ -126,6 +128,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 aiType={game.ai}
                 floatPosition="default"
                 isTranslationAvailable={isTranslationAvailable}
+                isFavorite={isFavorite}
               />
             )}
           </div>
@@ -250,6 +253,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               isInstalled={isInstalled}
               aiType={game.ai}
               isTranslationAvailable={isTranslationAvailable}
+              isFavorite={isFavorite}
             />
           </div>
 
