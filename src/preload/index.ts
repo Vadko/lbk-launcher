@@ -81,6 +81,20 @@ const electronAPI: ElectronAPI = {
     ),
   getGogLibrary: () => ipcRenderer.invoke('get-gog-library'),
   getEpicLibrary: () => ipcRenderer.invoke('get-epic-library'),
+  getXboxInstalledPaths: () => ipcRenderer.invoke('get-xbox-installed-paths'),
+  findGamesByXboxPaths: (
+    folderNames: string[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean,
+    sortOrder: SortOrderType = 'name'
+  ) =>
+    ipcRenderer.invoke(
+      'find-games-by-xbox-paths',
+      folderNames,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    ),
   detectGamePlatforms: (game: Game) => ipcRenderer.invoke('detect-game-platforms', game),
   installTranslation: (game: Game, options: InstallOptions, customGamePath?: string) =>
     ipcRenderer.invoke('install-translation', game, options, customGamePath),

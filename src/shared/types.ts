@@ -173,7 +173,14 @@ export interface ElectronAPI {
   ) => Promise<GetGamesResult>;
   getGogLibrary: () => Promise<string[]>;
   getEpicLibrary: () => Promise<string[]>;
-  detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
+  getXboxInstalledPaths: () => Promise<string[]>;
+  findGamesByXboxPaths: (
+    folderNames: string[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
+  ) => Promise<GetGamesResult>;
+   detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
   installTranslation: (
     game: Game,
     options: InstallOptions,

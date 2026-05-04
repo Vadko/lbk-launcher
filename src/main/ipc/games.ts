@@ -32,6 +32,7 @@ import {
   getGOGGameId,
   getGogLibrary,
   getHeroicGame,
+  getInstalledXboxGamePaths,
   getLutrisSlug,
   getSteamLibraryAppIds,
 } from '../game-detector';
@@ -359,6 +360,41 @@ export function setupGamesHandlers(): void {
       return [];
     }
   });
+
+  // Get Xbox installed game folder names (parsed from .GamingRoot)
+  ipcMain.handle('get-xbox-installed-paths', () => {
+    try {
+      return getInstalledXboxGamePaths();
+    } catch (error) {
+      console.error('Error getting Xbox installed paths:', error);
+      return [];
+    }
+  });
+
+  // Find games by Xbox install folder names (matches against install_paths)
+  ipcMain.handle(
+    'find-games-by-xbox-paths',
+    (
+      _,
+      folderNames: string[],
+      searchQuery?: string,
+      hideAiTranslations?: boolean,
+      sortOrder: SortOrderType = 'name'
+    ) => {
+      try {
+        const repo = GamesRepository.getInstance();
+        return repo.findGamesByXboxPaths(
+          folderNames,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
+      } catch (error) {
+        console.error('Error finding games by Xbox paths:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
 
   // Launch game
   ipcMain.handle('launch-game', async (_, game: Game) => {

@@ -6,6 +6,7 @@ export const getReadablePlatform = (platform: string): string => {
     epic: 'Epic Games Store',
     gog: 'GOG',
     rockstar: 'Rockstar Games Launcher',
+    xbox: 'Xbox app',
     emulator: 'Емулятор',
     other: 'Інша',
   };

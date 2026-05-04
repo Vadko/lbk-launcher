@@ -14,6 +14,7 @@ import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
+import { trackEvent } from '../utils/analytics';
 
 interface UseInstallationParams {
   selectedGame: Game | null;
@@ -142,6 +143,17 @@ export function useInstallation({
           statusMessage: null,
         });
 
+        // Track download start event
+        trackEvent('Actions', {
+          'Game Id': selectedGame.id,
+          'Game Name': selectedGame.name,
+          'Install Text': effectiveOptions.installText,
+          'Install Voice': effectiveOptions.installVoice,
+          'Install Achievements': effectiveOptions.installAchievements,
+          Team: selectedGame.team || 'Unknown',
+          Type: 'install',
+        });
+
         const unsubDownloadProgress = window.electronAPI.onDownloadProgress?.(
           (gameId: string, progress: DownloadProgress) => {
             setInstallationProgress(gameId, {
@@ -257,6 +269,29 @@ export function useInstallation({
         useStore.getState().clearGameUpdate(selectedGame.id);
         // Clear notified version so next version update will show notification again
         useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
+
+        // Track installation event
+        if (isUpdateAvailable) {
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            'Install Text': effectiveOptions.installText,
+            'Install Voice': effectiveOptions.installVoice,
+            'Install Achievements': effectiveOptions.installAchievements,
+            Type: 'updated',
+          });
+        } else {
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            'Install Text': effectiveOptions.installText,
+            'Install Voice': effectiveOptions.installVoice,
+            'Install Achievements': effectiveOptions.installAchievements,
+            Type: 'installed',
+          });
+        }
 
         let message = isUpdateAvailable
           ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
@@ -398,6 +433,14 @@ export function useInstallation({
                 resolve(false);
                 return;
               }
+
+              // Track removal of conflicting translation
+              trackEvent('Actions', {
+                'Game Id': conflict.gameId,
+                'Game Name': conflict.gameName,
+                Team: conflict.team || 'Unknown',
+                Type: 'delete',
+              });
 
               // Refresh installed translations cache
               await useStore.getState().loadInstalledGamesFromSystem();
@@ -669,6 +712,14 @@ export function useInstallation({
             });
             return;
           }
+
+          // Track uninstallation event
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            Type: 'delete',
+          });
 
           // Clear notified version so future installs will get notifications
           useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
