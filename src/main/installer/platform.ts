@@ -304,9 +304,7 @@ export async function runInstaller(
         if (isAppImage) extraEnv.APPIMAGE_EXTRACT_AND_RUN = '1';
         if (inFlatpak) extraEnv.ELECTRON_DISABLE_SANDBOX = '1';
         const env =
-          Object.keys(extraEnv).length > 0
-            ? { ...process.env, ...extraEnv }
-            : undefined;
+          Object.keys(extraEnv).length > 0 ? { ...process.env, ...extraEnv } : undefined;
 
         const child = spawn(installerPath, [], {
           cwd: extractDir,
