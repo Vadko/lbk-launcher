@@ -293,12 +293,20 @@ export async function runInstaller(
       onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
 
       await new Promise<void>((resolve, reject) => {
-        // AppImage needs APPIMAGE_EXTRACT_AND_RUN=1 to bypass FUSE
-        // (e.g. on Steam Deck or when launched from another AppImage)
         const isAppImage = installerPath.toLowerCase().endsWith('.appimage');
-        const env = isAppImage
-          ? { ...process.env, APPIMAGE_EXTRACT_AND_RUN: '1' }
-          : undefined;
+        const inFlatpak = !!process.env.FLATPAK_ID;
+        // APPIMAGE_EXTRACT_AND_RUN=1 bypasses FUSE for AppImages (Steam Deck,
+        // nested AppImages). ELECTRON_DISABLE_SANDBOX=1 lets Electron-based
+        // installers run inside Flatpak where chrome-sandbox can't be setuid.
+        // Both are env vars, so they also propagate through wrapper scripts
+        // (.sh/.run/.bin) that internally spawn an AppImage or Electron binary.
+        const extraEnv: NodeJS.ProcessEnv = {};
+        if (isAppImage) extraEnv.APPIMAGE_EXTRACT_AND_RUN = '1';
+        if (inFlatpak) extraEnv.ELECTRON_DISABLE_SANDBOX = '1';
+        const env =
+          Object.keys(extraEnv).length > 0
+            ? { ...process.env, ...extraEnv }
+            : undefined;
 
         const child = spawn(installerPath, [], {
           cwd: extractDir,
