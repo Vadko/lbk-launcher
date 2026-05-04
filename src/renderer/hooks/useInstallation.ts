@@ -3,9 +3,11 @@ import type {
   ConflictingTranslation,
   DownloadProgress,
   Game,
+  GamePath,
   InstallationInfo,
   InstallOptions,
   InstallResult,
+  Platform,
 } from '../../shared/types';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
@@ -45,6 +47,7 @@ interface UseInstallationResult {
   showInstallOptions: boolean;
   setShowInstallOptions: (show: boolean) => void;
   pendingInstallPath: string | undefined;
+  availablePlatforms: GamePath[];
 }
 
 export function useInstallation({
@@ -73,6 +76,7 @@ export function useInstallation({
     InstallOptions | undefined
   >();
   const [selectedProton, setSelectedProton] = useState<string | undefined>();
+  const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
 
   const gameProgress = selectedGame
     ? getInstallationProgress(selectedGame.id)
@@ -98,13 +102,15 @@ export function useInstallation({
     async (customGamePath?: string, options?: InstallOptions) => {
       if (!selectedGame) return;
 
-      const platform = selectedGame.platforms[0] || 'steam';
+      const platform =
+        options?.platform || (selectedGame.platforms[0] as Platform) || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
           createBackup: createBackupBeforeInstall,
           installText: true,
           installVoice: false,
           installAchievements: false,
+          platform,
         };
 
       if (options) {
@@ -175,7 +181,6 @@ export function useInstallation({
         try {
           result = await window.electronAPI.installTranslation(
             selectedGame,
-            platform,
             effectiveOptions,
             customGamePath
           );
@@ -492,6 +497,10 @@ export function useInstallation({
           return;
         }
       }
+
+      // Detect available platforms for the game
+      const platforms = await window.electronAPI.detectGamePlatforms(selectedGame);
+      await setAvailablePlatforms(platforms);
 
       setPendingInstallPath(customGamePath);
       setShowInstallOptions(true);
@@ -944,5 +953,6 @@ export function useInstallation({
     showInstallOptions,
     setShowInstallOptions,
     pendingInstallPath,
+    availablePlatforms,
   };
 }

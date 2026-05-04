@@ -33,17 +33,10 @@ import { getMainWindow } from '../window';
 export function setupInstallerHandlers(): void {
   ipcMain.handle(
     'install-translation',
-    async (
-      _,
-      game: Game,
-      platform: string,
-      options: InstallOptions,
-      customGamePath?: string
-    ) => {
+    async (_, game: Game, options: InstallOptions, customGamePath?: string) => {
       try {
         await installTranslation(
           game,
-          platform,
           options,
           customGamePath,
           (downloadProgress) => {

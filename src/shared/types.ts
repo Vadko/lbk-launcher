@@ -14,6 +14,12 @@ export type InstallPath = Database['public']['CompositeTypes']['install_path_ent
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated';
 
+export interface GamePath {
+  platform: Platform;
+  path: string;
+  exists: boolean;
+}
+
 interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
@@ -30,6 +36,7 @@ export interface InstallationInfo {
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
   installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
+  installedPlatform?: Platform; // Platform on which the localization was installed (steam, epic, gog, etc.)
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;
@@ -75,6 +82,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  platform: Platform | 'auto';
   protonPath?: string;
 }
 
@@ -172,9 +180,9 @@ export interface ElectronAPI {
     hideAiTranslations?: boolean,
     sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
+  detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
   installTranslation: (
     game: Game,
-    platform: string,
     options: InstallOptions,
     customGamePath?: string
   ) => Promise<InstallResult>;

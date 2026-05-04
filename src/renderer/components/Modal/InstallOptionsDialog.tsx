@@ -3,13 +3,22 @@ import {
   Check,
   FileText,
   Info,
+  Monitor,
   Shield,
   Trash2,
   Trophy,
   Volume2,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Game, InstallationInfo, InstallOptions } from '../../../shared/types';
+import type {
+  Game,
+  GamePath,
+  InstallationInfo,
+  InstallOptions,
+  Platform,
+} from '../../../shared/types';
+import { getReadablePlatform } from '../../helpers/getReadablePlatform';
+import { SelectDropdown, type SelectOption } from '../ui/SelectDropdown';
 import { Modal } from './Modal';
 
 interface InstallOptionsDialogProps {
@@ -23,6 +32,7 @@ interface InstallOptionsDialogProps {
   defaultCreateBackup: boolean;
   installationInfo?: InstallationInfo;
   isCustomPath?: boolean; // True if installed via custom path (not Steam folder)
+  availablePlatforms?: GamePath[]; // List of platforms with availability info
 }
 
 export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
@@ -33,6 +43,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   defaultCreateBackup,
   installationInfo,
   isCustomPath,
+  availablePlatforms = [],
 }) => {
   // Check what's available and what's already installed
   const isSteamGame = game.platforms?.includes('steam');
@@ -51,11 +62,33 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     installationInfo?.components?.achievements?.installed ?? false;
   const isReinstall = !!installationInfo;
 
+  // Filter platforms to only show those that the game supports
+  const supportedPlatforms = useMemo(() => {
+    if (!availablePlatforms || availablePlatforms.length === 0) {
+      return [];
+    }
+    return availablePlatforms.filter((p) => game.platforms?.includes(p.platform));
+  }, [availablePlatforms, game.platforms]);
+
+  // Determine default platform
+  const defaultPlatform = useMemo((): Platform | 'auto' => {
+    // If there's an installation, use its platform
+    if (installationInfo) {
+      // Try to find platform from install path
+      const firstAvailable = supportedPlatforms.find((p) => p.exists);
+      return firstAvailable?.platform || 'auto';
+    }
+    return 'auto';
+  }, [installationInfo, supportedPlatforms]);
+
   // State for checkboxes - initialize based on what's installed or defaults
   const [createBackup, setCreateBackup] = useState(defaultCreateBackup);
   const [installText, setInstallText] = useState(true);
   const [installVoice, setInstallVoice] = useState(true);
   const [installAchievements, setInstallAchievements] = useState(true);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'auto'>(
+    defaultPlatform
+  );
 
   // Reset state when dialog opens
   /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
@@ -67,6 +100,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       // Set defaults based on what's already installed
       setInstallVoice(isVoiceInstalled || !isReinstall);
       setInstallAchievements(isAchievementsInstalled || !isReinstall);
+      setSelectedPlatform(defaultPlatform);
     }
   }, [
     isOpen,
@@ -74,6 +108,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     isVoiceInstalled,
     isAchievementsInstalled,
     isReinstall,
+    defaultPlatform,
   ]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -97,6 +132,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         installText,
         installVoice: hasVoiceArchive ? installVoice : false,
         installAchievements: hasAchievementsArchive ? installAchievements : false,
+        platform: selectedPlatform,
       },
       {
         removeVoice: willRemoveVoice,
@@ -158,6 +194,40 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     hasAchievementsArchive,
   ]);
 
+  // Prepare platform options for dropdown
+  const platformOptions = useMemo(() => {
+    const firstExisting = supportedPlatforms.find((p) => p.exists);
+    const options: SelectOption[] = [
+      {
+        name: firstExisting
+          ? `Автоматично(${getReadablePlatform(firstExisting.platform)})`
+          : 'Ручний вибір (не знайдено автоматично)',
+        value: 'auto',
+      },
+    ];
+
+    supportedPlatforms.forEach((platform) => {
+      const platformName = getReadablePlatform(platform.platform);
+      options.push({
+        name: platformName,
+        isDisabled: !platform.exists,
+        children: (
+          <>
+            <span>{platformName}</span>
+            <span
+              className={`ml-auto ${platform.exists ? 'text-color-main' : 'text-text-muted'}`}
+            >
+              {platform.exists ? 'Знайдено' : 'Не знайдено'}
+            </span>
+          </>
+        ),
+        value: platform.platform,
+      });
+    });
+
+    return options;
+  }, [supportedPlatforms]);
+
   // При новому встановленні - хоча б один компонент має бути вибраний
   // При перевстановленні - будь-яка зміна
   const hasChanges = isReinstall
@@ -183,6 +253,25 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             ? `Оберіть компоненти для "${game.name}":`
             : `Виберіть опції для встановлення українізатора "${game.name}":`}
         </p>
+
+        {/* Platform selection - show if multiple platforms available */}
+        {supportedPlatforms.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2">
+              <Monitor size={18} className="text-color-accent" />
+              <span className="font-medium text-text-main">Платформа гри</span>
+            </label>
+            <SelectDropdown
+              options={platformOptions}
+              selectedValue={selectedPlatform}
+              onSelectionChange={(value) =>
+                setSelectedPlatform(value as Platform | 'auto')
+              }
+              placeholder="Оберіть платформу"
+              maxHeight={500}
+            />
+          </div>
+        )}
 
         {/* Backup option - only show for new installs */}
         {!isReinstall && (

@@ -10,7 +10,7 @@ import type {
   InstallOptions,
   PausedDownloadState,
 } from '../shared/types';
-import { getFirstAvailableGamePath } from './game-detector';
+import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 // Import all utilities from installer modules
 import { extractArchive } from './installer/archive';
 import {
@@ -179,19 +179,18 @@ export async function resumeDownload(
  */
 export async function installTranslation(
   game: Game,
-  platform: string,
   options: InstallOptions,
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
-  const { createBackup, installText, installVoice, installAchievements } = options;
+  const { createBackup, installText, installVoice, installAchievements, platform } =
+    options;
 
   try {
     console.log(`[Installer] ========== INSTALLATION START ==========`);
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
     console.log(`[Installer] Options:`, JSON.stringify(options));
-    console.log(`[Installer] Requested platform: ${platform}`);
 
     // 1. Check platform compatibility for installer-based translations
     const platformError = checkPlatformCompatibility(game);
@@ -212,9 +211,18 @@ export async function installTranslation(
       );
     }
 
-    const gamePath = customGamePath
-      ? { platform, path: customGamePath, exists: true }
-      : getFirstAvailableGamePath(game.install_paths || []);
+    let gamePath: ReturnType<typeof getFirstAvailableGamePath>;
+    if (customGamePath) {
+      const customPlatform = platform === 'auto' ? 'steam' : platform;
+      gamePath = { platform: customPlatform, path: customGamePath, exists: true };
+    } else if (platform === 'auto') {
+      gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    } else {
+      const selectedInstallPath = (game.install_paths || []).find(
+        (p) => p.type === platform
+      );
+      gamePath = detectGamePath(selectedInstallPath);
+    }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
@@ -350,9 +358,13 @@ export async function installTranslation(
       installAchievements,
       hasArchivePath: !!game.achievements_archive_path,
       archivePath: game.achievements_archive_path,
-      platform,
+      platform: gamePath.platform,
     });
-    if (installAchievements && game.achievements_archive_path && platform === 'steam') {
+    if (
+      installAchievements &&
+      game.achievements_archive_path &&
+      gamePath.platform === 'steam'
+    ) {
       const achievementsExtractDir = path.join(
         downloadDir,
         `${game.id}_achievements_extract`
@@ -434,6 +446,7 @@ export async function installTranslation(
         protonPath: options.protonPath,
         installerPath: path.join(fullTargetPath, installerFileName),
         installedFiles: [],
+        installedPlatform: gamePath.platform,
         components: { text: { installed: true, files: [] } },
       };
 
@@ -498,6 +511,7 @@ export async function installTranslation(
       hasBackup: createBackup,
       isCustomPath: !!customGamePath,
       installedFiles: prefixPaths(installedFiles),
+      installedPlatform: gamePath.platform,
       components: {
         text: { installed: installText, files: prefixPaths(textFiles) },
         ...(installVoice && voiceFiles.length > 0
