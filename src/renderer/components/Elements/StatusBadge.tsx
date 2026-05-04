@@ -32,17 +32,22 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       capsuleColor: 'bg-[rgba(148,163,184,0.25)]',
       textColor: 'text-[rgb(148,163,184)]',
     },
+    unknown: {
+      textLabel: 'Невідомо',
+      capsuleColor: 'bg-[rgba(255,164,122,0.25)]',
+      textColor: 'text-color-accent',
+    },
   };
+
+  const config = badgeConfig[status] || badgeConfig['unknown'];
 
   return (
     <span
-      className={`${className} ${badgeConfig[status].textColor} ${
-        style === 'capsule'
-          ? `py-1 px-2  rounded-xl ${badgeConfig[status].capsuleColor}`
-          : ''
+      className={`${className} ${config.textColor} ${
+        style === 'capsule' ? `py-1 px-2  rounded-xl ${config.capsuleColor}` : ''
       }`}
     >
-      {badgeConfig[status].textLabel}
+      {config.textLabel}
     </span>
   );
 };

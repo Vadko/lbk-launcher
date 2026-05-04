@@ -252,6 +252,7 @@ export const MainContent: React.FC = () => {
     showInstallOptions,
     setShowInstallOptions,
     pendingInstallPath,
+    availablePlatforms,
   } = useInstallation({
     selectedGame,
     isUpdateAvailable: !!isUpdateAvailable,
@@ -396,6 +397,7 @@ export const MainContent: React.FC = () => {
             installationInfo?.isCustomPath ||
             !isGameInstalledOnSystem
           }
+          availablePlatforms={availablePlatforms}
         />
       )}
 
