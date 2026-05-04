@@ -180,7 +180,7 @@ export interface ElectronAPI {
     hideAiTranslations?: boolean,
     sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
-   detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
+  detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
   installTranslation: (
     game: Game,
     options: InstallOptions,

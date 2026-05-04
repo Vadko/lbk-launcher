@@ -76,7 +76,7 @@ export function detectGamePath(
         path: foundPath || '',
         exists: !!foundPath,
       };
-      
+
     case 'xbox':
       foundPath = findXboxGame(installPath.path);
       return {
