@@ -36,6 +36,7 @@ export interface InstallationInfo {
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
   installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
+  installedPlatform?: Platform; // Platform on which the localization was installed (steam, epic, gog, etc.)
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;

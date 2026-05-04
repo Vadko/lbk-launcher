@@ -433,6 +433,7 @@ export async function installTranslation(
         protonPath: options.protonPath,
         installerPath: path.join(fullTargetPath, installerFileName),
         installedFiles: [],
+        installedPlatform: gamePath.platform,
         components: { text: { installed: true, files: [] } },
       };
 
@@ -497,6 +498,7 @@ export async function installTranslation(
       hasBackup: createBackup,
       isCustomPath: !!customGamePath,
       installedFiles: prefixPaths(installedFiles),
+      installedPlatform: gamePath.platform,
       components: {
         text: { installed: installText, files: prefixPaths(textFiles) },
         ...(installVoice && voiceFiles.length > 0

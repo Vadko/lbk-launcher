@@ -21,6 +21,7 @@ import {
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
+  detectGamePath,
   detectGamePaths,
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
@@ -34,6 +35,7 @@ import {
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
+import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
 import {
   getFeedbackUploadUrls,
@@ -365,7 +367,29 @@ export function setupGamesHandlers(): void {
         JSON.stringify(game.install_paths, null, 2)
       );
 
-      const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      // Check if localization is installed and get platform info
+      const installInfo = await checkInstallation(game);
+      let gamePath = null;
+
+      console.log('[LaunchGame] Installation info:', installInfo);
+
+      // If localization is installed on a specific platform, use that platform
+      if (installInfo?.installedPlatform) {
+        console.log(
+          '[LaunchGame] Using installed platform:',
+          installInfo.installedPlatform
+        );
+        const selectedInstallPath = (game.install_paths || []).find(
+          (p) => p.type === installInfo.installedPlatform
+        );
+        gamePath = detectGamePath(selectedInstallPath);
+      }
+
+      // Fallback: use first available game path if platform not found
+      if (!gamePath || !gamePath.exists) {
+        console.log('[LaunchGame] Falling back to first available game path');
+        gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      }
 
       if (!gamePath || !gamePath.exists) {
         console.error('[LaunchGame] Game not found on system');
