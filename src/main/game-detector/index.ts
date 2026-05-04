@@ -14,6 +14,8 @@ import type { GamePath } from './types'; // Used locally
 // Re-exports
 // ============================================================================
 
+// Epic
+export { getEpicAppName } from './epic';
 // GOG
 export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
 // Steam

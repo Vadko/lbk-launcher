@@ -199,7 +199,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     const firstExisting = supportedPlatforms.find((p) => p.exists);
     const options: SelectOption[] = [
       {
-        name: firstExisting ? `Автоматично(${getReadablePlatform(firstExisting.platform)})` : 'Ручний вибір (не знайдено автоматично)',
+        name: firstExisting
+          ? `Автоматично(${getReadablePlatform(firstExisting.platform)})`
+          : 'Ручний вибір (не знайдено автоматично)',
         value: 'auto',
       },
     ];

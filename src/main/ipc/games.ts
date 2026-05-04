@@ -25,6 +25,7 @@ import {
   detectGamePaths,
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
+  getEpicAppName,
   getEpicLibrary,
   getFirstAvailableGamePath,
   getGOGGalaxyClientPath,
@@ -47,6 +48,7 @@ import {
   trackSupportClick,
   uploadFileToSignedUrl,
 } from '../tracking';
+import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
@@ -418,6 +420,20 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
+        }
+      }
+
+      // For Epic games, try to launch via Epic protocol
+      if (gamePath.platform === 'epic') {
+        const epicAppId = getEpicAppName(gamePath.path);
+
+        if (epicAppId) {
+          const result = await launchEpicGame(epicAppId);
+          if (result.success) {
+            return { success: true };
+          }
+        } else {
+          console.warn('[LaunchGame] Epic App ID not found for:', gamePath.path);
         }
       }
 

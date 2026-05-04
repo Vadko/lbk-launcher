@@ -101,7 +101,8 @@ export function useInstallation({
     async (customGamePath?: string, options?: InstallOptions) => {
       if (!selectedGame) return;
 
-      const platform = options?.platform || selectedGame.platforms[0] as Platform || 'steam';
+      const platform =
+        options?.platform || (selectedGame.platforms[0] as Platform) || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
           createBackup: createBackupBeforeInstall,
