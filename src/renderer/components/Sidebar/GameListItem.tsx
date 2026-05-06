@@ -1,4 +1,4 @@
-import { EyeOff } from 'lucide-react';
+import { Bookmark, BookmarkCheck, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { useImagePreload } from '../../hooks/useImagePreload';
@@ -9,6 +9,7 @@ import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { Loader } from '../ui/Loader';
+import { Button } from '../ui/Button';
 
 interface GameListItemProps {
   game: Game | TrendingGameWithDetails;
@@ -40,6 +41,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const [imageError, setImageError] = useState(false);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
     const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
+    const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
@@ -64,6 +66,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         e.preventDefault();
         onClick();
       }
+    };
+
+    const handleToggleFavorite = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      toggleFavoriteGame(game.id);
     };
 
     // Card style rendering
@@ -133,9 +140,26 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
-            <h3 className="text-lg font-head font-bold truncate" title={game.name}>
-              {game.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3
+                className="text-lg font-head font-bold truncate flex-1"
+                title={game.name}
+              >
+                {game.name}
+              </h3>
+              <Button
+                variant="ghost"
+                onClick={handleToggleFavorite}
+                className="!rounded-lg !px-1"
+                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+              >
+                {isFavorite ? (
+                  <BookmarkCheck size={20} className="text-color-accent" />
+                ) : (
+                  <Bookmark size={20} className="text-text-muted hover:text-text-main" />
+                )}
+              </Button>
+            </div>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">
                 <PopularIcon />
