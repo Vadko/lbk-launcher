@@ -8,8 +8,8 @@ import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
-import { Loader } from '../ui/Loader';
 import { Button } from '../ui/Button';
+import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
   game: Game | TrendingGameWithDetails;
