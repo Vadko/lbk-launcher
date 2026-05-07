@@ -14,8 +14,8 @@ import {
   X,
 } from 'lucide-react';
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { useStore } from '../../store/useStore';
 import {
   type Notification,
   useSubscriptionsStore,
@@ -33,6 +33,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const [showConfirmClear, setShowConfirmClear] = useState(false);
 
@@ -43,8 +44,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     clearNotification,
     clearAllNotifications,
   } = useSubscriptionsStore();
-
-  const { setSelectedGame } = useStore();
 
   const appUpdateNotificationsEnabled = useSettingsStore(
     (state) => state.appUpdateNotificationsEnabled
@@ -59,7 +58,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     (state) => state.toggleGameUpdateNotifications
   );
 
-  const handleNotificationClick = async (notification: Notification) => {
+  const handleNotificationClick = (notification: Notification) => {
     // Позначити як прочитане
     markNotificationAsRead(notification.id);
 
@@ -68,16 +67,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       return;
     }
 
-    // Завантажити гру та вибрати її
-    try {
-      const games = await window.electronAPI.fetchGamesByIds([notification.gameId]);
-      if (games.length > 0) {
-        setSelectedGame(games[0]);
-        onClose();
-      }
-    } catch (error) {
-      console.error('Failed to load game:', error);
-    }
+    // Перейти на сторінку гри
+    navigate(`/game/${notification.gameId}`);
+    onClose();
   };
 
   const formatTimestamp = (timestamp: number) => {

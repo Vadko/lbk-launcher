@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ListFilter } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useInstalledGamesForHome } from '@/renderer/queries/useHomePageGames';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
@@ -20,14 +21,15 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   title = 'Знайдено встановлені ігри',
   showLimit = 3,
 }) => {
+  const navigate = useNavigate();
+
   const { hideAiTranslations } = useSettingsStore(
     useShallow((state) => ({
       hideAiTranslations: state.hideAiTranslations,
     }))
   );
-  const { setSelectedGame, installedGames } = useStore(
+  const { installedGames } = useStore(
     useShallow((state) => ({
-      setSelectedGame: state.setSelectedGame,
       installedGames: state.installedGames,
     }))
   );
@@ -142,7 +144,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
                   isSelected={false}
                   isCardStyle={true}
                   showDownloadCounter={false}
-                  onClick={() => setSelectedGame(game)}
+                  onClick={() => navigate(`/game/${game.id}`)}
                 />
               </motion.div>
             ))

@@ -55,6 +55,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-lazy-load-image-component": "^1.6.3",
+    "react-router-dom": "^7.15.0",
     "react-ts-gamepads": "^1.0.8",
     "zustand": "^4.5.7"
   },

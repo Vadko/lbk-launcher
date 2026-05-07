@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGamepads } from 'react-ts-gamepads';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -120,6 +121,7 @@ function playBackSound(): void {
  * - B: Back / Cancel in modal
  */
 export function useGamepadModeNavigation(enabled = true) {
+  const navigate = useNavigate();
   const lastInputRef = useRef<Record<string, number>>({});
   const gameCardsRef = useRef<HTMLElement[]>([]);
   const [gamepads, setGamepads] = useState<Record<number, Gamepad>>({});
@@ -490,9 +492,12 @@ export function useGamepadModeNavigation(enabled = true) {
     if (navigationArea === 'main-content' && !selectedGame) return;
 
     playNavigateSound();
+    // Очищаємо selectedGame перед навігацією для миттєвого оновлення UI
     setSelectedGame(null);
+    // Навігуємо на головну сторінку
+    navigate('/');
     setNavigationArea('main-content');
-  }, [navigationArea, selectedGame, setSelectedGame, setNavigationArea]);
+  }, [navigationArea, selectedGame, setSelectedGame, navigate, setNavigationArea]);
 
   // Handle main content navigation
   const handleMainContentNavigation = useCallback(

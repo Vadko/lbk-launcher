@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Download, Languages, RefreshCw, TrendingUp, X } from 'lucide-react';
 import React, { useCallback } from 'react';
-import { useStore } from '../../store/useStore';
+import { useNavigate } from 'react-router-dom';
 import {
   type ToastNotification,
   useSubscriptionsStore,
@@ -68,30 +68,22 @@ const getToastTitle = (type: ToastNotification['type']) => {
 };
 
 export const ToastNotifications: React.FC = () => {
+  const navigate = useNavigate();
   const toasts = useSubscriptionsStore((state) => state.toasts);
   const dismissToast = useSubscriptionsStore((state) => state.dismissToast);
-  const setSelectedGame = useStore((state) => state.setSelectedGame);
 
   const handleToastClick = useCallback(
-    async (toast: ToastNotification) => {
+    (toast: ToastNotification) => {
       // Don't navigate for app-update notifications
       if (toast.type === 'app-update') {
         return;
       }
 
-      // Load game and select it
-      try {
-        const games = await window.electronAPI.fetchGamesByIds([toast.gameId]);
-        if (games.length > 0) {
-          setSelectedGame(games[0]);
-        }
-      } catch (error) {
-        console.error('Failed to load game:', error);
-      }
-
+      // Navigate to game page
+      navigate(`/game/${toast.gameId}`);
       dismissToast(toast.id);
     },
-    [setSelectedGame, dismissToast]
+    [navigate, dismissToast]
   );
 
   if (toasts.length === 0) return null;

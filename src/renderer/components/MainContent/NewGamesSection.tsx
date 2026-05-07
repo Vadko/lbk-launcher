@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useNewGames, useUpdatedGames } from '@/renderer/queries/useHomePageGames';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
-import { useStore } from '@/renderer/store/useStore';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
@@ -27,6 +27,8 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
   defaultTabSortOrder,
   showLimit = 3,
 }) => {
+  const navigate = useNavigate();
+
   const [activeTabSortOrder, setActiveTabSortOrder] = useState<string>(
     defaultTabSortOrder || tabs[0]?.sortOrder || ''
   );
@@ -36,7 +38,6 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
       hideAiTranslations: state.hideAiTranslations,
     }))
   );
-  const { setSelectedGame } = useStore();
 
   // Find active tab config
   const activeTab = useMemo(
@@ -132,7 +133,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
                     isSelected={false}
                     isCardStyle={true}
                     showDownloadCounter={activeTab?.showDownloadCounter}
-                    onClick={() => setSelectedGame(game)}
+                    onClick={() => navigate(`/game/${game.id}`)}
                   />
                 </motion.div>
               ))}
