@@ -63,6 +63,7 @@ import {
   runUninstaller,
 } from './installer/platform';
 import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
+import { isLinux, isMacOS } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -261,6 +262,18 @@ export async function installTranslation(
         textArchiveSize = game.gog_archive_size;
       } else if (gamePath.platform === 'xbox' && game.xbox_archive_size) {
         textArchiveSize = game.xbox_archive_size;
+      } else if (
+        gamePath.platform === 'steam' &&
+        isLinux() &&
+        game.steam_linux_archive_size
+      ) {
+        textArchiveSize = game.steam_linux_archive_size;
+      } else if (
+        gamePath.platform === 'steam' &&
+        isMacOS() &&
+        game.steam_mac_archive_size
+      ) {
+        textArchiveSize = game.steam_mac_archive_size;
       }
       if (textArchiveSize) {
         requiredSpace += parseSizeToBytes(textArchiveSize);
@@ -299,7 +312,8 @@ export async function installTranslation(
     // 5.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
-      // Use platform-specific archive if available, otherwise fall back to default
+      // Use platform-specific archive if available, otherwise fall back to default.
+      // Steam has OS-aware variants — Linux/macOS get their own archives if uploaded.
       let archivePath = game.archive_path;
       let archiveHash = game.archive_hash;
 
@@ -315,6 +329,22 @@ export async function installTranslation(
         archivePath = game.xbox_archive_path;
         archiveHash = game.xbox_archive_hash;
         console.log('[Installer] Using Xbox-specific archive');
+      } else if (
+        gamePath.platform === 'steam' &&
+        isLinux() &&
+        game.steam_linux_archive_path
+      ) {
+        archivePath = game.steam_linux_archive_path;
+        archiveHash = game.steam_linux_archive_hash;
+        console.log('[Installer] Using Steam Linux variant archive');
+      } else if (
+        gamePath.platform === 'steam' &&
+        isMacOS() &&
+        game.steam_mac_archive_path
+      ) {
+        archivePath = game.steam_mac_archive_path;
+        archiveHash = game.steam_mac_archive_hash;
+        console.log('[Installer] Using Steam macOS variant archive');
       }
 
       textFiles = await downloadAndExtractArchive({
