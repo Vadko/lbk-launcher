@@ -436,6 +436,14 @@ export type Database = {
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
           support_url: string | null
           team: string
           telegram: string | null
@@ -509,6 +517,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           support_url?: string | null
           team: string
           telegram?: string | null
@@ -582,6 +598,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           support_url?: string | null
           team?: string
           telegram?: string | null
@@ -687,6 +711,14 @@ export type Database = {
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
           subscriptions: number | null
           support_url: string | null
           team: string
@@ -766,6 +798,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           subscriptions?: number | null
           support_url?: string | null
           team: string
@@ -845,6 +885,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           subscriptions?: number | null
           support_url?: string | null
           team?: string
