@@ -147,9 +147,6 @@ importers:
       lucide-react:
         specifier: 0.577.0
         version: 0.577.0(react@19.2.6)
-      node-abi:
-        specifier: 4.31.0
-        version: 4.31.0
       postcss:
         specifier: 8.5.10
         version: 8.5.10
