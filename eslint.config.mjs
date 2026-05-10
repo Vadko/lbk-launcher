@@ -6,7 +6,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'out', 'release', 'node_modules', 'resources/extensions/**'],
+    ignores: [
+      'dist',
+      'out',
+      'release',
+      'node_modules',
+      'resources/extensions/**',
+      '**/*.{js,cjs,mjs}',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -35,6 +42,11 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+
+      // Rules newly introduced by ESLint 9 / tseslint v8 — disabled to preserve
+      // pre-migration behavior. Address case-by-case in follow-up PRs.
+      'preserve-caught-error': 'off',
+      'no-useless-assignment': 'off',
 
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'react-hooks/rules-of-hooks': 'error',
@@ -87,5 +99,9 @@ export default tseslint.config(
       'no-lonely-if': 'warn',
       'no-else-return': ['warn', { allowElseIf: false }],
     },
+  },
+  {
+    files: ['src/main/liquid-glass.ts'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 );
