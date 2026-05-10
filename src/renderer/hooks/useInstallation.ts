@@ -3,15 +3,18 @@ import type {
   ConflictingTranslation,
   DownloadProgress,
   Game,
+  GamePath,
   InstallationInfo,
   InstallOptions,
   InstallResult,
+  Platform,
 } from '../../shared/types';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
+import { trackEvent } from '../utils/analytics';
 
 interface UseInstallationParams {
   selectedGame: Game | null;
@@ -44,6 +47,7 @@ interface UseInstallationResult {
   showInstallOptions: boolean;
   setShowInstallOptions: (show: boolean) => void;
   pendingInstallPath: string | undefined;
+  availablePlatforms: GamePath[];
 }
 
 export function useInstallation({
@@ -72,6 +76,7 @@ export function useInstallation({
     InstallOptions | undefined
   >();
   const [selectedProton, setSelectedProton] = useState<string | undefined>();
+  const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
 
   const gameProgress = selectedGame
     ? getInstallationProgress(selectedGame.id)
@@ -97,13 +102,15 @@ export function useInstallation({
     async (customGamePath?: string, options?: InstallOptions) => {
       if (!selectedGame) return;
 
-      const platform = selectedGame.platforms[0] || 'steam';
+      const platform =
+        options?.platform || (selectedGame.platforms[0] as Platform) || 'steam';
       const effectiveOptions: InstallOptions = options ??
         pendingInstallOptions ?? {
           createBackup: createBackupBeforeInstall,
           installText: true,
           installVoice: false,
           installAchievements: false,
+          platform,
         };
 
       if (options) {
@@ -136,6 +143,17 @@ export function useInstallation({
           statusMessage: null,
         });
 
+        // Track download start event
+        trackEvent('Actions', {
+          'Game Id': selectedGame.id,
+          'Game Name': selectedGame.name,
+          'Install Text': effectiveOptions.installText,
+          'Install Voice': effectiveOptions.installVoice,
+          'Install Achievements': effectiveOptions.installAchievements,
+          Team: selectedGame.team || 'Unknown',
+          Type: 'install',
+        });
+
         const unsubDownloadProgress = window.electronAPI.onDownloadProgress?.(
           (gameId: string, progress: DownloadProgress) => {
             setInstallationProgress(gameId, {
@@ -163,7 +181,6 @@ export function useInstallation({
         try {
           result = await window.electronAPI.installTranslation(
             selectedGame,
-            platform,
             effectiveOptions,
             customGamePath
           );
@@ -252,6 +269,29 @@ export function useInstallation({
         useStore.getState().clearGameUpdate(selectedGame.id);
         // Clear notified version so next version update will show notification again
         useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
+
+        // Track installation event
+        if (isUpdateAvailable) {
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            'Install Text': effectiveOptions.installText,
+            'Install Voice': effectiveOptions.installVoice,
+            'Install Achievements': effectiveOptions.installAchievements,
+            Type: 'updated',
+          });
+        } else {
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            'Install Text': effectiveOptions.installText,
+            'Install Voice': effectiveOptions.installVoice,
+            'Install Achievements': effectiveOptions.installAchievements,
+            Type: 'installed',
+          });
+        }
 
         let message = isUpdateAvailable
           ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
@@ -394,6 +434,14 @@ export function useInstallation({
                 return;
               }
 
+              // Track removal of conflicting translation
+              trackEvent('Actions', {
+                'Game Id': conflict.gameId,
+                'Game Name': conflict.gameName,
+                Team: conflict.team || 'Unknown',
+                Type: 'delete',
+              });
+
               // Refresh installed translations cache
               await useStore.getState().loadInstalledGamesFromSystem();
 
@@ -449,6 +497,10 @@ export function useInstallation({
           return;
         }
       }
+
+      // Detect available platforms for the game
+      const platforms = await window.electronAPI.detectGamePlatforms(selectedGame);
+      await setAvailablePlatforms(platforms);
 
       setPendingInstallPath(customGamePath);
       setShowInstallOptions(true);
@@ -660,6 +712,14 @@ export function useInstallation({
             });
             return;
           }
+
+          // Track uninstallation event
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            Type: 'delete',
+          });
 
           // Clear notified version so future installs will get notifications
           useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
@@ -893,5 +953,6 @@ export function useInstallation({
     showInstallOptions,
     setShowInstallOptions,
     pendingInstallPath,
+    availablePlatforms,
   };
 }

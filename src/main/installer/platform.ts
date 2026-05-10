@@ -6,6 +6,7 @@ import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getTransliteratedPath } from '../utils/files';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { getCleanEnv } from './archive';
 import { runProton } from './proton';
 
 /**
@@ -293,17 +294,22 @@ export async function runInstaller(
       onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
 
       await new Promise<void>((resolve, reject) => {
-        // AppImage needs APPIMAGE_EXTRACT_AND_RUN=1 to bypass FUSE
-        // (e.g. on Steam Deck or when launched from another AppImage)
         const isAppImage = installerPath.toLowerCase().endsWith('.appimage');
-        const env = isAppImage
-          ? { ...process.env, APPIMAGE_EXTRACT_AND_RUN: '1' }
-          : undefined;
+        // On Linux: drop Steam's 32-bit LD_PRELOAD (breaks 64-bit Electron
+        // child processes — GPU/ICU init fails). APPIMAGE_EXTRACT_AND_RUN
+        // bypasses FUSE for AppImages. ELECTRON_DISABLE_SANDBOX lets
+        // Electron-based installers run when chrome-sandbox can't be setuid
+        // root (Flatpak, AppImage-extracted /tmp on Steam Deck). All env vars
+        // propagate to wrapper scripts (.sh/.run/.bin) that nest AppImages.
+        const env: NodeJS.ProcessEnv = isLinux()
+          ? { ...getCleanEnv(), ELECTRON_DISABLE_SANDBOX: '1' }
+          : { ...process.env };
+        if (isAppImage) env.APPIMAGE_EXTRACT_AND_RUN = '1';
 
         const child = spawn(installerPath, [], {
           cwd: extractDir,
           stdio: ['inherit', 'pipe', 'pipe'],
-          ...(env && { env }),
+          env,
         });
 
         child.stdout?.on('data', (data) => {

@@ -21,18 +21,23 @@ import {
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
+  detectGamePath,
+  detectGamePaths,
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
+  getEpicAppName,
   getEpicLibrary,
   getFirstAvailableGamePath,
   getGOGGalaxyClientPath,
   getGOGGameId,
   getGogLibrary,
   getHeroicGame,
+  getInstalledXboxGamePaths,
   getLutrisSlug,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
+import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
 import {
   getFeedbackUploadUrls,
@@ -44,6 +49,7 @@ import {
   trackSupportClick,
   uploadFileToSignedUrl,
 } from '../tracking';
+import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
@@ -233,6 +239,16 @@ export function setupGamesHandlers(): void {
     }
   });
 
+  // Detect available platforms for a game
+  ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
+    try {
+      return detectGamePaths(game.install_paths || []);
+    } catch (error) {
+      console.error('Error detecting game platforms:', error);
+      return [];
+    }
+  });
+
   // Find games by install paths - SYNC
   ipcMain.handle(
     'find-games-by-install-paths',
@@ -345,6 +361,41 @@ export function setupGamesHandlers(): void {
     }
   });
 
+  // Get Xbox installed game folder names (parsed from .GamingRoot)
+  ipcMain.handle('get-xbox-installed-paths', () => {
+    try {
+      return getInstalledXboxGamePaths();
+    } catch (error) {
+      console.error('Error getting Xbox installed paths:', error);
+      return [];
+    }
+  });
+
+  // Find games by Xbox install folder names (matches against install_paths)
+  ipcMain.handle(
+    'find-games-by-xbox-paths',
+    (
+      _,
+      folderNames: string[],
+      searchQuery?: string,
+      hideAiTranslations?: boolean,
+      sortOrder: SortOrderType = 'name'
+    ) => {
+      try {
+        const repo = GamesRepository.getInstance();
+        return repo.findGamesByXboxPaths(
+          folderNames,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
+      } catch (error) {
+        console.error('Error finding games by Xbox paths:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
+
   // Launch game
   ipcMain.handle('launch-game', async (_, game: Game) => {
     try {
@@ -354,7 +405,29 @@ export function setupGamesHandlers(): void {
         JSON.stringify(game.install_paths, null, 2)
       );
 
-      const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      // Check if localization is installed and get platform info
+      const installInfo = await checkInstallation(game);
+      let gamePath = null;
+
+      console.log('[LaunchGame] Installation info:', installInfo);
+
+      // If localization is installed on a specific platform, use that platform
+      if (installInfo?.installedPlatform) {
+        console.log(
+          '[LaunchGame] Using installed platform:',
+          installInfo.installedPlatform
+        );
+        const selectedInstallPath = (game.install_paths || []).find(
+          (p) => p.type === installInfo.installedPlatform
+        );
+        gamePath = detectGamePath(selectedInstallPath);
+      }
+
+      // Fallback: use first available game path if platform not found
+      if (!gamePath || !gamePath.exists) {
+        console.log('[LaunchGame] Falling back to first available game path');
+        gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      }
 
       if (!gamePath || !gamePath.exists) {
         console.error('[LaunchGame] Game not found on system');
@@ -383,6 +456,20 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
+        }
+      }
+
+      // For Epic games, try to launch via Epic protocol
+      if (gamePath.platform === 'epic') {
+        const epicAppId = getEpicAppName(gamePath.path);
+
+        if (epicAppId) {
+          const result = await launchEpicGame(epicAppId);
+          if (result.success) {
+            return { success: true };
+          }
+        } else {
+          console.warn('[LaunchGame] Epic App ID not found for:', gamePath.path);
         }
       }
 

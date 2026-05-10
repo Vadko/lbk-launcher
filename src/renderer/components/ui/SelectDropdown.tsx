@@ -2,8 +2,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-interface SelectOption {
+export interface SelectOption {
   name: string;
+  children?: React.ReactNode;
+  isDisabled?: boolean;
   value: string;
 }
 
@@ -13,6 +15,7 @@ interface SelectDropdownProps {
   onSelectionChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  maxHeight?: number; // Maximum height in pixels, 'auto' means no limit (uses available space)
 }
 
 export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
@@ -22,9 +25,10 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
     onSelectionChange,
     placeholder = 'Оберіть варіант',
     className = '',
+    maxHeight: customMaxHeight = 300, // Default 300px instead of 120px
   }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [maxHeight, setMaxHeight] = useState(120); // Start with smaller default
+    const [maxHeight, setMaxHeight] = useState(customMaxHeight); // Use prop value as default
     const [isReady, setIsReady] = useState(false); // Track if calculations are done
     const [dropdownPosition, setDropdownPosition] = useState<'above' | 'below'>('below');
     const menuRef = useRef<HTMLDivElement>(null);
@@ -62,7 +66,10 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
         // Use space below, but if not enough, use the larger of the two spaces
         const availableSpace =
           spaceBelow > 80 ? spaceBelow : Math.max(spaceBelow, spaceAbove);
-        const calculatedMaxHeight = Math.min(120, Math.max(60, availableSpace));
+        const calculatedMaxHeight = Math.min(
+          customMaxHeight,
+          Math.max(60, availableSpace)
+        );
         const position = spaceBelow >= 80 ? 'below' : 'above';
 
         // Use requestAnimationFrame to batch state updates and avoid cascading renders
@@ -76,7 +83,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           setIsReady(false);
         });
       }
-    }, [isOpen]);
+    }, [isOpen, customMaxHeight]); // Add customMaxHeight to dependencies
 
     // Close menu on outside click
     useEffect(() => {
@@ -159,18 +166,27 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
                     return (
                       <button
                         key={option.value}
-                        onClick={() => handleOptionSelect(option.value)}
+                        onClick={
+                          option.isDisabled
+                            ? undefined
+                            : () => handleOptionSelect(option.value)
+                        }
                         data-gamepad-dropdown-item
-                        className={`w-full flex items-center px-3 py-2 text-sm text-left transition-colors ${
+                        disabled={option.isDisabled}
+                        className={`w-full flex items-center px-3 py-2 text-sm gap-1 text-left transition-colors ${
                           isSelected
                             ? 'bg-glass-hover text-text-main'
                             : 'text-text-muted hover:bg-glass hover:text-text-main'
                         }`}
                         title={option.name}
                       >
-                        <span className="truncate">{option.name}</span>
+                        <span
+                          className={`flex flex-1 gap-2 truncate ${!isSelected ? 'mr-4' : ''}`}
+                        >
+                          {option.children || option.name}
+                        </span>
                         {isSelected && (
-                          <span className="ml-auto text-color-accent">✓</span>
+                          <span className="ml-auto text-color-accent w-3">✓</span>
                         )}
                       </button>
                     );

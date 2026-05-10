@@ -80,9 +80,12 @@ function getEpicPath(): string | null {
 /**
  * Parse Epic Games manifest file
  */
-function parseEpicManifest(
-  manifestPath: string
-): { installLocation: string; displayName: string } | null {
+function parseEpicManifest(manifestPath: string): {
+  installLocation: string;
+  displayName: string;
+  catalogItemId?: string;
+  appName?: string;
+} | null {
   try {
     const content = fs.readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(content);
@@ -91,6 +94,8 @@ function parseEpicManifest(
       return {
         installLocation: manifest.InstallLocation,
         displayName: manifest.DisplayName,
+        catalogItemId: manifest.CatalogItemId,
+        appName: manifest.AppName,
       };
     }
   } catch (error) {
@@ -411,6 +416,52 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
     }
   } catch (error) {
     console.error('[Epic] Error getting Heroic AppName:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Get Epic App Name / Catalog Item ID by game path (Windows/macOS)
+ * Returns the app name in format suitable for epic:// protocol
+ */
+export function getEpicAppName(gamePath: string): string | null {
+  // For Linux, use Heroic config
+  if (isLinux()) {
+    return getHeroicEpicAppName(gamePath);
+  }
+
+  // For Windows/macOS, use Epic manifests
+  const epicManifestPath = getEpicPath();
+  if (!epicManifestPath || !fs.existsSync(epicManifestPath)) {
+    return null;
+  }
+
+  try {
+    const manifestFiles = fs
+      .readdirSync(epicManifestPath)
+      .filter((f: string) => f.endsWith('.item'));
+
+    for (const manifestFile of manifestFiles) {
+      const manifestFullPath = path.join(epicManifestPath, manifestFile);
+      const manifest = parseEpicManifest(manifestFullPath);
+
+      if (manifest && manifest.installLocation) {
+        const resolvedManifestPath = path.resolve(manifest.installLocation);
+        const resolvedGamePath = path.resolve(gamePath);
+
+        if (resolvedManifestPath === resolvedGamePath) {
+          // Prefer catalogItemId, fallback to appName
+          const appIdentifier = manifest.catalogItemId || manifest.appName;
+          if (appIdentifier) {
+            console.log(`[Epic] Found app identifier for ${gamePath}: ${appIdentifier}`);
+            return appIdentifier;
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Epic] Error getting Epic App Name:', error);
   }
 
   return null;

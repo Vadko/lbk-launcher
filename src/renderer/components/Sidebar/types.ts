@@ -20,6 +20,7 @@ export type SpecialFilterType =
   | 'available-in-steam'
   | 'owned-gog-games'
   | 'owned-epic-games'
+  | 'installed-xbox-games'
   | 'with-achievements'
   | 'with-voice'
   | 'favorite-translations';
@@ -50,6 +51,7 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Доступно зі Steam', value: 'available-in-steam' },
   { label: 'Доступно з GOG', value: 'owned-gog-games' },
   { label: 'Доступно з Epic', value: 'owned-epic-games' },
+  { label: 'Встановлено з Xbox app', value: 'installed-xbox-games' },
   { label: 'З перекладом досягнень', value: 'with-achievements' },
   { label: 'З озвученням', value: 'with-voice' },
 ];

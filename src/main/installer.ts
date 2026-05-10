@@ -10,7 +10,7 @@ import type {
   InstallOptions,
   PausedDownloadState,
 } from '../shared/types';
-import { getFirstAvailableGamePath } from './game-detector';
+import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 // Import all utilities from installer modules
 import { extractArchive } from './installer/archive';
 import {
@@ -63,6 +63,7 @@ import {
   runUninstaller,
 } from './installer/platform';
 import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
+import { isLinux, isMacOS } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -179,19 +180,18 @@ export async function resumeDownload(
  */
 export async function installTranslation(
   game: Game,
-  platform: string,
   options: InstallOptions,
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
-  const { createBackup, installText, installVoice, installAchievements } = options;
+  const { createBackup, installText, installVoice, installAchievements, platform } =
+    options;
 
   try {
     console.log(`[Installer] ========== INSTALLATION START ==========`);
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
     console.log(`[Installer] Options:`, JSON.stringify(options));
-    console.log(`[Installer] Requested platform: ${platform}`);
 
     // 1. Check platform compatibility for installer-based translations
     const platformError = checkPlatformCompatibility(game);
@@ -212,9 +212,18 @@ export async function installTranslation(
       );
     }
 
-    const gamePath = customGamePath
-      ? { platform, path: customGamePath, exists: true }
-      : getFirstAvailableGamePath(game.install_paths || []);
+    let gamePath: ReturnType<typeof getFirstAvailableGamePath>;
+    if (customGamePath) {
+      const customPlatform = platform === 'auto' ? 'steam' : platform;
+      gamePath = { platform: customPlatform, path: customGamePath, exists: true };
+    } else if (platform === 'auto') {
+      gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    } else {
+      const selectedInstallPath = (game.install_paths || []).find(
+        (p) => p.type === platform
+      );
+      gamePath = detectGamePath(selectedInstallPath);
+    }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
@@ -245,11 +254,22 @@ export async function installTranslation(
     // 4. Check available disk space
     let requiredSpace = 0;
     if (installText) {
-      // Use epic_archive_size if platform is 'epic' and epic_archive is available
-      const textArchiveSize =
-        gamePath.platform === 'epic' && game.epic_archive_size
-          ? game.epic_archive_size
-          : game.archive_size;
+      // Pick the matching archive size in priority order:
+      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //   2. Store-specific variant (Epic/GOG/Xbox) — only if user is on that store.
+      //   3. Main archive — default fallback (typically Windows).
+      let textArchiveSize: string | null | undefined = game.archive_size;
+      if (isLinux() && game.steam_linux_archive_size) {
+        textArchiveSize = game.steam_linux_archive_size;
+      } else if (isMacOS() && game.steam_mac_archive_size) {
+        textArchiveSize = game.steam_mac_archive_size;
+      } else if (gamePath.platform === 'epic' && game.epic_archive_size) {
+        textArchiveSize = game.epic_archive_size;
+      } else if (gamePath.platform === 'gog' && game.gog_archive_size) {
+        textArchiveSize = game.gog_archive_size;
+      } else if (gamePath.platform === 'xbox' && game.xbox_archive_size) {
+        textArchiveSize = game.xbox_archive_size;
+      }
       if (textArchiveSize) {
         requiredSpace += parseSizeToBytes(textArchiveSize);
       }
@@ -287,13 +307,35 @@ export async function installTranslation(
     // 5.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
-      // Use epic_archive if platform is 'epic' and epic_archive is available
-      const useEpicArchive = gamePath.platform === 'epic' && game.epic_archive_path;
-      const archivePath = useEpicArchive ? game.epic_archive_path : game.archive_path;
-      const archiveHash = useEpicArchive ? game.epic_archive_hash : game.archive_hash;
+      // Selection priority (matches the disk-space check above):
+      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //      Translator uploads these when files differ for Linux/macOS builds.
+      //   2. Store-specific variant (Epic/GOG/Xbox) — only when user is on
+      //      that store.
+      //   3. Main archive — default fallback.
+      let archivePath = game.archive_path;
+      let archiveHash = game.archive_hash;
 
-      if (useEpicArchive) {
+      if (isLinux() && game.steam_linux_archive_path) {
+        archivePath = game.steam_linux_archive_path;
+        archiveHash = game.steam_linux_archive_hash;
+        console.log('[Installer] Using Linux variant archive');
+      } else if (isMacOS() && game.steam_mac_archive_path) {
+        archivePath = game.steam_mac_archive_path;
+        archiveHash = game.steam_mac_archive_hash;
+        console.log('[Installer] Using macOS variant archive');
+      } else if (gamePath.platform === 'epic' && game.epic_archive_path) {
+        archivePath = game.epic_archive_path;
+        archiveHash = game.epic_archive_hash;
         console.log('[Installer] Using Epic-specific archive');
+      } else if (gamePath.platform === 'gog' && game.gog_archive_path) {
+        archivePath = game.gog_archive_path;
+        archiveHash = game.gog_archive_hash;
+        console.log('[Installer] Using GOG-specific archive');
+      } else if (gamePath.platform === 'xbox' && game.xbox_archive_path) {
+        archivePath = game.xbox_archive_path;
+        archiveHash = game.xbox_archive_hash;
+        console.log('[Installer] Using Xbox-specific archive');
       }
 
       textFiles = await downloadAndExtractArchive({
@@ -337,9 +379,13 @@ export async function installTranslation(
       installAchievements,
       hasArchivePath: !!game.achievements_archive_path,
       archivePath: game.achievements_archive_path,
-      platform,
+      platform: gamePath.platform,
     });
-    if (installAchievements && game.achievements_archive_path && platform === 'steam') {
+    if (
+      installAchievements &&
+      game.achievements_archive_path &&
+      gamePath.platform === 'steam'
+    ) {
       const achievementsExtractDir = path.join(
         downloadDir,
         `${game.id}_achievements_extract`
@@ -421,6 +467,7 @@ export async function installTranslation(
         protonPath: options.protonPath,
         installerPath: path.join(fullTargetPath, installerFileName),
         installedFiles: [],
+        installedPlatform: gamePath.platform,
         components: { text: { installed: true, files: [] } },
       };
 
@@ -485,6 +532,7 @@ export async function installTranslation(
       hasBackup: createBackup,
       isCustomPath: !!customGamePath,
       installedFiles: prefixPaths(installedFiles),
+      installedPlatform: gamePath.platform,
       components: {
         text: { installed: installText, files: prefixPaths(textFiles) },
         ...(installVoice && voiceFiles.length > 0

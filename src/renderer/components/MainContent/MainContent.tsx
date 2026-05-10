@@ -17,7 +17,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
 import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
-import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -35,6 +34,7 @@ import { AuthorsList } from './AuthorsList';
 import { DownloadProgressCard } from './DownloadProgressCard';
 import { FundraisingProgressCard } from './FundraisingProgressCard';
 import { GameHero } from './GameHero';
+import { ImportantNotice } from './ImportantNotice';
 import { InfoCard } from './InfoCard';
 import { InstallationStatusBadge } from './InstallationStatusBadge';
 import { InstallationStatusMessage } from './InstallationStatusMessage';
@@ -267,6 +267,7 @@ export const MainContent: React.FC = () => {
     showInstallOptions,
     setShowInstallOptions,
     pendingInstallPath,
+    availablePlatforms,
   } = useInstallation({
     selectedGame,
     isUpdateAvailable: !!isUpdateAvailable,
@@ -411,6 +412,7 @@ export const MainContent: React.FC = () => {
             installationInfo?.isCustomPath ||
             !isGameInstalledOnSystem
           }
+          availablePlatforms={availablePlatforms}
         />
       )}
 
@@ -535,18 +537,7 @@ export const MainContent: React.FC = () => {
                 )}
             </div>
 
-            {(() => {
-              const langHint = getLanguageHint(selectedGame.source_language);
-              return langHint ? (
-                <div className="flex gap-2">
-                  <span className="w-0 h-auto border-l border-border-hover" />
-                  <span className="text-sm text-text-muted">
-                    В налаштуваннях гри оберіть{' '}
-                    <span className="text-color-accent">{langHint} мову</span>
-                  </span>
-                </div>
-              ) : null;
-            })()}
+            <ImportantNotice game={selectedGame} />
           </div>
 
           <div className="space-y-4 mb-6">

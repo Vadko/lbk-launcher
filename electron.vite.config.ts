@@ -49,7 +49,7 @@ export default defineConfig({
           index: path.resolve(__dirname, 'src/main/index.ts'),
           'db-worker': path.resolve(__dirname, 'src/main/db/db-worker.ts'),
         },
-        external: ['better-sqlite3'],
+        external: ['better-sqlite3', 'electron-liquid-glass'],
       },
     },
     plugins: [sentryPlugin()],

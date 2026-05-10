@@ -40,7 +40,7 @@ function getResourcesBased7zPath(): string {
  * Get clean environment without Steam's LD_PRELOAD
  * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
  */
-function getCleanEnv(): NodeJS.ProcessEnv {
+export function getCleanEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
   delete env.LD_PRELOAD;
