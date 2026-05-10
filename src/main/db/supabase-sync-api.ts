@@ -26,6 +26,8 @@ type ExcludedFields =
   | 'epic_archive_file_list'
   | 'gog_archive_file_list'
   | 'xbox_archive_file_list'
+  | 'steam_linux_archive_file_list'
+  | 'steam_mac_archive_file_list'
   | 'name_fts'
   | 'name_search';
 
@@ -94,6 +96,12 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'xbox_archive_path',
   'xbox_archive_hash',
   'xbox_archive_size',
+  'steam_linux_archive_path',
+  'steam_linux_archive_hash',
+  'steam_linux_archive_size',
+  'steam_mac_archive_path',
+  'steam_mac_archive_hash',
+  'steam_mac_archive_size',
   'ai',
   'hide',
   'additional_path',

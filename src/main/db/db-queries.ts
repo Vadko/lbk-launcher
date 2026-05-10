@@ -16,6 +16,8 @@ type ExcludedLocalFields =
   | 'epic_archive_file_list'
   | 'gog_archive_file_list'
   | 'xbox_archive_file_list'
+  | 'steam_linux_archive_file_list'
+  | 'steam_mac_archive_file_list'
   | 'name_fts'; // Generated column in Supabase for FTS
 
 /**
@@ -107,6 +109,12 @@ function gameToInsertParams(game: Game): GameInsertParams {
     xbox_archive_hash: game.xbox_archive_hash ?? null,
     xbox_archive_path: game.xbox_archive_path ?? null,
     xbox_archive_size: game.xbox_archive_size ?? null,
+    steam_linux_archive_hash: game.steam_linux_archive_hash ?? null,
+    steam_linux_archive_path: game.steam_linux_archive_path ?? null,
+    steam_linux_archive_size: game.steam_linux_archive_size ?? null,
+    steam_mac_archive_hash: game.steam_mac_archive_hash ?? null,
+    steam_mac_archive_path: game.steam_mac_archive_path ?? null,
+    steam_mac_archive_size: game.steam_mac_archive_size ?? null,
     steam_app_id: game.steam_app_id ?? null,
     website: game.website ?? null,
     youtube: game.youtube ?? null,
@@ -134,6 +142,8 @@ const UPSERT_GAME_SQL = `
     epic_archive_hash, epic_archive_path, epic_archive_size,
     gog_archive_hash, gog_archive_path, gog_archive_size,
     xbox_archive_hash, xbox_archive_path, xbox_archive_size,
+    steam_linux_archive_hash, steam_linux_archive_path, steam_linux_archive_size,
+    steam_mac_archive_hash, steam_mac_archive_path, steam_mac_archive_size,
     steam_app_id, website, youtube, ai, hide, search_keywords, source_language
   ) VALUES (
     @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -148,6 +158,8 @@ const UPSERT_GAME_SQL = `
     @epic_archive_hash, @epic_archive_path, @epic_archive_size,
     @gog_archive_hash, @gog_archive_path, @gog_archive_size,
     @xbox_archive_hash, @xbox_archive_path, @xbox_archive_size,
+    @steam_linux_archive_hash, @steam_linux_archive_path, @steam_linux_archive_size,
+    @steam_mac_archive_hash, @steam_mac_archive_path, @steam_mac_archive_size,
     @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
   )
 `;

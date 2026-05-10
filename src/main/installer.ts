@@ -63,6 +63,7 @@ import {
   runUninstaller,
 } from './installer/platform';
 import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
+import { isLinux, isMacOS } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -253,9 +254,16 @@ export async function installTranslation(
     // 4. Check available disk space
     let requiredSpace = 0;
     if (installText) {
-      // Use platform-specific archive size if available, otherwise fall back to default
+      // Pick the matching archive size in priority order:
+      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //   2. Store-specific variant (Epic/GOG/Xbox) — only if user is on that store.
+      //   3. Main archive — default fallback (typically Windows).
       let textArchiveSize: string | null | undefined = game.archive_size;
-      if (gamePath.platform === 'epic' && game.epic_archive_size) {
+      if (isLinux() && game.steam_linux_archive_size) {
+        textArchiveSize = game.steam_linux_archive_size;
+      } else if (isMacOS() && game.steam_mac_archive_size) {
+        textArchiveSize = game.steam_mac_archive_size;
+      } else if (gamePath.platform === 'epic' && game.epic_archive_size) {
         textArchiveSize = game.epic_archive_size;
       } else if (gamePath.platform === 'gog' && game.gog_archive_size) {
         textArchiveSize = game.gog_archive_size;
@@ -299,11 +307,24 @@ export async function installTranslation(
     // 5.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
-      // Use platform-specific archive if available, otherwise fall back to default
+      // Selection priority (matches the disk-space check above):
+      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //      Translator uploads these when files differ for Linux/macOS builds.
+      //   2. Store-specific variant (Epic/GOG/Xbox) — only when user is on
+      //      that store.
+      //   3. Main archive — default fallback.
       let archivePath = game.archive_path;
       let archiveHash = game.archive_hash;
 
-      if (gamePath.platform === 'epic' && game.epic_archive_path) {
+      if (isLinux() && game.steam_linux_archive_path) {
+        archivePath = game.steam_linux_archive_path;
+        archiveHash = game.steam_linux_archive_hash;
+        console.log('[Installer] Using Linux variant archive');
+      } else if (isMacOS() && game.steam_mac_archive_path) {
+        archivePath = game.steam_mac_archive_path;
+        archiveHash = game.steam_mac_archive_hash;
+        console.log('[Installer] Using macOS variant archive');
+      } else if (gamePath.platform === 'epic' && game.epic_archive_path) {
         archivePath = game.epic_archive_path;
         archiveHash = game.epic_archive_hash;
         console.log('[Installer] Using Epic-specific archive');
