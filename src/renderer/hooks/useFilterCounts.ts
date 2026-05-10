@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FilterCountsResult } from '../../shared/types';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 
 export type FilterCounts = FilterCountsResult & {
+  'favorite-translations': number;
   'installed-translations': number;
   'installed-games': number;
   'available-in-steam': number;
@@ -12,6 +14,7 @@ export type FilterCounts = FilterCountsResult & {
 };
 
 const INITIAL_COUNTS: FilterCounts = {
+  'favorite-translations': 0,
   'installed-translations': 0,
   'installed-games': 0,
   'available-in-steam': 0,
@@ -30,6 +33,7 @@ const DEBOUNCE_DELAY = 300;
 
 export function useFilterCounts() {
   const syncStatus = useStore((state) => state.syncStatus);
+  const favoriteGameIds = useSettingsStore((state) => state.favoriteGameIds);
   const [counts, setCounts] = useState<FilterCounts>(INITIAL_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,6 +89,7 @@ export function useFilterCounts() {
 
       setCounts({
         ...sqlCounts,
+        'favorite-translations': favoriteGameIds.length,
         'installed-translations': installedIds.length,
         'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
         'available-in-steam': steamLibraryCount,
@@ -99,7 +104,7 @@ export function useFilterCounts() {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [favoriteGameIds]);
 
   const debouncedFetchCounts = useCallback(() => {
     if (debounceTimerRef.current) {

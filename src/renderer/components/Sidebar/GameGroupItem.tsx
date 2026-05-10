@@ -35,6 +35,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+    const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
     const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
 
     const primaryGame = group.translations[0];
@@ -42,6 +43,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const anyHasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
     const anyGameInstalled = group.translations.some((t) => !!getInstallationInfo(t.id));
+    const anyIsFavorite = group.translations.some((t) => isFavoriteGame(t.id));
     const anyTranslationAvailable = group.translations.some(
       (t) => t.status !== 'planned' && t.status !== 'tech-improvement'
     );
@@ -135,6 +137,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                 isGameDetected={anyGameDetected}
                 isInstalled={anyGameInstalled}
                 isTranslationAvailable={anyTranslationAvailable}
+                isFavorite={anyIsFavorite}
               />
             </div>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">

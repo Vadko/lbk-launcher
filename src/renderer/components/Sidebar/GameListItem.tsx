@@ -1,4 +1,4 @@
-import { EyeOff } from 'lucide-react';
+import { Bookmark, BookmarkCheck, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { useImagePreload } from '../../hooks/useImagePreload';
@@ -8,6 +8,7 @@ import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
+import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
@@ -39,9 +40,12 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
+    const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
+    const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
+    const isFavorite = isFavoriteGame(game.id);
 
     const averageProgress = Math.round(
       (game.translation_progress + game.editing_progress) / 2
@@ -62,6 +66,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         e.preventDefault();
         onClick();
       }
+    };
+
+    const handleToggleFavorite = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      toggleFavoriteGame(game.id);
     };
 
     // Card style rendering
@@ -126,13 +135,31 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 aiType={game.ai}
                 floatPosition="default"
                 isTranslationAvailable={isTranslationAvailable}
+                isFavorite={isFavorite}
               />
             )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
-            <h3 className="text-lg font-head font-bold truncate" title={game.name}>
-              {game.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3
+                className="text-lg font-head font-bold truncate flex-1"
+                title={game.name}
+              >
+                {game.name}
+              </h3>
+              <Button
+                variant="ghost"
+                onClick={handleToggleFavorite}
+                className="!rounded-lg !px-1"
+                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+              >
+                {isFavorite ? (
+                  <BookmarkCheck size={20} className="text-color-accent" />
+                ) : (
+                  <Bookmark size={20} className="text-text-muted hover:text-text-main" />
+                )}
+              </Button>
+            </div>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">
                 <PopularIcon />
@@ -250,6 +277,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               isInstalled={isInstalled}
               aiType={game.ai}
               isTranslationAvailable={isTranslationAvailable}
+              isFavorite={isFavorite}
             />
           </div>
 

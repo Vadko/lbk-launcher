@@ -3,6 +3,7 @@ import React from 'react';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'glass' | 'amber' | 'pink' | 'accent' | 'ghost';
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
   icon?: React.ReactNode;
 }
 
@@ -31,7 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   return (
-    <button {...props} className={`${baseStyles} ${variants[variant]} ${className}`}>
+    <button {...props} className={`${baseStyles} ${variants[variant]}  ${className}`}>
       {icon && <span>{icon}</span>}
       {children}
     </button>

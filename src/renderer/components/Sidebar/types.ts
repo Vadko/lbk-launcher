@@ -22,7 +22,8 @@ export type SpecialFilterType =
   | 'owned-epic-games'
   | 'installed-xbox-games'
   | 'with-achievements'
-  | 'with-voice';
+  | 'with-voice'
+  | 'favorite-translations';
 
 interface StatusFilterOption {
   label: string;
@@ -44,6 +45,7 @@ export const STATUS_OPTIONS: StatusFilterOption[] = [
 
 // Special filter options (single-select, separate from statuses)
 export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
+  { label: 'Улюблені українізатори', value: 'favorite-translations' },
   { label: 'Встановлені українізатори', value: 'installed-translations' },
   { label: 'Встановлені ігри', value: 'installed-games' },
   { label: 'Доступно зі Steam', value: 'available-in-steam' },

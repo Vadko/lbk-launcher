@@ -1,6 +1,8 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
   AlertTriangle,
+  Bookmark,
+  BookmarkCheck,
   Download,
   EyeOff,
   Heart,
@@ -50,8 +52,13 @@ export const MainContent: React.FC = () => {
     installedGames,
   } = useStore();
   const { showModal } = useModalStore();
-  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
-    useSettingsStore();
+  const {
+    showAdultGames,
+    openSettingsModal,
+    createBackupBeforeInstall,
+    toggleFavoriteGame,
+    isFavoriteGame,
+  } = useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -78,6 +85,14 @@ export const MainContent: React.FC = () => {
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
+  const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
+
+  // Toggle favorite handler
+  const handleToggleFavorite = useCallback(() => {
+    if (selectedGame) {
+      toggleFavoriteGame(selectedGame.id);
+    }
+  }, [selectedGame, toggleFavoriteGame]);
 
   // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
@@ -496,6 +511,15 @@ export const MainContent: React.FC = () => {
                   data-gamepad-action
                 />
               )}
+              <Button
+                variant="secondary"
+                icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                onClick={handleToggleFavorite}
+                data-gamepad-action
+                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+              >
+                {isFavorite ? 'В улюблених' : 'До улюблених'}
+              </Button>
               {selectedGame.support_url &&
                 bannerInfo.placementType &&
                 !(
