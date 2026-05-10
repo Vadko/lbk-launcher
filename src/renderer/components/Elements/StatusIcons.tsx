@@ -76,7 +76,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   if (isFavorite && !floatPosition) {
     favoriteIcon = (
       <div title="В улюбленому">
-        <BookmarkCheck size={18} className="text-color-accent" title="В улюбленому" />
+        <BookmarkCheck size={18} className="text-color-accent" />
       </div>
     );
   }
