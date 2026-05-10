@@ -17,7 +17,7 @@ interface UseVirtualizedListResult {
   /** Number of items to render */
   renderCount: number;
   /** Ref to attach to the sentinel element at the end of the list */
-  sentinelRef: React.RefObject<HTMLDivElement>;
+  sentinelRef: React.RefObject<HTMLDivElement | null>;
   /** Reset the render count (e.g., when filters change) */
   reset: () => void;
 }

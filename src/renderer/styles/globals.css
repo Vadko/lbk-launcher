@@ -109,6 +109,15 @@ html.maximized #root {
   transform: translateY(-2px);
 }
 
+.glass-card-no-motion {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 8px;
+}
+
 .placement {
   padding: 0;
 }
@@ -186,6 +195,29 @@ body.liquid-glass-enabled .glass-panel {
 body.liquid-glass-enabled .glass-card {
   background: rgba(255, 255, 255, 0.04) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.modal-gradient-border {
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.modal-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(168, 207, 150, 0.4), rgba(255, 164, 122, 0.4));
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  pointer-events: none;
 }
 
 body.liquid-glass-enabled .modal-backdrop {
@@ -399,6 +431,9 @@ body.liquid-glass-enabled .glass-input:focus {
 /* ==========================================================================
    10. GAMEPAD FOCUS STYLES
    ========================================================================== */
+[data-gamepad-mode] {
+  cursor: none !important;
+}
 
 [data-gamepad-mode] button:focus,
 [data-gamepad-mode] a:focus,

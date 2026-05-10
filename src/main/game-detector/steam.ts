@@ -18,7 +18,6 @@ import { getPlatform, isLinux, isMacOS, isWindows } from '../utils/platform';
 import {
   parseAppManifest,
   parseLibraryFolders,
-  parseLocalConfigApps,
   parseLocalConfigPlaytime,
   parseMostRecentUser,
   type SteamAppPlaytime,
@@ -115,7 +114,7 @@ function detectSteamPathWindows(): string | null {
   try {
     const output = execSync(
       `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v InstallPath`,
-      { encoding: 'utf8' }
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
     );
     const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
     if (match?.[1]) {
@@ -130,7 +129,7 @@ function detectSteamPathWindows(): string | null {
     try {
       const output = execSync(
         `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam" /v InstallPath`,
-        { encoding: 'utf8' }
+        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
       );
       const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
       if (match?.[1]) {
@@ -642,15 +641,34 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
 }
 
 function getSteamLibraryAppIdsFallback(): number[] {
-  const content = readLocalConfigContent();
-  if (!content) {
+  try {
+    const libraryCachePath = getUserConfigPath('librarycache');
+    if (!libraryCachePath || !fs.existsSync(libraryCachePath)) {
+      return [];
+    }
+
+    const files = fs.readdirSync(libraryCachePath);
+    const appIds: number[] = [];
+
+    for (const file of files) {
+      // Check if filename is a number (app ID) with .json extension
+      const match = file.match(/^(\d+)\.json$/);
+      if (match) {
+        const appId = Number.parseInt(match[1], 10);
+        if (!Number.isNaN(appId)) {
+          appIds.push(appId);
+        }
+      }
+    }
+
+    console.log(
+      `[Steam] Library: using librarycache folder fallback (${appIds.length} apps)`
+    );
+    cache.libraryAppIds = appIds;
+    return appIds;
+  } catch {
     return [];
   }
-
-  const appIds = parseLocalConfigApps(content);
-  console.log(`[Steam] Library: using localconfig.vdf fallback (${appIds.length} apps)`);
-  cache.libraryAppIds = appIds;
-  return appIds;
 }
 
 // ============================================================================

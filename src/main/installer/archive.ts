@@ -40,7 +40,7 @@ function getResourcesBased7zPath(): string {
  * Get clean environment without Steam's LD_PRELOAD
  * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
  */
-function getCleanEnv(): NodeJS.ProcessEnv {
+export function getCleanEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
   delete env.LD_PRELOAD;
@@ -154,13 +154,14 @@ export async function extractArchive(
         onStatus?.({
           message: `Розпакування файлів... ${percent}%`,
           progress: percent,
+          phase: 'install',
         });
       }
     });
 
     stream.on('end', () => {
       console.log(`[Installer] Extracted archive to: ${extractPath}`);
-      onStatus?.({ message: 'Розпакування завершено' });
+      onStatus?.({ message: 'Розпакування завершено', phase: 'install' });
       resolve();
     });
 

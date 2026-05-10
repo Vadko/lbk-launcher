@@ -170,7 +170,7 @@ export function getGOGGalaxyClientPath(): string | null {
       try {
         const output = execSync(
           'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths" /v client',
-          { encoding: 'utf8' }
+          { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
         );
         const match = output.match(/client\s+REG_SZ\s+(.+)/);
         if (match?.[1]) {

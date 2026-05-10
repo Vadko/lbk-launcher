@@ -25,6 +25,19 @@ export class PausedSignal extends Error {
 }
 
 /**
+ * Network error that preserves partial download for retry.
+ * When thrown, the .part file is NOT deleted so the user can resume later.
+ */
+export class NetworkError extends Error {
+  public readonly isNetworkError = true;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'NetworkError';
+  }
+}
+
+/**
  * Rate-limit error for downloads
  */
 export class RateLimitError extends Error {

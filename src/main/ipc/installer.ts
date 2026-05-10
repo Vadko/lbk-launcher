@@ -10,6 +10,7 @@ import {
   getConflictingTranslation,
   installTranslation,
   ManualSelectionError,
+  NetworkError,
   PausedSignal,
   RateLimitError,
   removeComponents,
@@ -32,17 +33,10 @@ import { getMainWindow } from '../window';
 export function setupInstallerHandlers(): void {
   ipcMain.handle(
     'install-translation',
-    async (
-      _,
-      game: Game,
-      platform: string,
-      options: InstallOptions,
-      customGamePath?: string
-    ) => {
+    async (_, game: Game, options: InstallOptions, customGamePath?: string) => {
       try {
         await installTranslation(
           game,
-          platform,
           options,
           customGamePath,
           (downloadProgress) => {
@@ -90,6 +84,7 @@ export function setupInstallerHandlers(): void {
             message: error instanceof Error ? error.message : 'Невідома помилка',
             needsManualSelection: error instanceof ManualSelectionError,
             isRateLimit: error instanceof RateLimitError,
+            isNetworkError: error instanceof NetworkError,
           },
         };
       }

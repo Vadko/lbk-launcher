@@ -23,7 +23,9 @@ import {
 import { playNotificationSound } from '../../utils/notificationSounds';
 import { Modal } from '../Modal/Modal';
 import { PrivacyPolicyModal } from '../Modal/PrivacyPolicyModal';
+import { SendLogsModal } from '../Modal/SendLogsModal';
 import { TermsOfServiceModal } from '../Modal/TermsOfServiceModal';
+import { Button } from '../ui/Button';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
 
@@ -88,6 +90,7 @@ export const SettingsModal: React.FC = () => {
   // Legal modals state
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -173,6 +176,15 @@ export const SettingsModal: React.FC = () => {
     setIsPrivacyModalOpen(false);
   }, []);
 
+  const handleOpenSendLogsModal = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent button click from triggering parent button
+    setIsSendLogsModalOpen(true);
+  }, []);
+
+  const handleCloseSendLogsModal = useCallback(() => {
+    setIsSendLogsModalOpen(false);
+  }, []);
+
   return (
     <>
       <Modal
@@ -195,6 +207,7 @@ export const SettingsModal: React.FC = () => {
             href="https://t.me/lbk_launcher_bot"
             target="_blank"
             rel="noopener noreferrer"
+            data-gamepad-modal-item
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
@@ -432,6 +445,13 @@ export const SettingsModal: React.FC = () => {
               </h4>
               <p className="text-xs text-text-muted">Переглянути збережені файли логів</p>
             </div>
+            <Button
+              onClick={handleOpenSendLogsModal}
+              variant="secondary"
+              className="flex-shrink-0 !border-color-accent !text-color-accent"
+            >
+              Відправити файл
+            </Button>
           </button>
 
           {/* Legal section */}
@@ -502,6 +522,8 @@ export const SettingsModal: React.FC = () => {
       {/* Legal modals */}
       <TermsOfServiceModal isOpen={isTermsModalOpen} onClose={handleCloseTermsModal} />
       <PrivacyPolicyModal isOpen={isPrivacyModalOpen} onClose={handleClosePrivacyModal} />
+      {/* Send logs modal */}
+      <SendLogsModal isOpen={isSendLogsModalOpen} onClose={handleCloseSendLogsModal} />
     </>
   );
 };

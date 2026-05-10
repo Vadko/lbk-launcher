@@ -10,7 +10,7 @@ import type {
   InstallOptions,
   PausedDownloadState,
 } from '../shared/types';
-import { getFirstAvailableGamePath } from './game-detector';
+import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 // Import all utilities from installer modules
 import { extractArchive } from './installer/archive';
 import {
@@ -41,7 +41,12 @@ import {
   setCurrentDownloadState,
   setDownloadAbortController,
 } from './installer/download';
-import { ManualSelectionError, PausedSignal, RateLimitError } from './installer/errors';
+import {
+  ManualSelectionError,
+  NetworkError,
+  PausedSignal,
+  RateLimitError,
+} from './installer/errors';
 import {
   cleanupDownloadDir,
   copyDirectory,
@@ -58,6 +63,7 @@ import {
   runUninstaller,
 } from './installer/platform';
 import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
+import { isLinux, isMacOS } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -65,16 +71,17 @@ const unlink = promisify(fs.unlink);
 
 // Re-export utilities for external use
 export {
-  ManualSelectionError,
-  RateLimitError,
-  PausedSignal,
   abortCurrentDownload,
-  checkPlatformCompatibility,
   checkInstallation,
-  invalidateInstalledGameIdsCache,
-  removeOrphanedInstallationMetadata,
+  checkPlatformCompatibility,
   getAllInstalledGameIds,
   getConflictingTranslation,
+  invalidateInstalledGameIdsCache,
+  ManualSelectionError,
+  NetworkError,
+  PausedSignal,
+  RateLimitError,
+  removeOrphanedInstallationMetadata,
 };
 
 /**
@@ -94,7 +101,10 @@ export async function resumeDownload(
 
   let downloadUrl = state.url;
   if (now - pausedTime > fiftyFiveMinutes) {
-    onStatus?.({ message: 'Оновлення посилання на завантаження...' });
+    onStatus?.({
+      message: 'Оновлення посилання на завантаження...',
+      phase: 'download',
+    });
     console.log('[Installer] Signed URL might be expired, getting new one...');
 
     // Extract archive path from the original URL or use a fallback approach
@@ -135,7 +145,7 @@ export async function resumeDownload(
   setDownloadAbortController(abortController);
 
   try {
-    onStatus?.({ message: 'Продовження завантаження...' });
+    onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
 
     await downloadFile(
       downloadUrl,
@@ -150,7 +160,7 @@ export async function resumeDownload(
     // Download complete - clear paused state
     clearPausedDownloadState(state.gameId);
 
-    onStatus?.({ message: 'Завантаження завершено!' });
+    onStatus?.({ message: 'Завантаження завершено!', phase: 'install' });
     console.log('[Installer] Resume download completed successfully');
   } catch (error) {
     // If paused again, don't treat as error
@@ -170,19 +180,18 @@ export async function resumeDownload(
  */
 export async function installTranslation(
   game: Game,
-  platform: string,
   options: InstallOptions,
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<void> {
-  const { createBackup, installText, installVoice, installAchievements } = options;
+  const { createBackup, installText, installVoice, installAchievements, platform } =
+    options;
 
   try {
     console.log(`[Installer] ========== INSTALLATION START ==========`);
     console.log(`[Installer] Installing translation for: ${game.name} (${game.id})`);
     console.log(`[Installer] Options:`, JSON.stringify(options));
-    console.log(`[Installer] Requested platform: ${platform}`);
 
     // 1. Check platform compatibility for installer-based translations
     const platformError = checkPlatformCompatibility(game);
@@ -203,9 +212,18 @@ export async function installTranslation(
       );
     }
 
-    const gamePath = customGamePath
-      ? { platform, path: customGamePath, exists: true }
-      : getFirstAvailableGamePath(game.install_paths || []);
+    let gamePath: ReturnType<typeof getFirstAvailableGamePath>;
+    if (customGamePath) {
+      const customPlatform = platform === 'auto' ? 'steam' : platform;
+      gamePath = { platform: customPlatform, path: customGamePath, exists: true };
+    } else if (platform === 'auto') {
+      gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    } else {
+      const selectedInstallPath = (game.install_paths || []).find(
+        (p) => p.type === platform
+      );
+      gamePath = detectGamePath(selectedInstallPath);
+    }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
       console.error(`[Installer] Game not found. Searched paths:`, game.install_paths);
@@ -217,14 +235,13 @@ export async function installTranslation(
       if (game.license_only) {
         throw new Error(
           `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-            `Гру не знайдено автоматично. Переконайтеся, що ліцензійна версія гри встановлена через Steam, GOG чи Epic Games.`
+            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через Steam, GOG чи Epic Games.`
         );
       }
 
       throw new ManualSelectionError(
-        `Гру не знайдено автоматично.\n\n` +
-          `Шукали папку: ${platformPath || 'не вказано'}\n\n` +
-          `Виберіть папку з грою вручну.`
+        `Гру не знайдено\n\n` +
+          `Ми не змогли автоматично визначити шлях до папки: ${platformPath || 'не вказано'}`
       );
     }
 
@@ -237,11 +254,22 @@ export async function installTranslation(
     // 4. Check available disk space
     let requiredSpace = 0;
     if (installText) {
-      // Use epic_archive_size if platform is 'epic' and epic_archive is available
-      const textArchiveSize =
-        gamePath.platform === 'epic' && game.epic_archive_size
-          ? game.epic_archive_size
-          : game.archive_size;
+      // Pick the matching archive size in priority order:
+      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //   2. Store-specific variant (Epic/GOG/Xbox) — only if user is on that store.
+      //   3. Main archive — default fallback (typically Windows).
+      let textArchiveSize: string | null | undefined = game.archive_size;
+      if (isLinux() && game.steam_linux_archive_size) {
+        textArchiveSize = game.steam_linux_archive_size;
+      } else if (isMacOS() && game.steam_mac_archive_size) {
+        textArchiveSize = game.steam_mac_archive_size;
+      } else if (gamePath.platform === 'epic' && game.epic_archive_size) {
+        textArchiveSize = game.epic_archive_size;
+      } else if (gamePath.platform === 'gog' && game.gog_archive_size) {
+        textArchiveSize = game.gog_archive_size;
+      } else if (gamePath.platform === 'xbox' && game.xbox_archive_size) {
+        textArchiveSize = game.xbox_archive_size;
+      }
       if (textArchiveSize) {
         requiredSpace += parseSizeToBytes(textArchiveSize);
       }
@@ -279,13 +307,35 @@ export async function installTranslation(
     // 5.1 Download text archive if requested
     let textFiles: string[] = [];
     if (installText) {
-      // Use epic_archive if platform is 'epic' and epic_archive is available
-      const useEpicArchive = gamePath.platform === 'epic' && game.epic_archive_path;
-      const archivePath = useEpicArchive ? game.epic_archive_path : game.archive_path;
-      const archiveHash = useEpicArchive ? game.epic_archive_hash : game.archive_hash;
+      // Selection priority (matches the disk-space check above):
+      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //      Translator uploads these when files differ for Linux/macOS builds.
+      //   2. Store-specific variant (Epic/GOG/Xbox) — only when user is on
+      //      that store.
+      //   3. Main archive — default fallback.
+      let archivePath = game.archive_path;
+      let archiveHash = game.archive_hash;
 
-      if (useEpicArchive) {
+      if (isLinux() && game.steam_linux_archive_path) {
+        archivePath = game.steam_linux_archive_path;
+        archiveHash = game.steam_linux_archive_hash;
+        console.log('[Installer] Using Linux variant archive');
+      } else if (isMacOS() && game.steam_mac_archive_path) {
+        archivePath = game.steam_mac_archive_path;
+        archiveHash = game.steam_mac_archive_hash;
+        console.log('[Installer] Using macOS variant archive');
+      } else if (gamePath.platform === 'epic' && game.epic_archive_path) {
+        archivePath = game.epic_archive_path;
+        archiveHash = game.epic_archive_hash;
         console.log('[Installer] Using Epic-specific archive');
+      } else if (gamePath.platform === 'gog' && game.gog_archive_path) {
+        archivePath = game.gog_archive_path;
+        archiveHash = game.gog_archive_hash;
+        console.log('[Installer] Using GOG-specific archive');
+      } else if (gamePath.platform === 'xbox' && game.xbox_archive_path) {
+        archivePath = game.xbox_archive_path;
+        archiveHash = game.xbox_archive_hash;
+        console.log('[Installer] Using Xbox-specific archive');
       }
 
       textFiles = await downloadAndExtractArchive({
@@ -315,7 +365,8 @@ export async function installTranslation(
         extractDir: voiceExtractDir,
         isFirstSession,
         onDownloadProgress,
-        onStatus: (status) => onStatus?.({ message: `Озвучення: ${status.message}` }),
+        onStatus: (status) =>
+          onStatus?.({ message: `Озвучення: ${status.message}`, phase: status.phase }),
       });
       // Copy voice files to main extract directory
       await copyDirectory(voiceExtractDir, extractDir);
@@ -328,9 +379,13 @@ export async function installTranslation(
       installAchievements,
       hasArchivePath: !!game.achievements_archive_path,
       archivePath: game.achievements_archive_path,
-      platform,
+      platform: gamePath.platform,
     });
-    if (installAchievements && game.achievements_archive_path && platform === 'steam') {
+    if (
+      installAchievements &&
+      game.achievements_archive_path &&
+      gamePath.platform === 'steam'
+    ) {
       const achievementsExtractDir = path.join(
         downloadDir,
         `${game.id}_achievements_extract`
@@ -344,13 +399,14 @@ export async function installTranslation(
         extractDir: achievementsExtractDir,
         isFirstSession,
         onDownloadProgress,
-        onStatus: (status) => onStatus?.({ message: `Досягнення: ${status.message}` }),
+        onStatus: (status) =>
+          onStatus?.({ message: `Досягнення: ${status.message}`, phase: status.phase }),
       });
 
       achievementsInstallPath = await getSteamAchievementsPath();
       if (achievementsInstallPath) {
         console.log(`[Installer] Installing achievements to: ${achievementsInstallPath}`);
-        onStatus?.({ message: 'Копіювання перекладу ачівок...' });
+        onStatus?.({ message: 'Копіювання перекладу ачівок...', phase: 'install' });
         await mkdir(achievementsInstallPath, { recursive: true });
 
         // Find all achievement files (ignore folder structure from archive)
@@ -395,13 +451,11 @@ export async function installTranslation(
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...' });
+      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
 
-      onStatus?.({ message: 'Очищення тимчасових файлів...' });
+      onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
       await cleanupDownloadDir(downloadDir);
-
-      await runInstaller(fullTargetPath, installerFileName, onStatus, options.protonPath);
 
       const installationInfo: InstallationInfo = {
         gameId: game.id,
@@ -413,9 +467,26 @@ export async function installTranslation(
         protonPath: options.protonPath,
         installerPath: path.join(fullTargetPath, installerFileName),
         installedFiles: [],
+        installedPlatform: gamePath.platform,
         components: { text: { installed: true, files: [] } },
       };
-      await saveInstallationInfo(gamePath.path, installationInfo);
+
+      try {
+        await runInstaller(
+          fullTargetPath,
+          installerFileName,
+          onStatus,
+          options.protonPath
+        );
+
+        await saveInstallationInfo(gamePath.path, installationInfo);
+      } catch (error) {
+        await saveInstallationInfo(gamePath.path, {
+          ...installationInfo,
+          hasInstallError: true,
+        });
+        throw error;
+      }
       return;
     }
 
@@ -440,16 +511,16 @@ export async function installTranslation(
       }
 
       if (createBackup) {
-        onStatus?.({ message: 'Створення резервної копії...' });
+        onStatus?.({ message: 'Створення резервної копії...', phase: 'install' });
         await backupFiles(extractDir, fullTargetPath);
       }
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...' });
+      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
     }
 
     // 8. Cleanup
-    onStatus?.({ message: 'Очищення тимчасових файлів...' });
+    onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
@@ -461,6 +532,7 @@ export async function installTranslation(
       hasBackup: createBackup,
       isCustomPath: !!customGamePath,
       installedFiles: prefixPaths(installedFiles),
+      installedPlatform: gamePath.platform,
       components: {
         text: { installed: installText, files: prefixPaths(textFiles) },
         ...(installVoice && voiceFiles.length > 0
@@ -538,7 +610,7 @@ async function downloadAndExtractArchive(
   const archiveExt = path.extname(archivePath) || '.zip';
   const archiveFilePath = path.join(downloadDir, `${game.id}_${type}${archiveExt}`);
 
-  onStatus?.({ message: 'Отримання посилання для завантаження...' });
+  onStatus?.({ message: 'Отримання посилання для завантаження...', phase: 'download' });
   const urlResult = await getSignedDownloadUrl({
     gameId: game.id,
     archivePath,
@@ -593,7 +665,7 @@ async function downloadAndExtractArchive(
 
   // Verify hash if available
   if (archiveHash) {
-    onStatus?.({ message: 'Перевірка цілісності файлу...' });
+    onStatus?.({ message: 'Перевірка цілісності файлу...', phase: 'install' });
     const isValid = await verifyFileHash(archiveFilePath, archiveHash);
     if (!isValid) {
       if (fs.existsSync(archiveFilePath)) {
@@ -614,7 +686,11 @@ async function downloadAndExtractArchive(
  * Handle installation errors with user-friendly messages
  */
 function handleInstallationError(error: unknown): never {
-  if (error instanceof ManualSelectionError || error instanceof RateLimitError) {
+  if (
+    error instanceof ManualSelectionError ||
+    error instanceof RateLimitError ||
+    error instanceof NetworkError
+  ) {
     throw error;
   }
 
@@ -646,7 +722,7 @@ function handleInstallationError(error: unknown): never {
       );
     }
 
-    throw new Error(`Помилка встановлення: ${error.message}`);
+    throw new Error(error.message);
   }
 
   throw new Error('Невідома помилка встановлення.\n\nСпробуйте ще раз.');

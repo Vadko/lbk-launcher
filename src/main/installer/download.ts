@@ -9,6 +9,7 @@ import type {
   InstallOptions,
   PausedDownloadState,
 } from '../../shared/types';
+import { NetworkError } from './errors';
 
 const unlink = promisify(fs.unlink);
 
@@ -199,6 +200,20 @@ export function getPartialFilePath(outputPath: string): string {
 }
 
 /**
+ * Remove partial download file, ignoring errors
+ */
+async function cleanupPartialFile(partialPath: string): Promise<void> {
+  if (fs.existsSync(partialPath)) {
+    try {
+      await unlink(partialPath);
+      console.log('[Downloader] Cleaned up partial download file');
+    } catch (error) {
+      console.warn('[Downloader] Failed to clean up partial download:', error);
+    }
+  }
+}
+
+/**
  * Download file from URL with progress tracking and retry logic
  * Uses .part files for partial downloads to support pause/resume
  */
@@ -226,30 +241,32 @@ export async function downloadFile(
   console.log(`[Downloader] Expected total bytes from HEAD: ${expectedTotalBytes}`);
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    // Check if cancelled
-    if (signal?.aborted) {
-      throw new Error('Завантаження скасовано');
-    }
-
     try {
       if (attempt > 1) {
         console.log(`[Downloader] Retry attempt ${attempt}/${maxRetries}`);
         onStatus?.({
           message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.`,
+          phase: 'download',
         });
         // Wait before retry (exponential backoff)
         await new Promise((resolve) =>
           setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000))
         );
-
-        // Check if cancelled during wait
-        if (signal?.aborted) {
-          throw new Error('Завантаження скасовано');
-        }
       } else if (currentStartByte > 0) {
-        onStatus?.({ message: 'Продовження завантаження...' });
+        onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
       } else {
-        onStatus?.({ message: 'Завантаження українізатора...' });
+        onStatus?.({ message: 'Завантаження українізатора...', phase: 'download' });
+      }
+
+      // Check if cancelled/network lost before starting attempt
+      if (signal?.aborted) {
+        if (signal.reason === 'NETWORK_LOST') {
+          lastError = new NetworkError(
+            "З'єднання втрачено. Перевірте підключення до Інтернету."
+          );
+          break;
+        }
+        throw new Error('Завантаження скасовано');
       }
 
       await downloadFileAttempt(
@@ -283,16 +300,18 @@ export async function downloadFile(
       }
 
       // Show user that error occurred
-      const isNetworkError =
-        error instanceof Error &&
-        (error.message.toLowerCase().includes('network') ||
-          error.message.toLowerCase().includes('enotfound') ||
-          error.message.toLowerCase().includes('etimedout') ||
-          error.message.toLowerCase().includes('econnreset'));
-
-      if (isNetworkError && attempt < maxRetries) {
-        onStatus?.({ message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...` });
+      if (error instanceof NetworkError && attempt < maxRetries) {
+        onStatus?.({
+          message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...`,
+          phase: 'download',
+        });
         // Don't clean up partial file on network error - we can resume
+      }
+
+      // Network lost abort — stop immediately, preserve .part for retry
+      if (error instanceof NetworkError && signal?.reason === 'NETWORK_LOST') {
+        lastError = error;
+        break;
       }
 
       // Don't retry on certain errors
@@ -303,47 +322,31 @@ export async function downloadFile(
           message.includes('not found') ||
           message.includes('forbidden')
         ) {
-          // Clean up partial file on permanent errors
-          if (fs.existsSync(partialPath)) {
-            try {
-              await unlink(partialPath);
-            } catch (cleanupError) {
-              console.warn(
-                '[Downloader] Failed to clean up partial download:',
-                cleanupError
-              );
-            }
-          }
-          throw error; // Don't retry on these errors
+          await cleanupPartialFile(partialPath);
+          throw error;
         }
-        // Also don't retry if cancelled
         if (message.includes('скасовано') || message.includes('aborted')) {
-          // Clean up partial file on cancel (but not on pause)
-          if (!message.includes('paused') && fs.existsSync(partialPath)) {
-            try {
-              await unlink(partialPath);
-            } catch (cleanupError) {
-              console.warn(
-                '[Downloader] Failed to clean up partial download:',
-                cleanupError
-              );
-            }
+          if (!message.includes('paused')) {
+            await cleanupPartialFile(partialPath);
           }
-          throw error; // Don't retry on abort
+          throw error;
         }
       }
     }
   }
 
-  // All retries failed - clean up any partial file
-  if (fs.existsSync(partialPath)) {
-    try {
-      await unlink(partialPath);
-      console.log('[Downloader] Cleaned up failed download file');
-    } catch (cleanupError) {
-      console.warn('[Downloader] Failed to clean up after all retries:', cleanupError);
-    }
+  // All retries failed
+  // If it's a network error — preserve .part file for retry
+  if (lastError instanceof NetworkError) {
+    const partialSize = fs.existsSync(partialPath) ? fs.statSync(partialPath).size : 0;
+    console.log(
+      `[Downloader] Network error after ${maxRetries} retries. Preserving .part file (${partialSize} bytes) for retry.`
+    );
+    throw lastError;
   }
+
+  // Non-network error — clean up partial file
+  await cleanupPartialFile(partialPath);
 
   throw new Error(
     `Не вдалося завантажити файл після ${maxRetries} спроб.\n\n` +
@@ -378,14 +381,6 @@ async function downloadFileAttempt(
   // Use expectedTotalBytes from HEAD request as the source of truth
   let actualTotalBytes = expectedTotalBytes;
 
-  // Abort handler
-  const abortHandler = () => {
-    console.log('[Downloader] Download aborted by signal');
-    writeStream.close();
-  };
-
-  signal?.addEventListener('abort', abortHandler);
-
   try {
     // Add Range header if resuming
     const headers: Record<string, string> = {};
@@ -413,13 +408,17 @@ async function downloadFileAttempt(
             '[Downloader] Server does not support range requests, restarting from beginning'
           );
           serverSupportsRange = false;
-          onStatus?.({ message: 'Сервер не підтримує продовження, перезапуск...' });
+          onStatus?.({
+            message: 'Сервер не підтримує продовження, перезапуск...',
+            phase: 'download',
+          });
         } else if (response.statusCode === 416) {
           // Range not satisfiable - file may have changed on server
           console.error('[Downloader] Range not satisfiable (416)');
-          throw new Error(
-            'Файл на сервері змінився, потрібно перезапустити завантаження'
+          downloadStream.destroy(
+            new Error('Файл на сервері змінився, потрібно перезапустити завантаження')
           );
+          return;
         }
       }
 
@@ -440,9 +439,7 @@ async function downloadFileAttempt(
     // If already cancelled - stop immediately
     if (signal?.aborted) {
       downloadStream.destroy();
-      writeStream.close();
-      const reason = signal?.reason || 'Завантаження скасовано';
-      throw new Error(reason);
+      throw new Error(signal.reason || 'Завантаження скасовано');
     }
 
     downloadStream.on('downloadProgress', (progress) => {
@@ -543,7 +540,6 @@ async function downloadFileAttempt(
     console.log(`[Downloader] Download completed: ${outputPath}`);
   } catch (error) {
     console.error(`[Downloader] Download error:`, error);
-    writeStream.close();
 
     // Provide more specific error messages and notify UI
     if (error instanceof Error) {
@@ -562,7 +558,7 @@ async function downloadFileAttempt(
 
       if (message.includes('enotfound') || message.includes('getaddrinfo')) {
         onStatus?.({ message: '❌ Відсутнє підключення до Інтернету' });
-        throw new Error(
+        throw new NetworkError(
           'Не вдалося підключитися до сервера. Перевірте підключення до Інтернету.'
         );
       }
@@ -571,19 +567,28 @@ async function downloadFileAttempt(
         onStatus?.({
           message: '❌ Час очікування вичерпано. Перевірте підключення до Інтернету.',
         });
-        throw new Error('Час очікування вичерпано. Перевірте підключення до Інтернету.');
+        throw new NetworkError(
+          'Час очікування вичерпано. Перевірте підключення до Інтернету.'
+        );
       }
 
       if (message.includes('econnreset') || message.includes('socket hang up')) {
         onStatus?.({
           message: "❌ З'єднання розірвано. Перевірте підключення до Інтернету.",
         });
-        throw new Error("З'єднання розірвано. Перевірте підключення до Інтернету.");
+        throw new NetworkError(
+          "З'єднання розірвано. Перевірте підключення до Інтернету."
+        );
       }
 
       if (message.includes('econnrefused')) {
         onStatus?.({ message: '❌ Сервер недоступний' });
-        throw new Error('Сервер недоступний. Спробуйте пізніше.');
+        throw new NetworkError('Сервер недоступний. Спробуйте пізніше.');
+      }
+
+      // Network lost abort from offline detection
+      if (message === 'network_lost') {
+        throw new NetworkError("З'єднання втрачено. Перевірте підключення до Інтернету.");
       }
     }
 
@@ -594,6 +599,6 @@ async function downloadFileAttempt(
       `Помилка завантаження: ${error instanceof Error ? error.message : 'Невідома помилка'}`
     );
   } finally {
-    signal?.removeEventListener('abort', abortHandler);
+    writeStream.close();
   }
 }

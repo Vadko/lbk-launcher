@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { SortOrderType } from '../../shared/types';
 import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
@@ -9,7 +10,7 @@ interface UseGamesParams {
   selectedAuthors?: string[];
   specialFilter?: SpecialFilterType | null;
   searchQuery?: string;
-  sortOrder?: 'name' | 'downloads' | 'newest';
+  sortOrder?: SortOrderType;
   hideAiTranslations?: boolean;
 }
 
@@ -62,6 +63,36 @@ export function useGames({
     setError(null);
 
     try {
+      // Спеціальна обробка для улюблених перекладів
+      if (specialFilter === 'favorite-translations') {
+        const { useSettingsStore } = await import('../store/useSettingsStore');
+        const favoriteGameIds = useSettingsStore.getState().favoriteGameIds;
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        if (favoriteGameIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Отримати улюблені ігри (з SQL фільтрацією пошуку та AI)
+        const favoriteGames = await window.electronAPI.fetchGamesByIds(
+          favoriteGameIds,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        // Перевірити чи запит ще актуальний
+        if (signal.aborted) return;
+
+        setGames(favoriteGames);
+        setTotal(favoriteGames.length);
+        return;
+      }
+
       // Спеціальна обробка для встановлених українізаторів
       if (specialFilter === 'installed-translations') {
         const installedGameIds = [
@@ -81,7 +112,8 @@ export function useGames({
         const installedGames = await window.electronAPI.fetchGamesByIds(
           installedGameIds,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         // Перевірити чи запит ще актуальний
@@ -109,7 +141,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesByInstallPaths(
           installPaths,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         // Перевірити чи запит ще актуальний
@@ -137,7 +170,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesBySteamAppIds(
           steamLibraryAppIds,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         // Перевірити чи запит ще актуальний
@@ -163,7 +197,8 @@ export function useGames({
         const result = await window.electronAPI.findGamesByTitles(
           titles,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
         );
 
         if (signal.aborted) return;
@@ -188,7 +223,34 @@ export function useGames({
         const result = await window.electronAPI.findGamesByTitles(
           titles,
           searchQuery || undefined,
-          hideAiTranslations
+          hideAiTranslations,
+          sortOrder
+        );
+
+        if (signal.aborted) return;
+
+        setGames(result.games);
+        setTotal(result.total);
+        return;
+      }
+
+      // Special handling for Xbox-installed games (parsed from .GamingRoot)
+      if (specialFilter === 'installed-xbox-games') {
+        const folderNames = await window.electronAPI.getXboxInstalledPaths();
+
+        if (signal.aborted) return;
+
+        if (folderNames.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByXboxPaths(
+          folderNames,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
         );
 
         if (signal.aborted) return;
@@ -238,8 +300,11 @@ export function useGames({
         // Перевірити чи запит ще актуальний
         if (signal.aborted) return;
 
-        // Filter games that have voice archive
-        const withVoice = result.games.filter((game) => !!game.voice_archive_path);
+        // Фільтр ігор з озвучкою: показувати якщо є voice_archive_path АБО voice_progress не null
+        // (запланована озвучка, в процесі або готова)
+        const withVoice = result.games.filter(
+          (game) => !!game.voice_archive_path || game.voice_progress !== null
+        );
 
         setGames(withVoice);
         setTotal(withVoice.length);
@@ -370,7 +435,8 @@ export function useGames({
           specialFilter === 'installed-translations' ||
           specialFilter === 'available-in-steam' ||
           specialFilter === 'owned-gog-games' ||
-          specialFilter === 'owned-epic-games'
+          specialFilter === 'owned-epic-games' ||
+          specialFilter === 'installed-xbox-games'
         ) {
           if (index !== -1) {
             // Гра є в списку - оновити дані
@@ -395,7 +461,11 @@ export function useGames({
         }
 
         if (specialFilter === 'with-voice') {
-          if (!updatedGame.voice_archive_path) {
+          // Перевірити чи гра відповідає фільтру: має voice_archive_path АБО voice_progress не null
+          const hasVoice =
+            !!updatedGame.voice_archive_path || updatedGame.voice_progress !== null;
+
+          if (!hasVoice) {
             // Якщо у гри зникло озвучення - видалити зі списку
             if (index !== -1) {
               setTotal((prev) => prev - 1);

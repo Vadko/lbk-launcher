@@ -11,6 +11,7 @@ import type {
   Game,
   InstallationStatus,
   InstallOptions,
+  SortOrderType,
 } from '../shared/types';
 
 const electronAPI: ElectronAPI = {
@@ -22,8 +23,16 @@ const electronAPI: ElectronAPI = {
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
-  ) => ipcRenderer.invoke('fetch-games-by-ids', gameIds, searchQuery, hideAiTranslations),
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
+  ) =>
+    ipcRenderer.invoke(
+      'fetch-games-by-ids',
+      gameIds,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    ),
   syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
@@ -31,42 +40,64 @@ const electronAPI: ElectronAPI = {
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) =>
     ipcRenderer.invoke(
       'find-games-by-install-paths',
       installPaths,
       searchQuery,
-      hideAiTranslations
+      hideAiTranslations,
+      sortOrder
     ),
   getSteamLibraryAppIds: () => ipcRenderer.invoke('get-steam-library-app-ids'),
   findGamesBySteamAppIds: (
     steamAppIds: number[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) =>
     ipcRenderer.invoke(
       'find-games-by-steam-app-ids',
       steamAppIds,
       searchQuery,
-      hideAiTranslations
+      hideAiTranslations,
+      sortOrder
     ),
   countGamesBySteamAppIds: (steamAppIds: number[]) =>
     ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) =>
-    ipcRenderer.invoke('find-games-by-titles', titles, searchQuery, hideAiTranslations),
+    ipcRenderer.invoke(
+      'find-games-by-titles',
+      titles,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    ),
   getGogLibrary: () => ipcRenderer.invoke('get-gog-library'),
   getEpicLibrary: () => ipcRenderer.invoke('get-epic-library'),
-  installTranslation: (
-    game: Game,
-    platform: string,
-    options: InstallOptions,
-    customGamePath?: string
-  ) => ipcRenderer.invoke('install-translation', game, platform, options, customGamePath),
+  getXboxInstalledPaths: () => ipcRenderer.invoke('get-xbox-installed-paths'),
+  findGamesByXboxPaths: (
+    folderNames: string[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean,
+    sortOrder: SortOrderType = 'name'
+  ) =>
+    ipcRenderer.invoke(
+      'find-games-by-xbox-paths',
+      folderNames,
+      searchQuery,
+      hideAiTranslations,
+      sortOrder
+    ),
+  detectGamePlatforms: (game: Game) => ipcRenderer.invoke('detect-game-platforms', game),
+  installTranslation: (game: Game, options: InstallOptions, customGamePath?: string) =>
+    ipcRenderer.invoke('install-translation', game, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
   rerunInstaller: (installerPath: string, protonPath?: string) =>
     ipcRenderer.invoke('rerun-installer', installerPath, protonPath),
@@ -187,6 +218,19 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('track-support-click', gameId),
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
+  // Submit feedback for a game translation
+  submitFeedback: (
+    gameId: string,
+    errorType: string,
+    message: string,
+    screenshotPaths?: string[]
+  ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  submitLogs: (message: string, crashReason?: string) =>
+    ipcRenderer.invoke('submit-logs', message, crashReason),
+  getFeedbackUploadUrls: (fileNames: string[]) =>
+    ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
+  uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
+    ipcRenderer.invoke('upload-file-to-signed-url', signedUrl, filePath, contentType),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
@@ -211,8 +255,8 @@ const electronAPI: ElectronAPI = {
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => ipcRenderer.invoke('record-promo-banner-impression', params),
-  recordBannerImpression: (bannerId: string) =>
-    ipcRenderer.invoke('record-banner-impression', bannerId),
+  recordBannerImpression: (bannerId: string, impressionType: ImpressionType = 'view') =>
+    ipcRenderer.invoke('record-banner-impression', bannerId, impressionType),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

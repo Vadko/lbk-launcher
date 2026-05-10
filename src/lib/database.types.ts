@@ -169,6 +169,67 @@ export type Database = {
         }
         Relationships: []
       }
+      feedbacks: {
+        Row: {
+          admin_note: string | null
+          app_version: string | null
+          arch: string | null
+          created_at: string
+          error_type: Database["public"]["Enums"]["feedback_error_type"]
+          game_id: string
+          id: string
+          machine_id: string
+          message: string
+          platform: string | null
+          screenshot_paths: string[] | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          app_version?: string | null
+          arch?: string | null
+          created_at?: string
+          error_type: Database["public"]["Enums"]["feedback_error_type"]
+          game_id: string
+          id?: string
+          machine_id: string
+          message: string
+          platform?: string | null
+          screenshot_paths?: string[] | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          app_version?: string | null
+          arch?: string | null
+          created_at?: string
+          error_type?: Database["public"]["Enums"]["feedback_error_type"]
+          game_id?: string
+          id?: string
+          machine_id?: string
+          message?: string
+          platform?: string | null
+          screenshot_paths?: string[] | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       game_authors: {
         Row: {
           author_id: string
@@ -354,6 +415,10 @@ export type Database = {
           fundraising_goal: number | null
           game_description: string | null
           game_id: string
+          gog_archive_file_list: Json | null
+          gog_archive_hash: string | null
+          gog_archive_path: string | null
+          gog_archive_size: string | null
           hide: boolean
           id: string
           install_paths:
@@ -371,6 +436,14 @@ export type Database = {
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
           support_url: string | null
           team: string
           telegram: string | null
@@ -387,6 +460,10 @@ export type Database = {
           voice_archive_size: string | null
           voice_progress: number | null
           website: string | null
+          xbox_archive_file_list: Json | null
+          xbox_archive_hash: string | null
+          xbox_archive_path: string | null
+          xbox_archive_size: string | null
           youtube: string | null
         }
         Insert: {
@@ -419,6 +496,10 @@ export type Database = {
           fundraising_goal?: number | null
           game_description?: string | null
           game_id: string
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -436,6 +517,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           support_url?: string | null
           team: string
           telegram?: string | null
@@ -452,6 +541,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Update: {
@@ -484,6 +577,10 @@ export type Database = {
           fundraising_goal?: number | null
           game_description?: string | null
           game_id?: string
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -501,6 +598,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           support_url?: string | null
           team?: string
           telegram?: string | null
@@ -517,6 +622,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -578,6 +687,10 @@ export type Database = {
           fundraising_current: number | null
           fundraising_goal: number | null
           game_description: string | null
+          gog_archive_file_list: Json | null
+          gog_archive_hash: string | null
+          gog_archive_path: string | null
+          gog_archive_size: string | null
           hide: boolean
           id: string
           install_paths:
@@ -598,6 +711,14 @@ export type Database = {
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
           subscriptions: number | null
           support_url: string | null
           team: string
@@ -616,6 +737,10 @@ export type Database = {
           voice_archive_size: string | null
           voice_progress: number | null
           website: string | null
+          xbox_archive_file_list: Json | null
+          xbox_archive_hash: string | null
+          xbox_archive_path: string | null
+          xbox_archive_size: string | null
           youtube: string | null
         }
         Insert: {
@@ -649,6 +774,10 @@ export type Database = {
           fundraising_current?: number | null
           fundraising_goal?: number | null
           game_description?: string | null
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -669,6 +798,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           subscriptions?: number | null
           support_url?: string | null
           team: string
@@ -687,6 +824,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Update: {
@@ -720,6 +861,10 @@ export type Database = {
           fundraising_current?: number | null
           fundraising_goal?: number | null
           game_description?: string | null
+          gog_archive_file_list?: Json | null
+          gog_archive_hash?: string | null
+          gog_archive_path?: string | null
+          gog_archive_size?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -740,6 +885,14 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           subscriptions?: number | null
           support_url?: string | null
           team?: string
@@ -758,6 +911,10 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          xbox_archive_file_list?: Json | null
+          xbox_archive_hash?: string | null
+          xbox_archive_path?: string | null
+          xbox_archive_size?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -828,6 +985,7 @@ export type Database = {
       }
       kuli_imports: {
         Row: {
+          data_hash: string | null
           game_id: string
           imported_at: string
           kuli_id: number
@@ -835,6 +993,7 @@ export type Database = {
           localization_name: string | null
         }
         Insert: {
+          data_hash?: string | null
           game_id: string
           imported_at?: string
           kuli_id: number
@@ -842,6 +1001,7 @@ export type Database = {
           localization_name?: string | null
         }
         Update: {
+          data_hash?: string | null
           game_id?: string
           imported_at?: string
           kuli_id?: number
@@ -893,6 +1053,51 @@ export type Database = {
           reason?: string | null
           skipped_at?: string | null
           skipped_by?: string | null
+        }
+        Relationships: []
+      }
+      launcher_logs: {
+        Row: {
+          admin_note: string | null
+          app_version: string | null
+          arch: string | null
+          crash_reason: string | null
+          created_at: string
+          id: string
+          log_path: string | null
+          machine_id: string
+          message: string | null
+          platform: string | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          app_version?: string | null
+          arch?: string | null
+          crash_reason?: string | null
+          created_at?: string
+          id?: string
+          log_path?: string | null
+          machine_id: string
+          message?: string | null
+          platform?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          app_version?: string | null
+          arch?: string | null
+          crash_reason?: string | null
+          created_at?: string
+          id?: string
+          log_path?: string | null
+          machine_id?: string
+          message?: string | null
+          platform?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1554,10 +1759,14 @@ export type Database = {
           created_at: string
           email: string
           email_notifications: boolean
+          feedback_email_notifications: boolean
           full_name: string | null
           id: string
           password_hash: string
           role: Database["public"]["Enums"]["user_role"]
+          telegram_chat_ids: number[] | null
+          telegram_link_token: string | null
+          telegram_notifications: boolean
           unsubscribe_token: string
           updated_at: string
           verified_user: boolean
@@ -1569,10 +1778,14 @@ export type Database = {
           created_at?: string
           email: string
           email_notifications?: boolean
+          feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
           password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
+          telegram_chat_ids?: number[] | null
+          telegram_link_token?: string | null
+          telegram_notifications?: boolean
           unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
@@ -1584,10 +1797,14 @@ export type Database = {
           created_at?: string
           email?: string
           email_notifications?: boolean
+          feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
           password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
+          telegram_chat_ids?: number[] | null
+          telegram_link_token?: string | null
+          telegram_notifications?: boolean
           unsubscribe_token?: string
           updated_at?: string
           verified_user?: boolean
@@ -1855,6 +2072,11 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
+      feedback_error_type:
+        | "missing_translation"
+        | "translation_error"
+        | "technical"
+      feedback_status: "new" | "in_progress" | "fixed" | "rejected"
       game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
         | "steam"
@@ -1863,6 +2085,7 @@ export type Database = {
         | "epic"
         | "rockstar"
         | "other"
+        | "xbox"
       user_role: "admin" | "moderator" | "translator" | "user"
     }
     CompositeTypes: {
@@ -1997,8 +2220,22 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
+      feedback_error_type: [
+        "missing_translation",
+        "translation_error",
+        "technical",
+      ],
+      feedback_status: ["new", "in_progress", "fixed", "rejected"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],
-      install_source: ["steam", "gog", "emulator", "epic", "rockstar", "other"],
+      install_source: [
+        "steam",
+        "gog",
+        "emulator",
+        "epic",
+        "rockstar",
+        "other",
+        "xbox",
+      ],
       user_role: ["admin", "moderator", "translator", "user"],
     },
   },

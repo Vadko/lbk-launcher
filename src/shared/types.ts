@@ -8,8 +8,17 @@ import type { Database } from '../lib/database.types';
 export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
+export type BannerType = Database['public']['Enums']['banner_type'];
+export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
+export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated';
+
+export interface GamePath {
+  platform: Platform;
+  path: string;
+  exists: boolean;
+}
 
 interface InstallationComponent {
   installed: boolean;
@@ -22,10 +31,12 @@ export interface InstallationInfo {
   installedAt: string;
   gamePath: string;
   hasBackup?: boolean;
+  hasInstallError?: boolean; // True if installation was attempted but failed
   protonPath?: string; // For Linux Proton installations
   isCustomPath?: boolean; // True if installed via manual folder selection (not auto-detected Steam path)
   installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
+  installedPlatform?: Platform; // Platform on which the localization was installed (steam, epic, gog, etc.)
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;
@@ -52,6 +63,7 @@ export interface DownloadProgress {
 export interface InstallationStatus {
   message: string;
   progress?: number;
+  phase?: 'download' | 'install';
 }
 
 export interface InstallResult {
@@ -61,6 +73,7 @@ export interface InstallResult {
     message: string;
     needsManualSelection?: boolean;
     isRateLimit?: boolean;
+    isNetworkError?: boolean;
   };
 }
 
@@ -69,6 +82,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  platform: Platform | 'auto';
   protonPath?: string;
 }
 
@@ -90,7 +104,7 @@ export interface GetGamesParams {
   authors?: string[];
   showAdultGames?: boolean;
   hideAiTranslations?: boolean;
-  sortOrder?: 'name' | 'downloads' | 'newest';
+  sortOrder?: SortOrderType;
 }
 
 export interface GetGamesResult {
@@ -130,7 +144,8 @@ export interface ElectronAPI {
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
-    showAiTranslations?: boolean
+    showAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) => Promise<Game[]>;
   syncKurinGames: () => Promise<string[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
@@ -139,25 +154,35 @@ export interface ElectronAPI {
   findGamesByInstallPaths: (
     installPaths: string[],
     searchQuery?: string,
-    showAiTranslations?: boolean
+    showAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
   getSteamLibraryAppIds: () => Promise<number[]>;
   findGamesBySteamAppIds: (
     steamAppIds: number[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
   countGamesBySteamAppIds: (steamAppIds: number[]) => Promise<number>;
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,
-    hideAiTranslations?: boolean
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
   getGogLibrary: () => Promise<string[]>;
   getEpicLibrary: () => Promise<string[]>;
+  getXboxInstalledPaths: () => Promise<string[]>;
+  findGamesByXboxPaths: (
+    folderNames: string[],
+    searchQuery?: string,
+    hideAiTranslations?: boolean,
+    sortOrder?: SortOrderType
+  ) => Promise<GetGamesResult>;
+  detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
   installTranslation: (
     game: Game,
-    platform: string,
     options: InstallOptions,
     customGamePath?: string
   ) => Promise<InstallResult>;
@@ -236,6 +261,29 @@ export interface ElectronAPI {
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
+  // Submit feedback for a game translation
+  submitFeedback: (
+    gameId: string,
+    errorType: FeedbackErrorType,
+    message: string,
+    screenshotPaths?: string[]
+  ) => Promise<{ success: boolean; error?: string }>;
+  submitLogs: (
+    message: string,
+    crashReason?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  // Get signed upload URLs for feedback screenshots
+  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
+    success: boolean;
+    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
+    error?: string;
+  }>;
+  // Upload a file to a signed URL
+  uploadFileToSignedUrl: (
+    signedUrl: string,
+    filePath: string,
+    contentType: string
+  ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
   // Sync status
@@ -249,7 +297,10 @@ export interface ElectronAPI {
     impressionType: ImpressionType;
     gameSlug?: string;
   }) => Promise<boolean>;
-  recordBannerImpression: (bannerId: string) => Promise<boolean>;
+  recordBannerImpression: (
+    bannerId: string,
+    impressionType?: ImpressionType
+  ) => Promise<boolean>;
 }
 
 declare global {

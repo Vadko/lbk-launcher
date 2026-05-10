@@ -33,36 +33,6 @@ export function parseLibraryFolders(content: string): string[] {
 }
 
 /**
- * Parse Steam localconfig.vdf file and extract all App IDs from user's library
- * Path: userdata/<steamid>/config/localconfig.vdf
- * Structure: UserLocalConfigStore.Software.Valve.Steam.apps.<appid>
- * Returns all App IDs that user has ever launched (their full library)
- */
-export function parseLocalConfigApps(content: string): number[] {
-  try {
-    const parsed = vdf.parse(content);
-    const appIds: number[] = [];
-
-    // Navigate to: UserLocalConfigStore.Software.Valve.Steam.apps
-    const apps = parsed?.UserLocalConfigStore?.Software?.Valve?.Steam?.apps;
-    if (!apps || typeof apps !== 'object') return [];
-
-    for (const appId of Object.keys(apps)) {
-      const parsedAppId = parseInt(appId, 10);
-      // Filter out system entries (0, 1, 2, 7) and invalid IDs
-      if (!isNaN(parsedAppId) && parsedAppId > 10) {
-        appIds.push(parsedAppId);
-      }
-    }
-
-    return appIds;
-  } catch (error) {
-    console.error('[VDFParser] Error parsing localconfig.vdf:', error);
-    return [];
-  }
-}
-
-/**
  * Parse Steam appmanifest file
  */
 interface AppManifest {

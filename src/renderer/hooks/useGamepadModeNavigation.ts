@@ -131,7 +131,7 @@ export function useGamepadModeNavigation(enabled = true) {
     setNavigationArea,
     totalGames,
   } = useGamepadModeStore();
-  const { selectedGame } = useStore();
+  const { selectedGame, setSelectedGame } = useStore();
 
   const prevNavigationAreaRef = useRef<string | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -476,13 +476,23 @@ export function useGamepadModeNavigation(enabled = true) {
     return Array.from(buttons);
   }, []);
 
-  // Get home active cards
+  // Get home active cards and action buttons
   const getHomeActive = useCallback((): HTMLElement[] => {
-    const cardButtons = document.querySelectorAll<HTMLElement>(
-      '[data-gamepad-main-content] [data-gamepad-card]:not([disabled])'
+    const allElements = document.querySelectorAll<HTMLElement>(
+      '[data-gamepad-main-content] .main-page:not([style*="display: none"]) :is([data-gamepad-action], [data-gamepad-card]):not([disabled])'
     );
-    return Array.from(cardButtons);
+    return Array.from(allElements);
   }, []);
+
+  // Go to home page (reset selected game and navigate to games area)
+  const handleGoHome = useCallback(() => {
+    // Check if we're already on the home page
+    if (navigationArea === 'main-content' && !selectedGame) return;
+
+    playNavigateSound();
+    setSelectedGame(null);
+    setNavigationArea('main-content');
+  }, [navigationArea, selectedGame, setSelectedGame, setNavigationArea]);
 
   // Handle main content navigation
   const handleMainContentNavigation = useCallback(
@@ -562,7 +572,7 @@ export function useGamepadModeNavigation(enabled = true) {
       }
 
       // A button - click focused button or primary action
-      if (gp.buttons[BUTTON.A]?.pressed && canInput('button-a')) {
+      if (isButtonJustPressed(gp, BUTTON.A) && canInput('button-a')) {
         // If a button is focused, click it
         if (currentIndex !== -1) {
           playConfirmSound();
@@ -579,9 +589,15 @@ export function useGamepadModeNavigation(enabled = true) {
           primaryButton.click();
         }
       }
+
+      // Y button - go to home page
+      if (isButtonJustPressed(gp, BUTTON.Y) && canInput('button-y-home')) {
+        handleGoHome();
+      }
     },
     [
       canInput,
+      isButtonJustPressed,
       focusedGameIndex,
       getActionButtons,
       getGameCards,
@@ -589,6 +605,7 @@ export function useGamepadModeNavigation(enabled = true) {
       setNavigationArea,
       getHomeActive,
       selectedGame,
+      handleGoHome,
     ]
   );
 
@@ -847,6 +864,11 @@ export function useGamepadModeNavigation(enabled = true) {
           }
         }
       }
+
+      // Y button - go to home page
+      if (isButtonJustPressed(gp, BUTTON.Y) && canInput('button-y-home')) {
+        handleGoHome();
+      }
     },
     [
       canInput,
@@ -860,6 +882,7 @@ export function useGamepadModeNavigation(enabled = true) {
       isTextInput,
       setGamepadSelected,
       getHeaderSelectedElement,
+      handleGoHome,
     ]
   );
 
@@ -918,6 +941,11 @@ export function useGamepadModeNavigation(enabled = true) {
       if (gp.buttons[BUTTON.A]?.pressed && canInput('button-a')) {
         selectCurrentGame();
       }
+
+      // Y button - go to home page (only when game is selected)
+      if (gp.buttons[BUTTON.Y]?.pressed && canInput('button-y-home')) {
+        handleGoHome();
+      }
     },
     [
       canInput,
@@ -926,6 +954,7 @@ export function useGamepadModeNavigation(enabled = true) {
       navigateToGame,
       selectCurrentGame,
       setNavigationArea,
+      handleGoHome,
     ]
   );
 

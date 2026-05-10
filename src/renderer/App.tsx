@@ -5,7 +5,6 @@ import { useGamepads } from 'react-ts-gamepads';
 import mainBg from '../../resources/main-bg.webp';
 import { AppLoader } from './components/AppLoader/AppLoader';
 import { GamepadHints } from './components/GamepadHints/GamepadHints';
-import { AmbientBackground } from './components/Layout/AmbientBackground';
 import { TitleBar } from './components/Layout/TitleBar';
 import { MainContent } from './components/MainContent/MainContent';
 import { ConfirmModal } from './components/Modal/ConfirmModal';
@@ -265,6 +264,17 @@ export const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [loadSteamGames]);
 
+  // Завантажити встановлені українізатори при старті
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const timer = setTimeout(async () => {
+      await useStore.getState().loadInstalledGamesFromSystem();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   // Детекція встановлених ігор на початку (якщо увімкнено)
   useEffect(() => {
     if (!autoDetectInstalledGames || !window.electronAPI) return;
@@ -397,8 +407,6 @@ export const App: React.FC = () => {
         className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
         data-gamepad-mode={isGamepadMode || undefined}
       >
-        {/* Only show ambient background when liquid glass is not active */}
-        {!isLiquidGlassActive && <AmbientBackground />}
         <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
 
         {/* Main layout - changes based on gamepad mode */}

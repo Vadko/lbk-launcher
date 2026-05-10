@@ -29,8 +29,8 @@ interface InfoItemProps {
 }
 
 const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value, compact }) => (
-  <div className="flex items-start gap-3">
-    <div className="text-color-main mt-0.5">{icon}</div>
+  <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
+    <div className={`text-color-main ${compact ? '' : 'mt-0.5'}`}>{icon}</div>
     <div
       className={`flex gap-1 transition-all duration-200 ${compact ? 'items-center flex-row' : 'flex-col'}`}
     >
@@ -141,8 +141,8 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
         )}
         {game.achievements_archive_size && (
           <motion.div layout transition={{ duration: 0.2 }}>
-            <div className="flex items-start gap-3">
-              <div className="text-neon-blue mt-0.5">
+            <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
+              <div className={`text-neon-blue ${compact ? '' : 'mt-0.5'}`}>
                 <Trophy size={18} />
               </div>
               <div

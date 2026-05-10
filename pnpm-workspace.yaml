@@ -1,3 +1,10 @@
+allowBuilds:
+  '@sentry/cli': true
+  '@swc/core': true
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
 onlyBuiltDependencies:
   - '@swc/core'
   - better-sqlite3

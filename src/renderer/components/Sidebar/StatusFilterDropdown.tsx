@@ -32,6 +32,8 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
   }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [dropdownMaxHeight, setDropdownMaxHeight] = useState<number | null>(null);
 
     const currentLabel = useMemo(() => {
       if (specialFilter) {
@@ -61,6 +63,26 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
       };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    // Compute available vertical space from the trigger button to the bottom of
+    // the viewport. Re-runs on open and on window resize so the dropdown always
+    // fits inside the visible area and shows its scrollbar when truncated.
+    useEffect(() => {
+      if (!isOpen) return;
+
+      const recalc = () => {
+        if (!buttonRef.current) return;
+        const rect = buttonRef.current.getBoundingClientRect();
+        const margin = 16; // breathing room from the viewport bottom
+        const available = window.innerHeight - rect.bottom - margin;
+        // Floor at 200px so the dropdown is at least usable on tiny windows.
+        setDropdownMaxHeight(Math.max(200, available));
+      };
+
+      recalc();
+      window.addEventListener('resize', recalc);
+      return () => window.removeEventListener('resize', recalc);
     }, [isOpen]);
 
     const handleStatusToggle = useCallback(
@@ -98,6 +120,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
     return (
       <div className="relative flex-1 min-w-0" ref={menuRef}>
         <button
+          ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
             hasActiveFilter
@@ -131,7 +154,10 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="absolute top-full left-0 mt-1 py-1 w-[calc(200%+0.5rem)] bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-hidden filter-dropdown"
+              className="absolute top-full left-0 mt-1 py-1 w-[calc(200%+0.5rem)] bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-x-hidden overflow-y-auto filter-dropdown custom-scrollbar"
+              style={{
+                maxHeight: dropdownMaxHeight ? `${dropdownMaxHeight}px` : undefined,
+              }}
               data-gamepad-dropdown
             >
               {hasActiveFilter && (

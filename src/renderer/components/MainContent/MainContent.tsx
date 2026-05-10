@@ -1,5 +1,8 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
+  AlertTriangle,
+  Bookmark,
+  BookmarkCheck,
   Download,
   EyeOff,
   Heart,
@@ -11,17 +14,17 @@ import {
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { GameBannersResult } from '@/main/db/banners-api';
-import type { LaunchGameResult } from '../../../shared/types';
+import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
+import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { isSpecialTranslator } from '../../constants/specialTranslators';
-import { getLanguageHint } from '../../helpers/getLanguageHint';
 import { useInstallation } from '../../hooks/useInstallation';
-import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { trackEvent } from '../../utils/analytics';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
+import { FeedbackModal } from '../Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
 import { Placement } from '../Placements';
 import { Button } from '../ui/Button';
@@ -31,10 +34,11 @@ import { AuthorsList } from './AuthorsList';
 import { DownloadProgressCard } from './DownloadProgressCard';
 import { FundraisingProgressCard } from './FundraisingProgressCard';
 import { GameHero } from './GameHero';
-import { GamesSection } from './GamesSection';
+import { ImportantNotice } from './ImportantNotice';
 import { InfoCard } from './InfoCard';
 import { InstallationStatusBadge } from './InstallationStatusBadge';
 import { InstallationStatusMessage } from './InstallationStatusMessage';
+import { MainPage } from './MainPage';
 import { SocialLinksCard } from './SocialLinksCard';
 import { StatusCard } from './StatusCard';
 import { VideoCard } from './VideoCard';
@@ -46,15 +50,20 @@ export const MainContent: React.FC = () => {
     isCheckingInstallationStatus,
     isGameDetected,
     installedGames,
-    setInstallationProgress,
   } = useStore();
   const { showModal } = useModalStore();
-  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
-    useSettingsStore();
+  const {
+    showAdultGames,
+    openSettingsModal,
+    createBackupBeforeInstall,
+    toggleFavoriteGame,
+    isFavoriteGame,
+  } = useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
@@ -66,7 +75,9 @@ export const MainContent: React.FC = () => {
 
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
   const isTranslationInstalled =
-    installationInfo && installationInfo.gameId === selectedGame?.id;
+    installationInfo &&
+    !installationInfo.hasInstallError &&
+    installationInfo.gameId === selectedGame?.id;
   const isUpdateAvailable =
     installationInfo &&
     selectedGame &&
@@ -74,11 +85,18 @@ export const MainContent: React.FC = () => {
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
+  const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
+
+  // Toggle favorite handler
+  const handleToggleFavorite = useCallback(() => {
+    if (selectedGame) {
+      toggleFavoriteGame(selectedGame.id);
+    }
+  }, [selectedGame, toggleFavoriteGame]);
 
   // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
     let isMounted = true;
-    let showTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const loadBannerData = async () => {
       if (!selectedGame?.id) {
@@ -95,9 +113,6 @@ export const MainContent: React.FC = () => {
         return;
       }
 
-      setBannerData(null);
-      setLoadedBannerGameId(null);
-
       try {
         const result = await window.electronAPI.fetchBannersForGame(
           selectedGame.id,
@@ -108,12 +123,10 @@ export const MainContent: React.FC = () => {
         // Cache the result
         bannerCacheRef.current.set(selectedGame.id, result);
 
-        showTimeout = setTimeout(() => {
-          if (isMounted) {
-            setBannerData(result);
-            setLoadedBannerGameId(selectedGame.id);
-          }
-        }, 500);
+        if (isMounted) {
+          setBannerData(result);
+          setLoadedBannerGameId(selectedGame.id);
+        }
       } catch (error) {
         if (!isMounted) return;
         console.error('Error loading banner data:', error);
@@ -126,15 +139,25 @@ export const MainContent: React.FC = () => {
 
     return () => {
       isMounted = false;
-      if (showTimeout) {
-        clearTimeout(showTimeout);
-      }
     };
   }, [selectedGame?.id, selectedGame?.slug]);
 
+  const prevBannerInfoRef = useRef<{
+    data: BannerData | null;
+    isKuli: boolean;
+    support_url: string | null;
+    placementType: BannerType | null;
+  }>({ data: null, isKuli: false, support_url: null, placementType: null });
+
   const bannerInfo = useMemo(() => {
     if (!selectedGame) {
-      return { data: null };
+      prevBannerInfoRef.current = {
+        data: null,
+        isKuli: false,
+        support_url: null,
+        placementType: null,
+      };
+      return prevBannerInfoRef.current;
     }
 
     // Check cache directly to avoid flickering when switching between cached games
@@ -148,22 +171,20 @@ export const MainContent: React.FC = () => {
         (selectedGame.support_url ? 'small_square' : null) ??
         null;
 
-      return {
+      const info = {
         data: cachedData.banner || null,
         isKuli: cachedData.isKuli || false,
         support_url: selectedGame?.support_url || null,
         placementType: type,
       };
+      prevBannerInfoRef.current = info;
+      return info;
     }
 
-    // If not in cache and not loaded for this game yet, show nothing
+    // If not in cache and not loaded for this game yet,
+    // keep previous banner to avoid flicker
     if (loadedBannerGameId !== selectedGame.id) {
-      return {
-        data: null,
-        isKuli: false,
-        support_url: null,
-        placementType: null,
-      };
+      return prevBannerInfoRef.current;
     }
 
     const type =
@@ -172,13 +193,45 @@ export const MainContent: React.FC = () => {
       (selectedGame.support_url ? 'small_square' : null) ??
       null;
 
-    return {
+    const info = {
       data: bannerData?.banner || null,
       isKuli: bannerData?.isKuli || false,
       support_url: selectedGame?.support_url || null,
       placementType: type,
     };
+    prevBannerInfoRef.current = info;
+    return info;
   }, [selectedGame, bannerData, loadedBannerGameId]);
+
+  // Record banner impression: Mixpanel + Supabase together
+  const trackBannerImpression = useCallback(
+    (action: 'view' | 'click') => {
+      const banner = bannerInfo?.data;
+      const content = banner?.id ? 'ads' : bannerInfo?.isKuli ? 'kuli' : 'support';
+
+      trackEvent('ads-placement', {
+        ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+        Content: content,
+        Type: bannerInfo?.placementType ?? 'unknown',
+        'Game Name': selectedGame?.name ?? '',
+        'Game Id': selectedGame?.id ?? '',
+        Action: action,
+      });
+
+      if (banner?.id) {
+        window.electronAPI?.recordBannerImpression?.(banner.id, action);
+      }
+    },
+    [bannerInfo, selectedGame]
+  );
+
+  const handleBannerView = useCallback(() => {
+    trackBannerImpression('view');
+  }, [trackBannerImpression]);
+
+  const handleBannerClick = useCallback(() => {
+    trackBannerImpression('click');
+  }, [trackBannerImpression]);
 
   // Callback for first install - show subscription modal
   const handleFirstInstallComplete = useCallback(() => {
@@ -199,6 +252,7 @@ export const MainContent: React.FC = () => {
     isInstalling,
     isUninstalling,
     isPaused,
+    isWaitingForNetwork,
     installProgress,
     downloadProgress,
     statusMessage,
@@ -213,6 +267,7 @@ export const MainContent: React.FC = () => {
     showInstallOptions,
     setShowInstallOptions,
     pendingInstallPath,
+    availablePlatforms,
   } = useInstallation({
     selectedGame,
     isUpdateAvailable: !!isUpdateAvailable,
@@ -234,28 +289,16 @@ export const MainContent: React.FC = () => {
     const handleOnline = () => {
       setIsOnline(true);
       console.log('[MainContent] Internet connection restored');
-
-      if (selectedGame && isInstalling) {
-        setInstallationProgress(selectedGame.id, {
-          statusMessage: 'Підключення відновлено. Спроба продовжити...',
-        });
-      }
     };
 
     const handleOffline = async () => {
       setIsOnline(false);
       console.log('[MainContent] Internet connection lost');
 
-      // Don't abort if paused - download is already stopped
-      if (selectedGame && isInstalling && !isPaused) {
+      // Don't abort if paused or already waiting — download is already stopped
+      if (selectedGame && isInstalling && !isPaused && !isWaitingForNetwork) {
         console.log('[MainContent] Aborting download due to connection loss');
-        await window.electronAPI?.abortDownload(
-          'Завантаження скасовано через відсутність підключення до Інтернету'
-        );
-        setInstallationProgress(selectedGame.id, {
-          statusMessage:
-            '❌ Завантаження скасовано через відсутність підключення до Інтернету',
-        });
+        await window.electronAPI?.abortDownload('NETWORK_LOST');
       }
     };
 
@@ -266,7 +309,7 @@ export const MainContent: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [selectedGame, isInstalling, isPaused, setInstallationProgress]);
+  }, [selectedGame, isInstalling, isPaused, isWaitingForNetwork]);
 
   const handleSupport = useCallback(() => {
     if (!selectedGame?.support_url) return;
@@ -323,21 +366,7 @@ export const MainContent: React.FC = () => {
   ]);
 
   if (!selectedGame) {
-    return (
-      <div
-        data-gamepad-main-content
-        className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'pb-3'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
-      >
-        <div className="grid grid-rows-auto gap-10 h-auto">
-          <GamesSection title="Новинки" sortOrder="newest" />
-          <GamesSection
-            title="Популярне у гравців"
-            showDownloadCounter={true}
-            showTrendsGames={true}
-          />
-        </div>
-      </div>
-    );
+    return <MainPage />;
   }
 
   // Adult content overlay - show when adult game is selected but setting is off
@@ -383,6 +412,7 @@ export const MainContent: React.FC = () => {
             installationInfo?.isCustomPath ||
             !isGameInstalledOnSystem
           }
+          availablePlatforms={availablePlatforms}
         />
       )}
 
@@ -396,269 +426,349 @@ export const MainContent: React.FC = () => {
         />
       )}
 
+      {/* Feedback Modal */}
+      {selectedGame && (
+        <FeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          gameId={selectedGame.id}
+          gameName={selectedGame.name}
+        />
+      )}
+
       <div
         data-gamepad-main-content
         className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar"
       >
-        <GameHero game={selectedGame} />
+        <LayoutGroup>
+          <GameHero game={selectedGame} />
 
-        {/* Actions block */}
-        <div className="glass-card mb-6 grid gap-6">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Primary actions */}
-            {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
-              <Button
-                variant="primary"
-                icon={<Play size={20} />}
-                onClick={handleLaunchGame}
-                disabled={isLaunching || isInstalling || isUninstalling}
-                data-gamepad-action
-              >
-                {isLaunching ? 'Запуск...' : 'Грати'}
-              </Button>
-            )}
-            <Button
-              variant={
-                isGameInstalledOnSystem && isTranslationInstalled
-                  ? 'secondary'
-                  : 'primary'
-              }
-              icon={isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />}
-              onClick={() => handleInstall()}
-              disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
-              title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
-              data-gamepad-primary-action
-              data-gamepad-action
-            >
-              {getInstallButtonText()}
-            </Button>
-            {installationInfo && !isInstalling && (
-              <Button
-                variant="secondary"
-                icon={<Trash2 size={20} />}
-                onClick={handleUninstall}
-                disabled={isUninstalling}
-                data-gamepad-action
-              >
-                {isUninstalling ? 'Видалення...' : 'Видалити'}
-              </Button>
-            )}
-            {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
-              <Button
-                variant="secondary"
-                icon={<ReplaceAllIcon size={20} />}
-                onClick={handleRerunInstaller}
-                data-gamepad-action
-                title="Запустити інсталятор повторно"
-              >
-                Перевстановити
-              </Button>
-            )}
-
-            {/* Separator */}
-            <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
-
-            {/* Secondary actions */}
-            {isPlanned && (
-              <SubscribeButton
-                gameId={selectedGame.id}
-                gameName={selectedGame.name}
-                gameStatus={selectedGame.status}
-                variant="amber"
-                data-gamepad-action
-              />
-            )}
-            {selectedGame.support_url &&
-              bannerInfo.placementType &&
-              !(bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id) && (
+          {/* Actions block */}
+          <div className="glass-card mb-6 grid gap-6">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Primary actions */}
+              {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
                 <Button
-                  variant="accent"
-                  icon={<Heart size={20} />}
-                  onClick={handleSupport}
+                  variant="primary"
+                  icon={<Play size={20} />}
+                  onClick={handleLaunchGame}
+                  disabled={isLaunching || isInstalling || isUninstalling}
                   data-gamepad-action
-                  className="support-button"
                 >
-                  Підтримати переклад
+                  {isLaunching ? 'Запуск...' : 'Грати'}
                 </Button>
               )}
-          </div>
+              <Button
+                variant={
+                  isGameInstalledOnSystem && isTranslationInstalled
+                    ? 'secondary'
+                    : 'primary'
+                }
+                icon={
+                  isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
+                }
+                onClick={() => handleInstall()}
+                disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
+                title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
+                data-gamepad-primary-action
+                data-gamepad-action
+              >
+                {getInstallButtonText()}
+              </Button>
+              {installationInfo && !isInstalling && (
+                <Button
+                  variant="secondary"
+                  icon={<Trash2 size={20} />}
+                  onClick={handleUninstall}
+                  disabled={isUninstalling}
+                  data-gamepad-action
+                >
+                  {isUninstalling ? 'Видалення...' : 'Видалити'}
+                </Button>
+              )}
+              {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
+                <Button
+                  variant="secondary"
+                  icon={<ReplaceAllIcon size={20} />}
+                  onClick={handleRerunInstaller}
+                  data-gamepad-action
+                  title="Запустити інсталятор повторно"
+                >
+                  Перевстановити
+                </Button>
+              )}
 
-          {(() => {
-            const langHint = getLanguageHint(selectedGame.source_language);
-            return langHint ? (
-              <div className="flex gap-2">
-                <span className="w-0 h-auto border-l border-border-hover" />
-                <span className="text-sm">
-                  В налаштуваннях гри оберіть{' '}
-                  <span className="text-color-accent">{langHint} мову</span>
-                </span>
-              </div>
-            ) : null;
-          })()}
-        </div>
+              {/* Separator */}
+              <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
 
-        <div className="space-y-4 mb-6">
-          {installationInfo && !isCheckingInstallation && !isInstalling && (
-            <InstallationStatusBadge
-              isUpdateAvailable={!!isUpdateAvailable}
-              installedVersion={installationInfo.version}
-              newVersion={selectedGame?.version}
-            />
-          )}
-
-          {(isInstalling || isPaused) && (
-            <div className="glass-card">
-              {downloadProgress && downloadProgress.totalBytes > 0 ? (
-                <DownloadProgressCard
-                  progress={installProgress}
-                  downloadProgress={downloadProgress}
-                  isPaused={isPaused}
-                  onPause={handlePauseDownload}
-                  onResume={handleResumeDownload}
-                  onCancel={handleCancelDownload}
-                />
-              ) : (
-                <InstallationStatusMessage
-                  statusMessage={statusMessage}
-                  isUpdateAvailable={!!isUpdateAvailable}
-                  isOnline={isOnline}
-                  isInstalling={isInstalling}
+              {/* Secondary actions */}
+              {isPlanned && (
+                <SubscribeButton
+                  gameId={selectedGame.id}
+                  gameName={selectedGame.name}
+                  gameStatus={selectedGame.status}
+                  variant="amber"
+                  data-gamepad-action
                 />
               )}
+              <Button
+                variant="secondary"
+                icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                onClick={handleToggleFavorite}
+                data-gamepad-action
+                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+              >
+                {isFavorite ? 'В улюблених' : 'До улюблених'}
+              </Button>
+              {selectedGame.support_url &&
+                bannerInfo.placementType &&
+                !(
+                  bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id
+                ) && (
+                  <Button
+                    variant="accent"
+                    icon={<Heart size={20} />}
+                    onClick={handleSupport}
+                    data-gamepad-action
+                    className="support-button"
+                  >
+                    Підтримати переклад
+                  </Button>
+                )}
             </div>
-          )}
 
-          {isUninstalling && (
-            <div className="glass-card">
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm font-medium text-text-main">
-                  Видалення українізатора та відновлення оригінальних файлів...
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Author card */}
-        {selectedGame.team && (
-          <div className="glass-card mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-neon-blue/20'}`}
-                >
-                  <Users
-                    size={20}
-                    className={
-                      isSpecialTranslator(selectedGame.team)
-                        ? 'text-yellow-400'
-                        : 'text-neon-blue'
-                    }
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-text-muted">
-                    {selectedGame.team.includes(',')
-                      ? 'Автори локалізації'
-                      : 'Автор локалізації'}
-                  </div>
-                  <AuthorsList team={selectedGame.team} maxVisible={3} />
-                </div>
-              </div>
-              <TeamSubscribeButton teamName={selectedGame.team} data-gamepad-action />
-            </div>
+            <ImportantNotice game={selectedGame} />
           </div>
-        )}
 
-        <AnimatePresence mode="wait">
-          {bannerInfo.placementType === 'narrow' && (
-            <motion.div
-              key={`narrow-${selectedGame.id}`}
-              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-              animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              transition={{ duration: 0.2 }}
-              className="mb-6"
-            >
-              <Placement
-                banner={bannerInfo.data}
-                placementType="narrow"
-                gameId={selectedGame.id}
-                isKuli={bannerInfo.isKuli}
-                className="placement-long"
+          <div className="space-y-4 mb-6">
+            {installationInfo && !isCheckingInstallation && !isInstalling && (
+              <InstallationStatusBadge
+                isUpdateAvailable={!!isUpdateAvailable}
+                installedVersion={installationInfo.version}
+                hasInstallError={installationInfo.hasInstallError}
+                newVersion={selectedGame?.version}
               />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
 
-        <div
-          className={`grid grid-cols-1 ${bannerInfo.placementType === 'small_square' ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-4 mb-6`}
-        >
-          <StatusCard game={selectedGame} />
-          <InfoCard game={selectedGame} />
-          <AnimatePresence>
-            {bannerInfo.placementType === 'small_square' && (
+            {(isInstalling || isPaused || isWaitingForNetwork) && (
+              <div className="glass-card">
+                {downloadProgress && downloadProgress.totalBytes > 0 ? (
+                  <DownloadProgressCard
+                    progress={installProgress}
+                    downloadProgress={downloadProgress}
+                    isPaused={isPaused}
+                    onPause={handlePauseDownload}
+                    onResume={handleResumeDownload}
+                    onCancel={handleCancelDownload}
+                  />
+                ) : (
+                  <div>
+                    <InstallationStatusMessage
+                      statusMessage={statusMessage}
+                      isUpdateAvailable={!!isUpdateAvailable}
+                      isOnline={isOnline}
+                      isInstalling={isInstalling}
+                    />
+                    {isWaitingForNetwork && (
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={handleCancelDownload}
+                          className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                        >
+                          Скасувати
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isUninstalling && (
+              <div className="glass-card">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm font-medium text-text-main">
+                    Видалення українізатора та відновлення оригінальних файлів...
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Author card */}
+          {selectedGame.team && (
+            <div className="glass-card mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-neon-blue/20'}`}
+                  >
+                    <Users
+                      size={20}
+                      className={
+                        isSpecialTranslator(selectedGame.team)
+                          ? 'text-yellow-400'
+                          : 'text-neon-blue'
+                      }
+                    />
+                  </div>
+                  <div>
+                    <div className="text-xs text-text-muted">
+                      {selectedGame.team.includes(',')
+                        ? 'Автори локалізації'
+                        : 'Автор локалізації'}
+                    </div>
+                    <AuthorsList team={selectedGame.team} maxVisible={3} />
+                  </div>
+                </div>
+                <TeamSubscribeButton teamName={selectedGame.team} data-gamepad-action />
+              </div>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {bannerInfo.placementType === 'narrow' && (
               <motion.div
-                key={`small-square-${selectedGame.id}`}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                key="narrow"
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.2 }}
               >
                 <Placement
                   banner={bannerInfo.data}
-                  placementType="small_square"
+                  placementType="narrow"
                   gameId={selectedGame.id}
-                  supportUrl={selectedGame.support_url || undefined}
-                  className="placement h-full"
+                  gameName={selectedGame.name}
+                  isKuli={bannerInfo.isKuli}
+                  onView={handleBannerView}
+                  onClick={handleBannerClick}
+                  className="placement-long"
                 />
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        <div className="mb-6">
-          <SocialLinksCard game={selectedGame} />
-        </div>
-
-        {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-          <div className="mb-6">
-            <FundraisingProgressCard
-              current={selectedGame.fundraising_current || 0}
-              goal={selectedGame.fundraising_goal}
-              supportUrl={selectedGame.support_url}
-            />
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-w-0">
+              <StatusCard game={selectedGame} />
+              <InfoCard game={selectedGame} />
+            </div>
+            <motion.div
+              animate={{
+                width: bannerInfo.placementType === 'small_square' ? 320 : 0,
+                opacity: bannerInfo.placementType === 'small_square' ? 1 : 0,
+                display: bannerInfo.placementType === 'small_square' ? 'block' : 'none',
+              }}
+              initial={false}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="overflow-x-clip flex-shrink-0"
+            >
+              <div className="w-[320px] h-full">
+                <Placement
+                  banner={bannerInfo.data}
+                  placementType="small_square"
+                  gameId={selectedGame.id}
+                  gameName={selectedGame.name}
+                  supportUrl={selectedGame.support_url || undefined}
+                  onView={handleBannerView}
+                  onClick={handleBannerClick}
+                  className="placement h-full"
+                />
+              </div>
+            </motion.div>
           </div>
-        )}
 
-        {selectedGame.video_url && (
-          <div className="mb-6">
-            <VideoCard videoUrl={selectedGame.video_url} />
-          </div>
-        )}
+          <motion.div
+            layout="position"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="flex gap-4 mb-6"
+          >
+            <div className="flex-1 min-w-0">
+              <SocialLinksCard game={selectedGame} />
+            </div>
+            <AnimatePresence>
+              {isTranslationInstalled && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 320, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="overflow-visible flex-shrink-0"
+                >
+                  <div className="glass-card h-full flex flex-col justify-center gap-4 w-[320px] p-6">
+                    <h3 className="text-base font-semibold text-text-main">
+                      Знайшли помилку?
+                    </h3>
+                    <button
+                      onClick={() => setShowFeedbackModal(true)}
+                      data-gamepad-action
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-text-main hover:bg-glass-hover transition-colors"
+                    >
+                      <AlertTriangle size={16} />
+                      Повідомити про помилку
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
-        {selectedGame.description && (
-          <div className="glass-card mb-6">
-            <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-              Про українізатор
-            </h3>
-            <p className="text-text-muted leading-relaxed whitespace-pre-line">
-              {selectedGame.description}
-            </p>
-          </div>
-        )}
+          {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-6"
+            >
+              <FundraisingProgressCard
+                current={selectedGame.fundraising_current || 0}
+                goal={selectedGame.fundraising_goal}
+                supportUrl={selectedGame.support_url}
+              />
+            </motion.div>
+          )}
 
-        {selectedGame.game_description && (
-          <div className="glass-card mb-6">
-            <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-              Про гру
-            </h3>
-            <p className="text-text-muted leading-relaxed whitespace-pre-line">
-              {selectedGame.game_description}
-            </p>
-          </div>
-        )}
+          {selectedGame.video_url && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-6"
+            >
+              <VideoCard videoUrl={selectedGame.video_url} />
+            </motion.div>
+          )}
+
+          {selectedGame.description && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="glass-card mb-6"
+            >
+              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                Про українізатор
+              </h3>
+              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+                {selectedGame.description}
+              </p>
+            </motion.div>
+          )}
+
+          {selectedGame.game_description && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="glass-card mb-6"
+            >
+              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                Про гру
+              </h3>
+              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+                {selectedGame.game_description}
+              </p>
+            </motion.div>
+          )}
+        </LayoutGroup>
       </div>
     </>
   );

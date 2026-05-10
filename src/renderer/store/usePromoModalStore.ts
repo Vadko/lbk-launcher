@@ -15,15 +15,15 @@ interface PromoModalState {
 interface PromoModalStore extends PromoModalState {
   openModal: () => void;
   closeModal: (dontRemind?: boolean) => void;
-  shouldShowModal: () => boolean;
-  checkAndResetNeverShow: () => boolean; // Новий action для скидання
+  shouldShowModal: (ignoreDontShowAgain?: boolean) => boolean;
+  checkAndResetNeverShow: () => boolean;
   markAsShownForSession: () => void;
   resetShowingState: () => void;
   setDevMode: (mode: DevModeType) => void;
 }
 
-const TWENTY_DAYS_MS = 20 * 24 * 60 * 60 * 1000; // 20 днів у мілісекундах
-const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 24 години у мілісекундах
+const TWENTY_DAYS_MS = 20 * 24 * 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export const usePromoModalStore = create<PromoModalStore>()(
   persist(
@@ -53,41 +53,37 @@ export const usePromoModalStore = create<PromoModalStore>()(
         }
       },
 
-      shouldShowModal: () => {
+      shouldShowModal: (ignoreDontShowAgain = false) => {
         const state = get();
 
-        // Dev mode overrides
-        if (state.devMode === 'never') {
-          return false;
-        }
-        if (state.devMode === 'always') {
-          return !state.isOpen; // Show always but not if already open
-        }
-
-        // Normal logic for 'normal' dev mode
-        // Якщо користувач вибрав "більше не показувати"
-        if (state.neverShowAgain) {
-          // Перевіряємо чи пройшло 20 днів (БЕЗ side effect!)
-          if (state.lastShownAt && Date.now() - state.lastShownAt < TWENTY_DAYS_MS) {
+        // Dev mode overrides (development only)
+        if (import.meta.env.DEV) {
+          if (state.devMode === 'never') {
             return false;
           }
-          // Якщо пройшло 20 днів, можна показувати (але не скидаємо тут!)
-          return true;
+          if (state.devMode === 'always') {
+            return !state.isOpen;
+          }
         }
 
-        // Якщо вже показували в цій сесії
         if (state.hasShownOnCurrentSession) {
           return false;
         }
 
-        // Якщо модалка відкрита
         if (state.isOpen) {
           return false;
         }
 
-        // Якщо модалку закрили через хрестик, перевіряємо 24 години
+        // 24 hours cooldown
         if (state.lastShownAt && Date.now() - state.lastShownAt < ONE_DAY_MS) {
           return false;
+        }
+
+        // Ad banners ignore checkbox, SupportContent respects it
+        if (!ignoreDontShowAgain && state.neverShowAgain) {
+          if (state.lastShownAt && Date.now() - state.lastShownAt < TWENTY_DAYS_MS) {
+            return false;
+          }
         }
 
         return true;
@@ -96,14 +92,13 @@ export const usePromoModalStore = create<PromoModalStore>()(
       checkAndResetNeverShow: () => {
         const state = get();
 
-        // Скидаємо neverShowAgain якщо пройшло 20 днів
         if (
           state.neverShowAgain &&
           state.lastShownAt &&
           Date.now() - state.lastShownAt >= TWENTY_DAYS_MS
         ) {
           set({ neverShowAgain: false });
-          return true; // Повертаємо true якщо скинули
+          return true;
         }
 
         return false;

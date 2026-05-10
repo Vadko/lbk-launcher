@@ -1,6 +1,6 @@
 /**
  * Game Detector - Main Entry Point
- * Detects installed games from various platforms (Steam, Epic, GOG, Rockstar)
+ * Detects installed games from various platforms (Steam, Epic, GOG, Rockstar, Xbox)
  */
 
 import type { InstallPath } from '../../shared/types';
@@ -9,11 +9,14 @@ import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
 import { findSteamGame, getInstalledSteamGamePaths } from './steam';
 import type { GamePath } from './types'; // Used locally
+import { findXboxGame, getInstalledXboxGamePaths } from './xbox';
 
 // ============================================================================
 // Re-exports
 // ============================================================================
 
+// Epic
+export { getEpicAppName } from './epic';
 // GOG
 export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
 // Steam
@@ -34,63 +37,77 @@ export {
 // Main Detection Logic
 // ============================================================================
 
+export function detectGamePath(
+  installPath: InstallPath | null | undefined
+): GamePath | null {
+  if (!installPath || !installPath.type || !installPath.path) return null;
+
+  let foundPath: string | null = null;
+
+  switch (installPath.type) {
+    case 'steam':
+      foundPath = findSteamGame(installPath.path);
+      return {
+        platform: 'steam',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'gog':
+      foundPath = findGOGGame(installPath.path);
+      return {
+        platform: 'gog',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'epic':
+      foundPath = findEpicGame(installPath.path);
+      return {
+        platform: 'epic',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'rockstar':
+      foundPath = findRockstarGame(installPath.path);
+      return {
+        platform: 'rockstar',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'xbox':
+      foundPath = findXboxGame(installPath.path);
+      return {
+        platform: 'xbox',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'emulator':
+    case 'other':
+      // These platforms require manual path selection
+      return {
+        platform: installPath.type,
+        path: '',
+        exists: false,
+      };
+  }
+
+  return null;
+}
+
 /**
  * Detect all possible paths for a game
  */
-function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
+export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
   const results: GamePath[] = [];
 
   for (const installPath of installPaths) {
-    if (!installPath.type || !installPath.path) continue;
-
-    let foundPath: string | null = null;
-
-    switch (installPath.type) {
-      case 'steam':
-        foundPath = findSteamGame(installPath.path);
-        results.push({
-          platform: 'steam',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'gog':
-        foundPath = findGOGGame(installPath.path);
-        results.push({
-          platform: 'gog',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'epic':
-        foundPath = findEpicGame(installPath.path);
-        results.push({
-          platform: 'epic',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'rockstar':
-        foundPath = findRockstarGame(installPath.path);
-        results.push({
-          platform: 'rockstar',
-          path: foundPath || '',
-          exists: !!foundPath,
-        });
-        break;
-
-      case 'emulator':
-      case 'other':
-        // These platforms require manual path selection
-        results.push({
-          platform: installPath.type,
-          path: '',
-          exists: false,
-        });
-        break;
+    const gamePath = detectGamePath(installPath);
+    if (gamePath) {
+      results.push(gamePath);
     }
   }
 
@@ -140,6 +157,13 @@ export function getAllInstalledGamePaths(): string[] {
     console.error('[GameDetector] Error getting Rockstar games:', error);
   }
 
+  // Xbox games
+  try {
+    installedPaths.push(...getInstalledXboxGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting Xbox games:', error);
+  }
+
   console.log(
     `[GameDetector] Found ${installedPaths.length} installed game paths on system`
   );
@@ -150,6 +174,8 @@ export function getAllInstalledGamePaths(): string[] {
 export { getEpicLibrary } from './epic';
 export { getGogLibrary } from './gog';
 export { getLutrisSlug } from './lutris';
+// Xbox installed-games (no library API; only what's on disk)
+export { getInstalledXboxGamePaths } from './xbox';
 
 interface HeroicGameInfo {
   appName: string;

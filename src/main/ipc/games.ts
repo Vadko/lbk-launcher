@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron';
-import type { Game, GetGamesParams } from '../../shared/types';
+import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   countGamesBySteamAppIds,
   fetchFilterCounts,
@@ -21,25 +21,35 @@ import {
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import {
+  detectGamePath,
+  detectGamePaths,
   getAllInstalledGamePaths,
   getAllInstalledSteamGames,
+  getEpicAppName,
   getEpicLibrary,
   getFirstAvailableGamePath,
   getGOGGalaxyClientPath,
   getGOGGameId,
   getGogLibrary,
   getHeroicGame,
+  getInstalledXboxGamePaths,
   getLutrisSlug,
   getSteamLibraryAppIds,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
+import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
 import {
+  getFeedbackUploadUrls,
   getMachineId,
+  submitFeedback,
+  submitLogs,
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
+  uploadFileToSignedUrl,
 } from '../tracking';
+import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
@@ -76,6 +86,35 @@ export function setupGamesHandlers(): void {
     trackFailedSearch(query)
   );
 
+  // Submit feedback for a game translation
+  ipcMain.handle(
+    'submit-feedback',
+    async (
+      _,
+      gameId: string,
+      errorType: string,
+      message: string,
+      screenshotPaths?: string[]
+    ) => submitFeedback(gameId, errorType, message, screenshotPaths)
+  );
+
+  // Send logs handler
+  ipcMain.handle('submit-logs', async (_, message: string, crashReason?: string) =>
+    submitLogs(message, crashReason)
+  );
+
+  // Get signed upload URLs for feedback screenshots
+  ipcMain.handle('get-feedback-upload-urls', async (_, fileNames: string[]) =>
+    getFeedbackUploadUrls(fileNames)
+  );
+
+  // Upload file to signed URL
+  ipcMain.handle(
+    'upload-file-to-signed-url',
+    async (_, signedUrl: string, filePath: string, contentType: string) =>
+      uploadFileToSignedUrl(signedUrl, filePath, contentType)
+  );
+
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
   ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {
     const timer = createTimer('IPC: fetch-games');
@@ -93,9 +132,21 @@ export function setupGamesHandlers(): void {
   // Fetch games by IDs - SYNC
   ipcMain.handle(
     'fetch-games-by-ids',
-    (_, gameIds: string[], searchQuery?: string, hideAiTranslations = false) => {
+    (
+      _,
+      gameIds: string[],
+      searchQuery?: string,
+      hideAiTranslations = false,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
-        return fetchGamesByIds(gameIds, searchQuery, hideAiTranslations);
+        return fetchGamesByIds(
+          gameIds,
+          searchQuery,
+          hideAiTranslations,
+          false,
+          sortOrder
+        );
       } catch (error) {
         console.error('Error fetching games by IDs:', error);
         return [];
@@ -188,12 +239,33 @@ export function setupGamesHandlers(): void {
     }
   });
 
+  // Detect available platforms for a game
+  ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
+    try {
+      return detectGamePaths(game.install_paths || []);
+    } catch (error) {
+      console.error('Error detecting game platforms:', error);
+      return [];
+    }
+  });
+
   // Find games by install paths - SYNC
   ipcMain.handle(
     'find-games-by-install-paths',
-    (_, installPaths: string[], searchQuery?: string, hideAiTranslations = false) => {
+    (
+      _,
+      installPaths: string[],
+      searchQuery?: string,
+      hideAiTranslations = false,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
-        return findGamesByInstallPaths(installPaths, searchQuery, hideAiTranslations);
+        return findGamesByInstallPaths(
+          installPaths,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
       } catch (error) {
         console.error('Error finding games by install paths:', error);
         return { games: [], total: 0 };
@@ -218,9 +290,20 @@ export function setupGamesHandlers(): void {
   // Find games by Steam App IDs
   ipcMain.handle(
     'find-games-by-steam-app-ids',
-    (_, steamAppIds: number[], searchQuery?: string, hideAiTranslations = false) => {
+    (
+      _,
+      steamAppIds: number[],
+      searchQuery?: string,
+      hideAiTranslations = false,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
-        return findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations);
+        return findGamesBySteamAppIds(
+          steamAppIds,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
       } catch (error) {
         console.error('Error finding games by Steam App IDs:', error);
         return { games: [], total: 0 };
@@ -251,10 +334,16 @@ export function setupGamesHandlers(): void {
   // Find games by titles
   ipcMain.handle(
     'find-games-by-titles',
-    (_, titles: string[], searchQuery?: string, hideAiTranslations?: boolean) => {
+    (
+      _,
+      titles: string[],
+      searchQuery?: string,
+      hideAiTranslations?: boolean,
+      sortOrder: SortOrderType = 'name'
+    ) => {
       try {
         const repo = GamesRepository.getInstance();
-        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations);
+        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations, sortOrder);
       } catch (error) {
         console.error('Error finding games by titles:', error);
         return { games: [], total: 0 };
@@ -272,6 +361,41 @@ export function setupGamesHandlers(): void {
     }
   });
 
+  // Get Xbox installed game folder names (parsed from .GamingRoot)
+  ipcMain.handle('get-xbox-installed-paths', () => {
+    try {
+      return getInstalledXboxGamePaths();
+    } catch (error) {
+      console.error('Error getting Xbox installed paths:', error);
+      return [];
+    }
+  });
+
+  // Find games by Xbox install folder names (matches against install_paths)
+  ipcMain.handle(
+    'find-games-by-xbox-paths',
+    (
+      _,
+      folderNames: string[],
+      searchQuery?: string,
+      hideAiTranslations?: boolean,
+      sortOrder: SortOrderType = 'name'
+    ) => {
+      try {
+        const repo = GamesRepository.getInstance();
+        return repo.findGamesByXboxPaths(
+          folderNames,
+          searchQuery,
+          hideAiTranslations,
+          sortOrder
+        );
+      } catch (error) {
+        console.error('Error finding games by Xbox paths:', error);
+        return { games: [], total: 0 };
+      }
+    }
+  );
+
   // Launch game
   ipcMain.handle('launch-game', async (_, game: Game) => {
     try {
@@ -281,7 +405,29 @@ export function setupGamesHandlers(): void {
         JSON.stringify(game.install_paths, null, 2)
       );
 
-      const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      // Check if localization is installed and get platform info
+      const installInfo = await checkInstallation(game);
+      let gamePath = null;
+
+      console.log('[LaunchGame] Installation info:', installInfo);
+
+      // If localization is installed on a specific platform, use that platform
+      if (installInfo?.installedPlatform) {
+        console.log(
+          '[LaunchGame] Using installed platform:',
+          installInfo.installedPlatform
+        );
+        const selectedInstallPath = (game.install_paths || []).find(
+          (p) => p.type === installInfo.installedPlatform
+        );
+        gamePath = detectGamePath(selectedInstallPath);
+      }
+
+      // Fallback: use first available game path if platform not found
+      if (!gamePath || !gamePath.exists) {
+        console.log('[LaunchGame] Falling back to first available game path');
+        gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      }
 
       if (!gamePath || !gamePath.exists) {
         console.error('[LaunchGame] Game not found on system');
@@ -310,6 +456,20 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
+        }
+      }
+
+      // For Epic games, try to launch via Epic protocol
+      if (gamePath.platform === 'epic') {
+        const epicAppId = getEpicAppName(gamePath.path);
+
+        if (epicAppId) {
+          const result = await launchEpicGame(epicAppId);
+          if (result.success) {
+            return { success: true };
+          }
+        } else {
+          console.warn('[LaunchGame] Epic App ID not found for:', gamePath.path);
         }
       }
 
@@ -474,15 +634,19 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Record banner impression for placement banners
+  // Record banner impression for placement banners (view or click)
   ipcMain.handle(
     'record-banner-impression',
-    async (_, bannerId: string): Promise<boolean> => {
+    async (
+      _,
+      bannerId: string,
+      impressionType: ImpressionType = 'view'
+    ): Promise<boolean> => {
       try {
         const machineId = getMachineId();
         await recordBannerImpression({
           campaignId: bannerId,
-          impressionType: 'view' as ImpressionType,
+          impressionType,
           machineId,
         });
         return true;

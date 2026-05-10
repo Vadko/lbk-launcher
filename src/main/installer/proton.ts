@@ -347,8 +347,7 @@ export function runProton({
 
       const steamPath = fs.realpathSync(`${HOME}/.steam/root`);
 
-      const env = {
-        ...process.env,
+      const protonEnv: Record<string, string> = {
         STEAM_COMPAT_DATA_PATH: prefix,
         STEAM_COMPAT_CLIENT_INSTALL_PATH: steamPath,
         STEAM_COMPAT_LIBRARY_PATHS: steamPath,
@@ -356,9 +355,30 @@ export function runProton({
       };
 
       const installerArgs = ['run', enFilePath, ...(args || [])];
-      const child = spawn(protonPath, installerArgs, {
+      // Pressure-vessel (Steam Linux Runtime, used by Proton 5.13+) creates its
+      // own bubblewrap container and can't nest inside Flatpak's sandbox. Escape
+      // to the host via flatpak-spawn so pressure-vessel runs unconstrained.
+      const inFlatpak = !!process.env.FLATPAK_ID;
+      const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
+      const cmdArgs = inFlatpak
+        ? [
+            '--host',
+            ...Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`),
+            protonPath,
+            ...installerArgs,
+          ]
+        : installerArgs;
+      const env = inFlatpak ? process.env : { ...process.env, ...protonEnv };
+      const child = spawn(cmd, cmdArgs, {
         env,
-        stdio: 'inherit',
+        stdio: ['inherit', 'pipe', 'pipe'],
+      });
+
+      child.stdout?.on('data', (data) => {
+        console.log(`[Proton stdout] ${data.toString().trimEnd()}`);
+      });
+      child.stderr?.on('data', (data) => {
+        console.error(`[Proton stderr] ${data.toString().trimEnd()}`);
       });
 
       child.on('exit', async (code) => {
