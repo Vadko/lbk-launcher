@@ -67,19 +67,48 @@ async function deleteObjects(paths) {
   return res.json();
 }
 
-async function tg(text) {
-  const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: Number(TELEGRAM_CHAT_ID),
-      message_thread_id: Number(TELEGRAM_THREAD_ID),
-      text,
-      disable_web_page_preview: true,
-    }),
-  });
-  if (!res.ok) console.error('TG send failed:', res.status, await res.text());
+const TG_MAX = 4000; // TG hard limit is 4096; leave margin
+
+function splitForTg(text) {
+  if (text.length <= TG_MAX) return [text];
+  const lines = text.split('\n');
+  const chunks = [];
+  let buf = '';
+  for (const line of lines) {
+    if (buf.length + line.length + 1 > TG_MAX) {
+      if (buf) chunks.push(buf);
+      buf = line;
+    } else {
+      buf = buf ? `${buf}\n${line}` : line;
+    }
+  }
+  if (buf) chunks.push(buf);
+  return chunks;
 }
+
+async function tg(text, { html = false } = {}) {
+  for (const chunk of splitForTg(text)) {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: Number(TELEGRAM_CHAT_ID),
+        message_thread_id: Number(TELEGRAM_THREAD_ID),
+        text: chunk,
+        disable_web_page_preview: true,
+        ...(html ? { parse_mode: 'HTML' } : {}),
+      }),
+    });
+    if (!res.ok) console.error('TG send failed:', res.status, await res.text());
+  }
+}
+
+const escHtml = (s) =>
+  String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 
 function classify(name) {
   if (/\.exe$/i.test(name)) return 'Windows';
@@ -99,19 +128,20 @@ async function announceBuild() {
 
   const installers = files.filter((f) => /\.(exe|dmg|AppImage|rpm)$/i.test(f.name));
   const aux = files.filter((f) => !installers.includes(f));
+  const tagEsc = escHtml(TAG_NAME);
 
   const lines = [];
   if (BUILD_RESULT === 'success') {
-    lines.push(`✅ Білд готовий: ${TAG_NAME}`);
+    lines.push(`✅ Білд готовий: <code>${tagEsc}</code>`);
   } else {
-    lines.push(`⚠️ Білд завершився з помилками (${BUILD_RESULT}): ${TAG_NAME}`);
+    lines.push(`⚠️ Білд завершився з помилками (${escHtml(BUILD_RESULT)}): <code>${tagEsc}</code>`);
     lines.push('Доступні часткові артефакти:');
   }
   lines.push('');
   lines.push('Інсталери (посилання дійсні 30 днів):');
   for (const f of installers) {
     const url = await signUrl(`${TAG_NAME}/${f.name}`);
-    lines.push(`• ${classify(f.name)}: ${url}`);
+    lines.push(`• <a href="${escHtml(url)}">${escHtml(classify(f.name))}</a>`);
   }
 
   if (aux.length > 0) {
@@ -119,11 +149,11 @@ async function announceBuild() {
     lines.push('Допоміжні (auto-update):');
     for (const f of aux) {
       const url = await signUrl(`${TAG_NAME}/${f.name}`);
-      lines.push(`• ${f.name}: ${url}`);
+      lines.push(`• <a href="${escHtml(url)}">${escHtml(f.name)}</a>`);
     }
   }
 
-  await tg(lines.join('\n'));
+  await tg(lines.join('\n'), { html: true });
 }
 
 async function cleanupOld() {
