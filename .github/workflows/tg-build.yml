@@ -25,9 +25,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TG_API: https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}
-  TG_CHAT: ${{ inputs.chat_id }}
-  TG_THREAD: ${{ inputs.thread_id }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ inputs.chat_id }}
+  TELEGRAM_THREAD_ID: ${{ inputs.thread_id }}
 
 jobs:
   prepare:
@@ -36,19 +36,16 @@ jobs:
     outputs:
       tag_name: ${{ steps.tag.outputs.tag_name }}
     steps:
-      - name: Notify start
-        run: |
-          curl -sS "$TG_API/sendMessage" \
-            --data-urlencode "chat_id=$TG_CHAT" \
-            --data-urlencode "message_thread_id=$TG_THREAD" \
-            --data-urlencode "text=🔄 Старт від ${{ inputs.triggered_by }}: мерджу main → admin-version..." \
-            -o /dev/null
-
       - name: Checkout admin-version
         uses: actions/checkout@v4
         with:
           ref: admin-version
           fetch-depth: 0
+
+      - name: Notify start
+        env:
+          TRIGGERED_BY: ${{ inputs.triggered_by }}
+        run: node scripts/tg-notify.mjs start
 
       - name: Merge main → admin-version
         id: merge
@@ -58,11 +55,7 @@ jobs:
           git fetch origin main
           if ! git merge origin/main --no-edit; then
             git merge --abort || true
-            curl -sS "$TG_API/sendMessage" \
-              --data-urlencode "chat_id=$TG_CHAT" \
-              --data-urlencode "message_thread_id=$TG_THREAD" \
-              --data-urlencode "text=❌ Конфлікт мержу main → admin-version. Розрули вручну й перезапусти." \
-              -o /dev/null
+            node scripts/tg-notify.mjs merge_conflict
             exit 1
           fi
           git push origin admin-version
@@ -75,12 +68,9 @@ jobs:
           echo "tag_name=v${VERSION}-dev.admin-version.${TIMESTAMP}" >> $GITHUB_OUTPUT
 
       - name: Notify build start
-        run: |
-          curl -sS "$TG_API/sendMessage" \
-            --data-urlencode "chat_id=$TG_CHAT" \
-            --data-urlencode "message_thread_id=$TG_THREAD" \
-            --data-urlencode "text=🏗 Мерж ок. Білджу 3 платформи. Тег: ${{ steps.tag.outputs.tag_name }}" \
-            -o /dev/null
+        env:
+          TAG_NAME: ${{ steps.tag.outputs.tag_name }}
+        run: node scripts/tg-notify.mjs build_start
 
   build:
     needs: prepare
@@ -191,55 +181,26 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: pnpm dist:mac --publish never
 
-      - name: Upload artifacts to Supabase Storage
+      - name: Upload artifacts to Supabase Storage (TUS)
         shell: bash
         env:
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          RELEASE_DIR="release/${VERSION}"
-          shopt -s nullglob
-          uploaded=0
-          for file in "$RELEASE_DIR"/*.exe "$RELEASE_DIR"/*.dmg "$RELEASE_DIR"/*.AppImage "$RELEASE_DIR"/*.rpm "$RELEASE_DIR"/*.zip "$RELEASE_DIR"/*.blockmap "$RELEASE_DIR"/*.yml; do
-            [ -f "$file" ] || continue
-            filename=$(basename "$file")
-            echo "Uploading: $filename ($(du -h "$file" | cut -f1))"
-            http_code=$(curl -sS -o /tmp/upload.log -w "%{http_code}" \
-              -X POST "${SUPABASE_URL}/storage/v1/object/launcher-builds/${TAG_NAME}/${filename}" \
-              -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
-              -H "Content-Type: application/octet-stream" \
-              -H "x-upsert: true" \
-              --data-binary "@${file}")
-            if [ "$http_code" != "200" ] && [ "$http_code" != "201" ]; then
-              echo "Upload failed ($http_code):"
-              cat /tmp/upload.log
-              exit 1
-            fi
-            uploaded=$((uploaded + 1))
-          done
-          echo "Uploaded $uploaded file(s) to launcher-builds/${TAG_NAME}/"
+        run: node scripts/tg-build-upload.mjs
 
       - name: Notify platform success
         if: success()
-        shell: bash
-        run: |
-          curl -sS "$TG_API/sendMessage" \
-            --data-urlencode "chat_id=$TG_CHAT" \
-            --data-urlencode "message_thread_id=$TG_THREAD" \
-            --data-urlencode "text=✅ ${{ matrix.platform }}: готово" \
-            -o /dev/null
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: node scripts/tg-notify.mjs platform_success
 
       - name: Notify platform failure
         if: failure()
-        shell: bash
-        run: |
-          curl -sS "$TG_API/sendMessage" \
-            --data-urlencode "chat_id=$TG_CHAT" \
-            --data-urlencode "message_thread_id=$TG_THREAD" \
-            --data-urlencode "text=❌ ${{ matrix.platform }}: збій. Логи: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            -o /dev/null
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/tg-notify.mjs platform_failure
 
   finalize:
     needs: [prepare, build]
@@ -259,9 +220,6 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ inputs.chat_id }}
-          TELEGRAM_THREAD_ID: ${{ inputs.thread_id }}
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: node scripts/tg-build-finalize.mjs
