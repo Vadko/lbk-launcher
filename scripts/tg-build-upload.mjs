@@ -14,6 +14,8 @@ const BUCKET = 'launcher-builds';
 const CHUNK_SIZE = 6 * 1024 * 1024;
 const ENDPOINT = `${SUPABASE_URL}/storage/v1/upload/resumable`;
 const ARTIFACT_RE = /\.(exe|dmg|AppImage|rpm|zip|blockmap|yml)$/i;
+// electron-builder emits the same builder-debug.yml on every platform → cross-job conflict
+const SKIP = new Set(['builder-debug.yml']);
 
 const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 
@@ -60,6 +62,7 @@ async function uploadOne(filePath) {
           'Tus-Resumable': '1.0.0',
           'Upload-Offset': String(offset),
           'Content-Type': 'application/offset+octet-stream',
+          'x-upsert': 'true',
         },
         body: buffer,
       });
@@ -88,7 +91,7 @@ async function main() {
 
   const entries = await readdir(releaseDir, { withFileTypes: true });
   const files = entries
-    .filter((e) => e.isFile() && ARTIFACT_RE.test(e.name))
+    .filter((e) => e.isFile() && ARTIFACT_RE.test(e.name) && !SKIP.has(e.name))
     .map((e) => path.join(releaseDir, e.name));
 
   if (files.length === 0) {
