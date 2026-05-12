@@ -557,7 +557,10 @@ export async function installTranslation(
       game.steam_app_id &&
       (game.steam_launch_options_windows || game.steam_launch_options_linux)
     ) {
-      onStatus?.({ message: 'Налаштування параметрів запуску Steam...', phase: 'install' });
+      onStatus?.({
+        message: 'Налаштування параметрів запуску Steam...',
+        phase: 'install',
+      });
       const result = await writeSteamLaunchOptions({
         appId: game.steam_app_id,
         windowsOptions: game.steam_launch_options_windows,
