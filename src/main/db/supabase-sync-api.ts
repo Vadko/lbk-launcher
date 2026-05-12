@@ -102,6 +102,8 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'steam_mac_archive_path',
   'steam_mac_archive_hash',
   'steam_mac_archive_size',
+  'steam_launch_options_windows',
+  'steam_launch_options_linux',
   'ai',
   'hide',
   'additional_path',

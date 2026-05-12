@@ -115,6 +115,8 @@ function gameToInsertParams(game: Game): GameInsertParams {
     steam_mac_archive_hash: game.steam_mac_archive_hash ?? null,
     steam_mac_archive_path: game.steam_mac_archive_path ?? null,
     steam_mac_archive_size: game.steam_mac_archive_size ?? null,
+    steam_launch_options_windows: game.steam_launch_options_windows ?? null,
+    steam_launch_options_linux: game.steam_launch_options_linux ?? null,
     steam_app_id: game.steam_app_id ?? null,
     website: game.website ?? null,
     youtube: game.youtube ?? null,
@@ -144,6 +146,7 @@ const UPSERT_GAME_SQL = `
     xbox_archive_hash, xbox_archive_path, xbox_archive_size,
     steam_linux_archive_hash, steam_linux_archive_path, steam_linux_archive_size,
     steam_mac_archive_hash, steam_mac_archive_path, steam_mac_archive_size,
+    steam_launch_options_windows, steam_launch_options_linux,
     steam_app_id, website, youtube, ai, hide, search_keywords, source_language
   ) VALUES (
     @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -160,6 +163,7 @@ const UPSERT_GAME_SQL = `
     @xbox_archive_hash, @xbox_archive_path, @xbox_archive_size,
     @steam_linux_archive_hash, @steam_linux_archive_path, @steam_linux_archive_size,
     @steam_mac_archive_hash, @steam_mac_archive_path, @steam_mac_archive_size,
+    @steam_launch_options_windows, @steam_launch_options_linux,
     @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
   )
 `;

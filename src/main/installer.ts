@@ -64,6 +64,7 @@ import {
 } from './installer/platform';
 import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
 import { isLinux, isMacOS } from './utils/platform';
+import { writeSteamLaunchOptions } from './utils/steam-launch-options';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -549,6 +550,27 @@ export async function installTranslation(
       },
     };
     await saveInstallationInfo(gamePath.path, installationInfo);
+
+    // 10. Write Steam LaunchOptions if applicable (Steam-only, when configured by translator)
+    if (
+      gamePath.platform === 'steam' &&
+      game.steam_app_id &&
+      (game.steam_launch_options_windows || game.steam_launch_options_linux)
+    ) {
+      onStatus?.({ message: 'Налаштування параметрів запуску Steam...', phase: 'install' });
+      const result = await writeSteamLaunchOptions({
+        appId: game.steam_app_id,
+        windowsOptions: game.steam_launch_options_windows,
+        linuxOptions: game.steam_launch_options_linux,
+      });
+      if (result.written) {
+        console.log(
+          `[Installer] Steam LaunchOptions written for app ${game.steam_app_id}${result.steamRestarted ? ' (Steam restarted)' : ''}`
+        );
+      } else if (result.reason) {
+        console.log(`[Installer] Steam LaunchOptions skipped: ${result.reason}`);
+      }
+    }
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
   } catch (error) {
