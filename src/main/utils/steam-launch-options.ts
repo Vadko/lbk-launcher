@@ -11,9 +11,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import dlv from 'dlv';
-import { dset } from 'dset';
-import * as vdf from 'simple-vdf';
+import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { isSteamRunning, launchSteam, shutdownSteam } from '@/main/utils/steam-launcher';
@@ -41,23 +39,6 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
   if (isWindows()) return params.windowsOptions;
   if (isLinux() || isMacOS()) return params.linuxOptions;
   return null;
-}
-
-/**
- * Convert a raw string to VDF on-disk escaped form.
- *
- * `simple-vdf` keeps escape sequences as literals on both parse and stringify
- * — so a value read from disk like `WINEDLLOVERRIDES=\"foo\"` comes back with
- * the literal backslash-quote characters, and any string we hand to stringify
- * goes to disk byte-for-byte. New values coming from our DB are in raw form
- * (plain `"`), so we have to escape them ourselves before writing, otherwise
- * Steam's parser breaks at the first unescaped quote.
- *
- * Backslash escaping must come first to avoid double-escaping the backslashes
- * we just inserted.
- */
-function escapeVdfValue(raw: string): string {
-  return raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 const COMMAND_TOKEN = '%command%';
@@ -90,9 +71,7 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
     // Extract whatever args the user had after their own %command% (if any),
     // otherwise treat the whole existing string as plain args.
     const userArgs = existingTrim.includes(COMMAND_TOKEN)
-      ? existingTrim
-          .slice(existingTrim.indexOf(COMMAND_TOKEN) + COMMAND_TOKEN.length)
-          .trim()
+      ? existingTrim.slice(existingTrim.indexOf(COMMAND_TOKEN) + COMMAND_TOKEN.length).trim()
       : existingTrim;
 
     if (!userArgs) return ours;
@@ -101,6 +80,53 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
   }
 
   return `${existingTrim} ${ours}`;
+}
+
+const LAUNCH_OPTIONS_PARENT = ['UserLocalConfigStore', 'Software', 'Valve', 'Steam', 'apps'];
+
+/** Read a string pair value walking a path of nested sets; returns null on any miss. */
+function readNestedPairValue(
+  root: KeyVRoot,
+  segments: string[],
+  pairKey: string
+): string | null {
+  let cursor: KeyVSet | KeyVRoot = root;
+  for (const seg of segments) {
+    const next: KeyVSet | null = cursor.dir(seg, null);
+    if (!next) return null;
+    cursor = next;
+  }
+  const pair: KeyV | null = cursor.pair(pairKey, null);
+  return pair ? String(pair.value) : null;
+}
+
+/** Walk down `segments`, creating empty `KeyVSet` nodes for any missing rungs. */
+function ensurePath(root: KeyVRoot, segments: string[]): KeyVSet {
+  let cursor: KeyVSet | KeyVRoot = root;
+  for (const seg of segments) {
+    const existing: KeyVSet | null = cursor.dir(seg, null);
+    if (existing) {
+      cursor = existing;
+    } else {
+      const fresh = new KeyVSet(seg);
+      cursor.add(fresh);
+      cursor = fresh;
+    }
+  }
+  return cursor as KeyVSet;
+}
+
+/** Plan a merge against the current contents of localconfig.vdf. */
+function readAndPlanMerge(
+  localConfigPath: string,
+  appId: string,
+  value: string
+): { root: KeyVRoot; existing: string | null; merged: string } {
+  const raw = fs.readFileSync(localConfigPath, 'utf8');
+  const root = vdfParse(raw);
+  const existing = readNestedPairValue(root, [...LAUNCH_OPTIONS_PARENT, appId], 'LaunchOptions');
+  const merged = mergeLaunchOptions(existing, value);
+  return { root, existing, merged };
 }
 
 /**
@@ -112,17 +138,14 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
 export async function writeSteamLaunchOptions(
   params: WriteLaunchOptionsParams
 ): Promise<WriteLaunchOptionsResult> {
-  const rawValue = pickOptionsForCurrentOS(params);
-  if (!rawValue || rawValue.trim() === '') {
+  const value = pickOptionsForCurrentOS(params);
+  if (!value || value.trim() === '') {
     return {
       written: false,
       steamRestarted: false,
       reason: 'No launch options for current OS',
     };
   }
-  // Escape once here; from this point on we operate in disk-escaped form so
-  // the merge and idempotency comparison line up with what dlv reads back.
-  const value = escapeVdfValue(rawValue);
 
   const localConfigPath = getLocalConfigPath();
   if (!localConfigPath) {
@@ -140,38 +163,13 @@ export async function writeSteamLaunchOptions(
     };
   }
 
-  const launchOptionsPath = [
-    'UserLocalConfigStore',
-    'Software',
-    'Valve',
-    'Steam',
-    'apps',
-    String(params.appId),
-    'LaunchOptions',
-  ];
-
-  /**
-   * Read+parse localconfig.vdf and compute the merged LaunchOptions value.
-   * Safe to call with Steam running — we only read here.
-   */
-  const readAndPlanMerge = (): {
-    parsed: Record<string, unknown>;
-    existing: string | null;
-    merged: string;
-  } => {
-    const raw = fs.readFileSync(localConfigPath, 'utf8');
-    const parsed = vdf.parse(raw) as Record<string, unknown>;
-    const existingRaw: unknown = dlv(parsed, launchOptionsPath);
-    const existing = typeof existingRaw === 'string' ? existingRaw : null;
-    const merged = mergeLaunchOptions(existing, value);
-    return { parsed, existing, merged };
-  };
+  const appIdStr = String(params.appId);
 
   // First pass: read with Steam possibly running. If our value is already
   // included, we can skip the whole shutdown/launch dance.
   let plan: ReturnType<typeof readAndPlanMerge>;
   try {
-    plan = readAndPlanMerge();
+    plan = readAndPlanMerge(localConfigPath, appIdStr, value);
   } catch (error) {
     return {
       written: false,
@@ -203,7 +201,7 @@ export async function writeSteamLaunchOptions(
     // Re-read after shutdown: Steam flushes its in-memory state to disk on
     // graceful exit, so the value we saw before shutdown may now be stale.
     if (steamWasRunning) {
-      plan = readAndPlanMerge();
+      plan = readAndPlanMerge(localConfigPath, appIdStr, value);
       if (plan.merged === (plan.existing ?? '').trim()) {
         console.log(
           `[SteamLaunchOptions] After Steam shutdown, app ${params.appId} already contains our LaunchOptions`
@@ -217,9 +215,15 @@ export async function writeSteamLaunchOptions(
       }
     }
 
-    dset(plan.parsed, launchOptionsPath, plan.merged);
+    const app = ensurePath(plan.root, [...LAUNCH_OPTIONS_PARENT, appIdStr]);
+    const existingPair: KeyV | null = app.pair('LaunchOptions', null);
+    if (existingPair) {
+      existingPair.value = plan.merged;
+    } else {
+      app.add(new KeyV('LaunchOptions', plan.merged));
+    }
 
-    const serialized = vdf.stringify(plan.parsed);
+    const serialized = plan.root.dump();
     const tmp = localConfigPath + '.lbk.tmp';
     fs.writeFileSync(tmp, serialized, 'utf8');
     fs.renameSync(tmp, localConfigPath);

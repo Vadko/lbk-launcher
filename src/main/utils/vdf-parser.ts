@@ -1,33 +1,29 @@
 /**
  * VDF (Valve Data Format) Parser
+ *
+ * Uses `fast-vdf`'s typed `parse()` API. Other text-VDF libs we tried mangle
+ * inputs: @node-steam/vdf and vdf-parser convert quoted numeric strings like
+ * "020000000828" to the number 20000000828 (losing the leading zero) and don't
+ * re-escape quotes on write, both of which silently corrupt files like
+ * localconfig.vdf on round-trip. fast-vdf parses values as strings and decodes
+ * escape sequences automatically.
  */
 
-import * as vdf from 'simple-vdf';
+import { parse as vdfParse } from 'fast-vdf';
 
 /**
  * Parse Steam libraryfolders.vdf file
  */
 export function parseLibraryFolders(content: string): string[] {
-  const parsed = vdf.parse(content);
+  const root = vdfParse(content);
+  const folders = root.dir('libraryfolders', null);
+  if (!folders) return [];
+
   const libraries: string[] = [];
-
-  // The VDF structure is: "libraryfolders" -> { "0": {...}, "1": {...}, ... }
-  const libraryFolders = parsed?.libraryfolders;
-  if (!libraryFolders || typeof libraryFolders === 'string') return libraries;
-
-  // Iterate through numbered entries
-  for (const key in libraryFolders) {
-    const entry = libraryFolders[key];
-    if (
-      entry &&
-      typeof entry === 'object' &&
-      'path' in entry &&
-      typeof entry.path === 'string'
-    ) {
-      libraries.push(entry.path);
-    }
+  for (const entry of folders.dirs()) {
+    const p = entry.value('path', null);
+    if (p) libraries.push(p);
   }
-
   return libraries;
 }
 
@@ -44,17 +40,15 @@ interface AppManifest {
 
 export function parseAppManifest(content: string): AppManifest | null {
   try {
-    const parsed = vdf.parse(content);
-    const appState = parsed?.AppState;
-
-    if (!appState || typeof appState === 'string') return null;
+    const appState = vdfParse(content).dir('AppState', null);
+    if (!appState) return null;
 
     return {
-      appid: appState.appid || '',
-      name: appState.name || '',
-      installdir: appState.installdir || '',
-      StateFlags: appState.StateFlags,
-      LastUpdated: appState.LastUpdated,
+      appid: appState.value('appid', '') ?? '',
+      name: appState.value('name', '') ?? '',
+      installdir: appState.value('installdir', '') ?? '',
+      StateFlags: appState.value('StateFlags', undefined),
+      LastUpdated: appState.value('LastUpdated', undefined),
     };
   } catch (error) {
     console.error('[VDFParser] Error parsing appmanifest:', error);
@@ -69,28 +63,23 @@ export function parseAppManifest(content: string): AppManifest | null {
  */
 export function parseMostRecentUser(content: string): string | null {
   try {
-    const parsed = vdf.parse(content);
-    const users = parsed?.users;
-
-    if (!users || typeof users !== 'object') return null;
+    const users = vdfParse(content).dir('users', null);
+    if (!users) return null;
 
     let mostRecentUser: string | null = null;
     let highestTimestamp = 0;
 
-    for (const steam64Id of Object.keys(users)) {
-      const user = users[steam64Id];
-      if (!user || typeof user !== 'object') continue;
-
+    for (const user of users.dirs()) {
       // Check MostRecent flag first (most reliable)
-      if (user.MostRecent === '1') {
-        return steam64Id;
+      if (user.value('MostRecent', null) === '1') {
+        return user.key;
       }
 
       // Fallback to timestamp comparison
-      const timestamp = parseInt(user.Timestamp || '0', 10);
+      const timestamp = parseInt(user.value('Timestamp', '0') ?? '0', 10);
       if (timestamp > highestTimestamp) {
         highestTimestamp = timestamp;
-        mostRecentUser = steam64Id;
+        mostRecentUser = user.key;
       }
     }
 
@@ -121,38 +110,36 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
   const playtimes = new Map<number, SteamAppPlaytime>();
 
   try {
-    const parsed = vdf.parse(content);
+    const apps = vdfParse(content)
+      .dir('UserLocalConfigStore', null)
+      ?.dir('Software', null)
+      ?.dir('Valve', null)
+      ?.dir('Steam', null)
+      ?.dir('apps', null);
+    if (!apps) return playtimes;
 
-    // Navigate to: UserLocalConfigStore.Software.Valve.Steam.apps
-    const apps = parsed?.UserLocalConfigStore?.Software?.Valve?.Steam?.apps;
-    if (!apps || typeof apps !== 'object') return playtimes;
-
-    for (const [appIdStr, appData] of Object.entries(apps)) {
-      const appId = parseInt(appIdStr, 10);
+    for (const app of apps.dirs()) {
+      const appId = parseInt(app.key, 10);
       if (isNaN(appId) || appId <= 10) continue;
 
-      if (appData && typeof appData === 'object') {
-        const data = appData as Record<string, unknown>;
+      // Steam stores playtime under several differently-cased keys; try each.
+      const playtimeStr =
+        app.value('Playtime', null) ??
+        app.value('playtime', null) ??
+        app.value('playtime_forever', null) ??
+        app.value('PlaytimeForever', null);
+      if (playtimeStr === null) continue;
 
-        // Try different playtime field names (Steam uses different formats)
-        const playtimeStr =
-          data.Playtime || data.playtime || data.playtime_forever || data.PlaytimeForever;
+      const playtimeMinutes = parseInt(playtimeStr, 10);
+      if (isNaN(playtimeMinutes) || playtimeMinutes <= 0) continue;
 
-        if (playtimeStr !== undefined) {
-          const playtimeMinutes = parseInt(String(playtimeStr), 10);
-          if (!isNaN(playtimeMinutes) && playtimeMinutes > 0) {
-            const lastPlayedStr = data.LastPlayed || data.lastplayed;
-            const lastPlayed = lastPlayedStr
-              ? parseInt(String(lastPlayedStr), 10)
-              : undefined;
+      const lastPlayedStr = app.value('LastPlayed', null) ?? app.value('lastplayed', null);
+      const lastPlayed = lastPlayedStr ? parseInt(lastPlayedStr, 10) : undefined;
 
-            playtimes.set(appId, {
-              playtimeMinutes,
-              lastPlayed: lastPlayed && !isNaN(lastPlayed) ? lastPlayed : undefined,
-            });
-          }
-        }
-      }
+      playtimes.set(appId, {
+        playtimeMinutes,
+        lastPlayed: lastPlayed && !isNaN(lastPlayed) ? lastPlayed : undefined,
+      });
     }
   } catch (error) {
     console.error('[VDFParser] Error parsing localconfig playtime:', error);
