@@ -192,6 +192,8 @@ class DatabaseManager {
         steam_mac_archive_hash TEXT,
         steam_mac_archive_path TEXT,
         steam_mac_archive_size TEXT,
+        steam_launch_options_windows TEXT,
+        steam_launch_options_linux TEXT,
         ai TEXT,
         hide INTEGER NOT NULL DEFAULT 0,
         search_keywords TEXT,

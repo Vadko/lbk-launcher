@@ -122,7 +122,7 @@ function detectLinuxSteamType(): SteamInstallationType {
 /**
  * Check if Steam is running
  */
-async function isSteamRunning(): Promise<boolean> {
+export async function isSteamRunning(): Promise<boolean> {
   try {
     if (isWindows()) {
       await execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe');
@@ -161,7 +161,7 @@ async function waitForSteamExit(timeoutMs = 10000): Promise<boolean> {
 /**
  * Gracefully shutdown Steam
  */
-async function shutdownSteam(): Promise<void> {
+export async function shutdownSteam(): Promise<void> {
   const running = await isSteamRunning();
   if (!running) {
     console.log('[Steam] Steam is not running, skipping shutdown');
@@ -262,9 +262,9 @@ function launchSteamLinux(url?: string): boolean {
 }
 
 /**
- * Launch Steam (cross-platform) (internal)
+ * Launch Steam (cross-platform)
  */
-async function launchSteam(url?: string): Promise<boolean> {
+export async function launchSteam(url?: string): Promise<boolean> {
   if (isLinux()) {
     return launchSteamLinux(url);
   }

@@ -984,6 +984,49 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_steam_launch_options_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_launch_options_windows'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_steam_launch_options_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN steam_launch_options_windows TEXT;
+          ALTER TABLE games ADD COLUMN steam_launch_options_linux TEXT;
+        `);
+        console.log('[Migrations] Completed: add_steam_launch_options_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_steam_launch_options',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_launch_options_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_steam_launch_options');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_steam_launch_options_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_steam_launch_options - will resync on next startup'
+      );
+    },
+  },
 ];
 
 /**
