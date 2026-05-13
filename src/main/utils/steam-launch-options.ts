@@ -18,7 +18,7 @@ import { getLocalConfigPath } from '@/main/game-detector/steam';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { isSteamRunning, launchSteam, shutdownSteam } from '@/main/utils/steam-launcher';
 
-export interface WriteLaunchOptionsParams {
+interface WriteLaunchOptionsParams {
   appId: number;
   /** Value for Windows builds. */
   windowsOptions: string | null;
@@ -29,7 +29,7 @@ export interface WriteLaunchOptionsParams {
   linuxOptions: string | null;
 }
 
-export interface WriteLaunchOptionsResult {
+interface WriteLaunchOptionsResult {
   /** false = nothing to write (no options for current OS) or Steam path missing. */
   written: boolean;
   /** true = Steam was running and we restarted it so the new value takes effect. */
@@ -57,7 +57,7 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
  * Idempotent: if `existing` already contains our value as a substring, return
  * `existing` unchanged so re-runs don't keep appending duplicates.
  */
-export function mergeLaunchOptions(existing: string | null, ours: string): string {
+function mergeLaunchOptions(existing: string | null, ours: string): string {
   const existingTrim = (existing ?? '').trim();
   if (!existingTrim) return ours;
   if (existingTrim.includes(ours)) return existingTrim;
