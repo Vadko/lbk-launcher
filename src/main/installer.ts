@@ -450,11 +450,13 @@ export async function installTranslation(
           const schemaName = `UserGameStatsSchema_${game.steam_app_id}.bin`;
           const schemaPath = path.join(achievementsInstallPath, schemaName);
           try {
-            const [{ extractAchievementTranslationsFromFile }, { isCefAvailable, evaluateInSharedJsContext }] =
-              await Promise.all([
-                import('./utils/extract-achievement-translations'),
-                import('./utils/steam-cef'),
-              ]);
+            const [
+              { extractAchievementTranslationsFromFile },
+              { isCefAvailable, evaluateInSharedJsContext },
+            ] = await Promise.all([
+              import('./utils/extract-achievement-translations'),
+              import('./utils/steam-cef'),
+            ]);
             const translations = extractAchievementTranslationsFromFile(schemaPath);
             const count = Object.keys(translations).length;
             if (count > 0 && (await isCefAvailable())) {

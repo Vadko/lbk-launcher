@@ -35,10 +35,7 @@ interface AchievementTranslationMap {
  * any other available language as a last resort. Returns null if the slot is
  * missing or not a string container.
  */
-function pickLocalized(
-  slot: unknown,
-  preferredLang: string
-): string | null {
+function pickLocalized(slot: unknown, preferredLang: string): string | null {
   if (typeof slot === 'string') return slot;
   if (!slot || typeof slot !== 'object') return null;
   const map = slot as Record<string, unknown>;

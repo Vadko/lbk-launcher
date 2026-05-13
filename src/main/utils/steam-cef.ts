@@ -60,7 +60,9 @@ export async function isCefAvailable(): Promise<boolean> {
  * is returned by value (CDP otherwise returns object handles for non-primitive
  * results).
  */
-export async function evaluateInSharedJsContext<T = unknown>(expression: string): Promise<T> {
+export async function evaluateInSharedJsContext<T = unknown>(
+  expression: string
+): Promise<T> {
   const client = await withTimeout(
     CDP({
       host: CEF_HOST,
