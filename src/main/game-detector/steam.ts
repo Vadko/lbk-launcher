@@ -297,7 +297,7 @@ function getUserConfigPath(filename: string): string | null {
 /**
  * Get the path to localconfig.vdf for current user
  */
-function getLocalConfigPath(): string | null {
+export function getLocalConfigPath(): string | null {
   return getUserConfigPath('localconfig.vdf');
 }
 
