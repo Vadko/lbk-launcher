@@ -1,9 +1,8 @@
 /**
  * VDF (Valve Data Format) Parser
- * Using @node-steam/vdf library
  */
 
-import * as vdf from '@node-steam/vdf';
+import * as vdf from 'simple-vdf';
 
 /**
  * Parse Steam libraryfolders.vdf file

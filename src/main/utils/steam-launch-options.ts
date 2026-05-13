@@ -11,9 +11,9 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as vdf from '@node-steam/vdf';
 import dlv from 'dlv';
 import { dset } from 'dset';
+import * as vdf from 'simple-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { isSteamRunning, launchSteam, shutdownSteam } from '@/main/utils/steam-launcher';
@@ -44,27 +44,62 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
 }
 
 /**
+ * Convert a raw string to VDF on-disk escaped form.
+ *
+ * `simple-vdf` keeps escape sequences as literals on both parse and stringify
+ * — so a value read from disk like `WINEDLLOVERRIDES=\"foo\"` comes back with
+ * the literal backslash-quote characters, and any string we hand to stringify
+ * goes to disk byte-for-byte. New values coming from our DB are in raw form
+ * (plain `"`), so we have to escape them ourselves before writing, otherwise
+ * Steam's parser breaks at the first unescaped quote.
+ *
+ * Backslash escaping must come first to avoid double-escaping the backslashes
+ * we just inserted.
+ */
+function escapeVdfValue(raw: string): string {
+  return raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+const COMMAND_TOKEN = '%command%';
+
+/**
  * Merge user's existing Steam LaunchOptions with the translator-provided value.
  *
  * Steam's `%command%` token splits the launch string into two zones:
  *   <env / wrappers> %command% <game CLI args>
  *
- * Translator value typically contains `%command%` (Proton wrappers). The user's
- * existing value is usually plain game flags (`-skipintro`, etc.) and should
- * land in the args zone. If our value has `%command%`, splice their flags right
- * after it; otherwise just space-concatenate.
+ * Translator values typically include `%command%` (Proton wrappers, env vars).
+ * The user's existing value can be:
+ *   - empty                 → just use ours
+ *   - plain CLI flags       → splice them into our args zone after %command%
+ *   - their own wrapper +
+ *     %command% + args      → preserve only their args; replace their wrapper
+ *                              (env/Proton setup is the translator's domain
+ *                              and two wrappers can't co-exist)
  *
- * Idempotent: if `existing` already contains our value as a substring, return
- * `existing` unchanged so re-runs don't keep appending duplicates.
+ * Idempotent: if our value (or the resulting merge) is already present,
+ * returns existing unchanged so re-runs don't accumulate duplicates.
  */
 function mergeLaunchOptions(existing: string | null, ours: string): string {
   const existingTrim = (existing ?? '').trim();
   if (!existingTrim) return ours;
+  if (existingTrim === ours) return existingTrim;
   if (existingTrim.includes(ours)) return existingTrim;
 
-  if (ours.includes('%command%')) {
-    return ours.replace('%command%', `%command% ${existingTrim}`);
+  if (ours.includes(COMMAND_TOKEN)) {
+    // Extract whatever args the user had after their own %command% (if any),
+    // otherwise treat the whole existing string as plain args.
+    const userArgs = existingTrim.includes(COMMAND_TOKEN)
+      ? existingTrim
+          .slice(existingTrim.indexOf(COMMAND_TOKEN) + COMMAND_TOKEN.length)
+          .trim()
+      : existingTrim;
+
+    if (!userArgs) return ours;
+    if (ours.includes(userArgs)) return ours;
+    return ours.replace(COMMAND_TOKEN, `${COMMAND_TOKEN} ${userArgs}`);
   }
+
   return `${existingTrim} ${ours}`;
 }
 
@@ -77,14 +112,17 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
 export async function writeSteamLaunchOptions(
   params: WriteLaunchOptionsParams
 ): Promise<WriteLaunchOptionsResult> {
-  const value = pickOptionsForCurrentOS(params);
-  if (!value || value.trim() === '') {
+  const rawValue = pickOptionsForCurrentOS(params);
+  if (!rawValue || rawValue.trim() === '') {
     return {
       written: false,
       steamRestarted: false,
       reason: 'No launch options for current OS',
     };
   }
+  // Escape once here; from this point on we operate in disk-escaped form so
+  // the merge and idempotency comparison line up with what dlv reads back.
+  const value = escapeVdfValue(rawValue);
 
   const localConfigPath = getLocalConfigPath();
   if (!localConfigPath) {

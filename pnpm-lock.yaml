@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@node-steam/vdf':
-        specifier: 2.2.0
-        version: 2.2.0
       '@sentry/electron':
         specifier: 7.13.0
         version: 7.13.0
@@ -62,6 +59,9 @@ importers:
       react-ts-gamepads:
         specifier: 1.0.8
         version: 1.0.8(react@19.2.6)
+      simple-vdf:
+        specifier: ^1.1.1
+        version: 1.1.1
       zustand:
         specifier: 4.5.7
         version: 4.5.7(@types/react@19.2.14)(react@19.2.6)
@@ -822,10 +822,6 @@ packages:
 
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
-
-  '@node-steam/vdf@2.2.0':
-    resolution: {integrity: sha512-YCfIPsIpyrtOP5AdsarjPqjTElVFrXJlWedWNzjCaIeam06v9ebYgApRAcw9b93awNDboTEiHFMnCvlJJHqKcA==}
-    engines: {node: '>=8.0.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -3109,9 +3105,6 @@ packages:
   lodash.throttle@4.1.1:
     resolution: {integrity: sha512-wIkUCfVKpVsWo3JSZlc+8MB5it+2AN5W8J7YVMST30UrvcQNZ1Okbj+rbVniijTWE6FGYy4XJq/rHkas8qJMLQ==}
 
-  lodash@4.17.23:
-    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
-
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
@@ -3908,6 +3901,9 @@ packages:
   simple-update-notifier@2.0.0:
     resolution: {integrity: sha512-a2B9Y0KlNXl9u/vsW6sTIu9vGEpfKu2wRV6l1H3XEas/0gUIzGzBoP/IouTcUQbm9JWZLH3COxyn03TYlFax6w==}
     engines: {node: '>=10'}
+
+  simple-vdf@1.1.1:
+    resolution: {integrity: sha512-IHz5fiOyWX0etTzlrzpWfKWxkwOhSwbbuZxcig+JuON0id1clnYlINBRbe4M4Pz4VnNvNvNaZiKiS7tdIYyF6g==}
 
   slice-ansi@3.0.0:
     resolution: {integrity: sha512-pSyv7bSTC7ig9Dcgbw9AuRNUb5k5V6oDudjZoMBSr13qpLBG7tB+zgCkARjq7xIUgdz5P1Qe8u+rSGdouOOIyQ==}
@@ -4910,7 +4906,7 @@ snapshots:
     dependencies:
       debug: 4.4.3
       fs-extra: 9.1.0
-      lodash: 4.17.23
+      lodash: 4.18.1
       tmp-promise: 3.0.3
     transitivePeerDependencies:
       - supports-color
@@ -4949,8 +4945,6 @@ snapshots:
       '@emnapi/runtime': 1.8.1
       '@tybys/wasm-util': 0.10.1
     optional: true
-
-  '@node-steam/vdf@2.2.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -7487,8 +7481,6 @@ snapshots:
 
   lodash.throttle@4.1.1: {}
 
-  lodash@4.17.23: {}
-
   lodash@4.18.1: {}
 
   log-symbols@4.1.0:
@@ -8359,6 +8351,8 @@ snapshots:
   simple-update-notifier@2.0.0:
     dependencies:
       semver: 7.7.4
+
+  simple-vdf@1.1.1: {}
 
   slice-ansi@3.0.0:
     dependencies:
