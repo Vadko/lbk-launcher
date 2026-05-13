@@ -71,7 +71,9 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
     // Extract whatever args the user had after their own %command% (if any),
     // otherwise treat the whole existing string as plain args.
     const userArgs = existingTrim.includes(COMMAND_TOKEN)
-      ? existingTrim.slice(existingTrim.indexOf(COMMAND_TOKEN) + COMMAND_TOKEN.length).trim()
+      ? existingTrim
+          .slice(existingTrim.indexOf(COMMAND_TOKEN) + COMMAND_TOKEN.length)
+          .trim()
       : existingTrim;
 
     if (!userArgs) return ours;
@@ -82,7 +84,13 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
   return `${existingTrim} ${ours}`;
 }
 
-const LAUNCH_OPTIONS_PARENT = ['UserLocalConfigStore', 'Software', 'Valve', 'Steam', 'apps'];
+const LAUNCH_OPTIONS_PARENT = [
+  'UserLocalConfigStore',
+  'Software',
+  'Valve',
+  'Steam',
+  'apps',
+];
 
 /** Read a string pair value walking a path of nested sets; returns null on any miss. */
 function readNestedPairValue(
@@ -124,7 +132,11 @@ function readAndPlanMerge(
 ): { root: KeyVRoot; existing: string | null; merged: string } {
   const raw = fs.readFileSync(localConfigPath, 'utf8');
   const root = vdfParse(raw);
-  const existing = readNestedPairValue(root, [...LAUNCH_OPTIONS_PARENT, appId], 'LaunchOptions');
+  const existing = readNestedPairValue(
+    root,
+    [...LAUNCH_OPTIONS_PARENT, appId],
+    'LaunchOptions'
+  );
   const merged = mergeLaunchOptions(existing, value);
   return { root, existing, merged };
 }

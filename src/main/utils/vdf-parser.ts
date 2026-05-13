@@ -133,7 +133,8 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
       const playtimeMinutes = parseInt(playtimeStr, 10);
       if (isNaN(playtimeMinutes) || playtimeMinutes <= 0) continue;
 
-      const lastPlayedStr = app.value('LastPlayed', null) ?? app.value('lastplayed', null);
+      const lastPlayedStr =
+        app.value('LastPlayed', null) ?? app.value('lastplayed', null);
       const lastPlayed = lastPlayedStr ? parseInt(lastPlayedStr, 10) : undefined;
 
       playtimes.set(appId, {
