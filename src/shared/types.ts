@@ -249,19 +249,6 @@ export interface ElectronAPI {
    * user needs to restart Steam so the CEF debug port opens.
    */
   onSteamRestartRequired: (callback: () => void) => () => void;
-  /**
-   * TEMPORARY: diagnostic event from the installer with the result of the
-   * achievement-translation injection step. Remove once flow is validated.
-   */
-  onAchievementsApplyStatus: (
-    callback: (
-      status:
-        | { mode: 'cef'; appId: number; count: number }
-        | { mode: 'file-only'; appId: number; count: number }
-        | { mode: 'no-translations'; appId: number }
-        | { mode: 'error'; appId: number; message: string }
-    ) => void
-  ) => () => void;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking

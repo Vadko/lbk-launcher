@@ -391,30 +391,6 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // TEMPORARY: diagnostic modal showing the outcome of the achievement-
-  // translation injection step. Lets us verify on real Steam Deck / desktop
-  // installs whether CEF inject succeeded, fell back to the .bin-only path,
-  // or hit an error. Remove once the flow is validated.
-  useEffect(() => {
-    if (!window.electronAPI?.onAchievementsApplyStatus) return;
-    const unsubscribe = window.electronAPI.onAchievementsApplyStatus((status) => {
-      const variant: 'success' | 'info' | 'error' =
-        status.mode === 'cef' ? 'success' : status.mode === 'error' ? 'error' : 'info';
-      const messages: Record<typeof status.mode, string> = {
-        cef: `Застосовано ${status.mode === 'cef' ? status.count : 0} переклад(ів) досягнень для App ID ${status.appId} наживо через CEF — Steam перезапускати не треба.`,
-        'file-only': `Записано ${status.mode === 'file-only' ? status.count : 0} переклад(ів) досягнень на диск для App ID ${status.appId}. CEF недоступний — Steam підхопить переклад при наступному запуску.`,
-        'no-translations': `Файл досягнень для App ID ${status.appId} не містить перекладів — нічого застосовувати.`,
-        error: `Помилка під час застосування досягнень для App ID ${status.appId}: ${status.mode === 'error' ? status.message : ''}`,
-      };
-      useModalStore.getState().showModal({
-        title: '[DEBUG] Статус перекладу досягнень',
-        message: messages[status.mode],
-        type: variant,
-      });
-    });
-    return unsubscribe;
-  }, []);
-
   const handleOnlineEvent = () => {
     setOnline(true);
     console.log('[App] Internet connection restored');

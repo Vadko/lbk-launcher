@@ -446,20 +446,14 @@ export async function installTranslation(
         // CEF debug channel. The .bin on disk is the persistent source-of-
         // truth — Steam reads it at next startup regardless. CEF just avoids
         // the "restart Steam to see new names" round-trip while Steam is up.
-        //
-        // We also push a diagnostic IPC event so the renderer can show a
-        // temporary status modal — useful while we're confirming the flow
-        // works on real Steam Deck / desktop installs.
         if (game.steam_app_id) {
-          const status = await applyAchievementsLive(
+          await applyAchievementsLive(
             game.steam_app_id,
             path.join(
               achievementsInstallPath,
               `UserGameStatsSchema_${game.steam_app_id}.bin`
             )
           );
-          const { getMainWindow } = await import('./window');
-          getMainWindow()?.webContents.send('achievements-apply-status', status);
         }
       }
     }
@@ -745,24 +739,12 @@ function buildAchievementInjectionExpression(
 }
 
 /**
- * Status payload for the temporary achievement-apply diagnostic modal.
- * `mode` is what we want to communicate; `count` / `message` are extra context.
+ * Read translations from the freshly-written schema file, then CEF-inject if
+ * Steam is up with the debug port open. The `.bin` on disk is the persistent
+ * source-of-truth either way; this just avoids the "restart Steam to see new
+ * names" round-trip while Steam is running.
  */
-export type AchievementsApplyStatus =
-  | { mode: 'cef'; appId: number; count: number }
-  | { mode: 'file-only'; appId: number; count: number }
-  | { mode: 'no-translations'; appId: number }
-  | { mode: 'error'; appId: number; message: string };
-
-/**
- * Read translations from the freshly-written schema file, then either CEF-inject
- * (Steam running with debug port open) or leave it for the next Steam start.
- * Caller forwards the status to the renderer for a diagnostic modal.
- */
-async function applyAchievementsLive(
-  appId: number,
-  schemaPath: string
-): Promise<AchievementsApplyStatus> {
+async function applyAchievementsLive(appId: number, schemaPath: string): Promise<void> {
   try {
     const [
       { extractAchievementTranslationsFromFile },
@@ -775,7 +757,7 @@ async function applyAchievementsLive(
     const count = Object.keys(translations).length;
     if (count === 0) {
       console.log(`[Installer] No achievement translations found in ${schemaPath}`);
-      return { mode: 'no-translations', appId };
+      return;
     }
     if (await isCefAvailable()) {
       await evaluateInSharedJsContext(
@@ -784,16 +766,16 @@ async function applyAchievementsLive(
       console.log(
         `[Installer] Applied ${count} achievement translation(s) via CEF for ${appId}`
       );
-      return { mode: 'cef', appId, count };
+      return;
     }
     console.log(
       `[Installer] ${count} achievement translation(s) on disk for ${appId}; Steam will pick them up on next start`
     );
-    return { mode: 'file-only', appId, count };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn('[Installer] Achievement live-apply failed:', message);
-    return { mode: 'error', appId, message };
+    console.warn(
+      '[Installer] Achievement live-apply failed:',
+      err instanceof Error ? err.message : err
+    );
   }
 }
 

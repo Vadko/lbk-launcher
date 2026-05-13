@@ -77,21 +77,16 @@ function extractAchievementTranslations(
   if (!root) return {};
 
   // The schema is keyed by appid at the top level; there's usually exactly one.
+  // We don't filter by `stat.type` because Steam uses several values (`Achievements`,
+  // `GroupAchievements`, sometimes empty) — any stat that carries a `bits` container
+  // with per-bit `display` strings is what we want.
   const result: AchievementTranslationMap = {};
   for (const appNode of Object.values(root)) {
     const stats = asObject(asObject(appNode)?.stats);
     if (!stats) continue;
 
     for (const stat of Object.values(stats)) {
-      const statObj = asObject(stat);
-      if (!statObj) continue;
-      // Only `achievements`-type stat groups carry localized bit definitions.
-      // Some schemas just use a flat list — accept missing type too.
-      const type = statObj.type;
-      if (typeof type === 'string' && type.toLowerCase() !== 'achievements') {
-        continue;
-      }
-      const bits = asObject(statObj.bits);
+      const bits = asObject(asObject(stat)?.bits);
       if (!bits) continue;
 
       for (const bit of Object.values(bits)) {
@@ -111,6 +106,26 @@ function extractAchievementTranslations(
       }
     }
   }
+
+  // Diagnostic: when extraction yields nothing despite a parseable file, dump a
+  // shallow picture of what the schema actually looks like so we can adjust.
+  if (Object.keys(result).length === 0) {
+    const summarize = (v: unknown, depth = 0): unknown => {
+      if (depth > 2 || v === null || v === undefined) return v;
+      if (typeof v !== 'object') return typeof v;
+      const obj = v as Record<string, unknown>;
+      const keys = Object.keys(obj).slice(0, 8);
+      const out: Record<string, unknown> = {};
+      for (const k of keys) out[k] = summarize(obj[k], depth + 1);
+      if (Object.keys(obj).length > keys.length) out.__more = Object.keys(obj).length;
+      return out;
+    };
+    console.warn(
+      '[AchievementTranslations] No translations extracted. Schema shape:',
+      JSON.stringify(summarize(root), null, 2)
+    );
+  }
+
   return result;
 }
 
