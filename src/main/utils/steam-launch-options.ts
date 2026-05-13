@@ -12,6 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vdf from '@node-steam/vdf';
+import dlv from 'dlv';
 import { dset } from 'dset';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
@@ -40,6 +41,31 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
   if (isWindows()) return params.windowsOptions;
   if (isLinux() || isMacOS()) return params.linuxOptions;
   return null;
+}
+
+/**
+ * Merge user's existing Steam LaunchOptions with the translator-provided value.
+ *
+ * Steam's `%command%` token splits the launch string into two zones:
+ *   <env / wrappers> %command% <game CLI args>
+ *
+ * Translator value typically contains `%command%` (Proton wrappers). The user's
+ * existing value is usually plain game flags (`-skipintro`, etc.) and should
+ * land in the args zone. If our value has `%command%`, splice their flags right
+ * after it; otherwise just space-concatenate.
+ *
+ * Idempotent: if `existing` already contains our value as a substring, return
+ * `existing` unchanged so re-runs don't keep appending duplicates.
+ */
+export function mergeLaunchOptions(existing: string | null, ours: string): string {
+  const existingTrim = (existing ?? '').trim();
+  if (!existingTrim) return ours;
+  if (existingTrim.includes(ours)) return existingTrim;
+
+  if (ours.includes('%command%')) {
+    return ours.replace('%command%', `%command% ${existingTrim}`);
+  }
+  return `${existingTrim} ${ours}`;
 }
 
 /**
@@ -76,6 +102,57 @@ export async function writeSteamLaunchOptions(
     };
   }
 
+  const launchOptionsPath = [
+    'UserLocalConfigStore',
+    'Software',
+    'Valve',
+    'Steam',
+    'apps',
+    String(params.appId),
+    'LaunchOptions',
+  ];
+
+  /**
+   * Read+parse localconfig.vdf and compute the merged LaunchOptions value.
+   * Safe to call with Steam running — we only read here.
+   */
+  const readAndPlanMerge = (): {
+    parsed: Record<string, unknown>;
+    existing: string | null;
+    merged: string;
+  } => {
+    const raw = fs.readFileSync(localConfigPath, 'utf8');
+    const parsed = vdf.parse(raw) as Record<string, unknown>;
+    const existingRaw: unknown = dlv(parsed, launchOptionsPath);
+    const existing = typeof existingRaw === 'string' ? existingRaw : null;
+    const merged = mergeLaunchOptions(existing, value);
+    return { parsed, existing, merged };
+  };
+
+  // First pass: read with Steam possibly running. If our value is already
+  // included, we can skip the whole shutdown/launch dance.
+  let plan: ReturnType<typeof readAndPlanMerge>;
+  try {
+    plan = readAndPlanMerge();
+  } catch (error) {
+    return {
+      written: false,
+      steamRestarted: false,
+      reason: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+
+  if (plan.merged === (plan.existing ?? '').trim()) {
+    console.log(
+      `[SteamLaunchOptions] App ${params.appId} already contains our LaunchOptions — nothing to do`
+    );
+    return {
+      written: false,
+      steamRestarted: false,
+      reason: 'LaunchOptions already include our value',
+    };
+  }
+
   const steamWasRunning = await isSteamRunning();
   if (steamWasRunning) {
     console.log(
@@ -85,24 +162,26 @@ export async function writeSteamLaunchOptions(
   }
 
   try {
-    const raw = fs.readFileSync(localConfigPath, 'utf8');
-    const parsed = vdf.parse(raw) as Record<string, unknown>;
+    // Re-read after shutdown: Steam flushes its in-memory state to disk on
+    // graceful exit, so the value we saw before shutdown may now be stale.
+    if (steamWasRunning) {
+      plan = readAndPlanMerge();
+      if (plan.merged === (plan.existing ?? '').trim()) {
+        console.log(
+          `[SteamLaunchOptions] After Steam shutdown, app ${params.appId} already contains our LaunchOptions`
+        );
+        await launchSteam();
+        return {
+          written: false,
+          steamRestarted: true,
+          reason: 'LaunchOptions already include our value (post-shutdown)',
+        };
+      }
+    }
 
-    dset(
-      parsed,
-      [
-        'UserLocalConfigStore',
-        'Software',
-        'Valve',
-        'Steam',
-        'apps',
-        String(params.appId),
-        'LaunchOptions',
-      ],
-      value
-    );
+    dset(plan.parsed, launchOptionsPath, plan.merged);
 
-    const serialized = vdf.stringify(parsed);
+    const serialized = vdf.stringify(plan.parsed);
     const tmp = localConfigPath + '.lbk.tmp';
     fs.writeFileSync(tmp, serialized, 'utf8');
     fs.renameSync(tmp, localConfigPath);
