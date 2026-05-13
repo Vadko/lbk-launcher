@@ -19,6 +19,7 @@ import { useDeepLink } from './hooks/useDeepLink';
 import { useGamepadModeNavigation } from './hooks/useGamepadModeNavigation';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
+import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
 import { trackEvent } from './utils/analytics';
@@ -359,6 +360,34 @@ export const App: React.FC = () => {
     };
 
     const unsubscribe = window.electronAPI.onTestGamesChanged(handleTestGamesChanged);
+    return unsubscribe;
+  }, []);
+
+  // Mandatory "restart Steam" prompt — fires when the installer couldn't
+  // apply a Steam config change live because Steam is running but its debug
+  // channel (CEF) isn't open yet. Restarting Steam picks up the flag file we
+  // just dropped, after which subsequent installs apply silently.
+  useEffect(() => {
+    if (!window.electronAPI?.onSteamRestartRequired) return;
+    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
+      useModalStore.getState().showModal({
+        title: 'Перезапустіть Steam',
+        message:
+          'Щоб параметри запуску гри застосувались, потрібно перезапустити Steam. ' +
+          'Після перезапуску запустіть установлення перекладу знову.',
+        type: 'info',
+        mandatory: true,
+        actions: [
+          {
+            label: 'Перезапустити Steam',
+            onClick: () => {
+              window.electronAPI.restartSteam();
+            },
+            variant: 'primary',
+          },
+        ],
+      });
+    });
     return unsubscribe;
   }, []);
 

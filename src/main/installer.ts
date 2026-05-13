@@ -441,6 +441,37 @@ export async function installTranslation(
 
         // Update achievementsFiles to contain only filenames (for installation info)
         achievementsFiles = achievementFilesToCopy.map(({ dest }) => path.basename(dest));
+
+        // Try to apply the translated achievement strings live via Steam's
+        // CEF debug channel. The .bin on disk is the persistent source-of-
+        // truth — Steam reads it at next startup regardless. CEF just avoids
+        // the "restart Steam to see new names" round-trip while Steam is up.
+        if (game.steam_app_id) {
+          const schemaName = `UserGameStatsSchema_${game.steam_app_id}.bin`;
+          const schemaPath = path.join(achievementsInstallPath, schemaName);
+          try {
+            const [{ extractAchievementTranslationsFromFile }, { isCefAvailable, evaluateInSharedJsContext }] =
+              await Promise.all([
+                import('./utils/extract-achievement-translations'),
+                import('./utils/steam-cef'),
+              ]);
+            const translations = extractAchievementTranslationsFromFile(schemaPath);
+            const count = Object.keys(translations).length;
+            if (count > 0 && (await isCefAvailable())) {
+              await evaluateInSharedJsContext(
+                buildAchievementInjectionExpression(game.steam_app_id, translations)
+              );
+              console.log(
+                `[Installer] Applied ${count} achievement translation(s) live via CEF for app ${game.steam_app_id}`
+              );
+            }
+          } catch (err) {
+            console.warn(
+              '[Installer] Achievement live-apply skipped:',
+              err instanceof Error ? err.message : err
+            );
+          }
+        }
       }
     }
 
@@ -566,12 +597,14 @@ export async function installTranslation(
         windowsOptions: game.steam_launch_options_windows,
         linuxOptions: game.steam_launch_options_linux,
       });
-      if (result.written) {
-        console.log(
-          `[Installer] Steam LaunchOptions written for app ${game.steam_app_id}${result.steamRestarted ? ' (Steam restarted)' : ''}`
-        );
-      } else if (result.reason) {
-        console.log(`[Installer] Steam LaunchOptions skipped: ${result.reason}`);
+      console.log(
+        `[Installer] Steam LaunchOptions mode=${result.mode}${result.needsSteamRestart ? ' (Steam restart required)' : ''}${result.reason ? ` — ${result.reason}` : ''}`
+      );
+      if (result.needsSteamRestart) {
+        // Mandatory "restart Steam" prompt in renderer. Imported lazily so the
+        // installer module stays decoupled from electron's BrowserWindow API.
+        const { getMainWindow } = await import('./window');
+        getMainWindow()?.webContents.send('steam-restart-required');
       }
     }
 
@@ -606,6 +639,120 @@ interface DownloadAndExtractParams {
   onDownloadProgress?: (progress: DownloadProgress) => void;
   onStatus?: (status: InstallationStatus) => void;
   downloadContext?: DownloadContext;
+}
+
+/**
+ * Build the JS expression we send through CEF to patch in-memory achievement
+ * strings. Persistent source-of-truth lives on disk in
+ * `appcache/stats/UserGameStatsSchema_*.bin`; this just refreshes the live
+ * Steam UI without forcing the user to restart Steam.
+ *
+ * Module discovery follows the `decky-frontend-lib` strategy:
+ * inject a fake webpack chunk to grab the `__webpack_require__` function,
+ * eagerly require every known module, then scan the resulting cache for
+ * something with `m_mapMyAchievements` on it. Source we mirror (MIT):
+ * https://github.com/SteamDeckHomebrew/decky-frontend-lib/blob/main/src/webpack.ts
+ *
+ * Once we have the module we:
+ *   1. After-patch `LoadMyAchievements(appId)` on its prototype so future
+ *      reloads (Steam refires this on every `CMsgAchievementChange` push)
+ *      still apply our translations.
+ *   2. Trigger an immediate reload so the UI reflects the change now.
+ *
+ * Per-game translations live on `window.__lbk_achievementTranslations[appId]`
+ * — re-running for another app just adds an entry; we don't re-patch.
+ */
+function buildAchievementInjectionExpression(
+  appId: number,
+  translations: Record<string, { strName: string; strDescription: string }>
+): string {
+  return `(() => {
+    const APP_ID = ${appId};
+    const TR = ${JSON.stringify(translations)};
+    const store = (window.__lbk_achievementTranslations ||= {});
+    store[APP_ID] = TR;
+
+    const applyTo = (mod, loadedAppId) => {
+      const tr = (window.__lbk_achievementTranslations || {})[loadedAppId];
+      const entry = mod?.m_mapMyAchievements?.get(loadedAppId);
+      if (!tr || !entry?.data) return;
+      for (const bucket of ['achieved', 'unachieved', 'hidden']) {
+        const items = entry.data[bucket] || {};
+        for (const id of Object.keys(items)) {
+          if (tr[id]) {
+            items[id].strName = tr[id].strName;
+            items[id].strDescription = tr[id].strDescription;
+          }
+        }
+      }
+    };
+
+    if (window.__lbk_achievementPatchInstalled) {
+      applyTo(window.__lbk_achievementModule, APP_ID);
+      return { mode: 'refresh' };
+    }
+
+    // ---- decky-frontend-lib webpack module cache (verbatim port) ----
+    // Initializes a Map<id, module> by faking a webpack chunk to capture
+    // __webpack_require__, then eagerly requiring every known module ID.
+    if (!window.__lbk_webpackModules) {
+      const cache = new Map();
+      const id = Symbol('@lbk/ui');
+      let webpackRequire;
+      window.webpackChunksteamui.push([
+        [id],
+        {},
+        (r) => {
+          webpackRequire = r;
+        },
+      ]);
+      for (const moduleId of Object.keys(webpackRequire.m)) {
+        try {
+          const mod = webpackRequire(moduleId);
+          if (mod) cache.set(moduleId, mod);
+        } catch {
+          // Module side-effect threw; safe to skip — Decky does the same.
+        }
+      }
+      window.__lbk_webpackModules = cache;
+    }
+
+    // findModuleChild from decky-frontend-lib (deprecated but matches the
+    // pattern DeckAchievementsManager uses for this exact lookup).
+    const findModuleChild = (filter) => {
+      for (const m of window.__lbk_webpackModules.values()) {
+        for (const candidate of [m?.default, m]) {
+          if (!candidate) continue;
+          const hit = filter(candidate);
+          if (hit) return hit;
+        }
+      }
+      return null;
+    };
+
+    const achModule = findModuleChild((module) => {
+      if (typeof module !== 'object' || module === null) return undefined;
+      for (const prop in module) {
+        if (module[prop]?.m_mapMyAchievements) return module[prop];
+      }
+      return undefined;
+    });
+    if (!achModule) throw new Error('Achievements module not found');
+    window.__lbk_achievementModule = achModule;
+
+    const proto = Object.getPrototypeOf(achModule);
+    const orig = proto.LoadMyAchievements;
+    if (typeof orig !== 'function') throw new Error('LoadMyAchievements is not a function');
+
+    proto.LoadMyAchievements = async function (loadedAppId) {
+      const result = await orig.call(this, loadedAppId);
+      applyTo(this, loadedAppId);
+      return result;
+    };
+    window.__lbk_achievementPatchInstalled = true;
+    achModule.LoadMyAchievements(APP_ID);
+    return { mode: 'installed' };
+  })()`;
 }
 
 /**
