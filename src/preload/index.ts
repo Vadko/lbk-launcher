@@ -5,6 +5,7 @@ const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
+import type { AchievementsApplyStatus } from '@/main/installer';
 import type {
   DownloadProgress,
   ElectronAPI,
@@ -211,6 +212,17 @@ const electronAPI: ElectronAPI = {
     const handler = () => callback();
     ipcRenderer.on('steam-restart-required', handler);
     return () => ipcRenderer.removeListener('steam-restart-required', handler);
+  },
+  /**
+   * TEMPORARY: diagnostic event from the installer reporting whether the
+   * achievement translations were live-injected via CEF, written to disk only,
+   * or failed. Used to surface a status modal while we validate the flow on
+   * real Steam Deck / desktop installs. Remove once we've confirmed behaviour.
+   */
+  onAchievementsApplyStatus: (callback: (status: AchievementsApplyStatus) => void) => {
+    const handler = (_: unknown, status: AchievementsApplyStatus) => callback(status);
+    ipcRenderer.on('achievements-apply-status', handler);
+    return () => ipcRenderer.removeListener('achievements-apply-status', handler);
   },
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
