@@ -1774,7 +1774,6 @@ export type Database = {
           feedback_email_notifications: boolean
           full_name: string | null
           id: string
-          password_hash: string
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
           telegram_link_token: string | null
@@ -1793,7 +1792,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -1812,7 +1810,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
