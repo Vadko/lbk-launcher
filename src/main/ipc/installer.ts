@@ -2,29 +2,29 @@ import { dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
+import { installTranslation } from '../installer';
 import {
-  abortCurrentDownload,
   checkInstallation,
-  checkPlatformCompatibility,
   getAllInstalledGameIds,
   getConflictingTranslation,
-  installTranslation,
-  ManualSelectionError,
-  NetworkError,
-  PausedSignal,
-  RateLimitError,
-  removeComponents,
   removeOrphanedInstallationMetadata,
-  resumeDownload,
-  uninstallTranslation,
-} from '../installer';
+} from '../installer/cache';
 import {
+  abortCurrentDownload,
   clearPausedDownloadState,
   getPartialFilePath,
   getPausedDownloadState,
   pauseCurrentDownload,
 } from '../installer/download';
-import { rerunInstaller } from '../installer/platform';
+import {
+  ManualSelectionError,
+  NetworkError,
+  PausedSignal,
+  RateLimitError,
+} from '../installer/errors';
+import { checkPlatformCompatibility, rerunInstaller } from '../installer/platform';
+import { resumeDownload } from '../installer/resume';
+import { removeComponents, uninstallTranslation } from '../installer/uninstall';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';

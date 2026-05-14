@@ -1,7 +1,7 @@
 import { app, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { invalidateInstalledGameIdsCache } from './installer';
+import { invalidateInstalledGameIdsCache } from './installer/cache';
 
 let watcher: fs.FSWatcher | null = null;
 let debounceTimer: NodeJS.Timeout | null = null;

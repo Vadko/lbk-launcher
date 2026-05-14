@@ -15,7 +15,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getDatabase } from './db/database';
 import { getSteamPlaytimesForApps } from './game-detector/steam';
-import { getAllInstalledGameIds } from './installer';
+import { getAllInstalledGameIds } from './installer/cache';
 
 // ============================================================================
 // Types
