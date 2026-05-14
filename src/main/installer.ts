@@ -12,24 +12,11 @@ import type {
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 import { applyAchievementsLive } from './installer/achievements';
 import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
-import {
-  checkInstallation,
-  getAllInstalledGameIds,
-  getConflictingTranslation,
-  invalidateInstalledGameIdsCache,
-  removeOrphanedInstallationMetadata,
-  saveInstallationInfo,
-} from './installer/cache';
+import { saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
-import { abortCurrentDownload } from './installer/download';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
 import { handleInstallationError } from './installer/error-handler';
-import {
-  ManualSelectionError,
-  NetworkError,
-  PausedSignal,
-  RateLimitError,
-} from './installer/errors';
+import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
 import {
   checkPlatformCompatibility,
@@ -38,31 +25,11 @@ import {
   hasExecutableInstaller,
   runInstaller,
 } from './installer/platform';
-import { resumeDownload } from './installer/resume';
-import { removeComponents, uninstallTranslation } from './installer/uninstall';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { isLinux, isMacOS } from './utils/platform';
 import { writeSteamLaunchOptions } from './utils/steam-launch-options';
 
 const mkdir = promisify(fs.mkdir);
-
-// Re-export utilities for external use
-export {
-  abortCurrentDownload,
-  checkInstallation,
-  checkPlatformCompatibility,
-  getAllInstalledGameIds,
-  getConflictingTranslation,
-  invalidateInstalledGameIdsCache,
-  ManualSelectionError,
-  NetworkError,
-  PausedSignal,
-  RateLimitError,
-  removeComponents,
-  removeOrphanedInstallationMetadata,
-  resumeDownload,
-  uninstallTranslation,
-};
 
 /**
  * Main installation function
