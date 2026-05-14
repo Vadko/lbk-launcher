@@ -21,7 +21,7 @@ importers:
         specifier: 12.9.0
         version: 12.9.0
       chrome-remote-interface:
-        specifier: ^0.34.0
+        specifier: 0.34.0
         version: 0.34.0
       cyrillic-to-translit-js:
         specifier: 3.2.1
@@ -85,7 +85,7 @@ importers:
         specifier: 7.6.13
         version: 7.6.13
       '@types/chrome-remote-interface':
-        specifier: ^0.33.0
+        specifier: 0.33.0
         version: 0.33.0
       '@types/node':
         specifier: 20.19.35
