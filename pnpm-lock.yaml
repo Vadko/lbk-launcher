@@ -20,9 +20,6 @@ importers:
       better-sqlite3:
         specifier: 12.9.0
         version: 12.9.0
-      binarykvparser:
-        specifier: ^2.3.0
-        version: 2.3.0
       chrome-remote-interface:
         specifier: ^0.34.0
         version: 0.34.0
@@ -41,9 +38,6 @@ importers:
       got:
         specifier: 11.8.6
         version: 11.8.6
-      long:
-        specifier: ^5.3.2
-        version: 5.3.2
       mixpanel-browser:
         specifier: 2.78.0
         version: 2.78.0
@@ -1912,11 +1906,6 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
-  binarykvparser@2.3.0:
-    resolution: {integrity: sha512-B1N5ZxC8I9oSLis7Rg36DxsZJoIikUGU2XwpI0FKFCaPIJIEYi0B9UeIk3QU006axzq0TI9KC3iXelfGGgnWew==}
-    bundledDependencies:
-      - long
-
   bindings@1.5.0:
     resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
 
@@ -3132,9 +3121,6 @@ packages:
   log-update@6.1.0:
     resolution: {integrity: sha512-9ie8ItPR6tjY5uYJh8K/Zrv/RMZ5VOlOWvtZdEHYSTFKZfIBPQa9tOAEeAWhd+AnIneLJ22w5fjOYtoutpWq5w==}
     engines: {node: '>=18'}
-
-  long@5.3.2:
-    resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
 
   lowercase-keys@2.0.0:
     resolution: {integrity: sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA==}
@@ -6077,8 +6063,6 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
-  binarykvparser@2.3.0: {}
-
   bindings@1.5.0:
     dependencies:
       file-uri-to-path: 1.0.0
@@ -7540,8 +7524,6 @@ snapshots:
       slice-ansi: 7.1.2
       strip-ansi: 7.2.0
       wrap-ansi: 9.0.2
-
-  long@5.3.2: {}
 
   lowercase-keys@2.0.0: {}
 

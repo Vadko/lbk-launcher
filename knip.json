@@ -15,7 +15,6 @@
   ],
   "ignoreDependencies": [
     "7zip-bin-full",
-    "playwright-core",
-    "long"
+    "playwright-core"
   ]
 }

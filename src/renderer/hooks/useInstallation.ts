@@ -63,6 +63,7 @@ export function useInstallation({
     setInstallationProgress,
     clearInstallationProgress,
     checkInstallationStatus,
+    steamGames,
   } = useStore();
 
   const { showModal } = useModalStore();
@@ -292,21 +293,48 @@ export function useInstallation({
           });
         }
 
-        const message = isUpdateAvailable
+        let message = isUpdateAvailable
           ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
           : `Українізатор ${selectedGame.name} успішно встановлено!`;
+
+        const installPath = customGamePath || installationInfo?.gamePath;
+        const isSteamPath = installPath
+          ? Array.from(steamGames.values()).some(
+              (p) => installPath.startsWith(p) || p.startsWith(installPath)
+            )
+          : platform === 'steam';
+
+        if (effectiveOptions.installAchievements && isSteamPath) {
+          message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
+        }
 
         showModal({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
           type: 'success',
-          actions: [
-            {
-              label: 'Зрозуміло',
-              onClick: () => undefined,
-              variant: 'primary',
-            },
-          ],
+          actions:
+            effectiveOptions.installAchievements && isSteamPath
+              ? [
+                  {
+                    label: 'Перезапустити Steam',
+                    onClick: () => {
+                      window.electronAPI.restartSteam();
+                    },
+                    variant: 'primary',
+                  },
+                  {
+                    label: 'Пізніше',
+                    onClick: () => undefined,
+                    variant: 'secondary',
+                  },
+                ]
+              : [
+                  {
+                    label: 'Зрозуміло',
+                    onClick: () => undefined,
+                    variant: 'primary',
+                  },
+                ],
         });
 
         // Trigger callback for first install (not update)

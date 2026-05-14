@@ -10,7 +10,6 @@ import type {
   InstallOptions,
 } from '../shared/types';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
-import { applyAchievementsLive } from './installer/achievements';
 import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
 import { saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
@@ -296,20 +295,6 @@ export async function installTranslation(
 
         // Update achievementsFiles to contain only filenames (for installation info)
         achievementsFiles = achievementFilesToCopy.map(({ dest }) => path.basename(dest));
-
-        // Try to apply the translated achievement strings live via Steam's
-        // CEF debug channel. The .bin on disk is the persistent source-of-
-        // truth — Steam reads it at next startup regardless. CEF just avoids
-        // the "restart Steam to see new names" round-trip while Steam is up.
-        if (game.steam_app_id) {
-          await applyAchievementsLive(
-            game.steam_app_id,
-            path.join(
-              achievementsInstallPath,
-              `UserGameStatsSchema_${game.steam_app_id}.bin`
-            )
-          );
-        }
       }
     }
 
