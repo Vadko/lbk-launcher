@@ -23,7 +23,6 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
-import { ensureCefFlagFile } from '@/main/utils/cef-flag-file';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
@@ -42,13 +41,10 @@ interface WriteLaunchOptionsParams {
 type WriteLaunchOptionsMode =
   | 'noop' // nothing to write (no options for current OS, or already in place)
   | 'cef' // applied live through Steam's CEF API
-  | 'file' // wrote localconfig.vdf directly (Steam was off)
-  | 'needs-restart'; // Steam on, CEF unreachable — caller prompts a restart
+  | 'file'; // wrote localconfig.vdf directly (Steam was off)
 
 interface WriteLaunchOptionsResult {
   mode: WriteLaunchOptionsMode;
-  /** true if user must restart Steam for the change to take effect. */
-  needsSteamRestart: boolean;
   reason?: string;
 }
 
@@ -204,18 +200,13 @@ export async function writeSteamLaunchOptions(
 ): Promise<WriteLaunchOptionsResult> {
   const value = pickOptionsForCurrentOS(params);
   if (!value || value.trim() === '') {
-    return {
-      mode: 'noop',
-      needsSteamRestart: false,
-      reason: 'No launch options for current OS',
-    };
+    return { mode: 'noop', reason: 'No launch options for current OS' };
   }
 
   const localConfigPath = getLocalConfigPath();
   if (!localConfigPath || !fs.existsSync(localConfigPath)) {
     return {
       mode: 'noop',
-      needsSteamRestart: false,
       reason: 'localconfig.vdf not found — Steam never started?',
     };
   }
@@ -227,7 +218,6 @@ export async function writeSteamLaunchOptions(
   } catch (error) {
     return {
       mode: 'noop',
-      needsSteamRestart: false,
       reason: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -236,11 +226,7 @@ export async function writeSteamLaunchOptions(
     console.log(
       `[SteamLaunchOptions] App ${params.appId} already contains our LaunchOptions — nothing to do`
     );
-    return {
-      mode: 'noop',
-      needsSteamRestart: false,
-      reason: 'LaunchOptions already include our value',
-    };
+    return { mode: 'noop', reason: 'LaunchOptions already include our value' };
   }
 
   // Steam off → file is safe to edit directly. Skip CEF entirely (Steam isn't
@@ -251,41 +237,34 @@ export async function writeSteamLaunchOptions(
       console.log(
         `[SteamLaunchOptions] App ${params.appId} wrote ${path.basename(localConfigPath)} (Steam off)`
       );
-      return { mode: 'file', needsSteamRestart: false };
+      return { mode: 'file' };
     } catch (error) {
       return {
         mode: 'noop',
-        needsSteamRestart: false,
         reason: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
 
-  // Steam on → only CEF is safe. Make sure the flag file exists so the next
-  // Steam restart opens the debug port for us.
-  ensureCefFlagFile();
-
+  // Steam on → only CEF is safe. The bootstrap modal at launcher startup
+  // guarantees CEF is reachable by the time we get here.
   if (await isCefAvailable()) {
     try {
       await evaluateInSharedJsContext(
         `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${jsString(plan.merged)})`
       );
       console.log(`[SteamLaunchOptions] App ${params.appId} updated live via CEF`);
-      return { mode: 'cef', needsSteamRestart: false };
+      return { mode: 'cef' };
     } catch (error) {
-      console.warn(
-        '[SteamLaunchOptions] CEF apply failed:',
-        error instanceof Error ? error.message : error
-      );
+      return {
+        mode: 'noop',
+        reason: error instanceof Error ? error.message : 'CEF apply failed',
+      };
     }
   }
 
-  // Steam on, CEF unreachable — caller will prompt the user to restart Steam.
-  // No queue: after restart they re-run the install (idempotent) and the CEF
-  // path will succeed.
   return {
-    mode: 'needs-restart',
-    needsSteamRestart: true,
-    reason: 'Steam running without CEF; restart needed to enable live updates',
+    mode: 'noop',
+    reason: 'Steam running without CEF — flag file dropped, retry after restart',
   };
 }

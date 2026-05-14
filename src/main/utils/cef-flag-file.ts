@@ -11,6 +11,9 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
+import { getMainWindow } from '@/main/window';
+import { isCefAvailable } from './steam-cef';
+import { isSteamRunning } from './steam-launcher';
 
 const FLAG_FILE_NAME = '.cef-enable-remote-debugging';
 
@@ -29,7 +32,7 @@ function getFlagFilePath(): string | null {
 /**
  * Make sure the flag file exists. Idempotent — calling it many times is fine.
  */
-export function ensureCefFlagFile(): void {
+function ensureCefFlagFile(): void {
   const filePath = getFlagFilePath();
   if (!filePath) {
     console.warn('[CEFFlagFile] Steam path not found, cannot create flag file');
@@ -40,7 +43,7 @@ export function ensureCefFlagFile(): void {
 
   try {
     // `wx` = create exclusively; treat EEXIST as already-there so two parallel
-    // installs don't race each other.
+    // callers don't race each other.
     fs.writeFileSync(filePath, '', { flag: 'wx' });
     console.log(
       `[CEFFlagFile] Created ${filePath} — Steam restart needed for it to take effect`
@@ -49,4 +52,20 @@ export function ensureCefFlagFile(): void {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') return;
     console.error('[CEFFlagFile] Failed to create flag file:', error);
   }
+}
+
+/**
+ * Called once at app startup. Ensures the flag file exists, then if Steam is
+ * running but the debug port isn't open yet (= Steam started before the flag
+ * was created), forces a mandatory "restart Steam" prompt in the renderer.
+ * After that restart the debug port stays open until the user deletes the
+ * flag file, so installs never need to prompt for a restart later.
+ */
+export async function bootstrapCefDebugging(): Promise<void> {
+  ensureCefFlagFile();
+
+  if (!(await isSteamRunning())) return;
+  if (await isCefAvailable()) return;
+
+  getMainWindow()?.webContents.send('steam-restart-required');
 }

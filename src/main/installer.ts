@@ -421,14 +421,8 @@ export async function installTranslation(
         linuxOptions: game.steam_launch_options_linux,
       });
       console.log(
-        `[Installer] Steam LaunchOptions mode=${result.mode}${result.needsSteamRestart ? ' (Steam restart required)' : ''}${result.reason ? ` — ${result.reason}` : ''}`
+        `[Installer] Steam LaunchOptions mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
       );
-      if (result.needsSteamRestart) {
-        // Mandatory "restart Steam" prompt in renderer. Imported lazily so the
-        // installer module stays decoupled from electron's BrowserWindow API.
-        const { getMainWindow } = await import('./window');
-        getMainWindow()?.webContents.send('steam-restart-required');
-      }
     }
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);

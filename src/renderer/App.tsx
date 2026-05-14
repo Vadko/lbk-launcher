@@ -363,18 +363,18 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Mandatory "restart Steam" prompt — fires when the installer couldn't
-  // apply a Steam config change live because Steam is running but its debug
-  // channel (CEF) isn't open yet. Restarting Steam picks up the flag file we
-  // just dropped, after which subsequent installs apply silently.
+  // Mandatory one-time "restart Steam" prompt — fires at launcher startup if
+  // Steam is running but its debug channel (CEF) isn't open. We just dropped
+  // the flag file Steam reads on startup; one restart enables live config
+  // updates for all future installs.
   useEffect(() => {
     if (!window.electronAPI?.onSteamRestartRequired) return;
     const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
       useModalStore.getState().showModal({
         title: 'Перезапустіть Steam',
         message:
-          'Щоб параметри запуску гри застосувались, потрібно перезапустити Steam. ' +
-          'Після перезапуску запустіть установлення перекладу знову.',
+          'Для коректного встановлення перекладів потрібно перезапустити Steam. ' +
+          'Це разова дія — наступні встановлення відбуватимуться без рестартів.',
         type: 'info',
         mandatory: true,
         actions: [
