@@ -20,15 +20,15 @@ import { verifyFileHash } from './hash';
 
 const unlink = promisify(fs.unlink);
 
-export type ArchiveType = 'text' | 'voice' | 'achievements';
+type ArchiveType = 'text' | 'voice' | 'achievements';
 
-export interface DownloadContext {
+interface DownloadContext {
   options: InstallOptions;
   platform: string;
   customGamePath?: string;
 }
 
-export interface DownloadAndExtractParams {
+interface DownloadAndExtractParams {
   game: Game;
   type: ArchiveType;
   archivePath: string | undefined | null;
