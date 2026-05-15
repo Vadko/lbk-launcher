@@ -34,6 +34,13 @@
     "status": "completed",
     "support_url": "https://donatello.to/tommygun",
     "team": "Квадрат Кніш",
+    "gallery": [
+      "466f48ea-2635-46a3-903e-1ebd1a99d650/banner.webp",
+      "466f48ea-2635-46a3-903e-1ebd1a99d650/capsule.webp",
+      "466f48ea-2635-46a3-903e-1ebd1a99d650/banner.webp",
+      "466f48ea-2635-46a3-903e-1ebd1a99d650/banner.webp",
+      "466f48ea-2635-46a3-903e-1ebd1a99d650/banner.webp"
+    ],
     "telegram": "t.me/test",
     "textures_progress": 10,
     "thumbnail_path": "466f48ea-2635-46a3-903e-1ebd1a99d650/thumbnail.webp",
