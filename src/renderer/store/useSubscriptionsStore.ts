@@ -93,6 +93,11 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     newStatus: string,
     showToast?: boolean
   ) => void;
+  addFirstFavoriteNotification: (
+    gameId: string,
+    gameName: string,
+    showToast?: boolean
+  ) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   clearNotification: (notificationId: string) => void;
@@ -457,6 +462,37 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           }));
 
           playNotificationSoundIfEnabled('team-status-change');
+          scheduleToastDismissal(notification.id, get().dismissToast);
+          showSystemNotificationIfHidden(gameName, message, gameId);
+        }
+      },
+
+      addFirstFavoriteNotification: (gameId, gameName, showToast = true) => {
+        const notification = createNotification({
+          type: 'first-favorite',
+          gameId,
+          gameName,
+          idPrefix: `first-favorite-${gameId}`,
+        });
+
+        set((state) => ({
+          notifications: [notification, ...state.notifications],
+          unreadCount: state.unreadCount + 1,
+        }));
+
+        if (showToast) {
+          const message = getNotificationMessage({
+            type: 'first-favorite',
+            gameId,
+            gameName,
+          });
+          const toast = createToast(notification, message);
+
+          set((state) => ({
+            toasts: [...state.toasts, toast],
+          }));
+
+          playNotificationSoundIfEnabled('status-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(gameName, message, gameId);
         }

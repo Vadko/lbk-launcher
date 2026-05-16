@@ -87,16 +87,16 @@ export function useFilterCounts() {
 
       if (!isMountedRef.current) return;
 
-      setCounts({
+      setCounts((prevCounts) => ({
         ...sqlCounts,
-        'favorite-translations': favoriteGameIds.length,
+        'favorite-translations': prevCounts['favorite-translations'], // Will be updated separately
         'installed-translations': installedIds.length,
         'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
         'available-in-steam': steamLibraryCount,
         'owned-gog-games': gogLibraryResult.total,
         'owned-epic-games': epicLibraryResult.total,
         'installed-xbox-games': xboxLibraryResult.total,
-      });
+      }));
     } catch (err) {
       console.error('[useFilterCounts] Error:', err);
     } finally {
@@ -104,7 +104,7 @@ export function useFilterCounts() {
         setIsLoading(false);
       }
     }
-  }, [favoriteGameIds]);
+  }, []);
 
   const debouncedFetchCounts = useCallback(() => {
     if (debounceTimerRef.current) {
@@ -112,6 +112,14 @@ export function useFilterCounts() {
     }
     debounceTimerRef.current = setTimeout(fetchCounts, DEBOUNCE_DELAY);
   }, [fetchCounts]);
+
+  // Update favorite translations count separately when favoriteGameIds changes
+  useEffect(() => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      'favorite-translations': favoriteGameIds.length,
+    }));
+  }, [favoriteGameIds]);
 
   useEffect(() => {
     isMountedRef.current = true;

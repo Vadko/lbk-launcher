@@ -8,7 +8,8 @@ interface BaseNotification {
     | 'app-update'
     | 'progress-change'
     | 'team-new-game'
-    | 'team-status-change';
+    | 'team-status-change'
+    | 'first-favorite';
   gameName: string;
   timestamp: number;
 }
