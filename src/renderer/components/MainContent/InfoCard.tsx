@@ -82,7 +82,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   }, []);
 
   return (
-    <div ref={cardRef} className="glass-card">
+    <div ref={cardRef} className="glass-card-no-motion">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-head font-semibold text-text-main">Інформація</h3>
         <div className="flex items-center gap-2">
