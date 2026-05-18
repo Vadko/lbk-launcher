@@ -74,6 +74,7 @@ export const UpdateNotification = () => {
   };
 
   const handleInstall = () => {
+    useSubscriptionsStore.getState().markAppUpdateNotificationsAsRead();
     window.electronAPI.installUpdate();
   };
 
