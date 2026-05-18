@@ -12,7 +12,7 @@ export type BannerType = Database['public']['Enums']['banner_type'];
 export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
-export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated';
+export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
 
 export interface GamePath {
   platform: Platform;

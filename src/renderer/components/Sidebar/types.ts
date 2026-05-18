@@ -59,5 +59,6 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
 export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [
   { label: 'За назвою', value: 'name' },
   { label: 'За популярністю', value: 'downloads' },
+  { label: 'За кількістю підписників', value: 'subscribers' },
   { label: 'За новизною', value: 'newest' },
 ];

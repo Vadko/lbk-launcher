@@ -156,6 +156,9 @@ export class GamesRepository {
     if (sortOrder === 'downloads') {
       return `downloads DESC NULLS LAST, ${nameSortExpr} ASC`;
     }
+    if (sortOrder === 'subscribers') {
+      return `subscriptions DESC NULLS LAST, ${nameSortExpr} ASC`;
+    }
     if (sortOrder === 'newest') {
       return `created_at DESC NULLS LAST, ${nameSortExpr} ASC`;
     }
