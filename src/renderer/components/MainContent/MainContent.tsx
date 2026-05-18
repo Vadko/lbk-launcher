@@ -90,7 +90,7 @@ export const MainContent: React.FC = () => {
   // Toggle favorite handler
   const handleToggleFavorite = useCallback(() => {
     if (selectedGame) {
-      toggleFavoriteGame(selectedGame.id);
+      toggleFavoriteGame(selectedGame.id, selectedGame.name);
     }
   }, [selectedGame, toggleFavoriteGame]);
 
