@@ -109,7 +109,7 @@ export const GamePage: React.FC = () => {
 
       try {
         const games = await window.electronAPI.fetchGamesByIds([gameId]);
-        
+
         // Перевірка чи не відмінено запит (користувач перейшов на іншу гру)
         if (isCancelled) {
           console.log('[GamePage] Request cancelled, not updating selectedGame');
