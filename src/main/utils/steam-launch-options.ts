@@ -41,7 +41,9 @@ interface WriteLaunchOptionsParams {
 type WriteLaunchOptionsMode =
   | 'noop' // nothing to write (no options for current OS, or already in place)
   | 'cef' // applied live through Steam's CEF API
-  | 'file'; // wrote localconfig.vdf directly (Steam was off)
+  | 'file' // wrote localconfig.vdf directly (Steam was off)
+  | 'needs-shutdown'; // Steam running + CEF unreachable (e.g. Millennium) —
+//                       caller can prompt user to restart Steam then re-apply.
 
 interface WriteLaunchOptionsResult {
   mode: WriteLaunchOptionsMode;
@@ -263,8 +265,13 @@ export async function writeSteamLaunchOptions(
     }
   }
 
+  // Steam running but no CEF — typically Millennium nuked the flag file, or
+  // the first-run bootstrap restart hasn't happened yet. We can't safely write
+  // to localconfig.vdf while Steam is up (Steam will overwrite on exit), so
+  // surface a `needs-shutdown` signal: caller can prompt the user to restart
+  // Steam, which then takes the Steam-off file-write path.
   return {
-    mode: 'noop',
-    reason: 'Steam running without CEF — flag file dropped, retry after restart',
+    mode: 'needs-shutdown',
+    reason: 'Steam running without CEF — restart required to apply',
   };
 }

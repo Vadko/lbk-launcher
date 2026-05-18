@@ -203,6 +203,8 @@ const electronAPI: ElectronAPI = {
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
   // Steam integration
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
+  applyPendingLaunchOptions: (game: Game) =>
+    ipcRenderer.invoke('apply-pending-launch-options', game),
   /**
    * Fires when an install couldn't apply a Steam config change live and the
    * user needs to restart Steam so the CEF debug port opens.

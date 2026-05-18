@@ -23,6 +23,13 @@ export interface GamePath {
 interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
+  /**
+   * Source archive hash that produced these files. Used to detect whether a
+   * subsequent update actually changes the component — if the hash matches,
+   * the bytes on disk are identical and we can skip both the re-install and
+   * any "restart Steam" prompts tied to this component.
+   */
+  archiveHash?: string;
 }
 
 export interface InstallationInfo {
@@ -69,6 +76,20 @@ export interface InstallationStatus {
 export interface InstallResult {
   success: boolean;
   paused?: boolean;
+  /**
+   * Launch options for the game couldn't be applied because Steam is running
+   * and CEF isn't reachable (typically Millennium-modded Steam). Renderer can
+   * offer the user a "restart Steam to apply" prompt that calls
+   * `applyPendingLaunchOptions`.
+   */
+  launchOptionsPending?: boolean;
+  /**
+   * Whether achievement files were actually written this install. False when
+   * the user re-runs an install whose achievement archive hash matches what's
+   * already on disk — used to suppress the "restart Steam for achievements"
+   * prompt in that case.
+   */
+  achievementsChanged?: boolean;
   error?: {
     message: string;
     needsManualSelection?: boolean;
@@ -244,6 +265,9 @@ export interface ElectronAPI {
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
+  applyPendingLaunchOptions: (
+    game: Game
+  ) => Promise<{ success: boolean; error?: string }>;
   /**
    * Fires when an install couldn't apply a Steam config change live and the
    * user needs to restart Steam so the CEF debug port opens.

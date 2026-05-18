@@ -18,6 +18,15 @@ import { isSteamRunning } from './steam-launcher';
 const FLAG_FILE_NAME = '.cef-enable-remote-debugging';
 
 /**
+ * Files that indicate the Millennium Steam mod is installed. Millennium hooks
+ * Steam by sideloading `user32.dll.local` (so the loader resolves the local
+ * `millennium.dll` first) and deletes our flag file on every Steam start —
+ * its maintainer considers it insecure to leave enabled.
+ * See https://github.com/SteamClientHomebrew/Millennium/issues/591.
+ */
+const MILLENNIUM_MARKERS = ['millennium.dll', 'user32.dll.local'];
+
+/**
  * Steam looks for the flag file alongside `config/`, `userdata/`, etc. — the
  * folder that `getSteamPath()` returns. On Linux that's `~/.steam/steam` or
  * the Flatpak data dir; on Windows the install dir; on macOS
@@ -27,6 +36,12 @@ function getFlagFilePath(): string | null {
   const steamPath = getSteamPath();
   if (!steamPath) return null;
   return path.join(steamPath, FLAG_FILE_NAME);
+}
+
+function isMillenniumInstalled(): boolean {
+  const steamPath = getSteamPath();
+  if (!steamPath) return false;
+  return MILLENNIUM_MARKERS.some((marker) => fs.existsSync(path.join(steamPath, marker)));
 }
 
 /**
@@ -62,6 +77,14 @@ function ensureCefFlagFile(): void {
  * flag file, so installs never need to prompt for a restart later.
  */
 export async function bootstrapCefDebugging(): Promise<void> {
+  if (isMillenniumInstalled()) {
+    // Pointless to drop the flag file or nag the user — Millennium will delete
+    // it again on the next Steam start. Launch-option installs that need CEF
+    // will silently fall back to a noop (logged in writeSteamLaunchOptions).
+    console.log('[CEFFlagFile] Millennium detected, skipping CEF bootstrap');
+    return;
+  }
+
   ensureCefFlagFile();
 
   if (!(await isSteamRunning())) return;
