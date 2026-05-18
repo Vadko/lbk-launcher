@@ -161,7 +161,7 @@ async function waitForSteamExit(timeoutMs = 10000): Promise<boolean> {
 /**
  * Gracefully shutdown Steam
  */
-async function shutdownSteam(): Promise<void> {
+export async function shutdownSteam(): Promise<void> {
   const running = await isSteamRunning();
   if (!running) {
     console.log('[Steam] Steam is not running, skipping shutdown');
@@ -264,7 +264,7 @@ function launchSteamLinux(url?: string): boolean {
 /**
  * Launch Steam (cross-platform) (internal)
  */
-async function launchSteam(url?: string): Promise<boolean> {
+export async function launchSteam(url?: string): Promise<boolean> {
   if (isLinux()) {
     return launchSteamLinux(url);
   }

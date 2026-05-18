@@ -93,8 +93,14 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     newStatus: string,
     showToast?: boolean
   ) => void;
+  addFirstFavoriteNotification: (
+    gameId: string,
+    gameName: string,
+    showToast?: boolean
+  ) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
+  markAppUpdateNotificationsAsRead: () => void;
   clearNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
   dismissToast: (toastId: string) => void;
@@ -462,6 +468,37 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }
       },
 
+      addFirstFavoriteNotification: (gameId, gameName, showToast = true) => {
+        const notification = createNotification({
+          type: 'first-favorite',
+          gameId,
+          gameName,
+          idPrefix: `first-favorite-${gameId}`,
+        });
+
+        set((state) => ({
+          notifications: [notification, ...state.notifications],
+          unreadCount: state.unreadCount + 1,
+        }));
+
+        if (showToast) {
+          const message = getNotificationMessage({
+            type: 'first-favorite',
+            gameId,
+            gameName,
+          });
+          const toast = createToast(notification, message);
+
+          set((state) => ({
+            toasts: [...state.toasts, toast],
+          }));
+
+          playNotificationSoundIfEnabled('status-change');
+          scheduleToastDismissal(notification.id, get().dismissToast);
+          showSystemNotificationIfHidden(gameName, message, gameId);
+        }
+      },
+
       markNotificationAsRead: (notificationId) => {
         set((state) => {
           const notifications = state.notifications.map((n) =>
@@ -477,6 +514,16 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           notifications: state.notifications.map((n) => ({ ...n, read: true })),
           unreadCount: 0,
         }));
+      },
+
+      markAppUpdateNotificationsAsRead: () => {
+        set((state) => {
+          const notifications = state.notifications.map((n) =>
+            n.type === 'app-update' ? { ...n, read: true } : n
+          );
+          const unreadCount = notifications.filter((n) => !n.read).length;
+          return { notifications, unreadCount };
+        });
       },
 
       clearNotification: (notificationId) => {

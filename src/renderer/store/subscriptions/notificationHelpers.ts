@@ -33,6 +33,8 @@ export function getNotificationMessage(
       return `Нова локалізація від ${notification.teamName}`;
     case 'team-status-change':
       return `${notification.teamName}: стан змінено на "${notification.newValue}"`;
+    case 'first-favorite':
+      return 'Натисніть, щоб відфільтрувати список улюблених';
     default:
       return 'Нове сповіщення';
   }

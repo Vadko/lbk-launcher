@@ -15,7 +15,7 @@
 
 import CDP from 'chrome-remote-interface';
 
-const CEF_HOST = 'localhost';
+const CEF_HOST = '127.0.0.1';
 const CEF_PORT = 8080;
 const TARGET_TITLE = 'SharedJSContext';
 const CEF_PROBE_TIMEOUT_MS = 1500;

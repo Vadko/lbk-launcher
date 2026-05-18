@@ -304,7 +304,22 @@ export function useInstallation({
             )
           : platform === 'steam';
 
-        if (effectiveOptions.installAchievements && isSteamPath) {
+        // Restart Steam to make new achievement strings visible AND/OR to let
+        // Steam re-read localconfig.vdf with the launch options we couldn't
+        // apply live (CEF unreachable, e.g. Millennium). Only prompt if there's
+        // something to gain — skip when achievements weren't actually rewritten.
+        const needsRestartForAchievements =
+          effectiveOptions.installAchievements &&
+          isSteamPath &&
+          result.achievementsChanged;
+        const needsRestartForLaunchOptions = result.launchOptionsPending === true;
+        const shouldOfferRestart =
+          needsRestartForAchievements || needsRestartForLaunchOptions;
+
+        if (needsRestartForLaunchOptions) {
+          message +=
+            '\n\nДля застосування параметрів запуску гри Steam потрібно перезапустити.';
+        } else if (needsRestartForAchievements) {
           message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
         }
 
@@ -312,29 +327,32 @@ export function useInstallation({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
           type: 'success',
-          actions:
-            effectiveOptions.installAchievements && isSteamPath
-              ? [
-                  {
-                    label: 'Перезапустити Steam',
-                    onClick: () => {
+          actions: shouldOfferRestart
+            ? [
+                {
+                  label: 'Перезапустити Steam',
+                  onClick: () => {
+                    if (needsRestartForLaunchOptions) {
+                      window.electronAPI.applyPendingLaunchOptions(selectedGame);
+                    } else {
                       window.electronAPI.restartSteam();
-                    },
-                    variant: 'primary',
+                    }
                   },
-                  {
-                    label: 'Пізніше',
-                    onClick: () => undefined,
-                    variant: 'secondary',
-                  },
-                ]
-              : [
-                  {
-                    label: 'Зрозуміло',
-                    onClick: () => undefined,
-                    variant: 'primary',
-                  },
-                ],
+                  variant: 'primary',
+                },
+                {
+                  label: 'Пізніше',
+                  onClick: () => undefined,
+                  variant: 'secondary',
+                },
+              ]
+            : [
+                {
+                  label: 'Зрозуміло',
+                  onClick: () => undefined,
+                  variant: 'primary',
+                },
+              ],
         });
 
         // Trigger callback for first install (not update)
