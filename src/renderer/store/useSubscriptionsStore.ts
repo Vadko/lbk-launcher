@@ -95,6 +95,7 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
   ) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
+  markAppUpdateNotificationsAsRead: () => void;
   clearNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
   dismissToast: (toastId: string) => void;
@@ -477,6 +478,16 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           notifications: state.notifications.map((n) => ({ ...n, read: true })),
           unreadCount: 0,
         }));
+      },
+
+      markAppUpdateNotificationsAsRead: () => {
+        set((state) => {
+          const notifications = state.notifications.map((n) =>
+            n.type === 'app-update' ? { ...n, read: true } : n
+          );
+          const unreadCount = notifications.filter((n) => !n.read).length;
+          return { notifications, unreadCount };
+        });
       },
 
       clearNotification: (notificationId) => {
