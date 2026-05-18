@@ -77,7 +77,11 @@ export default function SwiperSlider({
           //   }}
         >
           {slidesUrls.map((slide, index) => (
-            <SwiperSlide key={index}>
+            <SwiperSlide key={index} className="overflow-hidden rounded-lg">
+              <img
+                src={slide}
+                className="absolute inset-0 !object-cover blur-xl opacity-40 -z-10 pointer-events-none"
+              />
               <div className="swiper-zoom-container">
                 <img src={slide} alt={`slide-${index}`} className="rounded-lg" />
               </div>
