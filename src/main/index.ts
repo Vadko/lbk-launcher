@@ -136,6 +136,7 @@ import {
 } from './playtime-tracker';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
+import { bootstrapCefDebugging } from './utils/cef-flag-file';
 import { createMainWindow, getMainWindow } from './window';
 
 // Глобальні менеджери
@@ -340,6 +341,9 @@ if (!gotTheLock) {
     setTimeout(() => {
       startSteamWatcher(getMainWindow());
       startInstallationWatcher(getMainWindow());
+      bootstrapCefDebugging().catch((err) => {
+        console.error('[Main] CEF bootstrap failed:', err);
+      });
     }, 1000);
 
     app.on('activate', async () => {

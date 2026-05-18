@@ -122,7 +122,7 @@ function detectLinuxSteamType(): SteamInstallationType {
 /**
  * Check if Steam is running
  */
-async function isSteamRunning(): Promise<boolean> {
+export async function isSteamRunning(): Promise<boolean> {
   try {
     if (isWindows()) {
       await execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe');

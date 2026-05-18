@@ -1,3 +1,4 @@
+import { BookmarkCheck } from 'lucide-react';
 import React from 'react';
 import { CheckIcon } from '@/renderer/components/Icons/CheckIcon';
 import { DownloadIcon } from '@/renderer/components/Icons/DownloadIcon';
@@ -12,6 +13,7 @@ interface StatusIconsProps {
   aiType?: string | null;
   floatPosition?: 'default' | 'compact' | null;
   isTranslationAvailable?: boolean;
+  isFavorite?: boolean;
 }
 
 export const StatusIcons: React.FC<StatusIconsProps> = ({
@@ -21,15 +23,17 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   aiType = null,
   floatPosition = null,
   isTranslationAvailable = true,
+  isFavorite = false,
 }) => {
   let statusIcon = null;
   let aiIcon = null;
+  let favoriteIcon = null;
 
   if (hasUpdate) {
     statusIcon = (
       <RefreshIcon
         size={floatPosition === 'default' ? 20 : 18}
-        className={`${floatPosition ? 'text-text-dark' : 'text-color-accent'}`}
+        className={floatPosition ? 'text-text-dark' : 'text-color-accent'}
         title="Є оновлення перекладу"
       />
     );
@@ -37,7 +41,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
     statusIcon = (
       <CheckIcon
         size={floatPosition === 'default' ? 20 : 18}
-        className={`${floatPosition ? 'text-text-dark' : 'text-color-main'}`}
+        className={floatPosition ? 'text-text-dark' : 'text-color-main'}
         title="Переклад актуальний"
       />
     );
@@ -45,7 +49,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
     statusIcon = (
       <DownloadIcon
         size={floatPosition === 'default' ? 20 : 18}
-        className={`${floatPosition ? 'text-text-dark' : ''}`}
+        className={floatPosition ? 'text-text-dark' : ''}
         title="Переклад доступний для встановлення"
       />
     );
@@ -55,7 +59,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
     aiIcon = (
       <PencilIcon
         size={floatPosition === 'default' ? 20 : 18}
-        className={`${floatPosition ? 'text-text-dark' : 'text-color-main'}`}
+        className={floatPosition ? 'text-text-dark' : 'text-color-main'}
         title="ШІ + редактура людиною"
       />
     );
@@ -63,22 +67,29 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
     aiIcon = (
       <AiIcon
         size={floatPosition === 'default' ? 20 : 18}
-        className={`${floatPosition ? 'text-text-dark' : 'text-color-main'}`}
+        className={floatPosition ? 'text-text-dark' : 'text-color-main'}
         title="Переклад ШІ"
       />
     );
   }
 
-  // If no icons to show, return null
-  if (!statusIcon && !aiIcon) {
+  if (isFavorite && !floatPosition) {
+    favoriteIcon = (
+      <div title="В улюбленому">
+        <BookmarkCheck size={18} className="text-color-accent" />
+      </div>
+    );
+  }
+
+  if (!statusIcon && !aiIcon && !favoriteIcon) {
     return null;
   }
 
-  // Show both icons if available, or just one
   return (
     <div
       className={`flex gap-2 ${floatPosition ? 'absolute bg-white/80 rounded-full text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]' : ''} ${floatPosition === 'default' ? 'top-5 right-5' : floatPosition === 'compact' ? 'top-3 right-3' : ''}`}
     >
+      {favoriteIcon}
       {statusIcon}
       {aiIcon}
     </div>

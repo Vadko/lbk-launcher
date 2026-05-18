@@ -18,6 +18,7 @@ import { Sidebar } from './components/Sidebar/Sidebar';
 import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
+import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
 import { trackEvent } from './utils/analytics';
@@ -332,6 +333,34 @@ export const App: React.FC = () => {
     };
 
     const unsubscribe = window.electronAPI.onTestGamesChanged(handleTestGamesChanged);
+    return unsubscribe;
+  }, []);
+
+  // Mandatory one-time "restart Steam" prompt — fires at launcher startup if
+  // Steam is running but its debug channel (CEF) isn't open. We just dropped
+  // the flag file Steam reads on startup; one restart enables live config
+  // updates for all future installs.
+  useEffect(() => {
+    if (!window.electronAPI?.onSteamRestartRequired) return;
+    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
+      useModalStore.getState().showModal({
+        title: 'Перезапустіть Steam',
+        message:
+          'Для коректного встановлення перекладів потрібно перезапустити Steam. ' +
+          'Це разова дія — наступні встановлення відбуватимуться без рестартів.',
+        type: 'info',
+        mandatory: true,
+        actions: [
+          {
+            label: 'Перезапустити Steam',
+            onClick: () => {
+              window.electronAPI.restartSteam();
+            },
+            variant: 'primary',
+          },
+        ],
+      });
+    });
     return unsubscribe;
   }, []);
 

@@ -436,6 +436,16 @@ export type Database = {
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
+          steam_launch_options_linux: string | null
+          steam_launch_options_windows: string | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
           support_url: string | null
           team: string
           telegram: string | null
@@ -509,6 +519,16 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_launch_options_linux?: string | null
+          steam_launch_options_windows?: string | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           support_url?: string | null
           team: string
           telegram?: string | null
@@ -582,6 +602,16 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_launch_options_linux?: string | null
+          steam_launch_options_windows?: string | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           support_url?: string | null
           team?: string
           telegram?: string | null
@@ -687,6 +717,16 @@ export type Database = {
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
+          steam_launch_options_linux: string | null
+          steam_launch_options_windows: string | null
+          steam_linux_archive_file_list: Json | null
+          steam_linux_archive_hash: string | null
+          steam_linux_archive_path: string | null
+          steam_linux_archive_size: string | null
+          steam_mac_archive_file_list: Json | null
+          steam_mac_archive_hash: string | null
+          steam_mac_archive_path: string | null
+          steam_mac_archive_size: string | null
           subscriptions: number | null
           support_url: string | null
           team: string
@@ -766,6 +806,16 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_launch_options_linux?: string | null
+          steam_launch_options_windows?: string | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           subscriptions?: number | null
           support_url?: string | null
           team: string
@@ -845,6 +895,16 @@ export type Database = {
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
+          steam_launch_options_linux?: string | null
+          steam_launch_options_windows?: string | null
+          steam_linux_archive_file_list?: Json | null
+          steam_linux_archive_hash?: string | null
+          steam_linux_archive_path?: string | null
+          steam_linux_archive_size?: string | null
+          steam_mac_archive_file_list?: Json | null
+          steam_mac_archive_hash?: string | null
+          steam_mac_archive_path?: string | null
+          steam_mac_archive_size?: string | null
           subscriptions?: number | null
           support_url?: string | null
           team?: string
@@ -1714,7 +1774,6 @@ export type Database = {
           feedback_email_notifications: boolean
           full_name: string | null
           id: string
-          password_hash: string
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
           telegram_link_token: string | null
@@ -1733,7 +1792,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -1752,7 +1810,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null

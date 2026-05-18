@@ -877,6 +877,70 @@ const migrations: Migration[] = [
     },
   },
   {
+    name: 'add_steam_linux_archive_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_linux_archive_path'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_steam_linux_archive_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN steam_linux_archive_hash TEXT;
+          ALTER TABLE games ADD COLUMN steam_linux_archive_path TEXT;
+          ALTER TABLE games ADD COLUMN steam_linux_archive_size TEXT;
+        `);
+        console.log('[Migrations] Completed: add_steam_linux_archive_columns');
+      }
+    },
+  },
+  {
+    name: 'add_steam_mac_archive_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_mac_archive_path'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_steam_mac_archive_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN steam_mac_archive_hash TEXT;
+          ALTER TABLE games ADD COLUMN steam_mac_archive_path TEXT;
+          ALTER TABLE games ADD COLUMN steam_mac_archive_size TEXT;
+        `);
+        console.log('[Migrations] Completed: add_steam_mac_archive_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_steam_os_archives',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_os_archives_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_steam_os_archives');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_steam_os_archives_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_steam_os_archives - will resync on next startup'
+      );
+    },
+  },
+  {
     name: 'add_xbox_archive_columns',
     up: (db) => {
       const hasColumn = db
@@ -917,6 +981,49 @@ const migrations: Migration[] = [
       `);
       console.log(
         '[Migrations] Completed: resync_for_gog_xbox_archives - will resync on next startup'
+      );
+    },
+  },
+  {
+    name: 'add_steam_launch_options_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_launch_options_windows'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_steam_launch_options_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN steam_launch_options_windows TEXT;
+          ALTER TABLE games ADD COLUMN steam_launch_options_linux TEXT;
+        `);
+        console.log('[Migrations] Completed: add_steam_launch_options_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_steam_launch_options',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_launch_options_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_steam_launch_options');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_steam_launch_options_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_steam_launch_options - will resync on next startup'
       );
     },
   },

@@ -244,6 +244,11 @@ export interface ElectronAPI {
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
   restartSteam: () => Promise<{ success: boolean; error?: string }>;
+  /**
+   * Fires when an install couldn't apply a Steam config change live and the
+   * user needs to restart Steam so the CEF debug port opens.
+   */
+  onSteamRestartRequired: (callback: () => void) => () => void;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking

@@ -17,6 +17,11 @@ interface ModalConfig {
     onSelectionChange?: (value: string) => void;
     placeholder?: string;
   };
+  /**
+   * Hide the close (X) button, the backdrop dismiss, and the implicit
+   * "Скасувати" fallback so the user MUST pick one of the listed actions.
+   */
+  mandatory?: boolean;
 }
 
 interface ModalAction {
