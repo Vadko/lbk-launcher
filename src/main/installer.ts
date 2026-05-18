@@ -11,7 +11,7 @@ import type {
 } from '../shared/types';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
-import { saveInstallationInfo } from './installer/cache';
+import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
 import { handleInstallationError } from './installer/error-handler';
@@ -39,7 +39,7 @@ export async function installTranslation(
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
-): Promise<void> {
+): Promise<{ launchOptionsPending: boolean; achievementsChanged: boolean }> {
   const { createBackup, installText, installVoice, installAchievements, platform } =
     options;
 
@@ -230,17 +230,37 @@ export async function installTranslation(
     // 5.3 Download achievements archive if requested (Steam only)
     let achievementsFiles: string[] = [];
     let achievementsInstallPath: string | null = null;
+    let achievementsChanged = false;
     console.log(`[Installer] Achievements check:`, {
       installAchievements,
       hasArchivePath: !!game.achievements_archive_path,
       archivePath: game.achievements_archive_path,
       platform: gamePath.platform,
     });
+    // If the on-disk install already has the same achievement archive hash,
+    // re-copying would write byte-identical files and the in-Steam state
+    // wouldn't change — so we skip and suppress the restart prompt.
+    const existingInfo = readInstallationInfo(gamePath.path);
+    const existingAchievementHash = existingInfo?.components?.achievements?.archiveHash;
+    const achievementsAlreadyUpToDate =
+      installAchievements &&
+      !!game.achievements_archive_hash &&
+      existingAchievementHash === game.achievements_archive_hash &&
+      existingInfo?.components?.achievements?.installed === true;
+    if (achievementsAlreadyUpToDate) {
+      console.log(
+        `[Installer] Achievements already up-to-date (hash matches), skipping re-install`
+      );
+      achievementsFiles = existingInfo?.components?.achievements?.files || [];
+      achievementsInstallPath = await getSteamAchievementsPath();
+    }
     if (
       installAchievements &&
       game.achievements_archive_path &&
-      gamePath.platform === 'steam'
+      gamePath.platform === 'steam' &&
+      !achievementsAlreadyUpToDate
     ) {
+      achievementsChanged = true;
       const achievementsExtractDir = path.join(
         downloadDir,
         `${game.id}_achievements_extract`
@@ -342,7 +362,7 @@ export async function installTranslation(
         });
         throw error;
       }
-      return;
+      return { launchOptionsPending: false, achievementsChanged };
     }
 
     // 7. Copy files to game directory
@@ -398,6 +418,7 @@ export async function installTranslation(
               achievements: {
                 installed: true,
                 files: achievementsFiles,
+                archiveHash: game.achievements_archive_hash || undefined,
               },
             }
           : {}),
@@ -406,6 +427,7 @@ export async function installTranslation(
     await saveInstallationInfo(gamePath.path, installationInfo);
 
     // 10. Write Steam LaunchOptions if applicable (Steam-only, when configured by translator)
+    let launchOptionsPending = false;
     if (
       gamePath.platform === 'steam' &&
       game.steam_app_id &&
@@ -423,9 +445,11 @@ export async function installTranslation(
       console.log(
         `[Installer] Steam LaunchOptions mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
       );
+      launchOptionsPending = result.mode === 'needs-shutdown';
     }
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
+    return { launchOptionsPending, achievementsChanged };
   } catch (error) {
     // Handle pause specially - throw PausedSignal for IPC handler
     if (error instanceof Error && error.message === 'PAUSED') {

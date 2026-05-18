@@ -44,6 +44,23 @@ export function findInstallationInfoFile(gamePath: string) {
 }
 
 /**
+ * Read installation info written by a previous install. Returns null when
+ * the file doesn't exist or is corrupt (caller treats both as "no prior
+ * install"). For callers that already know the game path; for the full
+ * resolution + library/cache fallback dance use `checkInstallation` instead.
+ */
+export function readInstallationInfo(gamePath: string): InstallationInfo | null {
+  const infoPath = findInstallationInfoFile(gamePath);
+  if (!fs.existsSync(infoPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
+  } catch (error) {
+    console.warn('[Installer] Failed to read installation info:', error);
+    return null;
+  }
+}
+
+/**
  * Save installation info to game directory
  */
 export async function saveInstallationInfo(
