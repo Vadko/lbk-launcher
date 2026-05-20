@@ -432,6 +432,7 @@ export type Database = {
           logo_path: string | null
           name: string
           platforms: string[]
+          screenshots: string[] | null
           search_keywords: string | null
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
@@ -515,6 +516,7 @@ export type Database = {
           logo_path?: string | null
           name: string
           platforms?: string[]
+          screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -598,6 +600,7 @@ export type Database = {
           logo_path?: string | null
           name?: string
           platforms?: string[]
+          screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -712,6 +715,7 @@ export type Database = {
           name_search: string | null
           platforms: string[]
           project_id: string | null
+          screenshots: string[] | null
           search_keywords: string | null
           slug: string
           source_language: string | null
@@ -801,6 +805,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          screenshots?: string[] | null
           search_keywords?: string | null
           slug: string
           source_language?: string | null
@@ -890,6 +895,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          screenshots?: string[] | null
           search_keywords?: string | null
           slug?: string
           source_language?: string | null
