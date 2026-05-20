@@ -1032,7 +1032,9 @@ const migrations: Migration[] = [
     name: 'add_screenshots_column',
     up: (db) => {
       const hasColumn = db
-        .prepare("SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='screenshots'")
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='screenshots'"
+        )
         .get() as { count: number };
 
       if (hasColumn.count === 0) {
