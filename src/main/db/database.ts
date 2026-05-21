@@ -152,6 +152,7 @@ class DatabaseManager {
         name_search TEXT, -- For FTS search
         platforms TEXT NOT NULL, -- JSON array
         project_id TEXT,
+        screenshots TEXT, -- JSON array of storage paths
         slug TEXT NOT NULL,
         status TEXT NOT NULL,
         support_url TEXT,
