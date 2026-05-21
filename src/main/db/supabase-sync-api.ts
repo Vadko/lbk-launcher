@@ -47,6 +47,7 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'support_url',
   'video_url',
   'platforms',
+  'screenshots',
   'status',
   'approved',
   'approved_at',

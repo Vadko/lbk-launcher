@@ -179,6 +179,10 @@ export class GamesRepository {
       typeof row.install_paths === 'string' && row.install_paths !== null
         ? JSON.parse(row.install_paths)
         : row.install_paths;
+    const screenshots =
+      typeof row.screenshots === 'string' && row.screenshots !== null
+        ? (JSON.parse(row.screenshots) as string[])
+        : ((row.screenshots as string[] | null) ?? null);
 
     return {
       ...row,
@@ -190,6 +194,7 @@ export class GamesRepository {
       achievements_third_party: row.achievements_third_party || null,
       platforms,
       install_paths,
+      screenshots,
     } as Game;
   }
 
