@@ -8,173 +8,27 @@ import type {
   InstallationInfo,
   InstallationStatus,
   InstallOptions,
-  PausedDownloadState,
 } from '../shared/types';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
-// Import all utilities from installer modules
-import { extractArchive } from './installer/archive';
-import {
-  BACKUP_DIR_NAME,
-  BACKUP_DIR_NAME_LEGACY,
-  BACKUP_SUFFIX,
-  backupFiles,
-  cleanupEmptyDirectories,
-  findBackupDir,
-  restoreBackupLegacy,
-  restoreBackupNew,
-} from './installer/backup';
-import {
-  checkInstallation,
-  deleteCachedInstallationInfo,
-  findInstallationInfoFile,
-  getAllInstalledGameIds,
-  getConflictingTranslation,
-  invalidateInstalledGameIdsCache,
-  removeOrphanedInstallationMetadata,
-  saveInstallationInfo,
-} from './installer/cache';
+import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
+import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
-import {
-  abortCurrentDownload,
-  clearPausedDownloadState,
-  downloadFile,
-  setCurrentDownloadState,
-  setDownloadAbortController,
-} from './installer/download';
-import {
-  ManualSelectionError,
-  NetworkError,
-  PausedSignal,
-  RateLimitError,
-} from './installer/errors';
-import {
-  cleanupDownloadDir,
-  copyDirectory,
-  deleteDirectory,
-  getAllFiles,
-} from './installer/files';
-import { verifyFileHash } from './installer/hash';
+import { downloadAndExtractArchive } from './installer/download-and-extract';
+import { handleInstallationError } from './installer/error-handler';
+import { ManualSelectionError, PausedSignal } from './installer/errors';
+import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
   getSteamAchievementsPath,
   hasExecutableInstaller,
   runInstaller,
-  runUninstaller,
 } from './installer/platform';
-import { getSignedDownloadUrl, isCurrentSessionFirstLaunch } from './tracking';
+import { isCurrentSessionFirstLaunch } from './tracking';
 import { isLinux, isMacOS } from './utils/platform';
 import { writeSteamLaunchOptions } from './utils/steam-launch-options';
 
 const mkdir = promisify(fs.mkdir);
-const readdir = promisify(fs.readdir);
-const unlink = promisify(fs.unlink);
-
-// Re-export utilities for external use
-export {
-  abortCurrentDownload,
-  checkInstallation,
-  checkPlatformCompatibility,
-  getAllInstalledGameIds,
-  getConflictingTranslation,
-  invalidateInstalledGameIdsCache,
-  ManualSelectionError,
-  NetworkError,
-  PausedSignal,
-  RateLimitError,
-  removeOrphanedInstallationMetadata,
-};
-
-/**
- * Resume a paused download
- */
-export async function resumeDownload(
-  state: PausedDownloadState,
-  onDownloadProgress?: (progress: DownloadProgress) => void,
-  onStatus?: (status: InstallationStatus) => void
-): Promise<void> {
-  console.log(`[Installer] Resuming download for game: ${state.gameId}`);
-
-  // Check if URL might be expired (> 55 minutes since pause - signed URLs expire in 1 hour)
-  const pausedTime = new Date(state.pausedAt).getTime();
-  const now = Date.now();
-  const fiftyFiveMinutes = 55 * 60 * 1000;
-
-  let downloadUrl = state.url;
-  if (now - pausedTime > fiftyFiveMinutes) {
-    onStatus?.({
-      message: 'Оновлення посилання на завантаження...',
-      phase: 'download',
-    });
-    console.log('[Installer] Signed URL might be expired, getting new one...');
-
-    // Extract archive path from the original URL or use a fallback approach
-    // Since we don't store the archive path in PausedDownloadState, we'll need to refresh via game data
-    // For now, we'll try with the old URL and if it fails, the error will be handled
-    try {
-      // Try to get a fresh URL using the archive path pattern
-      const archivePathMatch = state.url.match(/\/([^/]+\.(zip|rar|7z))/);
-      if (archivePathMatch) {
-        const urlResult = await getSignedDownloadUrl({
-          gameId: state.gameId,
-          archivePath: archivePathMatch[1],
-        });
-        if (urlResult.success) {
-          downloadUrl = urlResult.downloadUrl;
-          console.log('[Installer] Got fresh signed URL');
-        }
-      }
-    } catch (error) {
-      console.warn('[Installer] Failed to refresh URL, will try with old one:', error);
-    }
-  }
-
-  // Set up download state tracking
-  setCurrentDownloadState({
-    gameId: state.gameId,
-    url: downloadUrl,
-    outputPath: state.outputPath,
-    downloadedBytes: state.downloadedBytes,
-    totalBytes: state.totalBytes,
-    options: state.options,
-    platform: state.platform,
-    customGamePath: state.customGamePath,
-  });
-
-  // Create AbortController for this download
-  const abortController = new AbortController();
-  setDownloadAbortController(abortController);
-
-  try {
-    onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
-
-    await downloadFile(
-      downloadUrl,
-      state.outputPath,
-      onDownloadProgress,
-      onStatus,
-      3,
-      abortController.signal,
-      state.downloadedBytes
-    );
-
-    // Download complete - clear paused state
-    clearPausedDownloadState(state.gameId);
-
-    onStatus?.({ message: 'Завантаження завершено!', phase: 'install' });
-    console.log('[Installer] Resume download completed successfully');
-  } catch (error) {
-    // If paused again, don't treat as error
-    if (error instanceof Error && error.message === 'PAUSED') {
-      console.log('[Installer] Download paused again');
-      return;
-    }
-    throw error;
-  } finally {
-    setDownloadAbortController(null);
-    setCurrentDownloadState(null);
-  }
-}
 
 /**
  * Main installation function
@@ -185,7 +39,7 @@ export async function installTranslation(
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void
-): Promise<void> {
+): Promise<{ launchOptionsPending: boolean; achievementsChanged: boolean }> {
   const { createBackup, installText, installVoice, installAchievements, platform } =
     options;
 
@@ -376,17 +230,37 @@ export async function installTranslation(
     // 5.3 Download achievements archive if requested (Steam only)
     let achievementsFiles: string[] = [];
     let achievementsInstallPath: string | null = null;
+    let achievementsChanged = false;
     console.log(`[Installer] Achievements check:`, {
       installAchievements,
       hasArchivePath: !!game.achievements_archive_path,
       archivePath: game.achievements_archive_path,
       platform: gamePath.platform,
     });
+    // If the on-disk install already has the same achievement archive hash,
+    // re-copying would write byte-identical files and the in-Steam state
+    // wouldn't change — so we skip and suppress the restart prompt.
+    const existingInfo = readInstallationInfo(gamePath.path);
+    const existingAchievementHash = existingInfo?.components?.achievements?.archiveHash;
+    const achievementsAlreadyUpToDate =
+      installAchievements &&
+      !!game.achievements_archive_hash &&
+      existingAchievementHash === game.achievements_archive_hash &&
+      existingInfo?.components?.achievements?.installed === true;
+    if (achievementsAlreadyUpToDate) {
+      console.log(
+        `[Installer] Achievements already up-to-date (hash matches), skipping re-install`
+      );
+      achievementsFiles = existingInfo?.components?.achievements?.files || [];
+      achievementsInstallPath = await getSteamAchievementsPath();
+    }
     if (
       installAchievements &&
       game.achievements_archive_path &&
-      gamePath.platform === 'steam'
+      gamePath.platform === 'steam' &&
+      !achievementsAlreadyUpToDate
     ) {
+      achievementsChanged = true;
       const achievementsExtractDir = path.join(
         downloadDir,
         `${game.id}_achievements_extract`
@@ -488,7 +362,7 @@ export async function installTranslation(
         });
         throw error;
       }
-      return;
+      return { launchOptionsPending: false, achievementsChanged };
     }
 
     // 7. Copy files to game directory
@@ -544,6 +418,7 @@ export async function installTranslation(
               achievements: {
                 installed: true,
                 files: achievementsFiles,
+                archiveHash: game.achievements_archive_hash || undefined,
               },
             }
           : {}),
@@ -552,6 +427,7 @@ export async function installTranslation(
     await saveInstallationInfo(gamePath.path, installationInfo);
 
     // 10. Write Steam LaunchOptions if applicable (Steam-only, when configured by translator)
+    let launchOptionsPending = false;
     if (
       gamePath.platform === 'steam' &&
       game.steam_app_id &&
@@ -566,16 +442,14 @@ export async function installTranslation(
         windowsOptions: game.steam_launch_options_windows,
         linuxOptions: game.steam_launch_options_linux,
       });
-      if (result.written) {
-        console.log(
-          `[Installer] Steam LaunchOptions written for app ${game.steam_app_id}${result.steamRestarted ? ' (Steam restarted)' : ''}`
-        );
-      } else if (result.reason) {
-        console.log(`[Installer] Steam LaunchOptions skipped: ${result.reason}`);
-      }
+      console.log(
+        `[Installer] Steam LaunchOptions mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
+      );
+      launchOptionsPending = result.mode === 'needs-shutdown';
     }
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
+    return { launchOptionsPending, achievementsChanged };
   } catch (error) {
     // Handle pause specially - throw PausedSignal for IPC handler
     if (error instanceof Error && error.message === 'PAUSED') {
@@ -584,421 +458,5 @@ export async function installTranslation(
     }
     console.error('[Installer] Installation error:', error);
     handleInstallationError(error);
-  }
-}
-
-type ArchiveType = 'text' | 'voice' | 'achievements';
-
-interface DownloadContext {
-  options: InstallOptions;
-  platform: string;
-  customGamePath?: string;
-}
-
-interface DownloadAndExtractParams {
-  game: Game;
-  type: ArchiveType;
-  archivePath: string | undefined | null;
-  archiveHash: string | undefined | null;
-  downloadDir: string;
-  extractDir: string;
-  isFirstSession?: boolean;
-  onDownloadProgress?: (progress: DownloadProgress) => void;
-  onStatus?: (status: InstallationStatus) => void;
-  downloadContext?: DownloadContext;
-}
-
-/**
- * Download and extract an archive
- */
-async function downloadAndExtractArchive(
-  params: DownloadAndExtractParams
-): Promise<string[]> {
-  const {
-    game,
-    type,
-    archivePath,
-    archiveHash,
-    downloadDir,
-    extractDir,
-    isFirstSession = false,
-    onDownloadProgress,
-    onStatus,
-    downloadContext,
-  } = params;
-
-  if (!archivePath) {
-    throw new Error(`Архів ${type} не знайдено`);
-  }
-
-  // Get extension from archive path (supports .zip, .rar, .7z)
-  const archiveExt = path.extname(archivePath) || '.zip';
-  const archiveFilePath = path.join(downloadDir, `${game.id}_${type}${archiveExt}`);
-
-  onStatus?.({ message: 'Отримання посилання для завантаження...', phase: 'download' });
-  const urlResult = await getSignedDownloadUrl({
-    gameId: game.id,
-    archivePath,
-    archiveType: type,
-    isFirstSession,
-  });
-
-  if (!urlResult.success) {
-    if (urlResult.error === 'rate_limit_exceeded' && 'nextAvailableAt' in urlResult) {
-      throw new RateLimitError(
-        urlResult.nextAvailableAt,
-        urlResult.downloadsToday,
-        urlResult.maxAllowed
-      );
-    }
-    throw new Error(`Не вдалося отримати посилання: ${urlResult.error}`);
-  }
-
-  // Create AbortController for this download
-  const abortController = new AbortController();
-  setDownloadAbortController(abortController);
-
-  // Set download state for pause functionality (only for text archive - main download)
-  if (downloadContext && type === 'text') {
-    setCurrentDownloadState({
-      gameId: game.id,
-      url: urlResult.downloadUrl,
-      outputPath: archiveFilePath,
-      downloadedBytes: 0,
-      totalBytes: 0,
-      options: downloadContext.options,
-      platform: downloadContext.platform,
-      customGamePath: downloadContext.customGamePath,
-    });
-  }
-
-  try {
-    await downloadFile(
-      urlResult.downloadUrl,
-      archiveFilePath,
-      onDownloadProgress,
-      onStatus,
-      3,
-      abortController.signal
-    );
-  } finally {
-    setDownloadAbortController(null);
-    if (downloadContext && type === 'text') {
-      setCurrentDownloadState(null);
-    }
-  }
-
-  // Verify hash if available
-  if (archiveHash) {
-    onStatus?.({ message: 'Перевірка цілісності файлу...', phase: 'install' });
-    const isValid = await verifyFileHash(archiveFilePath, archiveHash);
-    if (!isValid) {
-      if (fs.existsSync(archiveFilePath)) {
-        await unlink(archiveFilePath);
-      }
-      throw new Error('Файл пошкоджено. Спробуйте завантажити ще раз.');
-    }
-  }
-
-  // Extract archive
-  await extractArchive(archiveFilePath, extractDir, onStatus);
-
-  // Get list of extracted files
-  return await getAllFiles(extractDir);
-}
-
-/**
- * Handle installation errors with user-friendly messages
- */
-function handleInstallationError(error: unknown): never {
-  if (
-    error instanceof ManualSelectionError ||
-    error instanceof RateLimitError ||
-    error instanceof NetworkError
-  ) {
-    throw error;
-  }
-
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-
-    if (
-      message.includes('err_connection_refused') ||
-      message.includes('enotfound') ||
-      message.includes('econnrefused')
-    ) {
-      throw new Error(
-        'Не вдалося підключитися до сервера.\n\nПеревірте підключення до Інтернету.'
-      );
-    }
-    if (message.includes('eacces') || message.includes('eperm')) {
-      throw new Error(
-        'Недостатньо прав для встановлення.\n\nЗапустіть застосунок від імені адміністратора.'
-      );
-    }
-    if (message.includes('enospc')) {
-      throw new Error(
-        'Недостатньо місця на диску.\n\nЗвільніть місце та спробуйте знову.'
-      );
-    }
-    if (message.includes('enoent')) {
-      throw new Error(
-        'Файл або папку не знайдено.\n\nПереконайтеся, що гра встановлена.'
-      );
-    }
-
-    throw new Error(error.message);
-  }
-
-  throw new Error('Невідома помилка встановлення.\n\nСпробуйте ще раз.');
-}
-
-/**
- * Uninstall translation
- */
-export async function uninstallTranslation(game: Game): Promise<void> {
-  try {
-    console.log(`[Installer] Uninstalling translation for: ${game.id}`);
-
-    const installInfo = await checkInstallation(game);
-    if (!installInfo) {
-      throw new Error('Українізатор не встановлено');
-    }
-
-    const gamePath = installInfo.gamePath;
-
-    // If installer was used, run it with /uninstall parameter first
-    if (installInfo.installerPath && fs.existsSync(installInfo.installerPath)) {
-      console.log(`[Uninstaller] Running uninstaller: ${installInfo.installerPath}`);
-      try {
-        await runUninstaller(installInfo.installerPath, installInfo.protonPath);
-        console.log(`[Uninstaller] Uninstaller completed successfully`);
-
-        // // After uninstaller completes, clean up installation info and exit
-        // const infoPath = findInstallationInfoFile(gamePath);
-        // if (fs.existsSync(infoPath)) {
-        //   await unlink(infoPath);
-        // }
-        // await deleteCachedInstallationInfo(game.id);
-
-        // console.log(`[Installer] Translation for ${game.id} uninstalled successfully`);
-        // return;
-      } catch (uninstallerError) {
-        console.error('[Installer] Uninstaller failed:', uninstallerError);
-        // Continue with manual cleanup if uninstaller fails
-        console.log('[Installer] Proceeding with manual cleanup...');
-      }
-    }
-
-    const backupDir = findBackupDir(gamePath);
-
-    // Collect files to delete
-    let allFilesToDelete: string[] = [];
-
-    if (installInfo.components) {
-      if (installInfo.components.text?.installed) {
-        allFilesToDelete.push(...installInfo.components.text.files);
-      }
-      if (installInfo.components.voice?.installed) {
-        allFilesToDelete.push(...installInfo.components.voice.files);
-      }
-      // Handle achievements separately (files are just filenames, need to get full path)
-      if (installInfo.components.achievements?.installed) {
-        const achievementsPath = await getSteamAchievementsPath();
-        if (achievementsPath) {
-          for (const achievementFile of installInfo.components.achievements.files) {
-            const fullPath = path.join(achievementsPath, achievementFile);
-            await restoreOrDeleteFile(fullPath);
-          }
-        }
-      }
-    } else if (installInfo.installedFiles?.length) {
-      allFilesToDelete = installInfo.installedFiles;
-    }
-
-    // Delete files
-    if (allFilesToDelete.length > 0) {
-      console.log(`[Installer] Deleting ${allFilesToDelete.length} installed files...`);
-      for (const relativePath of allFilesToDelete) {
-        const filePath = path.join(gamePath, relativePath);
-        await deleteFileAndCleanupDirs(filePath, gamePath);
-      }
-    }
-
-    // Restore from backup
-    if (installInfo.hasBackup !== false) {
-      if (fs.existsSync(backupDir)) {
-        await restoreBackupLegacy(backupDir, gamePath);
-        await deleteDirectory(backupDir);
-      } else {
-        await restoreBackupNew(gamePath, allFilesToDelete);
-      }
-    }
-
-    // Cleanup
-    await cleanupEmptyDirectories(gamePath, gamePath);
-
-    // Delete installation info
-    const infoPath = findInstallationInfoFile(gamePath);
-    if (fs.existsSync(infoPath)) {
-      await unlink(infoPath);
-    }
-    await deleteCachedInstallationInfo(game.id);
-
-    console.log(`[Installer] Translation for ${game.id} uninstalled successfully`);
-  } catch (error) {
-    console.error('[Installer] Uninstall error:', error);
-    throw new Error(
-      `Помилка видалення: ${error instanceof Error ? error.message : 'Невідома помилка'}`
-    );
-  }
-}
-
-/**
- * Remove specific components without full uninstall
- */
-export async function removeComponents(
-  game: Game,
-  componentsToRemove: { voice?: boolean; achievements?: boolean }
-): Promise<void> {
-  try {
-    console.log(`[Installer] Removing components for: ${game.id}`, componentsToRemove);
-
-    const installInfo = await checkInstallation(game);
-    if (!installInfo) {
-      throw new Error('Українізатор не встановлено');
-    }
-
-    const gamePath = installInfo.gamePath;
-
-    // Remove voice component
-    if (componentsToRemove.voice && installInfo.components?.voice?.installed) {
-      for (const relativePath of installInfo.components.voice.files) {
-        const filePath = path.join(gamePath, relativePath);
-        await restoreOrDeleteFile(filePath);
-      }
-      installInfo.components.voice = { installed: false, files: [] };
-    }
-
-    // Remove achievements component
-    if (
-      componentsToRemove.achievements &&
-      installInfo.components?.achievements?.installed
-    ) {
-      const achievementsPath = await getSteamAchievementsPath();
-      if (achievementsPath) {
-        for (const achievementFile of installInfo.components.achievements.files) {
-          const fullPath = path.join(achievementsPath, achievementFile);
-          await restoreOrDeleteFile(fullPath);
-        }
-      }
-      installInfo.components.achievements = { installed: false, files: [] };
-    }
-
-    await saveInstallationInfo(gamePath, installInfo);
-    console.log(`[Installer] Components removed successfully for ${game.id}`);
-  } catch (error) {
-    console.error('[Installer] Error removing components:', error);
-    throw new Error(
-      `Помилка видалення компонентів: ${error instanceof Error ? error.message : 'Невідома помилка'}`
-    );
-  }
-}
-
-/**
- * Restore from backup or delete file if no backup exists
- * Supports both new format (.lbk-backup/ dir) and legacy format (_backup suffix)
- */
-async function restoreOrDeleteFile(
-  filePath: string,
-  backupBaseDir?: string
-): Promise<void> {
-  const fileName = path.basename(filePath);
-  const fileDir = path.dirname(filePath);
-
-  // Try new format first (.lbk-backup/ directory)
-  const newBackupDir = backupBaseDir || findBackupDir(fileDir);
-  const newBackupPath = path.join(newBackupDir, fileName);
-
-  // Legacy format (file_backup suffix)
-  const legacyBackupPath = filePath + BACKUP_SUFFIX;
-
-  try {
-    // Check new format first
-    if (fs.existsSync(newBackupPath)) {
-      if (fs.existsSync(filePath)) {
-        await unlink(filePath);
-      }
-      await fs.promises.rename(newBackupPath, filePath);
-      console.log(`[Installer] Restored from backup dir: ${fileName}`);
-      return;
-    }
-
-    // Fall back to legacy format
-    if (fs.existsSync(legacyBackupPath)) {
-      if (fs.existsSync(filePath)) {
-        await unlink(filePath);
-      }
-      await fs.promises.rename(legacyBackupPath, filePath);
-      console.log(`[Installer] Restored from legacy backup: ${fileName}`);
-      return;
-    }
-
-    // No backup found, just delete the file
-    if (fs.existsSync(filePath)) {
-      await unlink(filePath);
-      console.log(`[Installer] Deleted (no backup): ${fileName}`);
-    }
-  } catch (error) {
-    console.warn(`[Installer] Failed to restore/delete ${filePath}:`, error);
-  }
-}
-
-/**
- * Delete file and clean up empty parent directories
- * Protects backup directory from accidental deletion
- */
-async function deleteFileAndCleanupDirs(
-  filePath: string,
-  rootDir: string
-): Promise<void> {
-  try {
-    // Never delete files inside backup directory
-    if (filePath.includes(BACKUP_DIR_NAME) || filePath.includes(BACKUP_DIR_NAME_LEGACY)) {
-      console.warn(`[Installer] Skipping deletion of backup file: ${filePath}`);
-      return;
-    }
-
-    if (fs.existsSync(filePath)) {
-      await unlink(filePath);
-      console.log(`[Installer] Deleted: ${path.relative(rootDir, filePath)}`);
-
-      // Clean up empty parent directories (but never the backup dir)
-      let dirPath = path.dirname(filePath);
-      while (dirPath !== rootDir) {
-        // Never remove backup directory
-        if (
-          dirPath.includes(BACKUP_DIR_NAME) ||
-          dirPath.includes(BACKUP_DIR_NAME_LEGACY) ||
-          path.basename(dirPath) === BACKUP_DIR_NAME ||
-          path.basename(dirPath) === BACKUP_DIR_NAME_LEGACY
-        ) {
-          break;
-        }
-        try {
-          const entries = await readdir(dirPath);
-          if (entries.length === 0) {
-            await fs.promises.rmdir(dirPath);
-            dirPath = path.dirname(dirPath);
-          } else {
-            break;
-          }
-        } catch {
-          break;
-        }
-      }
-    }
-  } catch (error) {
-    console.warn(`[Installer] Failed to delete ${filePath}:`, error);
   }
 }

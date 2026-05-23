@@ -22,7 +22,12 @@ export const GlobalModal: React.FC = () => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={closeModal} title={config.title}>
+    <Modal
+      isOpen={isOpen}
+      onClose={config.mandatory ? () => undefined : closeModal}
+      title={config.title}
+      showCloseButton={!config.mandatory}
+    >
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-glass">
           {getIcon()}
@@ -68,12 +73,14 @@ export const GlobalModal: React.FC = () => {
                   {action.label}
                 </button>
               ))}
-              <button
-                onClick={closeModal}
-                className="w-full px-6 py-3 rounded-xl bg-glass-heavy text-text-muted font-semibold hover:opacity-90 transition-opacity"
-              >
-                Скасувати
-              </button>
+              {!config.mandatory && (
+                <button
+                  onClick={closeModal}
+                  className="w-full px-6 py-3 rounded-xl bg-glass-heavy text-text-muted font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Скасувати
+                </button>
+              )}
             </>
           ) : (
             <button

@@ -432,6 +432,7 @@ export type Database = {
           logo_path: string | null
           name: string
           platforms: string[]
+          screenshots: string[] | null
           search_keywords: string | null
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
@@ -515,6 +516,7 @@ export type Database = {
           logo_path?: string | null
           name: string
           platforms?: string[]
+          screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -598,6 +600,7 @@ export type Database = {
           logo_path?: string | null
           name?: string
           platforms?: string[]
+          screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -712,6 +715,7 @@ export type Database = {
           name_search: string | null
           platforms: string[]
           project_id: string | null
+          screenshots: string[] | null
           search_keywords: string | null
           slug: string
           source_language: string | null
@@ -801,6 +805,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          screenshots?: string[] | null
           search_keywords?: string | null
           slug: string
           source_language?: string | null
@@ -890,6 +895,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          screenshots?: string[] | null
           search_keywords?: string | null
           slug?: string
           source_language?: string | null
@@ -1774,7 +1780,6 @@ export type Database = {
           feedback_email_notifications: boolean
           full_name: string | null
           id: string
-          password_hash: string
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
           telegram_link_token: string | null
@@ -1793,7 +1798,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -1812,7 +1816,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null

@@ -262,7 +262,7 @@ function launchSteamLinux(url?: string): boolean {
 }
 
 /**
- * Launch Steam (cross-platform)
+ * Launch Steam (cross-platform) (internal)
  */
 export async function launchSteam(url?: string): Promise<boolean> {
   if (isLinux()) {

@@ -2,32 +2,34 @@ import { dialog, ipcMain } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
+import { installTranslation } from '../installer';
 import {
-  abortCurrentDownload,
   checkInstallation,
-  checkPlatformCompatibility,
   getAllInstalledGameIds,
   getConflictingTranslation,
-  installTranslation,
-  ManualSelectionError,
-  NetworkError,
-  PausedSignal,
-  RateLimitError,
-  removeComponents,
   removeOrphanedInstallationMetadata,
-  resumeDownload,
-  uninstallTranslation,
-} from '../installer';
+} from '../installer/cache';
 import {
+  abortCurrentDownload,
   clearPausedDownloadState,
   getPartialFilePath,
   getPausedDownloadState,
   pauseCurrentDownload,
 } from '../installer/download';
-import { rerunInstaller } from '../installer/platform';
+import {
+  ManualSelectionError,
+  NetworkError,
+  PausedSignal,
+  RateLimitError,
+} from '../installer/errors';
+import { checkPlatformCompatibility, rerunInstaller } from '../installer/platform';
+import { resumeDownload } from '../installer/resume';
+import { removeComponents, uninstallTranslation } from '../installer/uninstall';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
+import { writeSteamLaunchOptions } from '../utils/steam-launch-options';
+import { launchSteam, shutdownSteam } from '../utils/steam-launcher';
 import { getMainWindow } from '../window';
 
 export function setupInstallerHandlers(): void {
@@ -35,7 +37,7 @@ export function setupInstallerHandlers(): void {
     'install-translation',
     async (_, game: Game, options: InstallOptions, customGamePath?: string) => {
       try {
-        await installTranslation(
+        const installResult = await installTranslation(
           game,
           options,
           customGamePath,
@@ -70,7 +72,11 @@ export function setupInstallerHandlers(): void {
           }
         }
 
-        return { success: true };
+        return {
+          success: true,
+          launchOptionsPending: installResult.launchOptionsPending,
+          achievementsChanged: installResult.achievementsChanged,
+        };
       } catch (error) {
         // Handle pause - not an error, just a state
         if (error instanceof PausedSignal) {
@@ -90,6 +96,37 @@ export function setupInstallerHandlers(): void {
       }
     }
   );
+
+  /**
+   * Restart Steam and apply launch options in the gap. Used when a translation
+   * needs launch options but CEF was unreachable at install time (typically
+   * Millennium-modded Steam). Order matters: Steam must be off before we
+   * touch localconfig.vdf, or it overwrites our changes on graceful exit.
+   */
+  ipcMain.handle('apply-pending-launch-options', async (_, game: Game) => {
+    try {
+      if (!game.steam_app_id) {
+        return { success: false, error: 'Гра не має Steam App ID' };
+      }
+      await shutdownSteam();
+      const result = await writeSteamLaunchOptions({
+        appId: game.steam_app_id,
+        windowsOptions: game.steam_launch_options_windows,
+        linuxOptions: game.steam_launch_options_linux,
+      });
+      console.log(
+        `[Installer] Apply pending launch options mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
+      );
+      await launchSteam();
+      return { success: result.mode === 'file' || result.mode === 'noop' };
+    } catch (error) {
+      console.error('Error applying pending launch options:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Невідома помилка',
+      };
+    }
+  });
 
   ipcMain.handle('check-installation', async (_, game: Game) => {
     const timer = createTimer(`IPC: check-installation (${game.name})`);

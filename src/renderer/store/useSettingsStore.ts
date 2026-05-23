@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { SortOrderType } from '../../shared/types';
 import type { SpecialFilterType } from '../components/Sidebar/types';
 import { electronStorage } from './electronStorage';
+import { useSubscriptionsStore } from './useSubscriptionsStore';
 
 interface SettingsStore {
   sortOrder: SortOrderType;
@@ -25,7 +26,7 @@ interface SettingsStore {
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
   setSelectedAuthors: (authors: string[]) => void;
-  toggleFavoriteGame: (gameId: string) => void;
+  toggleFavoriteGame: (gameId: string, gameName: string) => void;
   isFavoriteGame: (gameId: string) => boolean;
   toggleAnimations: () => void;
   toggleAppUpdateNotifications: () => void;
@@ -69,13 +70,25 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
 
-      toggleFavoriteGame: (gameId) =>
-        set((state) => {
-          const favoriteGameIds = state.favoriteGameIds.includes(gameId)
+      toggleFavoriteGame: (gameId, gameName) => {
+        const state = get();
+        const isCurrentlyFavorite = state.favoriteGameIds.includes(gameId);
+        const isFirstFavorite =
+          state.favoriteGameIds.length === 0 && !isCurrentlyFavorite;
+
+        set({
+          favoriteGameIds: isCurrentlyFavorite
             ? state.favoriteGameIds.filter((id) => id !== gameId)
-            : [...state.favoriteGameIds, gameId];
-          return { favoriteGameIds };
-        }),
+            : [...state.favoriteGameIds, gameId],
+        });
+
+        // Show notification if this is the first favorite being added
+        if (isFirstFavorite) {
+          useSubscriptionsStore
+            .getState()
+            .addFirstFavoriteNotification(gameId, gameName, true);
+        }
+      },
 
       isFavoriteGame: (gameId) => get().favoriteGameIds.includes(gameId),
 
