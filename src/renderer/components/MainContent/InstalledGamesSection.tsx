@@ -80,7 +80,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   };
 
   // Show banner instead of section when no games found
-  if (!isLoading && installedGames.size === 0) {
+  if (!isLoading && allInstalledGames.length === 0) {
     return (
       <div className="text-left w-full max-w-[1317px]">
         <AnimatePresence mode="wait">
