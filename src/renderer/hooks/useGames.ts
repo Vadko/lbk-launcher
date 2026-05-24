@@ -393,8 +393,11 @@ export function useGames({
       // Перевірити зміну версії для історії
       const { addVersionUpdateNotification, hasNotifiedVersion } =
         useSubscriptionsStore.getState();
-      const { installedTranslations, checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
-        useStore.getState();
+      const {
+        installedTranslations,
+        checkSubscribedGamesStatus,
+        checkSubscribedTeamUpdate,
+      } = useStore.getState();
 
       // Перевірити статус підписаних ігор (централізована обробка)
       checkSubscribedGamesStatus([updatedGame]);
