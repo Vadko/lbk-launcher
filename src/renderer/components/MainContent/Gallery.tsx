@@ -119,7 +119,7 @@ export default function SwiperSlider({
             breakpoints={{
               1441: {
                 direction: 'vertical',
-                spaceBetween: spaceBetween,
+                spaceBetween,
               },
             }}
             modules={[Thumbs, Scrollbar, A11y]}

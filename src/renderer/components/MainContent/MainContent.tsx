@@ -739,7 +739,7 @@ export const MainContent: React.FC = () => {
               <VideoCard videoUrl={selectedGame.video_url} />
             </motion.div>
           )}
-          {selectedGame.gallery && (
+          {selectedGame.screenshots && (
             <motion.div
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -747,7 +747,7 @@ export const MainContent: React.FC = () => {
             >
               <div className="glass-card-no-motion">
                 <SwiperSlider
-                  slides={selectedGame.gallery}
+                  slides={selectedGame.screenshots}
                   spaceBetween={30}
                   slidesPerView={3}
                   pagination={false}
