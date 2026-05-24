@@ -393,7 +393,7 @@ export function useGames({
       // Перевірити зміну версії для історії
       const { addVersionUpdateNotification, hasNotifiedVersion } =
         useSubscriptionsStore.getState();
-      const { installedGames, checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
+      const { installedTranslations, checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
         useStore.getState();
 
       // Перевірити статус підписаних ігор (централізована обробка)
@@ -408,7 +408,7 @@ export function useGames({
 
         if (oldGame) {
           // Перевірити оновлення версії (тільки для встановлених українізаторів)
-          const isInstalled = installedGames.has(updatedGame.id);
+          const isInstalled = installedTranslations.has(updatedGame.id);
           if (
             isInstalled &&
             oldGame.version &&

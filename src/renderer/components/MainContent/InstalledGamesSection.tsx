@@ -25,10 +25,10 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       hideAiTranslations: state.hideAiTranslations,
     }))
   );
-  const { setSelectedGame, installedGames } = useStore(
+  const { setSelectedGame, installedTranslations } = useStore(
     useShallow((state) => ({
       setSelectedGame: state.setSelectedGame,
-      installedGames: state.installedGames,
+      installedTranslations: state.installedTranslations,
     }))
   );
 
@@ -41,7 +41,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   // Filter and sort games
   const gamesWithoutInstalls = useMemo(() => {
     const withoutTranslations = allInstalledGames.filter(
-      (game) => !installedGames.has(game.id)
+      (game) => !installedTranslations.has(game.id)
     );
 
     // If no games without translations, show all installed games
@@ -50,8 +50,8 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
 
     // Sort by update availability - games with updates first
     return gamesToShow.sort((a, b) => {
-      const aInstallInfo = installedGames.get(a.id);
-      const bInstallInfo = installedGames.get(b.id);
+      const aInstallInfo = installedTranslations.get(a.id);
+      const bInstallInfo = installedTranslations.get(b.id);
 
       const aHasUpdate =
         aInstallInfo && a.version && aInstallInfo.version !== a.version ? 1 : 0;
@@ -61,7 +61,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       // Sort: games with updates first (descending)
       return bHasUpdate - aHasUpdate;
     });
-  }, [allInstalledGames, installedGames]);
+  }, [allInstalledGames, installedTranslations]);
 
   const visibleGames = useMemo(
     () => gamesWithoutInstalls.slice(0, showLimit),
