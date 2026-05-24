@@ -49,7 +49,7 @@ export const MainContent: React.FC = () => {
     checkInstallationStatus,
     isCheckingInstallationStatus,
     isGameDetected,
-    installedGames,
+    installedTranslations,
   } = useStore();
   const { showModal } = useModalStore();
   const {
@@ -68,7 +68,9 @@ export const MainContent: React.FC = () => {
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
 
-  const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
+  const installationInfo = selectedGame
+    ? installedTranslations.get(selectedGame.id)
+    : undefined;
   const isCheckingInstallation = selectedGame
     ? isCheckingInstallationStatus(selectedGame.id)
     : false;

@@ -306,7 +306,7 @@ export const App: React.FC = () => {
     const handleSteamLibraryChange = async () => {
       console.log('[App] Steam library changed, clearing cache and reloading');
 
-      // Очистити кеші (installedGames НЕ очищаємо - це українізатори, вони персістентні в installation-cache/)
+      // Очистити кеші (installedTranslations НЕ очищаємо - це українізатори, вони персістентні в installation-cache/)
       clearSteamGamesCache();
       clearDetectedGamesCache();
 
