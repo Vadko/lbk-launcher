@@ -410,6 +410,7 @@ export type Database = {
           epic_archive_hash: string | null
           epic_archive_path: string | null
           epic_archive_size: string | null
+          epic_store_url: string | null
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -419,6 +420,7 @@ export type Database = {
           gog_archive_hash: string | null
           gog_archive_path: string | null
           gog_archive_size: string | null
+          gog_store_url: string | null
           hide: boolean
           id: string
           install_paths:
@@ -467,6 +469,7 @@ export type Database = {
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
           xbox_archive_size: string | null
+          xbox_store_url: string | null
           youtube: string | null
         }
         Insert: {
@@ -494,6 +497,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -503,6 +507,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -551,6 +556,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Update: {
@@ -578,6 +584,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -587,6 +594,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -635,6 +643,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -692,6 +701,7 @@ export type Database = {
           epic_archive_hash: string | null
           epic_archive_path: string | null
           epic_archive_size: string | null
+          epic_store_url: string | null
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -700,6 +710,7 @@ export type Database = {
           gog_archive_hash: string | null
           gog_archive_path: string | null
           gog_archive_size: string | null
+          gog_store_url: string | null
           hide: boolean
           id: string
           install_paths:
@@ -753,6 +764,7 @@ export type Database = {
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
           xbox_archive_size: string | null
+          xbox_store_url: string | null
           youtube: string | null
         }
         Insert: {
@@ -782,6 +794,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -790,6 +803,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -843,6 +857,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Update: {
@@ -872,6 +887,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -880,6 +896,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -933,6 +950,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Relationships: [
