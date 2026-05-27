@@ -1,13 +1,16 @@
 import { Check, Copy } from 'lucide-react';
 import React, { useState } from 'react';
 import { trackEvent } from '@/renderer/utils/analytics';
-import { FacebookIcon } from '../Icons/FacebookIcon';
-import { RedditIcon } from '../Icons/RedditIcon';
-import { SignalIcon } from '../Icons/SignalIcon';
-import { TelegramIcon } from '../Icons/TelegramIcon';
-import { ThreadsIcon } from '../Icons/ThreadsIcon';
-import { WhatsAppIcon } from '../Icons/WhatsAppIcon';
-import { XIcon } from '../Icons/XIcon';
+import {
+  FacebookIcon,
+  RedditIcon,
+  SignalIcon,
+  TelegramIcon,
+  ThreadsIcon,
+  WhatsAppIcon,
+  XIcon,
+} from '../Icons/BrandIcons';
+
 import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
@@ -32,7 +35,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'telegram',
     name: 'Telegram',
-    icon: <TelegramIcon size={24} />,
+    icon: <TelegramIcon />,
     color: 'focus:text-[#0088cc] focus:bg-[#0088cc]/15 focus:border-[#0088cc]',
     getShareUrl: (shareUrl, shareText) =>
       `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}&type=custom_url&app_absent=0`,
@@ -40,7 +43,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'whatsapp',
     name: 'WhatsApp',
-    icon: <WhatsAppIcon size={24} />,
+    icon: <WhatsAppIcon />,
     color: 'focus:text-[#25D366] focus:bg-[#25D366]/15 focus:border-[#25D366]',
     getShareUrl: (shareUrl, shareText) =>
       `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
@@ -48,7 +51,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'reddit',
     name: 'Reddit',
-    icon: <RedditIcon size={24} />,
+    icon: <RedditIcon />,
     color: 'focus:text-[#FF4500] focus:bg-[#FF4500]/15 focus:border-[#FF4500]',
     getShareUrl: (shareUrl, shareText) =>
       `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareText)}`,
@@ -56,7 +59,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'facebook',
     name: 'Facebook',
-    icon: <FacebookIcon size={24} />,
+    icon: <FacebookIcon />,
     color: 'focus:text-[#1877F2] focus:bg-[#1877F2]/15 focus:border-[#1877F2]',
     getShareUrl: (shareUrl, shareText) =>
       `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`,
@@ -64,7 +67,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'signal',
     name: 'Signal',
-    icon: <SignalIcon size={24} />,
+    icon: <SignalIcon />,
     color: 'focus:text-[#3a76f0] focus:bg-[#3a76f0]/15 focus:border-[#3a76f0]',
     getShareUrl: (shareUrl, shareText) =>
       `https://signal.me/#p/${encodeURIComponent(`${shareText} ${shareUrl}`)}`,
@@ -72,7 +75,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'threads',
     name: 'Threads',
-    icon: <ThreadsIcon size={24} />,
+    icon: <ThreadsIcon />,
     color: 'focus:text-white focus:bg-white/20 focus:border-white',
     getShareUrl: (shareUrl, shareText) =>
       `https://www.threads.net/intent/post?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`,
@@ -80,7 +83,7 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   {
     key: 'x',
     name: 'X',
-    icon: <XIcon size={24} />,
+    icon: <XIcon />,
     color: 'focus:text-white focus:bg-white/20 focus:border-white',
     getShareUrl: (shareUrl, shareText) =>
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
