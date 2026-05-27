@@ -115,6 +115,8 @@ export const PromoModal: React.FC = () => {
 
   // Promo modal initialization - runs only once on mount
   useEffect(() => {
+    if (window.electronAPI?.isE2E?.()) return;
+
     const { devMode } = usePromoModalStore.getState();
 
     // Dev mode only works in development
