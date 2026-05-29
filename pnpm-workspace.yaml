@@ -1,4 +1,4 @@
-shamefullyHoist: true
+nodeLinker: hoisted
 enablePrePostScripts: true
 allowBuilds:
   '@sentry/cli': true
