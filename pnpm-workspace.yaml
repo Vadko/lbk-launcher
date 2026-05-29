@@ -1,3 +1,5 @@
+shamefullyHoist: true
+enablePrePostScripts: true
 allowBuilds:
   '@sentry/cli': true
   '@swc/core': true
