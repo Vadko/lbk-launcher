@@ -136,7 +136,7 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
         <div className="text-neon-purple group-hover:brightness-125 transition-all duration-300">
           <Share2 size={18} />
         </div>
-        <span className="text-sm font-medium">Поділитись</span>
+        <span className="text-sm font-medium">Поділитися</span>
       </button>
       <ShareModal
         isOpen={isModalOpen}
@@ -153,7 +153,7 @@ const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
 export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   const links = [
     game.website && {
-      icon: game.website.includes('steamcommunity.com') ? (
+      icon: game.website.includes('steamcommunity.com/sharedfiles/filedetails') ? (
         <Book size={18} />
       ) : (
         <Globe size={18} />
@@ -216,24 +216,40 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   }
 
   return (
-    <div className="glass-card">
-      <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
-      <p className="text-base font-head font-semibold text-text-muted mb-2">Крамниці</p>
-      <div className="flex flex-wrap items-center gap-3 mb-3">
-        {stores.map((link, index) => (
-          <StoreButton key={index} {...link} />
-        ))}
-      </div>
-      <p className="text-base font-head font-semibold text-text-muted mb-2">Інше</p>
-      <div className="flex flex-wrap items-center gap-3">
-        <ShareButton game={game} />
-        {links.length > 0 && (game.steam_app_id || hasShareButton) && (
-          <div className="hidden sm:block w-0 h-10 border-l border-border-hover" />
+    (stores.length > 0 || hasShareButton || links.length > 0) && (
+      <div className="glass-card">
+        <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
+        {stores.length > 0 && (
+          <>
+            <p className="text-base font-head font-semibold text-text-muted mb-2">
+              Крамниці
+            </p>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              {stores.map((link, index) => (
+                <StoreButton key={index} {...link} />
+              ))}
+            </div>
+          </>
         )}
-        {links.map((link, index) => (
-          <SocialLink key={index} {...link} />
-        ))}
+
+        {hasShareButton ||
+          (links.length > 0 && (
+            <>
+              <p className="text-base font-head font-semibold text-text-muted mb-2">
+                Інше
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                {hasShareButton && <ShareButton game={game} />}
+                {links.length > 0 && (game.steam_app_id || hasShareButton) && (
+                  <div className="hidden sm:block w-0 h-10 border-l border-border-hover" />
+                )}
+                {links.map((link, index) => (
+                  <SocialLink key={index} {...link} />
+                ))}
+              </div>
+            </>
+          ))}
       </div>
-    </div>
+    )
   );
 };
