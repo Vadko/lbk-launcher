@@ -28,9 +28,10 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       hideAiTranslations: state.hideAiTranslations,
     }))
   );
-  const { installedGames } = useStore(
+  const { installedTranslations } = useStore(
     useShallow((state) => ({
-      installedGames: state.installedGames,
+      setSelectedGame: state.setSelectedGame,
+      installedTranslations: state.installedTranslations,
     }))
   );
 
@@ -40,11 +41,30 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     'newest'
   );
 
-  // Filter to show only games WITHOUT translations installed
-  const gamesWithoutInstalls = useMemo(
-    () => allInstalledGames.filter((game) => !installedGames.has(game.id)),
-    [allInstalledGames, installedGames]
-  );
+  // Filter and sort games
+  const gamesWithoutInstalls = useMemo(() => {
+    const withoutTranslations = allInstalledGames.filter(
+      (game) => !installedTranslations.has(game.id)
+    );
+
+    // If no games without translations, show all installed games
+    const gamesToShow =
+      withoutTranslations.length > 0 ? withoutTranslations : allInstalledGames;
+
+    // Sort by update availability - games with updates first
+    return gamesToShow.sort((a, b) => {
+      const aInstallInfo = installedTranslations.get(a.id);
+      const bInstallInfo = installedTranslations.get(b.id);
+
+      const aHasUpdate =
+        aInstallInfo && a.version && aInstallInfo.version !== a.version ? 1 : 0;
+      const bHasUpdate =
+        bInstallInfo && b.version && bInstallInfo.version !== b.version ? 1 : 0;
+
+      // Sort: games with updates first (descending)
+      return bHasUpdate - aHasUpdate;
+    });
+  }, [allInstalledGames, installedTranslations]);
 
   const visibleGames = useMemo(
     () => gamesWithoutInstalls.slice(0, showLimit),
@@ -63,7 +83,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   };
 
   // Show banner instead of section when no games found
-  if (!isLoading && gamesWithoutInstalls.length === 0) {
+  if (!isLoading && allInstalledGames.length === 0) {
     return (
       <div className="text-left w-full max-w-[1317px]">
         <AnimatePresence mode="wait">

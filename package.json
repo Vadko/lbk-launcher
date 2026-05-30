@@ -1,6 +1,6 @@
 {
   "name": "lbk-launcher",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "description": "Інсталятор українізаторів відеоігор",
   "author": {
     "name": "LBK Team",
@@ -8,12 +8,13 @@
   },
   "license": "GPL-3.0-or-later",
   "main": "out/main/index.js",
+  "packageManager": "pnpm@11.4.0",
   "engines": {
     "node": ">=22.20.0"
   },
   "volta": {
     "node": "22.20.0",
-    "pnpm": "10.7.1"
+    "pnpm": "11.4.0"
   },
   "scripts": {
     "dev": "pnpm prebuild && electron-vite dev",
@@ -85,7 +86,7 @@
     "@vitejs/plugin-react-swc": "4.2.3",
     "autoprefixer": "10.5.0",
     "electron": "39.8.10",
-    "electron-builder": "26.8.1",
+    "electron-builder": "26.8.2",
     "electron-devtools-installer": "4.0.0",
     "electron-updater": "6.8.3",
     "electron-vite": "5.0.0",

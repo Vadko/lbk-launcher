@@ -35,7 +35,7 @@ type GameInsertParams = {
     ? number // boolean перетворюється на 0/1 для SQLite
     : K extends 'ai'
       ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
-      : K extends 'platforms' | 'install_paths'
+      : K extends 'platforms' | 'install_paths' | 'screenshots'
         ? string | null // JSON.stringify для SQLite
         : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
@@ -78,6 +78,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     name_search: generateSearchableString(game.name),
     platforms: JSON.stringify(game.platforms),
     project_id: game.project_id ?? null,
+    screenshots: game.screenshots ? JSON.stringify(game.screenshots) : null,
     slug: game.slug ?? null,
     status: game.status ?? null,
     support_url: game.support_url ?? null,
@@ -117,6 +118,9 @@ function gameToInsertParams(game: Game): GameInsertParams {
     steam_mac_archive_size: game.steam_mac_archive_size ?? null,
     steam_launch_options_windows: game.steam_launch_options_windows ?? null,
     steam_launch_options_linux: game.steam_launch_options_linux ?? null,
+    epic_store_url: game.epic_store_url ?? null,
+    gog_store_url: game.gog_store_url ?? null,
+    xbox_store_url: game.xbox_store_url ?? null,
     steam_app_id: game.steam_app_id ?? null,
     website: game.website ?? null,
     youtube: game.youtube ?? null,
@@ -136,7 +140,7 @@ const UPSERT_GAME_SQL = `
     banner_path, capsule_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
     fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
     installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
-    name, name_search, platforms, project_id, slug, status, support_url, team, telegram, textures_progress,
+    name, name_search, platforms, project_id, screenshots, slug, status, support_url, team, telegram, textures_progress,
     thumbnail_path, translation_progress, translation_updated_at, twitter, updated_at, version, video_url,
     voice_archive_hash, voice_archive_path, voice_archive_size,
     voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
@@ -147,13 +151,14 @@ const UPSERT_GAME_SQL = `
     steam_linux_archive_hash, steam_linux_archive_path, steam_linux_archive_size,
     steam_mac_archive_hash, steam_mac_archive_path, steam_mac_archive_size,
     steam_launch_options_windows, steam_launch_options_linux,
+    epic_store_url, gog_store_url, xbox_store_url,
     steam_app_id, website, youtube, ai, hide, search_keywords, source_language
   ) VALUES (
     @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
     @banner_path, @capsule_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
     @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
     @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
-    @name, @name_search, @platforms, @project_id, @slug, @status, @support_url, @team, @telegram, @textures_progress,
+    @name, @name_search, @platforms, @project_id, @screenshots, @slug, @status, @support_url, @team, @telegram, @textures_progress,
     @thumbnail_path, @translation_progress, @translation_updated_at, @twitter, @updated_at, @version, @video_url,
     @voice_archive_hash, @voice_archive_path, @voice_archive_size,
     @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
@@ -164,6 +169,7 @@ const UPSERT_GAME_SQL = `
     @steam_linux_archive_hash, @steam_linux_archive_path, @steam_linux_archive_size,
     @steam_mac_archive_hash, @steam_mac_archive_path, @steam_mac_archive_size,
     @steam_launch_options_windows, @steam_launch_options_linux,
+    @epic_store_url, @gog_store_url, @xbox_store_url,
     @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
   )
 `;

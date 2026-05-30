@@ -57,7 +57,7 @@ export const GamePage: React.FC = () => {
     checkInstallationStatus,
     isCheckingInstallationStatus,
     isGameDetected,
-    installedGames,
+    installedTranslations,
   } = useStore();
 
   const { showModal } = useModalStore();
@@ -77,8 +77,9 @@ export const GamePage: React.FC = () => {
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
 
-  // Обчислення на основі selectedGame (з optional chaining для безпеки)
-  const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
+  const installationInfo = selectedGame
+    ? installedTranslations.get(selectedGame.id)
+    : undefined;
   const isCheckingInstallation = selectedGame
     ? isCheckingInstallationStatus(selectedGame.id)
     : false;
