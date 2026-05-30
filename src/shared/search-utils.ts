@@ -30,13 +30,32 @@ export function generateSearchableString(name: string): string {
   return translit ? `${nameLower} ${translit}` : nameLower;
 }
 
-export function getSearchVariations(input: string): string[] {
-  if (!input) return [];
+function tokenize(value: string): string[] {
+  return value
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 2);
+}
 
-  const normalized = input.toLowerCase();
+function escapeFtsToken(token: string): string {
+  return token.replace(/"/g, '""');
+}
+
+export function buildFtsQuery(input: string): string {
+  if (!input) return '';
+
+  const buildExpr = (tokens: string[]) =>
+    tokens.map((t) => `"${escapeFtsToken(t)}"*`).join(' AND ');
+
+  const primary = tokenize(input);
   const translit = getTransliteration(input);
+  const translitTokens = translit ? tokenize(translit) : [];
 
-  return translit ? [normalized, translit] : [normalized];
+  const exprs: string[] = [];
+  if (primary.length) exprs.push(`(${buildExpr(primary)})`);
+  if (translitTokens.length) exprs.push(`(${buildExpr(translitTokens)})`);
+
+  return exprs.join(' OR ');
 }
 
 export function teamToSlug(team: string): string {
