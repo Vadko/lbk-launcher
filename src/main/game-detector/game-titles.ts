@@ -4,6 +4,8 @@ const GAME_TITLE_MAPPING: Record<string, string | string[]> = {
     'The Witcher 3: Wild Hunt - Game of the Year Edition',
     'The Witcher 3: Wild Hunt',
   ],
+  "Mirror's Edge™ (з прихованими діалогами)": "Mirror's Edge™",
+  "Mirror's Edge™ (оригінал)": "Mirror's Edge™",
 
   'Відьмак 2: Убивці королів – Розширене видання':
     'The Witcher 2: Assassins of Kings Enhanced Edition',
