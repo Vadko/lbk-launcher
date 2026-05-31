@@ -18,13 +18,27 @@ import { isSteamRunning } from './steam-launcher';
 const FLAG_FILE_NAME = '.cef-enable-remote-debugging';
 
 /**
- * Files that indicate the Millennium Steam mod is installed. Millennium hooks
- * Steam by sideloading `user32.dll.local` (so the loader resolves the local
- * `millennium.dll` first) and deletes our flag file on every Steam start —
- * its maintainer considers it insecure to leave enabled.
- * See https://github.com/SteamClientHomebrew/Millennium/issues/591.
+ * File paths (relative to Steam install dir) that indicate the Millennium
+ * Steam mod is installed. Either layout makes Steam's CEF endpoint unreachable
+ * for us: vanilla v2 actively deletes our flag file, and v3 routes CDP
+ * exclusively over anonymous pipes inside `steamwebhelper` so there's no TCP
+ * port to probe.
+ *
+ *   v3 (2026+) — DLL-hijack via `wsock32.dll`, main code under `millennium/`
+ *   v2 legacy — root-dropped `millennium.dll` + `user32.dll.local` shim
+ *
+ * Refs:
+ *   https://github.com/SteamClientHomebrew/Millennium/releases/tag/v3.0.0
+ *   https://github.com/SteamClientHomebrew/Millennium/blob/main/src/instrumentation/internal/steam_hooks.cc
  */
-const MILLENNIUM_MARKERS = ['millennium.dll', 'user32.dll.local'];
+const MILLENNIUM_MARKERS = [
+  // v3
+  'millennium/lib/millennium.dll',
+  'wsock32.dll',
+  // v2 legacy
+  'millennium.dll',
+  'user32.dll.local',
+];
 
 /**
  * Steam looks for the flag file alongside `config/`, `userdata/`, etc. — the

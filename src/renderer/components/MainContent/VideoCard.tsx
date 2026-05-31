@@ -31,7 +31,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
   if (!videoId) {
     // If not a YouTube URL or can't extract ID, show a button to open link
     return (
-      <div className="glass-card">
+      <div className="glass-card-no-motion">
         <h3 className="text-lg font-head font-semibold text-text-main mb-3">Відео</h3>
         <a
           href={videoUrl}
@@ -51,7 +51,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;
 
   return (
-    <div className="glass-card">
+    <div className="glass-card-no-motion">
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">
         Трейлер українізації
       </h3>
