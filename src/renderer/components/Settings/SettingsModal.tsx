@@ -390,21 +390,21 @@ export const SettingsModal: React.FC = () => {
                   <p className="text-xs text-text-muted mb-2">Звуки геймпада:</p>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={playNavigateSound}
+                      onClick={() => playNavigateSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       <Play size={12} />
                       Навігація
                     </button>
                     <button
-                      onClick={playConfirmSound}
+                      onClick={() => playConfirmSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       <Play size={12} />
                       Підтвердити
                     </button>
                     <button
-                      onClick={playBackSound}
+                      onClick={() => playBackSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       <Play size={12} />

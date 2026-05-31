@@ -56,9 +56,6 @@ importers:
       react-lazy-load-image-component:
         specifier: 1.6.3
         version: 1.6.3(react@19.2.6)
-      react-ts-gamepads:
-        specifier: 1.0.8
-        version: 1.0.8(react@19.2.6)
       swiper:
         specifier: 12.1.4
         version: 12.1.4
@@ -3682,12 +3679,6 @@ packages:
     resolution: {integrity: sha512-kdQYUDbuISF3T9El0sBLNoWrmPohqlytcG4ognLtHYjY8bZAsJ0/Ez+VaV+0QlVyUY3K6dDXkuQAz3GpvdjBkw==}
     peerDependencies:
       react: ^15.x.x || ^16.x.x || ^17.x.x || ^18.x.x || ^19.x.x
-
-  react-ts-gamepads@1.0.8:
-    resolution: {integrity: sha512-DHPwxsPH1RM6iVpPp14+ITIpO2GarMAdUfbM35GwgdEI5rfmSQM9UZh2Qqo0Cp0gkPJNiTyRnqgrwkp5iiic9A==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: ^18.0.0 || ^19.0.0
 
   react@19.2.6:
     resolution: {integrity: sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==}
@@ -8109,10 +8100,6 @@ snapshots:
     dependencies:
       lodash.debounce: 4.0.8
       lodash.throttle: 4.1.1
-      react: 19.2.6
-
-  react-ts-gamepads@1.0.8(react@19.2.6):
-    dependencies:
       react: 19.2.6
 
   react@19.2.6: {}

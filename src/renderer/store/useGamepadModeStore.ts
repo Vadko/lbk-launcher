@@ -1,15 +1,11 @@
 import { create } from 'zustand';
 
-type NavigationArea = 'header' | 'games' | 'main-content' | 'modal';
+type NavigationArea = 'header' | 'games' | 'main-content';
 
 interface GamepadModeStore {
   // Mode
   isGamepadMode: boolean;
   setGamepadMode: (enabled: boolean) => void;
-
-  // Track last input method to show/hide gamepad focus styles
-  lastInputMethod: 'gamepad' | 'keyboard' | 'mouse';
-  setLastInputMethod: (method: 'gamepad' | 'keyboard' | 'mouse') => void;
 
   // Navigation state
   focusedGameIndex: number;
@@ -31,11 +27,7 @@ export const useGamepadModeStore = create<GamepadModeStore>((set) => ({
       // Reset navigation state when mode changes
       focusedGameIndex: enabled ? 0 : state.focusedGameIndex,
       navigationArea: enabled ? 'games' : state.navigationArea,
-      lastInputMethod: enabled ? 'gamepad' : state.lastInputMethod,
     })),
-
-  lastInputMethod: 'mouse',
-  setLastInputMethod: (method) => set({ lastInputMethod: method }),
 
   focusedGameIndex: 0,
   setFocusedGameIndex: (index) => set({ focusedGameIndex: index }),
