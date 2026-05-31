@@ -85,11 +85,7 @@ export function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
   // get mapping="standard". This prevents the polling hook from triggering
   // 60fps re-renders for devices whose id we don't recognize but that
   // happen to expose enough axes/buttons to look like a gamepad.
-  if (
-    gp.mapping === 'standard' &&
-    gp.axes.length >= 4 &&
-    gp.buttons.length >= 16
-  ) {
+  if (gp.mapping === 'standard' && gp.axes.length >= 4 && gp.buttons.length >= 16) {
     return true;
   }
 
