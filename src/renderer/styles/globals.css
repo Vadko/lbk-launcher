@@ -115,7 +115,7 @@ html.maximized #root {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 8px;
+  padding: 24px;
 }
 
 .placement {
@@ -481,4 +481,87 @@ body.liquid-glass-enabled .glass-input:focus {
   box-shadow:
     0 0 0 6px rgba(251, 191, 36, 0.3),
     0 0 20px rgba(251, 191, 36, 0.4) !important;
+}
+
+/* ==========================================================================
+   11. SLIDER STYLES
+   ========================================================================== */
+.slider-container.slider-container--thumbs {
+  display: grid;
+  grid-template-columns: 1fr 428px;
+  gap: 30px;
+}
+
+:is(.main-slider, .main-slider-thumbs) .swiper {
+  height: 680px;
+}
+
+.main-slider-thumbs .swiper-wrapper {
+  width: calc(100% - 38px);
+}
+
+@media screen and (max-height: 800px) {
+  :is(.main-slider, .main-slider-thumbs) .swiper {
+    height: 600px;
+  }
+}
+
+@media screen and (max-width: 1440px) {
+  .slider-container.slider-container--thumbs {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .main-slider .swiper {
+    height: 350px;
+  }
+
+  .main-slider-thumbs .swiper {
+    height: 158px;
+  }
+
+  .main-slider-thumbs .swiper-wrapper {
+    width: 100%;
+    height: calc(100% - 38px);
+  }
+}
+
+.swiper-scrollbar {
+  --swiper-scrollbar-right: 0;
+  --swiper-scrollbar-sides-offset: 0px;
+  --swiper-scrollbar-size: 8px;
+  --swiper-scrollbar-border-radius: 60px;
+  --swiper-scrollbar-bg-color: var(--dark-gray);
+  --swiper-scrollbar-drag-bg-color: var(--gray-text);
+}
+
+.swiper-scrollbar.swiper-scrollbar-horizontal {
+  --swiper-scrollbar-bottom: 0;
+}
+
+.main-slider-thumbs .swiper-slide::after {
+  content: "";
+  position: absolute;
+  background-color: white;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  inset: 0;
+}
+
+.main-slider-thumbs .swiper-slide:is(.swiper-slide-thumb-active, :hover)::after {
+  opacity: 0.2;
+}
+
+.slider-container--same-height .swiper-slide {
+  height: auto;
+}
+
+.swiper-slide > *:not(svg, .swiper-zoom-container),
+.swiper-slide > .swiper-zoom-container > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  overflow: hidden;
 }

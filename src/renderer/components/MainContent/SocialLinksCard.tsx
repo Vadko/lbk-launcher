@@ -216,7 +216,7 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   }
 
   return (
-    <div className="glass-card">
+    <div className="glass-card-no-motion">
       <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
       <p className="text-base font-head font-semibold text-text-muted mb-2">Крамниці</p>
       <div className="flex flex-wrap items-center gap-3 mb-3">
