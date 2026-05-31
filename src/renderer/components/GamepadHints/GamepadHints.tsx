@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useStore } from '../../store/useStore';
 
@@ -75,10 +75,23 @@ const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) 
 };
 
 export const GamepadHints: React.FC = () => {
-  const { isGamepadMode, navigationArea } = useGamepadModeStore();
+  const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
+  const navigationArea = useGamepadModeStore((s) => s.navigationArea);
   const { selectedGame } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const gamepadType = useMemo(() => detectGamepadType(), []);
+  const [gamepadType, setGamepadType] = useState<GamepadType>(detectGamepadType);
+
+  // Re-detect controller type when one is plugged in or out so the hint
+  // glyphs (A/B vs Cross/Circle) stay accurate if the user switches pads.
+  useEffect(() => {
+    const update = () => setGamepadType(detectGamepadType());
+    window.addEventListener('gamepadconnected', update);
+    window.addEventListener('gamepaddisconnected', update);
+    return () => {
+      window.removeEventListener('gamepadconnected', update);
+      window.removeEventListener('gamepaddisconnected', update);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isGamepadMode) return;

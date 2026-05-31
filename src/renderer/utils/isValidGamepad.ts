@@ -28,6 +28,8 @@ export function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
     'yoke',
     't16000', // Thrustmaster T.16000M
     't.16000',
+    'x52', // Saitek/Logitech X52 HOTAS (id may not include "saitek" after Logitech rebrand)
+    'x56', // Saitek/Logitech X56 HOTAS
     // Flight sim brands (primarily make non-gamepad controllers)
     'thrustmaster',
     'saitek',
@@ -77,9 +79,13 @@ export function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
     return true;
   }
 
-  // For generic devices, check if they have typical gamepad characteristics
-  // Standard gamepads have 4 axes (2 sticks) and 16+ buttons
-  if (gp.axes.length >= 4 && gp.buttons.length >= 16) {
+  // For generic devices, require the browser's standard gamepad mapping.
+  // HOTAS sticks, joysticks, and other non-gamepad HID devices report
+  // mapping="" — only real gamepads (XInput, DualShock/DualSense, etc.)
+  // get mapping="standard". This prevents the polling hook from triggering
+  // 60fps re-renders for devices whose id we don't recognize but that
+  // happen to expose enough axes/buttons to look like a gamepad.
+  if (gp.mapping === 'standard' && gp.axes.length >= 4 && gp.buttons.length >= 16) {
     return true;
   }
 
@@ -87,6 +93,7 @@ export function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
   console.log('[Gamepad] Rejecting unrecognized device:', gp.id, {
     buttons: gp.buttons.length,
     axes: gp.axes.length,
+    mapping: gp.mapping,
   });
   return false;
 }
