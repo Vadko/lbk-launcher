@@ -2,7 +2,7 @@ import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
-import { getSearchVariations } from '../../shared/search-utils';
+import { buildFtsQuery } from '../../shared/search-utils';
 import type {
   Game,
   GetGamesParams,
@@ -228,12 +228,17 @@ export class GamesRepository {
 
     // Filter by search query using FTS5 (min 2 chars to avoid expensive single-char prefix scans)
     if (searchQuery && searchQuery.trim().length >= 2) {
-      const variations = getSearchVariations(searchQuery);
-      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
-      whereConditions.push(
-        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-      );
-      queryParams.push(ftsQuery);
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        whereConditions.push(
+          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+        );
+        queryParams.push(ftsQuery);
+      } else {
+        // No usable tokens (e.g. only punctuation/single-char) — fall back to LIKE
+        whereConditions.push('name LIKE ?');
+        queryParams.push(`%${searchQuery.trim()}%`);
+      }
     } else if (searchQuery) {
       // For 1-char queries use simple LIKE (faster than FTS prefix scan)
       whereConditions.push('name LIKE ?');
@@ -374,12 +379,13 @@ export class GamesRepository {
     }
 
     if (searchQuery) {
-      const variations = getSearchVariations(searchQuery);
-      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
-      whereConditions.push(
-        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-      );
-      queryParams.push(ftsQuery);
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        whereConditions.push(
+          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+        );
+        queryParams.push(ftsQuery);
+      }
     }
 
     const stmt = this.db.prepare(`
@@ -415,12 +421,13 @@ export class GamesRepository {
     }
 
     if (searchQuery) {
-      const variations = getSearchVariations(searchQuery);
-      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
-      whereConditions.push(
-        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-      );
-      queryParams.push(ftsQuery);
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        whereConditions.push(
+          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+        );
+        queryParams.push(ftsQuery);
+      }
     }
 
     const stmt = this.db.prepare(`
@@ -502,12 +509,13 @@ export class GamesRepository {
     }
 
     if (searchQuery) {
-      const variations = getSearchVariations(searchQuery);
-      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
-      whereConditions.push(
-        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-      );
-      queryParams.push(ftsQuery);
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        whereConditions.push(
+          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+        );
+        queryParams.push(ftsQuery);
+      }
     }
 
     const stmt = this.db.prepare(`
@@ -684,12 +692,13 @@ export class GamesRepository {
     }
 
     if (searchQuery) {
-      const variations = getSearchVariations(searchQuery);
-      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
-      whereConditions.push(
-        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-      );
-      queryParams.push(ftsQuery);
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        whereConditions.push(
+          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+        );
+        queryParams.push(ftsQuery);
+      }
     }
 
     const stmt = this.db.prepare(`
@@ -738,12 +747,13 @@ export class GamesRepository {
     }
 
     if (searchQuery) {
-      const variations = getSearchVariations(searchQuery);
-      const ftsQuery = variations.map((v) => `"${v}"*`).join(' OR ');
-      whereConditions.push(
-        `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-      );
-      queryParams.push(ftsQuery);
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        whereConditions.push(
+          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
+        );
+        queryParams.push(ftsQuery);
+      }
     }
 
     const stmt = this.db.prepare(`
