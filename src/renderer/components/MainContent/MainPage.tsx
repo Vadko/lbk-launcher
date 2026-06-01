@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
+import { NewsFeedSection } from './NewsFeedSection';
 import { TrendingGamesPage } from './TrendingGamesPage';
 import { TrendGamesSection } from './TrendsGamesSection';
 
@@ -58,6 +59,7 @@ export const MainPage: React.FC = () => {
             showDownloadCounter={true}
             onViewAll={() => setCurrentView('trending')}
           />
+          <NewsFeedSection />
         </div>
       )}
       {/* Trending games page */}
