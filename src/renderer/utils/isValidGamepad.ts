@@ -14,6 +14,13 @@ export function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
 
   // Filter out known phantom/non-standard devices by checking ID
   const id = gp.id.toLowerCase();
+  const normalizedId = id.replace(/[\s_-]/g, '');
+
+  // Canyon GP-W6/CND-GPW6 reports as a gamepad but causes phantom navigation input.
+  if (id.includes('canyon') && normalizedId.includes('gpw6')) {
+    console.log('[Gamepad] Rejecting problematic gamepad device:', gp.id);
+    return false;
+  }
 
   // Blacklist: devices that are NOT gamepads (joysticks, HOTAS, racing wheels, etc.)
   const nonGamepadPatterns = [
