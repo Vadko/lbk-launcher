@@ -8,7 +8,7 @@ import {
   Thumbs,
   Zoom,
 } from 'swiper/modules';
-import { Swiper, SwiperClass, SwiperSlide } from 'swiper/react';
+import { Swiper, type SwiperClass, SwiperSlide } from 'swiper/react';
 
 import 'swiper/css';
 import 'swiper/css/a11y';
@@ -30,7 +30,7 @@ type Props = {
   autoplay?: boolean;
 };
 
-export default function SwiperSlider({
+export function SwiperSlider({
   slides,
   spaceBetween = 10,
   slidesPerView = 1,

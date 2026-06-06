@@ -14,44 +14,53 @@ import {
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
 import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
-import { isSpecialTranslator } from '../../constants/specialTranslators';
-import { useInstallation } from '../../hooks/useInstallation';
-import { useModalStore } from '../../store/useModalStore';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { useStore } from '../../store/useStore';
-import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
-import { trackEvent } from '../../utils/analytics';
-import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
-import { FeedbackModal } from '../Modal/FeedbackModal';
-import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
-import { Placement } from '../Placements';
-import { Button } from '../ui/Button';
-import { SubscribeButton } from '../ui/SubscribeButton';
-import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
-import { AuthorsList } from './AuthorsList';
-import { DownloadProgressCard } from './DownloadProgressCard';
-import { FundraisingProgressCard } from './FundraisingProgressCard';
-import SwiperSlider from './Gallery';
-import { GameHero } from './GameHero';
-import { ImportantNotice } from './ImportantNotice';
-import { InfoCard } from './InfoCard';
-import { InstallationStatusBadge } from './InstallationStatusBadge';
-import { InstallationStatusMessage } from './InstallationStatusMessage';
-import { MainPage } from './MainPage';
-import { SocialLinksCard } from './SocialLinksCard';
-import { StatusCard } from './StatusCard';
-import { VideoCard } from './VideoCard';
+import { AuthorsList } from '../components/MainContent/AuthorsList';
+import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
+import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
+import { SwiperSlider } from '../components/MainContent/Gallery';
+import { GameHero } from '../components/MainContent/GameHero';
+import { ImportantNotice } from '../components/MainContent/ImportantNotice';
+import { InfoCard } from '../components/MainContent/InfoCard';
+import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
+import { InstallationStatusMessage } from '../components/MainContent/InstallationStatusMessage';
+import { SocialLinksCard } from '../components/MainContent/SocialLinksCard';
+import { StatusCard } from '../components/MainContent/StatusCard';
+import { VideoCard } from '../components/MainContent/VideoCard';
+import { AuthorSubscriptionModal } from '../components/Modal/AuthorSubscriptionModal';
+import { FeedbackModal } from '../components/Modal/FeedbackModal';
+import { InstallOptionsDialog } from '../components/Modal/InstallOptionsDialog';
+import { Placement } from '../components/Placements';
+import { Button } from '../components/ui/Button';
+import { SubscribeButton } from '../components/ui/SubscribeButton';
+import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
+import { isSpecialTranslator } from '../constants/specialTranslators';
+import { useInstallation } from '../hooks/useInstallation';
+import { useModalStore } from '../store/useModalStore';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { useStore } from '../store/useStore';
+import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
+import { trackEvent } from '../utils/analytics';
 
-export const MainContent: React.FC = () => {
+/**
+ * Сторінка детальної інформації про гру
+ * Відображає всю інформацію, банери, кнопки встановлення тощо
+ */
+export const GamePage: React.FC = () => {
+  const { gameId } = useParams<{ gameId: string }>();
+  const navigate = useNavigate();
+
   const {
     selectedGame,
+    setSelectedGame,
     checkInstallationStatus,
     isCheckingInstallationStatus,
     isGameDetected,
     installedTranslations,
   } = useStore();
+
   const { showModal } = useModalStore();
   const {
     showAdultGames,
@@ -96,6 +105,62 @@ export const MainContent: React.FC = () => {
       toggleFavoriteGame(selectedGame.id, selectedGame.name);
     }
   }, [selectedGame, toggleFavoriteGame]);
+
+  // Завантажити гру якщо її ще немає в selectedGame
+  useEffect(() => {
+    if (!gameId) {
+      navigate('/');
+      return;
+    }
+
+    let isCancelled = false; // Race condition protection
+
+    const loadGame = async () => {
+      // Якщо вже є вибрана гра з правильним ID, не треба перезавантажувати
+      if (selectedGame?.id === gameId) return;
+
+      // Очищаємо selectedGame якщо змінився gameId (щоб не показувати стару гру)
+      if (selectedGame?.id && selectedGame.id !== gameId) {
+        setSelectedGame(null);
+      }
+
+      try {
+        const games = await window.electronAPI.fetchGamesByIds([gameId]);
+
+        // Перевірка чи не відмінено запит (користувач перейшов на іншу гру)
+        if (isCancelled) {
+          console.log('[GamePage] Request cancelled, not updating selectedGame');
+          return;
+        }
+
+        if (games.length > 0) {
+          // Додаткова перевірка: чи все ще той самий gameId в URL
+          // (захист від швидких кліків на різні ігри)
+          if (games[0].id === gameId) {
+            setSelectedGame(games[0]);
+          } else {
+            console.log('[GamePage] Game ID mismatch, skipping setSelectedGame');
+          }
+        } else {
+          // Гру не знайдено, повертаємось на головну
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('[GamePage] Failed to load game:', error);
+        // Не навігуємо якщо запит відмінено
+        if (!isCancelled) {
+          navigate('/');
+        }
+      }
+    };
+
+    loadGame();
+
+    // Cleanup: позначити запит як скасований при розмонтуванні або зміні gameId
+    return () => {
+      isCancelled = true;
+    };
+  }, [gameId, selectedGame, setSelectedGame, navigate]);
 
   // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
@@ -291,16 +356,16 @@ export const MainContent: React.FC = () => {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      console.log('[MainContent] Internet connection restored');
+      console.log('[GamePage] Internet connection restored');
     };
 
     const handleOffline = async () => {
       setIsOnline(false);
-      console.log('[MainContent] Internet connection lost');
+      console.log('[GamePage] Internet connection lost');
 
       // Don't abort if paused or already waiting — download is already stopped
       if (selectedGame && isInstalling && !isPaused && !isWaitingForNetwork) {
-        console.log('[MainContent] Aborting download due to connection loss');
+        console.log('[GamePage] Aborting download due to connection loss');
         await window.electronAPI?.abortDownload('NETWORK_LOST');
       }
     };
@@ -367,12 +432,11 @@ export const MainContent: React.FC = () => {
     isTranslationInstalled,
     showModal,
   ]);
-
+  // Early return якщо немає гри (після всіх хуків!)
   if (!selectedGame) {
-    return <MainPage />;
+    return null;
   }
-
-  // Adult content overlay - show when adult game is selected but setting is off
+  // Adult content overlay
   if (isAdultBlurred) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">

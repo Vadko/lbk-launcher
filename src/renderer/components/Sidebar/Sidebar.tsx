@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFilterCounts } from '../../hooks/useFilterCounts';
@@ -28,12 +29,13 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = React.memo(
   ({ onOpenHistory, isHorizontal = false }) => {
+    const navigate = useNavigate();
+
     // Use shallow selectors to prevent unnecessary re-renders
     const {
       selectedGame,
       selectedStatuses,
       searchQuery,
-      setSelectedGame,
       setSelectedStatuses: setSelectedStatusesRaw,
       setSearchQuery,
       gamesWithUpdates,
@@ -45,7 +47,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         selectedGame: state.selectedGame,
         selectedStatuses: state.selectedStatuses,
         searchQuery: state.searchQuery,
-        setSelectedGame: state.setSelectedGame,
         setSelectedStatuses: state.setSelectedStatuses,
         setSearchQuery: state.setSearchQuery,
         gamesWithUpdates: state.gamesWithUpdates,
@@ -339,7 +340,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
               animationsEnabled={animationsEnabled}
               selectedGameId={selectedGame?.id}
               gamesWithUpdates={gamesWithUpdates}
-              onSelectGame={setSelectedGame}
+              onSelectGame={(game) => navigate(`/game/${game.id}`)}
               onOpenTranslationPicker={openTranslationPicker}
               isGameDetected={isGameDetected}
               getInstallationInfo={getInstallationInfo}
@@ -401,7 +402,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             selectedGameId={selectedGame?.id}
             gamesWithUpdates={gamesWithUpdates}
             onToggleGroup={toggleGroupExpanded}
-            onSelectGame={setSelectedGame}
+            onSelectGame={(game) => navigate(`/game/${game.id}`)}
             isGameDetected={isGameDetected}
             getInstallationInfo={getInstallationInfo}
           />

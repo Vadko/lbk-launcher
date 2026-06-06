@@ -1,11 +1,12 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import mainBg from '../../resources/main-bg.webp';
 import { AppLoader } from './components/AppLoader/AppLoader';
+import { AppRoutes } from './components/AppRoutes';
 import { GamepadHints } from './components/GamepadHints/GamepadHints';
 import { TitleBar } from './components/Layout/TitleBar';
-import { MainContent } from './components/MainContent/MainContent';
 import { ConfirmModal } from './components/Modal/ConfirmModal';
 import { GlobalModal } from './components/Modal/GlobalModal';
 import { PromoModal } from './components/Modal/PromoModal';
@@ -14,8 +15,6 @@ import { ToastNotifications } from './components/Notifications/ToastNotification
 import { SettingsModal } from './components/Settings/SettingsModal';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
-import { useDeepLink } from './hooks/useDeepLink';
-import { useGamepadModeNavigation } from './hooks/useGamepadModeNavigation';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
@@ -65,7 +64,6 @@ export const App: React.FC = () => {
     loadSteamGames,
     clearSteamGamesCache,
     clearDetectedGamesCache,
-    setSelectedGame,
     syncStatus,
     setSyncStatus,
   } = useStore();
@@ -82,28 +80,6 @@ export const App: React.FC = () => {
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
-
-  // Обробка deep link для навігації до перекладу
-  useDeepLink();
-
-  // Listen for navigation from system notifications
-  useEffect(() => {
-    if (!window.windowControls?.onNavigateToGame) return;
-
-    const unsubscribe = window.windowControls.onNavigateToGame(async (gameId) => {
-      console.log('[App] Navigating to game from notification:', gameId);
-      try {
-        const games = await window.electronAPI.fetchGamesByIds([gameId]);
-        if (games.length > 0) {
-          setSelectedGame(games[0]);
-        }
-      } catch (error) {
-        console.error('[App] Failed to load game:', error);
-      }
-    });
-
-    return unsubscribe;
-  }, [setSelectedGame]);
 
   // Listen for sync status from main process
   useEffect(() => {
@@ -146,7 +122,7 @@ export const App: React.FC = () => {
       unsubscribe();
       if (hideTimeout) clearTimeout(hideTimeout);
     };
-  }, [setSyncStatus]);
+  }, [setSyncStatus, setLoaderVisible]);
 
   // Відстеження першого запуску додатку
   useEffect(() => {
@@ -158,9 +134,6 @@ export const App: React.FC = () => {
       trackEvent('First App Open');
     }
   }, []);
-
-  // Простий скрол геймпадом (тільки в геймпад-режимі)
-  useGamepadModeNavigation(isGamepadMode);
 
   // Track mouse movement for mode switching
   const lastMouseMoveRef = useRef(0);
@@ -426,81 +399,83 @@ export const App: React.FC = () => {
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
   return (
-    <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
-      {/* Loader overlay with fade animation */}
-      <AnimatePresence>
-        {loaderVisible && <AppLoader status={syncStatus} />}
-      </AnimatePresence>
+    <MemoryRouter>
+      <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
+        {/* Loader overlay with fade animation */}
+        <AnimatePresence>
+          {loaderVisible && <AppLoader status={syncStatus} />}
+        </AnimatePresence>
 
-      <div
-        className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
-        data-gamepad-mode={isGamepadMode || undefined}
-      >
-        <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
+        <div
+          className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
+          data-gamepad-mode={isGamepadMode || undefined}
+        >
+          <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
 
-        {/* Main layout - changes based on gamepad mode */}
-        {isGamepadMode ? (
-          /* Gamepad layout: Header + Games strip on top, MainContent below */
-          <div className="flex flex-col h-full pt-8 relative z-10">
-            {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
-            {/* Sidebar - hides when in main-content mode */}
-            <div
-              className={`transition-all duration-300 ease-in-out relative z-20 ${
-                navigationArea === 'main-content'
-                  ? 'max-h-0 opacity-0 overflow-hidden'
-                  : 'max-h-[300px] opacity-100'
-              }`}
-            >
+          {/* Main layout - changes based on gamepad mode */}
+          {isGamepadMode ? (
+            /* Gamepad layout: Header + Games strip on top, MainContent below */
+            <div className="flex flex-col h-full pt-8 relative z-10">
+              {/* Background image */}
+              <img
+                src={mainBg}
+                alt=""
+                className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+                aria-hidden="true"
+              />
+              {/* Sidebar - hides when in main-content mode */}
+              <div
+                className={`transition-all duration-300 ease-in-out relative z-20 ${
+                  navigationArea === 'main-content'
+                    ? 'max-h-0 opacity-0 overflow-hidden'
+                    : 'max-h-[300px] opacity-100'
+                }`}
+              >
+                <Sidebar
+                  onOpenHistory={() => setShowNotificationHistory(true)}
+                  isHorizontal={true}
+                />
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                <AppRoutes isGamepadMode={isGamepadMode} />
+              </div>
+            </div>
+          ) : (
+            /* Normal layout: Vertical sidebar on left, MainContent on right */
+            <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
+              {/* Background image */}
+              <img
+                src={mainBg}
+                alt=""
+                className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
+                aria-hidden="true"
+              />
               <Sidebar
                 onOpenHistory={() => setShowNotificationHistory(true)}
-                isHorizontal={true}
+                isHorizontal={false}
               />
+              <AppRoutes isGamepadMode={isGamepadMode} />
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-              <MainContent />
-            </div>
-          </div>
-        ) : (
-          /* Normal layout: Vertical sidebar on left, MainContent on right */
-          <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
-            {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
-            <Sidebar
-              onOpenHistory={() => setShowNotificationHistory(true)}
-              isHorizontal={false}
-            />
-            <MainContent />
-          </div>
-        )}
+          )}
 
-        {/* Update notifications */}
-        <UpdateNotification />
-        <ToastNotifications />
+          {/* Update notifications */}
+          <UpdateNotification />
+          <ToastNotifications />
 
-        {/* Global modals — GlobalModal last so it renders on top of others */}
-        <ConfirmModal />
-        <SettingsModal />
-        <GlobalModal />
-        <NotificationModal
-          isOpen={showNotificationHistory}
-          onClose={() => setShowNotificationHistory(false)}
-        />
-        <PromoModal />
+          {/* Global modals — GlobalModal last so it renders on top of others */}
+          <ConfirmModal />
+          <SettingsModal />
+          <GlobalModal />
+          <NotificationModal
+            isOpen={showNotificationHistory}
+            onClose={() => setShowNotificationHistory(false)}
+          />
+          <PromoModal />
 
-        {/* Gamepad hints */}
-        <GamepadHints />
-      </div>
-    </MotionConfig>
+          {/* Gamepad hints */}
+          <GamepadHints />
+        </div>
+      </MotionConfig>
+    </MemoryRouter>
   );
 };
