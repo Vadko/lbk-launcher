@@ -130,7 +130,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Поширити"
+      title="Поділитися"
       classNames="!max-w-[514px]"
       usePortal
     >

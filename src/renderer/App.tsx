@@ -2,7 +2,6 @@ import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { useGamepads } from 'react-ts-gamepads';
 import mainBg from '../../resources/main-bg.webp';
 import { AppLoader } from './components/AppLoader/AppLoader';
 import { AppRoutes } from './components/AppRoutes';
@@ -70,7 +69,9 @@ export const App: React.FC = () => {
   } = useStore();
   const { animationsEnabled, autoDetectInstalledGames, liquidGlassEnabled } =
     useSettingsStore();
-  const { isGamepadMode, setGamepadMode, navigationArea } = useGamepadModeStore();
+  const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
+  const setGamepadMode = useGamepadModeStore((s) => s.setGamepadMode);
+  const navigationArea = useGamepadModeStore((s) => s.navigationArea);
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
@@ -137,64 +138,63 @@ export const App: React.FC = () => {
   // Track mouse movement for mode switching
   const lastMouseMoveRef = useRef(0);
 
-  useGamepads((gamepads) => {
-    // If already in gamepad mode, nothing to do here
-    if (useGamepadModeStore.getState().isGamepadMode) return;
-
-    // Find first valid gamepad (filter out phantom devices)
-    const gp = Object.values(gamepads).find(isValidGamepad);
-    if (!gp) return;
-
-    const anyButtonPressed = gp.buttons.some((b) => b.pressed);
-    const anyAxisMoved = gp.axes.some((axis) => Math.abs(axis) > MODE_SWITCH_DEADZONE);
-
-    if (anyButtonPressed || anyAxisMoved) {
-      setGamepadMode(true);
-    }
-  });
-
-  // Mouse movement and gamepad connect/disconnect events
+  // Mode switching: poll the gamepad in a RAF loop so a first button press
+  // or stick movement flips us into gamepad mode. Loop touches no React
+  // state, so an idle gamepad costs zero re-renders.
   useEffect(() => {
     const MOUSE_THROTTLE_MS = 500;
 
-    // Gamepad connected → gamepad mode (only for valid gamepads)
     const handleGamepadConnected = (e: GamepadEvent) => {
-      if (!isValidGamepad(e.gamepad)) {
-        return;
-      }
+      if (!isValidGamepad(e.gamepad)) return;
       console.log('[App] Gamepad connected:', e.gamepad.id);
       setGamepadMode(true);
     };
 
-    // Gamepad disconnected → mouse mode (if no valid gamepads remain)
     const handleGamepadDisconnected = (e: GamepadEvent) => {
       console.log('[App] Gamepad disconnected:', e.gamepad.id);
-      const gamepads = navigator.getGamepads();
-      const stillConnected = Array.from(gamepads).some(isValidGamepad);
+      const stillConnected = Array.from(navigator.getGamepads()).some(isValidGamepad);
       if (!stillConnected) {
         setGamepadMode(false);
       }
     };
 
-    // Mouse movement → mouse mode (throttled)
     const handleMouseMove = () => {
       const now = Date.now();
       if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
       lastMouseMoveRef.current = now;
-
       if (useGamepadModeStore.getState().isGamepadMode) {
         setGamepadMode(false);
       }
     };
 
+    let rafId = 0;
+    const tick = () => {
+      if (!useGamepadModeStore.getState().isGamepadMode) {
+        for (const pad of navigator.getGamepads()) {
+          if (!pad || !pad.connected || !isValidGamepad(pad)) continue;
+          const anyButtonPressed = pad.buttons.some((b) => b.pressed);
+          const anyAxisMoved = pad.axes.some(
+            (axis) => Math.abs(axis) > MODE_SWITCH_DEADZONE
+          );
+          if (anyButtonPressed || anyAxisMoved) {
+            setGamepadMode(true);
+            break;
+          }
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
     window.addEventListener('mousemove', handleMouseMove);
+    rafId = requestAnimationFrame(tick);
 
     return () => {
       window.removeEventListener('gamepadconnected', handleGamepadConnected);
       window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
       window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(rafId);
     };
   }, [setGamepadMode]);
 

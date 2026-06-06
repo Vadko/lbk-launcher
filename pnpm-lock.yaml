@@ -59,9 +59,9 @@ importers:
       react-router-dom:
         specifier: ^7.15.0
         version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      react-ts-gamepads:
-        specifier: 1.0.8
-        version: 1.0.8(react@19.2.6)
+      swiper:
+        specifier: 12.1.4
+        version: 12.1.4
       zustand:
         specifier: 4.5.7
         version: 4.5.7(@types/react@19.2.14)(react@19.2.6)
@@ -3704,12 +3704,6 @@ packages:
       react-dom:
         optional: true
 
-  react-ts-gamepads@1.0.8:
-    resolution: {integrity: sha512-DHPwxsPH1RM6iVpPp14+ITIpO2GarMAdUfbM35GwgdEI5rfmSQM9UZh2Qqo0Cp0gkPJNiTyRnqgrwkp5iiic9A==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: ^18.0.0 || ^19.0.0
-
   react@19.2.6:
     resolution: {integrity: sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==}
     engines: {node: '>=0.10.0'}
@@ -4020,6 +4014,10 @@ packages:
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
+
+  swiper@12.1.4:
+    resolution: {integrity: sha512-bihiwoKMOQwW8FfdUbo1DgkVH25E+4ZELIq0oopL1KTKBteLuaTMi/wwFjMxtlhTkk45k3XQ89D1Fvv0spSqBA==}
+    engines: {node: '>= 4.7.0'}
 
   tailwindcss@3.4.19:
     resolution: {integrity: sha512-3ofp+LL8E+pK/JuPLPggVAIaEuhvIz4qNcf3nA1Xn2o/7fb7s/TYpHhwGDv1ZU3PkBluUVaF8PyCHcm48cKLWQ==}
@@ -8147,10 +8145,6 @@ snapshots:
     optionalDependencies:
       react-dom: 19.2.6(react@19.2.6)
 
-  react-ts-gamepads@1.0.8(react@19.2.6):
-    dependencies:
-      react: 19.2.6
-
   react@19.2.6: {}
 
   read-binary-file-arch@1.0.6:
@@ -8517,6 +8511,8 @@ snapshots:
       has-flag: 4.0.0
 
   supports-preserve-symlinks-flag@1.0.0: {}
+
+  swiper@12.1.4: {}
 
   tailwindcss@3.4.19(yaml@2.8.3):
     dependencies:

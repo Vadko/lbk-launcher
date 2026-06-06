@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGamepads } from 'react-ts-gamepads';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
-import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
+import {
+  playBackSound,
+  playConfirmSound,
+  playNavigateSound,
+} from '../utils/gamepadSounds';
 import { isValidGamepad } from '../utils/isValidGamepad';
 
 // Gamepad button mapping (Xbox layout)
@@ -37,82 +40,6 @@ const DEADZONE = 0.5;
 const INPUT_DELAY = 180;
 const SCROLL_AMOUNT = 300;
 
-// Audio context for sound effects
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-  // Resume if suspended (browser autoplay policy)
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
-  }
-  return audioContext;
-}
-
-function playNavigateSound(): void {
-  if (!document.hasFocus()) return;
-  if (!useSettingsStore.getState().gamepadSoundsEnabled) return;
-  try {
-    const ctx = getAudioContext();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.05);
-  } catch {
-    // Audio not available
-  }
-}
-
-function playConfirmSound(): void {
-  if (!document.hasFocus()) return;
-  if (!useSettingsStore.getState().gamepadSoundsEnabled) return;
-  try {
-    const ctx = getAudioContext();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.setValueAtTime(600, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.08);
-    oscillator.type = 'sine';
-    gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.1);
-  } catch {
-    // Audio not available
-  }
-}
-
-function playBackSound(): void {
-  if (!document.hasFocus()) return;
-  if (!useSettingsStore.getState().gamepadSoundsEnabled) return;
-  try {
-    const ctx = getAudioContext();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.setValueAtTime(500, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
-    oscillator.type = 'sine';
-    gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.12);
-  } catch {
-    // Audio not available
-  }
-}
-
 /**
  * Gamepad navigation hook for gamepad mode
  * - Left/Right: Navigate between game cards
@@ -124,40 +51,20 @@ export function useGamepadModeNavigation(enabled = true) {
   const navigate = useNavigate();
   const lastInputRef = useRef<Record<string, number>>({});
   const gameCardsRef = useRef<HTMLElement[]>([]);
-  const [gamepads, setGamepads] = useState<Record<number, Gamepad>>({});
 
-  const {
-    focusedGameIndex,
-    setFocusedGameIndex,
-    navigationArea,
-    setNavigationArea,
-    totalGames,
-  } = useGamepadModeStore();
-  const { selectedGame, setSelectedGame } = useStore();
+  const focusedGameIndex = useGamepadModeStore((s) => s.focusedGameIndex);
+  const setFocusedGameIndex = useGamepadModeStore((s) => s.setFocusedGameIndex);
+  const navigationArea = useGamepadModeStore((s) => s.navigationArea);
+  const setNavigationArea = useGamepadModeStore((s) => s.setNavigationArea);
+  const totalGames = useGamepadModeStore((s) => s.totalGames);
+  const selectedGame = useStore((s) => s.selectedGame);
+  const setSelectedGame = useStore((s) => s.setSelectedGame);
 
   const prevNavigationAreaRef = useRef<string | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const wasModalOpenRef = useRef<boolean>(false);
   const prevButtonStatesRef = useRef<boolean[]>([]);
   const ignoreScrollDownRef = useRef<boolean>(false);
-
-  // Subscribe to gamepad state, filtering out non-gamepad devices (flight sim joysticks, etc.)
-  // to prevent constant re-renders from their analog axis noise.
-  useGamepads((pads) => {
-    const filtered: Record<number, Gamepad> = {};
-    for (const [key, pad] of Object.entries(pads)) {
-      if (isValidGamepad(pad)) {
-        filtered[Number(key)] = pad;
-      }
-    }
-    setGamepads((prev) => {
-      // No valid gamepads now and state already empty — keep same reference, skip re-render
-      if (Object.keys(filtered).length === 0 && Object.keys(prev).length === 0) {
-        return prev;
-      }
-      return filtered;
-    });
-  });
 
   // Input debouncing
   const canInput = useCallback((key: string): boolean => {
@@ -976,78 +883,104 @@ export function useGamepadModeNavigation(enabled = true) {
     }
   }, [navigationArea]);
 
-  // Main gamepad polling effect
+  // Latest handlers proxied through a ref so the RAF loop below always sees
+  // the current closures without having to depend on them. Pattern borrowed
+  // from React Three Fiber's useFrame: input lives outside React state,
+  // re-renders happen only when a handler actually mutates the store.
+  const handlersRef = useRef({
+    modal: handleModalNavigation,
+    header: handleHeaderNavigation,
+    games: handleGamesNavigation,
+    mainContent: handleMainContentNavigation,
+    updatePrevButtons: updatePrevButtonStates,
+  });
+  useEffect(() => {
+    handlersRef.current = {
+      modal: handleModalNavigation,
+      header: handleHeaderNavigation,
+      games: handleGamesNavigation,
+      mainContent: handleMainContentNavigation,
+      updatePrevButtons: updatePrevButtonStates,
+    };
+  });
+
+  // Main gamepad polling loop. Runs at requestAnimationFrame cadence but
+  // does NOT touch React state, so an idle gamepad costs zero re-renders.
   useEffect(() => {
     if (!enabled) return;
 
-    // Find first connected gamepad
-    const gp = Object.values(gamepads).find((g) => g?.connected);
-    if (!gp) return;
+    let rafId = 0;
 
-    // Check for modal
-    const modalOpen = !!document.querySelector('[role="dialog"]');
-
-    // Track modal open/close for focus restoration
-    if (modalOpen && !wasModalOpenRef.current) {
-      // Modal just opened - save currently focused element and clear selection
-      previouslyFocusedRef.current = document.activeElement as HTMLElement;
-      document.querySelectorAll('[data-gamepad-selected]').forEach((e) => {
-        e.removeAttribute('data-gamepad-selected');
-      });
-    } else if (!modalOpen && wasModalOpenRef.current) {
-      // Modal just closed - restore focus and clear any modal selection
-      document.querySelectorAll('[data-gamepad-selected]').forEach((e) => {
-        e.removeAttribute('data-gamepad-selected');
-      });
-      if (
-        previouslyFocusedRef.current &&
-        document.body.contains(previouslyFocusedRef.current)
-      ) {
-        previouslyFocusedRef.current.focus();
-      } else {
-        // If previous element is gone, focus the primary action button
-        const primaryButton = document.querySelector<HTMLElement>(
-          '[data-gamepad-primary-action]'
-        );
-        if (primaryButton) {
-          primaryButton.focus();
+    const tick = () => {
+      const pads = navigator.getGamepads();
+      let gp: Gamepad | null = null;
+      for (const pad of pads) {
+        if (pad && pad.connected && isValidGamepad(pad)) {
+          gp = pad;
+          break;
         }
       }
-      previouslyFocusedRef.current = null;
-    }
-    wasModalOpenRef.current = modalOpen;
 
-    if (modalOpen) {
-      handleModalNavigation(gp);
-      // Update button states at end of frame
-      updatePrevButtonStates(gp);
-      return;
-    }
+      if (!gp) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
 
-    // Handle navigation based on current area
-    if (navigationArea === 'header') {
-      handleHeaderNavigation(gp);
-    } else if (navigationArea === 'games') {
-      handleGamesNavigation(gp);
-    } else if (navigationArea === 'main-content') {
-      handleMainContentNavigation(gp);
-    }
+      const modalOpen = !!document.querySelector('[role="dialog"]');
 
-    // Track previous area for "just entered" detection
-    prevNavigationAreaRef.current = navigationArea;
+      // Track modal open/close for focus restoration
+      if (modalOpen && !wasModalOpenRef.current) {
+        // Modal just opened - save currently focused element and clear selection
+        previouslyFocusedRef.current = document.activeElement as HTMLElement;
+        document.querySelectorAll('[data-gamepad-selected]').forEach((e) => {
+          e.removeAttribute('data-gamepad-selected');
+        });
+      } else if (!modalOpen && wasModalOpenRef.current) {
+        // Modal just closed - restore focus and clear any modal selection
+        document.querySelectorAll('[data-gamepad-selected]').forEach((e) => {
+          e.removeAttribute('data-gamepad-selected');
+        });
+        if (
+          previouslyFocusedRef.current &&
+          document.body.contains(previouslyFocusedRef.current)
+        ) {
+          previouslyFocusedRef.current.focus();
+        } else {
+          // If previous element is gone, focus the primary action button
+          const primaryButton = document.querySelector<HTMLElement>(
+            '[data-gamepad-primary-action]'
+          );
+          if (primaryButton) {
+            primaryButton.focus();
+          }
+        }
+        previouslyFocusedRef.current = null;
+      }
+      wasModalOpenRef.current = modalOpen;
 
-    // Update button states at end of frame
-    updatePrevButtonStates(gp);
-  }, [
-    enabled,
-    gamepads,
-    navigationArea,
-    handleHeaderNavigation,
-    handleGamesNavigation,
-    handleMainContentNavigation,
-    handleModalNavigation,
-    updatePrevButtonStates,
-  ]);
+      const handlers = handlersRef.current;
+
+      if (modalOpen) {
+        handlers.modal(gp);
+      } else {
+        const area = useGamepadModeStore.getState().navigationArea;
+        if (area === 'header') {
+          handlers.header(gp);
+        } else if (area === 'games') {
+          handlers.games(gp);
+        } else if (area === 'main-content') {
+          handlers.mainContent(gp);
+        }
+        prevNavigationAreaRef.current = area;
+      }
+
+      handlers.updatePrevButtons(gp);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [enabled]);
 
   // Initial focus on first game card when entering gamepad mode
   useEffect(() => {

@@ -5,6 +5,7 @@ interface InputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   icon?: React.ReactNode;
+  type?: string;
   className?: string;
 }
 
@@ -13,6 +14,7 @@ export const Input: React.FC<InputProps> = ({
   onChange,
   placeholder,
   icon,
+  type = 'text',
   className = '',
 }) => {
   // Track IME composition state to prevent double input (safety net for
@@ -28,7 +30,7 @@ export const Input: React.FC<InputProps> = ({
         </div>
       )}
       <input
-        type="text"
+        type={type}
         value={value}
         onChange={(e) => {
           if (isComposingRef.current) {
