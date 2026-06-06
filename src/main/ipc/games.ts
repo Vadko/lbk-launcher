@@ -448,7 +448,7 @@ export function setupGamesHandlers(): void {
 
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
-        // Використати game.steam_app_id якщо є, інакше шукати по шляху
+        // Use game.steam_app_id if available, otherwise find by path
         let appId = game.steam_app_id?.toString() || null;
 
         if (!appId) {
