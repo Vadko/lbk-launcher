@@ -20,6 +20,7 @@ import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { AuthorsList } from '../components/MainContent/AuthorsList';
 import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
 import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
+import { SwiperSlider } from '../components/MainContent/Gallery';
 import { GameHero } from '../components/MainContent/GameHero';
 import { ImportantNotice } from '../components/MainContent/ImportantNotice';
 import { InfoCard } from '../components/MainContent/InfoCard';
