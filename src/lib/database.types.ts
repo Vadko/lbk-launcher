@@ -9,6 +9,107 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      api_token_usage: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          game_id: string | null
+          game_slug: string | null
+          id: string
+          status_code: number
+          success: boolean
+          token_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          game_slug?: string | null
+          id?: string
+          status_code: number
+          success: boolean
+          token_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          game_slug?: string | null
+          id?: string
+          status_code?: number
+          success?: boolean
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_token_usage_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_token_usage_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "api_token_usage_token_id_fkey"
+            columns: ["token_id"]
+            referencedRelation: "api_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          prefix: string
+          revoked_at: string | null
+          revoked_by: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name: string
+          prefix: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          prefix?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_tokens_revoked_by_fkey"
+            columns: ["revoked_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_tokens_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authors: {
         Row: {
           created_at: string | null
@@ -410,6 +511,7 @@ export type Database = {
           epic_archive_hash: string | null
           epic_archive_path: string | null
           epic_archive_size: string | null
+          epic_store_url: string | null
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -419,6 +521,7 @@ export type Database = {
           gog_archive_hash: string | null
           gog_archive_path: string | null
           gog_archive_size: string | null
+          gog_store_url: string | null
           hide: boolean
           id: string
           install_paths:
@@ -432,6 +535,7 @@ export type Database = {
           logo_path: string | null
           name: string
           platforms: string[]
+          screenshots: string[] | null
           search_keywords: string | null
           source_language: string | null
           status: Database["public"]["Enums"]["game_status"]
@@ -466,6 +570,7 @@ export type Database = {
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
           xbox_archive_size: string | null
+          xbox_store_url: string | null
           youtube: string | null
         }
         Insert: {
@@ -493,6 +598,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -502,6 +608,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -515,6 +622,7 @@ export type Database = {
           logo_path?: string | null
           name: string
           platforms?: string[]
+          screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -549,6 +657,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Update: {
@@ -576,6 +685,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -585,6 +695,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -598,6 +709,7 @@ export type Database = {
           logo_path?: string | null
           name?: string
           platforms?: string[]
+          screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
           status?: Database["public"]["Enums"]["game_status"]
@@ -632,6 +744,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -689,6 +802,7 @@ export type Database = {
           epic_archive_hash: string | null
           epic_archive_path: string | null
           epic_archive_size: string | null
+          epic_store_url: string | null
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -697,6 +811,7 @@ export type Database = {
           gog_archive_hash: string | null
           gog_archive_path: string | null
           gog_archive_size: string | null
+          gog_store_url: string | null
           hide: boolean
           id: string
           install_paths:
@@ -712,6 +827,7 @@ export type Database = {
           name_search: string | null
           platforms: string[]
           project_id: string | null
+          screenshots: string[] | null
           search_keywords: string | null
           slug: string
           source_language: string | null
@@ -749,6 +865,7 @@ export type Database = {
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
           xbox_archive_size: string | null
+          xbox_store_url: string | null
           youtube: string | null
         }
         Insert: {
@@ -778,6 +895,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -786,6 +904,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -801,6 +920,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          screenshots?: string[] | null
           search_keywords?: string | null
           slug: string
           source_language?: string | null
@@ -838,6 +958,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Update: {
@@ -867,6 +988,7 @@ export type Database = {
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
           epic_archive_size?: string | null
+          epic_store_url?: string | null
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -875,6 +997,7 @@ export type Database = {
           gog_archive_hash?: string | null
           gog_archive_path?: string | null
           gog_archive_size?: string | null
+          gog_store_url?: string | null
           hide?: boolean
           id?: string
           install_paths?:
@@ -890,6 +1013,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          screenshots?: string[] | null
           search_keywords?: string | null
           slug?: string
           source_language?: string | null
@@ -927,6 +1051,7 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
+          xbox_store_url?: string | null
           youtube?: string | null
         }
         Relationships: [
@@ -1774,7 +1899,6 @@ export type Database = {
           feedback_email_notifications: boolean
           full_name: string | null
           id: string
-          password_hash: string
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
           telegram_link_token: string | null
@@ -1793,7 +1917,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -1812,7 +1935,6 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
-          password_hash?: string
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null

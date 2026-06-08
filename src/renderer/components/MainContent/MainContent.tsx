@@ -33,6 +33,7 @@ import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
 import { AuthorsList } from './AuthorsList';
 import { DownloadProgressCard } from './DownloadProgressCard';
 import { FundraisingProgressCard } from './FundraisingProgressCard';
+import SwiperSlider from './Gallery';
 import { GameHero } from './GameHero';
 import { ImportantNotice } from './ImportantNotice';
 import { InfoCard } from './InfoCard';
@@ -49,7 +50,7 @@ export const MainContent: React.FC = () => {
     checkInstallationStatus,
     isCheckingInstallationStatus,
     isGameDetected,
-    installedGames,
+    installedTranslations,
   } = useStore();
   const { showModal } = useModalStore();
   const {
@@ -68,7 +69,9 @@ export const MainContent: React.FC = () => {
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
 
-  const installationInfo = selectedGame ? installedGames.get(selectedGame.id) : undefined;
+  const installationInfo = selectedGame
+    ? installedTranslations.get(selectedGame.id)
+    : undefined;
   const isCheckingInstallation = selectedGame
     ? isCheckingInstallationStatus(selectedGame.id)
     : false;
@@ -90,7 +93,7 @@ export const MainContent: React.FC = () => {
   // Toggle favorite handler
   const handleToggleFavorite = useCallback(() => {
     if (selectedGame) {
-      toggleFavoriteGame(selectedGame.id);
+      toggleFavoriteGame(selectedGame.id, selectedGame.name);
     }
   }, [selectedGame, toggleFavoriteGame]);
 
@@ -373,7 +376,7 @@ export const MainContent: React.FC = () => {
   if (isAdultBlurred) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-        <div className="glass-card max-w-md p-8">
+        <div className="glass-card-no-motion max-w-md p-8">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
             <EyeOff size={40} className="text-red-400" />
           </div>
@@ -444,7 +447,7 @@ export const MainContent: React.FC = () => {
           <GameHero game={selectedGame} />
 
           {/* Actions block */}
-          <div className="glass-card mb-6 grid gap-6">
+          <div className="glass-card-no-motion mb-6 grid gap-6">
             <div className="flex flex-wrap items-center gap-3">
               {/* Primary actions */}
               {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
@@ -551,7 +554,7 @@ export const MainContent: React.FC = () => {
             )}
 
             {(isInstalling || isPaused || isWaitingForNetwork) && (
-              <div className="glass-card">
+              <div className="glass-card-no-motion">
                 {downloadProgress && downloadProgress.totalBytes > 0 ? (
                   <DownloadProgressCard
                     progress={installProgress}
@@ -585,7 +588,7 @@ export const MainContent: React.FC = () => {
             )}
 
             {isUninstalling && (
-              <div className="glass-card">
+              <div className="glass-card-no-motion">
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                   <span className="text-sm font-medium text-text-main">
@@ -598,7 +601,7 @@ export const MainContent: React.FC = () => {
 
           {/* Author card */}
           {selectedGame.team && (
-            <div className="glass-card mb-6">
+            <div className="glass-card-no-motion mb-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
@@ -697,7 +700,7 @@ export const MainContent: React.FC = () => {
                   transition={{ duration: 0.25, ease: 'easeOut' }}
                   className="overflow-visible flex-shrink-0"
                 >
-                  <div className="glass-card h-full flex flex-col justify-center gap-4 w-[320px] p-6">
+                  <div className="glass-card-no-motion h-full flex flex-col justify-center gap-4 w-[320px] p-6">
                     <h3 className="text-base font-semibold text-text-main">
                       Знайшли помилку?
                     </h3>
@@ -738,12 +741,31 @@ export const MainContent: React.FC = () => {
               <VideoCard videoUrl={selectedGame.video_url} />
             </motion.div>
           )}
+          {selectedGame.screenshots && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-6"
+            >
+              <div className="glass-card-no-motion">
+                <SwiperSlider
+                  slides={selectedGame.screenshots}
+                  spaceBetween={30}
+                  slidesPerView={3}
+                  pagination={false}
+                  thumbs={true}
+                  loop={true}
+                  updated_at={selectedGame.updated_at}
+                />
+              </div>
+            </motion.div>
+          )}
 
           {selectedGame.description && (
             <motion.div
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card mb-6"
+              className="glass-card-no-motion mb-6"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про українізатор
@@ -758,7 +780,7 @@ export const MainContent: React.FC = () => {
             <motion.div
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card mb-6"
+              className="glass-card-no-motion mb-6"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про гру

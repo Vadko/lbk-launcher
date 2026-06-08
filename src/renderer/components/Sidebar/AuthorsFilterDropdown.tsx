@@ -133,7 +133,7 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                 <Search size={14} className="text-text-muted flex-shrink-0" />
                 <input
                   ref={searchInputRef}
-                  type="text"
+                  type="search"
                   value={search}
                   onChange={(e) => {
                     if (isComposingRef.current) return;
@@ -149,14 +149,6 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                   placeholder="Пошук автора..."
                   className="flex-1 bg-transparent text-sm text-text-main placeholder-text-muted outline-none"
                 />
-                {search && (
-                  <button
-                    onClick={() => setSearch('')}
-                    className="text-text-muted hover:text-text-main transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
               </div>
 
               {/* Authors list */}

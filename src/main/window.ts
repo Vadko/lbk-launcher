@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/electron/main';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import { join } from 'path';
 import {
   applyLiquidGlass,
@@ -16,6 +16,11 @@ let liquidGlassId: number | null = null;
 
 export async function createMainWindow(): Promise<BrowserWindow> {
   console.log('[Window] Creating main window...');
+
+  // App is dark-only. Force the native appearance to dark so the macOS liquid
+  // glass material renders dark even when the system is in light mode (otherwise
+  // the transparent body shows a bright "light theme" through the glass).
+  nativeTheme.themeSource = 'dark';
 
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();

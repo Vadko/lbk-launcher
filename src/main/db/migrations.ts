@@ -527,6 +527,7 @@ const migrations: Migration[] = [
           name_search TEXT,
           platforms TEXT NOT NULL,
           project_id TEXT,
+          screenshots TEXT,
           slug TEXT NOT NULL,
           status TEXT NOT NULL,
           support_url TEXT,
@@ -1024,6 +1025,90 @@ const migrations: Migration[] = [
       `);
       console.log(
         '[Migrations] Completed: resync_for_steam_launch_options - will resync on next startup'
+      );
+    },
+  },
+  {
+    name: 'add_screenshots_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='screenshots'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_screenshots_column');
+        db.exec(`ALTER TABLE games ADD COLUMN screenshots TEXT;`);
+        console.log('[Migrations] Completed: add_screenshots_column');
+      }
+    },
+  },
+  {
+    name: 'resync_for_screenshots',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_screenshots_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_screenshots');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_screenshots_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_screenshots - will resync on next startup'
+      );
+    },
+  },
+  {
+    name: 'add_store_url_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='epic_store_url'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_store_url_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN epic_store_url TEXT;
+          ALTER TABLE games ADD COLUMN gog_store_url TEXT;
+          ALTER TABLE games ADD COLUMN xbox_store_url TEXT;
+        `);
+        console.log('[Migrations] Completed: add_store_url_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_store_urls',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_store_urls_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_store_urls');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_store_urls_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_store_urls - will resync on next startup'
       );
     },
   },

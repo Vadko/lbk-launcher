@@ -147,16 +147,21 @@ export async function extractArchive(
       console.log(`[Installer] Extracted: ${data.file || 'file'}`);
     });
 
+    // node-7z occasionally emits spurious 0% events mid-extraction (parser quirks
+    // around 7zip's backspace/CR-based in-place updates). Drop any non-monotonic
+    // value so the UI doesn't flicker between the real percent and 0.
+    let lastPercent = -1;
     stream.on('progress', (progress: { percent?: number; fileCount?: number }) => {
-      if (progress.percent !== undefined) {
-        const percent = Math.round(progress.percent);
-        console.log(`[Installer] Extraction progress: ${percent}%`);
-        onStatus?.({
-          message: `Розпакування файлів... ${percent}%`,
-          progress: percent,
-          phase: 'install',
-        });
-      }
+      if (progress.percent === undefined) return;
+      const percent = Math.round(progress.percent);
+      if (percent <= lastPercent) return;
+      lastPercent = percent;
+      console.log(`[Installer] Extraction progress: ${percent}%`);
+      onStatus?.({
+        message: `Розпакування файлів... ${percent}%`,
+        progress: percent,
+        phase: 'install',
+      });
     });
 
     stream.on('end', () => {

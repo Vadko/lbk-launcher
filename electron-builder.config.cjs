@@ -66,7 +66,14 @@ module.exports = {
       },
     ],
     icon: 'resources/icon.png',
-    verifyUpdateCodeSignature: false,
+    azureSignOptions: process.env.AZURE_TENANT_ID
+      ? {
+          publisherName: process.env.AZURE_PUBLISHER_NAME,
+          endpoint: process.env.AZURE_CODE_SIGNING_ENDPOINT,
+          codeSigningAccountName: process.env.AZURE_CODE_SIGNING_ACCOUNT_NAME,
+          certificateProfileName: process.env.AZURE_CERT_PROFILE_NAME,
+        }
+      : undefined,
     forceCodeSigning: false,
     legalTrademarks: '© 2026 LBK UA',
     extraResources: [
@@ -134,7 +141,7 @@ module.exports = {
       },
     ],
     category: 'public.app-category.utilities',
-    icon: 'resources/icon.icns',
+    icon: 'resources/icon-dark-mode.icns',
     hardenedRuntime: true,
     gatekeeperAssess: false,
     darkModeSupport: true,
@@ -175,7 +182,7 @@ module.exports = {
       width: 540,
       height: 380,
     },
-    icon: 'resources/icon.icns',
+    icon: 'resources/icon-dark-mode.icns',
     backgroundColor: '#323232',
     artifactName: 'LBK-Launcher-${version}-${arch}.${ext}',
   },

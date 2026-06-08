@@ -1,6 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Download, Languages, RefreshCw, TrendingUp, X } from 'lucide-react';
+import {
+  BookmarkCheck,
+  Download,
+  Languages,
+  RefreshCw,
+  TrendingUp,
+  X,
+} from 'lucide-react';
 import React, { useCallback } from 'react';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import {
   type ToastNotification,
@@ -17,6 +25,8 @@ const getToastIcon = (type: ToastNotification['type']) => {
       return <Download size={20} className="text-white" />;
     case 'progress-change':
       return <TrendingUp size={20} className="text-white" />;
+    case 'first-favorite':
+      return <BookmarkCheck size={20} className="text-text-dark" />;
     default:
       return <RefreshCw size={20} className="text-white" />;
   }
@@ -32,6 +42,8 @@ const getToastGradient = (type: ToastNotification['type']) => {
       return 'from-color-main to-color-accent';
     case 'progress-change':
       return 'from-color-mixed to-color-mixed';
+    case 'first-favorite':
+      return 'from-color-mixed to-color-mixed';
     default:
       return 'from-color-accent to-color-main';
   }
@@ -45,6 +57,8 @@ const getToastBorder = (type: ToastNotification['type']) => {
       return 'border-color-accent';
     case 'app-update':
       return 'border-color-main';
+    case 'first-favorite':
+      return 'border-color-mixed';
     case 'progress-change':
       return 'border-color-mixed';
     default:
@@ -60,6 +74,8 @@ const getToastTitle = (type: ToastNotification['type']) => {
       return 'Доступне оновлення';
     case 'app-update':
       return 'Оновлення застосунку';
+    case 'first-favorite':
+      return 'Додано в улюблені';
     case 'progress-change':
       return 'Оновлення прогресу';
     default:
@@ -71,11 +87,19 @@ export const ToastNotifications: React.FC = () => {
   const toasts = useSubscriptionsStore((state) => state.toasts);
   const dismissToast = useSubscriptionsStore((state) => state.dismissToast);
   const setSelectedGame = useStore((state) => state.setSelectedGame);
+  const setSpecialFilter = useSettingsStore((state) => state.setSpecialFilter);
 
   const handleToastClick = useCallback(
     async (toast: ToastNotification) => {
       // Don't navigate for app-update notifications
       if (toast.type === 'app-update') {
+        return;
+      }
+
+      // For first favorite notification, apply the favorites filter
+      if (toast.type === 'first-favorite') {
+        setSpecialFilter('favorite-translations');
+        dismissToast(toast.id);
         return;
       }
 
@@ -91,7 +115,7 @@ export const ToastNotifications: React.FC = () => {
 
       dismissToast(toast.id);
     },
-    [setSelectedGame, dismissToast]
+    [setSelectedGame, dismissToast, setSpecialFilter]
   );
 
   if (toasts.length === 0) return null;

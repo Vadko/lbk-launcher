@@ -36,7 +36,7 @@ interface Store {
   steamGames: Map<string, string>; // installdir (lowercase) -> full path
 
   // Installation State
-  installedGames: Map<string, InstallationInfo>; // Metadata про встановлені українізатори
+  installedTranslations: Map<string, InstallationInfo>; // Metadata про встановлені українізатори
   detectedGames: Map<string, DetectedGameInfo>; // Ігри знайдені на системі
   gamesWithUpdates: Set<string>; // Ігри з доступними оновленнями
   installationProgress: Map<string, InstallationProgress>;
@@ -98,7 +98,7 @@ export const useStore = create<Store>((set, get) => ({
   steamGames: new Map(),
 
   // Installation State
-  installedGames: new Map(),
+  installedTranslations: new Map(),
   detectedGames: new Map(), // Не персиститься
   gamesWithUpdates: new Set(),
   installationProgress: new Map(),
@@ -153,26 +153,29 @@ export const useStore = create<Store>((set, get) => ({
       if (installedGameIds.length === 0) {
         console.log('[Store] No installed translations found');
         set({
-          installedGames: new Map(),
+          installedTranslations: new Map(),
           gamesWithUpdates: new Set(),
         });
         return;
       }
 
       // 2. Отримати інфо про ці ігри з бази даних
-      const installedGames = await window.electronAPI.fetchGamesByIds(installedGameIds);
-      console.log(`[Store] Fetched ${installedGames.length} game records from database`);
+      const gamesWithTranslations =
+        await window.electronAPI.fetchGamesByIds(installedGameIds);
+      console.log(
+        `[Store] Fetched ${gamesWithTranslations.length} game records from database`
+      );
 
       // 3. Перевірити installation info для кожної гри (паралельно)
       const checkResults = await Promise.all(
-        installedGames.map(async (game) => {
+        gamesWithTranslations.map(async (game) => {
           const installInfo = await window.electronAPI.checkInstallation(game);
           return { game, installInfo };
         })
       );
 
       // Create fresh maps (not copying from old state to properly handle deletions)
-      const installedGamesMap = new Map<string, InstallationInfo>();
+      const installedTranslationsMap = new Map<string, InstallationInfo>();
       const gamesWithUpdatesSet = new Set<string>();
 
       // Обробляємо результати
@@ -180,7 +183,7 @@ export const useStore = create<Store>((set, get) => ({
 
       for (const { game, installInfo } of checkResults) {
         if (installInfo) {
-          installedGamesMap.set(game.id, installInfo);
+          installedTranslationsMap.set(game.id, installInfo);
 
           // Check if installed version differs from current version in DB
           if (game.version && installInfo.version !== game.version) {
@@ -229,11 +232,13 @@ export const useStore = create<Store>((set, get) => ({
       }
 
       set({
-        installedGames: installedGamesMap,
+        installedTranslations: installedTranslationsMap,
         gamesWithUpdates: gamesWithUpdatesSet,
       });
 
-      console.log(`[Store] Loaded ${installedGamesMap.size} installed translations`);
+      console.log(
+        `[Store] Loaded ${installedTranslationsMap.size} installed translations`
+      );
     } catch (error) {
       console.error('[Store] Error loading installed translations:', error);
     }
@@ -242,7 +247,7 @@ export const useStore = create<Store>((set, get) => ({
   clearInstalledGamesCache: () => {
     console.log('[Store] Clearing installed games cache');
     set({
-      installedGames: new Map(),
+      installedTranslations: new Map(),
     });
   },
 
@@ -259,18 +264,18 @@ export const useStore = create<Store>((set, get) => ({
       const info = await window.electronAPI.checkInstallation(game);
 
       set((state) => {
-        const newInstalledGames = new Map(state.installedGames);
+        const newInstalledTranslations = new Map(state.installedTranslations);
         if (info) {
-          newInstalledGames.set(gameId, info);
+          newInstalledTranslations.set(gameId, info);
         } else {
-          newInstalledGames.delete(gameId);
+          newInstalledTranslations.delete(gameId);
         }
 
         const newChecking = new Map(state.isCheckingInstallation);
         newChecking.set(gameId, false);
 
         return {
-          installedGames: newInstalledGames,
+          installedTranslations: newInstalledTranslations,
           isCheckingInstallation: newChecking,
         };
       });
@@ -319,7 +324,7 @@ export const useStore = create<Store>((set, get) => ({
 
   getInstallationProgress: (gameId: string) => get().installationProgress.get(gameId),
 
-  getInstallationInfo: (gameId: string) => get().installedGames.get(gameId),
+  getInstallationInfo: (gameId: string) => get().installedTranslations.get(gameId),
 
   isCheckingInstallationStatus: (gameId: string) =>
     get().isCheckingInstallation.get(gameId) || false,

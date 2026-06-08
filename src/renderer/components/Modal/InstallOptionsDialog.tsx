@@ -200,7 +200,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     const options: SelectOption[] = [
       {
         name: firstExisting
-          ? `Автоматично(${getReadablePlatform(firstExisting.platform)})`
+          ? `Автоматично (${getReadablePlatform(firstExisting.platform)})`
           : 'Ручний вибір (не знайдено автоматично)',
         value: 'auto',
       },
@@ -606,7 +606,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
-            {isReinstall ? 'Застосувати' : 'Встановити'}
+            Встановити
           </button>
         </div>
       </div>

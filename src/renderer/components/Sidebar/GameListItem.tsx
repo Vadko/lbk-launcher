@@ -70,7 +70,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
     const handleToggleFavorite = (e: React.MouseEvent) => {
       e.stopPropagation();
-      toggleFavoriteGame(game.id);
+      toggleFavoriteGame(game.id, game.name);
     };
 
     // Card style rendering
