@@ -475,9 +475,7 @@ export const MainContent: React.FC = () => {
                   isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
                 }
                 onClick={() => handleInstall()}
-                disabled={
-                  isInstalling || isUninstalling || !isInstallable || !isOnline
-                }
+                disabled={isInstalling || isUninstalling || !isInstallable || !isOnline}
                 title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
                 data-gamepad-primary-action
                 data-gamepad-action
