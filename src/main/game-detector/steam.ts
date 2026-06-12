@@ -619,25 +619,30 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
 
   // Fetch from API
   const apiResult = await fetchSteamLibraryFromApi(steam64Id);
+  let appIds: number[];
 
   if (apiResult) {
-    writeSteamLibraryCache({
-      steamId: steam64Id,
-      appIds: apiResult.appIds,
-      licensecacheSize: currentLicensecacheSize ?? 0,
-      cachedAt: new Date().toISOString(),
-    });
-
-    cache.libraryAppIds = apiResult.appIds;
+    appIds = apiResult.appIds;
     console.log(
-      `[Steam] Library: refreshed from API (${apiResult.appIds.length} apps, ${apiResult.remaining} requests remaining)`
+      `[Steam] Library: refreshed from API (${appIds.length} apps, ${apiResult.remaining} requests remaining)`
     );
-    return apiResult.appIds;
+  } else {
+    // Fallback to librarycache folder
+    appIds = getSteamLibraryAppIdsFallback();
+    console.log(
+      `[Steam] Library: using librarycache folder fallback (${appIds.length} apps)`
+    );
   }
 
-  // Fallback to localconfig.vdf
-  console.log('[Steam] Library: API failed, falling back to localconfig.vdf');
-  return getSteamLibraryAppIdsFallback();
+  writeSteamLibraryCache({
+    steamId: steam64Id,
+    appIds,
+    licensecacheSize: currentLicensecacheSize ?? 0,
+    cachedAt: new Date().toISOString(),
+  });
+
+  cache.libraryAppIds = appIds;
+  return appIds;
 }
 
 function getSteamLibraryAppIdsFallback(): number[] {
@@ -661,10 +666,6 @@ function getSteamLibraryAppIdsFallback(): number[] {
       }
     }
 
-    console.log(
-      `[Steam] Library: using librarycache folder fallback (${appIds.length} apps)`
-    );
-    cache.libraryAppIds = appIds;
     return appIds;
   } catch {
     return [];
