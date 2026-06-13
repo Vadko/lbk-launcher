@@ -127,9 +127,9 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
           <div className={`flex-1 min-w-0 ${isAdultBlurred ? 'blur-md' : ''}`}>
             <h4
               className="font-semibold text-sm text-text-main mb-1 truncate"
-              title={group.name}
+              title={group.name.split('(')[0].trim()}
             >
-              {group.name}
+              {group.name.split('(')[0].trim()}
             </h4>
             <div className="flex flex-1 justify-end items-center gap-2  mb-1 -mt-1">
               <StatusIcons

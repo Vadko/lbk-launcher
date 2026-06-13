@@ -93,7 +93,10 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
 
           const handleClick = () => {
             if (group.translations.length > 1) {
-              onOpenTranslationPicker(group.translations, group.name);
+              onOpenTranslationPicker(
+                group.translations,
+                group.name.split('(')[0].trim()
+              );
             } else {
               onSelectGame(primaryGame);
             }

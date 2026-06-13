@@ -93,6 +93,16 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 const isTranslationAvailable =
                   game.status !== 'planned' && game.status !== 'tech-improvement';
 
+                const nameData = game.name.split('(');
+                const gameTeam = (
+                  <>
+                    {game.team}
+                    <span className="text-text-muted text-xs">
+                      {nameData.length > 1 ? ` (${nameData[1].trim()}` : ''}
+                    </span>
+                  </>
+                );
+
                 return (
                   <button
                     key={game.id}
@@ -135,7 +145,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-text-main truncate">
-                          {game.team || 'Невідомий автор'}
+                          {gameTeam || 'Невідомий автор'}
                         </span>
                         <StatusIcons
                           hasUpdate={hasUpdate}

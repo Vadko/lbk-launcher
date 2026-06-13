@@ -167,33 +167,48 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       }
     }, [debouncedSearchQuery, isLoading, totalGames]);
 
-    // Group games by slug (games already sorted by SQL)
+    // Group games by steam_app_id first; fallback to slug/id (games already sorted by SQL)
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();
 
+      const getGroupKey = (game: Game): string => {
+        if (game.steam_app_id !== null && game.steam_app_id !== undefined) {
+          return `steam:${game.steam_app_id}`;
+        }
+
+        return game.slug ? `slug:${game.slug}` : `id:${game.id}`;
+      };
+
       for (const game of visibleGames) {
-        const slug = game.slug || game.id;
-        const existing = groupMap.get(slug);
+        const key = getGroupKey(game);
+        const existing = groupMap.get(key);
+
         if (existing) {
           existing.translations.push(game);
-        } else {
-          groupMap.set(slug, {
-            slug,
-            name: game.name,
-            translations: [game],
-          });
+          continue;
         }
+
+        groupMap.set(key, {
+          slug:
+            game.steam_app_id !== null && game.steam_app_id !== undefined
+              ? `steam-${game.steam_app_id}`
+              : game.slug || game.id,
+          name: game.name,
+          translations: [game],
+        });
       }
 
+      const groups = Array.from(groupMap.values());
+
       // Sort translations within each group by progress
-      for (const group of groupMap.values()) {
+      for (const group of groups) {
         group.translations.sort(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
       }
 
-      // Preserve order from SQL (already sorted)
-      return Array.from(groupMap.values());
+      // Preserve group order from SQL (first appearance of each key)
+      return groups;
     }, [visibleGames]);
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
