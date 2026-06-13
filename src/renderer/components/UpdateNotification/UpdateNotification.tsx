@@ -78,6 +78,16 @@ export const UpdateNotification = () => {
     window.electronAPI.installUpdate();
   };
 
+  const externalDownloadUrl = (updateInfo as { downloadUrl?: string } | null)
+    ?.downloadUrl;
+
+  const handleOpenExternal = () => {
+    if (!externalDownloadUrl) return;
+    useSubscriptionsStore.getState().markAppUpdateNotificationsAsRead();
+    window.electronAPI.openExternal(externalDownloadUrl);
+    setUpdateAvailable(false);
+  };
+
   if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded))
     return null;
 
@@ -107,7 +117,15 @@ export const UpdateNotification = () => {
 
   const buttons = (
     <div className="flex gap-2">
-      {updateDownloaded ? (
+      {externalDownloadUrl ? (
+        <button
+          onClick={handleOpenExternal}
+          data-gamepad-confirm
+          className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+        >
+          Скачати нову версію
+        </button>
+      ) : updateDownloaded ? (
         <button
           onClick={handleInstall}
           data-gamepad-confirm

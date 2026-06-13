@@ -23,6 +23,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { trackEvent } from '../../utils/analytics';
+import { isTranslationInstallable } from '../../utils/gameStatus';
 import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
 import { FeedbackModal } from '../Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
@@ -87,6 +88,9 @@ export const MainContent: React.FC = () => {
     selectedGame.version &&
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
+  const isInstallable = selectedGame
+    ? isTranslationInstallable(selectedGame.status)
+    : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
   const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
 
@@ -471,7 +475,7 @@ export const MainContent: React.FC = () => {
                   isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
                 }
                 onClick={() => handleInstall()}
-                disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
+                disabled={isInstalling || isUninstalling || !isInstallable || !isOnline}
                 title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
                 data-gamepad-primary-action
                 data-gamepad-action
