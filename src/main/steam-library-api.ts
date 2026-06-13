@@ -146,6 +146,13 @@ export async function fetchSteamLibraryFromApi(
       return null;
     }
 
+    if (data.appIds.length === 0) {
+      console.warn(
+        '[SteamLibraryAPI] No apps found for this Steam ID. Possible reasons: private profile, no owned games, or API issue.'
+      );
+      return null;
+    }
+
     console.log(
       `[SteamLibraryAPI] Fetched ${data.appIds.length} apps, remaining requests: ${data.remaining}`
     );
