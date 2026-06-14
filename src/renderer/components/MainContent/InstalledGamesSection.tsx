@@ -82,7 +82,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   // Show banner instead of section when no games found
   if (!isLoading && allInstalledGames.length === 0) {
     return (
-      <div className="text-left w-full max-w-[1317px]">
+      <section>
         <AnimatePresence mode="wait">
           <motion.div
             key="empty-banner"
@@ -107,12 +107,12 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             </div>
           </motion.div>
         </AnimatePresence>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="text-left w-full max-w-[1317px]">
+    <section>
       {/* Header with button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
@@ -168,6 +168,6 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </section>
   );
 };

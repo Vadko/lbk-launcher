@@ -20,6 +20,7 @@ interface InstallationProgress {
 }
 
 type SyncStatus = 'loading' | 'syncing' | 'ready' | 'error';
+type MainPageView = 'main' | 'trending' | 'news';
 
 interface Store {
   // Sync State
@@ -27,6 +28,7 @@ interface Store {
 
   // UI State
   selectedGame: Game | null;
+  mainPageView: MainPageView;
   selectedStatuses: string[];
   searchQuery: string;
   isInitialLoad: boolean;
@@ -47,6 +49,7 @@ interface Store {
 
   // UI Actions
   setSelectedGame: (game: Game | null) => void;
+  setMainPageView: (view: MainPageView) => void;
   setSelectedStatuses: (statuses: string[]) => void;
   setSearchQuery: (query: string) => void;
   setInitialLoadComplete: () => void;
@@ -89,6 +92,7 @@ export const useStore = create<Store>((set, get) => ({
 
   // UI State
   selectedGame: null,
+  mainPageView: 'main',
   selectedStatuses: [],
   searchQuery: '',
   isInitialLoad: true,
@@ -110,8 +114,14 @@ export const useStore = create<Store>((set, get) => ({
   // UI Actions
   setSelectedGame: (game) => {
     if (game) trackEvent('Select game', { 'Game Id': game.id, 'Game Name': game.name });
-    set({ selectedGame: game });
+    set({
+      selectedGame: game,
+      // Any navigation away from game details should return to the main page by default.
+      ...(game === null ? { mainPageView: 'main' as MainPageView } : {}),
+    });
   },
+
+  setMainPageView: (mainPageView) => set({ mainPageView }),
 
   setSelectedStatuses: (selectedStatuses) => set({ selectedStatuses }),
 

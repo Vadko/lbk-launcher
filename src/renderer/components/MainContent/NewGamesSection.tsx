@@ -66,7 +66,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
   const visibleGames = useMemo(() => games.slice(0, showLimit), [games, showLimit]);
 
   return (
-    <div className="text-left w-full max-w-[1317px]">
+    <section>
       {/* Header with tabs */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
@@ -140,6 +140,6 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </section>
   );
 };

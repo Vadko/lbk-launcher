@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
+import { useStore } from '../../store/useStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
 import { NewsFeedSection } from './NewsFeedSection';
 import { TrendingGamesPage } from './TrendingGamesPage';
 import { TrendGamesSection } from './TrendsGamesSection';
 
-type PageView = 'main' | 'trending';
-
 export const MainPage: React.FC = () => {
-  const [currentView, setCurrentView] = useState<PageView>('main');
+  const currentView = useStore((state) => state.mainPageView);
+  const setCurrentView = useStore((state) => state.setMainPageView);
   const ContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to top when opening trending page
@@ -42,11 +42,13 @@ export const MainPage: React.FC = () => {
     <div
       ref={ContainerRef}
       data-gamepad-main-content
-      className={`flex-1 grid items-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
+      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
     >
       {/* Main page */}
       {currentView === 'main' && (
-        <div className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}>
+        <div
+          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
+        >
           <InstalledGamesSection showLimit={3} />
           <NewGamesSection
             title="Новинки"
@@ -59,13 +61,22 @@ export const MainPage: React.FC = () => {
             showDownloadCounter={true}
             onViewAll={() => setCurrentView('trending')}
           />
-          <NewsFeedSection />
         </div>
       )}
       {/* Trending games page */}
       {currentView === 'trending' && (
-        <div className={`main-page grid grid-rows-auto gap-10 h-auto w-full`}>
+        <div
+          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
+        >
           <TrendingGamesPage onBack={() => setCurrentView('main')} />
+        </div>
+      )}
+      {/* News page */}
+      {currentView === 'news' && (
+        <div
+          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
+        >
+          <NewsFeedSection />
         </div>
       )}
     </div>

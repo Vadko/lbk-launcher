@@ -1,15 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ExternalLink } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
 import type { NewsFeedFilter } from '@/shared/types';
+import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
 const feedTabs: { label: string; filter: NewsFeedFilter }[] = [
+  { label: 'Ігри по знижці', filter: 'sales' },
   { label: 'Ігри за 80', filter: 'games-80' },
   { label: 'Новини', filter: 'news' },
-  { label: 'Реклама', filter: 'ads' },
-  { label: 'Пошук людей', filter: 'people-search' },
 ];
 
 const formatDate = (date?: string) => {
@@ -25,7 +24,7 @@ const formatDate = (date?: string) => {
 };
 
 export const NewsFeedSection: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState<NewsFeedFilter>('games-80');
+  const [activeFilter, setActiveFilter] = useState<NewsFeedFilter>('sales');
   const { data: feedItems = [], isError, isLoading } = useNewsFeed(activeFilter);
 
   const openInTelegram = async (url: string) => {
@@ -47,10 +46,10 @@ export const NewsFeedSection: React.FC = () => {
   };
 
   return (
-    <section className="text-left w-full max-w-[1317px]">
+    <section>
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">Новини</h2>
-        <div className="glass-card-no-motion flex gap-2">
+        <div className="glass-card-no-motion !p-2 flex gap-2">
           {feedTabs.map((tab) => (
             <button
               key={tab.filter}
@@ -69,7 +68,7 @@ export const NewsFeedSection: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-8">
+      <div className="grid grid-cols-2 gap-8 align-start">
         <AnimatePresence mode="wait" initial={false}>
           {isLoading ? (
             <motion.div
@@ -78,7 +77,7 @@ export const NewsFeedSection: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="col-span-3 flex items-center justify-center py-12"
+              className="col-span-2 flex items-center justify-center py-12"
             >
               <Loader size="md" />
             </motion.div>
@@ -89,7 +88,7 @@ export const NewsFeedSection: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="col-span-3 text-center text-text-muted py-8"
+              className="col-span-2 text-center text-text-muted py-8"
             >
               <p>Новин не знайдено</p>
             </motion.div>
@@ -110,33 +109,32 @@ export const NewsFeedSection: React.FC = () => {
                     }}
                     className="glass-card-no-motion !p-5 min-h-[172px] flex flex-col gap-4"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        {publishedAt && (
-                          <p className="text-sm text-text-muted mb-2">{publishedAt}</p>
-                        )}
-                        <h3 className="text-xl font-head font-semibold text-text-main line-clamp-2">
-                          {item.title}
-                        </h3>
-                      </div>
-                      <button
-                        type="button"
-                        data-gamepad-action
-                        aria-label="Відкрити новину"
-                        title="Відкрити новину"
-                        onClick={() => openInTelegram(item.url)}
-                        className="shrink-0 size-10 rounded-full bg-surface-elevated text-text-main flex items-center justify-center hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-white"
-                      >
-                        <ExternalLink size={18} />
-                      </button>
+                    <div>
+                      {publishedAt && (
+                        <p className="text-sm text-text-muted mb-2">{publishedAt}</p>
+                      )}
+                      <h3 className="text-xl font-head font-semibold text-text-main line-clamp-2">
+                        {item.title}
+                      </h3>
                     </div>
 
                     {item.content && (
                       <p
-                        className="text-sm leading-6 text-text-muted line-clamp-4"
+                        className="text-sm leading-6 text-text-muted line-clamp-6"
                         dangerouslySetInnerHTML={{ __html: item.content }}
                       />
                     )}
+
+                    <Button
+                      data-gamepad-action
+                      aria-label="Відкрити новину"
+                      title="Відкрити новину"
+                      variant="secondary"
+                      onClick={() => openInTelegram(item.url)}
+                      className="w-fit !px-3 !py-2 text-sm"
+                    >
+                      Обговорити в Telegram
+                    </Button>
                   </motion.article>
                 );
               })}

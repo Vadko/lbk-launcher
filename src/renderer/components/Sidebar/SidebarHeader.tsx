@@ -1,6 +1,6 @@
 import logo from '@resources/logo.svg';
 import { useStore } from '@store/useStore';
-import { Home } from 'lucide-react';
+import { Home, Newspaper } from 'lucide-react';
 import React from 'react';
 
 interface SidebarHeaderProps {
@@ -9,10 +9,20 @@ interface SidebarHeaderProps {
 
 export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
   ({ isCompact = false }) => {
-    const { setSelectedGame } = useStore();
+    const { setSelectedGame, setMainPageView } = useStore();
+
+    const openNews = () => {
+      setSelectedGame(null);
+      setMainPageView('news');
+    };
+
+    const openMainPage = () => {
+      setSelectedGame(null);
+      setMainPageView('main');
+    };
     return (
       <div
-        className={`relative flex items-center gap-3 select-none overflow-visible ${
+        className={`relative flex items-center justify-between gap-3 select-none overflow-visible ${
           isCompact ? '' : 'border-b p-3 pl-4 border-border'
         }`}
       >
@@ -23,16 +33,22 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
           draggable={false}
         />
         {!isCompact && (
-          <>
-            <div className="flex-1"></div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setSelectedGame(null)}
+              onClick={openNews}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
+              title="Відкрити новини"
+            >
+              <Newspaper size={20} />
+            </button>
+            <button
+              onClick={openMainPage}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити головну сторінку"
             >
               <Home size={20} />
             </button>
-          </>
+          </div>
         )}
       </div>
     );

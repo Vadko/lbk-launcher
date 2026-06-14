@@ -22,7 +22,7 @@ export interface NewsFeedItem {
   publishedAt?: string;
 }
 
-export type NewsFeedFilter = 'games-80' | 'news' | 'updates' | 'ads' | 'people-search';
+export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
 export interface GamePath {
   platform: Platform;
