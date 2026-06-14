@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
 import type { NewsFeedFilter } from '@/shared/types';
+import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
@@ -43,6 +44,7 @@ export const NewsFeedSection: React.FC = () => {
     } else {
       window.electronAPI.openExternal(url);
     }
+    trackEvent('Open news', { url });
   };
 
   return (
