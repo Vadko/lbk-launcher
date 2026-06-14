@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { useGamepads } from 'react-ts-gamepads';
+import { useEffect } from 'react';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { isValidGamepad } from '../utils/isValidGamepad';
 
@@ -12,71 +11,52 @@ const SCROLL_SPEED = 15; // Pixels per frame
 const SCROLL_BOOST = 2.5; // Multiplier for stick strength
 
 /**
- * Hook for scrolling modal content using the right stick on gamepad
+ * Hook for scrolling modal content using the right stick on gamepad.
+ *
+ * Polls navigator.getGamepads() in a RAF loop without touching React state,
+ * so an open modal with an idle gamepad costs zero re-renders.
  */
 export function useGamepadModalScroll<T extends HTMLElement = HTMLElement>(
   isOpen: boolean,
   scrollContainerRef: React.RefObject<T | null>
 ) {
-  const { isGamepadMode } = useGamepadModeStore();
-  const animationFrameRef = useRef<number | null>(null);
-  const [gamepads, setGamepads] = useState<Record<number, Gamepad>>({});
-
-  // Subscribe to gamepad updates - must be called at top level
-  useGamepads((pads) => {
-    const filtered: Record<number, Gamepad> = {};
-    for (const [key, pad] of Object.entries(pads)) {
-      if (isValidGamepad(pad)) {
-        filtered[Number(key)] = pad;
-      }
-    }
-    setGamepads((prev) => {
-      // No valid gamepads now and state already empty — keep same reference, skip re-render
-      if (Object.keys(filtered).length === 0 && Object.keys(prev).length === 0) {
-        return prev;
-      }
-      return filtered;
-    });
-  });
+  const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
 
   useEffect(() => {
-    if (!isOpen || !isGamepadMode || !scrollContainerRef.current) {
-      return;
-    }
+    if (!isOpen || !isGamepadMode) return;
+
+    let rafId = 0;
 
     const scroll = () => {
-      if (!scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      if (!container) {
+        rafId = requestAnimationFrame(scroll);
         return;
       }
 
-      // Check first connected gamepad
-      const gamepad = Object.values(gamepads)[0];
-      if (!gamepad) {
-        animationFrameRef.current = requestAnimationFrame(scroll);
-        return;
+      const pads = navigator.getGamepads();
+      let gp: Gamepad | null = null;
+      for (const pad of pads) {
+        if (pad && pad.connected && isValidGamepad(pad)) {
+          gp = pad;
+          break;
+        }
       }
 
-      const rightStickY = gamepad.axes[AXIS.RIGHT_Y] ?? 0;
-
-      // Apply deadzone and scroll
-      if (Math.abs(rightStickY) > DEADZONE) {
-        const scrollAmount = rightStickY * SCROLL_SPEED * SCROLL_BOOST;
-        scrollContainerRef.current.scrollBy({
-          top: scrollAmount,
-          behavior: 'auto', // Use 'auto' for smooth continuous scrolling
-        });
+      if (gp) {
+        const rightStickY = gp.axes[AXIS.RIGHT_Y] ?? 0;
+        if (Math.abs(rightStickY) > DEADZONE) {
+          container.scrollBy({
+            top: rightStickY * SCROLL_SPEED * SCROLL_BOOST,
+            behavior: 'auto',
+          });
+        }
       }
 
-      animationFrameRef.current = requestAnimationFrame(scroll);
+      rafId = requestAnimationFrame(scroll);
     };
 
-    // Start animation loop
-    animationFrameRef.current = requestAnimationFrame(scroll);
-
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isOpen, isGamepadMode, scrollContainerRef, gamepads]);
+    rafId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(rafId);
+  }, [isOpen, isGamepadMode, scrollContainerRef]);
 }

@@ -5,6 +5,7 @@ import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
+import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
@@ -183,7 +184,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     className="flex-shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
                   />
                 )}
-                {game.status !== 'planned' && (
+                {isTranslationInstallable(game.status) && (
                   <div className="flex items-center gap-3 flex-1">
                     <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
                       <div

@@ -9,6 +9,107 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      api_token_usage: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          game_id: string | null
+          game_slug: string | null
+          id: string
+          status_code: number
+          success: boolean
+          token_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          game_slug?: string | null
+          id?: string
+          status_code: number
+          success: boolean
+          token_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          game_slug?: string | null
+          id?: string
+          status_code?: number
+          success?: boolean
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_token_usage_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_token_usage_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "api_token_usage_token_id_fkey"
+            columns: ["token_id"]
+            referencedRelation: "api_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          prefix: string
+          revoked_at: string | null
+          revoked_by: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name: string
+          prefix: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          prefix?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_tokens_revoked_by_fkey"
+            columns: ["revoked_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_tokens_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authors: {
         Row: {
           created_at: string | null

@@ -15,6 +15,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
+import { isTranslationInstallable } from '../utils/gameStatus';
 
 interface UseInstallationParams {
   selectedGame: Game | null;
@@ -90,6 +91,7 @@ export function useInstallation({
   const statusMessage = gameProgress?.statusMessage || null;
 
   const isPlanned = selectedGame?.status === 'planned';
+  const isTechImprovement = selectedGame?.status === 'tech-improvement';
 
   // Retry context for auto-retry when network is restored
   const networkRetryRef = useRef<{
@@ -489,6 +491,8 @@ export function useInstallation({
     async (customGamePath?: string) => {
       if (!selectedGame || isInstalling || isCheckingInstallation) return;
 
+      if (!isTranslationInstallable(selectedGame.status)) return;
+
       if (!isOnline) {
         showModal({
           title: 'Немає підключення',
@@ -870,6 +874,7 @@ export function useInstallation({
   const getInstallButtonText = useCallback((): string => {
     if (!isOnline) return '❌ Немає інтернету';
     if (isPlanned) return 'Заплановано';
+    if (isTechImprovement) return 'Технічна доробка';
     if (isWaitingForNetwork) {
       return "Очікування з'єднання...";
     }
@@ -896,6 +901,7 @@ export function useInstallation({
   }, [
     isOnline,
     isPlanned,
+    isTechImprovement,
     isPaused,
     isWaitingForNetwork,
     isInstalling,

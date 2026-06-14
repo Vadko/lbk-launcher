@@ -70,7 +70,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
       {/* Header with tabs */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        <div className="glass-card-no-motion flex gap-2">
+        <div className="glass-card-no-motion !p-2 flex gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.sortOrder}

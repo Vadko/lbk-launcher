@@ -200,8 +200,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     const options: SelectOption[] = [
       {
         name: firstExisting
-          ? `Автоматично(${getReadablePlatform(firstExisting.platform)})`
-          : 'Ручний вибір (не знайдено автоматично)',
+          ? `Автоматично (${getReadablePlatform(firstExisting.platform)})`
+          : `Ручний вибір (${getReadablePlatform(supportedPlatforms[0]?.platform)})`,
         value: 'auto',
       },
     ];
@@ -210,14 +210,13 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       const platformName = getReadablePlatform(platform.platform);
       options.push({
         name: platformName,
-        isDisabled: !platform.exists,
         children: (
           <>
             <span>{platformName}</span>
             <span
               className={`ml-auto ${platform.exists ? 'text-color-main' : 'text-text-muted'}`}
             >
-              {platform.exists ? 'Знайдено' : 'Не знайдено'}
+              {platform.exists ? 'Знайдено' : 'Не знайдено (вибір вручну)'}
             </span>
           </>
         ),
@@ -606,7 +605,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
-            {isReinstall ? 'Застосувати' : 'Встановити'}
+            Встановити
           </button>
         </div>
       </div>

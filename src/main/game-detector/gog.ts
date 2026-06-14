@@ -528,6 +528,7 @@ export function getGogLibrary(): string[] {
 
   if (result.length > 0) {
     console.log(`[GOG] Found ${result.length} games in GOG Galaxy DB`);
+    console.log(`[GOG] Games list: ${result.join(', ')}`);
   }
 
   return result;

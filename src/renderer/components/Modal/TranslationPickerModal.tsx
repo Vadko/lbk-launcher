@@ -25,7 +25,8 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
 }) => {
   const { selectedGame, setSelectedGame, installedTranslations, gamesWithUpdates } =
     useStore();
-  const { isGamepadMode, setNavigationArea } = useGamepadModeStore();
+  const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
+  const setNavigationArea = useGamepadModeStore((s) => s.setNavigationArea);
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
   const handleSelect = (game: Game) => {
