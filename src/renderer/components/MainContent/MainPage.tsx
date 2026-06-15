@@ -1,15 +1,14 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
-import { useStore } from '../../store/useStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
-import { NewsFeedSection } from './NewsFeedSection';
 import { TrendingGamesPage } from './TrendingGamesPage';
 import { TrendGamesSection } from './TrendsGamesSection';
 
+type PageView = 'main' | 'trending';
+
 export const MainPage: React.FC = () => {
-  const currentView = useStore((state) => state.mainPageView);
-  const setCurrentView = useStore((state) => state.setMainPageView);
+  const [currentView, setCurrentView] = useState<PageView>('main');
   const ContainerRef = useRef<HTMLDivElement>(null);
 
   // Scroll to top when opening trending page
@@ -69,14 +68,6 @@ export const MainPage: React.FC = () => {
           className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
         >
           <TrendingGamesPage onBack={() => setCurrentView('main')} />
-        </div>
-      )}
-      {/* News page */}
-      {currentView === 'news' && (
-        <div
-          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
-        >
-          <NewsFeedSection />
         </div>
       )}
     </div>
