@@ -51,6 +51,7 @@
     "better-sqlite3": "12.9.0",
     "chrome-remote-interface": "0.34.0",
     "cyrillic-to-translit-js": "3.2.1",
+    "electron-router-dom": "^2.1.1",
     "electron-store": "8.2.0",
     "fast-vdf": "3.1.1",
     "framer-motion": "12.38.0",

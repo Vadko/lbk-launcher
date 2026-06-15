@@ -1,7 +1,7 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import mainBg from '../../resources/main-bg.webp';
 import { AppLoader } from './components/AppLoader/AppLoader';
 import { AppRoutes } from './components/AppRoutes';
@@ -399,7 +399,7 @@ export const App: React.FC = () => {
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
   return (
-    <MemoryRouter>
+    <BrowserRouter>
       <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
         {/* Loader overlay with fade animation */}
         <AnimatePresence>
@@ -476,6 +476,6 @@ export const App: React.FC = () => {
           <GamepadHints />
         </div>
       </MotionConfig>
-    </MemoryRouter>
+    </BrowserRouter>
   );
 };
