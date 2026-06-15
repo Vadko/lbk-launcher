@@ -1,7 +1,7 @@
 import logo from '@resources/logo.svg';
-import { useStore } from '@store/useStore';
 import { Home, Newspaper } from 'lucide-react';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarHeaderProps {
   isCompact?: boolean;
@@ -9,17 +9,7 @@ interface SidebarHeaderProps {
 
 export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
   ({ isCompact = false }) => {
-    const { setSelectedGame, setMainPageView } = useStore();
-
-    const openNews = () => {
-      setSelectedGame(null);
-      setMainPageView('news');
-    };
-
-    const openMainPage = () => {
-      setSelectedGame(null);
-      setMainPageView('main');
-    };
+    const navigate = useNavigate();
     return (
       <div
         className={`relative flex items-center justify-between gap-3 select-none overflow-visible ${
@@ -35,14 +25,14 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
         {!isCompact && (
           <div className="flex items-center gap-2">
             <button
-              onClick={openNews}
+              onClick={() => navigate('/news')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити новини"
             >
               <Newspaper size={20} />
             </button>
             <button
-              onClick={openMainPage}
+              onClick={() => navigate('/')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити головну сторінку"
             >

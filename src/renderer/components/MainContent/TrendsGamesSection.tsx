@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
 import { useTrendingGames } from '../../queries/useTrendingGames';
@@ -21,15 +22,15 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
   showDownloadCounter = false,
   onViewAll,
 }) => {
-  const { setSelectedGame, gamesWithUpdates, isGameDetected, getInstallationInfo } =
-    useStore(
-      useShallow((state) => ({
-        setSelectedGame: state.setSelectedGame,
-        gamesWithUpdates: state.gamesWithUpdates,
-        isGameDetected: state.isGameDetected,
-        getInstallationInfo: state.getInstallationInfo,
-      }))
-    );
+  const navigate = useNavigate();
+
+  const { gamesWithUpdates, isGameDetected, getInstallationInfo } = useStore(
+    useShallow((state) => ({
+      gamesWithUpdates: state.gamesWithUpdates,
+      isGameDetected: state.isGameDetected,
+      getInstallationInfo: state.getInstallationInfo,
+    }))
+  );
   const { data: trendingGames, isLoading } = useTrendingGames(30);
   const visibleGames = useMemo(
     () => (trendingGames ?? []).slice(0, showLimit),
@@ -96,7 +97,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
                   isTranslationAvailable={
                     game.status !== 'planned' && game.status !== 'tech-improvement'
                   }
-                  onClick={() => setSelectedGame(game)}
+                  onClick={() => navigate(`/game/${game.id}`)}
                 />
               </motion.div>
             ))

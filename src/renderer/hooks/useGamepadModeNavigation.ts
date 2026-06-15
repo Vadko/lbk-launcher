@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useStore } from '../store/useStore';
 import {
@@ -47,6 +48,7 @@ const SCROLL_AMOUNT = 300;
  * - B: Back / Cancel in modal
  */
 export function useGamepadModeNavigation(enabled = true) {
+  const navigate = useNavigate();
   const lastInputRef = useRef<Record<string, number>>({});
   const gameCardsRef = useRef<HTMLElement[]>([]);
 
@@ -397,9 +399,12 @@ export function useGamepadModeNavigation(enabled = true) {
     if (navigationArea === 'main-content' && !selectedGame) return;
 
     playNavigateSound();
+    // Очищаємо selectedGame перед навігацією для миттєвого оновлення UI
     setSelectedGame(null);
+    // Навігуємо на головну сторінку
+    navigate('/');
     setNavigationArea('main-content');
-  }, [navigationArea, selectedGame, setSelectedGame, setNavigationArea]);
+  }, [navigationArea, selectedGame, setSelectedGame, navigate, setNavigationArea]);
 
   // Handle main content navigation
   const handleMainContentNavigation = useCallback(
