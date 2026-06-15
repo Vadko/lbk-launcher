@@ -1,34 +1,43 @@
+/**
+ * Telegram News Feed Parser
+ * Direct Telegram channel parser without external RSS service
+ */
+
+import * as cheerio from 'cheerio';
 import { ipcMain } from 'electron';
 import DOMPurify from 'isomorphic-dompurify';
 import type { NewsFeedFilter, NewsFeedItem } from '../../shared/types';
 
-const NEWS_GROUP_ID = 'LittleBitUA';
-const NEWS_FEED_URL = `https://rsshub.ktachibana.party/telegram/channel/${NEWS_GROUP_ID}`;
+// ============================================================================
+// Constants
+// ============================================================================
+
+const NEWS_CHANNEL = 'LittleBitUA';
+const LIMIT_POSTS = 20;
 const NEWS_FEED_FILTERS: Record<NewsFeedFilter, string> = {
   sales: '#ігри_по_знижці',
   'games-80': '#ігри_за_80',
   news: '#lbk_новини',
 };
 
-interface NewsFeedResponse {
-  items?: NewsFeedRawItem[];
+// ============================================================================
+// Types
+// ============================================================================
+
+interface TelegramMessage {
+  id: string;
+  url: string;
+  rawTitle: string;
+  contentHtml: string;
+  images: string[];
+  datePublished: string;
 }
 
-interface NewsFeedRawItem {
-  id?: string;
-  url?: string;
-  title?: string;
-  summary?: string;
-  content_html?: string;
-  date_published?: string;
-}
+// ============================================================================
+// HTML Utilities
+// ============================================================================
 
-// const stripHtml = (value: string) =>
-//   value
-//     .replace(/<[^>]*>/g, ' ')
-//     .replace(/\s+/g, ' ')
-//     .trim();
-
+// Configure DOMPurify for safe HTML
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A') {
     node.setAttribute('target', '_blank');
@@ -37,135 +46,171 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   }
 });
 
-const cleanHtml = (html: string) =>
+const cleanHtml = (html: string): string =>
   DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['br', 'p', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li'],
+    ALLOWED_TAGS: [
+      'br',
+      'p',
+      'b',
+      'strong',
+      'i',
+      'em',
+      'u',
+      'a',
+      'ul',
+      'ol',
+      'li',
+      'span',
+    ],
     ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
     ALLOWED_URI_REGEXP: /^(https?:|tg:)/i,
   });
 
-const stripHtml = (value: string) =>
-  value
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+// ============================================================================
+// Telegram Parser
+// ============================================================================
 
-const normalizeComparableText = (value: string) =>
-  value
-    .replace(/^[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\s]+/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+/**
+ * Parse HTML messages from Telegram channel
+ */
+function parseTelegramMessages(html: string): TelegramMessage[] {
+  const $ = cheerio.load(html);
+  const messages: TelegramMessage[] = [];
 
-const isTitleDuplicatedInFirstLine = (firstLine: string, title: string) => {
-  const normalizedFirstLine = normalizeComparableText(firstLine);
-  const normalizedTitle = normalizeComparableText(title);
+  $('.tgme_widget_message_wrap').each((_, el) => {
+    const $msg = $(el).find('.tgme_widget_message');
+    const messageId = $msg.attr('data-post');
 
-  if (!normalizedFirstLine || !normalizedTitle) {
-    return false;
-  }
+    if (!messageId) return;
 
-  if (normalizedFirstLine === normalizedTitle) {
-    return true;
-  }
+    const postId = messageId.split('/')[1];
+    const postUrl = `https://t.me/${NEWS_CHANNEL}/${postId}`;
 
-  const hasTrailingEllipsis = /(\.\.\.|…)\s*$/u.test(normalizedTitle);
+    // Get message text
+    const $text = $msg.find('.tgme_widget_message_text');
+    let contentHtml = $text.html() || '';
 
-  if (!hasTrailingEllipsis) {
-    return false;
-  }
+    // Simplify emoji
+    contentHtml = contentHtml.replace(
+      /<i class="emoji"[^>]*><b>([^<]*)<\/b><\/i>/g,
+      '<span class="emoji">$1</span>'
+    );
 
-  const normalizedTitlePrefix = normalizedTitle.replace(/(\.\.\.|…)\s*$/u, '').trim();
+    // Absolute links for hashtags
+    contentHtml = contentHtml.replace(/href="\?q=/g, `href="${postUrl}?q=`);
 
-  if (normalizedTitlePrefix.length < 20) {
-    return false;
-  }
+    // Parse images
+    const images: string[] = [];
 
-  return normalizedFirstLine.startsWith(normalizedTitlePrefix);
-};
+    // Images from photos
+    $msg.find('.tgme_widget_message_photo_wrap').each((__, photo) => {
+      const style = $(photo).attr('style') || '';
+      const match = style.match(/url\(['"]?(.*?)['"]?\)/);
+      if (match) images.push(match[1]);
+    });
 
-const removeLeadingTitleFromContent = (contentHtml: string, title: string) => {
-  if (!title.trim()) {
-    return contentHtml;
-  }
+    // Video preview
+    const $video = $msg.find('.tgme_widget_message_video_thumb');
+    if ($video.length) {
+      const style = $video.attr('style') || '';
+      const match = style.match(/url\(['"]?(.*?)['"]?\)/);
+      if (match) images.push(match[1]);
+    }
 
-  const firstParagraphMatch = contentHtml.match(/^<p>([\s\S]*?)<\/p>/i);
+    // Publication date
+    const $time = $msg.find('.tgme_widget_message_date time');
+    const datetime = $time.attr('datetime') || new Date().toISOString();
 
-  if (!firstParagraphMatch) {
-    return contentHtml;
-  }
+    // Title - first line of text
+    const textWithBreaks = $text.html()?.replace(/<br\s*\/?>/gi, '\n') || '';
+    const $tempText = cheerio.load(`<div>${textWithBreaks}</div>`);
+    let rawTitle = $tempText('div').text().trim().split('\n')[0] || '';
 
-  const paragraphInnerHtml = firstParagraphMatch[1];
-  const firstBreakMatch = paragraphInnerHtml.match(/<br\s*\/?>/i);
+    // Truncate long titles
+    if (rawTitle.length > 100) {
+      rawTitle = `${rawTitle.substring(0, 97)}...`;
+    }
 
-  const firstLineHtml = firstBreakMatch
-    ? paragraphInnerHtml.slice(0, firstBreakMatch.index)
-    : paragraphInnerHtml;
+    // Remove first paragraph from content (as it becomes the title)
+    const contentParts = contentHtml.split(/<br\s*\/?>\s*<br\s*\/?>/i);
+    if (contentParts.length > 1) {
+      contentHtml = contentParts.slice(1).join('<br><br>');
+    }
 
-  if (!isTitleDuplicatedInFirstLine(stripHtml(firstLineHtml), title)) {
-    return contentHtml;
-  }
+    messages.push({
+      id: postUrl,
+      url: postUrl,
+      rawTitle,
+      contentHtml: `<p>${contentHtml}</p>`,
+      images,
+      datePublished: datetime,
+    });
+  });
 
-  const contentWithoutTitle = firstBreakMatch
-    ? paragraphInnerHtml
-        .slice((firstBreakMatch.index ?? 0) + firstBreakMatch[0].length)
-        .replace(/^(\s*<br\s*\/?>\s*)+/i, '')
-        .trim()
-    : '';
+  return messages.reverse(); // From oldest to newest
+}
 
-  const updatedFirstParagraph = contentWithoutTitle
-    ? `<p>${contentWithoutTitle}</p>`
-    : '';
-
-  return contentHtml
-    .replace(/^<p>[\s\S]*?<\/p>/i, updatedFirstParagraph)
-    .replace(/^\s+/, '')
-    .trim();
-};
-
-const normalizeNewsFeedItem = (item: NewsFeedRawItem, index: number): NewsFeedItem => {
-  const url = item.url || 'https://t.me/LittleBitUA';
-  const title = item.title ? item.title.replace(/^(🖼|📹|🎵|📄)\s*/u, '') : 'Новина';
-  const cleanedContent = item.content_html ? cleanHtml(item.content_html) : undefined;
-  const content = cleanedContent
-    ? removeLeadingTitleFromContent(cleanedContent, title)
-    : undefined;
+/**
+ * Normalize message to NewsFeedItem
+ * Clean HTML using DOMPurify for security
+ */
+function normalizeMessage(message: TelegramMessage): NewsFeedItem {
+  const title = message.rawTitle || 'Новина';
+  const cleanedContent = cleanHtml(message.contentHtml);
 
   return {
-    id: item.id || item.url || `news-feed-${index}`,
-    url,
+    id: message.id,
+    url: message.url,
     title,
-    content,
-    publishedAt: item.date_published,
+    content: cleanedContent || undefined,
+    publishedAt: message.datePublished,
   };
-};
+}
 
-const buildNewsFeedUrl = (filter: NewsFeedFilter) => {
-  const url = new URL(
-    `${NEWS_FEED_URL}/searchQuery=${encodeURIComponent(NEWS_FEED_FILTERS[filter])}`
-  );
-  url.searchParams.set('format', 'json');
-  url.searchParams.set('limit', '20');
-  // Для обрізання контенту до 100 символів і видалення HTML тегів
-  // url.searchParams.set('brief', '100');
-  return url;
-};
+/**
+ * Fetch posts from Telegram channel by filter
+ */
+async function fetchTelegramChannel(filter: NewsFeedFilter): Promise<NewsFeedItem[]> {
+  const searchQuery = NEWS_FEED_FILTERS[filter];
+  const url = `https://t.me/s/${NEWS_CHANNEL}?q=${encodeURIComponent(searchQuery)}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.8',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Telegram channel: ${response.status}`);
+    }
+
+    const html = await response.text();
+    const messages = parseTelegramMessages(html);
+
+    // Normalize and limit to LIMIT_POSTS messages
+    return messages.slice(0, LIMIT_POSTS).map(normalizeMessage);
+  } catch (error) {
+    console.error('[TelegramNews] Error fetching news feed:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// IPC Handlers
+// ============================================================================
 
 export function setupTgNewsHandlers(): void {
   ipcMain.handle(
     'fetch-news-feed',
     async (_, filter: NewsFeedFilter): Promise<NewsFeedItem[]> => {
       try {
-        const response = await fetch(buildNewsFeedUrl(filter));
-
-        if (!response.ok) {
-          throw new Error(`RSSHub responded with ${response.status}`);
-        }
-
-        const data = (await response.json()) as NewsFeedResponse;
-        return (data.items || []).map(normalizeNewsFeedItem);
+        return await fetchTelegramChannel(filter);
       } catch (error) {
-        console.error('[News] Error fetching news feed:', error);
+        console.error('[TelegramNews] Error in IPC handler:', error);
         throw error;
       }
     }
