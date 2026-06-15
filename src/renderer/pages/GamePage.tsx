@@ -43,6 +43,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
+import { isTranslationInstallable } from '../utils/gameStatus';
 
 /**
  * Сторінка детальної інформації про гру
@@ -96,6 +97,9 @@ export const GamePage: React.FC = () => {
     selectedGame.version &&
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
+  const isInstallable = selectedGame
+    ? isTranslationInstallable(selectedGame.status)
+    : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
   const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
 
@@ -535,7 +539,7 @@ export const GamePage: React.FC = () => {
                   isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
                 }
                 onClick={() => handleInstall()}
-                disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
+                disabled={isInstalling || isUninstalling || !isInstallable || !isOnline}
                 title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
                 data-gamepad-primary-action
                 data-gamepad-action
@@ -730,7 +734,7 @@ export const GamePage: React.FC = () => {
               }}
               initial={false}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-x-clip flex-shrink-0"
+              className="overflow-x-clip flex-shrink-0 mb-auto"
             >
               <div className="w-[320px] h-full">
                 <Placement
@@ -746,41 +750,6 @@ export const GamePage: React.FC = () => {
               </div>
             </motion.div>
           </div>
-
-          <motion.div
-            layout="position"
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="flex gap-4 mb-6"
-          >
-            <div className="flex-1 min-w-0">
-              <SocialLinksCard game={selectedGame} />
-            </div>
-            <AnimatePresence>
-              {isTranslationInstalled && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 320, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="overflow-visible flex-shrink-0"
-                >
-                  <div className="glass-card-no-motion h-full flex flex-col justify-center gap-4 w-[320px] p-6">
-                    <h3 className="text-base font-semibold text-text-main">
-                      Знайшли помилку?
-                    </h3>
-                    <button
-                      onClick={() => setShowFeedbackModal(true)}
-                      data-gamepad-action
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-text-main hover:bg-glass-hover transition-colors"
-                    >
-                      <AlertTriangle size={16} />
-                      Повідомити про помилку
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
 
           {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
             <motion.div
@@ -839,6 +808,41 @@ export const GamePage: React.FC = () => {
               </p>
             </motion.div>
           )}
+
+          <motion.div
+            layout="position"
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="flex gap-4 mb-6"
+          >
+            <div className="flex-1 min-w-0">
+              <SocialLinksCard game={selectedGame} />
+            </div>
+            <AnimatePresence>
+              {isTranslationInstalled && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 320, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="overflow-visible flex-shrink-0"
+                >
+                  <div className="glass-card-no-motion h-full flex flex-col justify-center gap-4 w-[320px] p-6">
+                    <h3 className="text-base font-semibold text-text-main">
+                      Знайшли помилку?
+                    </h3>
+                    <button
+                      onClick={() => setShowFeedbackModal(true)}
+                      data-gamepad-action
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-text-main hover:bg-glass-hover transition-colors"
+                    >
+                      <AlertTriangle size={16} />
+                      Повідомити про помилку
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
           {selectedGame.game_description && (
             <motion.div

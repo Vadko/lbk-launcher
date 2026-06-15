@@ -11,6 +11,7 @@ import {
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
+import { invalidateSteamLibraryCache } from '../steam-library-api';
 import { getLogFileDirectory } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
 import { clearStore } from '../utils/store-storage';
@@ -164,6 +165,9 @@ export function setupWindowControls(): void {
         storages: ['cookies', 'filesystem', 'shadercache', 'cachestorage'],
       });
 
+      // Clear Steam library file cache stored in userData
+      invalidateSteamLibraryCache();
+
       // Close database and mark for deletion right before exit
       // to avoid "database connection is not open" errors from IPC handlers
       closeDatabase();
@@ -210,6 +214,9 @@ export function setupWindowControls(): void {
           'cachestorage',
         ],
       });
+
+      // Clear Steam library file cache stored in userData
+      invalidateSteamLibraryCache();
 
       // Close database and clean up right before exit
       closeDatabase();

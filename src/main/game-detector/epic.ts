@@ -354,6 +354,11 @@ export function getEpicLibrary(): string[] {
   const result = Array.from(titles);
   if (result.length > 0) {
     console.log(`[Epic] Found ${result.length} games in library`);
+
+    // Print only first 15 detected titles to keep logs readable.
+    const maxLoggedGames = 15;
+    const visibleTitles = result.slice(0, maxLoggedGames).join(', ');
+    console.log(`[Epic] Games list: ${visibleTitles}`);
   }
 
   return result;
@@ -377,7 +382,7 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
         let data;
         try {
           data = JSON.parse(content);
-        } catch (e) {
+        } catch {
           continue;
         }
 

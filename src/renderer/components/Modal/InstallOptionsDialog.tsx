@@ -201,7 +201,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       {
         name: firstExisting
           ? `Автоматично (${getReadablePlatform(firstExisting.platform)})`
-          : 'Ручний вибір (не знайдено автоматично)',
+          : `Ручний вибір (${getReadablePlatform(supportedPlatforms[0]?.platform)})`,
         value: 'auto',
       },
     ];
@@ -210,14 +210,13 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       const platformName = getReadablePlatform(platform.platform);
       options.push({
         name: platformName,
-        isDisabled: !platform.exists,
         children: (
           <>
             <span>{platformName}</span>
             <span
               className={`ml-auto ${platform.exists ? 'text-color-main' : 'text-text-muted'}`}
             >
-              {platform.exists ? 'Знайдено' : 'Не знайдено'}
+              {platform.exists ? 'Знайдено' : 'Не знайдено (вибір вручну)'}
             </span>
           </>
         ),

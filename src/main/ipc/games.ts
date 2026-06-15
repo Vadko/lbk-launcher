@@ -448,8 +448,13 @@ export function setupGamesHandlers(): void {
 
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
-        const { findSteamAppId } = await import('../game-launcher');
-        const appId = await findSteamAppId(gamePath.path);
+        // Use game.steam_app_id if available, otherwise find by path
+        let appId = game.steam_app_id?.toString() || null;
+
+        if (!appId) {
+          const { findSteamAppId } = await import('../game-launcher');
+          appId = await findSteamAppId(gamePath.path);
+        }
 
         if (appId) {
           const result = await launchSteamGame(appId);
