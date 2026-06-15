@@ -1,21 +1,11 @@
-import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserRouter } from 'react-router-dom';
-import mainBg from '../../resources/main-bg.webp';
-import { AppLoader } from './components/AppLoader/AppLoader';
-import { AppRoutes } from './components/AppRoutes';
-import { GamepadHints } from './components/GamepadHints/GamepadHints';
-import { TitleBar } from './components/Layout/TitleBar';
-import { ConfirmModal } from './components/Modal/ConfirmModal';
-import { GlobalModal } from './components/Modal/GlobalModal';
-import { PromoModal } from './components/Modal/PromoModal';
-import { NotificationModal } from './components/Notifications/NotificationModal';
-import { ToastNotifications } from './components/Notifications/ToastNotifications';
-import { SettingsModal } from './components/Settings/SettingsModal';
-import { Sidebar } from './components/Sidebar/Sidebar';
-import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
+import { Route } from 'react-router-dom';
+import { Router } from '../lib/electron-router-dom';
+import { MainLayout } from './components/Layout/MainLayout';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
+import { GamePage } from './pages/GamePage';
+import { HomePage } from './pages/HomePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
@@ -64,18 +54,12 @@ export const App: React.FC = () => {
     loadSteamGames,
     clearSteamGamesCache,
     clearDetectedGamesCache,
-    syncStatus,
     setSyncStatus,
   } = useStore();
-  const { animationsEnabled, autoDetectInstalledGames, liquidGlassEnabled } =
-    useSettingsStore();
-  const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
+  const { autoDetectInstalledGames, liquidGlassEnabled } = useSettingsStore();
   const setGamepadMode = useGamepadModeStore((s) => s.setGamepadMode);
-  const navigationArea = useGamepadModeStore((s) => s.navigationArea);
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
-  const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const loaderVisible = useStore((s) => s.loaderVisible);
   const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
   // Підписка на real-time оновлення ігор
@@ -395,87 +379,23 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Check if liquid glass mode is active (supported AND enabled)
-  const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
-
   return (
-    <BrowserRouter>
-      <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
-        {/* Loader overlay with fade animation */}
-        <AnimatePresence>
-          {loaderVisible && <AppLoader status={syncStatus} />}
-        </AnimatePresence>
-
-        <div
-          className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
-          data-gamepad-mode={isGamepadMode || undefined}
+    <Router
+      main={
+        <Route
+          path="/"
+          element={
+            <MainLayout
+              online={online}
+              version={window.electronAPI?.getVersion?.() || ''}
+              liquidGlassSupported={liquidGlassSupported}
+            />
+          }
         >
-          <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
-
-          {/* Main layout - changes based on gamepad mode */}
-          {isGamepadMode ? (
-            /* Gamepad layout: Header + Games strip on top, MainContent below */
-            <div className="flex flex-col h-full pt-8 relative z-10">
-              {/* Background image */}
-              <img
-                src={mainBg}
-                alt=""
-                className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-                aria-hidden="true"
-              />
-              {/* Sidebar - hides when in main-content mode */}
-              <div
-                className={`transition-all duration-300 ease-in-out relative z-20 ${
-                  navigationArea === 'main-content'
-                    ? 'max-h-0 opacity-0 overflow-hidden'
-                    : 'max-h-[300px] opacity-100'
-                }`}
-              >
-                <Sidebar
-                  onOpenHistory={() => setShowNotificationHistory(true)}
-                  isHorizontal={true}
-                />
-              </div>
-              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                <AppRoutes isGamepadMode={isGamepadMode} />
-              </div>
-            </div>
-          ) : (
-            /* Normal layout: Vertical sidebar on left, MainContent on right */
-            <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
-              {/* Background image */}
-              <img
-                src={mainBg}
-                alt=""
-                className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-                aria-hidden="true"
-              />
-              <Sidebar
-                onOpenHistory={() => setShowNotificationHistory(true)}
-                isHorizontal={false}
-              />
-              <AppRoutes isGamepadMode={isGamepadMode} />
-            </div>
-          )}
-
-          {/* Update notifications */}
-          <UpdateNotification />
-          <ToastNotifications />
-
-          {/* Global modals — GlobalModal last so it renders on top of others */}
-          <ConfirmModal />
-          <SettingsModal />
-          <GlobalModal />
-          <NotificationModal
-            isOpen={showNotificationHistory}
-            onClose={() => setShowNotificationHistory(false)}
-          />
-          <PromoModal />
-
-          {/* Gamepad hints */}
-          <GamepadHints />
-        </div>
-      </MotionConfig>
-    </BrowserRouter>
+          <Route index element={<HomePage />} />
+          <Route path="/game/:gameId" element={<GamePage />} />
+        </Route>
+      }
+    />
   );
 };
