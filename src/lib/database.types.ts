@@ -1350,6 +1350,57 @@ export type Database = {
           },
         ]
       }
+      news_posts: {
+        Row: {
+          channel_id: number
+          channel_username: string
+          content_html: string | null
+          edited_at: string | null
+          entities: Json | null
+          id: number
+          images: Json
+          ingested_at: string
+          is_deleted: boolean
+          posted_at: string
+          raw_text: string | null
+          tags: string[]
+          telegram_message_id: number
+          title: string | null
+        }
+        Insert: {
+          channel_id: number
+          channel_username?: string
+          content_html?: string | null
+          edited_at?: string | null
+          entities?: Json | null
+          id?: number
+          images?: Json
+          ingested_at?: string
+          is_deleted?: boolean
+          posted_at: string
+          raw_text?: string | null
+          tags?: string[]
+          telegram_message_id: number
+          title?: string | null
+        }
+        Update: {
+          channel_id?: number
+          channel_username?: string
+          content_html?: string | null
+          edited_at?: string | null
+          entities?: Json | null
+          id?: number
+          images?: Json
+          ingested_at?: string
+          is_deleted?: boolean
+          posted_at?: string
+          raw_text?: string | null
+          tags?: string[]
+          telegram_message_id?: number
+          title?: string | null
+        }
+        Relationships: []
+      }
       slug_redirects: {
         Row: {
           created_at: string | null
