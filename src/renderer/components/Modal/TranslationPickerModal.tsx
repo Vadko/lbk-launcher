@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Users, X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
@@ -23,14 +24,15 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   translations,
   gameName,
 }) => {
-  const { selectedGame, setSelectedGame, installedTranslations, gamesWithUpdates } =
-    useStore();
+  const navigate = useNavigate();
+  const { selectedGame, installedTranslations, gamesWithUpdates } = useStore();
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const setNavigationArea = useGamepadModeStore((s) => s.setNavigationArea);
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
   const handleSelect = (game: Game) => {
-    setSelectedGame(game);
+    // Навігуємо на сторінку вибраної гри замість setSelectedGame
+    navigate(`/game/${game.id}`);
     onClose();
     // Switch to main content after selection in gamepad mode
     if (isGamepadMode) {

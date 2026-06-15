@@ -1,6 +1,6 @@
 import { Bell, Home, Settings, Volume2, VolumeX } from 'lucide-react';
 import React from 'react';
-import { useStore } from '@/renderer/store/useStore';
+import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface SidebarFooterProps {
@@ -12,15 +12,15 @@ interface SidebarFooterProps {
 
 export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
   ({ onOpenHistory, onOpenSettings, unreadCount, isCompact = false }) => {
+    const navigate = useNavigate();
     const { gamepadSoundsEnabled, toggleGamepadSounds } = useSettingsStore();
-    const { setSelectedGame } = useStore();
 
     return (
       <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
         {isCompact && (
           <>
             <button
-              onClick={() => setSelectedGame(null)}
+              onClick={() => navigate('/')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"

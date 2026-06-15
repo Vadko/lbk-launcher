@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useStore } from '../store/useStore';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Hook для обробки deep link навігації.
@@ -7,7 +7,7 @@ import { useStore } from '../store/useStore';
  * URL формат: lbk://games/{slug}/{team}
  */
 export function useDeepLink() {
-  const setSelectedGame = useStore((state) => state.setSelectedGame);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!window.electronAPI?.onDeepLink) return;
@@ -16,7 +16,8 @@ export function useDeepLink() {
       console.log('[DeepLink] Navigating to:', data);
 
       try {
-        // Завантажити всі ігри з БД
+        // TODO: Оптимізувати - зараз завантажуються ВСІ ігри для пошуку однієї
+        // Варіанти: 1) додати API метод для пошуку по slug, 2) використовувати кеш
         const result = await window.electronAPI.fetchGames();
 
         // Знайти гру по slug та team
@@ -38,7 +39,7 @@ export function useDeepLink() {
 
         if (targetGame) {
           console.log('[DeepLink] Found game:', targetGame.name, 'by', targetGame.team);
-          setSelectedGame(targetGame);
+          navigate(`/game/${targetGame.id}`);
         } else {
           console.warn('[DeepLink] Game not found for:', data);
         }
@@ -49,5 +50,5 @@ export function useDeepLink() {
 
     const unsubscribe = window.electronAPI.onDeepLink(handleDeepLink);
     return unsubscribe;
-  }, [setSelectedGame]);
+  }, [navigate]);
 }
