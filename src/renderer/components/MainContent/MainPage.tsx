@@ -41,7 +41,7 @@ export const MainPage: React.FC = () => {
     <div
       ref={ContainerRef}
       data-gamepad-main-content
-      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar scrollbar-gutter-[stable]`}
+      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar`}
     >
       {/* Main page */}
       {currentView === 'main' && (

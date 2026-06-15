@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
 import type { NewsFeedFilter } from '@/shared/types';
+import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -26,7 +27,20 @@ const formatDate = (date?: string) => {
 
 export const NewsFeedSection: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<NewsFeedFilter>('sales');
-  const { data: feedItems = [], isError, isLoading } = useNewsFeed(activeFilter);
+  const {
+    data: feedItems = [],
+    isError,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useNewsFeed(activeFilter);
+
+  const attachSentinel = useInfiniteScrollSentinel({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  });
 
   const openInTelegram = async (url: string) => {
     // Витягуємо назву каналу та ID поста за допомогою регулярного виразу
@@ -95,7 +109,7 @@ export const NewsFeedSection: React.FC = () => {
               <p>Новин не знайдено</p>
             </motion.div>
           ) : (
-            <React.Fragment key={`news-feed-${activeFilter}`}>
+            <React.Fragment>
               {feedItems.map((item, index) => {
                 const publishedAt = formatDate(item.publishedAt);
 
@@ -140,6 +154,14 @@ export const NewsFeedSection: React.FC = () => {
                   </motion.article>
                 );
               })}
+              {hasNextPage && (
+                <div ref={attachSentinel} className="col-span-2 h-1" aria-hidden />
+              )}
+              {isFetchingNextPage && (
+                <div className="col-span-2 flex items-center justify-center py-6">
+                  <Loader size="sm" />
+                </div>
+              )}
             </React.Fragment>
           )}
         </AnimatePresence>

@@ -24,6 +24,8 @@ export interface NewsFeedItem {
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
+export const NEWS_PAGE_SIZE = 20;
+
 export interface GamePath {
   platform: Platform;
   path: string;
@@ -235,7 +237,7 @@ export interface ElectronAPI {
     componentsToRemove: { voice?: boolean; achievements?: boolean }
   ) => Promise<InstallResult>;
   checkPlatformCompatibility: (game: Game) => Promise<string | null>;
-  fetchNewsFeed: (filter: NewsFeedFilter) => Promise<NewsFeedItem[]>;
+  fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;
