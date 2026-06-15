@@ -57,7 +57,7 @@ export async function copyDirectory(source: string, destination: string): Promis
     console.log(`Copied files from ${source} to ${destination}`);
   } catch (error) {
     throw new Error(
-      `Error copying files: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Помилка копіювання файлів: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
