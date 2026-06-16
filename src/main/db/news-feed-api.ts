@@ -1,12 +1,9 @@
 import got from 'got';
-import {
-  NEWS_PAGE_SIZE,
-  type NewsFeedFilter,
-  type NewsFeedItem,
-} from '../../shared/types';
+import type { NewsFeedFilter, NewsFeedItem } from '../../shared/types';
 import { getSupabaseCredentials } from './supabase-credentials';
 
 const REQUEST_TIMEOUT = { connect: 5000, response: 10_000 };
+const PAGE_SIZE = 20;
 
 interface NewsPostRow {
   channel_username: string;
@@ -26,7 +23,7 @@ export async function fetchNewsFeed(
     select: 'channel_username,telegram_message_id,title,content_html,posted_at',
     tags: `cs.{${filter}}`,
     order: 'posted_at.desc',
-    limit: String(NEWS_PAGE_SIZE),
+    limit: String(PAGE_SIZE),
   });
   if (before) params.set('posted_at', `lt.${before}`);
 

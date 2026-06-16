@@ -24,8 +24,6 @@ export interface NewsFeedItem {
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
-export const NEWS_PAGE_SIZE = 20;
-
 export interface GamePath {
   platform: Platform;
   path: string;
