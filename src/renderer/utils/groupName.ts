@@ -6,7 +6,9 @@ interface GroupNaming {
 }
 
 const TRAILING_JUNK = /(?:[\s([{]+|[^\p{L}\p{N})\]}]+)+$/u;
+const TRAILING_WORD = /[\p{L}\p{N}]+$/u;
 const LEADING_JUNK = /^[^\p{L}\p{N}([{]+/u;
+const WORD_CHAR = /[\p{L}\p{N}]/u;
 
 /**
  * Derives a clean shared title plus per-translation variant suffixes for a
@@ -54,17 +56,20 @@ function commonPrefix(a: string, b: string): string {
 
 /**
  * Snap a raw prefix to a sensible boundary: drop a trailing partial word if
- * the prefix cut mid-token, then strip any trailing whitespace, punctuation,
- * or unbalanced opener (`(`, `[`, `{`) that survives.
+ * the prefix cut mid-word, then strip any trailing whitespace, punctuation,
+ * or unbalanced opener (`(`, `[`, `{`) that survives. Only word characters
+ * (letters/digits) are considered "in a word" — that way a prefix like
+ * "Stray:" + divergence "Bonus" / "DLC" trims to "Stray", not to "".
  */
 function cleanPrefix(rawPrefix: string, allNames: string[]): string {
   let prefix = rawPrefix;
   const lastChar = prefix.at(-1);
-  const cutMidToken = allNames.some(
-    (n) => prefix.length < n.length && /\S/.test(n[prefix.length])
-  );
-  if (cutMidToken && lastChar && /\S/.test(lastChar)) {
-    prefix = prefix.replace(/\S+$/, '');
+  const cutMidWord =
+    !!lastChar &&
+    WORD_CHAR.test(lastChar) &&
+    allNames.some((n) => prefix.length < n.length && WORD_CHAR.test(n[prefix.length]));
+  if (cutMidWord) {
+    prefix = prefix.replace(TRAILING_WORD, '');
   }
   return prefix.replace(TRAILING_JUNK, '').trim();
 }
