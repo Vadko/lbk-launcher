@@ -1,6 +1,6 @@
 import type { Game } from '../types/game';
 
-export interface GroupNaming {
+interface GroupNaming {
   name: string;
   variantById: Map<string, string>;
 }
