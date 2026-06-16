@@ -35,9 +35,7 @@ export function deriveGroupNaming(translations: Game[]): GroupNaming {
 }
 
 function sortCaseInsensitive(strings: string[]): string[] {
-  return [...strings].sort((a, b) =>
-    a.toLowerCase().localeCompare(b.toLowerCase())
-  );
+  return [...strings].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 }
 
 /**
