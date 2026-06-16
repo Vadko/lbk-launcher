@@ -583,13 +583,8 @@ export const GamePage: React.FC = () => {
                   variant="secondary"
                   icon={<ReplaceAllIcon size={20} />}
                   onClick={handleRerunInstaller}
-                  disabled={isTombstoned}
                   data-gamepad-action
-                  title={
-                    isTombstoned
-                      ? 'Переклад більше не доступний у каталозі'
-                      : 'Запустити інсталятор повторно'
-                  }
+                  title="Запустити інсталятор повторно"
                 >
                   Перевстановити
                 </Button>
