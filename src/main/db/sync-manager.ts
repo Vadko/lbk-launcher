@@ -1,9 +1,25 @@
 import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
+import { getAllInstalledGameIds } from '../installer/cache';
 import { createTimer } from '../utils/logger';
+import { getMainWindow } from '../window';
 import { getDatabase } from './database';
 import { dbWorkerClient } from './db-worker-client';
 import { GamesRepository } from './games-repository';
+
+const PENDING_DELETIONS_KEY = 'pending_game_deletions';
+
+/**
+ * Повідомити рендерер про видалення ігор зі списку (sidebar/головний список).
+ */
+function notifyGamesRemoved(gameIds: string[]): void {
+  if (gameIds.length === 0) return;
+  const mainWindow = getMainWindow();
+  if (!mainWindow) return;
+  for (const id of gameIds) {
+    mainWindow.webContents.send('game-removed', id);
+  }
+}
 
 /**
  * Менеджер синхронізації між Supabase та локальною базою даних
@@ -48,6 +64,102 @@ export class SyncManager {
   }
 
   /**
+   * Отримати список ID ігор, які сервер позначив видаленими, але які наразі
+   * встановлені у користувача і тому збережені в локальній БД.
+   */
+  private getPendingDeletions(): string[] {
+    const stmt = this.db.prepare('SELECT value FROM sync_metadata WHERE key = ?');
+    const result = stmt.get(PENDING_DELETIONS_KEY) as { value: string } | undefined;
+    if (!result?.value) return [];
+    try {
+      const parsed = JSON.parse(result.value);
+      return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private setPendingDeletions(ids: string[]): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+      VALUES (?, ?, datetime('now'))
+    `);
+    stmt.run(PENDING_DELETIONS_KEY, JSON.stringify(ids));
+  }
+
+  /**
+   * Єдина точка реального видалення ігор: видаляє з SQLite через worker
+   * і повідомляє рендерер ('game-removed'), щоб список у sidebar оновився.
+   */
+  private async actuallyDeleteGames(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await dbWorkerClient.init();
+    await dbWorkerClient.deleteGames(ids);
+    notifyGamesRemoved(ids);
+  }
+
+  /**
+   * Розділити deletedIds на ті, які можна видалити одразу (гра не встановлена),
+   * та ті, які треба зберегти до моменту видалення локалізації.
+   */
+  private async splitDeletedIds(
+    deletedIds: string[]
+  ): Promise<{ safe: string[]; deferred: string[] }> {
+    if (deletedIds.length === 0) return { safe: [], deferred: [] };
+    const installedIds = new Set(await getAllInstalledGameIds());
+    const safe: string[] = [];
+    const deferred: string[] = [];
+    for (const id of deletedIds) {
+      if (installedIds.has(id)) deferred.push(id);
+      else safe.push(id);
+    }
+    return { safe, deferred };
+  }
+
+  /**
+   * Додати ID до списку pending deletions (унікально).
+   */
+  private addPendingDeletions(ids: string[]): void {
+    if (ids.length === 0) return;
+    const existing = new Set(this.getPendingDeletions());
+    for (const id of ids) existing.add(id);
+    this.setPendingDeletions([...existing]);
+  }
+
+  /**
+   * Пройтися по pending deletions і видалити з локальної БД ті, які
+   * більше не встановлені (юзер видалив переклад або файли відновлено).
+   * Викликається після зміни в installation-cache.
+   */
+  async processPendingDeletions(): Promise<void> {
+    const pending = this.getPendingDeletions();
+    if (pending.length === 0) return;
+
+    try {
+      const installedIds = new Set(await getAllInstalledGameIds());
+      const stillInstalled: string[] = [];
+      const readyToDelete: string[] = [];
+      for (const id of pending) {
+        if (installedIds.has(id)) stillInstalled.push(id);
+        else readyToDelete.push(id);
+      }
+
+      if (readyToDelete.length > 0) {
+        console.log(
+          `[SyncManager] Processing ${readyToDelete.length} pending deletions (now uninstalled)`
+        );
+        await this.actuallyDeleteGames(readyToDelete);
+      }
+
+      if (readyToDelete.length > 0 || stillInstalled.length !== pending.length) {
+        this.setPendingDeletions(stillInstalled);
+      }
+    } catch (error) {
+      console.error('[SyncManager] Error processing pending deletions:', error);
+    }
+  }
+
+  /**
    * Повний sync - завантажити всі ігри з Supabase та видалити видалені
    * Використовує Worker Thread для batch операцій щоб не блокувати main thread
    */
@@ -82,16 +194,25 @@ export class SyncManager {
         console.log(`[SyncManager] Inserted/updated ${games.length} games via worker`);
       }
 
-      // Видалити ігри, які є в deleted_games
+      // Видалити ігри, які є в deleted_games (крім встановлених — їх відкладаємо)
       if (fetchDeletedGameIds) {
         const deletedIds = await fetchDeletedGameIds();
         if (deletedIds.length > 0) {
-          console.log(
-            `[SyncManager] Deleting ${deletedIds.length} games from deleted_games table`
-          );
-          const deleteTimer = createTimer(`Delete ${deletedIds.length} games`);
-          await dbWorkerClient.deleteGames(deletedIds);
-          deleteTimer.end();
+          const { safe, deferred } = await this.splitDeletedIds(deletedIds);
+          if (safe.length > 0) {
+            console.log(
+              `[SyncManager] Deleting ${safe.length} games from deleted_games table`
+            );
+            const deleteTimer = createTimer(`Delete ${safe.length} games`);
+            await this.actuallyDeleteGames(safe);
+            deleteTimer.end();
+          }
+          if (deferred.length > 0) {
+            console.log(
+              `[SyncManager] Deferring deletion of ${deferred.length} installed games`
+            );
+            this.addPendingDeletions(deferred);
+          }
         }
       }
 
@@ -146,14 +267,23 @@ export class SyncManager {
         console.log(`[SyncManager] Updated ${updatedGames.length} games via worker`);
       }
 
-      // Видалити ігри, які були видалені на сервері
+      // Видалити ігри, які були видалені на сервері (крім встановлених)
       if (fetchDeletedGameIds) {
         const deletedIds = await fetchDeletedGameIds(lastSync);
         if (deletedIds.length > 0) {
-          console.log(
-            `[SyncManager] Deleting ${deletedIds.length} games removed from server`
-          );
-          await dbWorkerClient.deleteGames(deletedIds);
+          const { safe, deferred } = await this.splitDeletedIds(deletedIds);
+          if (safe.length > 0) {
+            console.log(
+              `[SyncManager] Deleting ${safe.length} games removed from server`
+            );
+            await this.actuallyDeleteGames(safe);
+          }
+          if (deferred.length > 0) {
+            console.log(
+              `[SyncManager] Deferring deletion of ${deferred.length} installed games`
+            );
+            this.addPendingDeletions(deferred);
+          }
         }
       }
 
@@ -211,11 +341,21 @@ export class SyncManager {
   }
 
   /**
-   * Обробити realtime видалення
+   * Обробити realtime видалення.
+   * Якщо гра встановлена — зберегти її у локальній БД до моменту, коли
+   * користувач видалить локалізацію (див. processPendingDeletions).
    */
-  handleRealtimeDelete(gameId: string): void {
+  async handleRealtimeDelete(gameId: string): Promise<void> {
     console.log(`[SyncManager] Handling realtime delete for game: ${gameId}`);
-    this.gamesRepo.deleteGame(gameId);
+    const installedIds = new Set(await getAllInstalledGameIds());
+    if (installedIds.has(gameId)) {
+      console.log(
+        `[SyncManager] Game ${gameId} is installed — deferring deletion until uninstall`
+      );
+      this.addPendingDeletions([gameId]);
+      return;
+    }
+    await this.actuallyDeleteGames([gameId]);
   }
 
   /**

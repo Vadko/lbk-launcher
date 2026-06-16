@@ -166,6 +166,19 @@ export const GamePage: React.FC = () => {
     };
   }, [gameId, selectedGame, setSelectedGame, navigate]);
 
+  // Якщо поточну гру видалено з БД (через sync/realtime/post-uninstall cleanup) —
+  // повертаємось на головну, щоб не показувати stale дані.
+  useEffect(() => {
+    if (!window.electronAPI?.onGameRemoved || !gameId) return;
+    const unsubscribe = window.electronAPI.onGameRemoved((removedId) => {
+      if (removedId === gameId) {
+        console.log('[GamePage] Current game removed, navigating home');
+        navigate('/');
+      }
+    });
+    return unsubscribe;
+  }, [gameId, navigate]);
+
   // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
     let isMounted = true;

@@ -133,12 +133,9 @@ export class SupabaseRealtimeManager {
     console.log(`[SupabaseRealtime] Game ${event}:`, game.name, `(${game.id})`);
 
     if (event === 'DELETE') {
+      // SyncManager сам вирішить — видаляти зараз чи відкласти (якщо встановлено),
+      // і він же відправить 'game-removed' рендереру, коли реально видалить.
       onDelete(game.id);
-      const mainWindow = getMainWindow();
-      if (mainWindow) {
-        mainWindow.webContents.send('game-removed', game.id);
-        console.log('[SupabaseRealtime] Sent game-removed to renderer:', game.id);
-      }
       return;
     }
 
@@ -147,10 +144,6 @@ export class SupabaseRealtimeManager {
       if (event === 'UPDATE') {
         console.log('[SupabaseRealtime] Game unapproved, removing:', game.name);
         onDelete(game.id);
-        const mainWindow = getMainWindow();
-        if (mainWindow) {
-          mainWindow.webContents.send('game-removed', game.id);
-        }
       } else {
         console.log('[SupabaseRealtime] New game not approved, skipping:', game.name);
       }
