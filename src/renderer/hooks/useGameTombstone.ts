@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
  */
 export function useGameTombstone(gameId: string | undefined): boolean {
   const navigate = useNavigate();
-  const [isTombstoned, setIsTombstoned] = useState(false);
+  const [data, setData] = useState<{ id: string; value: boolean } | null>(null);
 
   useEffect(() => {
     if (!window.electronAPI?.onGameRemoved || !gameId) return;
@@ -24,20 +24,17 @@ export function useGameTombstone(gameId: string | undefined): boolean {
   }, [gameId, navigate]);
 
   useEffect(() => {
-    if (!gameId) {
-      setIsTombstoned(false);
-      return;
-    }
+    if (!gameId) return;
     let cancelled = false;
     window.electronAPI
       ?.isGameTombstoned(gameId)
       .then((value) => {
-        if (!cancelled) setIsTombstoned(value);
+        if (!cancelled) setData({ id: gameId, value });
       })
       .catch((err) => console.error('[useGameTombstone] check failed:', err));
 
     const unsubscribe = window.electronAPI?.onGameTombstoned?.((tombstonedId) => {
-      if (tombstonedId === gameId) setIsTombstoned(true);
+      if (tombstonedId === gameId) setData({ id: gameId, value: true });
     });
     return () => {
       cancelled = true;
@@ -45,5 +42,5 @@ export function useGameTombstone(gameId: string | undefined): boolean {
     };
   }, [gameId]);
 
-  return isTombstoned;
+  return data !== null && data.id === gameId ? data.value : false;
 }
