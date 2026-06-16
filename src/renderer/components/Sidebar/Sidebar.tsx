@@ -7,6 +7,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import type { Game } from '../../types/game';
+import { deriveGroupNaming } from '../../utils/groupName';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
 import { AuthorsFilterDropdown } from './AuthorsFilterDropdown';
@@ -104,16 +105,23 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       [setSpecialFilterRaw, setSelectedStatusesRaw, setSelectedAuthors]
     );
 
-    // Translation picker modal state
-    const [pickerModalOpen, setPickerModalOpen] = useState(false);
-    const [pickerTranslations, setPickerTranslations] = useState<Game[]>([]);
-    const [pickerGameName, setPickerGameName] = useState('');
-
-    const openTranslationPicker = (translations: Game[], gameName: string) => {
-      setPickerTranslations(translations);
-      setPickerGameName(gameName);
-      setPickerModalOpen(true);
+    // Translation picker modal state. Bundled so opening/closing is atomic and
+    // we never flash translations from one group with variants from another.
+    type PickerPayload = {
+      translations: Game[];
+      gameName: string;
+      variantById: Map<string, string>;
     };
+    const [pickerPayload, setPickerPayload] = useState<PickerPayload | null>(null);
+
+    const openTranslationPicker = (
+      translations: Game[],
+      gameName: string,
+      variantById: Map<string, string>
+    ) => {
+      setPickerPayload({ translations, gameName, variantById });
+    };
+    const closeTranslationPicker = () => setPickerPayload(null);
 
     // Fetch authors list (wait for sync to complete)
     const syncStatus = useStore((state) => state.syncStatus);
@@ -175,7 +183,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         if (game.steam_app_id !== null && game.steam_app_id !== undefined) {
           return `steam:${game.steam_app_id}`;
         }
-
         return game.slug ? `slug:${game.slug}` : `id:${game.id}`;
       };
 
@@ -189,29 +196,31 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         }
 
         groupMap.set(key, {
-          slug:
-            game.steam_app_id !== null && game.steam_app_id !== undefined
-              ? `steam-${game.steam_app_id}`
-              : game.slug || game.id,
+          key,
           name: game.name,
           translations: [game],
+          variantById: new Map(),
         });
       }
 
       const groups = Array.from(groupMap.values());
 
-      // Sort translations within each group by progress
       for (const group of groups) {
         group.translations.sort(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
+        // Derive a clean shared title and per-translation variant suffix
+        // (e.g. "Stray (без озвучення)" → name="Stray", variant="(без озвучення)").
+        const naming = deriveGroupNaming(group.translations);
+        group.name = naming.name;
+        group.variantById = naming.variantById;
       }
 
       // Preserve group order from SQL (first appearance of each key)
       return groups;
     }, [visibleGames]);
 
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
 
     const listRef = useRef<HTMLDivElement>(null);
 
@@ -263,13 +272,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       };
     }, [isResizing, setSidebarWidth]);
 
-    const toggleGroupExpanded = (slug: string) => {
+    const toggleGroupExpanded = (key: string) => {
       setExpandedGroups((prev) => {
         const newSet = new Set(prev);
-        if (newSet.has(slug)) {
-          newSet.delete(slug);
+        if (newSet.has(key)) {
+          newSet.delete(key);
         } else {
-          newSet.add(slug);
+          newSet.add(key);
         }
         return newSet;
       });
@@ -363,10 +372,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
           {/* Translation picker modal */}
           <TranslationPickerModal
-            isOpen={pickerModalOpen}
-            onClose={() => setPickerModalOpen(false)}
-            translations={pickerTranslations}
-            gameName={pickerGameName}
+            isOpen={pickerPayload !== null}
+            onClose={closeTranslationPicker}
+            translations={pickerPayload?.translations ?? []}
+            gameName={pickerPayload?.gameName ?? ''}
+            variantById={pickerPayload?.variantById}
           />
         </div>
       );

@@ -22,6 +22,7 @@ interface GameListItemProps {
   isCardStyle?: boolean;
   showDownloadCounter?: boolean;
   isTranslationAvailable?: boolean;
+  variant?: string;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -36,6 +37,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     isCardStyle = false,
     showDownloadCounter = false,
     isTranslationAvailable = true,
+    variant,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -58,16 +60,16 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
-    const nameData = game.name.split('(');
+    const teamLabel = game.team || 'Невідомий автор';
     const gameTeamTitle = showTeamName
-      ? `${game.team}${nameData.length > 1 ? ` (${nameData[1].trim()}` : ''}`
+      ? variant
+        ? `${teamLabel} ${variant}`
+        : teamLabel
       : game.name;
     const gameTeam = showTeamName ? (
       <>
-        {game.team}
-        <span className="text-text-muted text-xs">
-          {nameData.length > 1 ? ` (${nameData[1].trim()}` : ''}
-        </span>
+        {teamLabel}
+        {variant && <span className="text-text-muted text-xs"> {variant}</span>}
       </>
     ) : (
       game.name

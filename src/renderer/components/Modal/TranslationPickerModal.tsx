@@ -15,6 +15,7 @@ interface TranslationPickerModalProps {
   onClose: () => void;
   translations: Game[];
   gameName: string;
+  variantById?: Map<string, string>;
 }
 
 export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
@@ -22,6 +23,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   onClose,
   translations,
   gameName,
+  variantById,
 }) => {
   const { selectedGame, setSelectedGame, installedTranslations, gamesWithUpdates } =
     useStore();
@@ -93,15 +95,8 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 const isTranslationAvailable =
                   game.status !== 'planned' && game.status !== 'tech-improvement';
 
-                const nameData = game.name.split('(');
-                const gameTeam = (
-                  <>
-                    {game.team}
-                    <span className="text-text-muted text-xs">
-                      {nameData.length > 1 ? ` (${nameData[1].trim()}` : ''}
-                    </span>
-                  </>
-                );
+                const variant = variantById?.get(game.id);
+                const teamLabel = game.team || 'Невідомий автор';
 
                 return (
                   <button
@@ -145,7 +140,10 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-text-main truncate">
-                          {gameTeam || 'Невідомий автор'}
+                          {teamLabel}
+                          {variant && (
+                            <span className="text-text-muted text-xs"> {variant}</span>
+                          )}
                         </span>
                         <StatusIcons
                           hasUpdate={hasUpdate}

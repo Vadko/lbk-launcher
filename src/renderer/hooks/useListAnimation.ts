@@ -14,8 +14,8 @@ interface AnimationProps {
 }
 
 interface UseListAnimationOptions {
-  /** Slug list to track changes */
-  slugs: string[];
+  /** Key list to track changes */
+  keys: string[];
   /** Whether animations are enabled globally */
   animationsEnabled: boolean;
   /** How many items get staggered entrance on app start */
@@ -25,20 +25,20 @@ interface UseListAnimationOptions {
 }
 
 const EASE_OUT_EXPO: EaseArray = [0.22, 1, 0.36, 1];
-/** How long to keep prevSlugs stale so animations can finish (ms) */
+/** How long to keep prevKeys stale so animations can finish (ms) */
 const ANIMATION_DURATION_MS = 400;
 
 interface AnimState {
-  prevSlugs: Set<string>;
+  prevKeys: Set<string>;
   initialStaggerDone: boolean;
 }
 
-type AnimAction = { type: 'update_slugs'; slugs: string[] } | { type: 'stagger_done' };
+type AnimAction = { type: 'update_keys'; keys: string[] } | { type: 'stagger_done' };
 
 function animReducer(state: AnimState, action: AnimAction): AnimState {
   switch (action.type) {
-    case 'update_slugs':
-      return { ...state, prevSlugs: new Set(action.slugs) };
+    case 'update_keys':
+      return { ...state, prevKeys: new Set(action.keys) };
     case 'stagger_done':
       return { ...state, initialStaggerDone: true };
   }
@@ -49,7 +49,7 @@ function animReducer(state: AnimState, action: AnimAction): AnimState {
  * Returns a function that provides motion props for each item.
  */
 export function useListAnimation({
-  slugs,
+  keys,
   animationsEnabled,
   staggerCount,
   direction,
@@ -57,20 +57,20 @@ export function useListAnimation({
   const loaderVisible = useStore((s) => s.loaderVisible);
 
   const [state, dispatch] = useReducer(animReducer, {
-    prevSlugs: new Set<string>(),
+    prevKeys: new Set<string>(),
     initialStaggerDone: false,
   });
 
-  // Delay prevSlugs update so animation has time to play.
+  // Delay prevKeys update so animation has time to play.
   // During the delay, listChanged (computed at render time) stays true
   // and items remain as motion.div until animation completes.
-  const slugsKey = slugs.join(',');
+  const keysKey = keys.join(',');
   useEffect(() => {
     const timer = setTimeout(() => {
-      dispatch({ type: 'update_slugs', slugs });
+      dispatch({ type: 'update_keys', keys });
     }, ANIMATION_DURATION_MS);
     return () => clearTimeout(timer);
-  }, [slugsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [keysKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mark initial stagger as done after animations complete
   useEffect(() => {
@@ -91,8 +91,8 @@ export function useListAnimation({
   // available on the same render cycle as the data change
   const listChanged =
     !isInitialAppear &&
-    state.prevSlugs.size > 0 &&
-    (slugs.length !== state.prevSlugs.size || slugs.some((s) => !state.prevSlugs.has(s)));
+    state.prevKeys.size > 0 &&
+    (keys.length !== state.prevKeys.size || keys.some((s) => !state.prevKeys.has(s)));
 
   const offset = direction === 'x' ? { opacity: 0, x: 20 } : { opacity: 0, y: 20 };
   const target = direction === 'x' ? { opacity: 1, x: 0 } : { opacity: 1, y: 0 };
@@ -102,7 +102,7 @@ export function useListAnimation({
    * Returns null if the item should render as a plain div.
    */
   const getAnimationProps = useCallback(
-    (slug: string, index: number): AnimationProps | null => {
+    (key: string, index: number): AnimationProps | null => {
       if (skipAll) return null;
 
       if (isInitialAppear) {
@@ -115,7 +115,7 @@ export function useListAnimation({
         };
       }
 
-      if (!listChanged && state.prevSlugs.has(slug)) return null;
+      if (!listChanged && state.prevKeys.has(key)) return null;
 
       return {
         initial: offset,
@@ -123,7 +123,7 @@ export function useListAnimation({
         transition: { duration: 0.35, ease: EASE_OUT_EXPO },
       };
     },
-    [skipAll, isInitialAppear, staggerCount, offset, target, listChanged, state.prevSlugs]
+    [skipAll, isInitialAppear, staggerCount, offset, target, listChanged, state.prevKeys]
   );
 
   return { getAnimationProps };
