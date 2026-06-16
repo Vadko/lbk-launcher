@@ -258,7 +258,7 @@ if (!gotTheLock) {
 
     // Запустити синхронізацію з retry та загальним таймаутом
     console.log('[Main] Starting sync with Supabase...');
-    syncManager = new SyncManager();
+    syncManager = SyncManager.getInstance();
 
     try {
       sendSyncStatus('syncing');

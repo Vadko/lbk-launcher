@@ -20,6 +20,7 @@ import {
 } from '../db/banners-api';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
+import { SyncManager } from '../db/sync-manager';
 import {
   detectGamePath,
   detectGamePaths,
@@ -113,6 +114,12 @@ export function setupGamesHandlers(): void {
     'upload-file-to-signed-url',
     async (_, signedUrl: string, filePath: string, contentType: string) =>
       uploadFileToSignedUrl(signedUrl, filePath, contentType)
+  );
+
+  // Перевірити чи гру позначено як tombstoned
+  // (видалена з каталогу, але встановлена локально)
+  ipcMain.handle('is-game-tombstoned', (_, gameId: string) =>
+    SyncManager.getInstance().isGameTombstoned(gameId)
   );
 
   // Fetch games with pagination - SYNC тепер, тому що локальна БД

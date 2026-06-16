@@ -90,8 +90,19 @@ function detectLinuxBrowser(): BrowserCommand | null {
  * by detecting and launching the browser directly.
  */
 export async function openExternalUrl(url: string): Promise<void> {
+  if (!url || typeof url !== 'string') {
+    throw new Error(`[OpenExternal] Invalid URL: ${JSON.stringify(url)}`);
+  }
+
+  const trimmed = url.trim();
+  if (!/^(https?:|mailto:|tel:)/i.test(trimmed)) {
+    throw new Error(
+      `[OpenExternal] Refusing to open URL without a safe protocol: ${trimmed}`
+    );
+  }
+
   if (!isLinux()) {
-    await shell.openExternal(url);
+    await shell.openExternal(trimmed);
     return;
   }
 
@@ -106,7 +117,7 @@ export async function openExternalUrl(url: string): Promise<void> {
   }
 
   if (cachedBrowser) {
-    const child = spawn(cachedBrowser.command, [...cachedBrowser.args, url], {
+    const child = spawn(cachedBrowser.command, [...cachedBrowser.args, trimmed], {
       detached: true,
       stdio: 'ignore',
     });
@@ -115,5 +126,5 @@ export async function openExternalUrl(url: string): Promise<void> {
   }
 
   // Fallback to Electron's default (xdg-open)
-  await shell.openExternal(url);
+  await shell.openExternal(trimmed);
 }

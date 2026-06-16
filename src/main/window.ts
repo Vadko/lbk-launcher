@@ -68,7 +68,9 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   // open target="_blank" links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    openExternalUrl(url);
+    openExternalUrl(url).catch((error) => {
+      console.error('[Window] openExternalUrl failed:', error);
+    });
     return { action: 'deny' };
   });
 

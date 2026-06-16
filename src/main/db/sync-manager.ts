@@ -22,9 +22,23 @@ function notifyGamesRemoved(gameIds: string[]): void {
 }
 
 /**
+ * Повідомити рендерер що гра була позначена як tombstoned (видалена з каталогу,
+ * але збережена локально бо встановлена). Використовується GamePage для banner.
+ */
+function notifyGamesTombstoned(gameIds: string[]): void {
+  if (gameIds.length === 0) return;
+  const mainWindow = getMainWindow();
+  if (!mainWindow) return;
+  for (const id of gameIds) {
+    mainWindow.webContents.send('game-tombstoned', id);
+  }
+}
+
+/**
  * Менеджер синхронізації між Supabase та локальною базою даних
  */
 export class SyncManager {
+  private static instance: SyncManager | null = null;
   private db: Database.Database;
   private gamesRepo: GamesRepository;
   private isSyncing = false;
@@ -32,6 +46,17 @@ export class SyncManager {
   constructor() {
     this.db = getDatabase();
     this.gamesRepo = GamesRepository.getInstance();
+  }
+
+  /**
+   * Отримати singleton (використовується IPC хендлерами та іншими споживачами,
+   * щоб не передавати референс через index.ts).
+   */
+  static getInstance(): SyncManager {
+    if (!SyncManager.instance) {
+      SyncManager.instance = new SyncManager();
+    }
+    return SyncManager.instance;
   }
 
   /**
@@ -122,8 +147,23 @@ export class SyncManager {
   private addPendingDeletions(ids: string[]): void {
     if (ids.length === 0) return;
     const existing = new Set(this.getPendingDeletions());
-    for (const id of ids) existing.add(id);
+    const fresh: string[] = [];
+    for (const id of ids) {
+      if (!existing.has(id)) {
+        existing.add(id);
+        fresh.push(id);
+      }
+    }
+    if (fresh.length === 0) return;
     this.setPendingDeletions([...existing]);
+    notifyGamesTombstoned(fresh);
+  }
+
+  /**
+   * Чи позначена гра як tombstoned (видалена з каталогу, але встановлена локально).
+   */
+  isGameTombstoned(gameId: string): boolean {
+    return this.getPendingDeletions().includes(gameId);
   }
 
   /**
