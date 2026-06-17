@@ -89,22 +89,25 @@ function detectLinuxBrowser(): BrowserCommand | null {
  * On Linux (especially SteamOS), bypasses xdg-open to avoid the Discover store redirect
  * by detecting and launching the browser directly.
  */
-export async function openExternalUrl(url: string): Promise<void> {
-  if (!url || typeof url !== 'string') {
-    throw new Error(`[OpenExternal] Invalid URL: ${JSON.stringify(url)}`);
-  }
+export async function openExternalUrl(
+  url: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!url) {
+      throw new Error(`[OpenExternal] Invalid URL: ${JSON.stringify(url)}`);
+    }
 
-  const trimmed = url.trim();
-  if (!/^(https?:|mailto:|tel:)/i.test(trimmed)) {
-    throw new Error(
-      `[OpenExternal] Refusing to open URL without a safe protocol: ${trimmed}`
-    );
-  }
+    const trimmed = url.trim();
+    if (!/^(https?:|mailto:|tel:)/i.test(trimmed)) {
+      throw new Error(
+        `[OpenExternal] Refusing to open URL without a safe protocol: ${trimmed}`
+      );
+    }
 
-  if (!isLinux()) {
-    await shell.openExternal(trimmed);
-    return;
-  }
+    if (!isLinux()) {
+      await shell.openExternal(trimmed);
+      return { success: true };
+    }
 
     // Lazily detect and cache the browser
     if (cachedBrowser === undefined) {
