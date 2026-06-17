@@ -14,6 +14,16 @@ export type InstallPath = Database['public']['CompositeTypes']['install_path_ent
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
 
+export interface NewsFeedItem {
+  id: string;
+  url: string;
+  title?: string;
+  content?: string;
+  publishedAt?: string;
+}
+
+export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
+
 export interface GamePath {
   platform: Platform;
   path: string;
@@ -225,6 +235,7 @@ export interface ElectronAPI {
     componentsToRemove: { voice?: boolean; achievements?: boolean }
   ) => Promise<InstallResult>;
   checkPlatformCompatibility: (game: Game) => Promise<string | null>;
+  fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;

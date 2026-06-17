@@ -21,7 +21,11 @@ interface HorizontalGameListProps {
   selectedGameId: string | undefined;
   gamesWithUpdates: Set<string>;
   onSelectGame: (game: Game) => void;
-  onOpenTranslationPicker: (translations: Game[], gameName: string) => void;
+  onOpenTranslationPicker: (
+    translations: Game[],
+    gameName: string,
+    variantById: Map<string, string>
+  ) => void;
   isGameDetected: (gameId: string) => boolean;
   getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
 }
@@ -39,10 +43,10 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     isGameDetected,
     getInstallationInfo,
   }) => {
-    const slugs = useMemo(() => gameGroups.map((g) => g.slug), [gameGroups]);
+    const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
 
     const { getAnimationProps } = useListAnimation({
-      slugs,
+      keys,
       animationsEnabled,
       staggerCount: 6,
       direction: 'x',
@@ -62,8 +66,8 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     );
 
     const keyPrefix = useMemo(() => {
-      const first = gameGroups[0]?.slug ?? '';
-      const last = gameGroups[gameGroups.length - 1]?.slug ?? '';
+      const first = gameGroups[0]?.key ?? '';
+      const last = gameGroups[gameGroups.length - 1]?.key ?? '';
       return `${gameGroups.length}_${first}_${last}`;
     }, [gameGroups]);
 
@@ -93,17 +97,17 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
 
           const handleClick = () => {
             if (group.translations.length > 1) {
-              onOpenTranslationPicker(group.translations, group.name);
+              onOpenTranslationPicker(group.translations, group.name, group.variantById);
             } else {
               onSelectGame(primaryGame);
             }
           };
 
-          const animProps = getAnimationProps(group.slug, index);
+          const animProps = getAnimationProps(group.key, index);
 
           return (
             <motion.div
-              key={`${keyPrefix}_${group.slug}`}
+              key={`${keyPrefix}_${group.key}`}
               className="flex-shrink-0"
               initial={animProps?.initial ?? false}
               animate={animProps?.animate ?? { opacity: 1, x: 0 }}

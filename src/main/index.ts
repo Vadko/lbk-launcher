@@ -129,6 +129,7 @@ import {
 } from './installation-watcher';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
+import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import {
   calculatePlaytimeDeltas,
@@ -211,6 +212,7 @@ if (!gotTheLock) {
   setupWindowControls();
   setupGamesHandlers();
   setupInstallerHandlers();
+  setupTgNewsHandlers();
   setupAutoUpdater();
 
   // IPC handler for getting current sync status

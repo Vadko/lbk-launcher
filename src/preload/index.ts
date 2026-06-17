@@ -120,6 +120,8 @@ const electronAPI: ElectronAPI = {
   ) => ipcRenderer.invoke('remove-components', game, componentsToRemove),
   checkPlatformCompatibility: (game: Game) =>
     ipcRenderer.invoke('check-platform-compatibility', game),
+  fetchNewsFeed: (filter, before) =>
+    ipcRenderer.invoke('fetch-news-feed', filter, before),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   selectGameFolder: () => ipcRenderer.invoke('select-game-folder'),
   onInstallProgress: (callback: (progress: number) => void) => {

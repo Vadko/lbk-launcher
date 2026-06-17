@@ -189,6 +189,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                         game.status !== 'planned' && game.status !== 'tech-improvement'
                       }
                       showTeamName
+                      variant={group.variantById.get(game.id)}
                     />
                   ))}
                 </div>
@@ -211,6 +212,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                     game.status !== 'planned' && game.status !== 'tech-improvement'
                   }
                   showTeamName
+                  variant={group.variantById.get(game.id)}
                 />
               ))}
             </div>

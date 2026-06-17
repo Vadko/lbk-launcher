@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import type { Game } from '../../types/game';
+import { deriveGroupNaming } from '../../utils/groupName';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
 import { AuthorsFilterDropdown } from './AuthorsFilterDropdown';
@@ -105,16 +106,23 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       [setSpecialFilterRaw, setSelectedStatusesRaw, setSelectedAuthors]
     );
 
-    // Translation picker modal state
-    const [pickerModalOpen, setPickerModalOpen] = useState(false);
-    const [pickerTranslations, setPickerTranslations] = useState<Game[]>([]);
-    const [pickerGameName, setPickerGameName] = useState('');
-
-    const openTranslationPicker = (translations: Game[], gameName: string) => {
-      setPickerTranslations(translations);
-      setPickerGameName(gameName);
-      setPickerModalOpen(true);
+    // Translation picker modal state. Bundled so opening/closing is atomic and
+    // we never flash translations from one group with variants from another.
+    type PickerPayload = {
+      translations: Game[];
+      gameName: string;
+      variantById: Map<string, string>;
     };
+    const [pickerPayload, setPickerPayload] = useState<PickerPayload | null>(null);
+
+    const openTranslationPicker = (
+      translations: Game[],
+      gameName: string,
+      variantById: Map<string, string>
+    ) => {
+      setPickerPayload({ translations, gameName, variantById });
+    };
+    const closeTranslationPicker = () => setPickerPayload(null);
 
     // Fetch authors list (wait for sync to complete)
     const syncStatus = useStore((state) => state.syncStatus);
@@ -168,36 +176,52 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       }
     }, [debouncedSearchQuery, isLoading, totalGames]);
 
-    // Group games by slug (games already sorted by SQL)
+    // Group games by steam_app_id first; fallback to slug/id (games already sorted by SQL)
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();
 
+      const getGroupKey = (game: Game): string => {
+        if (game.steam_app_id !== null && game.steam_app_id !== undefined) {
+          return `steam:${game.steam_app_id}`;
+        }
+        return game.slug ? `slug:${game.slug}` : `id:${game.id}`;
+      };
+
       for (const game of visibleGames) {
-        const slug = game.slug || game.id;
-        const existing = groupMap.get(slug);
+        const key = getGroupKey(game);
+        const existing = groupMap.get(key);
+
         if (existing) {
           existing.translations.push(game);
-        } else {
-          groupMap.set(slug, {
-            slug,
-            name: game.name,
-            translations: [game],
-          });
+          continue;
         }
+
+        groupMap.set(key, {
+          key,
+          name: game.name,
+          translations: [game],
+          variantById: new Map(),
+        });
       }
 
-      // Sort translations within each group by progress
-      for (const group of groupMap.values()) {
+      const groups = Array.from(groupMap.values());
+
+      for (const group of groups) {
         group.translations.sort(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
+        // Derive a clean shared title and per-translation variant suffix
+        // (e.g. "Stray (без озвучення)" → name="Stray", variant="(без озвучення)").
+        const naming = deriveGroupNaming(group.translations);
+        group.name = naming.name;
+        group.variantById = naming.variantById;
       }
 
-      // Preserve order from SQL (already sorted)
-      return Array.from(groupMap.values());
+      // Preserve group order from SQL (first appearance of each key)
+      return groups;
     }, [visibleGames]);
 
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
 
     const listRef = useRef<HTMLDivElement>(null);
 
@@ -249,13 +273,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       };
     }, [isResizing, setSidebarWidth]);
 
-    const toggleGroupExpanded = (slug: string) => {
+    const toggleGroupExpanded = (key: string) => {
       setExpandedGroups((prev) => {
         const newSet = new Set(prev);
-        if (newSet.has(slug)) {
-          newSet.delete(slug);
+        if (newSet.has(key)) {
+          newSet.delete(key);
         } else {
-          newSet.add(slug);
+          newSet.add(key);
         }
         return newSet;
       });
@@ -349,10 +373,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
           {/* Translation picker modal */}
           <TranslationPickerModal
-            isOpen={pickerModalOpen}
-            onClose={() => setPickerModalOpen(false)}
-            translations={pickerTranslations}
-            gameName={pickerGameName}
+            isOpen={pickerPayload !== null}
+            onClose={closeTranslationPicker}
+            translations={pickerPayload?.translations ?? []}
+            gameName={pickerPayload?.gameName ?? ''}
+            variantById={pickerPayload?.variantById}
           />
         </div>
       );

@@ -38,7 +38,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
   );
 
   return (
-    <div className="text-left w-full max-w-[1317px]">
+    <section>
       {/* Header with view all button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
@@ -104,6 +104,6 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </section>
   );
 };

@@ -9,12 +9,12 @@ interface TrendingGamesPageProps {
 }
 
 export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) => (
-  <motion.div
+  <motion.section
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
     transition={{ duration: 0.2 }}
-    className="text-left w-full max-w-[1317px] pt-[1px]"
+    className="pt-[1px]"
   >
     {/* Back button */}
     <div className="mb-4">
@@ -36,5 +36,5 @@ export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) 
       showDownloadCounter={true}
       showLimit={30}
     />
-  </motion.div>
+  </motion.section>
 );

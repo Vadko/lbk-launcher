@@ -106,25 +106,32 @@ export async function openExternalUrl(url: string): Promise<void> {
     return;
   }
 
-  // Lazily detect and cache the browser
-  if (cachedBrowser === undefined) {
-    cachedBrowser = detectLinuxBrowser();
-    console.log(
-      cachedBrowser
-        ? `[OpenExternal] Detected browser: ${cachedBrowser.command} ${cachedBrowser.args.join(' ')}`
-        : '[OpenExternal] No browser detected, falling back to shell.openExternal'
-    );
-  }
+    // Lazily detect and cache the browser
+    if (cachedBrowser === undefined) {
+      cachedBrowser = detectLinuxBrowser();
+      console.log(
+        cachedBrowser
+          ? `[OpenExternal] Detected browser: ${cachedBrowser.command} ${cachedBrowser.args.join(' ')}`
+          : '[OpenExternal] No browser detected, falling back to shell.openExternal'
+      );
+    }
 
-  if (cachedBrowser) {
-    const child = spawn(cachedBrowser.command, [...cachedBrowser.args, trimmed], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
-    return;
-  }
+    if (cachedBrowser) {
+      const child = spawn(cachedBrowser.command, [...cachedBrowser.args, url], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      return { success: true };
+    }
 
-  // Fallback to Electron's default (xdg-open)
-  await shell.openExternal(trimmed);
+    // Fallback to Electron's default (xdg-open)
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
+  }
 }
