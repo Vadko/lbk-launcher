@@ -16,11 +16,7 @@ class JsonRecommendationsSource implements RecommendationsSource {
   }
 }
 
-let source: RecommendationsSource = new JsonRecommendationsSource();
-
-export function setRecommendationsSource(nextSource: RecommendationsSource): void {
-  source = nextSource;
-}
+const source: RecommendationsSource = new JsonRecommendationsSource();
 
 export async function getRecommendedGameIds(gameId: string): Promise<string[]> {
   if (!gameId) {

@@ -3,7 +3,7 @@ import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 
-export const recommendedGamesKeys = {
+const recommendedGamesKeys = {
   all: ['recommended-games'] as const,
   byGame: (gameId: string, limit: number, hideAiTranslations: boolean) =>
     [...recommendedGamesKeys.all, gameId, limit, hideAiTranslations] as const,
