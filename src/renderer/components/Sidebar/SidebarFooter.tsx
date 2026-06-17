@@ -1,4 +1,4 @@
-import { Bell, Home, Settings, Volume2, VolumeX } from 'lucide-react';
+import { Bell, Home, Newspaper, Settings, Volume2, VolumeX } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -19,6 +19,15 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
       <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
         {isCompact && (
           <>
+            <button
+              onClick={() => navigate('/news')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title="Відкрити новини"
+            >
+              <Newspaper size={20} className="mx-auto text-text-muted" />
+            </button>
             <button
               onClick={() => navigate('/')}
               data-nav-group="sidebar-actions"

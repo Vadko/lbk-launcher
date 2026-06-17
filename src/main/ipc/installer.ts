@@ -159,9 +159,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('open-external', async (_, url: string) => {
-    await openExternalUrl(url);
-  });
+  ipcMain.handle('open-external', async (_, url: string) => await openExternalUrl(url));
 
   ipcMain.handle('select-game-folder', async () => {
     const result = await dialog.showOpenDialog({
