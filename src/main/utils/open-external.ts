@@ -93,8 +93,19 @@ export async function openExternalUrl(
   url: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!url) {
+      throw new Error(`[OpenExternal] Invalid URL: ${JSON.stringify(url)}`);
+    }
+
+    const trimmed = url.trim();
+    if (!/^(https?:|mailto:|tel:)/i.test(trimmed)) {
+      throw new Error(
+        `[OpenExternal] Refusing to open URL without a safe protocol: ${trimmed}`
+      );
+    }
+
     if (!isLinux()) {
-      await shell.openExternal(url);
+      await shell.openExternal(trimmed);
       return { success: true };
     }
 

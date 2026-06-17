@@ -10,7 +10,10 @@ const pendingChanges = new Set<string>();
 /**
  * Start watching installation-cache directory for changes
  */
-export function startInstallationWatcher(mainWindow: BrowserWindow | null): void {
+export function startInstallationWatcher(
+  mainWindow: BrowserWindow | null,
+  onChange?: () => void
+): void {
   // Close any existing watcher first to prevent EMFILE errors
   if (watcher) {
     console.log('[InstallationWatcher] Closing existing watcher before starting new one');
@@ -53,6 +56,10 @@ export function startInstallationWatcher(mainWindow: BrowserWindow | null): void
 
           // Notify renderer to refresh installed games list
           mainWindow?.webContents.send('installed-games-changed');
+
+          // Optional callback (e.g. process server-side tombstoned games
+          // that became uninstalled and can now be removed locally)
+          onChange?.();
         }
       }, 100);
     }

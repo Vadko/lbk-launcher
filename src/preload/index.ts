@@ -184,6 +184,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-removed', handler);
     return () => ipcRenderer.removeListener('game-removed', handler);
   },
+  isGameTombstoned: (gameId: string) => ipcRenderer.invoke('is-game-tombstoned', gameId),
+  onGameTombstoned: (callback: (gameId: string) => void) => {
+    const handler = (_: unknown, gameId: string) => callback(gameId);
+    ipcRenderer.on('game-tombstoned', handler);
+    return () => ipcRenderer.removeListener('game-tombstoned', handler);
+  },
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();

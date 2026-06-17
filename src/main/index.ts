@@ -260,7 +260,7 @@ if (!gotTheLock) {
 
     // Запустити синхронізацію з retry та загальним таймаутом
     console.log('[Main] Starting sync with Supabase...');
-    syncManager = new SyncManager();
+    syncManager = SyncManager.getInstance();
 
     try {
       sendSyncStatus('syncing');
@@ -296,7 +296,9 @@ if (!gotTheLock) {
       },
       (gameId) => {
         // Видалити з локальної БД через SyncManager
-        syncManager?.handleRealtimeDelete(gameId);
+        syncManager?.handleRealtimeDelete(gameId).catch((err) => {
+          console.error('[Main] Realtime delete failed:', err);
+        });
       }
     );
 
@@ -342,7 +344,11 @@ if (!gotTheLock) {
     // Start watching Steam library for changes (after a short delay to ensure window is ready)
     setTimeout(() => {
       startSteamWatcher(getMainWindow());
-      startInstallationWatcher(getMainWindow());
+      startInstallationWatcher(getMainWindow(), () => {
+        syncManager?.processPendingDeletions().catch((err) => {
+          console.error('[Main] Failed to process pending deletions:', err);
+        });
+      });
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });

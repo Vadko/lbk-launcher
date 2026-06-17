@@ -37,6 +37,7 @@ import { Button } from '../components/ui/Button';
 import { SubscribeButton } from '../components/ui/SubscribeButton';
 import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
+import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -78,6 +79,7 @@ export const GamePage: React.FC = () => {
   const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
+  const isTombstoned = useGameTombstone(gameId);
 
   const installationInfo = selectedGame
     ? installedTranslations.get(selectedGame.id)
@@ -514,6 +516,13 @@ export const GamePage: React.FC = () => {
         <LayoutGroup>
           <GameHero game={selectedGame} />
 
+          {isTombstoned && (
+            <div className="glass-card-no-motion mb-6 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
+              Цей переклад більше не доступний у каталозі. Ви можете лише видалити
+              локалізацію — повторне встановлення недоступне.
+            </div>
+          )}
+
           {/* Actions block */}
           <div className="glass-card-no-motion mb-6 grid gap-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -539,8 +548,20 @@ export const GamePage: React.FC = () => {
                   isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
                 }
                 onClick={() => handleInstall()}
-                disabled={isInstalling || isUninstalling || !isInstallable || !isOnline}
-                title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
+                disabled={
+                  isInstalling ||
+                  isUninstalling ||
+                  !isInstallable ||
+                  !isOnline ||
+                  isTombstoned
+                }
+                title={
+                  isTombstoned
+                    ? 'Переклад більше не доступний у каталозі'
+                    : !isOnline
+                      ? 'Відсутнє підключення до Інтернету'
+                      : undefined
+                }
                 data-gamepad-primary-action
                 data-gamepad-action
               >
