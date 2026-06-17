@@ -26,6 +26,7 @@ import { ImportantNotice } from '../components/MainContent/ImportantNotice';
 import { InfoCard } from '../components/MainContent/InfoCard';
 import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
 import { InstallationStatusMessage } from '../components/MainContent/InstallationStatusMessage';
+import { RecommendedGamesSection } from '../components/MainContent/RecommendedGamesSection';
 import { SocialLinksCard } from '../components/MainContent/SocialLinksCard';
 import { StatusCard } from '../components/MainContent/StatusCard';
 import { VideoCard } from '../components/MainContent/VideoCard';
@@ -796,7 +797,7 @@ export const GamePage: React.FC = () => {
             </motion.div>
           )}
           {selectedGame.screenshots && (
-            <motion.div
+            <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="mb-6"
@@ -812,11 +813,11 @@ export const GamePage: React.FC = () => {
                   updated_at={selectedGame.updated_at}
                 />
               </div>
-            </motion.div>
+            </motion.section>
           )}
 
           {selectedGame.description && (
-            <motion.div
+            <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="glass-card-no-motion mb-6"
@@ -827,7 +828,7 @@ export const GamePage: React.FC = () => {
               <p className="text-text-muted leading-relaxed whitespace-pre-line">
                 {selectedGame.description}
               </p>
-            </motion.div>
+            </motion.section>
           )}
 
           <motion.div
@@ -865,8 +866,14 @@ export const GamePage: React.FC = () => {
             </AnimatePresence>
           </motion.div>
 
+          <RecommendedGamesSection
+            gameId={selectedGame.id}
+            gameName={selectedGame.name}
+            showLimit={3}
+          />
+
           {selectedGame.game_description && (
-            <motion.div
+            <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="glass-card-no-motion mb-6"
@@ -877,7 +884,7 @@ export const GamePage: React.FC = () => {
               <p className="text-text-muted leading-relaxed whitespace-pre-line">
                 {selectedGame.game_description}
               </p>
-            </motion.div>
+            </motion.section>
           )}
         </LayoutGroup>
       </div>

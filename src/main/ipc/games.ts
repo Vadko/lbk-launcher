@@ -5,6 +5,7 @@ import {
   fetchFilterCounts,
   fetchGames,
   fetchGamesByIds,
+  fetchRecommendedGames,
   fetchTeams,
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
@@ -156,6 +157,19 @@ export function setupGamesHandlers(): void {
         );
       } catch (error) {
         console.error('Error fetching games by IDs:', error);
+        return [];
+      }
+    }
+  );
+
+  // Fetch recommended games for game page (currently from local JSON source)
+  ipcMain.handle(
+    'fetch-recommended-games',
+    async (_, gameId: string, limit = 3, hideAiTranslations = false) => {
+      try {
+        return await fetchRecommendedGames(gameId, limit, hideAiTranslations);
+      } catch (error) {
+        console.error('Error fetching recommended games:', error);
         return [];
       }
     }
