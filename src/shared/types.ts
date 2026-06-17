@@ -168,6 +168,11 @@ export interface ElectronAPI {
     showAiTranslations?: boolean,
     sortOrder?: SortOrderType
   ) => Promise<Game[]>;
+  fetchRecommendedGames: (
+    gameId: string,
+    limit?: number,
+    hideAiTranslations?: boolean
+  ) => Promise<Game[]>;
   syncKurinGames: () => Promise<string[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
