@@ -22,7 +22,7 @@ interface GameListProps {
   expandedGroups: Set<string>;
   selectedGameId: string | undefined;
   gamesWithUpdates: Set<string>;
-  onToggleGroup: (slug: string) => void;
+  onToggleGroup: (key: string) => void;
   onSelectGame: (game: Game) => void;
   isGameDetected: (gameId: string) => boolean;
   getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
@@ -42,10 +42,10 @@ export const GameList: React.FC<GameListProps> = React.memo(
     isGameDetected,
     getInstallationInfo,
   }) => {
-    const slugs = useMemo(() => gameGroups.map((g) => g.slug), [gameGroups]);
+    const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
 
     const { getAnimationProps } = useListAnimation({
-      slugs,
+      keys,
       animationsEnabled,
       staggerCount: 8,
       direction: 'y',
@@ -66,8 +66,8 @@ export const GameList: React.FC<GameListProps> = React.memo(
     // Key prefix that changes when list composition changes, forcing items
     // to remount so framer-motion replays the initial animation.
     const keyPrefix = useMemo(() => {
-      const first = gameGroups[0]?.slug ?? '';
-      const last = gameGroups[gameGroups.length - 1]?.slug ?? '';
+      const first = gameGroups[0]?.key ?? '';
+      const last = gameGroups[gameGroups.length - 1]?.key ?? '';
       return `${gameGroups.length}_${first}_${last}`;
     }, [gameGroups]);
 
@@ -96,8 +96,8 @@ export const GameList: React.FC<GameListProps> = React.memo(
           const content = hasMultipleTranslations ? (
             <GameGroupItem
               group={group}
-              isExpanded={expandedGroups.has(group.slug)}
-              onToggle={() => onToggleGroup(group.slug)}
+              isExpanded={expandedGroups.has(group.key)}
+              onToggle={() => onToggleGroup(group.key)}
               selectedGameId={selectedGameId}
               onSelectGame={onSelectGame}
               gamesWithUpdates={gamesWithUpdates}
@@ -119,12 +119,12 @@ export const GameList: React.FC<GameListProps> = React.memo(
             />
           );
 
-          const animProps = getAnimationProps(group.slug, index);
+          const animProps = getAnimationProps(group.key, index);
 
           return (
             <motion.div
-              key={`${keyPrefix}_${group.slug}`}
-              id={`group-${group.slug}`}
+              key={`${keyPrefix}_${group.key}`}
+              id={`group-${group.key}`}
               initial={animProps?.initial ?? false}
               animate={animProps?.animate ?? { opacity: 1, y: 0 }}
               transition={animProps?.transition}

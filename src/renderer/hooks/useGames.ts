@@ -300,8 +300,8 @@ export function useGames({
         // Перевірити чи запит ще актуальний
         if (signal.aborted) return;
 
-        // Фільтр ігор з озвучкою: показувати якщо є voice_archive_path АБО voice_progress не null
-        // (запланована озвучка, в процесі або готова)
+        // Фільтр ігор з озвученням: показувати якщо є voice_archive_path АБО voice_progress не null
+        // (заплановане озвучення, в процесі або готове)
         const withVoice = result.games.filter(
           (game) => !!game.voice_archive_path || game.voice_progress !== null
         );

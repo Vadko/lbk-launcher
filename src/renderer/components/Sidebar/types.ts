@@ -5,9 +5,10 @@ import type { Game } from '../../types/game';
 export type { SortOrderType };
 
 export interface GameGroup {
-  slug: string;
+  key: string;
   name: string;
   translations: Game[];
+  variantById: Map<string, string>;
 }
 
 // Status type for multi-select filter
