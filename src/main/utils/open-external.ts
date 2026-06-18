@@ -98,9 +98,13 @@ export async function openExternalUrl(
     }
 
     const trimmed = url.trim();
-    if (!/^(https?:|mailto:|tel:)/i.test(trimmed)) {
+    if (!trimmed) {
+      throw new Error('[OpenExternal] Empty URL');
+    }
+
+    if (/^(file|javascript|data|vbscript):/i.test(trimmed)) {
       throw new Error(
-        `[OpenExternal] Refusing to open URL without a safe protocol: ${trimmed}`
+        `[OpenExternal] Refusing to open URL with unsafe protocol: ${trimmed}`
       );
     }
 
