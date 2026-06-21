@@ -14,7 +14,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { type DevModeType, usePromoModalStore } from '../../store/usePromoModalStore';
-import { useSettingsStore } from '../../store/useSettingsStore';
+import { isHardwareWeak, useSettingsStore } from '../../store/useSettingsStore';
 import {
   playBackSound,
   playConfirmSound,
@@ -35,13 +35,19 @@ const SettingItem = React.memo<{
   description: string;
   enabled: boolean;
   onChange: () => void;
-}>(({ id, title, description, enabled, onChange }) => (
+  disabled?: boolean;
+}>(({ id, title, description, enabled, onChange, disabled = false }) => (
   <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
     <div className="flex-1 pr-4">
       <h4 className="text-sm font-semibold text-text-main mb-1">{title}</h4>
       <p className="text-xs text-text-muted">{description}</p>
     </div>
-    <Switch id={`switch-${id}`} checked={enabled} onCheckedChange={onChange} />
+    <Switch
+      id={`switch-${id}`}
+      checked={enabled}
+      onCheckedChange={onChange}
+      disabled={disabled}
+    />
   </div>
 ));
 
@@ -222,9 +228,14 @@ export const SettingsModal: React.FC = () => {
           <SettingItem
             id="animations"
             title="Анімації"
-            description="Увімкнути або вимкнути анімації в інтерфейсі"
+            description={
+              isHardwareWeak
+                ? 'Вимкнено: на цьому пристрої недостатньо ресурсів для плавних анімацій'
+                : 'Увімкнути або вимкнути анімації в інтерфейсі'
+            }
             enabled={animationsEnabled}
             onChange={toggleAnimations}
+            disabled={isHardwareWeak}
           />
 
           {/* Liquid Glass setting - only show on macOS 26+ */}
@@ -232,9 +243,14 @@ export const SettingsModal: React.FC = () => {
             <SettingItem
               id="liquid-glass"
               title="Liquid Glass тема"
-              description="Увімкнути ефект прозорості та розмиття для вікон (macOS 26+)"
+              description={
+                isHardwareWeak
+                  ? 'Вимкнено: на цьому пристрої недостатньо ресурсів для ефекту прозорості'
+                  : 'Увімкнути ефект прозорості та розмиття для вікон (macOS 26+)'
+              }
               enabled={liquidGlassEnabled}
               onChange={handleToggleLiquidGlass}
+              disabled={isHardwareWeak}
             />
           )}
           <SettingItem

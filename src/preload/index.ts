@@ -229,6 +229,8 @@ const electronAPI: ElectronAPI = {
   isE2E: () => isE2EMode,
   // Platform
   getPlatform: () => ipcRenderer.sendSync('get-platform'),
+  // System hardware info (accurate, via Node os module)
+  getSystemInfo: () => ipcRenderer.sendSync('get-system-info'),
   // Machine ID - for subscription tracking
   getMachineId: () => ipcRenderer.invoke('get-machine-id'),
   // Track subscription events

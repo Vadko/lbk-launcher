@@ -123,34 +123,12 @@ export const App: React.FC = () => {
   // Track mouse movement for mode switching
   const lastMouseMoveRef = useRef(0);
 
-  // Mode switching: poll the gamepad in a RAF loop so a first button press
-  // or stick movement flips us into gamepad mode. Loop touches no React
-  // state, so an idle gamepad costs zero re-renders.
+  // Mode switching: poll connected gamepads in a RAF loop so a first button
+  // press or stick movement flips us into gamepad mode. RAF runs ONLY while
+  // a gamepad is connected — without one, getGamepads() returns an empty
+  // array and polling 60×/sec for nothing was burning CPU for every user.
   useEffect(() => {
     const MOUSE_THROTTLE_MS = 500;
-
-    const handleGamepadConnected = (e: GamepadEvent) => {
-      if (!isValidGamepad(e.gamepad)) return;
-      console.log('[App] Gamepad connected:', e.gamepad.id);
-      setGamepadMode(true);
-    };
-
-    const handleGamepadDisconnected = (e: GamepadEvent) => {
-      console.log('[App] Gamepad disconnected:', e.gamepad.id);
-      const stillConnected = Array.from(navigator.getGamepads()).some(isValidGamepad);
-      if (!stillConnected) {
-        setGamepadMode(false);
-      }
-    };
-
-    const handleMouseMove = () => {
-      const now = Date.now();
-      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
-      lastMouseMoveRef.current = now;
-      if (useGamepadModeStore.getState().isGamepadMode) {
-        setGamepadMode(false);
-      }
-    };
 
     let rafId = 0;
     const tick = () => {
@@ -170,16 +148,57 @@ export const App: React.FC = () => {
       rafId = requestAnimationFrame(tick);
     };
 
+    const startPolling = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const stopPolling = () => {
+      if (!rafId) return;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    };
+
+    const handleGamepadConnected = (e: GamepadEvent) => {
+      if (!isValidGamepad(e.gamepad)) return;
+      console.log('[App] Gamepad connected:', e.gamepad.id);
+      setGamepadMode(true);
+      startPolling();
+    };
+
+    const handleGamepadDisconnected = (e: GamepadEvent) => {
+      console.log('[App] Gamepad disconnected:', e.gamepad.id);
+      const stillConnected = Array.from(navigator.getGamepads()).some(isValidGamepad);
+      if (!stillConnected) {
+        setGamepadMode(false);
+        stopPolling();
+      }
+    };
+
+    const handleMouseMove = () => {
+      const now = Date.now();
+      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
+      lastMouseMoveRef.current = now;
+      if (useGamepadModeStore.getState().isGamepadMode) {
+        setGamepadMode(false);
+      }
+    };
+
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
     window.addEventListener('mousemove', handleMouseMove);
-    rafId = requestAnimationFrame(tick);
+
+    // Cover the case where a gamepad was already connected before mount
+    // (Chromium fires gamepadconnected on first input, not at page load).
+    if (Array.from(navigator.getGamepads()).some(isValidGamepad)) {
+      startPolling();
+    }
 
     return () => {
       window.removeEventListener('gamepadconnected', handleGamepadConnected);
       window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
       window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(rafId);
+      stopPolling();
     };
   }, [setGamepadMode]);
 

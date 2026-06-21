@@ -115,14 +115,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     };
     const [pickerPayload, setPickerPayload] = useState<PickerPayload | null>(null);
 
-    const openTranslationPicker = (
-      translations: Game[],
-      gameName: string,
-      variantById: Map<string, string>
-    ) => {
-      setPickerPayload({ translations, gameName, variantById });
-    };
-    const closeTranslationPicker = () => setPickerPayload(null);
+    const openTranslationPicker = useCallback(
+      (translations: Game[], gameName: string, variantById: Map<string, string>) => {
+        setPickerPayload({ translations, gameName, variantById });
+      },
+      []
+    );
+    const closeTranslationPicker = useCallback(() => setPickerPayload(null), []);
 
     // Fetch authors list (wait for sync to complete)
     const syncStatus = useStore((state) => state.syncStatus);
@@ -273,7 +272,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       };
     }, [isResizing, setSidebarWidth]);
 
-    const toggleGroupExpanded = (key: string) => {
+    const toggleGroupExpanded = useCallback((key: string) => {
       setExpandedGroups((prev) => {
         const newSet = new Set(prev);
         if (newSet.has(key)) {
@@ -283,7 +282,12 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         }
         return newSet;
       });
-    };
+    }, []);
+
+    const handleSelectGame = useCallback(
+      (game: Game) => navigate(`/game/${game.id}`),
+      [navigate]
+    );
 
     const hasLoadedRef = useRef(false);
 
@@ -364,7 +368,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
               animationsEnabled={animationsEnabled}
               selectedGameId={selectedGame?.id}
               gamesWithUpdates={gamesWithUpdates}
-              onSelectGame={(game) => navigate(`/game/${game.id}`)}
+              onSelectGame={handleSelectGame}
               onOpenTranslationPicker={openTranslationPicker}
               isGameDetected={isGameDetected}
               getInstallationInfo={getInstallationInfo}
@@ -427,7 +431,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             selectedGameId={selectedGame?.id}
             gamesWithUpdates={gamesWithUpdates}
             onToggleGroup={toggleGroupExpanded}
-            onSelectGame={(game) => navigate(`/game/${game.id}`)}
+            onSelectGame={handleSelectGame}
             isGameDetected={isGameDetected}
             getInstallationInfo={getInstallationInfo}
           />

@@ -297,6 +297,8 @@ export interface ElectronAPI {
   isE2E: () => boolean;
   // Platform
   getPlatform: () => string;
+  // Hardware info from Node `os` module — accurate, no Chromium 8GB cap.
+  getSystemInfo: () => { totalRamGB: number; cpuCount: number };
   // Machine ID - for subscription tracking
   getMachineId: () => Promise<string | null>;
   // Track subscription events

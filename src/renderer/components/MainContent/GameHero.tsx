@@ -11,49 +11,32 @@ interface GameHeroProps {
   game: Game;
 }
 
-/**
- * Перевірити чи картинка має прозорі кути
- */
+const TRANSPARENCY_SAMPLE = 32;
+const ALPHA_THRESHOLD = 250;
+
 function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
   try {
-    console.log(
-      '[GameHero] Checking transparency for:',
-      img.src,
-      'size:',
-      img.naturalWidth,
-      'x',
-      img.naturalHeight
-    );
-
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.log('[GameHero] No canvas context');
-      return true;
-    }
+    canvas.width = TRANSPARENCY_SAMPLE;
+    canvas.height = TRANSPARENCY_SAMPLE;
+    // willReadFrequently keeps the canvas CPU-backed so getImageData
+    // doesn't force a GPU→CPU readback stall.
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return true;
 
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, TRANSPARENCY_SAMPLE, TRANSPARENCY_SAMPLE);
+    const data = ctx.getImageData(0, 0, TRANSPARENCY_SAMPLE, TRANSPARENCY_SAMPLE).data;
 
-    const checkPixel = (x: number, y: number): boolean => {
-      const data = ctx.getImageData(x, y, 1, 1).data;
-      console.log(`[GameHero] Pixel at (${x}, ${y}): alpha=${data[3]}`);
-      return data[3] < 250; // Альфа < 250 = прозорий
-    };
-
-    // Перевіряємо кути
-    const result =
-      checkPixel(0, 0) ||
-      checkPixel(canvas.width - 1, 0) ||
-      checkPixel(0, canvas.height - 1) ||
-      checkPixel(canvas.width - 1, canvas.height - 1);
-
-    console.log('[GameHero] Has transparency:', result);
-    return result;
-  } catch (error) {
-    console.error('[GameHero] Error checking transparency:', error);
-    return true; // При помилці - без скруглення
+    const last = TRANSPARENCY_SAMPLE - 1;
+    const alphaAt = (x: number, y: number) => data[(y * TRANSPARENCY_SAMPLE + x) * 4 + 3];
+    return (
+      alphaAt(0, 0) < ALPHA_THRESHOLD ||
+      alphaAt(last, 0) < ALPHA_THRESHOLD ||
+      alphaAt(0, last) < ALPHA_THRESHOLD ||
+      alphaAt(last, last) < ALPHA_THRESHOLD
+    );
+  } catch {
+    return true; // при помилці — без скруглення
   }
 }
 
@@ -76,9 +59,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
 
   // Перевірити прозорість при завантаженні лого
   const handleLogoLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.log('[GameHero] Logo loaded, checking transparency...');
-    const img = e.currentTarget;
-    const hasTransparency = checkImageHasTransparentCorners(img);
+    const hasTransparency = checkImageHasTransparentCorners(e.currentTarget);
     setShouldRoundLogo(!hasTransparency);
   }, []);
 

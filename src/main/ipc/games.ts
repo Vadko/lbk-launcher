@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { app, ipcMain } from 'electron';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
@@ -66,6 +67,16 @@ export function setupGamesHandlers(): void {
   // Platform
   ipcMain.on('get-platform', (event) => {
     event.returnValue = getPlatform();
+  });
+
+  // System info — accurate hardware specs via Node `os` (no Chromium's
+  // deviceMemory cap of 8GB). Sync so the renderer can use it for initial
+  // store defaults.
+  ipcMain.on('get-system-info', (event) => {
+    event.returnValue = {
+      totalRamGB: os.totalmem() / 1024 ** 3,
+      cpuCount: os.cpus().length,
+    };
   });
 
   // Machine ID - for subscription tracking
