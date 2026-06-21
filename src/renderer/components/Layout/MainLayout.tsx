@@ -1,11 +1,13 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
 import { useGamepadModeNavigation } from '../../hooks/useGamepadModeNavigation';
 import { useNavigateFromNotifications } from '../../hooks/useNavigateFromNotifications';
+import { useConfirmStore } from '../../store/useConfirmStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
+import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { AppLoader } from '../AppLoader/AppLoader';
@@ -31,12 +33,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   version,
   liquidGlassSupported,
 }) => {
-  const { animationsEnabled, liquidGlassEnabled } = useSettingsStore();
+  // Select individual fields so MainLayout doesn't re-render on every settings
+  // change (sortOrder, favorites, etc.) — only when these three flip.
+  const animationsEnabled = useSettingsStore((s) => s.animationsEnabled);
+  const liquidGlassEnabled = useSettingsStore((s) => s.liquidGlassEnabled);
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const navigationArea = useGamepadModeStore((s) => s.navigationArea);
   const [showNotificationHistory, setShowNotificationHistory] = useState(false);
   const loaderVisible = useStore((s) => s.loaderVisible);
   const syncStatus = useStore((s) => s.syncStatus);
+
+  // Mount modals only when actually open — otherwise they cost a full render
+  // pass on every parent re-render (~270ms total for all of them during the
+  // cold-start mount window).
+  const confirmOpen = useConfirmStore((s) => s.isOpen);
+  const globalModalOpen = useModalStore((s) => s.isOpen);
+  const settingsModalOpen = useSettingsStore((s) => s.isSettingsModalOpen);
+
+  const openHistory = useCallback(() => setShowNotificationHistory(true), []);
+  const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
 
   // Обробка deep link для навігації до перекладу
   useDeepLink();
@@ -81,10 +96,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   : 'max-h-[300px] opacity-100'
               }`}
             >
-              <Sidebar
-                onOpenHistory={() => setShowNotificationHistory(true)}
-                isHorizontal={true}
-              />
+              <Sidebar onOpenHistory={openHistory} isHorizontal={true} />
             </div>
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
               <Outlet />
@@ -100,10 +112,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
               aria-hidden="true"
             />
-            <Sidebar
-              onOpenHistory={() => setShowNotificationHistory(true)}
-              isHorizontal={false}
-            />
+            <Sidebar onOpenHistory={openHistory} isHorizontal={false} />
             <Outlet />
           </div>
         )}
@@ -112,14 +121,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         <UpdateNotification />
         <ToastNotifications />
 
-        {/* Global modals — GlobalModal last so it renders on top of others */}
-        <ConfirmModal />
-        <SettingsModal />
-        <GlobalModal />
-        <NotificationModal
-          isOpen={showNotificationHistory}
-          onClose={() => setShowNotificationHistory(false)}
-        />
+        {/* Global modals — GlobalModal last so it renders on top of others.
+            All gated by their own open state to avoid mounting cost when closed.
+            PromoModal stays unconditional — it self-initializes on mount and
+            decides whether to display via a delayed banner fetch. */}
+        {confirmOpen && <ConfirmModal />}
+        {settingsModalOpen && <SettingsModal />}
+        {globalModalOpen && <GlobalModal />}
+        {showNotificationHistory && (
+          <NotificationModal isOpen={showNotificationHistory} onClose={closeHistory} />
+        )}
         <PromoModal />
 
         {/* Gamepad hints */}

@@ -6,10 +6,11 @@ interface SwitchProps {
   onCheckedChange: (checked: boolean) => void;
   className?: string;
   id?: string;
+  disabled?: boolean;
 }
 
 export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
-  ({ checked, onCheckedChange, className, id }, ref) => {
+  ({ checked, onCheckedChange, className, id, disabled = false }, ref) => {
     const [isPressed, setIsPressed] = React.useState(false);
     const [isHovered, setIsHovered] = React.useState(false);
 
@@ -18,16 +19,20 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         ref={ref}
         role="switch"
         aria-checked={checked}
+        aria-disabled={disabled}
+        disabled={disabled}
         type="button"
-        onClick={() => onCheckedChange(!checked)}
-        onPointerDown={() => setIsPressed(true)}
+        onClick={() => !disabled && onCheckedChange(!checked)}
+        onPointerDown={() => !disabled && setIsPressed(true)}
         onPointerUp={() => setIsPressed(false)}
         onPointerLeave={() => {
           setIsPressed(false);
           setIsHovered(false);
         }}
-        onPointerEnter={() => setIsHovered(true)}
-        className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full overflow-hidden ${className || ''}`}
+        onPointerEnter={() => !disabled && setIsHovered(true)}
+        className={`relative inline-flex h-8 w-14 shrink-0 rounded-full overflow-hidden ${
+          disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+        } ${className || ''}`}
       >
         {/* Gradient background (checked state) */}
         <motion.div
