@@ -720,6 +720,13 @@ export const GamePage: React.FC = () => {
             </div>
           )}
 
+          {/* Recommended */}
+          <RecommendedGamesSection
+            gameId={selectedGame.id}
+            gameName={selectedGame.name}
+            showLimit={3}
+          />
+
           {/* Narrow placement */}
           <AnimatePresence mode="wait">
             {bannerInfo.placementType === 'narrow' && (
@@ -790,12 +797,21 @@ export const GamePage: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Recommended */}
-          <RecommendedGamesSection
-            gameId={selectedGame.id}
-            gameName={selectedGame.name}
-            showLimit={3}
-          />
+          {/* Translate description */}
+          {selectedGame.description && (
+            <motion.section
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="glass-card-no-motion mb-6"
+            >
+              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                Про українізатор
+              </h3>
+              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+                {selectedGame.description}
+              </p>
+            </motion.section>
+          )}
 
           {/* Video */}
           {selectedGame.video_url && (
@@ -829,18 +845,18 @@ export const GamePage: React.FC = () => {
             </motion.section>
           )}
 
-          {/* Translate description */}
-          {selectedGame.description && (
+          {/* Game description */}
+          {selectedGame.game_description && (
             <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="glass-card-no-motion mb-6"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про українізатор
+                Про гру
               </h3>
               <p className="text-text-muted leading-relaxed whitespace-pre-line">
-                {selectedGame.description}
+                {selectedGame.game_description}
               </p>
             </motion.section>
           )}
@@ -880,22 +896,6 @@ export const GamePage: React.FC = () => {
               )}
             </AnimatePresence>
           </motion.div>
-
-          {/* Game description */}
-          {selectedGame.game_description && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion mb-6"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про гру
-              </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line">
-                {selectedGame.game_description}
-              </p>
-            </motion.section>
-          )}
         </LayoutGroup>
       </div>
     </>
