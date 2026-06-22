@@ -720,6 +720,7 @@ export const GamePage: React.FC = () => {
             </div>
           )}
 
+          {/* Narrow placement */}
           <AnimatePresence mode="wait">
             {bannerInfo.placementType === 'narrow' && (
               <motion.div
@@ -743,6 +744,7 @@ export const GamePage: React.FC = () => {
             )}
           </AnimatePresence>
 
+          {/* Info cards */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-w-0">
               <StatusCard game={selectedGame} />
@@ -773,6 +775,7 @@ export const GamePage: React.FC = () => {
             </motion.div>
           </div>
 
+          {/* Donate */}
           {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
             <motion.div
               layout="position"
@@ -787,6 +790,14 @@ export const GamePage: React.FC = () => {
             </motion.div>
           )}
 
+          {/* Recommended */}
+          <RecommendedGamesSection
+            gameId={selectedGame.id}
+            gameName={selectedGame.name}
+            showLimit={3}
+          />
+
+          {/* Video */}
           {selectedGame.video_url && (
             <motion.div
               layout="position"
@@ -796,6 +807,8 @@ export const GamePage: React.FC = () => {
               <VideoCard videoUrl={selectedGame.video_url} />
             </motion.div>
           )}
+
+          {/* Gallery */}
           {selectedGame.screenshots && (
             <motion.section
               layout="position"
@@ -816,6 +829,7 @@ export const GamePage: React.FC = () => {
             </motion.section>
           )}
 
+          {/* Translate description */}
           {selectedGame.description && (
             <motion.section
               layout="position"
@@ -831,6 +845,7 @@ export const GamePage: React.FC = () => {
             </motion.section>
           )}
 
+          {/* Links */}
           <motion.div
             layout="position"
             transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -866,12 +881,7 @@ export const GamePage: React.FC = () => {
             </AnimatePresence>
           </motion.div>
 
-          <RecommendedGamesSection
-            gameId={selectedGame.id}
-            gameName={selectedGame.name}
-            showLimit={3}
-          />
-
+          {/* Game description */}
           {selectedGame.game_description && (
             <motion.section
               layout="position"
