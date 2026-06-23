@@ -12,6 +12,10 @@ export function isLinux(): boolean {
   return process.platform === 'linux';
 }
 
+export function isPortable(): boolean {
+  return isWindows() && !!process.env.PORTABLE_EXECUTABLE_FILE;
+}
+
 export function getPlatform(): 'macos' | 'windows' | 'linux' | 'unknown' {
   if (isMacOS()) return 'macos';
   if (isWindows()) return 'windows';

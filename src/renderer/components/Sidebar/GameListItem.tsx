@@ -5,6 +5,7 @@ import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
+import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
@@ -22,6 +23,7 @@ interface GameListItemProps {
   isCardStyle?: boolean;
   showDownloadCounter?: boolean;
   isTranslationAvailable?: boolean;
+  variant?: string;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -36,6 +38,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     isCardStyle = false,
     showDownloadCounter = false,
     isTranslationAvailable = true,
+    variant,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
@@ -57,6 +60,21 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     );
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
+
+    const teamLabel = game.team || 'Невідомий автор';
+    const gameTeamTitle = showTeamName
+      ? variant
+        ? `${teamLabel} ${variant}`
+        : teamLabel
+      : game.name;
+    const gameTeam = showTeamName ? (
+      <>
+        {teamLabel}
+        {variant && <span className="text-text-muted text-xs"> {variant}</span>}
+      </>
+    ) : (
+      game.name
+    );
 
     // Preload banner and logo when this item becomes visible
     const preloadRef = useImagePreload([bannerUrl, logoUrl]);
@@ -191,7 +209,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     className="flex-shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
                   />
                 )}
-                {game.status !== 'planned' && (
+                {isTranslationInstallable(game.status) && (
                   <div className="flex items-center gap-3 flex-1">
                     <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
                       <div
@@ -275,9 +293,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         <div className="flex-1 min-w-0">
           <h4
             className="font-semibold text-sm text-text-main truncate mb-1"
-            title={showTeamName ? game.team : game.name}
+            title={gameTeamTitle}
           >
-            {showTeamName ? game.team : game.name}
+            {gameTeam}
           </h4>
           <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
             <div className="text-text-muted text-xs">

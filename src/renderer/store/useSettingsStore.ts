@@ -5,6 +5,33 @@ import type { SpecialFilterType } from '../components/Sidebar/types';
 import { electronStorage } from './electronStorage';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 
+/**
+ * Heuristic: low-end hardware (Steam Deck, old Macs/PCs) where the heavy
+ * animations and liquid-glass effects would lag.
+ *
+ * Prefers `electronAPI.getSystemInfo()` (Node `os` module, accurate) over
+ * `navigator.deviceMemory` (Chromium-capped at 8GB, useless for thresholding).
+ */
+function detectWeakHardware(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // Respect the OS-level reduced-motion preference first.
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return true;
+
+  const info = window.electronAPI?.getSystemInfo?.();
+  if (info) {
+    return info.cpuCount <= 4 || info.totalRamGB <= 8;
+  }
+
+  // Browser fallback (dev preview without preload).
+  const cores = navigator.hardwareConcurrency ?? 8;
+  return cores <= 4;
+}
+
+/** Detected once at module load; consumers can import for UI gating. */
+export const isHardwareWeak = detectWeakHardware();
+const fancyEffectsByDefault = !isHardwareWeak;
+
 interface SettingsStore {
   sortOrder: SortOrderType;
   animationsEnabled: boolean;
@@ -46,14 +73,14 @@ export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set, get) => ({
       sortOrder: 'name',
-      animationsEnabled: true,
+      animationsEnabled: fancyEffectsByDefault,
       appUpdateNotificationsEnabled: true,
       gameUpdateNotificationsEnabled: true,
       createBackupBeforeInstall: true,
       autoDetectInstalledGames: true,
       showAdultGames: false,
       hideAiTranslations: false,
-      liquidGlassEnabled: true,
+      liquidGlassEnabled: fancyEffectsByDefault,
       gamepadSoundsEnabled: true,
       isSettingsModalOpen: false,
       sidebarWidth: 320,
@@ -92,8 +119,12 @@ export const useSettingsStore = create<SettingsStore>()(
 
       isFavoriteGame: (gameId) => get().favoriteGameIds.includes(gameId),
 
-      toggleAnimations: () =>
-        set((state) => ({ animationsEnabled: !state.animationsEnabled })),
+      // No-op on weak hardware — UI also disables the toggle, but guard the
+      // setter too in case it's called from elsewhere (keyboard shortcut, etc.).
+      toggleAnimations: () => {
+        if (isHardwareWeak) return;
+        set((state) => ({ animationsEnabled: !state.animationsEnabled }));
+      },
 
       toggleAppUpdateNotifications: () =>
         set((state) => ({
@@ -117,8 +148,10 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleHideAiTranslations: () =>
         set((state) => ({ hideAiTranslations: !state.hideAiTranslations })),
 
-      toggleLiquidGlass: () =>
-        set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled })),
+      toggleLiquidGlass: () => {
+        if (isHardwareWeak) return;
+        set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled }));
+      },
 
       toggleGamepadSounds: () =>
         set((state) => ({ gamepadSoundsEnabled: !state.gamepadSoundsEnabled })),
@@ -132,6 +165,15 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'lbk-settings',
       storage: createJSONStorage(() => electronStorage),
+      // Override the persisted choice for fancy effects when hardware is weak,
+      // so a setting saved on a stronger machine (or older app version) can't
+      // re-enable lag on the current machine.
+      onRehydrateStorage: () => (state) => {
+        if (isHardwareWeak && state) {
+          state.animationsEnabled = false;
+          state.liquidGlassEnabled = false;
+        }
+      },
       partialize: (state) => ({
         sortOrder: state.sortOrder,
         animationsEnabled: state.animationsEnabled,

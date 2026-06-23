@@ -6,6 +6,7 @@ import type {
   SortOrderType,
 } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
+import { getRecommendedGameIds } from './db/recommendations-source';
 
 const gamesRepo = GamesRepository.getInstance();
 
@@ -108,5 +109,32 @@ export function countGamesBySteamAppIds(steamAppIds: number[]): number {
   } catch (error) {
     console.error('[API] Error counting games by Steam App IDs:', error);
     return 0;
+  }
+}
+
+export async function fetchRecommendedGames(
+  gameId: string,
+  limit = 3,
+  hideAiTranslations = false
+): Promise<Game[]> {
+  try {
+    const recommendedIds = await getRecommendedGameIds(gameId);
+    const normalizedLimit = Math.max(0, limit);
+    const uniqueIds = [...new Set(recommendedIds)].slice(0, normalizedLimit);
+
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const games = fetchGamesByIds(uniqueIds, undefined, hideAiTranslations);
+    const gamesById = new Map(games.map((game) => [game.id, game]));
+
+    // Preserve recommendation order from source (JSON now, backend later)
+    return uniqueIds
+      .map((id) => gamesById.get(id))
+      .filter((game): game is Game => game !== undefined);
+  } catch (error) {
+    console.error('[API] Error fetching recommended games:', error);
+    return [];
   }
 }

@@ -128,7 +128,7 @@ export class GamesRepository {
         // Modify test games to appear at top of list
         const modifiedTestGames = testGames.map((game, index) => ({
           ...game,
-          name: `[TEST] ${game.name}`,
+          name: `${game.name} (TEST)`,
           id: `test-${game.id}`,
           slug: `test-${game.slug || game.id}`,
           approved_at: new Date(2099, 11, 31, 23, 59, 59 - index).toISOString(),

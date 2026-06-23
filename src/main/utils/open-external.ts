@@ -89,31 +89,56 @@ function detectLinuxBrowser(): BrowserCommand | null {
  * On Linux (especially SteamOS), bypasses xdg-open to avoid the Discover store redirect
  * by detecting and launching the browser directly.
  */
-export async function openExternalUrl(url: string): Promise<void> {
-  if (!isLinux()) {
+export async function openExternalUrl(
+  url: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!url) {
+      throw new Error(`[OpenExternal] Invalid URL: ${JSON.stringify(url)}`);
+    }
+
+    const trimmed = url.trim();
+    if (!trimmed) {
+      throw new Error('[OpenExternal] Empty URL');
+    }
+
+    if (/^(file|javascript|data|vbscript):/i.test(trimmed)) {
+      throw new Error(
+        `[OpenExternal] Refusing to open URL with unsafe protocol: ${trimmed}`
+      );
+    }
+
+    if (!isLinux()) {
+      await shell.openExternal(trimmed);
+      return { success: true };
+    }
+
+    // Lazily detect and cache the browser
+    if (cachedBrowser === undefined) {
+      cachedBrowser = detectLinuxBrowser();
+      console.log(
+        cachedBrowser
+          ? `[OpenExternal] Detected browser: ${cachedBrowser.command} ${cachedBrowser.args.join(' ')}`
+          : '[OpenExternal] No browser detected, falling back to shell.openExternal'
+      );
+    }
+
+    if (cachedBrowser) {
+      const child = spawn(cachedBrowser.command, [...cachedBrowser.args, url], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      return { success: true };
+    }
+
+    // Fallback to Electron's default (xdg-open)
     await shell.openExternal(url);
-    return;
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Network error',
+    };
   }
-
-  // Lazily detect and cache the browser
-  if (cachedBrowser === undefined) {
-    cachedBrowser = detectLinuxBrowser();
-    console.log(
-      cachedBrowser
-        ? `[OpenExternal] Detected browser: ${cachedBrowser.command} ${cachedBrowser.args.join(' ')}`
-        : '[OpenExternal] No browser detected, falling back to shell.openExternal'
-    );
-  }
-
-  if (cachedBrowser) {
-    const child = spawn(cachedBrowser.command, [...cachedBrowser.args, url], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
-    return;
-  }
-
-  // Fallback to Electron's default (xdg-open)
-  await shell.openExternal(url);
 }

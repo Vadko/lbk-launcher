@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ListFilter } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useInstalledGamesForHome } from '@/renderer/queries/useHomePageGames';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
@@ -20,12 +21,14 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   title = 'Знайдено встановлені ігри',
   showLimit = 3,
 }) => {
+  const navigate = useNavigate();
+
   const { hideAiTranslations } = useSettingsStore(
     useShallow((state) => ({
       hideAiTranslations: state.hideAiTranslations,
     }))
   );
-  const { setSelectedGame, installedTranslations } = useStore(
+  const { installedTranslations } = useStore(
     useShallow((state) => ({
       setSelectedGame: state.setSelectedGame,
       installedTranslations: state.installedTranslations,
@@ -82,7 +85,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   // Show banner instead of section when no games found
   if (!isLoading && allInstalledGames.length === 0) {
     return (
-      <div className="text-left w-full max-w-[1317px]">
+      <section>
         <AnimatePresence mode="wait">
           <motion.div
             key="empty-banner"
@@ -107,12 +110,12 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             </div>
           </motion.div>
         </AnimatePresence>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="text-left w-full max-w-[1317px]">
+    <section>
       {/* Header with button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
@@ -161,13 +164,13 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
                   isSelected={false}
                   isCardStyle={true}
                   showDownloadCounter={false}
-                  onClick={() => setSelectedGame(game)}
+                  onClick={() => navigate(`/game/${game.id}`)}
                 />
               </motion.div>
             ))
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </section>
   );
 };

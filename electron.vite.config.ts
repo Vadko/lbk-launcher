@@ -5,6 +5,7 @@ import { defineConfig } from 'electron-vite';
 import path from 'path';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { version } from './package.json';
+import { settings } from './src/lib/electron-router-dom';
 
 function getRelease(): string {
   try {
@@ -106,7 +107,7 @@ export default defineConfig({
       },
     },
     server: {
-      port: 5173,
+      port: settings.port,
       hmr: {
         overlay: true,
       },

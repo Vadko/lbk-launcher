@@ -1,10 +1,17 @@
 import { app, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import { checkForPortableUpdates, stopPortableUpdateCheck } from './portable-updater';
+import { isPortable } from './utils/platform';
 import { getMainWindow } from './window';
 
 let updateCheckInterval: NodeJS.Timeout | null = null;
 
 export function setupAutoUpdater(): void {
+  if (isPortable()) {
+    // Portable builds can't self-update; UI shows a "download new version" link instead.
+    return;
+  }
+
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
@@ -29,6 +36,11 @@ function handleUpdateError(error: unknown): void {
 }
 
 export function checkForUpdates(): void {
+  if (isPortable()) {
+    checkForPortableUpdates();
+    return;
+  }
+
   if (app.isPackaged) {
     // Initial check after 3 seconds
     setTimeout(() => autoUpdater.checkForUpdates().catch(handleUpdateError), 3000);
@@ -42,6 +54,10 @@ export function checkForUpdates(): void {
 }
 
 export function stopUpdateCheck(): void {
+  if (isPortable()) {
+    stopPortableUpdateCheck();
+    return;
+  }
   if (updateCheckInterval) {
     clearInterval(updateCheckInterval);
     updateCheckInterval = null;

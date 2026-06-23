@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Users, X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
@@ -15,6 +16,7 @@ interface TranslationPickerModalProps {
   onClose: () => void;
   translations: Game[];
   gameName: string;
+  variantById?: Map<string, string>;
 }
 
 export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
@@ -22,15 +24,17 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   onClose,
   translations,
   gameName,
+  variantById,
 }) => {
-  const { selectedGame, setSelectedGame, installedTranslations, gamesWithUpdates } =
-    useStore();
+  const navigate = useNavigate();
+  const { selectedGame, installedTranslations, gamesWithUpdates } = useStore();
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const setNavigationArea = useGamepadModeStore((s) => s.setNavigationArea);
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
   const handleSelect = (game: Game) => {
-    setSelectedGame(game);
+    // Навігуємо на сторінку вибраної гри замість setSelectedGame
+    navigate(`/game/${game.id}`);
     onClose();
     // Switch to main content after selection in gamepad mode
     if (isGamepadMode) {
@@ -93,6 +97,9 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 const isTranslationAvailable =
                   game.status !== 'planned' && game.status !== 'tech-improvement';
 
+                const variant = variantById?.get(game.id);
+                const teamLabel = game.team || 'Невідомий автор';
+
                 return (
                   <button
                     key={game.id}
@@ -135,7 +142,10 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-text-main truncate">
-                          {game.team || 'Невідомий автор'}
+                          {teamLabel}
+                          {variant && (
+                            <span className="text-text-muted text-xs"> {variant}</span>
+                          )}
                         </span>
                         <StatusIcons
                           hasUpdate={hasUpdate}

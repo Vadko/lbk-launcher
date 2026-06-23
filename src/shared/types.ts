@@ -14,6 +14,16 @@ export type InstallPath = Database['public']['CompositeTypes']['install_path_ent
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
 
+export interface NewsFeedItem {
+  id: string;
+  url: string;
+  title?: string;
+  content?: string;
+  publishedAt?: string;
+}
+
+export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
+
 export interface GamePath {
   platform: Platform;
   path: string;
@@ -168,6 +178,11 @@ export interface ElectronAPI {
     showAiTranslations?: boolean,
     sortOrder?: SortOrderType
   ) => Promise<Game[]>;
+  fetchRecommendedGames: (
+    gameId: string,
+    limit?: number,
+    hideAiTranslations?: boolean
+  ) => Promise<Game[]>;
   syncKurinGames: () => Promise<string[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
   getAllInstalledSteamGames: () => Promise<Record<string, string>>;
@@ -225,7 +240,8 @@ export interface ElectronAPI {
     componentsToRemove: { voice?: boolean; achievements?: boolean }
   ) => Promise<InstallResult>;
   checkPlatformCompatibility: (game: Game) => Promise<string | null>;
-  openExternal: (url: string) => Promise<void>;
+  fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
+  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
   onInstallProgress: (callback: (progress: number) => void) => () => void;
   onDownloadProgress: (
@@ -257,6 +273,8 @@ export interface ElectronAPI {
   // Real-time updates (автоматично керуються в main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
+  isGameTombstoned: (gameId: string) => Promise<boolean>;
+  onGameTombstoned: (callback: (gameId: string) => void) => () => void;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
   onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY
@@ -279,6 +297,8 @@ export interface ElectronAPI {
   isE2E: () => boolean;
   // Platform
   getPlatform: () => string;
+  // Hardware info from Node `os` module — accurate, no Chromium 8GB cap.
+  getSystemInfo: () => { totalRamGB: number; cpuCount: number };
   // Machine ID - for subscription tracking
   getMachineId: () => Promise<string | null>;
   // Track subscription events

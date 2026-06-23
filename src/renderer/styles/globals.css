@@ -340,6 +340,10 @@ input[type="search"]::-webkit-search-cancel-button {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.custom-scrollbar {
+  scrollbar-gutter: stable;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 12px;
 }
@@ -413,6 +417,17 @@ input[type="search"]::-webkit-search-cancel-button {
 .no-animations [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* Disable expensive `filter: drop-shadow(...)` (regular filter, not backdrop). */
+.no-animations [class*="drop-shadow-"] {
+  filter: none !important;
+}
+
+/* Disable `filter: blur(...)` inside the loader only — the rest of the app
+   uses `blur-*` classes for adult-content censoring which must stay on. */
+.no-animations .app-loader [class*="blur-"] {
+  filter: none !important;
 }
 
 /* Disable hover transforms */

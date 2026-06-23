@@ -33,6 +33,8 @@ const electronAPI: ElectronAPI = {
       hideAiTranslations,
       sortOrder
     ),
+  fetchRecommendedGames: (gameId: string, limit = 3, hideAiTranslations?: boolean) =>
+    ipcRenderer.invoke('fetch-recommended-games', gameId, limit, hideAiTranslations),
   syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
   getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
@@ -120,6 +122,8 @@ const electronAPI: ElectronAPI = {
   ) => ipcRenderer.invoke('remove-components', game, componentsToRemove),
   checkPlatformCompatibility: (game: Game) =>
     ipcRenderer.invoke('check-platform-compatibility', game),
+  fetchNewsFeed: (filter, before) =>
+    ipcRenderer.invoke('fetch-news-feed', filter, before),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   selectGameFolder: () => ipcRenderer.invoke('select-game-folder'),
   onInstallProgress: (callback: (progress: number) => void) => {
@@ -182,6 +186,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-removed', handler);
     return () => ipcRenderer.removeListener('game-removed', handler);
   },
+  isGameTombstoned: (gameId: string) => ipcRenderer.invoke('is-game-tombstoned', gameId),
+  onGameTombstoned: (callback: (gameId: string) => void) => {
+    const handler = (_: unknown, gameId: string) => callback(gameId);
+    ipcRenderer.on('game-tombstoned', handler);
+    return () => ipcRenderer.removeListener('game-tombstoned', handler);
+  },
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();
@@ -219,6 +229,8 @@ const electronAPI: ElectronAPI = {
   isE2E: () => isE2EMode,
   // Platform
   getPlatform: () => ipcRenderer.sendSync('get-platform'),
+  // System hardware info (accurate, via Node os module)
+  getSystemInfo: () => ipcRenderer.sendSync('get-system-info'),
   // Machine ID - for subscription tracking
   getMachineId: () => ipcRenderer.invoke('get-machine-id'),
   // Track subscription events

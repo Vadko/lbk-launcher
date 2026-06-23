@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { app, ipcMain } from 'electron';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
@@ -5,6 +6,7 @@ import {
   fetchFilterCounts,
   fetchGames,
   fetchGamesByIds,
+  fetchRecommendedGames,
   fetchTeams,
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
@@ -20,6 +22,7 @@ import {
 } from '../db/banners-api';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
+import { SyncManager } from '../db/sync-manager';
 import {
   detectGamePath,
   detectGamePaths,
@@ -64,6 +67,16 @@ export function setupGamesHandlers(): void {
   // Platform
   ipcMain.on('get-platform', (event) => {
     event.returnValue = getPlatform();
+  });
+
+  // System info — accurate hardware specs via Node `os` (no Chromium's
+  // deviceMemory cap of 8GB). Sync so the renderer can use it for initial
+  // store defaults.
+  ipcMain.on('get-system-info', (event) => {
+    event.returnValue = {
+      totalRamGB: os.totalmem() / 1024 ** 3,
+      cpuCount: os.cpus().length,
+    };
   });
 
   // Machine ID - for subscription tracking
@@ -115,6 +128,12 @@ export function setupGamesHandlers(): void {
       uploadFileToSignedUrl(signedUrl, filePath, contentType)
   );
 
+  // Перевірити чи гру позначено як tombstoned
+  // (видалена з каталогу, але встановлена локально)
+  ipcMain.handle('is-game-tombstoned', (_, gameId: string) =>
+    SyncManager.getInstance().isGameTombstoned(gameId)
+  );
+
   // Fetch games with pagination - SYNC тепер, тому що локальна БД
   ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {
     const timer = createTimer('IPC: fetch-games');
@@ -149,6 +168,19 @@ export function setupGamesHandlers(): void {
         );
       } catch (error) {
         console.error('Error fetching games by IDs:', error);
+        return [];
+      }
+    }
+  );
+
+  // Fetch recommended games for game page (currently from local JSON source)
+  ipcMain.handle(
+    'fetch-recommended-games',
+    async (_, gameId: string, limit = 3, hideAiTranslations = false) => {
+      try {
+        return await fetchRecommendedGames(gameId, limit, hideAiTranslations);
+      } catch (error) {
+        console.error('Error fetching recommended games:', error);
         return [];
       }
     }
@@ -448,8 +480,13 @@ export function setupGamesHandlers(): void {
 
       // For Steam games, try to launch via Steam protocol
       if (gamePath.platform === 'steam') {
-        const { findSteamAppId } = await import('../game-launcher');
-        const appId = await findSteamAppId(gamePath.path);
+        // Use game.steam_app_id if available, otherwise find by path
+        let appId = game.steam_app_id?.toString() || null;
+
+        if (!appId) {
+          const { findSteamAppId } = await import('../game-launcher');
+          appId = await findSteamAppId(gamePath.path);
+        }
 
         if (appId) {
           const result = await launchSteamGame(appId);

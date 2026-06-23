@@ -1,22 +1,12 @@
-import { AnimatePresence, MotionConfig } from 'framer-motion';
 import mixpanel from 'mixpanel-browser';
 import React, { useEffect, useRef, useState } from 'react';
-import mainBg from '../../resources/main-bg.webp';
-import { AppLoader } from './components/AppLoader/AppLoader';
-import { GamepadHints } from './components/GamepadHints/GamepadHints';
-import { TitleBar } from './components/Layout/TitleBar';
-import { MainContent } from './components/MainContent/MainContent';
-import { ConfirmModal } from './components/Modal/ConfirmModal';
-import { GlobalModal } from './components/Modal/GlobalModal';
-import { PromoModal } from './components/Modal/PromoModal';
-import { NotificationModal } from './components/Notifications/NotificationModal';
-import { ToastNotifications } from './components/Notifications/ToastNotifications';
-import { SettingsModal } from './components/Settings/SettingsModal';
-import { Sidebar } from './components/Sidebar/Sidebar';
-import { UpdateNotification } from './components/UpdateNotification/UpdateNotification';
-import { useDeepLink } from './hooks/useDeepLink';
-import { useGamepadModeNavigation } from './hooks/useGamepadModeNavigation';
+import { Route } from 'react-router-dom';
+import { Router } from '../lib/electron-router-dom';
+import { MainLayout } from './components/Layout/MainLayout';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
+import { GamePage } from './pages/GamePage';
+import { HomePage } from './pages/HomePage';
+import { NewsPage } from './pages/NewsPage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
@@ -65,45 +55,16 @@ export const App: React.FC = () => {
     loadSteamGames,
     clearSteamGamesCache,
     clearDetectedGamesCache,
-    setSelectedGame,
-    syncStatus,
     setSyncStatus,
   } = useStore();
-  const { animationsEnabled, autoDetectInstalledGames, liquidGlassEnabled } =
-    useSettingsStore();
-  const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
+  const { autoDetectInstalledGames, liquidGlassEnabled } = useSettingsStore();
   const setGamepadMode = useGamepadModeStore((s) => s.setGamepadMode);
-  const navigationArea = useGamepadModeStore((s) => s.navigationArea);
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
-  const [showNotificationHistory, setShowNotificationHistory] = useState(false);
-  const loaderVisible = useStore((s) => s.loaderVisible);
   const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
   // Підписка на real-time оновлення ігор
   useRealtimeGames();
-
-  // Обробка deep link для навігації до перекладу
-  useDeepLink();
-
-  // Listen for navigation from system notifications
-  useEffect(() => {
-    if (!window.windowControls?.onNavigateToGame) return;
-
-    const unsubscribe = window.windowControls.onNavigateToGame(async (gameId) => {
-      console.log('[App] Navigating to game from notification:', gameId);
-      try {
-        const games = await window.electronAPI.fetchGamesByIds([gameId]);
-        if (games.length > 0) {
-          setSelectedGame(games[0]);
-        }
-      } catch (error) {
-        console.error('[App] Failed to load game:', error);
-      }
-    });
-
-    return unsubscribe;
-  }, [setSelectedGame]);
 
   // Listen for sync status from main process
   useEffect(() => {
@@ -146,7 +107,7 @@ export const App: React.FC = () => {
       unsubscribe();
       if (hideTimeout) clearTimeout(hideTimeout);
     };
-  }, [setSyncStatus]);
+  }, [setSyncStatus, setLoaderVisible]);
 
   // Відстеження першого запуску додатку
   useEffect(() => {
@@ -159,40 +120,15 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Простий скрол геймпадом (тільки в геймпад-режимі)
-  useGamepadModeNavigation(isGamepadMode);
-
   // Track mouse movement for mode switching
   const lastMouseMoveRef = useRef(0);
 
-  // Mode switching: poll the gamepad in a RAF loop so a first button press
-  // or stick movement flips us into gamepad mode. Loop touches no React
-  // state, so an idle gamepad costs zero re-renders.
+  // Mode switching: poll connected gamepads in a RAF loop so a first button
+  // press or stick movement flips us into gamepad mode. RAF runs ONLY while
+  // a gamepad is connected — without one, getGamepads() returns an empty
+  // array and polling 60×/sec for nothing was burning CPU for every user.
   useEffect(() => {
     const MOUSE_THROTTLE_MS = 500;
-
-    const handleGamepadConnected = (e: GamepadEvent) => {
-      if (!isValidGamepad(e.gamepad)) return;
-      console.log('[App] Gamepad connected:', e.gamepad.id);
-      setGamepadMode(true);
-    };
-
-    const handleGamepadDisconnected = (e: GamepadEvent) => {
-      console.log('[App] Gamepad disconnected:', e.gamepad.id);
-      const stillConnected = Array.from(navigator.getGamepads()).some(isValidGamepad);
-      if (!stillConnected) {
-        setGamepadMode(false);
-      }
-    };
-
-    const handleMouseMove = () => {
-      const now = Date.now();
-      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
-      lastMouseMoveRef.current = now;
-      if (useGamepadModeStore.getState().isGamepadMode) {
-        setGamepadMode(false);
-      }
-    };
 
     let rafId = 0;
     const tick = () => {
@@ -212,16 +148,57 @@ export const App: React.FC = () => {
       rafId = requestAnimationFrame(tick);
     };
 
+    const startPolling = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const stopPolling = () => {
+      if (!rafId) return;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    };
+
+    const handleGamepadConnected = (e: GamepadEvent) => {
+      if (!isValidGamepad(e.gamepad)) return;
+      console.log('[App] Gamepad connected:', e.gamepad.id);
+      setGamepadMode(true);
+      startPolling();
+    };
+
+    const handleGamepadDisconnected = (e: GamepadEvent) => {
+      console.log('[App] Gamepad disconnected:', e.gamepad.id);
+      const stillConnected = Array.from(navigator.getGamepads()).some(isValidGamepad);
+      if (!stillConnected) {
+        setGamepadMode(false);
+        stopPolling();
+      }
+    };
+
+    const handleMouseMove = () => {
+      const now = Date.now();
+      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
+      lastMouseMoveRef.current = now;
+      if (useGamepadModeStore.getState().isGamepadMode) {
+        setGamepadMode(false);
+      }
+    };
+
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
     window.addEventListener('mousemove', handleMouseMove);
-    rafId = requestAnimationFrame(tick);
+
+    // Cover the case where a gamepad was already connected before mount
+    // (Chromium fires gamepadconnected on first input, not at page load).
+    if (Array.from(navigator.getGamepads()).some(isValidGamepad)) {
+      startPolling();
+    }
 
     return () => {
       window.removeEventListener('gamepadconnected', handleGamepadConnected);
       window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
       window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(rafId);
+      stopPolling();
     };
   }, [setGamepadMode]);
 
@@ -422,85 +399,24 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Check if liquid glass mode is active (supported AND enabled)
-  const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
-
   return (
-    <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
-      {/* Loader overlay with fade animation */}
-      <AnimatePresence>
-        {loaderVisible && <AppLoader status={syncStatus} />}
-      </AnimatePresence>
-
-      <div
-        className={`relative w-screen h-screen text-white ${!animationsEnabled ? 'no-animations' : ''} ${isLiquidGlassActive ? '' : 'bg-bg-dark'}`}
-        data-gamepad-mode={isGamepadMode || undefined}
-      >
-        <TitleBar online={online} version={window.electronAPI?.getVersion?.() || ''} />
-
-        {/* Main layout - changes based on gamepad mode */}
-        {isGamepadMode ? (
-          /* Gamepad layout: Header + Games strip on top, MainContent below */
-          <div className="flex flex-col h-full pt-8 relative z-10">
-            {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
+    <Router
+      main={
+        <Route
+          path="/"
+          element={
+            <MainLayout
+              online={online}
+              version={window.electronAPI?.getVersion?.() || ''}
+              liquidGlassSupported={liquidGlassSupported}
             />
-            {/* Sidebar - hides when in main-content mode */}
-            <div
-              className={`transition-all duration-300 ease-in-out relative z-20 ${
-                navigationArea === 'main-content'
-                  ? 'max-h-0 opacity-0 overflow-hidden'
-                  : 'max-h-[300px] opacity-100'
-              }`}
-            >
-              <Sidebar
-                onOpenHistory={() => setShowNotificationHistory(true)}
-                isHorizontal={true}
-              />
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-              <MainContent />
-            </div>
-          </div>
-        ) : (
-          /* Normal layout: Vertical sidebar on left, MainContent on right */
-          <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
-            {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
-            <Sidebar
-              onOpenHistory={() => setShowNotificationHistory(true)}
-              isHorizontal={false}
-            />
-            <MainContent />
-          </div>
-        )}
-
-        {/* Update notifications */}
-        <UpdateNotification />
-        <ToastNotifications />
-
-        {/* Global modals — GlobalModal last so it renders on top of others */}
-        <ConfirmModal />
-        <SettingsModal />
-        <GlobalModal />
-        <NotificationModal
-          isOpen={showNotificationHistory}
-          onClose={() => setShowNotificationHistory(false)}
-        />
-        <PromoModal />
-
-        {/* Gamepad hints */}
-        <GamepadHints />
-      </div>
-    </MotionConfig>
+          }
+        >
+          <Route index element={<HomePage />} />
+          <Route path="/news" element={<NewsPage />} />
+          <Route path="/game/:gameId" element={<GamePage />} />
+        </Route>
+      }
+    />
   );
 };

@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/electron/main';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import { join } from 'path';
+import { registerRoute } from '../lib/electron-router-dom';
 import {
   applyLiquidGlass,
   isLiquidGlassSupported,
@@ -52,18 +53,13 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     mainWindow.setWindowButtonVisibility(true);
   }
 
-  // Load the app
-  if (process.env.ELECTRON_RENDERER_URL) {
-    const url = process.env.ELECTRON_RENDERER_URL;
-    console.log('[Window] Loading from URL (dev mode):', url);
-    mainWindow.loadURL(url);
-  } else {
-    const htmlPath = join(app.getAppPath(), 'out/renderer/index.html');
-    console.log('[Window] Loading from file (production):', htmlPath);
-    console.log('[Window] app.getAppPath():', app.getAppPath());
-    console.log('[Window] app.isPackaged:', app.isPackaged);
-    mainWindow.loadFile(htmlPath);
-  }
+  // Register electron-router-dom route
+  // This automatically handles loadURL/loadFile for both dev and production
+  registerRoute({
+    id: 'main',
+    browserWindow: mainWindow,
+    htmlFile: join(app.getAppPath(), 'out/renderer/index.html'),
+  });
 
   // Open DevTools in development
   if (!app.isPackaged) {
@@ -72,7 +68,9 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   // open target="_blank" links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    openExternalUrl(url);
+    openExternalUrl(url).catch((error) => {
+      console.error('[Window] openExternalUrl failed:', error);
+    });
     return { action: 'deny' };
   });
 

@@ -14,44 +14,56 @@ import {
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
 import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
-import { isSpecialTranslator } from '../../constants/specialTranslators';
-import { useInstallation } from '../../hooks/useInstallation';
-import { useModalStore } from '../../store/useModalStore';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { useStore } from '../../store/useStore';
-import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
-import { trackEvent } from '../../utils/analytics';
-import { AuthorSubscriptionModal } from '../Modal/AuthorSubscriptionModal';
-import { FeedbackModal } from '../Modal/FeedbackModal';
-import { InstallOptionsDialog } from '../Modal/InstallOptionsDialog';
-import { Placement } from '../Placements';
-import { Button } from '../ui/Button';
-import { SubscribeButton } from '../ui/SubscribeButton';
-import { TeamSubscribeButton } from '../ui/TeamSubscribeButton';
-import { AuthorsList } from './AuthorsList';
-import { DownloadProgressCard } from './DownloadProgressCard';
-import { FundraisingProgressCard } from './FundraisingProgressCard';
-import SwiperSlider from './Gallery';
-import { GameHero } from './GameHero';
-import { ImportantNotice } from './ImportantNotice';
-import { InfoCard } from './InfoCard';
-import { InstallationStatusBadge } from './InstallationStatusBadge';
-import { InstallationStatusMessage } from './InstallationStatusMessage';
-import { MainPage } from './MainPage';
-import { SocialLinksCard } from './SocialLinksCard';
-import { StatusCard } from './StatusCard';
-import { VideoCard } from './VideoCard';
+import { AuthorsList } from '../components/MainContent/AuthorsList';
+import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
+import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
+import { SwiperSlider } from '../components/MainContent/Gallery';
+import { GameHero } from '../components/MainContent/GameHero';
+import { ImportantNotice } from '../components/MainContent/ImportantNotice';
+import { InfoCard } from '../components/MainContent/InfoCard';
+import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
+import { InstallationStatusMessage } from '../components/MainContent/InstallationStatusMessage';
+import { RecommendedGamesSection } from '../components/MainContent/RecommendedGamesSection';
+import { SocialLinksCard } from '../components/MainContent/SocialLinksCard';
+import { StatusCard } from '../components/MainContent/StatusCard';
+import { VideoCard } from '../components/MainContent/VideoCard';
+import { AuthorSubscriptionModal } from '../components/Modal/AuthorSubscriptionModal';
+import { FeedbackModal } from '../components/Modal/FeedbackModal';
+import { InstallOptionsDialog } from '../components/Modal/InstallOptionsDialog';
+import { Placement } from '../components/Placements';
+import { Button } from '../components/ui/Button';
+import { SubscribeButton } from '../components/ui/SubscribeButton';
+import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
+import { isSpecialTranslator } from '../constants/specialTranslators';
+import { useGameTombstone } from '../hooks/useGameTombstone';
+import { useInstallation } from '../hooks/useInstallation';
+import { useModalStore } from '../store/useModalStore';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { useStore } from '../store/useStore';
+import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
+import { trackEvent } from '../utils/analytics';
+import { isTranslationInstallable } from '../utils/gameStatus';
 
-export const MainContent: React.FC = () => {
+/**
+ * Сторінка детальної інформації про гру
+ * Відображає всю інформацію, банери, кнопки встановлення тощо
+ */
+export const GamePage: React.FC = () => {
+  const { gameId } = useParams<{ gameId: string }>();
+  const navigate = useNavigate();
+
   const {
     selectedGame,
+    setSelectedGame,
     checkInstallationStatus,
     isCheckingInstallationStatus,
     isGameDetected,
     installedTranslations,
   } = useStore();
+
   const { showModal } = useModalStore();
   const {
     showAdultGames,
@@ -68,6 +80,7 @@ export const MainContent: React.FC = () => {
   const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
+  const isTombstoned = useGameTombstone(gameId);
 
   const installationInfo = selectedGame
     ? installedTranslations.get(selectedGame.id)
@@ -87,6 +100,9 @@ export const MainContent: React.FC = () => {
     selectedGame.version &&
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
+  const isInstallable = selectedGame
+    ? isTranslationInstallable(selectedGame.status)
+    : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
   const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
 
@@ -96,6 +112,62 @@ export const MainContent: React.FC = () => {
       toggleFavoriteGame(selectedGame.id, selectedGame.name);
     }
   }, [selectedGame, toggleFavoriteGame]);
+
+  // Завантажити гру якщо її ще немає в selectedGame
+  useEffect(() => {
+    if (!gameId) {
+      navigate('/');
+      return;
+    }
+
+    let isCancelled = false; // Race condition protection
+
+    const loadGame = async () => {
+      // Якщо вже є вибрана гра з правильним ID, не треба перезавантажувати
+      if (selectedGame?.id === gameId) return;
+
+      // Очищаємо selectedGame якщо змінився gameId (щоб не показувати стару гру)
+      if (selectedGame?.id && selectedGame.id !== gameId) {
+        setSelectedGame(null);
+      }
+
+      try {
+        const games = await window.electronAPI.fetchGamesByIds([gameId]);
+
+        // Перевірка чи не відмінено запит (користувач перейшов на іншу гру)
+        if (isCancelled) {
+          console.log('[GamePage] Request cancelled, not updating selectedGame');
+          return;
+        }
+
+        if (games.length > 0) {
+          // Додаткова перевірка: чи все ще той самий gameId в URL
+          // (захист від швидких кліків на різні ігри)
+          if (games[0].id === gameId) {
+            setSelectedGame(games[0]);
+          } else {
+            console.log('[GamePage] Game ID mismatch, skipping setSelectedGame');
+          }
+        } else {
+          // Гру не знайдено, повертаємось на головну
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('[GamePage] Failed to load game:', error);
+        // Не навігуємо якщо запит відмінено
+        if (!isCancelled) {
+          navigate('/');
+        }
+      }
+    };
+
+    loadGame();
+
+    // Cleanup: позначити запит як скасований при розмонтуванні або зміні gameId
+    return () => {
+      isCancelled = true;
+    };
+  }, [gameId, selectedGame, setSelectedGame, navigate]);
 
   // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
@@ -291,16 +363,16 @@ export const MainContent: React.FC = () => {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      console.log('[MainContent] Internet connection restored');
+      console.log('[GamePage] Internet connection restored');
     };
 
     const handleOffline = async () => {
       setIsOnline(false);
-      console.log('[MainContent] Internet connection lost');
+      console.log('[GamePage] Internet connection lost');
 
       // Don't abort if paused or already waiting — download is already stopped
       if (selectedGame && isInstalling && !isPaused && !isWaitingForNetwork) {
-        console.log('[MainContent] Aborting download due to connection loss');
+        console.log('[GamePage] Aborting download due to connection loss');
         await window.electronAPI?.abortDownload('NETWORK_LOST');
       }
     };
@@ -367,12 +439,11 @@ export const MainContent: React.FC = () => {
     isTranslationInstalled,
     showModal,
   ]);
-
+  // Early return якщо немає гри (після всіх хуків!)
   if (!selectedGame) {
-    return <MainPage />;
+    return null;
   }
-
-  // Adult content overlay - show when adult game is selected but setting is off
+  // Adult content overlay
   if (isAdultBlurred) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
@@ -446,6 +517,13 @@ export const MainContent: React.FC = () => {
         <LayoutGroup>
           <GameHero game={selectedGame} />
 
+          {isTombstoned && (
+            <div className="glass-card-no-motion mb-6 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
+              Цей переклад більше не доступний у каталозі. Ви можете лише видалити
+              локалізацію — повторне встановлення недоступне.
+            </div>
+          )}
+
           {/* Actions block */}
           <div className="glass-card-no-motion mb-6 grid gap-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -471,8 +549,20 @@ export const MainContent: React.FC = () => {
                   isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
                 }
                 onClick={() => handleInstall()}
-                disabled={isInstalling || isUninstalling || isPlanned || !isOnline}
-                title={!isOnline ? 'Відсутнє підключення до Інтернету' : undefined}
+                disabled={
+                  isInstalling ||
+                  isUninstalling ||
+                  !isInstallable ||
+                  !isOnline ||
+                  isTombstoned
+                }
+                title={
+                  isTombstoned
+                    ? 'Переклад більше не доступний у каталозі'
+                    : !isOnline
+                      ? 'Відсутнє підключення до Інтернету'
+                      : undefined
+                }
                 data-gamepad-primary-action
                 data-gamepad-action
               >
@@ -630,6 +720,14 @@ export const MainContent: React.FC = () => {
             </div>
           )}
 
+          {/* Recommended */}
+          <RecommendedGamesSection
+            gameId={selectedGame.id}
+            gameName={selectedGame.name}
+            showLimit={3}
+          />
+
+          {/* Narrow placement */}
           <AnimatePresence mode="wait">
             {bannerInfo.placementType === 'narrow' && (
               <motion.div
@@ -653,6 +751,7 @@ export const MainContent: React.FC = () => {
             )}
           </AnimatePresence>
 
+          {/* Info cards */}
           <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-w-0">
               <StatusCard game={selectedGame} />
@@ -666,7 +765,7 @@ export const MainContent: React.FC = () => {
               }}
               initial={false}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-x-clip flex-shrink-0"
+              className="overflow-x-clip flex-shrink-0 mb-auto"
             >
               <div className="w-[320px] h-full">
                 <Placement
@@ -683,6 +782,86 @@ export const MainContent: React.FC = () => {
             </motion.div>
           </div>
 
+          {/* Donate */}
+          {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-6"
+            >
+              <FundraisingProgressCard
+                current={selectedGame.fundraising_current || 0}
+                goal={selectedGame.fundraising_goal}
+                supportUrl={selectedGame.support_url}
+              />
+            </motion.div>
+          )}
+
+          {/* Translate description */}
+          {selectedGame.description && (
+            <motion.section
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="glass-card-no-motion mb-6"
+            >
+              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                Про українізатор
+              </h3>
+              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+                {selectedGame.description}
+              </p>
+            </motion.section>
+          )}
+
+          {/* Video */}
+          {selectedGame.video_url && (
+            <motion.div
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-6"
+            >
+              <VideoCard videoUrl={selectedGame.video_url} />
+            </motion.div>
+          )}
+
+          {/* Gallery */}
+          {selectedGame.screenshots && (
+            <motion.section
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="mb-6"
+            >
+              <div className="glass-card-no-motion">
+                <SwiperSlider
+                  slides={selectedGame.screenshots}
+                  spaceBetween={30}
+                  slidesPerView={3}
+                  pagination={false}
+                  thumbs={true}
+                  loop={true}
+                  updated_at={selectedGame.updated_at}
+                />
+              </div>
+            </motion.section>
+          )}
+
+          {/* Game description */}
+          {selectedGame.game_description && (
+            <motion.section
+              layout="position"
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="glass-card-no-motion mb-6"
+            >
+              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                Про гру
+              </h3>
+              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+                {selectedGame.game_description}
+              </p>
+            </motion.section>
+          )}
+
+          {/* Links */}
           <motion.div
             layout="position"
             transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -717,79 +896,6 @@ export const MainContent: React.FC = () => {
               )}
             </AnimatePresence>
           </motion.div>
-
-          {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="mb-6"
-            >
-              <FundraisingProgressCard
-                current={selectedGame.fundraising_current || 0}
-                goal={selectedGame.fundraising_goal}
-                supportUrl={selectedGame.support_url}
-              />
-            </motion.div>
-          )}
-
-          {selectedGame.video_url && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="mb-6"
-            >
-              <VideoCard videoUrl={selectedGame.video_url} />
-            </motion.div>
-          )}
-          {selectedGame.screenshots && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="mb-6"
-            >
-              <div className="glass-card-no-motion">
-                <SwiperSlider
-                  slides={selectedGame.screenshots}
-                  spaceBetween={30}
-                  slidesPerView={3}
-                  pagination={false}
-                  thumbs={true}
-                  loop={true}
-                  updated_at={selectedGame.updated_at}
-                />
-              </div>
-            </motion.div>
-          )}
-
-          {selectedGame.description && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion mb-6"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про українізатор
-              </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line">
-                {selectedGame.description}
-              </p>
-            </motion.div>
-          )}
-
-          {selectedGame.game_description && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion mb-6"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про гру
-              </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line">
-                {selectedGame.game_description}
-              </p>
-            </motion.div>
-          )}
         </LayoutGroup>
       </div>
     </>
