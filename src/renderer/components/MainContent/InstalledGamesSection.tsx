@@ -3,7 +3,10 @@ import { ListFilter } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-import { useInstalledGamesForHome } from '@/renderer/queries/useHomePageGames';
+import {
+  useInstalledGamePathsCount,
+  useInstalledGamesForHome,
+} from '@/renderer/queries/useHomePageGames';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
@@ -40,6 +43,8 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     hideAiTranslations,
     'newest'
   );
+
+  const { data: installedPathsCount = 0 } = useInstalledGamePathsCount();
 
   // Filter and sort games
   const gamesWithoutInstalls = useMemo(() => {
@@ -82,8 +87,10 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }
   };
 
-  // Show banner instead of section when no games found
+  // Show banner instead of section when no games with translations found
   if (!isLoading && allInstalledGames.length === 0) {
+    const hasInstalledGames = installedPathsCount > 0;
+
     return (
       <section>
         <AnimatePresence mode="wait">
@@ -97,17 +104,33 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             <div className="glass-card-no-motion !p-4 flex gap-6 items-center">
               <WarningFillIcon size={32} />
               <div className="flex-1">
-                <h3 className="text-2xl font-head font-bold text-color-mixed mb-1">
-                  Не можемо знайти ваші ігри
-                </h3>
-                <p className="text-sm">
-                  От халепа... Ми не змогли знайти встановлені ігри на девайсі для яких є
-                  переклад.
-                  <br />
-                  Будь ласка, переконайтеся, що ви маєте хоча б одну завантажену гру з
-                  нашого каталогу у лаунчерах — Steam, GOG, EGS. Також можете перевірити
-                  чи є якісь невстановлені ігри відкривши меню фільтрування
-                </p>
+                {hasInstalledGames ? (
+                  <>
+                    <h3 className="text-2xl font-head font-bold text-color-mixed mb-1">
+                      Не знайшли перекладів для ваших ігор
+                    </h3>
+                    <p className="text-sm">
+                      От халепа... Ми знайшли ваші ігри, але перекладів для них поки немає.
+                      <br />
+                      Завантажте гру з нашого каталогу — відкрийте меню фільтрування, щоб
+                      переглянути доступні переклади.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-2xl font-head font-bold text-color-mixed mb-1">
+                      Не можемо знайти ваші ігри
+                    </h3>
+                    <p className="text-sm">
+                      От халепа... Ми не змогли знайти у вас встановлені ігри, для яких є
+                      переклад.
+                      <br />
+                      Переконайтеся, що маєте хоча б одну гру з нашого каталогу у лаунчерах —
+                      Steam, GOG, EGS. А ще можна відкрити меню фільтрування й переглянути ігри,
+                      які ще не встановлені.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
