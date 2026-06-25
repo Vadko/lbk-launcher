@@ -47,7 +47,12 @@ async function setHiddenAttribute(dirPath: string): Promise<void> {
   if (process.platform !== 'win32') return;
 
   try {
-    await execPromise(`attrib +h "${dirPath}"`);
+    const attribPath = path.join(
+      process.env.SystemRoot || 'C:\\Windows',
+      'System32',
+      'attrib.exe'
+    );
+    await execPromise(`"${attribPath}" +h "${dirPath}"`);
     console.log(`[Backup] Set hidden attribute on: ${dirPath}`);
   } catch (error) {
     console.warn(`[Backup] Failed to set hidden attribute:`, error);

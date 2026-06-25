@@ -72,12 +72,12 @@ export async function installTranslation(
       const customPlatform = platform === 'auto' ? 'steam' : platform;
       gamePath = { platform: customPlatform, path: customGamePath, exists: true };
     } else if (platform === 'auto') {
-      gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      gamePath = getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id);
     } else {
       const selectedInstallPath = (game.install_paths || []).find(
         (p) => p.type === platform
       );
-      gamePath = detectGamePath(selectedInstallPath);
+      gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
     }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {

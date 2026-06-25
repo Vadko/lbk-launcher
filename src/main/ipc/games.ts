@@ -274,7 +274,7 @@ export function setupGamesHandlers(): void {
   // Detect available platforms for a game
   ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
     try {
-      return detectGamePaths(game.install_paths || []);
+      return detectGamePaths(game.install_paths || [], game.steam_app_id);
     } catch (error) {
       console.error('Error detecting game platforms:', error);
       return [];
@@ -452,13 +452,13 @@ export function setupGamesHandlers(): void {
         const selectedInstallPath = (game.install_paths || []).find(
           (p) => p.type === installInfo.installedPlatform
         );
-        gamePath = detectGamePath(selectedInstallPath);
+        gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
       }
 
       // Fallback: use first available game path if platform not found
       if (!gamePath || !gamePath.exists) {
         console.log('[LaunchGame] Falling back to first available game path');
-        gamePath = getFirstAvailableGamePath(game.install_paths || []);
+        gamePath = getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id);
       }
 
       if (!gamePath || !gamePath.exists) {
