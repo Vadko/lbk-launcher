@@ -13,6 +13,7 @@ const homeGamesKeys = {
   updated: (hideAi: boolean) => [...homeGamesKeys.all, 'updated', hideAi] as const,
   installedGames: (hideAi: boolean, sortOrder: SortOrderType) =>
     [...homeGamesKeys.all, 'installed-games', hideAi, sortOrder] as const,
+  installedPathsCount: () => [...homeGamesKeys.all, 'installed-paths-count'] as const,
 };
 
 /**
@@ -75,6 +76,22 @@ export function useInstalledGamesForHome(
       );
 
       return result.games;
+    },
+    staleTime: FIVE_MINUTES,
+    gcTime: FIVE_MINUTES,
+  });
+}
+
+/**
+ * Кількість встановлених ігор на пристрої (незалежно від наявності перекладу).
+ * Дозволяє розрізнити сценарії: ігор не знайдено взагалі vs. знайдено, але без перекладів.
+ */
+export function useInstalledGamePathsCount() {
+  return useSyncAwareQuery({
+    queryKey: homeGamesKeys.installedPathsCount(),
+    queryFn: async (): Promise<number> => {
+      const installPaths = await window.electronAPI.getAllInstalledGamePaths();
+      return installPaths.length;
     },
     staleTime: FIVE_MINUTES,
     gcTime: FIVE_MINUTES,
