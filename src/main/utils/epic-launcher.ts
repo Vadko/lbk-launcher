@@ -9,19 +9,22 @@ interface LaunchResult {
 }
 
 /**
- * Launch an Epic game by its app identifier (CatalogItemId or AppName)
- * Uses the Epic Games Launcher protocol: com.epicgames.launcher://apps/{appId}?action=launch&silent=true
+ * Launch an Epic game by its AppName.
+ * Uses the Epic Games Launcher protocol: com.epicgames.launcher://apps/{appName}?action=launch&silent=true
  *
- * @param appId - The app identifier (e.g., "daisy:df656ca933ea44a2a68d10d9dd4b6c31:Daisy" or simple app name)
+ * The AppName must be the one from the user's own manifest — it is the ownership
+ * key Epic validates.
+ *
+ * @param appName - The Epic AppName for the game (e.g., "Daisy")
  * @returns Promise with launch result
  */
-export async function launchEpicGame(appId: string): Promise<LaunchResult> {
+export async function launchEpicGame(appName: string): Promise<LaunchResult> {
   try {
-    console.log(`[Epic] Launching game with App ID: ${appId}`);
+    console.log(`[Epic] Launching game with AppName: ${appName}`);
 
-    // URL-encode the app ID to handle special characters like colons
-    const encodedAppId = encodeURIComponent(appId);
-    const epicUrl = `com.epicgames.launcher://apps/daisy%3A${encodedAppId}%3ADaisy?action=launch&silent=true`;
+    // URL-encode to handle any special characters in the AppName
+    const encodedAppName = encodeURIComponent(appName);
+    const epicUrl = `com.epicgames.launcher://apps/${encodedAppName}?action=launch&silent=true`;
 
     console.log(`[Epic] Using protocol URL: ${epicUrl}`);
 
