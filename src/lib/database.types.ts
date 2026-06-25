@@ -230,16 +230,22 @@ export type Database = {
           deleted_at: string
           game_id: string
           id: string
+          slug: string | null
+          team: string | null
         }
         Insert: {
           deleted_at?: string
           game_id: string
           id?: string
+          slug?: string | null
+          team?: string | null
         }
         Update: {
           deleted_at?: string
           game_id?: string
           id?: string
+          slug?: string | null
+          team?: string | null
         }
         Relationships: []
       }
