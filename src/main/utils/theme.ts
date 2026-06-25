@@ -19,7 +19,9 @@ export function getIcon(placement: 'tray' | 'notification' | 'window'): string {
       return resolveResource('trayIconTemplate.png');
     }
     // Win/Linux: small monochrome tray glyph, manual swap by system theme.
-    return resolveResource(isLight() ? 'trayIconTemplateDark.png' : 'trayIconTemplate.png');
+    return resolveResource(
+      isLight() ? 'trayIconTemplateDark.png' : 'trayIconTemplate.png'
+    );
   }
 
   // Window / notification: full app icon, themed against system.
