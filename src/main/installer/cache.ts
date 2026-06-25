@@ -100,7 +100,10 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
     // PRIORITY 1: Check standard library paths first (Steam, GOG, Epic, etc.)
     // This ensures that if user installed game via Steam after manual installation,
     // the library path takes priority
-    const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    const gamePath = getFirstAvailableGamePath(
+      game.install_paths || [],
+      game.steam_app_id
+    );
 
     if (gamePath && gamePath.exists) {
       // Check for installation info file in library path
@@ -365,7 +368,10 @@ export async function getConflictingTranslation(
   game: Game
 ): Promise<ConflictingTranslation | null> {
   try {
-    const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    const gamePath = getFirstAvailableGamePath(
+      game.install_paths || [],
+      game.steam_app_id
+    );
 
     if (!gamePath || !gamePath.exists) {
       return null;

@@ -27,6 +27,8 @@ function isExecutableInstaller(fileName: string): boolean {
   return executableExtensions.some((ext) => lowerName.endsWith(ext));
 }
 
+const toPosix = (p: string): string => p.replace(/\\/g, '/');
+
 /**
  * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
  * If new key's DisplayName contains target words, print UninstallString.
@@ -149,11 +151,11 @@ export function getInstallerFileName(game: Game): string | null {
 
   // Linux and macOS can both run shell scripts
   if ((isLinuxOS || isMacOS) && game.installation_file_linux_path) {
-    return game.installation_file_linux_path;
+    return toPosix(game.installation_file_linux_path);
   }
 
   if (isLinuxOS && game.installation_file_windows_path) {
-    return game.installation_file_windows_path;
+    return toPosix(game.installation_file_windows_path);
   }
 
   return null;
