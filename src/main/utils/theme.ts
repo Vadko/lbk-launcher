@@ -6,21 +6,22 @@ function isLight(): boolean {
   return !nativeTheme.shouldUseDarkColors;
 }
 
-export function getIcon(placement: 'tray' | 'notification' | 'window'): string {
-  let iconPath: string;
+function resolveResource(filename: string): string {
+  return app.isPackaged
+    ? join(process.resourcesPath, filename)
+    : join(app.getAppPath(), 'resources', filename);
+}
 
-  if (isMacOS() && placement === 'tray') {
-    // На macOS використовуємо Template іконку для автоматичної адаптації до теми
-    const iconName = 'trayIconTemplate.png';
-    iconPath = app.isPackaged
-      ? join(process.resourcesPath, iconName)
-      : join(app.getAppPath(), 'resources', iconName);
-  } else {
-    // Для інших платформ використовуємо звичайну іконку
-    iconPath = app.isPackaged
-      ? join(process.resourcesPath, isLight() ? 'icon-dark.png' : 'icon.png')
-      : join(app.getAppPath(), 'resources', isLight() ? 'icon-dark.png' : 'icon.png');
+export function getIcon(placement: 'tray' | 'notification' | 'window'): string {
+  if (placement === 'tray') {
+    if (isMacOS()) {
+      // Template image — AppKit auto-inverts based on menu bar appearance.
+      return resolveResource('trayIconTemplate.png');
+    }
+    // Win/Linux: small monochrome tray glyph, manual swap by system theme.
+    return resolveResource(isLight() ? 'trayIconTemplateDark.png' : 'trayIconTemplate.png');
   }
 
-  return iconPath;
+  // Window / notification: full app icon, themed against system.
+  return resolveResource(isLight() ? 'icon-dark.png' : 'icon-light.png');
 }

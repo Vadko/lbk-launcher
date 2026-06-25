@@ -27,7 +27,7 @@
     "dist:mac": "electron-builder --mac --config electron-builder.config.cjs",
     "dist:win:local": "env-cmd pnpm build && pnpm dist:win",
     "dist:linux:local": "env-cmd pnpm build && pnpm dist:linux",
-    "dist:mac:local": "env-cmd pnpm build && pnpm dist:mac",
+    "dist:mac:local": "env-cmd pnpm build && CSC_IDENTITY_AUTO_DISCOVERY=false pnpm dist:mac",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "find-unused": "knip",
@@ -35,7 +35,6 @@
     "format:check": "biome check --max-diagnostics=200 .",
     "types:generate": "npx --yes supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts",
     "postinstall": "electron-builder install-app-deps",
-    "generate:icns": "bash scripts/generate-icns.sh",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "prepare": "husky"
   },
