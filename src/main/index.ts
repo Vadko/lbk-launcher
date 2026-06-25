@@ -81,6 +81,66 @@ function handleDeepLink(url: string) {
   }
 }
 
+function parseShowGameArgs(argv: string[]): string[] {
+  const gameIds = new Set<string>();
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+
+    if (/^--show$/i.test(arg)) {
+      const nextArg = argv[i + 1];
+      if (nextArg && !/^[/-]/.test(nextArg)) {
+        gameIds.add(nextArg);
+        i += 1;
+      }
+      continue;
+    }
+
+    const showMatch = arg.match(/^--show(?:[:=](.+))$/i);
+    if (showMatch?.[1]) {
+      gameIds.add(showMatch[1]);
+    }
+  }
+
+  return [...gameIds];
+}
+
+function applyVisibilityOverridesFromArgs(argv: string[]): void {
+  const gameIds = parseShowGameArgs(argv);
+
+  if (gameIds.length === 0) {
+    return;
+  }
+
+  const repo = GamesRepository.getInstance();
+
+  for (const gameId of gameIds) {
+    const currentGame = repo.getGameById(gameId);
+    if (!currentGame) {
+      console.warn(
+        `[Main] Could not unhide translation: game not found in DB (${gameId})`
+      );
+      continue;
+    }
+
+    if (!currentGame.hide) {
+      console.log(`[Main] Translation ${gameId} is already visible`);
+      continue;
+    }
+
+    const updated = repo.setGameVisibility(gameId, false);
+    if (updated) {
+      console.log(`[Main] Unhidden translation ${gameId} from startup args`);
+      const updatedGame = repo.getGameById(gameId);
+      if (updatedGame) {
+        getMainWindow()?.webContents.send('game-updated', updatedGame);
+      }
+    } else {
+      console.warn(`[Main] Failed to update visibility for translation ${gameId}`);
+    }
+  }
+}
+
 // Steam Deck / Gaming Mode / Flatpak support
 if (isLinux()) {
   app.commandLine.appendSwitch('disable-gpu-sandbox');
@@ -116,6 +176,7 @@ if (isLinux()) {
 
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { closeDatabase, initDatabase } from './db/database';
+import { GamesRepository } from './db/games-repository';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
   fetchAllGamesFromSupabase,
@@ -198,6 +259,8 @@ if (!gotTheLock) {
       mainWindow.focus();
     }
 
+    applyVisibilityOverridesFromArgs(argv);
+
     // On Windows/Linux, the deep link URL is passed as the last argument
     if (isWindows() || isLinux()) {
       const deepLinkUrl = argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
@@ -271,6 +334,7 @@ if (!gotTheLock) {
       );
       console.log('[Main] Initial sync completed');
       sendSyncStatus('ready');
+      applyVisibilityOverridesFromArgs(process.argv);
     } catch (error) {
       const code = (error as { code?: string }).code;
       const hint: Record<string, string> = {

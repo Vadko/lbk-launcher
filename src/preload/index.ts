@@ -98,6 +98,8 @@ const electronAPI: ElectronAPI = {
       sortOrder
     ),
   detectGamePlatforms: (game: Game) => ipcRenderer.invoke('detect-game-platforms', game),
+  setGameVisibility: (gameId: string, hidden: boolean) =>
+    ipcRenderer.invoke('set-game-visibility', { gameId, hidden }),
   installTranslation: (game: Game, options: InstallOptions, customGamePath?: string) =>
     ipcRenderer.invoke('install-translation', game, options, customGamePath),
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),

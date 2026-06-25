@@ -10,7 +10,7 @@ import {
   Shield,
   Trash2,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { type DevModeType, usePromoModalStore } from '../../store/usePromoModalStore';
@@ -97,6 +97,7 @@ export const SettingsModal: React.FC = () => {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
+  const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -281,7 +282,6 @@ export const SettingsModal: React.FC = () => {
             enabled={hideAiTranslations}
             onChange={toggleHideAiTranslations}
           />
-
           <SettingItem
             id="notification-sounds"
             title="Звуки сповіщень"
@@ -469,6 +469,32 @@ export const SettingsModal: React.FC = () => {
               Відправити файл
             </Button>
           </button>
+
+          <div className="flex flex-col gap-2 p-4 rounded-xl bg-glass border border-border">
+            <h4 className="text-sm font-semibold text-text-main">
+              Розблокувати прихований переклад
+            </h4>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="код перекладу"
+                className="flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent"
+                ref={unhideTranslationInputRef}
+              />
+              <Button
+                onClick={async () => {
+                  const translationId = unhideTranslationInputRef.current?.value;
+                  if (translationId) {
+                    await window.electronAPI.setGameVisibility(translationId, false);
+                  }
+                }}
+                variant="secondary"
+                className="flex-shrink-0"
+              >
+                Розблокувати
+              </Button>
+            </div>
+          </div>
 
           {/* Legal section */}
           <div className="grid grid-cols-2 gap-3">

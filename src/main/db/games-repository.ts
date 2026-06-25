@@ -578,6 +578,15 @@ export class GamesRepository {
   }
 
   /**
+   * Змінити видимість гри в БД (hide = 0 для показу, 1 для приховування)
+   */
+  setGameVisibility(gameId: string, hidden: boolean): boolean {
+    const stmt = this.db.prepare('UPDATE games SET hide = ? WHERE id = ?');
+    const result = stmt.run(hidden ? 1 : 0, gameId);
+    return result.changes > 0;
+  }
+
+  /**
    * Видалити гру
    */
   deleteGame(gameId: string): void {
