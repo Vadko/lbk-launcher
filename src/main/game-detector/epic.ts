@@ -456,8 +456,8 @@ export function getEpicAppName(gamePath: string): string | null {
         const resolvedGamePath = path.resolve(gamePath);
 
         if (resolvedManifestPath === resolvedGamePath) {
-          // Prefer catalogItemId, fallback to appName
-          const appIdentifier = manifest.catalogItemId || manifest.appName;
+          // Prefer AppName: it is the ownership key Epic checks on launch.
+          const appIdentifier = manifest.appName || manifest.catalogItemId;
           if (appIdentifier) {
             console.log(`[Epic] Found app identifier for ${gamePath}: ${appIdentifier}`);
             return appIdentifier;
