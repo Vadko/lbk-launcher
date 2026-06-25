@@ -1,20 +1,11 @@
-import got from 'got';
+import type { Database } from '../../lib/database.types';
 import type { Game } from '../../shared/types';
-import { getSupabaseCredentials } from './supabase-credentials';
+import { getSupabaseClient } from './supabase-client';
 
 /**
- * API для синхронізації з Supabase через REST API
- * Цей модуль викликається ТІЛЬКИ в main process
+ * API для синхронізації з Supabase через типізований supabase-js клієнт.
+ * Цей модуль викликається ТІЛЬКИ в main process.
  */
-
-/** Timeout для запитів до Supabase REST API */
-const REQUEST_TIMEOUT = {
-  lookup: 5000,
-  connect: 10_000,
-  secureConnect: 10_000,
-  socket: 30_000,
-  response: 30_000,
-};
 
 /**
  * Поля, які НЕ потрібно завантажувати (великі file_list та FTS поля)
@@ -118,56 +109,34 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
 
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
 
-/**
- * Виконати запит до Supabase REST API
- */
-function supabaseRequest<T>(
-  path: string,
-  params: Record<string, string> = {}
-): Promise<T[]> {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
-  const url = new URL(`${SUPABASE_URL}/rest/v1/${path}`);
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.append(key, value);
-  });
-
-  return got(url.toString(), {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-    },
-    timeout: REQUEST_TIMEOUT,
-    retry: { limit: 3 },
-  }).json<T[]>();
-}
+const GAMES_PAGE_SIZE = 100;
 
 /**
  * Завантажити всі затверджені ігри з Supabase
  */
 export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
+  const supabase = getSupabaseClient();
   const allGames: Game[] = [];
-  const pageSize = 100;
   let offset = 0;
   let hasMore = true;
 
   while (hasMore) {
-    const data = await supabaseRequest<Game>('games', {
-      select: GAME_SELECT_STRING,
-      approved: 'eq.true',
-      order: 'name.asc',
-      offset: offset.toString(),
-      limit: pageSize.toString(),
-    });
+    const { data, error } = await supabase
+      .from('games')
+      .select(GAME_SELECT_STRING)
+      .eq('approved', true)
+      .order('name', { ascending: true })
+      .range(offset, offset + GAMES_PAGE_SIZE - 1)
+      .overrideTypes<Game[], { merge: false }>();
 
-    if (data && data.length > 0) {
-      allGames.push(...data);
-      offset += pageSize;
-      hasMore = data.length === pageSize;
-    } else {
-      hasMore = false;
+    if (error) {
+      throw error;
     }
+
+    const rows = data ?? [];
+    allGames.push(...rows);
+    offset += GAMES_PAGE_SIZE;
+    hasMore = rows.length === GAMES_PAGE_SIZE;
 
     console.log(`[SupabaseSync] Fetched ${allGames.length} games so far...`);
   }
@@ -180,30 +149,31 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
  * Завантажити ігри оновлені після певної дати
  */
 export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game[]> {
+  const supabase = getSupabaseClient();
   const allGames: Game[] = [];
-  const pageSize = 100;
   let offset = 0;
   let hasMore = true;
 
   console.log(`[SupabaseSync] Fetching games updated since ${since}`);
 
   while (hasMore) {
-    const data = await supabaseRequest<Game>('games', {
-      select: GAME_SELECT_STRING,
-      approved: 'eq.true',
-      updated_at: `gt.${since}`,
-      order: 'updated_at.asc',
-      offset: offset.toString(),
-      limit: pageSize.toString(),
-    });
+    const { data, error } = await supabase
+      .from('games')
+      .select(GAME_SELECT_STRING)
+      .eq('approved', true)
+      .gt('updated_at', since)
+      .order('updated_at', { ascending: true })
+      .range(offset, offset + GAMES_PAGE_SIZE - 1)
+      .overrideTypes<Game[], { merge: false }>();
 
-    if (data && data.length > 0) {
-      allGames.push(...data);
-      offset += pageSize;
-      hasMore = data.length === pageSize;
-    } else {
-      hasMore = false;
+    if (error) {
+      throw error;
     }
+
+    const rows = data ?? [];
+    allGames.push(...rows);
+    offset += GAMES_PAGE_SIZE;
+    hasMore = rows.length === GAMES_PAGE_SIZE;
   }
 
   console.log(`[SupabaseSync] Fetched ${allGames.length} updated games`);
@@ -215,31 +185,29 @@ export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game
  * Якщо since не вказано - повертає всі видалені ігри
  */
 export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<string[]> {
+  const supabase = getSupabaseClient();
+
   if (since) {
     console.log(`[SupabaseSync] Fetching deleted games since ${since}`);
   } else {
     console.log(`[SupabaseSync] Fetching all deleted games`);
   }
 
-  const params: Record<string, string> = {
-    select: 'game_id',
-  };
+  const query = supabase.from('deleted_games').select('game_id');
+  const { data, error } = await (since ? query.gt('deleted_at', since) : query);
 
-  if (since) {
-    params.deleted_at = `gt.${since}`;
+  if (error) {
+    throw error;
   }
 
-  const data = await supabaseRequest<{ game_id: string }>('deleted_games', params);
-
-  const deletedIds = data.map((row) => row.game_id);
+  const deletedIds = (data ?? []).map((row) => row.game_id);
   console.log(`[SupabaseSync] Fetched ${deletedIds.length} deleted game IDs`);
   return deletedIds;
 }
 
-interface TrendingGame {
-  game_id: string;
-  downloads: number;
-}
+/** Рядок результату RPC get_trending_games */
+type TrendingGame =
+  Database['public']['Functions']['get_trending_games']['Returns'][number];
 
 /**
  * Завантажити найпопулярніші ігри за останні N днів
@@ -248,28 +216,20 @@ interface TrendingGame {
  * @returns масив {game_id, downloads}
  */
 export async function fetchTrendingGames(days = 30, limit = 10): Promise<TrendingGame[]> {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  const supabase = getSupabaseClient();
 
   console.log(`[SupabaseSync] Fetching trending games for last ${days} days`);
 
-  try {
-    const data = await got
-      .post(`${SUPABASE_URL}/rest/v1/rpc/get_trending_games`, {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        json: { p_days: days, p_limit: limit },
-        timeout: REQUEST_TIMEOUT,
-        retry: { limit: 3 },
-      })
-      .json<TrendingGame[]>();
+  const { data, error } = await supabase.rpc('get_trending_games', {
+    p_days: days,
+    p_limit: limit,
+  });
 
-    console.log(`[SupabaseSync] Fetched ${data.length} trending games`);
-    return data;
-  } catch (error) {
+  if (error) {
     console.error('[SupabaseSync] Failed to fetch trending games:', error);
     return [];
   }
+
+  console.log(`[SupabaseSync] Fetched ${data?.length ?? 0} trending games`);
+  return data ?? [];
 }

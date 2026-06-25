@@ -79,7 +79,7 @@ module.exports = {
         arch: ['x64'],
       },
     ],
-    icon: 'resources/icon-light.png',
+    icon: 'resources/icon-light.ico',
     azureSignOptions: process.env.AZURE_TENANT_ID
       ? {
           publisherName: process.env.AZURE_PUBLISHER_NAME,
@@ -142,9 +142,10 @@ module.exports = {
     shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
-    installerIcon: 'resources/icon-dark.png',
-    uninstallerIcon: 'resources/icon-dark.png',
-    installerHeaderIcon: 'resources/icon-dark.png',
+    // Dark icon inside the NSIS installer/uninstaller UI; light icon stays on
+    // Setup.exe in Explorer and on the installed app.exe (taskbar, Start menu).
+    installerIcon: 'resources/icon-dark.ico',
+    uninstallerIcon: 'resources/icon-dark.ico',
   },
 
   mac: {
