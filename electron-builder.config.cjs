@@ -142,6 +142,9 @@ module.exports = {
     shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
+    installerIcon: 'resources/icon-dark.png',
+    uninstallerIcon: 'resources/icon-dark.png',
+    installerHeaderIcon: 'resources/icon-dark.png',
   },
 
   mac: {
