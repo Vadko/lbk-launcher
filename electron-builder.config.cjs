@@ -19,16 +19,30 @@ module.exports = {
 
   extraResources: [
     {
-      from: 'resources/icon.png',
-      to: 'icon.png',
+      from: 'resources/icon-light.png',
+      to: 'icon-light.png',
     },
     {
       from: 'resources/icon-dark.png',
       to: 'icon-dark.png',
     },
+    {
+      from: 'resources/trayIconTemplate.png',
+      to: 'trayIconTemplate.png',
+    },
+    {
+      from: 'resources/trayIconTemplate@2x.png',
+      to: 'trayIconTemplate@2x.png',
+    },
+    {
+      from: 'resources/trayIconTemplateDark.png',
+      to: 'trayIconTemplateDark.png',
+    },
+    {
+      from: 'resources/trayIconTemplateDark@2x.png',
+      to: 'trayIconTemplateDark@2x.png',
+    },
   ],
-
-  icon: 'resources/icon.png',
 
   asarUnpack: ['**/*.node'],
 
@@ -65,7 +79,7 @@ module.exports = {
         arch: ['x64'],
       },
     ],
-    icon: 'resources/icon.png',
+    icon: 'resources/icon-light.png',
     azureSignOptions: process.env.AZURE_TENANT_ID
       ? {
           publisherName: process.env.AZURE_PUBLISHER_NAME,
@@ -99,6 +113,7 @@ module.exports = {
     category: 'Utility',
     maintainer: 'LBK UA <info@lbklauncher.com>',
     executableName: 'lbk-launcher',
+    icon: 'resources/icon-light.png',
     // Steam Deck compatibility
     executableArgs: ['--no-sandbox', '--disable-gpu-sandbox'],
     extraResources: [
@@ -141,16 +156,15 @@ module.exports = {
       },
     ],
     category: 'public.app-category.utilities',
-    icon: 'resources/icon-dark-mode.icns',
+    icon: 'resources/icon-mac.icon',
     hardenedRuntime: true,
     gatekeeperAssess: false,
     darkModeSupport: true,
     minimumSystemVersion: '10.13.0',
     artifactName: 'LBK-Launcher-${arch}.${ext}',
-    // Підписування: використовує CSC_LINK та CSC_KEY_PASSWORD з env
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',
-    notarize: true,
+    notarize: !!process.env.CI,
     extraResources: [
       {
         from: 'node_modules/7zip-bin-full/mac',
@@ -180,10 +194,10 @@ module.exports = {
     ],
     window: {
       width: 540,
-      height: 380,
+      height: 420,
     },
-    icon: 'resources/icon-dark-mode.icns',
-    backgroundColor: '#323232',
+    icon: 'resources/icon-mac.icns',
+    background: 'resources/dmg-background.png',
     artifactName: 'LBK-Launcher-${version}-${arch}.${ext}',
   },
 };
