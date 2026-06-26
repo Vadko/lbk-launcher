@@ -15,6 +15,12 @@
 ; which is the point at which ${LANG_UKRAINIAN} becomes defined.
 
 !macro customHeader
+  ; Window title bar — NSIS default is "$(^Name) $(^SetupCaption)" which in
+  ; Ukrainian renders as "LBK Launcher Встановлення". Ukrainian word order
+  ; reads more naturally as "Встановлення LBK Launcher", so we override.
+  Caption "Встановлення $(^Name)"
+  UninstallCaption "Видалення $(^Name)"
+
   !ifdef LANG_UKRAINIAN
     !pragma warning push
     !pragma warning disable 6030
