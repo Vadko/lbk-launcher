@@ -27,7 +27,7 @@
 
     ; --- Shown during the actual install (most visible string).
     ; "В один клац" — phrase from the landing page TypewriterText hero. ---
-    LangString installing ${LANG_UKRAINIAN} "Встановлюємо ${PRODUCT_NAME}... Скоро гратимете українською в один клац!"
+    LangString installing ${LANG_UKRAINIAN} "Встановлюємо. Скоро гратимете українською в один клац!"
 
     ; --- App-already-running prompt before reinstall/update ---
     LangString appRunning ${LANG_UKRAINIAN} "Упс, ${PRODUCT_NAME} ще працює.$\r$\nНатисніть «ОК» — ми його чемно закриємо за вас.$\r$\nЯкщо не закриється — спробуйте вручну."
