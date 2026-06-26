@@ -6,7 +6,7 @@
  * - Сесії лаунчера
  * - Видалення українізаторів
  *
- * Використовує Supabase Edge Functions
+ * Використовує Supabase Edge Functions через supabase.functions.invoke().
  * Machine ID використовується для ідентифікації користувача
  */
 
@@ -15,7 +15,8 @@ import { existsSync, readFileSync } from 'fs';
 import { machineIdSync } from 'node-machine-id';
 import { join } from 'path';
 import type { TrackingResponse } from '../shared/api-config';
-import { getSupabaseCredentials } from './db/supabase-credentials';
+import { readFunctionsErrorBody } from './db/functions-error';
+import { getSupabaseClient } from './db/supabase-client';
 import { getLogFileDirectory } from './utils/logger';
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
@@ -76,6 +77,24 @@ export function getMachineId(): string | null {
   }
 }
 
+type TrackPayload = Record<string, unknown>;
+type TrackResult = TrackingResponse & { sessionId?: string; isFirstLaunch?: boolean };
+
+/**
+ * Викликати edge function `track` з заданим payload.
+ */
+async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.functions.invoke<TrackResult>('track', { body });
+
+  if (error) {
+    console.error('[Tracking] Failed to call track:', error);
+    return { success: false, error: error.message };
+  }
+
+  return data ?? { success: false, error: 'Empty response' };
+}
+
 /**
  * Отримати signed URL для завантаження архіву
  * Edge Function перевіряє rate-limit і генерує тимчасовий URL
@@ -85,7 +104,6 @@ export async function getSignedDownloadUrl(
 ): Promise<GetSignedUrlResponse> {
   if (IS_E2E) return { success: false, error: 'E2E mode' };
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
 
   // Get machine ID for unique downloads tracking (not for rate limiting)
   const machineId = getMachineId();
@@ -95,39 +113,42 @@ export async function getSignedDownloadUrl(
       `[Tracking] Requesting signed URL for game: ${gameId}, type: ${archiveType}`
     );
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/get-download-url`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.functions.invoke<{
+      success: boolean;
+      downloadUrl?: string;
+      expiresIn?: number;
+      error?: string;
+    }>('get-download-url', {
+      body: {
         gameId,
         archivePath,
         archiveType,
         machineId, // For unique downloads statistics
         isFirstSession, // For first session conversion tracking
-      }),
+      },
     });
 
-    const data = await response.json();
-
-    if (response.status === 429) {
-      // Rate limit exceeded
-      console.warn(`[Tracking] Rate limit exceeded for game: ${gameId}`);
-      return {
-        success: false,
-        error: 'rate_limit_exceeded',
-        downloadsToday: data.downloadsToday || 0,
-        maxAllowed: data.maxAllowed || 2,
-        nextAvailableAt: data.nextAvailableAt || null,
-      };
+    if (error) {
+      const httpError = await readFunctionsErrorBody(error);
+      if (httpError?.status === 429) {
+        // Rate limit exceeded
+        console.warn(`[Tracking] Rate limit exceeded for game: ${gameId}`);
+        return {
+          success: false,
+          error: 'rate_limit_exceeded',
+          downloadsToday: Number(httpError.body.downloadsToday) || 0,
+          maxAllowed: Number(httpError.body.maxAllowed) || 2,
+          nextAvailableAt: (httpError.body.nextAvailableAt as string | null) ?? null,
+        };
+      }
+      console.error('[Tracking] Failed to get signed URL:', error);
+      return { success: false, error: error.message };
     }
 
-    if (!response.ok || !data.success) {
-      console.error(`[Tracking] Failed to get signed URL:`, data);
-      return { success: false, error: data.error || 'Unknown error' };
+    if (!data?.success || !data.downloadUrl || data.expiresIn === undefined) {
+      console.error('[Tracking] Failed to get signed URL:', data);
+      return { success: false, error: data?.error || 'Unknown error' };
     }
 
     console.log(`[Tracking] Got signed URL, expires in ${data.expiresIn}s`);
@@ -159,33 +180,16 @@ export async function trackSubscription(
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Tracking ${action} for game:`, gameId);
 
-  try {
-    console.log(`[Tracking] Tracking ${action} for game:`, gameId);
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'subscription',
-        gameId,
-        userIdentifier: machineId,
-        action,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse;
-    console.log('[Tracking] Subscription tracking response:', result);
-
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track subscription:', error);
-    return { success: false, error: String(error) };
-  }
+  const result = await invokeTrack({
+    type: 'subscription',
+    gameId,
+    userIdentifier: machineId,
+    action,
+  });
+  console.log('[Tracking] Subscription tracking response:', result);
+  return result;
 }
 
 /**
@@ -199,32 +203,15 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Tracking support click for game:`, gameId);
 
-  try {
-    console.log(`[Tracking] Tracking support click for game:`, gameId);
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'support_click',
-        gameId,
-        userIdentifier: machineId,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse;
-    console.log('[Tracking] Support click tracking response:', result);
-
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track support click:', error);
-    return { success: false, error: String(error) };
-  }
+  const result = await invokeTrack({
+    type: 'support_click',
+    gameId,
+    userIdentifier: machineId,
+  });
+  console.log('[Tracking] Support click tracking response:', result);
+  return result;
 }
 
 /**
@@ -240,42 +227,23 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Starting session, version: ${appVersion}`);
 
-  try {
-    console.log(`[Tracking] Starting session, version: ${appVersion}`);
+  const result = await invokeTrack({
+    type: 'session_start',
+    userIdentifier: machineId,
+    appVersion,
+  });
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'session_start',
-        userIdentifier: machineId,
-        appVersion,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse & {
-      sessionId?: string;
-      isFirstLaunch?: boolean;
-    };
-
-    if (result.success && result.sessionId) {
-      currentSessionId = result.sessionId;
-      isFirstLaunch = result.isFirstLaunch ?? false;
-      console.log(
-        `[Tracking] Session started: ${currentSessionId}, first launch: ${isFirstLaunch}`
-      );
-    }
-
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track session start:', error);
-    return { success: false, error: String(error) };
+  if (result.success && result.sessionId) {
+    currentSessionId = result.sessionId;
+    isFirstLaunch = result.isFirstLaunch ?? false;
+    console.log(
+      `[Tracking] Session started: ${currentSessionId}, first launch: ${isFirstLaunch}`
+    );
   }
+
+  return result;
 }
 
 /**
@@ -293,33 +261,17 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Ending session: ${currentSessionId}`);
 
-  try {
-    console.log(`[Tracking] Ending session: ${currentSessionId}`);
+  const result = await invokeTrack({
+    type: 'session_end',
+    userIdentifier: machineId,
+    sessionId: currentSessionId,
+  });
+  console.log('[Tracking] Session end response:', result);
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'session_end',
-        userIdentifier: machineId,
-        sessionId: currentSessionId,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse;
-    console.log('[Tracking] Session end response:', result);
-
-    currentSessionId = null;
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track session end:', error);
-    return { success: false, error: String(error) };
-  }
+  currentSessionId = null;
+  return result;
 }
 
 /**
@@ -333,32 +285,15 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Tracking uninstall for game:`, gameId);
 
-  try {
-    console.log(`[Tracking] Tracking uninstall for game:`, gameId);
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'uninstall',
-        gameId,
-        userIdentifier: machineId,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse;
-    console.log('[Tracking] Uninstall tracking response:', result);
-
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track uninstall:', error);
-    return { success: false, error: String(error) };
-  }
+  const result = await invokeTrack({
+    type: 'uninstall',
+    gameId,
+    userIdentifier: machineId,
+  });
+  console.log('[Tracking] Uninstall tracking response:', result);
+  return result;
 }
 
 /**
@@ -377,33 +312,16 @@ export async function trackFailedSearch(query: string): Promise<TrackingResponse
     return { success: false, error: 'Query too short' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Tracking failed search: "${trimmed}"`);
 
-  try {
-    console.log(`[Tracking] Tracking failed search: "${trimmed}"`);
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'failed_search',
-        query: trimmed,
-        source: 'launcher',
-        userIdentifier: machineId,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse;
-    console.log('[Tracking] Failed search tracking response:', result);
-
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track failed search:', error);
-    return { success: false, error: String(error) };
-  }
+  const result = await invokeTrack({
+    type: 'failed_search',
+    query: trimmed,
+    source: 'launcher',
+    userIdentifier: machineId,
+  });
+  console.log('[Tracking] Failed search tracking response:', result);
+  return result;
 }
 
 /**
@@ -422,18 +340,15 @@ export async function submitFeedback(
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
-
   try {
     console.log(`[Tracking] Submitting feedback for game: ${gameId}`);
 
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-feedback`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.functions.invoke<{
+      success: boolean;
+      error?: string;
+    }>('submit-feedback', {
+      body: {
         gameId,
         machineId,
         errorType,
@@ -442,19 +357,22 @@ export async function submitFeedback(
         version: app.getVersion(),
         platform: process.platform,
         arch: process.arch,
-      }),
+      },
     });
 
-    const result = await response.json();
-
-    if (response.status === 429) {
-      console.warn('[Tracking] Feedback rate limit exceeded');
-      return { success: false, error: 'rate_limit' };
+    if (error) {
+      const httpError = await readFunctionsErrorBody(error);
+      if (httpError?.status === 429) {
+        console.warn('[Tracking] Feedback rate limit exceeded');
+        return { success: false, error: 'rate_limit' };
+      }
+      console.error('[Tracking] Feedback submission failed:', error);
+      return { success: false, error: error.message };
     }
 
-    if (!response.ok || !result.success) {
-      console.error('[Tracking] Feedback submission failed:', result);
-      return { success: false, error: result.error || 'Unknown error' };
+    if (!data?.success) {
+      console.error('[Tracking] Feedback submission failed:', data);
+      return { success: false, error: data?.error || 'Unknown error' };
     }
 
     console.log('[Tracking] Feedback submitted successfully');
@@ -482,10 +400,10 @@ export async function submitLogs(
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
-
   try {
     console.log('[Tracking] Submitting logs');
+
+    const supabase = getSupabaseClient();
 
     // Read the log file
     const logsDir = getLogFileDirectory();
@@ -500,18 +418,16 @@ export async function submitLogs(
       const fileName = `lbk-${new Date().toISOString().split('T')[0]}.log`;
 
       // Get signed upload URL
-      const urlResponse = await fetch(
-        `${SUPABASE_URL}/functions/v1/submit-logs?action=upload-url`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-          body: JSON.stringify({ machineId, fileName }),
-        }
-      );
+      const { data: urlResult } = await supabase.functions.invoke<{
+        success: boolean;
+        signedUrl?: string;
+        path?: string;
+      }>('submit-logs?action=upload-url', {
+        body: { machineId, fileName },
+      });
 
-      const urlResult = await urlResponse.json();
-      if (urlResult.success && urlResult.signedUrl) {
-        // Upload the file
+      if (urlResult?.success && urlResult.signedUrl) {
+        // Upload the file (PUT напряму на signed URL Storage — не edge function)
         const fileBuffer = readFileSync(logFilePath);
         const uploadResponse = await fetch(urlResult.signedUrl, {
           method: 'PUT',
@@ -529,13 +445,11 @@ export async function submitLogs(
     }
 
     // Submit log entry
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/submit-logs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
+    const { data, error } = await supabase.functions.invoke<{
+      success: boolean;
+      error?: string;
+    }>('submit-logs', {
+      body: {
         machineId,
         message,
         ...(crashReason && { crashReason }),
@@ -543,19 +457,22 @@ export async function submitLogs(
         version: app.getVersion(),
         platform: process.platform,
         arch: process.arch,
-      }),
+      },
     });
 
-    const result = await response.json();
-
-    if (response.status === 429) {
-      console.warn('[Tracking] Logs submission rate limit exceeded');
-      return { success: false, error: 'rate_limit' };
+    if (error) {
+      const httpError = await readFunctionsErrorBody(error);
+      if (httpError?.status === 429) {
+        console.warn('[Tracking] Logs submission rate limit exceeded');
+        return { success: false, error: 'rate_limit' };
+      }
+      console.error('[Tracking] Logs submission failed:', error);
+      return { success: false, error: error.message };
     }
 
-    if (!response.ok || !result.success) {
-      console.error('[Tracking] Logs submission failed:', result);
-      return { success: false, error: result.error || 'Unknown error' };
+    if (!data?.success) {
+      console.error('[Tracking] Logs submission failed:', data);
+      return { success: false, error: data?.error || 'Unknown error' };
     }
 
     console.log('[Tracking] Logs submitted successfully');
@@ -581,24 +498,24 @@ export async function getFeedbackUploadUrls(fileNames: string[]): Promise<{
   const machineId = getMachineId();
   if (!machineId) return { success: false, error: 'Machine ID not available' };
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
-
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/submit-feedback?action=upload-urls`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY },
-        body: JSON.stringify({ machineId, fileNames }),
-      }
-    );
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.functions.invoke<{
+      success: boolean;
+      uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
+      error?: string;
+    }>('submit-feedback?action=upload-urls', {
+      body: { machineId, fileNames },
+    });
 
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      return { success: false, error: result.error || 'Failed to get upload URLs' };
+    if (error || !data?.success) {
+      return {
+        success: false,
+        error: error?.message || data?.error || 'Failed to get upload URLs',
+      };
     }
 
-    return { success: true, uploadUrls: result.uploadUrls };
+    return { success: true, uploadUrls: data.uploadUrls };
   } catch (error) {
     return {
       success: false,
@@ -673,30 +590,13 @@ export async function trackPlaytime(
     return { success: false, error: 'Machine ID not available' };
   }
 
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  console.log(`[Tracking] Tracking playtime for ${playtimeData.length} games`);
 
-  try {
-    console.log(`[Tracking] Tracking playtime for ${playtimeData.length} games`);
-
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({
-        type: 'playtime',
-        userIdentifier: machineId,
-        playtimeData,
-      }),
-    });
-
-    const result = (await response.json()) as TrackingResponse;
-    console.log('[Tracking] Playtime tracking response:', result);
-
-    return result;
-  } catch (error) {
-    console.error('[Tracking] Failed to track playtime:', error);
-    return { success: false, error: String(error) };
-  }
+  const result = await invokeTrack({
+    type: 'playtime',
+    userIdentifier: machineId,
+    playtimeData,
+  });
+  console.log('[Tracking] Playtime tracking response:', result);
+  return result;
 }

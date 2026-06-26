@@ -5,10 +5,9 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { functionsErrorStatus } from './db/functions-error';
+import { getSupabaseClient } from './db/supabase-client';
 import { getMachineId } from './tracking';
-
-const SUPABASE_URL = 'https://supabase.lbklauncher.com';
-const EDGE_FUNCTION_PATH = '/functions/v1/steam-library';
 
 interface SteamLibraryCache {
   steamId: string;
@@ -115,33 +114,32 @@ export async function fetchSteamLibraryFromApi(
       return null;
     }
 
-    const url = new URL(EDGE_FUNCTION_PATH, SUPABASE_URL);
-    url.searchParams.set('steam_id', steamId);
-    url.searchParams.set('machine_id', machineId);
+    const searchParams = new URLSearchParams({
+      steam_id: steamId,
+      machine_id: machineId,
+    });
 
     console.log(`[SteamLibraryAPI] Fetching library for Steam ID: ${steamId}`);
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.functions.invoke<EdgeFunctionResponse>(
+      `steam-library?${searchParams.toString()}`,
+      { method: 'GET' }
+    );
 
-    const data: EdgeFunctionResponse = await response.json();
-
-    if (!response.ok) {
-      if (response.status === 429) {
+    if (error) {
+      const status = functionsErrorStatus(error);
+      if (status === 429) {
         console.warn('[SteamLibraryAPI] Rate limit exceeded');
-      } else if (response.status === 403) {
+      } else if (status === 403) {
         console.warn('[SteamLibraryAPI] Steam profile is private or invalid Steam ID');
       } else {
-        console.error('[SteamLibraryAPI] API error:', data.error);
+        console.error('[SteamLibraryAPI] API error:', error.message);
       }
       return null;
     }
 
-    if (!data.success || !data.appIds) {
+    if (!data?.success || !data.appIds) {
       console.error('[SteamLibraryAPI] Invalid response:', data);
       return null;
     }

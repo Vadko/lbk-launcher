@@ -23,24 +23,12 @@ module.exports = {
       to: 'icon-light.png',
     },
     {
-      from: 'resources/icon-dark.png',
-      to: 'icon-dark.png',
-    },
-    {
       from: 'resources/trayIconTemplate.png',
       to: 'trayIconTemplate.png',
     },
     {
       from: 'resources/trayIconTemplate@2x.png',
       to: 'trayIconTemplate@2x.png',
-    },
-    {
-      from: 'resources/trayIconTemplateDark.png',
-      to: 'trayIconTemplateDark.png',
-    },
-    {
-      from: 'resources/trayIconTemplateDark@2x.png',
-      to: 'trayIconTemplateDark@2x.png',
     },
   ],
 
@@ -79,7 +67,7 @@ module.exports = {
         arch: ['x64'],
       },
     ],
-    icon: 'resources/icon-light.png',
+    icon: 'resources/icon-light.ico',
     azureSignOptions: process.env.AZURE_TENANT_ID
       ? {
           publisherName: process.env.AZURE_PUBLISHER_NAME,
@@ -136,15 +124,21 @@ module.exports = {
     deleteAppDataOnUninstall: false,
     differentialPackage: true,
     artifactName: "LBK-Launcher-${os}-Setup.${ext}",
+    // Ukrainian-only installer: `installerLanguages` limits the bundle to
+    // uk_UA; `displayLanguageSelector` defaults to false so there's no picker.
+    // (Do NOT set `multiLanguageInstaller: false` — langs.js forces langs back
+    // to ['en_US'] in that mode, which would override our choice.)
     language: "1058",
+    installerLanguages: ['uk_UA'],
+    include: 'resources/installer.nsh',
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
-    installerIcon: 'resources/icon-dark.png',
-    uninstallerIcon: 'resources/icon-dark.png',
-    installerHeaderIcon: 'resources/icon-dark.png',
+    // Dark icon for Setup.exe + Uninstall.exe; installed app.exe stays light via win.icon.
+    installerIcon: 'resources/icon-dark.ico',
+    uninstallerIcon: 'resources/icon-dark.ico',
   },
 
   mac: {
