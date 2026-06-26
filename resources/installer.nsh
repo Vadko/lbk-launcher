@@ -25,16 +25,17 @@
     !pragma warning push
     !pragma warning disable 6030
 
-    ; --- Shown during the actual install (most visible string) ---
-    LangString installing ${LANG_UKRAINIAN} "Встановлюємо ${PRODUCT_NAME}... Хвилинку"
+    ; --- Shown during the actual install (most visible string).
+    ; "В один клац" — phrase from the landing page TypewriterText hero. ---
+    LangString installing ${LANG_UKRAINIAN} "Встановлюємо ${PRODUCT_NAME}... Скоро гратимете українською в один клац!"
 
     ; --- App-already-running prompt before reinstall/update ---
-    LangString appRunning ${LANG_UKRAINIAN} "От халепа... ${PRODUCT_NAME} ще запущено.$\r$\nКлацніть «ОК», ми його закриємо.$\r$\nЯкщо не вийде — закрийте вручну."
+    LangString appRunning ${LANG_UKRAINIAN} "Упс, ${PRODUCT_NAME} ще працює.$\r$\nНатисніть «ОК» — ми його чемно закриємо за вас.$\r$\nЯкщо не закриється — спробуйте вручну."
     LangString appCannotBeClosed ${LANG_UKRAINIAN} "Не вдалося закрити ${PRODUCT_NAME}.$\r$\nЗакрийте його вручну й натисніть «Повторити», щоб продовжити."
     LangString appClosing ${LANG_UKRAINIAN} "Закриваємо ${PRODUCT_NAME}..."
 
     ; --- Uninstall confirmation ---
-    LangString areYouSureToUninstall ${LANG_UKRAINIAN} "Точно хочете видалити ${PRODUCT_NAME}?"
+    LangString areYouSureToUninstall ${LANG_UKRAINIAN} "Точно прощаємось з ${PRODUCT_NAME}?$\r$\nА як же грати в улюблені ігри українською?"
 
     ; --- Failure recovery messages ---
     LangString decompressionFailed ${LANG_UKRAINIAN} "От халепа... Не вдалося розпакувати файли.$\r$\nСпробуйте запустити встановлювач ще раз."
