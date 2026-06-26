@@ -16,10 +16,17 @@
 
 !macro customHeader
   !ifdef LANG_UKRAINIAN
+    ; Suppress warning 6030 (LangString set multiple times, wasting space) —
+    ; that "waste" is exactly the override mechanism we want: NSIS keeps both
+    ; copies, but uses the last one. electron-builder invokes makensis with
+    ; -WX, so without this pragma the warning aborts the build.
+    !pragma warning push
+    !pragma warning disable 6030
     LangString installing ${LANG_UKRAINIAN} "Встановлюємо, зачекайте..."
     LangString areYouSureToUninstall ${LANG_UKRAINIAN} "Ви впевнені, що хочете видалити ${PRODUCT_NAME}?"
     LangString appClosing ${LANG_UKRAINIAN} "Закриваємо ${PRODUCT_NAME}..."
     LangString win7Required ${LANG_UKRAINIAN} "Потрібна Windows 7 або новіша"
     LangString x64WinRequired ${LANG_UKRAINIAN} "Потрібна 64-бітна Windows"
+    !pragma warning pop
   !endif
 !macroend
