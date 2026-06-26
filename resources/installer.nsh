@@ -1,40 +1,41 @@
-; Custom NSIS include for LBK Launcher installer — dark themed pages.
+; LBK Launcher — dark-themed NSIS installer customization.
 ;
-; electron-builder injects customHeader before MUI2 inclusion AND already
-; defines MUI_BGCOLOR / MUI_TEXTCOLOR with its own defaults, so we !undef
-; first (guarded by !ifdef) before redefining with brand colors.
+; HOW THIS LOADS:
+; electron-builder splices `!include "<this file>"` into the generated script
+; via `computeCommonInstallerScriptHeader()` — that lands BEFORE the bundled
+; `installer.nsi` template runs, which means BEFORE `!include "MUI2.nsh"`.
+; That ordering is the only place where MUI configuration defines (MUI_BGCOLOR,
+; MUI_TEXTCOLOR, MUI_CUSTOMFUNCTION_GUIINIT, …) are still actionable —
+; the `customHeader` extension point runs AFTER MUI2 and MUI page expansion,
+; which is why we don't put theme defines there.
 ;
-; Colors are RGB hex (no # prefix), consumed by MUI_BGCOLOR / MUI_TEXTCOLOR
-; and forwarded to SetCtlColors by Modern UI internals.
-;   #0F0F10 = brand base   (--bg-base)
-;   #FFFFFF = primary text
-;   #A8CF96 = brand main   (accent, future use)
+; TWO COMPILATION PASSES:
+; NSIS compiles the script twice — once with BUILD_UNINSTALLER undefined
+; (produces the installer .exe) and once with it defined (produces the
+; uninstaller .exe). Any unreferenced function in either pass emits
+; warning 6010, which electron-builder promotes to a fatal error. So
+; pass-specific code lives inside `!ifdef BUILD_UNINSTALLER` / `!else`.
 ;
-; Note: uninstaller styling intentionally left at MUI defaults. Wiring
-; MUI_CUSTOMFUNCTION_UNGUIINIT here would race with electron-builder's
-; macro order and emit a "function not referenced" warning that NSIS
-; promotes to a fatal error.
+; BRAND COLORS (RGB hex, no `#`, consumed by SetCtlColors / MUI internals):
+;   0F0F10 = brand base (--bg-base)
+;   FFFFFF = primary text
 
-!macro customHeader
-  !ifdef MUI_BGCOLOR
-    !undef MUI_BGCOLOR
-  !endif
-  !define MUI_BGCOLOR "0F0F10"
+; --- Global MUI theme — applied to BOTH installer and uninstaller pages. ---
+!define MUI_BGCOLOR "0F0F10"
+!define MUI_TEXTCOLOR "FFFFFF"
 
-  !ifdef MUI_TEXTCOLOR
-    !undef MUI_TEXTCOLOR
-  !endif
-  !define MUI_TEXTCOLOR "FFFFFF"
-
-  !ifdef MUI_CUSTOMFUNCTION_GUIINIT
-    !undef MUI_CUSTOMFUNCTION_GUIINIT
-  !endif
+; --- Per-pass GUI init: paint the outer dialog frame to match the brand. ---
+; MUI inserts the corresponding function call into .onGUIInit / un.onGUIInit
+; only on its own side, so the function and the MUI_CUSTOMFUNCTION_*INIT
+; define must be co-located inside the same !ifdef branch.
+!ifdef BUILD_UNINSTALLER
+  !define MUI_CUSTOMFUNCTION_UNGUIINIT un.lbkDarkInit
+  Function un.lbkDarkInit
+    SetCtlColors $HWNDPARENT FFFFFF 0F0F10
+  FunctionEnd
+!else
   !define MUI_CUSTOMFUNCTION_GUIINIT lbkDarkInit
-!macroend
-
-; Paint the outer dialog (the area around MUI pages, where the button strip
-; lives) with the brand base. Without this, the bottom band stays system-grey
-; even though the page interior is dark.
-Function lbkDarkInit
-  SetCtlColors $HWNDPARENT FFFFFF 0F0F10
-FunctionEnd
+  Function lbkDarkInit
+    SetCtlColors $HWNDPARENT FFFFFF 0F0F10
+  FunctionEnd
+!endif
