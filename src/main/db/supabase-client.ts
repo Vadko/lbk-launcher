@@ -10,9 +10,13 @@ import { getSupabaseCredentials } from './supabase-credentials';
  *   статусах 503/520 (тільки ідемпотентні GET/HEAD/OPTIONS);
  * - timeout: опція db.timeout — postgrest сам обгортає fetch в AbortController
  *   per-attempt і чистить таймер.
+ *
+ * Edge Functions (functions.invoke) під db.timeout не підпадають, але працюють
+ * на дефолтах Node-fetch (undici): ~10с на connect, ~300с на відповідь — для
+ * фонових викликів цього достатньо.
  */
 
-/** Таймаут на КОЖЕН HTTP-запит (і кожну retry-спробу) */
+/** Таймаут на КОЖЕН PostgREST-запит (і кожну retry-спробу) */
 const REQUEST_TIMEOUT_MS = 30_000;
 
 let supabaseClient: SupabaseClient<Database> | null = null;

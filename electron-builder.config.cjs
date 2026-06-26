@@ -23,24 +23,12 @@ module.exports = {
       to: 'icon-light.png',
     },
     {
-      from: 'resources/icon-dark.png',
-      to: 'icon-dark.png',
-    },
-    {
       from: 'resources/trayIconTemplate.png',
       to: 'trayIconTemplate.png',
     },
     {
       from: 'resources/trayIconTemplate@2x.png',
       to: 'trayIconTemplate@2x.png',
-    },
-    {
-      from: 'resources/trayIconTemplateDark.png',
-      to: 'trayIconTemplateDark.png',
-    },
-    {
-      from: 'resources/trayIconTemplateDark@2x.png',
-      to: 'trayIconTemplateDark@2x.png',
     },
   ],
 
@@ -130,7 +118,8 @@ module.exports = {
   },
 
   nsis: {
-    oneClick: true,
+    // Assisted installer required to show branded welcome/finish sidebar.
+    oneClick: false,
     perMachine: false,
     allowToChangeInstallationDirectory: false,
     deleteAppDataOnUninstall: false,
@@ -142,10 +131,9 @@ module.exports = {
     shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
-    // Dark icon inside the NSIS installer/uninstaller UI; light icon stays on
-    // Setup.exe in Explorer and on the installed app.exe (taskbar, Start menu).
-    installerIcon: 'resources/icon-dark.ico',
-    uninstallerIcon: 'resources/icon-dark.ico',
+    installerSidebar: 'resources/installerSidebar.bmp',
+    installerHeader: 'resources/installerHeader.bmp',
+    include: 'resources/installer.nsh',
   },
 
   mac: {
