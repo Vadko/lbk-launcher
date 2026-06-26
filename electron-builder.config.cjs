@@ -118,22 +118,27 @@ module.exports = {
   },
 
   nsis: {
-    // Assisted installer required to show branded welcome/finish sidebar.
-    oneClick: false,
+    oneClick: true,
     perMachine: false,
     allowToChangeInstallationDirectory: false,
     deleteAppDataOnUninstall: false,
     differentialPackage: true,
     artifactName: "LBK-Launcher-${os}-Setup.${ext}",
+    // Ukrainian-only installer: `installerLanguages` limits the bundle to
+    // uk_UA; `displayLanguageSelector` defaults to false so there's no picker.
+    // (Do NOT set `multiLanguageInstaller: false` — langs.js forces langs back
+    // to ['en_US'] in that mode, which would override our choice.)
     language: "1058",
+    installerLanguages: ['uk_UA'],
+    include: 'resources/installer.nsh',
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
     shortcutName: "LBK Launcher",
     runAfterFinish: true,
     menuCategory: false,
-    installerSidebar: 'resources/installerSidebar.bmp',
-    installerHeader: 'resources/installerHeader.bmp',
-    include: 'resources/installer.nsh',
+    // Dark icon for Setup.exe + Uninstall.exe; installed app.exe stays light via win.icon.
+    installerIcon: 'resources/icon-dark.ico',
+    uninstallerIcon: 'resources/icon-dark.ico',
   },
 
   mac: {
