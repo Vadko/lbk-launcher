@@ -1,32 +1,43 @@
-; LBK Launcher — Ukrainian translation overrides for electron-builder NSIS.
+; LBK Launcher — Ukrainian installer strings in the project's voice.
 ;
-; electron-builder ships `templates/nsis/messages.yml` with only 4 of 9 keys
-; translated into Ukrainian (verified in node_modules/app-builder-lib/.../messages.yml).
-; The 5 missing keys fall back to English. There is no `buildResources/`
-; override mechanism — `nsisLang.js` reads exclusively from `nsisTemplatesDir`.
+; Why we override all nine keys (not just the missing five):
+; electron-builder's `templates/nsis/messages.yml` provides Ukrainian for
+; four of them, but in a flat, generic register that doesn't match LBK's
+; tone ("От халепа...", direct polite "ви", friendly without emojis).
+; Since we're already paying the LangString-redefinition cost for the
+; missing five, we may as well restyle the rest to match the project.
 ;
-; NSIS `LangString` allows reassignment ("the second value overwrites the
-; first"). We exploit that by redefining the English-fallback strings for
-; ${LANG_UKRAINIAN} inside `customHeader`, which electron-builder splices
-; AFTER `!insertmacro addLangs` — at that point ${LANG_UKRAINIAN} is defined
-; and the original LangString from messages.nsh has already been emitted.
+; NSIS `LangString` reassignment emits warning 6030 ("set multiple times,
+; wasting space"). electron-builder runs makensis with -WX, so we wrap
+; the block in !pragma warning push/disable/pop to silence just 6030.
 ;
-; Skipped: `win7Required` / `x64WinRequired` (only shown on legacy/incompatible
-; systems we don't realistically target).
+; This macro is inserted by electron-builder AFTER `!insertmacro addLangs`,
+; which is the point at which ${LANG_UKRAINIAN} becomes defined.
 
 !macro customHeader
   !ifdef LANG_UKRAINIAN
-    ; Suppress warning 6030 (LangString set multiple times, wasting space) —
-    ; that "waste" is exactly the override mechanism we want: NSIS keeps both
-    ; copies, but uses the last one. electron-builder invokes makensis with
-    ; -WX, so without this pragma the warning aborts the build.
     !pragma warning push
     !pragma warning disable 6030
-    LangString installing ${LANG_UKRAINIAN} "Встановлюємо, зачекайте..."
-    LangString areYouSureToUninstall ${LANG_UKRAINIAN} "Ви впевнені, що хочете видалити ${PRODUCT_NAME}?"
+
+    ; --- Shown during the actual install (most visible string) ---
+    LangString installing ${LANG_UKRAINIAN} "Встановлюємо ${PRODUCT_NAME}... Хвилинку"
+
+    ; --- App-already-running prompt before reinstall/update ---
+    LangString appRunning ${LANG_UKRAINIAN} "От халепа... ${PRODUCT_NAME} ще запущено.$\r$\nКлацніть «ОК», ми його закриємо.$\r$\nЯкщо не вийде — закрийте вручну."
+    LangString appCannotBeClosed ${LANG_UKRAINIAN} "Не вдалося закрити ${PRODUCT_NAME}.$\r$\nЗакрийте його вручну й натисніть «Повторити», щоб продовжити."
     LangString appClosing ${LANG_UKRAINIAN} "Закриваємо ${PRODUCT_NAME}..."
-    LangString win7Required ${LANG_UKRAINIAN} "Потрібна Windows 7 або новіша"
-    LangString x64WinRequired ${LANG_UKRAINIAN} "Потрібна 64-бітна Windows"
+
+    ; --- Uninstall confirmation ---
+    LangString areYouSureToUninstall ${LANG_UKRAINIAN} "Точно хочете видалити ${PRODUCT_NAME}?"
+
+    ; --- Failure recovery messages ---
+    LangString decompressionFailed ${LANG_UKRAINIAN} "От халепа... Не вдалося розпакувати файли.$\r$\nСпробуйте запустити встановлювач ще раз."
+    LangString uninstallFailed ${LANG_UKRAINIAN} "От халепа... Не вдалося видалити старі файли застосунку.$\r$\nСпробуйте запустити встановлювач ще раз."
+
+    ; --- Legacy-system gates (rarely shown but should still be on-brand) ---
+    LangString win7Required ${LANG_UKRAINIAN} "Хм, схоже ваша Windows застаріла.$\r$\nПотрібна Windows 7 або новіша."
+    LangString x64WinRequired ${LANG_UKRAINIAN} "Хм, схоже у вас 32-бітна Windows.$\r$\nПотрібна 64-бітна версія, щоб запустити LBK Launcher."
+
     !pragma warning pop
   !endif
 !macroend
