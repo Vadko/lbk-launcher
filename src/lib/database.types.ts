@@ -2192,7 +2192,14 @@ export type Database = {
         }[]
       }
       get_failed_searches_statistics: {
-        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Args: {
+          p_end_date?: string
+          p_limit?: number
+          p_search?: string
+          p_sort?: string
+          p_source?: string
+          p_start_date?: string
+        }
         Returns: {
           last_searched_at: string
           query_normalized: string
