@@ -18,7 +18,9 @@ type ExcludedLocalFields =
   | 'xbox_archive_file_list'
   | 'steam_linux_archive_file_list'
   | 'steam_mac_archive_file_list'
-  | 'name_fts'; // Generated column in Supabase for FTS
+  | 'name_fts' // Generated column in Supabase for FTS
+  | 'last_download_milestone' // Admin-only milestone watermark, not synced locally
+  | 'last_subscriber_milestone';
 
 /**
  * Параметри для вставки гри в БД (локальну SQLite)
