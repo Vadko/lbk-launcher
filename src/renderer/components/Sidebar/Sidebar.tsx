@@ -42,7 +42,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       gamesWithUpdates,
       isGameDetected,
       getInstallationInfo,
-      loadInstalledGamesFromSystem,
     } = useStore(
       useShallow((state) => ({
         selectedGame: state.selectedGame,
@@ -53,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         gamesWithUpdates: state.gamesWithUpdates,
         isGameDetected: state.isGameDetected,
         getInstallationInfo: state.getInstallationInfo,
-        loadInstalledGamesFromSystem: state.loadInstalledGamesFromSystem,
       }))
     );
     const {
@@ -288,19 +286,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       (game: Game) => navigate(`/game/${game.id}`),
       [navigate]
     );
-
-    const hasLoadedRef = useRef(false);
-
-    useEffect(() => {
-      if (hasLoadedRef.current) return;
-      hasLoadedRef.current = true;
-
-      const timer = setTimeout(() => {
-        loadInstalledGamesFromSystem();
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }, [loadInstalledGamesFromSystem]);
 
     // Filter counts from dedicated hook (with debouncing)
     const { counts: filterCounts } = useFilterCounts();

@@ -8,6 +8,7 @@ import type { ImpressionType } from '@/main/db/banners-api';
 import type {
   DownloadProgress,
   ElectronAPI,
+  FeedbackReplyPayload,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -192,6 +193,13 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-tombstoned', handler);
     return () => ipcRenderer.removeListener('game-tombstoned', handler);
   },
+  onFeedbackReply: (callback) => {
+    const handler = (_: unknown, reply: FeedbackReplyPayload, live: boolean) =>
+      callback(reply, live);
+    ipcRenderer.on('feedback-reply', handler);
+    return () => ipcRenderer.removeListener('feedback-reply', handler);
+  },
+  syncFeedbackReplies: () => ipcRenderer.invoke('feedback-replies:sync'),
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();
@@ -260,6 +268,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
+  notifyReady: () => ipcRenderer.send('renderer-ready'),
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {
     const handler = (_: unknown, status: 'syncing' | 'ready' | 'error') =>

@@ -49,6 +49,7 @@ export function useDeepLink() {
     };
 
     const unsubscribe = window.electronAPI.onDeepLink(handleDeepLink);
+    window.electronAPI.notifyReady?.();
     return unsubscribe;
   }, [navigate]);
 }

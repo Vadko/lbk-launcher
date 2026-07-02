@@ -29,7 +29,6 @@ interface Store {
   selectedGame: Game | null;
   selectedStatuses: string[];
   searchQuery: string;
-  isInitialLoad: boolean;
   loaderVisible: boolean;
 
   // Steam State
@@ -49,7 +48,6 @@ interface Store {
   setSelectedGame: (game: Game | null) => void;
   setSelectedStatuses: (statuses: string[]) => void;
   setSearchQuery: (query: string) => void;
-  setInitialLoadComplete: () => void;
   setLoaderVisible: (visible: boolean) => void;
 
   // Steam Actions
@@ -91,7 +89,6 @@ export const useStore = create<Store>((set, get) => ({
   selectedGame: null,
   selectedStatuses: [],
   searchQuery: '',
-  isInitialLoad: true,
   loaderVisible: true,
 
   // Steam State
@@ -117,7 +114,6 @@ export const useStore = create<Store>((set, get) => ({
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
-  setInitialLoadComplete: () => set({ isInitialLoad: false }),
   setLoaderVisible: (loaderVisible) => set({ loaderVisible }),
 
   // Steam Actions
