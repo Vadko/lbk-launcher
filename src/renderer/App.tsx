@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Route } from 'react-router-dom';
 import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
+import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
@@ -50,7 +51,6 @@ if (!isE2E) {
 
 export const App: React.FC = () => {
   const {
-    setInitialLoadComplete,
     detectInstalledGames,
     loadSteamGames,
     clearSteamGamesCache,
@@ -224,56 +224,31 @@ export const App: React.FC = () => {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialLoadComplete();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [setInitialLoadComplete]);
-
-  // Завантажити Steam ігри при старті
-  useEffect(() => {
-    if (!window.electronAPI) return;
-
-    const timer = setTimeout(async () => {
-      await loadSteamGames();
-    }, 1000);
-
-    return () => clearTimeout(timer);
+  useIdleEffect(() => {
+    if (window.electronAPI) {
+      loadSteamGames();
+    }
   }, [loadSteamGames]);
 
   // Завантажити встановлені українізатори при старті
-  useEffect(() => {
-    if (!window.electronAPI) return;
-
-    const timer = setTimeout(async () => {
-      await useStore.getState().loadInstalledGamesFromSystem();
-    }, 1000);
-
-    return () => clearTimeout(timer);
+  useIdleEffect(() => {
+    if (window.electronAPI) {
+      useStore.getState().loadInstalledGamesFromSystem();
+    }
   }, []);
 
   // Детекція встановлених ігор на початку (якщо увімкнено)
-  useEffect(() => {
+  useIdleEffect(async () => {
     if (!autoDetectInstalledGames || !window.electronAPI) return;
 
-    const runDetection = async () => {
-      // Отримати всі ігри з локальної бази
-      const result = await window.electronAPI.fetchGames();
-      if (result.games.length === 0) {
-        console.log('[App] No games in database yet, skipping initial detection');
-        return;
-      }
-      console.log(
-        '[App] Running initial game detection for',
-        result.games.length,
-        'games'
-      );
-      await detectInstalledGames(result.games);
-    };
-
-    const timer = setTimeout(runDetection, 1000);
-    return () => clearTimeout(timer);
+    // Отримати всі ігри з локальної бази
+    const result = await window.electronAPI.fetchGames();
+    if (result.games.length === 0) {
+      console.log('[App] No games in database yet, skipping initial detection');
+      return;
+    }
+    console.log('[App] Running initial game detection for', result.games.length, 'games');
+    await detectInstalledGames(result.games);
   }, [autoDetectInstalledGames, detectInstalledGames]);
 
   // Слухати зміни Steam бібліотеки

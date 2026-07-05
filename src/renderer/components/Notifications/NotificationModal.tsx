@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   Download,
   Languages,
+  MessageSquare,
   RefreshCw,
   Settings,
   Sparkles,
@@ -103,6 +104,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return <Sparkles className="w-4 h-4 text-yellow-400" />;
       case 'team-status-change':
         return <Users className="w-4 h-4 text-cyan-400" />;
+      case 'feedback-reply':
+        return <MessageSquare className="w-4 h-4 text-color-main" />;
       default:
         return <Bell className="w-4 h-4 text-color-accent" />;
     }
@@ -122,6 +125,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return 'bg-yellow-500/20';
       case 'team-status-change':
         return 'bg-cyan-500/20';
+      case 'feedback-reply':
+        return 'bg-color-main/20';
       default:
         return 'bg-color-accent/20';
     }
@@ -157,6 +162,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           <>
             <span className="text-cyan-400">{notification.teamName}</span>: стан змінено
             на "{notification.newValue}"
+          </>
+        );
+      case 'feedback-reply':
+        return (
+          <>
+            <span className="text-color-main">Відповідь на ваш відгук:</span>{' '}
+            {notification.message}
           </>
         );
       default:

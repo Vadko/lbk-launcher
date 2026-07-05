@@ -116,6 +116,7 @@ if (isLinux()) {
 
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { closeDatabase, initDatabase } from './db/database';
+import { createGamesBroadcastSubscription } from './db/games-realtime';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
   fetchAllGamesFromSupabase,
@@ -123,10 +124,12 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
+import { createFeedbackReplyBroadcastSubscription } from './feedback-replies';
 import {
   startInstallationWatcher,
   stopInstallationWatcher,
 } from './installation-watcher';
+import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupTgNewsHandlers } from './ipc/tg-news';
@@ -213,13 +216,27 @@ if (!gotTheLock) {
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
+  setupFeedbackReplyHandlers();
   setupAutoUpdater();
 
   // IPC handler for getting current sync status
   ipcMain.handle('get-sync-status', () => currentSyncStatus);
 
+  // Flush a deep link buffered before the renderer's listener was registered.
+  ipcMain.on('renderer-ready', () => {
+    if (pendingDeepLink) {
+      handleDeepLink(pendingDeepLink);
+      pendingDeepLink = null;
+    }
+  });
+
   // App lifecycle
   app.whenReady().then(async () => {
+    if (isWindows() || isLinux()) {
+      const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+      if (deepLinkUrl) pendingDeepLink = deepLinkUrl;
+    }
+
     // Install React DevTools in development
     if (process.env.NODE_ENV === 'development' || !app.isPackaged) {
       try {
@@ -286,10 +303,9 @@ if (!gotTheLock) {
       sendSyncStatus('error');
     }
 
-    // Підписатися на realtime оновлення з Supabase
     console.log('[Main] Setting up realtime subscription...');
     realtimeManager = new SupabaseRealtimeManager();
-    realtimeManager.subscribe(
+    const gamesChannel = createGamesBroadcastSubscription(
       (game) => {
         // Оновити локальну БД через SyncManager
         syncManager?.handleRealtimeUpdate(game);
@@ -301,6 +317,8 @@ if (!gotTheLock) {
         });
       }
     );
+    const feedbackChannel = createFeedbackReplyBroadcastSubscription();
+    realtimeManager.subscribe([gamesChannel, feedbackChannel]);
 
     checkForUpdates();
 
@@ -326,23 +344,7 @@ if (!gotTheLock) {
         console.error('[Main] Failed to record playtime at start:', err);
       });
 
-    // Handle pending deep link if app was opened via protocol
-    if (pendingDeepLink) {
-      handleDeepLink(pendingDeepLink);
-      pendingDeepLink = null;
-    }
-
-    // Check for deep link in process args (Windows/Linux cold start)
-    if (isWindows() || isLinux()) {
-      const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
-      if (deepLinkUrl) {
-        // Small delay to ensure renderer is ready
-        setTimeout(() => handleDeepLink(deepLinkUrl), 500);
-      }
-    }
-
-    // Start watching Steam library for changes (after a short delay to ensure window is ready)
-    setTimeout(() => {
+    setImmediate(() => {
       startSteamWatcher(getMainWindow());
       startInstallationWatcher(getMainWindow(), () => {
         syncManager?.processPendingDeletions().catch((err) => {
@@ -352,7 +354,7 @@ if (!gotTheLock) {
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });
-    }, 1000);
+    });
 
     app.on('activate', async () => {
       // macOS: показати вікно якщо воно заховане або створити нове якщо немає
@@ -416,7 +418,7 @@ if (!gotTheLock) {
     stopSteamWatcher();
     stopInstallationWatcher();
 
-    // Відписатися від realtime оновлень
+    // Відписатися від realtime оновлень (ігри + відповіді на відгуки)
     realtimeManager?.unsubscribe();
 
     // Закрити базу даних

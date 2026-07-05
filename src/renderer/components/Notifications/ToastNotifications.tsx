@@ -3,6 +3,7 @@ import {
   BookmarkCheck,
   Download,
   Languages,
+  MessageSquare,
   RefreshCw,
   TrendingUp,
   X,
@@ -27,6 +28,8 @@ const getToastIcon = (type: ToastNotification['type']) => {
       return <TrendingUp size={20} className="text-white" />;
     case 'first-favorite':
       return <BookmarkCheck size={20} className="text-text-dark" />;
+    case 'feedback-reply':
+      return <MessageSquare size={20} className="text-white" />;
     default:
       return <RefreshCw size={20} className="text-white" />;
   }
@@ -44,6 +47,8 @@ const getToastGradient = (type: ToastNotification['type']) => {
       return 'from-color-mixed to-color-mixed';
     case 'first-favorite':
       return 'from-color-mixed to-color-mixed';
+    case 'feedback-reply':
+      return 'from-color-main to-color-accent';
     default:
       return 'from-color-accent to-color-main';
   }
@@ -61,6 +66,8 @@ const getToastBorder = (type: ToastNotification['type']) => {
       return 'border-color-mixed';
     case 'progress-change':
       return 'border-color-mixed';
+    case 'feedback-reply':
+      return 'border-color-main';
     default:
       return 'border-color-accent';
   }
@@ -78,6 +85,8 @@ const getToastTitle = (type: ToastNotification['type']) => {
       return 'Додано в улюблені';
     case 'progress-change':
       return 'Оновлення прогресу';
+    case 'feedback-reply':
+      return 'Відповідь на відгук';
     default:
       return 'Сповіщення';
   }

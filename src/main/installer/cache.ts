@@ -325,11 +325,23 @@ export async function getAllInstalledGameIds(): Promise<string[]> {
 
     // Read all files in the directory
     const files = await readdir(installInfoDir);
+    const jsonFiles = files.filter((file) => file.endsWith('.json'));
 
-    // Extract game IDs from filenames (remove .json extension)
-    const gameIds = files
-      .filter((file) => file.endsWith('.json'))
-      .map((file) => file.replace('.json', ''));
+    // Extract game IDs, excluding installs that failed
+    const gameIds: string[] = [];
+    for (const file of jsonFiles) {
+      try {
+        const content = await fs.promises.readFile(
+          path.join(installInfoDir, file),
+          'utf-8'
+        );
+        const info: InstallationInfo = JSON.parse(content);
+        if (info.hasInstallError) continue;
+      } catch {
+        // Unreadable/corrupt cache entry — fall back to treating it as installed
+      }
+      gameIds.push(file.replace('.json', ''));
+    }
 
     console.log(`[Installer] Found ${gameIds.length} installed games:`, gameIds);
 

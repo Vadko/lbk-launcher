@@ -982,18 +982,24 @@ export function useGamepadModeNavigation(enabled = true) {
     return () => cancelAnimationFrame(rafId);
   }, [enabled]);
 
-  // Initial focus on first game card when entering gamepad mode
+  // Initial focus on the first game card when entering gamepad mode — as soon as
+  // the cards are in the DOM (retry per animation frame instead of a fixed delay).
   useEffect(() => {
     if (!enabled) return;
 
-    const timer = setTimeout(() => {
+    let rafId = 0;
+    let attempts = 0;
+    const focusFirstCard = () => {
       const cards = getGameCards();
       if (cards.length > 0 && focusedGameIndex < cards.length) {
         cards[focusedGameIndex].focus();
+      } else if (attempts++ < 30) {
+        rafId = requestAnimationFrame(focusFirstCard);
       }
-    }, 100);
+    };
+    rafId = requestAnimationFrame(focusFirstCard);
 
-    return () => clearTimeout(timer);
+    return () => cancelAnimationFrame(rafId);
   }, [enabled, focusedGameIndex, getGameCards]);
 
   // Update total games count when cards change
