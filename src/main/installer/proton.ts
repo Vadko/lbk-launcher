@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-import { app } from 'electron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -13,14 +12,6 @@ import { isLinux } from '../utils/platform';
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
 
-// Directory where Proton writes its per-run `steam-<appid>.log` (PROTON_LOG=1).
-// Kept under userData so it survives prefix cleanup and is readable both inside
-// the Flatpak sandbox and by the host process spawned via flatpak-spawn.
-function getProtonLogDir(): string {
-  return path.join(app.getPath('userData'), 'proton-logs');
-}
-
-// Return the most recently modified Proton log file, or null if none exist.
 function getLatestProtonLog(logDir: string): string | null {
   try {
     const candidates = fs
@@ -37,8 +28,7 @@ function getLatestProtonLog(logDir: string): string | null {
   }
 }
 
-// Surface the most recent Proton/wine log — full tail on failure, path on
-// success. Best-effort: never throws.
+// Log the latest Proton/wine output — full tail on failure, path on success.
 function logProtonOutcome(logDir: string, code: number | null): void {
   try {
     const logFile = getLatestProtonLog(logDir);
@@ -267,6 +257,17 @@ function checkNewProtonUninstallKeys(
 }
 */
 
+// Steam Deck Game Mode (gamescope): flatpak-spawn'd Proton GUI windows detach
+// from the Steam surface and get an invalid window handle — wrap them in a
+// nested gamescope. AppImage shares the surface directly and needs no wrap.
+function isGameMode(): boolean {
+  const desktop = (process.env.XDG_CURRENT_DESKTOP || '').toLowerCase();
+  return desktop.includes('gamescope') || !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
+}
+
+// `-f` fullscreen so gamescope actually maps the installer's surface.
+const GAMESCOPE_WRAP = ['gamescope', '-f', '--'];
+
 function ensureTempDirectory(prefix: string): void {
   const tempDir = path.join(
     prefix,
@@ -339,6 +340,11 @@ export function findProtons() {
     }
   });
 
+  // Default to the highest numbered Proton; Experimental/Hotfix (no number) last.
+  const version = (name: string) =>
+    Number.parseFloat(name.match(/\d+(\.\d+)?/)?.[0] ?? '0');
+  result.sort((a, b) => version(b.name) - version(a.name));
+
   return result;
 }
 
@@ -395,10 +401,9 @@ export function runProton({
 
       const steamPath = fs.realpathSync(`${HOME}/.steam/root`);
 
-      // Enable Proton/wine logging so installer failures can be diagnosed.
-      // Proton writes `steam-<appid>.log` into PROTON_LOG_DIR; we read its tail
-      // after the process exits (see child 'exit' handler below).
-      const protonLogDir = getProtonLogDir();
+      // Log into the prefix — pressure-vessel mounts it RW, so Proton can write
+      // here from inside its container (userData is not visible in there).
+      const protonLogDir = path.join(prefix, 'lbk-logs');
       try {
         fs.mkdirSync(protonLogDir, { recursive: true });
       } catch {
@@ -419,11 +424,18 @@ export function runProton({
       // own bubblewrap container and can't nest inside Flatpak's sandbox. Escape
       // to the host via flatpak-spawn so pressure-vessel runs unconstrained.
       const inFlatpak = !!process.env.FLATPAK_ID;
+      const wrapGamescope = inFlatpak && isGameMode();
+      if (wrapGamescope) {
+        console.log(
+          '[Proton] Game Mode detected — wrapping installer in nested gamescope'
+        );
+      }
       const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
       const cmdArgs = inFlatpak
         ? [
             '--host',
             ...Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`),
+            ...(wrapGamescope ? GAMESCOPE_WRAP : []),
             protonPath,
             ...installerArgs,
           ]
