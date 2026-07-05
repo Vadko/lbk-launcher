@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { app } from 'electron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -11,6 +12,53 @@ import { isLinux } from '../utils/platform';
 
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
+
+// Directory where Proton writes its per-run `steam-<appid>.log` (PROTON_LOG=1).
+// Kept under userData so it survives prefix cleanup and is readable both inside
+// the Flatpak sandbox and by the host process spawned via flatpak-spawn.
+function getProtonLogDir(): string {
+  return path.join(app.getPath('userData'), 'proton-logs');
+}
+
+// Return the most recently modified Proton log file, or null if none exist.
+function getLatestProtonLog(logDir: string): string | null {
+  try {
+    const candidates = fs
+      .readdirSync(logDir)
+      .filter((f) => f.startsWith('steam-') && f.endsWith('.log'))
+      .map((f) => {
+        const full = path.join(logDir, f);
+        return { full, mtime: fs.statSync(full).mtimeMs };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+    return candidates.length > 0 ? candidates[0].full : null;
+  } catch {
+    return null;
+  }
+}
+
+// Surface the most recent Proton/wine log — full tail on failure, path on
+// success. Best-effort: never throws.
+function logProtonOutcome(logDir: string, code: number | null): void {
+  try {
+    const logFile = getLatestProtonLog(logDir);
+    if (!logFile) {
+      return;
+    }
+
+    if (code === 0) {
+      console.log(`[Proton log] Full log at: ${logFile}`);
+      return;
+    }
+
+    const tail = fs.readFileSync(logFile, 'utf8').split('\n').slice(-120).join('\n');
+    console.error(
+      `[Proton log] Exit code ${code}. ${path.basename(logFile)} (last 120 lines):\n${tail}`
+    );
+  } catch (err) {
+    console.warn('[Proton] Failed to read Proton log:', err);
+  }
+}
 
 // TODO: Registry functionality - commented out for future implementation
 /*
@@ -347,11 +395,23 @@ export function runProton({
 
       const steamPath = fs.realpathSync(`${HOME}/.steam/root`);
 
+      // Enable Proton/wine logging so installer failures can be diagnosed.
+      // Proton writes `steam-<appid>.log` into PROTON_LOG_DIR; we read its tail
+      // after the process exits (see child 'exit' handler below).
+      const protonLogDir = getProtonLogDir();
+      try {
+        fs.mkdirSync(protonLogDir, { recursive: true });
+      } catch {
+        // Best-effort — logging must never block the install.
+      }
+
       const protonEnv: Record<string, string> = {
         STEAM_COMPAT_DATA_PATH: prefix,
         STEAM_COMPAT_CLIENT_INSTALL_PATH: steamPath,
         STEAM_COMPAT_LIBRARY_PATHS: steamPath,
         STEAM_ROOT_PATH: `Z:${steamPath.replace(/\//g, '\\')}`,
+        PROTON_LOG: '1',
+        PROTON_LOG_DIR: protonLogDir,
       };
 
       const installerArgs = ['run', enFilePath, ...(args || [])];
@@ -406,6 +466,8 @@ export function runProton({
           // Error handling
         }
         */
+
+        logProtonOutcome(protonLogDir, code);
 
         if (!keepPrefix && prefix.startsWith(PREFIX_BASE)) {
           setTimeout(() => {
