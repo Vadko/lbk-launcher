@@ -1,4 +1,5 @@
 import { execSync, spawn } from 'child_process';
+import { app } from 'electron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -256,48 +257,22 @@ function checkNewProtonUninstallKeys(
 }
 */
 
-// Steam Deck Game Mode (gamescope). Here Proton's Wayland driver can't reach the
-// compositor over flatpak-spawn (sandbox socket doesn't resolve on the host) and
-// the installer window fails with "Invalid window handle". Unsetting
-// WAYLAND_DISPLAY forces Proton onto the session's Xwayland (X11) — the same path
-// the working AppImage takes.
-function isGameMode(): boolean {
-  const desktop = (process.env.XDG_CURRENT_DESKTOP || '').toLowerCase();
-  return desktop.includes('gamescope') || !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
-}
-
-function hostCmd(cmd: string): string {
+// umu-run launches Proton in-process (no flatpak-spawn host escape), so its window
+// is a normal client — the only way it renders under gamescope Game Mode. Bundled
+// via extraResources (like 7z): prod reads it from resourcesPath, dev from the
+// repo's resources/. The Flatpak extracts the same AppImage resources. Falls back
+// to a system-installed umu-run.
+function resolveUmuRun(): string | null {
+  const base = app.isPackaged
+    ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), 'umu')
+    : path.join(app.getAppPath(), 'resources', 'umu');
+  const bundled = path.join(base, 'umu-run');
+  if (fs.existsSync(bundled)) return bundled;
   try {
-    return execSync(`flatpak-spawn --host sh -c '${cmd}'`, {
-      encoding: 'utf8',
-      timeout: 5000,
-    }).trim();
+    return execSync('command -v umu-run', { encoding: 'utf8' }).trim() || null;
   } catch {
-    return '';
+    return null;
   }
-}
-
-// The X11 session env that makes the flatpak-spawn'd Proton behave like the
-// working AppImage. Reads Steam's own env (it lives in the gamescope session) and
-// picks the game Xwayland — the socket that isn't Steam's UI DISPLAY.
-function getGameSessionEnv(): Record<string, string> {
-  const raw = hostCmd('tr "\\0" "\\n" < /proc/$(pgrep -x steam | head -n1)/environ');
-  const steam: Record<string, string> = {};
-  for (const line of raw.split('\n')) {
-    const i = line.indexOf('=');
-    if (i > 0) steam[line.slice(0, i)] = line.slice(i + 1);
-  }
-  const displays = hostCmd('ls /tmp/.X11-unix')
-    .split(/\s+/)
-    .filter((s) => s.startsWith('X'))
-    .map((s) => `:${s.slice(1)}`);
-  const gameDisplay = displays.find((d) => d !== steam.DISPLAY) ?? steam.DISPLAY ?? '';
-  return {
-    DISPLAY: gameDisplay,
-    XDG_RUNTIME_DIR: steam.XDG_RUNTIME_DIR ?? '',
-    XAUTHORITY: steam.XAUTHORITY ?? '',
-    GAMESCOPE_WAYLAND_DISPLAY: steam.GAMESCOPE_WAYLAND_DISPLAY ?? '',
-  };
 }
 
 function ensureTempDirectory(prefix: string): void {
@@ -444,32 +419,33 @@ export function runProton({
       const protonEnv: Record<string, string> = {
         STEAM_COMPAT_DATA_PATH: prefix,
         STEAM_COMPAT_CLIENT_INSTALL_PATH: steamPath,
-        STEAM_COMPAT_LIBRARY_PATHS: steamPath,
-        STEAM_ROOT_PATH: `Z:${steamPath.replace(/\//g, '\\')}`,
         PROTON_LOG: '1',
         PROTON_LOG_DIR: protonLogDir,
       };
 
-      const installerArgs = ['run', enFilePath, ...(args || [])];
-      // Pressure-vessel (Steam Linux Runtime, used by Proton 5.13+) creates its
-      // own bubblewrap container and can't nest inside Flatpak's sandbox. Escape
-      // to the host via flatpak-spawn so pressure-vessel runs unconstrained.
-      const inFlatpak = !!process.env.FLATPAK_ID;
-      const envArgs = Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`);
-      if (inFlatpak && isGameMode()) {
-        // Force Xwayland over the broken sandbox socket, then mirror the session.
-        envArgs.push('--env=WAYLAND_DISPLAY=');
-        for (const [k, v] of Object.entries(getGameSessionEnv())) {
-          if (v) envArgs.push(`--env=${k}=${v}`);
-        }
+      // Prefer umu-run (in-sandbox) — required for the installer window to render
+      // under gamescope in Flatpak. Fall back to launching Proton directly, which
+      // works on the native AppImage where umu isn't available.
+      const umuRun = resolveUmuRun();
+      let cmd: string;
+      let cmdArgs: string[];
+      if (umuRun) {
+        cmd = umuRun;
+        cmdArgs = [enFilePath, ...(args ?? [])];
+        Object.assign(protonEnv, {
+          PROTONPATH: path.dirname(protonPath),
+          WINEPREFIX: prefix,
+          GAMEID: 'umu-0',
+          PROTON_VERB: 'run',
+          UMU_RUNTIME_UPDATE: '0',
+        });
+      } else {
+        cmd = protonPath;
+        cmdArgs = ['run', enFilePath, ...(args ?? [])];
       }
-      const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
-      const cmdArgs = inFlatpak
-        ? ['--host', ...envArgs, protonPath, ...installerArgs]
-        : installerArgs;
-      const env = inFlatpak ? process.env : { ...process.env, ...protonEnv };
+
       const child = spawn(cmd, cmdArgs, {
-        env,
+        env: { ...process.env, ...protonEnv },
         stdio: ['inherit', 'pipe', 'pipe'],
       });
 

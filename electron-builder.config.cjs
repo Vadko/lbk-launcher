@@ -114,6 +114,11 @@ module.exports = {
         from: 'resources/extensions/spellfix.so',
         to: 'extensions/spellfix.so',
       },
+      {
+        from: 'resources/umu',
+        to: 'umu',
+        filter: ['**/*'],
+      },
     ],
   },
 
