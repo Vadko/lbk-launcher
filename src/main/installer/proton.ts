@@ -423,6 +423,16 @@ export function runProton({
         PROTON_LOG_DIR: protonLogDir,
       };
 
+      // Steam Deck game mode = gamescope compositor. Inside Flatpak umu only
+      // brings the Proton window to the foreground when its steammode monitor
+      // fires, which needs all three: gamescope session + STEAM_MULTIPLE_XWAYLANDS
+      // + PROTON_VERB=waitforexitandrun. Without them the installer renders
+      // off-screen. (Native AppImage doesn't need this — the window shows itself.)
+      const inGameMode =
+        process.env.XDG_CURRENT_DESKTOP === 'gamescope' ||
+        process.env.XDG_SESSION_DESKTOP === 'gamescope' ||
+        Boolean(process.env.GAMESCOPE_WAYLAND_DISPLAY);
+
       // Prefer umu-run (in-sandbox) — required for the installer window to render
       // under gamescope in Flatpak. Fall back to launching Proton directly, which
       // works on the native AppImage where umu isn't available.
@@ -436,22 +446,24 @@ export function runProton({
           PROTONPATH: path.dirname(protonPath),
           WINEPREFIX: prefix,
           GAMEID: 'umu-0',
-          PROTON_VERB: 'run',
+          PROTON_VERB: 'waitforexitandrun',
           UMU_RUNTIME_UPDATE: '0',
         });
+        if (inGameMode) {
+          Object.assign(protonEnv, {
+            XDG_CURRENT_DESKTOP: 'gamescope',
+            STEAM_MULTIPLE_XWAYLANDS: '1',
+          });
+        }
       } else {
         cmd = protonPath;
-        cmdArgs = ['run', enFilePath, ...(args ?? [])];
+        cmdArgs = ['waitforexitandrun', enFilePath, ...(args ?? [])];
       }
 
-      // Steam launches us with its host overlay/runtime vars; they leak into
-      // umu and break pressure-vessel (wrong-ELF LD_PRELOAD, host /usr/lib/steam
-      // mounts). Drop them so umu sets up its own runtime. NB: keep
-      // LD_LIBRARY_PATH — inside the flatpak it points at the gamescope libs.
+      // Pass the environment through untouched (like Heroic): umu clears
+      // LD_PRELOAD itself in a gamescope session, and the Flatpak manifest
+      // unsets STEAM_RUNTIME/SDL_VIDEODRIVER.
       const env: NodeJS.ProcessEnv = { ...process.env, ...protonEnv };
-      for (const k of ['LD_PRELOAD', 'STEAM_RUNTIME', 'STEAM_COMPAT_MOUNTS']) {
-        delete env[k];
-      }
 
       const child = spawn(cmd, cmdArgs, {
         env,
