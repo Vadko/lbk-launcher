@@ -278,26 +278,30 @@ function hostCmd(cmd: string): string {
   }
 }
 
-// Find the game Xwayland + XDG_RUNTIME_DIR of the gamescope session. Steam's own
-// DISPLAY is its UI Xwayland (windows there stay hidden), so we pick the X socket
-// that isn't Steam's — that's where the visible game surface renders.
-function getHostSessionDisplay(): { display?: string; runtimeDir?: string } {
-  const steamEnv = hostCmd('tr "\\0" "\\n" < /proc/$(pgrep -x steam | head -n1)/environ');
-  let steamDisplay = '';
-  let runtimeDir = '';
-  for (const line of steamEnv.split('\n')) {
-    if (line.startsWith('DISPLAY=')) steamDisplay = line.slice(8);
-    else if (line.startsWith('XDG_RUNTIME_DIR=')) runtimeDir = line.slice(16);
+// The X11 session env that makes the flatpak-spawn'd Proton behave like the
+// working AppImage. Reads Steam's own env (it lives in the gamescope session) and
+// picks the game Xwayland — the socket that isn't Steam's UI DISPLAY.
+function getGameSessionEnv(): Record<string, string> {
+  const raw = hostCmd('tr "\\0" "\\n" < /proc/$(pgrep -x steam | head -n1)/environ');
+  const steam: Record<string, string> = {};
+  for (const line of raw.split('\n')) {
+    const i = line.indexOf('=');
+    if (i > 0) steam[line.slice(0, i)] = line.slice(i + 1);
   }
-  const sockets = hostCmd('ls /tmp/.X11-unix')
+  const displays = hostCmd('ls /tmp/.X11-unix')
     .split(/\s+/)
     .filter((s) => s.startsWith('X'))
     .map((s) => `:${s.slice(1)}`);
-  const display = sockets.find((d) => d !== steamDisplay) || steamDisplay || undefined;
+  const gameDisplay = displays.find((d) => d !== steam.DISPLAY) ?? steam.DISPLAY ?? '';
   console.log(
-    `[Proton] host X=[${sockets.join(',')}] steam=${steamDisplay || '?'} chosen=${display ?? '?'}`
+    `[Proton] X=[${displays.join(',')}] steam=${steam.DISPLAY} game=${gameDisplay} xauth=${steam.XAUTHORITY}`
   );
-  return { display, runtimeDir: runtimeDir || undefined };
+  return {
+    DISPLAY: gameDisplay,
+    XDG_RUNTIME_DIR: steam.XDG_RUNTIME_DIR ?? '',
+    XAUTHORITY: steam.XAUTHORITY ?? '',
+    GAMESCOPE_WAYLAND_DISPLAY: steam.GAMESCOPE_WAYLAND_DISPLAY ?? '',
+  };
 }
 
 function ensureTempDirectory(prefix: string): void {
@@ -458,12 +462,11 @@ export function runProton({
       const inFlatpak = !!process.env.FLATPAK_ID;
       const envArgs = Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`);
       if (inFlatpak && isGameMode()) {
-        // Force Proton onto the session's game Xwayland with the real DISPLAY.
-        const session = getHostSessionDisplay();
+        // Force Xwayland over the broken sandbox socket, then mirror the session.
         envArgs.push('--env=WAYLAND_DISPLAY=');
-        if (session.display) envArgs.push(`--env=DISPLAY=${session.display}`);
-        if (session.runtimeDir)
-          envArgs.push(`--env=XDG_RUNTIME_DIR=${session.runtimeDir}`);
+        for (const [k, v] of Object.entries(getGameSessionEnv())) {
+          if (v) envArgs.push(`--env=${k}=${v}`);
+        }
       }
       const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
       const cmdArgs = inFlatpak
