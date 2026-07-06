@@ -14,37 +14,36 @@ const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
 
 function getLatestProtonLog(logDir: string): string | null {
   try {
-    const candidates = fs
+    const logs = fs
       .readdirSync(logDir)
       .filter((f) => f.startsWith('steam-') && f.endsWith('.log'))
-      .map((f) => {
-        const full = path.join(logDir, f);
-        return { full, mtime: fs.statSync(full).mtimeMs };
-      })
-      .sort((a, b) => b.mtime - a.mtime);
-    return candidates.length > 0 ? candidates[0].full : null;
+      .map((f) => path.join(logDir, f))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    return logs[0] ?? null;
   } catch {
     return null;
   }
 }
 
-// Log the latest Proton/wine output — full tail on failure, path on success.
+// Point to the full Proton log; on failure also surface the notable lines
+// (skipping the verbose unwind/relay trace spam).
 function logProtonOutcome(logDir: string, code: number | null): void {
   try {
     const logFile = getLatestProtonLog(logDir);
     if (!logFile) {
       return;
     }
-
-    if (code === 0) {
-      console.log(`[Proton log] Full log at: ${logFile}`);
-      return;
+    console.log(`[Proton log] ${logFile}`);
+    if (code !== 0) {
+      const notable = fs
+        .readFileSync(logFile, 'utf8')
+        .split('\n')
+        .filter((l) => /err:|:warn:|fixme:|exception|fork|fail/i.test(l))
+        .slice(-40);
+      if (notable.length) {
+        console.error(`[Proton log] notable:\n${notable.join('\n')}`);
+      }
     }
-
-    const tail = fs.readFileSync(logFile, 'utf8').split('\n').slice(-120).join('\n');
-    console.error(
-      `[Proton log] Exit code ${code}. ${path.basename(logFile)} (last 120 lines):\n${tail}`
-    );
   } catch (err) {
     console.warn('[Proton] Failed to read Proton log:', err);
   }
@@ -293,9 +292,6 @@ function getGameSessionEnv(): Record<string, string> {
     .filter((s) => s.startsWith('X'))
     .map((s) => `:${s.slice(1)}`);
   const gameDisplay = displays.find((d) => d !== steam.DISPLAY) ?? steam.DISPLAY ?? '';
-  console.log(
-    `[Proton] X=[${displays.join(',')}] steam=${steam.DISPLAY} game=${gameDisplay} xauth=${steam.XAUTHORITY}`
-  );
   return {
     DISPLAY: gameDisplay,
     XDG_RUNTIME_DIR: steam.XDG_RUNTIME_DIR ?? '',
@@ -437,8 +433,7 @@ export function runProton({
 
       const steamPath = fs.realpathSync(`${HOME}/.steam/root`);
 
-      // Log into the prefix — pressure-vessel mounts it RW, so Proton can write
-      // here from inside its container (userData is not visible in there).
+      // Proton writes its log into the prefix (mounted RW inside the container).
       const protonLogDir = path.join(prefix, 'lbk-logs');
       try {
         fs.mkdirSync(protonLogDir, { recursive: true });
@@ -485,27 +480,7 @@ export function runProton({
         console.error(`[Proton stderr] ${data.toString().trimEnd()}`);
       });
 
-      // If the installer hangs (e.g. an unmapped window under gamescope), dump the
-      // live Proton log so we can see where it stuck, then kill it.
-      const HANG_MS = 60_000;
-      const hangTimer = setTimeout(() => {
-        let tail = '(no proton log found)';
-        try {
-          const logFile = getLatestProtonLog(protonLogDir);
-          if (logFile) {
-            tail = fs.readFileSync(logFile, 'utf8').split('\n').slice(-80).join('\n');
-          }
-        } catch {
-          // Best-effort.
-        }
-        console.error(
-          `[Proton] installer hung >${HANG_MS / 1000}s — killing. Log tail:\n${tail}`
-        );
-        child.kill('SIGKILL');
-      }, HANG_MS);
-
       child.on('exit', async (code) => {
-        clearTimeout(hangTimer);
         // TODO: Registry checking functionality commented out for future implementation
         /*
         try {
