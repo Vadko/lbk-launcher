@@ -265,9 +265,9 @@ function isGameMode(): boolean {
   return desktop.includes('gamescope') || !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
 }
 
-// `--backend sdl` nests into the running gamescope; the default tries DRM and
-// fails on the seat the outer gamescope already holds. `-f` = fullscreen.
-const GAMESCOPE_WRAP = ['gamescope', '--backend', 'sdl', '-f', '--'];
+// `--backend wayland` nests into the running gamescope via its socket (default
+// tries DRM and hits the seat; sdl backend isn't built in Valve's gamescope).
+const GAMESCOPE_WRAP = ['gamescope', '--backend', 'wayland', '-f', '--'];
 
 function ensureTempDirectory(prefix: string): void {
   const tempDir = path.join(
@@ -431,12 +431,17 @@ export function runProton({
           '[Proton] Game Mode detected — wrapping installer in nested gamescope'
         );
       }
+      // Point the nested gamescope at the parent gamescope's Wayland socket
+      // (the sandbox's own WAYLAND_DISPLAY doesn't resolve on the host).
+      const gamescopeSocket = process.env.GAMESCOPE_WAYLAND_DISPLAY || 'gamescope-0';
       const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
       const cmdArgs = inFlatpak
         ? [
             '--host',
             ...Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`),
-            ...(wrapGamescope ? GAMESCOPE_WRAP : []),
+            ...(wrapGamescope
+              ? [`--env=WAYLAND_DISPLAY=${gamescopeSocket}`, ...GAMESCOPE_WRAP]
+              : []),
             protonPath,
             ...installerArgs,
           ]
