@@ -257,17 +257,15 @@ function checkNewProtonUninstallKeys(
 }
 */
 
-// Steam Deck Game Mode (gamescope): flatpak-spawn'd Proton GUI windows detach
-// from the Steam surface and get an invalid window handle — wrap them in a
-// nested gamescope. AppImage shares the surface directly and needs no wrap.
+// Steam Deck Game Mode (gamescope). Here Proton's Wayland driver can't reach the
+// compositor over flatpak-spawn (sandbox socket doesn't resolve on the host) and
+// the installer window fails with "Invalid window handle". Unsetting
+// WAYLAND_DISPLAY forces Proton onto the session's Xwayland (X11) — the same path
+// the working AppImage takes.
 function isGameMode(): boolean {
   const desktop = (process.env.XDG_CURRENT_DESKTOP || '').toLowerCase();
   return desktop.includes('gamescope') || !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
 }
-
-// `--backend wayland` nests into the running gamescope via its socket (default
-// tries DRM and hits the seat; sdl backend isn't built in Valve's gamescope).
-const GAMESCOPE_WRAP = ['gamescope', '--backend', 'wayland', '-f', '--'];
 
 function ensureTempDirectory(prefix: string): void {
   const tempDir = path.join(
@@ -425,26 +423,14 @@ export function runProton({
       // own bubblewrap container and can't nest inside Flatpak's sandbox. Escape
       // to the host via flatpak-spawn so pressure-vessel runs unconstrained.
       const inFlatpak = !!process.env.FLATPAK_ID;
-      const wrapGamescope = inFlatpak && isGameMode();
-      if (wrapGamescope) {
-        console.log(
-          '[Proton] Game Mode detected — wrapping installer in nested gamescope'
-        );
+      const envArgs = Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`);
+      if (inFlatpak && isGameMode()) {
+        console.log('[Proton] Game Mode detected — forcing Xwayland (WAYLAND_DISPLAY=)');
+        envArgs.push('--env=WAYLAND_DISPLAY=');
       }
-      // Point the nested gamescope at the parent gamescope's Wayland socket
-      // (the sandbox's own WAYLAND_DISPLAY doesn't resolve on the host).
-      const gamescopeSocket = process.env.GAMESCOPE_WAYLAND_DISPLAY || 'gamescope-0';
       const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
       const cmdArgs = inFlatpak
-        ? [
-            '--host',
-            ...Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`),
-            ...(wrapGamescope
-              ? [`--env=WAYLAND_DISPLAY=${gamescopeSocket}`, ...GAMESCOPE_WRAP]
-              : []),
-            protonPath,
-            ...installerArgs,
-          ]
+        ? ['--host', ...envArgs, protonPath, ...installerArgs]
         : installerArgs;
       const env = inFlatpak ? process.env : { ...process.env, ...protonEnv };
       const child = spawn(cmd, cmdArgs, {
