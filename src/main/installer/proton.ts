@@ -444,8 +444,17 @@ export function runProton({
         cmdArgs = ['run', enFilePath, ...(args ?? [])];
       }
 
+      // Steam launches us with its host overlay/runtime vars; they leak into
+      // umu and break pressure-vessel (wrong-ELF LD_PRELOAD, host /usr/lib/steam
+      // mounts). Drop them so umu sets up its own runtime. NB: keep
+      // LD_LIBRARY_PATH — inside the flatpak it points at the gamescope libs.
+      const env: NodeJS.ProcessEnv = { ...process.env, ...protonEnv };
+      for (const k of ['LD_PRELOAD', 'STEAM_RUNTIME', 'STEAM_COMPAT_MOUNTS']) {
+        delete env[k];
+      }
+
       const child = spawn(cmd, cmdArgs, {
-        env: { ...process.env, ...protonEnv },
+        env,
         stdio: ['inherit', 'pipe', 'pipe'],
       });
 
