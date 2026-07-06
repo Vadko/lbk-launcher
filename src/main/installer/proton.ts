@@ -265,8 +265,9 @@ function isGameMode(): boolean {
   return desktop.includes('gamescope') || !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
 }
 
-// `-f` fullscreen so gamescope actually maps the installer's surface.
-const GAMESCOPE_WRAP = ['gamescope', '-f', '--'];
+// `--backend sdl` nests into the running gamescope; the default tries DRM and
+// fails on the seat the outer gamescope already holds. `-f` = fullscreen.
+const GAMESCOPE_WRAP = ['gamescope', '--backend', 'sdl', '-f', '--'];
 
 function ensureTempDirectory(prefix: string): void {
   const tempDir = path.join(
