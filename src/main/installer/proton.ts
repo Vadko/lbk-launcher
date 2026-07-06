@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -267,6 +267,30 @@ function isGameMode(): boolean {
   return desktop.includes('gamescope') || !!process.env.GAMESCOPE_WAYLAND_DISPLAY;
 }
 
+// Read the real session DISPLAY/XDG_RUNTIME_DIR from a host process (Steam runs
+// inside the gamescope session). flatpak-spawn forwards the sandbox's values,
+// which don't resolve on the host — these do.
+function getHostSessionDisplay(): Record<string, string> {
+  const wanted = ['DISPLAY', 'XDG_RUNTIME_DIR'];
+  const result: Record<string, string> = {};
+  try {
+    const raw = execSync(
+      'flatpak-spawn --host sh -c \'tr "\\0" "\\n" < /proc/$(pgrep -x steam | head -n1)/environ\'',
+      { encoding: 'utf8', timeout: 5000 }
+    );
+    for (const line of raw.split('\n')) {
+      const i = line.indexOf('=');
+      const key = line.slice(0, i);
+      if (i > 0 && wanted.includes(key)) {
+        result[key] = line.slice(i + 1);
+      }
+    }
+  } catch {
+    // Best-effort — fall through to X11 with whatever DISPLAY is already set.
+  }
+  return result;
+}
+
 function ensureTempDirectory(prefix: string): void {
   const tempDir = path.join(
     prefix,
@@ -425,8 +449,16 @@ export function runProton({
       const inFlatpak = !!process.env.FLATPAK_ID;
       const envArgs = Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`);
       if (inFlatpak && isGameMode()) {
-        console.log('[Proton] Game Mode detected — forcing Xwayland (WAYLAND_DISPLAY=)');
+        // Force Proton onto the session's Xwayland with the real DISPLAY.
+        const session = getHostSessionDisplay();
         envArgs.push('--env=WAYLAND_DISPLAY=');
+        if (session.DISPLAY) envArgs.push(`--env=DISPLAY=${session.DISPLAY}`);
+        if (session.XDG_RUNTIME_DIR) {
+          envArgs.push(`--env=XDG_RUNTIME_DIR=${session.XDG_RUNTIME_DIR}`);
+        }
+        console.log(
+          `[Proton] Game Mode — forcing Xwayland (DISPLAY=${session.DISPLAY ?? '?'})`
+        );
       }
       const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
       const cmdArgs = inFlatpak
