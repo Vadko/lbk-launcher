@@ -485,7 +485,27 @@ export function runProton({
         console.error(`[Proton stderr] ${data.toString().trimEnd()}`);
       });
 
+      // If the installer hangs (e.g. an unmapped window under gamescope), dump the
+      // live Proton log so we can see where it stuck, then kill it.
+      const HANG_MS = 60_000;
+      const hangTimer = setTimeout(() => {
+        let tail = '(no proton log found)';
+        try {
+          const logFile = getLatestProtonLog(protonLogDir);
+          if (logFile) {
+            tail = fs.readFileSync(logFile, 'utf8').split('\n').slice(-80).join('\n');
+          }
+        } catch {
+          // Best-effort.
+        }
+        console.error(
+          `[Proton] installer hung >${HANG_MS / 1000}s — killing. Log tail:\n${tail}`
+        );
+        child.kill('SIGKILL');
+      }, HANG_MS);
+
       child.on('exit', async (code) => {
+        clearTimeout(hangTimer);
         // TODO: Registry checking functionality commented out for future implementation
         /*
         try {
