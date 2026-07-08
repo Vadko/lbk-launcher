@@ -18,7 +18,7 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
   }
 
   return (
-    <div className="flex gap-3">
+    <>
       {/* Installer Notice */}
       {hasInstaller && (
         <span className="text-text-muted flex items-center gap-1">
@@ -26,9 +26,7 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
           Інсталятор
         </span>
       )}
-      {hasInstaller && langHint && (
-        <div className="w-0 h-auto border-l border-border-hover" />
-      )}
+      <div className="w-0 h-auto border-l border-border-hover last:hidden first:hidden" />
       {/* Language Notice */}
       {langHint && (
         <div className="flex items-center gap-2">
@@ -38,6 +36,6 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
           </span>
         </div>
       )}
-    </div>
+    </>
   );
 };
