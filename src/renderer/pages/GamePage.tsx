@@ -109,7 +109,9 @@ export const GamePage: React.FC = () => {
 
     const loadGame = async () => {
       // Якщо вже є вибрана гра з правильним ID, не треба перезавантажувати
-      if (selectedGame?.id === gameId) return;
+      if (selectedGame?.id === gameId) {
+        return;
+      }
 
       // Очищаємо selectedGame якщо змінився gameId (щоб не показувати стару гру)
       if (selectedGame?.id && selectedGame.id !== gameId) {
@@ -178,7 +180,9 @@ export const GamePage: React.FC = () => {
           selectedGame.id,
           selectedGame.slug
         );
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         // Cache the result
         bannerCacheRef.current.set(selectedGame.id, result);
@@ -188,7 +192,9 @@ export const GamePage: React.FC = () => {
           setLoadedBannerGameId(selectedGame.id);
         }
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
         console.error('Error loading banner data:', error);
         setBannerData(null);
         setLoadedBannerGameId(selectedGame.id);
@@ -372,7 +378,9 @@ export const GamePage: React.FC = () => {
   }, [selectedGame, isInstalling, isPaused, isWaitingForNetwork]);
 
   const handleSupport = useCallback(() => {
-    if (!selectedGame?.support_url) return;
+    if (!selectedGame?.support_url) {
+      return;
+    }
 
     // Track support click
     if (window.electronAPI?.trackSupportClick) {
@@ -392,8 +400,9 @@ export const GamePage: React.FC = () => {
       isLaunching ||
       !isGameInstalledOnSystem ||
       !isTranslationInstalled
-    )
+    ) {
       return;
+    }
 
     setIsLaunching(true);
     try {

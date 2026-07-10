@@ -27,7 +27,9 @@ function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
     // willReadFrequently keeps the canvas CPU-backed so getImageData
     // doesn't force a GPU→CPU readback stall.
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return true;
+    if (!ctx) {
+      return true;
+    }
 
     ctx.drawImage(img, 0, 0, TRANSPARENCY_SAMPLE, TRANSPARENCY_SAMPLE);
     const data = ctx.getImageData(0, 0, TRANSPARENCY_SAMPLE, TRANSPARENCY_SAMPLE).data;

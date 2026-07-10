@@ -11,7 +11,9 @@ export function useRealtimeGames() {
   const { selectedGame, setSelectedGame } = useStore();
 
   useEffect(() => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     // Обробник оновлень гри
     const handleGameUpdate = (updatedGame: Game) => {

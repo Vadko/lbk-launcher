@@ -44,7 +44,9 @@ export function findBackupDir(targetDir: string) {
  * Set hidden attribute on a folder (Windows only)
  */
 async function setHiddenAttribute(dirPath: string): Promise<void> {
-  if (process.platform !== 'win32') return;
+  if (process.platform !== 'win32') {
+    return;
+  }
 
   try {
     const attribPath = path.join(
@@ -291,7 +293,9 @@ export async function cleanupEmptyDirectories(
   rootDir: string
 ): Promise<void> {
   try {
-    if (!fs.existsSync(dir)) return;
+    if (!fs.existsSync(dir)) {
+      return;
+    }
 
     // Never clean up inside backup directory
     if (

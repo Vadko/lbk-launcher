@@ -13,7 +13,9 @@ import { getCleanTitle } from './game-titles';
  * Get Lutris database paths (native + Flatpak)
  */
 function getLutrisDBPath(): string | null {
-  if (!isLinux()) return null;
+  if (!isLinux()) {
+    return null;
+  }
 
   const home = os.homedir();
   const possiblePaths = [
@@ -70,7 +72,9 @@ class LutrisDBManager {
       this.lastChecked = now;
     }
 
-    if (!this.dbPath) return null;
+    if (!this.dbPath) {
+      return null;
+    }
 
     // Create new connection if needed
     if (!this.db) {
@@ -90,7 +94,9 @@ class LutrisDBManager {
    */
   query<T = Record<string, unknown>>(sql: string): T[] {
     const db = this.getConnection();
-    if (!db) return [];
+    if (!db) {
+      return [];
+    }
 
     try {
       return db.prepare(sql).all() as T[];

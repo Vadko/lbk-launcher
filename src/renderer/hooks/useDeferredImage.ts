@@ -14,7 +14,9 @@ export function useDeferredImage(imageDeferred: boolean, resetKey: string): bool
   }, [resetKey, imageDeferred]);
 
   useEffect(() => {
-    if (!imageDeferred) setSettled(true);
+    if (!imageDeferred) {
+      setSettled(true);
+    }
   }, [imageDeferred]);
   /* eslint-enable react-hooks/set-state-in-effect */
 

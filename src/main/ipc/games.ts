@@ -516,7 +516,9 @@ export function setupGamesHandlers(): void {
         const heroicGame = getHeroicGame(gamePath.path);
         if (heroicGame) {
           const result = await launchHeroicGame(heroicGame.appName, heroicGame.runner);
-          if (result.success) return { success: true };
+          if (result.success) {
+            return { success: true };
+          }
         }
 
         // Check for GOG/Epic game in Lutris
@@ -524,7 +526,9 @@ export function setupGamesHandlers(): void {
         if (lutrisSlug) {
           const { launchLutrisGame } = await import('../utils/lutris-launcher');
           const result = await launchLutrisGame(lutrisSlug);
-          if (result.success) return { success: true };
+          if (result.success) {
+            return { success: true };
+          }
         }
       }
 

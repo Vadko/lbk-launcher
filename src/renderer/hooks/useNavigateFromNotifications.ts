@@ -9,7 +9,9 @@ export function useNavigateFromNotifications() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!window.windowControls?.onNavigateToGame) return;
+    if (!window.windowControls?.onNavigateToGame) {
+      return;
+    }
 
     const unsubscribe = window.windowControls.onNavigateToGame((gameId) => {
       console.log('[App] Navigating to game from notification:', gameId);

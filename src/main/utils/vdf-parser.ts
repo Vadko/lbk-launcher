@@ -17,12 +17,16 @@ import { parse as vdfParse } from 'fast-vdf';
 export function parseLibraryFolders(content: string): string[] {
   const root = vdfParse(content);
   const folders = root.dir('libraryfolders', null);
-  if (!folders) return [];
+  if (!folders) {
+    return [];
+  }
 
   const libraries: string[] = [];
   for (const entry of folders.dirs()) {
     const p = entry.value('path', null);
-    if (p) libraries.push(p);
+    if (p) {
+      libraries.push(p);
+    }
   }
   return libraries;
 }
@@ -41,7 +45,9 @@ interface AppManifest {
 export function parseAppManifest(content: string): AppManifest | null {
   try {
     const appState = vdfParse(content).dir('AppState', null);
-    if (!appState) return null;
+    if (!appState) {
+      return null;
+    }
 
     return {
       appid: appState.value('appid', '') ?? '',
@@ -64,7 +70,9 @@ export function parseAppManifest(content: string): AppManifest | null {
 export function parseMostRecentUser(content: string): string | null {
   try {
     const users = vdfParse(content).dir('users', null);
-    if (!users) return null;
+    if (!users) {
+      return null;
+    }
 
     let mostRecentUser: string | null = null;
     let highestTimestamp = 0;
@@ -116,11 +124,15 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
       ?.dir('Valve', null)
       ?.dir('Steam', null)
       ?.dir('apps', null);
-    if (!apps) return playtimes;
+    if (!apps) {
+      return playtimes;
+    }
 
     for (const app of apps.dirs()) {
       const appId = parseInt(app.key, 10);
-      if (isNaN(appId) || appId <= 10) continue;
+      if (isNaN(appId) || appId <= 10) {
+        continue;
+      }
 
       // Steam stores playtime under several differently-cased keys; try each.
       const playtimeStr =
@@ -128,10 +140,14 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
         app.value('playtime', null) ??
         app.value('playtime_forever', null) ??
         app.value('PlaytimeForever', null);
-      if (playtimeStr === null) continue;
+      if (playtimeStr === null) {
+        continue;
+      }
 
       const playtimeMinutes = parseInt(playtimeStr, 10);
-      if (isNaN(playtimeMinutes) || playtimeMinutes <= 0) continue;
+      if (isNaN(playtimeMinutes) || playtimeMinutes <= 0) {
+        continue;
+      }
 
       const lastPlayedStr =
         app.value('LastPlayed', null) ?? app.value('lastplayed', null);

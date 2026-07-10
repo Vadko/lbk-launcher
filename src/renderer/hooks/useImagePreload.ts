@@ -8,10 +8,14 @@ export function useImagePreload(urls: (string | null)[]) {
 
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || hasPreloaded.current) return;
+    if (!element || hasPreloaded.current) {
+      return;
+    }
 
     const preload = () => {
-      if (hasPreloaded.current) return;
+      if (hasPreloaded.current) {
+        return;
+      }
       hasPreloaded.current = true;
 
       for (const url of urls) {

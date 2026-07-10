@@ -256,7 +256,9 @@ function getCurrentSteamUserId(steamPath: string): string | null {
   // Fallback: use first available userdata folder
   try {
     const userdataPath = path.join(steamPath, 'userdata');
-    if (!fs.existsSync(userdataPath)) return null;
+    if (!fs.existsSync(userdataPath)) {
+      return null;
+    }
 
     const userFolders = fs
       .readdirSync(userdataPath, { withFileTypes: true })
@@ -286,10 +288,14 @@ function getCurrentSteamUserId(steamPath: string): string | null {
  */
 function getUserConfigPath(filename: string): string | null {
   const steamPath = getSteamPath();
-  if (!steamPath) return null;
+  if (!steamPath) {
+    return null;
+  }
 
   const steamUserId = getCurrentSteamUserId(steamPath);
-  if (!steamUserId) return null;
+  if (!steamUserId) {
+    return null;
+  }
 
   return path.join(steamPath, 'userdata', steamUserId, 'config', filename);
 }
@@ -307,7 +313,9 @@ export function getLocalConfigPath(): string | null {
  */
 function readLocalConfigContent(): string | null {
   const localConfigPath = getLocalConfigPath();
-  if (!localConfigPath) return null;
+  if (!localConfigPath) {
+    return null;
+  }
 
   try {
     if (!fs.existsSync(localConfigPath)) {
@@ -333,7 +341,9 @@ export function getLicensecachePath(): string | null {
  */
 export function getLicensecacheSize(): number | null {
   const licensecachePath = getLicensecachePath();
-  if (!licensecachePath || !fs.existsSync(licensecachePath)) return null;
+  if (!licensecachePath || !fs.existsSync(licensecachePath)) {
+    return null;
+  }
 
   try {
     return fs.statSync(licensecachePath).size;
@@ -479,14 +489,20 @@ function resolveSteamGameByAppId(
 ): string | null {
   for (const folder of libraryFolders) {
     const manifestPath = path.join(folder, `appmanifest_${steamAppId}.acf`);
-    if (!fs.existsSync(manifestPath)) continue;
+    if (!fs.existsSync(manifestPath)) {
+      continue;
+    }
 
     try {
       const manifest = parseAppManifest(fs.readFileSync(manifestPath, 'utf8'));
-      if (!manifest?.installdir) continue;
+      if (!manifest?.installdir) {
+        continue;
+      }
 
       const gamePath = path.join(folder, 'common', manifest.installdir);
-      if (fs.existsSync(gamePath)) return gamePath;
+      if (fs.existsSync(gamePath)) {
+        return gamePath;
+      }
     } catch {
       // Ignore and try the next library
     }

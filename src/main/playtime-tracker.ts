@@ -63,7 +63,9 @@ function getCacheFilePath(): string {
 function readCacheFromDisk(): PlaytimeCache | null {
   try {
     const filePath = getCacheFilePath();
-    if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
 
     const content = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(content) as PlaytimeCache;

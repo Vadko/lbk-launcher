@@ -42,7 +42,9 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
           specialFilter
         );
       }
-      if (selectedStatuses.length === 0) return 'Усі стани';
+      if (selectedStatuses.length === 0) {
+        return 'Усі стани';
+      }
       if (selectedStatuses.length === 1) {
         return (
           STATUS_OPTIONS.find((o) => o.value === selectedStatuses[0])?.label ||
@@ -55,7 +57,9 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
     const hasActiveFilter = specialFilter !== null || selectedStatuses.length > 0;
 
     useEffect(() => {
-      if (!isOpen) return;
+      if (!isOpen) {
+        return;
+      }
       const handleClickOutside = (e: MouseEvent) => {
         if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
           setIsOpen(false);
@@ -69,10 +73,14 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
     // the viewport. Re-runs on open and on window resize so the dropdown always
     // fits inside the visible area and shows its scrollbar when truncated.
     useEffect(() => {
-      if (!isOpen) return;
+      if (!isOpen) {
+        return;
+      }
 
       const recalc = () => {
-        if (!buttonRef.current) return;
+        if (!buttonRef.current) {
+          return;
+        }
         const rect = buttonRef.current.getBoundingClientRect();
         const margin = 16; // breathing room from the viewport bottom
         const available = window.innerHeight - rect.bottom - margin;

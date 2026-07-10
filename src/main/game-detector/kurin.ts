@@ -62,7 +62,9 @@ function getKurinInstalledData() {
     games: Record<string, KurinInstalledData>;
   };
 
-  if (!data.games) return [];
+  if (!data.games) {
+    return [];
+  }
 
   return Object.values(data.games).map((game) => {
     const cache = game.gameDataCache || {};
@@ -102,7 +104,9 @@ function getKurinInstalledData() {
 }
 
 async function createCacheFiles(games: InstallationInfo[]) {
-  if (games.length === 0) return;
+  if (games.length === 0) {
+    return;
+  }
 
   for (const game of games) {
     await saveInstallationInfo(game.gamePath, game);
@@ -130,7 +134,9 @@ export async function syncKurinGames() {
           steamId === String(game.steam_app_id) &&
           (team === game.team || team === 'Спільнота')
       );
-      if (!kurinGame) return null;
+      if (!kurinGame) {
+        return null;
+      }
 
       syncedGameNames.push(`${game.name} (${game.team})`);
 

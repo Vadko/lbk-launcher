@@ -23,9 +23,13 @@ export class SupabaseRealtimeManager {
   private joinedTopics = new Set<string>();
 
   subscribe(subscriptions: Array<BroadcastSubscription | null | undefined>): void {
-    if (this.channels.length > 0) return;
+    if (this.channels.length > 0) {
+      return;
+    }
     const subs = subscriptions.filter((s): s is BroadcastSubscription => s != null);
-    if (subs.length === 0) return;
+    if (subs.length === 0) {
+      return;
+    }
 
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
     this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -41,15 +45,20 @@ export class SupabaseRealtimeManager {
           return;
         }
         console.log(`[SupabaseRealtime] Subscribed to ${sub.topic}`);
-        if (this.joinedTopics.has(sub.topic)) sub.onResubscribe?.();
-        else this.joinedTopics.add(sub.topic);
+        if (this.joinedTopics.has(sub.topic)) {
+          sub.onResubscribe?.();
+        } else {
+          this.joinedTopics.add(sub.topic);
+        }
       });
       this.channels.push(channel);
     }
   }
 
   unsubscribe(): void {
-    for (const channel of this.channels) channel.unsubscribe();
+    for (const channel of this.channels) {
+      channel.unsubscribe();
+    }
     this.channels = [];
     this.joinedTopics.clear();
     if (this.supabase) {

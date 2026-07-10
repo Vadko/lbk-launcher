@@ -69,7 +69,9 @@ export function useGamepadModeNavigation(enabled = true) {
   const canInput = useCallback((key: string): boolean => {
     const now = Date.now();
     const lastTime = lastInputRef.current[key] || 0;
-    if (now - lastTime < INPUT_DELAY) return false;
+    if (now - lastTime < INPUT_DELAY) {
+      return false;
+    }
     lastInputRef.current[key] = now;
     return true;
   }, []);
@@ -105,7 +107,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Scroll card into view
   const scrollCardIntoView = useCallback((card: HTMLElement) => {
     const container = document.querySelector('[data-gamepad-game-list]');
-    if (!container) return;
+    if (!container) {
+      return;
+    }
 
     const containerRect = container.getBoundingClientRect();
     const cardRect = card.getBoundingClientRect();
@@ -128,7 +132,9 @@ export function useGamepadModeNavigation(enabled = true) {
   const navigateToGame = useCallback(
     (index: number) => {
       const total = getTotalGameCards();
-      if (total === 0 || index < 0 || index >= total) return;
+      if (total === 0 || index < 0 || index >= total) {
+        return;
+      }
 
       setFocusedGameIndex(index);
       playNavigateSound();
@@ -140,7 +146,9 @@ export function useGamepadModeNavigation(enabled = true) {
           scrollCardIntoView(card);
           return;
         }
-        if (attempts >= 15) return;
+        if (attempts >= 15) {
+          return;
+        }
         useGamepadModeStore.getState().scrollGameListToIndex?.(index);
         requestAnimationFrame(() => tryFocus(attempts + 1));
       };
@@ -152,7 +160,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Refocus поточної картки з клампом (індекс може бути застарілим після фільтрів)
   const refocusCurrentCard = useCallback(() => {
     const total = getTotalGameCards();
-    if (total === 0) return;
+    if (total === 0) {
+      return;
+    }
     getCardByIndex(Math.min(focusedGameIndex, total - 1))?.focus();
   }, [getCardByIndex, getTotalGameCards, focusedGameIndex]);
 
@@ -178,7 +188,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Scroll main content
   const scrollMainContent = useCallback((direction: 'up' | 'down') => {
     const mainContent = document.querySelector('[data-gamepad-main-content]');
-    if (!mainContent) return;
+    if (!mainContent) {
+      return;
+    }
 
     mainContent.scrollBy({
       top: direction === 'up' ? -SCROLL_AMOUNT : SCROLL_AMOUNT,
@@ -188,7 +200,9 @@ export function useGamepadModeNavigation(enabled = true) {
 
   // Check if element is a text input (not checkbox/radio)
   const isTextInput = useCallback((el: HTMLElement): boolean => {
-    if (el.tagName === 'TEXTAREA') return true;
+    if (el.tagName === 'TEXTAREA') {
+      return true;
+    }
     if (el.tagName === 'INPUT') {
       const type = (el as HTMLInputElement).type?.toLowerCase();
       return !['checkbox', 'radio', 'button', 'submit', 'reset'].includes(type);
@@ -238,7 +252,9 @@ export function useGamepadModeNavigation(enabled = true) {
       // Get the last (topmost) dialog in case of nested modals
       const modals = document.querySelectorAll('[role="dialog"]');
       const modal = modals[modals.length - 1];
-      if (!modal) return;
+      if (!modal) {
+        return;
+      }
 
       // Get all focusable elements in modal
       const allFocusable = Array.from(
@@ -247,14 +263,19 @@ export function useGamepadModeNavigation(enabled = true) {
         )
       ).filter((el) => {
         const style = window.getComputedStyle(el);
-        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return false;
+        }
         // Skip elements marked as skip
-        if (el.hasAttribute('data-gamepad-skip')) return false;
+        if (el.hasAttribute('data-gamepad-skip')) {
+          return false;
+        }
         // Exclude small X close button in Modal component's header (button in border-b with only SVG child)
         if (el.tagName === 'BUTTON' && el.closest('.border-b')) {
           const children = el.children;
-          if (children.length === 1 && children[0].tagName.toLowerCase() === 'svg')
+          if (children.length === 1 && children[0].tagName.toLowerCase() === 'svg') {
             return false;
+          }
         }
         return true;
       });
@@ -267,14 +288,20 @@ export function useGamepadModeNavigation(enabled = true) {
           b.tagName === 'INPUT' || b.tagName === 'SELECT' || b.tagName === 'TEXTAREA';
 
         // Inputs/checkboxes come first
-        if (aIsInput && !bIsInput) return -1;
-        if (!aIsInput && bIsInput) return 1;
+        if (aIsInput && !bIsInput) {
+          return -1;
+        }
+        if (!aIsInput && bIsInput) {
+          return 1;
+        }
 
         // Keep DOM order for buttons
         return 0;
       });
 
-      if (focusableElements.length === 0) return;
+      if (focusableElements.length === 0) {
+        return;
+      }
 
       const { element: currentElement, index: currentIndex } =
         getSelectedElement(focusableElements);
@@ -306,7 +333,9 @@ export function useGamepadModeNavigation(enabled = true) {
         const cancelButton = modal.querySelector<HTMLButtonElement>(
           '[data-gamepad-cancel]'
         );
-        if (cancelButton) cancelButton.click();
+        if (cancelButton) {
+          cancelButton.click();
+        }
         return;
       }
 
@@ -419,7 +448,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Go to home page (reset selected game and navigate to games area)
   const handleGoHome = useCallback(() => {
     // Check if we're already on the home page
-    if (navigationArea === 'main-content' && !selectedGame) return;
+    if (navigationArea === 'main-content' && !selectedGame) {
+      return;
+    }
 
     playNavigateSound();
     // Очищаємо selectedGame перед навігацією для миттєвого оновлення UI
@@ -463,7 +494,9 @@ export function useGamepadModeNavigation(enabled = true) {
       if (!gp.buttons[BUTTON.DPAD_DOWN]?.pressed) {
         ignoreScrollDownRef.current = false;
       }
-      if (ignoreScrollDownRef.current) return;
+      if (ignoreScrollDownRef.current) {
+        return;
+      }
 
       // Up/Down - scroll content
       const upPressed =
@@ -473,8 +506,12 @@ export function useGamepadModeNavigation(enabled = true) {
         (gp.buttons[BUTTON.DPAD_DOWN]?.pressed && canInput('main-down')) ||
         (gp.axes[AXIS.LEFT_Y] > DEADZONE && canInput('main-stick-down'));
 
-      if (upPressed) scrollMainContent('up');
-      if (downPressed) scrollMainContent('down');
+      if (upPressed) {
+        scrollMainContent('up');
+      }
+      if (downPressed) {
+        scrollMainContent('down');
+      }
 
       // Left/Right - navigate between action buttons
       const leftPressed =
@@ -550,7 +587,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Get dropdown items from open dropdown
   const getDropdownItems = useCallback((): HTMLElement[] => {
     const dropdown = document.querySelector('[data-gamepad-dropdown]');
-    if (!dropdown) return [];
+    if (!dropdown) {
+      return [];
+    }
     const items = dropdown.querySelectorAll<HTMLElement>('[data-gamepad-dropdown-item]');
     return Array.from(items);
   }, []);
@@ -653,7 +692,9 @@ export function useGamepadModeNavigation(enabled = true) {
       // Check if dropdown is open - handle dropdown navigation
       if (isDropdownOpen()) {
         const dropdownItems = getDropdownItems();
-        if (dropdownItems.length === 0) return;
+        if (dropdownItems.length === 0) {
+          return;
+        }
 
         const currentFocused = document.activeElement as HTMLElement;
         // Check if the focused element is inside a dropdown item (e.g., input inside search container)
@@ -710,7 +751,9 @@ export function useGamepadModeNavigation(enabled = true) {
 
       // Normal header navigation
       const items = getHeaderItems();
-      if (items.length === 0) return;
+      if (items.length === 0) {
+        return;
+      }
 
       const { element: currentElement, index: currentIndex } =
         getHeaderSelectedElement(items);
@@ -813,7 +856,9 @@ export function useGamepadModeNavigation(enabled = true) {
   const handleGamesNavigation = useCallback(
     (gp: Gamepad) => {
       const totalCards = getTotalGameCards();
-      if (totalCards === 0) return;
+      if (totalCards === 0) {
+        return;
+      }
 
       // Left/Right - navigate between games
       const leftPressed =
@@ -920,7 +965,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Main gamepad polling loop. Runs at requestAnimationFrame cadence but
   // does NOT touch React state, so an idle gamepad costs zero re-renders.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     let rafId = 0;
 
@@ -998,7 +1045,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // Initial focus on the first game card when entering gamepad mode — as soon as
   // the cards are in the DOM (retry per animation frame instead of a fixed delay).
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     let rafId = 0;
     let attempts = 0;
@@ -1020,7 +1069,9 @@ export function useGamepadModeNavigation(enabled = true) {
   // спрацьовував би на кожен чурн віртуалізатора); початкове значення
   // синкаємо одразу, бо вставка контейнера не генерує attribute-мутації.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     const sync = () => {
       const total = getTotalGameCards();

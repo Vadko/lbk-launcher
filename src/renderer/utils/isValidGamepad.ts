@@ -4,13 +4,19 @@
  * can be incorrectly detected as gamepads by the browser.
  */
 export function isValidGamepad(gp: Gamepad | null): gp is Gamepad {
-  if (!gp) return false;
+  if (!gp) {
+    return false;
+  }
 
   // Must have standard button layout (at least 12 buttons like Xbox/PS controllers)
-  if (gp.buttons.length < 12) return false;
+  if (gp.buttons.length < 12) {
+    return false;
+  }
 
   // Must have at least 2 axes (left stick)
-  if (gp.axes.length < 2) return false;
+  if (gp.axes.length < 2) {
+    return false;
+  }
 
   // Filter out known phantom/non-standard devices by checking ID
   const id = gp.id.toLowerCase();

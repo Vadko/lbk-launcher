@@ -184,7 +184,9 @@ export function getMainWindow(): BrowserWindow | null {
 
 // IPC handler for toggling liquid glass
 ipcMain.handle('liquid-glass:toggle', async (_event, enabled: boolean) => {
-  if (!mainWindow) return;
+  if (!mainWindow) {
+    return;
+  }
 
   if (enabled && supportsMacOSLiquidGlass()) {
     // Apply liquid glass if not already applied

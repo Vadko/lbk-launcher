@@ -233,7 +233,9 @@ export async function recordBannerImpression(params: {
  * ```
  */
 export function buildBannerImageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
+  if (!path) {
+    return null;
+  }
 
   return getSupabaseClient().storage.from('banner-images').getPublicUrl(path).data
     .publicUrl;

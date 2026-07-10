@@ -209,7 +209,9 @@ function extractUniqueWords(games: Game[]): string[] {
  * Rebuild spellfix_words dictionary from all approved games
  */
 function rebuildSpellfixDictionary(db: Database.Database): void {
-  if (!hasSpellfixTable(db)) return;
+  if (!hasSpellfixTable(db)) {
+    return;
+  }
 
   try {
     const rows = db

@@ -102,7 +102,9 @@ async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
 export async function getSignedDownloadUrl(
   params: GetSignedDownloadUrlParams
 ): Promise<GetSignedUrlResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' };
+  }
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
 
   // Get machine ID for unique downloads tracking (not for rate limiting)
@@ -173,7 +175,9 @@ export async function trackSubscription(
   gameId: string,
   action: 'subscribe' | 'unsubscribe'
 ): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping subscription tracking');
@@ -196,7 +200,9 @@ export async function trackSubscription(
  * Track support button click
  */
 export async function trackSupportClick(gameId: string): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping support click tracking');
@@ -220,7 +226,9 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
  * and returns it in the response.
  */
 export async function trackSessionStart(appVersion: string): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping session tracking');
@@ -250,7 +258,9 @@ export async function trackSessionStart(appVersion: string): Promise<TrackingRes
  * Track session end (when launcher closes)
  */
 export async function trackSessionEnd(): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   if (!currentSessionId) {
     console.warn('[Tracking] No current session ID, skipping session end tracking');
     return { success: false, error: 'No session ID' };
@@ -278,7 +288,9 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
  * Track translation uninstall
  */
 export async function trackUninstall(gameId: string): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping uninstall tracking');
@@ -300,7 +312,9 @@ export async function trackUninstall(gameId: string): Promise<TrackingResponse> 
  * Track failed search (query with 0 results)
  */
 export async function trackFailedSearch(query: string): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping failed search tracking');
@@ -333,7 +347,9 @@ export async function submitFeedback(
   message: string,
   screenshotPaths?: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' };
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping feedback submission');
@@ -393,7 +409,9 @@ export async function submitLogs(
   message: string,
   crashReason?: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' };
+  }
   const machineId = getMachineId();
   if (!machineId) {
     console.warn('[Tracking] Could not get machine ID, skipping logs submission');
@@ -494,9 +512,13 @@ export async function getFeedbackUploadUrls(fileNames: string[]): Promise<{
   uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
   error?: string;
 }> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' };
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' };
+  }
   const machineId = getMachineId();
-  if (!machineId) return { success: false, error: 'Machine ID not available' };
+  if (!machineId) {
+    return { success: false, error: 'Machine ID not available' };
+  }
 
   try {
     const supabase = getSupabaseClient();
@@ -579,7 +601,9 @@ interface PlaytimeData {
 export async function trackPlaytime(
   playtimeData: PlaytimeData[]
 ): Promise<TrackingResponse> {
-  if (IS_E2E) return { success: false, error: 'E2E mode' } as TrackingResponse;
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
   if (playtimeData.length === 0) {
     return { success: true };
   }

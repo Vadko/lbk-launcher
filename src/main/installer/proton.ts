@@ -267,7 +267,9 @@ function resolveUmuRun(): string | null {
     ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), 'umu')
     : path.join(app.getAppPath(), 'resources', 'umu');
   const bundled = path.join(base, 'umu-run');
-  if (fs.existsSync(bundled)) return bundled;
+  if (fs.existsSync(bundled)) {
+    return bundled;
+  }
   try {
     return execSync('command -v umu-run', { encoding: 'utf8' }).trim() || null;
   } catch {
@@ -331,7 +333,9 @@ async function findOrCreateProtonPrefix(
 }
 
 export function findProtons() {
-  if (!isLinux()) return [];
+  if (!isLinux()) {
+    return [];
+  }
 
   const steamGames = getAllInstalledSteamGames();
   const result = [] as Array<{ name: string; path: string }>;
@@ -364,7 +368,9 @@ export function runProton({
   filePath: string | undefined;
   args?: string[];
 }): Promise<number | null> {
-  if (!isLinux() || !protonPath || !filePath) return Promise.resolve(null);
+  if (!isLinux() || !protonPath || !filePath) {
+    return Promise.resolve(null);
+  }
   return new Promise((resolve, reject) => {
     (async () => {
       const enFilePath = renameFileToTranslit(filePath);

@@ -13,9 +13,13 @@ const PENDING_DELETIONS_KEY = 'pending_game_deletions';
  * Повідомити рендерер про видалення ігор зі списку (sidebar/головний список).
  */
 function notifyGamesRemoved(gameIds: string[]): void {
-  if (gameIds.length === 0) return;
+  if (gameIds.length === 0) {
+    return;
+  }
   const mainWindow = getMainWindow();
-  if (!mainWindow) return;
+  if (!mainWindow) {
+    return;
+  }
   for (const id of gameIds) {
     mainWindow.webContents.send('game-removed', id);
   }
@@ -26,9 +30,13 @@ function notifyGamesRemoved(gameIds: string[]): void {
  * але збережена локально бо встановлена). Використовується GamePage для banner.
  */
 function notifyGamesTombstoned(gameIds: string[]): void {
-  if (gameIds.length === 0) return;
+  if (gameIds.length === 0) {
+    return;
+  }
   const mainWindow = getMainWindow();
-  if (!mainWindow) return;
+  if (!mainWindow) {
+    return;
+  }
   for (const id of gameIds) {
     mainWindow.webContents.send('game-tombstoned', id);
   }
@@ -95,7 +103,9 @@ export class SyncManager {
   private getPendingDeletions(): string[] {
     const stmt = this.db.prepare('SELECT value FROM sync_metadata WHERE key = ?');
     const result = stmt.get(PENDING_DELETIONS_KEY) as { value: string } | undefined;
-    if (!result?.value) return [];
+    if (!result?.value) {
+      return [];
+    }
     try {
       const parsed = JSON.parse(result.value);
       return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
@@ -117,7 +127,9 @@ export class SyncManager {
    * і повідомляє рендерер ('game-removed'), щоб список у sidebar оновився.
    */
   private async actuallyDeleteGames(ids: string[]): Promise<void> {
-    if (ids.length === 0) return;
+    if (ids.length === 0) {
+      return;
+    }
     await dbWorkerClient.init();
     await dbWorkerClient.deleteGames(ids);
     notifyGamesRemoved(ids);
@@ -130,13 +142,18 @@ export class SyncManager {
   private async splitDeletedIds(
     deletedIds: string[]
   ): Promise<{ safe: string[]; deferred: string[] }> {
-    if (deletedIds.length === 0) return { safe: [], deferred: [] };
+    if (deletedIds.length === 0) {
+      return { safe: [], deferred: [] };
+    }
     const installedIds = new Set(await getAllInstalledGameIds());
     const safe: string[] = [];
     const deferred: string[] = [];
     for (const id of deletedIds) {
-      if (installedIds.has(id)) deferred.push(id);
-      else safe.push(id);
+      if (installedIds.has(id)) {
+        deferred.push(id);
+      } else {
+        safe.push(id);
+      }
     }
     return { safe, deferred };
   }
@@ -145,7 +162,9 @@ export class SyncManager {
    * Додати ID до списку pending deletions (унікально).
    */
   private addPendingDeletions(ids: string[]): void {
-    if (ids.length === 0) return;
+    if (ids.length === 0) {
+      return;
+    }
     const existing = new Set(this.getPendingDeletions());
     const fresh: string[] = [];
     for (const id of ids) {
@@ -154,7 +173,9 @@ export class SyncManager {
         fresh.push(id);
       }
     }
-    if (fresh.length === 0) return;
+    if (fresh.length === 0) {
+      return;
+    }
     this.setPendingDeletions([...existing]);
     notifyGamesTombstoned(fresh);
   }
@@ -173,15 +194,20 @@ export class SyncManager {
    */
   async processPendingDeletions(): Promise<void> {
     const pending = this.getPendingDeletions();
-    if (pending.length === 0) return;
+    if (pending.length === 0) {
+      return;
+    }
 
     try {
       const installedIds = new Set(await getAllInstalledGameIds());
       const stillInstalled: string[] = [];
       const readyToDelete: string[] = [];
       for (const id of pending) {
-        if (installedIds.has(id)) stillInstalled.push(id);
-        else readyToDelete.push(id);
+        if (installedIds.has(id)) {
+          stillInstalled.push(id);
+        } else {
+          readyToDelete.push(id);
+        }
       }
 
       if (readyToDelete.length > 0) {

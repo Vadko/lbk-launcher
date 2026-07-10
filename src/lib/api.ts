@@ -12,7 +12,9 @@ export function getImageUrl(
   imagePath: string | null,
   updatedAt?: string | null
 ): string | null {
-  if (!imagePath) return null;
+  if (!imagePath) {
+    return null;
+  }
 
   // Already a full URL
   if (imagePath.startsWith('http')) {

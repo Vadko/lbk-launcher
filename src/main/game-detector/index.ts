@@ -41,7 +41,9 @@ export function detectGamePath(
   installPath: InstallPath | null | undefined,
   steamAppId?: number | null
 ): GamePath | null {
-  if (!installPath || !installPath.type || !installPath.path) return null;
+  if (!installPath || !installPath.type || !installPath.path) {
+    return null;
+  }
 
   let foundPath: string | null = null;
 
@@ -191,10 +193,14 @@ interface HeroicGameInfo {
 
 export function getHeroicGame(gamePath: string): HeroicGameInfo | null {
   const gogId = getHeroicGOGId(gamePath);
-  if (gogId) return { appName: gogId, runner: 'gog' };
+  if (gogId) {
+    return { appName: gogId, runner: 'gog' };
+  }
 
   const epicAppName = getHeroicEpicAppName(gamePath);
-  if (epicAppName) return { appName: epicAppName, runner: 'legendary' };
+  if (epicAppName) {
+    return { appName: epicAppName, runner: 'legendary' };
+  }
 
   return null;
 }

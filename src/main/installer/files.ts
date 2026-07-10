@@ -83,7 +83,9 @@ export async function cleanupDownloadDir(downloadDir: string): Promise<void> {
  * Delete directory recursively
  */
 export async function deleteDirectory(dirPath: string): Promise<void> {
-  if (!fs.existsSync(dirPath)) return;
+  if (!fs.existsSync(dirPath)) {
+    return;
+  }
 
   const entries = await readdir(dirPath, { withFileTypes: true });
 

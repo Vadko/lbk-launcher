@@ -21,8 +21,12 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
 
     // Determine current label
     const currentLabel = useMemo(() => {
-      if (selectedAuthors.length === 0) return 'Усі автори';
-      if (selectedAuthors.length === 1) return selectedAuthors[0];
+      if (selectedAuthors.length === 0) {
+        return 'Усі автори';
+      }
+      if (selectedAuthors.length === 1) {
+        return selectedAuthors[0];
+      }
       return `${selectedAuthors.length} авторів`;
     }, [selectedAuthors]);
 
@@ -30,7 +34,9 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
 
     // Filter authors based on search
     const filteredAuthors = useMemo(() => {
-      if (!search.trim()) return authors;
+      if (!search.trim()) {
+        return authors;
+      }
       const searchLower = search.toLowerCase();
       return authors.filter((author) => author.toLowerCase().includes(searchLower));
     }, [authors, search]);
@@ -136,7 +142,9 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
                   type="search"
                   value={search}
                   onChange={(e) => {
-                    if (isComposingRef.current) return;
+                    if (isComposingRef.current) {
+                      return;
+                    }
                     setSearch(e.target.value);
                   }}
                   onCompositionStart={() => {

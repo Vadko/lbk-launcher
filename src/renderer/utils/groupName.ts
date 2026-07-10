@@ -31,7 +31,9 @@ export function deriveGroupNaming(translations: Game[]): GroupNaming {
   const variantById = new Map<string, string>();
   for (const t of translations) {
     const tail = t.name.slice(prefix.length).replace(LEADING_JUNK, '').trim();
-    if (tail) variantById.set(t.id, tail);
+    if (tail) {
+      variantById.set(t.id, tail);
+    }
   }
   return { name: prefix, variantById };
 }
@@ -50,7 +52,9 @@ function commonPrefix(a: string, b: string): string {
   const bLower = b.toLowerCase();
   const max = Math.min(aLower.length, bLower.length);
   let i = 0;
-  while (i < max && aLower[i] === bLower[i]) i++;
+  while (i < max && aLower[i] === bLower[i]) {
+    i++;
+  }
   return a.slice(0, i);
 }
 

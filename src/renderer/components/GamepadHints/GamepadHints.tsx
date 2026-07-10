@@ -39,7 +39,9 @@ const BUTTON_CONFIG: Record<
 function detectGamepadType(): GamepadType {
   const gamepads = navigator.getGamepads();
   for (const gp of gamepads) {
-    if (!gp) continue;
+    if (!gp) {
+      continue;
+    }
     const id = gp.id.toLowerCase();
     if (
       id.includes('playstation') ||
@@ -94,7 +96,9 @@ export const GamepadHints: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isGamepadMode) return;
+    if (!isGamepadMode) {
+      return;
+    }
 
     const checkModal = () => {
       setIsModalOpen(!!document.querySelector('[role="dialog"]'));
@@ -108,7 +112,9 @@ export const GamepadHints: React.FC = () => {
     return () => observer.disconnect();
   }, [isGamepadMode]);
 
-  if (!isGamepadMode) return null;
+  if (!isGamepadMode) {
+    return null;
+  }
 
   const { confirm, back, home } = BUTTON_CONFIG[gamepadType];
   let hints: HintItem[] = [];
