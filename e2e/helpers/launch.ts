@@ -143,9 +143,12 @@ export async function launchApp(): Promise<AppInstance> {
   // Ensure CDP port is free from a previous run
   await waitForPortFree(CDP_PORT, 15_000);
 
+  // Extra Chromium switches for perf experiments (e.g. --disable-features=SkiaGraphite)
+  const extraArgs = (process.env.EXTRA_ELECTRON_ARGS || '').split(' ').filter(Boolean);
+
   const proc = spawn(
     executablePath,
-    ['--no-sandbox', '--disable-gpu-sandbox', '--e2e'],
+    ['--no-sandbox', '--disable-gpu-sandbox', '--e2e', ...extraArgs],
     {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ELECTRON_ENABLE_LOGGING: '1', LBK_E2E: '1' },

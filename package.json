@@ -47,6 +47,7 @@
     "@sentry/electron": "7.13.0",
     "@sentry/react": "10.50.0",
     "@tanstack/react-query": "5.100.9",
+    "@tanstack/react-virtual": "^3.14.5",
     "better-sqlite3": "12.9.0",
     "chrome-remote-interface": "0.34.0",
     "cyrillic-to-translit-js": "3.2.1",
@@ -60,7 +61,8 @@
     "node-machine-id": "1.1.12",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-lazy-load-image-component": "1.6.3",
+    "react-lazy-load-image-component": "^1.6.3",
+    "react-lite-youtube-embed": "^3.6.0",
     "react-router-dom": "^7.15.0",
     "swiper": "12.1.4",
     "zustand": "4.5.7"

@@ -50,7 +50,6 @@ const SCROLL_AMOUNT = 300;
 export function useGamepadModeNavigation(enabled = true) {
   const navigate = useNavigate();
   const lastInputRef = useRef<Record<string, number>>({});
-  const gameCardsRef = useRef<HTMLElement[]>([]);
 
   const focusedGameIndex = useGamepadModeStore((s) => s.focusedGameIndex);
   const setFocusedGameIndex = useGamepadModeStore((s) => s.setFocusedGameIndex);
@@ -87,12 +86,20 @@ export function useGamepadModeNavigation(enabled = true) {
     prevButtonStatesRef.current = gp.buttons.map((b) => b?.pressed ?? false);
   }, []);
 
-  // Get game cards from DOM
-  const getGameCards = useCallback((): HTMLElement[] => {
-    const cards = document.querySelectorAll<HTMLElement>(
-      '[data-gamepad-game-list] [data-gamepad-card]'
-    );
-    return Array.from(cards);
+  // Стрічка ігор віртуалізована (@tanstack/react-virtual): у DOM лише видимі
+  // картки, тому позиція в NodeList ≠ індекс гри. Шукаємо за data-gamepad-index
+  // на обгортці, а загальну кількість читаємо з data-gamepad-total контейнера.
+  const getCardByIndex = useCallback(
+    (index: number): HTMLElement | null =>
+      document.querySelector<HTMLElement>(
+        `[data-gamepad-game-list] [data-gamepad-index="${index}"] [data-gamepad-card]`
+      ),
+    []
+  );
+
+  const getTotalGameCards = useCallback((): number => {
+    const container = document.querySelector<HTMLElement>('[data-gamepad-game-list]');
+    return Number(container?.getAttribute('data-gamepad-total') ?? 0);
   }, []);
 
   // Scroll card into view
@@ -120,24 +127,40 @@ export function useGamepadModeNavigation(enabled = true) {
   // Navigate to specific game card
   const navigateToGame = useCallback(
     (index: number) => {
-      const cards = getGameCards();
-      if (cards.length === 0 || index < 0 || index >= cards.length) return;
+      const total = getTotalGameCards();
+      if (total === 0 || index < 0 || index >= total) return;
 
       setFocusedGameIndex(index);
-      const card = cards[index];
-      card.focus();
-      scrollCardIntoView(card);
       playNavigateSound();
+
+      const tryFocus = (attempts: number) => {
+        const card = getCardByIndex(index);
+        if (card) {
+          card.focus();
+          scrollCardIntoView(card);
+          return;
+        }
+        if (attempts >= 15) return;
+        useGamepadModeStore.getState().scrollGameListToIndex?.(index);
+        requestAnimationFrame(() => tryFocus(attempts + 1));
+      };
+      tryFocus(0);
     },
-    [getGameCards, setFocusedGameIndex, scrollCardIntoView]
+    [getCardByIndex, getTotalGameCards, setFocusedGameIndex, scrollCardIntoView]
   );
+
+  // Refocus поточної картки з клампом (індекс може бути застарілим після фільтрів)
+  const refocusCurrentCard = useCallback(() => {
+    const total = getTotalGameCards();
+    if (total === 0) return;
+    getCardByIndex(Math.min(focusedGameIndex, total - 1))?.focus();
+  }, [getCardByIndex, getTotalGameCards, focusedGameIndex]);
 
   // Select current game
   const selectCurrentGame = useCallback(() => {
-    const cards = getGameCards();
-    if (cards.length === 0) return;
-
-    const card = cards[focusedGameIndex];
+    const total = getTotalGameCards();
+    const index = Math.min(focusedGameIndex, total - 1);
+    const card = getCardByIndex(index);
     if (card) {
       playConfirmSound();
       card.click();
@@ -150,7 +173,7 @@ export function useGamepadModeNavigation(enabled = true) {
         }
       }, 50);
     }
-  }, [getGameCards, focusedGameIndex, setNavigationArea]);
+  }, [getCardByIndex, getTotalGameCards, focusedGameIndex, setNavigationArea]);
 
   // Scroll main content
   const scrollMainContent = useCallback((direction: 'up' | 'down') => {
@@ -433,10 +456,7 @@ export function useGamepadModeNavigation(enabled = true) {
         playBackSound();
         setNavigationArea('games');
         // Re-focus the current game card
-        const cards = getGameCards();
-        if (cards[focusedGameIndex]) {
-          cards[focusedGameIndex].focus();
-        }
+        refocusCurrentCard();
         return;
       }
 
@@ -512,7 +532,7 @@ export function useGamepadModeNavigation(enabled = true) {
       isButtonJustPressed,
       focusedGameIndex,
       getActionButtons,
-      getGameCards,
+      refocusCurrentCard,
       scrollMainContent,
       setNavigationArea,
       getHomeActive,
@@ -598,10 +618,7 @@ export function useGamepadModeNavigation(enabled = true) {
           // Return to games area
           setGamepadSelected(null);
           setNavigationArea('games');
-          const cards = getGameCards();
-          if (cards[focusedGameIndex]) {
-            cards[focusedGameIndex].focus();
-          }
+          refocusCurrentCard();
         }
         return;
       }
@@ -624,10 +641,7 @@ export function useGamepadModeNavigation(enabled = true) {
         playBackSound();
         setGamepadSelected(null);
         setNavigationArea('games');
-        const cards = getGameCards();
-        if (cards[focusedGameIndex]) {
-          cards[focusedGameIndex].focus();
-        }
+        refocusCurrentCard();
         return;
       }
 
@@ -755,10 +769,7 @@ export function useGamepadModeNavigation(enabled = true) {
         playNavigateSound();
         setGamepadSelected(null);
         setNavigationArea('games');
-        const cards = getGameCards();
-        if (cards[focusedGameIndex]) {
-          cards[focusedGameIndex].focus();
-        }
+        refocusCurrentCard();
       }
 
       // A button - activate element
@@ -786,7 +797,7 @@ export function useGamepadModeNavigation(enabled = true) {
       canInput,
       isButtonJustPressed,
       focusedGameIndex,
-      getGameCards,
+      refocusCurrentCard,
       getHeaderItems,
       getDropdownItems,
       isDropdownOpen,
@@ -801,10 +812,8 @@ export function useGamepadModeNavigation(enabled = true) {
   // Handle games navigation
   const handleGamesNavigation = useCallback(
     (gp: Gamepad) => {
-      const cards = getGameCards();
-      gameCardsRef.current = cards;
-
-      if (cards.length === 0) return;
+      const totalCards = getTotalGameCards();
+      if (totalCards === 0) return;
 
       // Left/Right - navigate between games
       const leftPressed =
@@ -814,15 +823,19 @@ export function useGamepadModeNavigation(enabled = true) {
         (gp.buttons[BUTTON.DPAD_RIGHT]?.pressed && canInput('games-right')) ||
         (gp.axes[AXIS.LEFT_X] > DEADZONE && canInput('games-stick-right'));
 
+      // Індекс міг лишитись поза межами після звуження списку фільтром —
+      // клампимо, інакше left/A мовчки впираються в bounds check navigateToGame
+      const currentIndex = Math.min(focusedGameIndex, totalCards - 1);
+
       if (leftPressed) {
-        const newIndex = Math.max(0, focusedGameIndex - 1);
+        const newIndex = Math.max(0, currentIndex - 1);
         if (newIndex !== focusedGameIndex) {
           navigateToGame(newIndex);
         }
       }
 
       if (rightPressed) {
-        const newIndex = Math.min(cards.length - 1, focusedGameIndex + 1);
+        const newIndex = Math.min(totalCards - 1, currentIndex + 1);
         if (newIndex !== focusedGameIndex) {
           navigateToGame(newIndex);
         }
@@ -862,7 +875,7 @@ export function useGamepadModeNavigation(enabled = true) {
     [
       canInput,
       focusedGameIndex,
-      getGameCards,
+      getTotalGameCards,
       navigateToGame,
       selectCurrentGame,
       setNavigationArea,
@@ -990,9 +1003,9 @@ export function useGamepadModeNavigation(enabled = true) {
     let rafId = 0;
     let attempts = 0;
     const focusFirstCard = () => {
-      const cards = getGameCards();
-      if (cards.length > 0 && focusedGameIndex < cards.length) {
-        cards[focusedGameIndex].focus();
+      const card = getCardByIndex(focusedGameIndex);
+      if (card) {
+        card.focus();
       } else if (attempts++ < 30) {
         rafId = requestAnimationFrame(focusFirstCard);
       }
@@ -1000,24 +1013,30 @@ export function useGamepadModeNavigation(enabled = true) {
     rafId = requestAnimationFrame(focusFirstCard);
 
     return () => cancelAnimationFrame(rafId);
-  }, [enabled, focusedGameIndex, getGameCards]);
+  }, [enabled, focusedGameIndex, getCardByIndex]);
 
-  // Update total games count when cards change
+  // Update total games count when the list composition changes.
+  // Спостерігаємо лише за атрибутом data-gamepad-total (childList на body
+  // спрацьовував би на кожен чурн віртуалізатора); початкове значення
+  // синкаємо одразу, бо вставка контейнера не генерує attribute-мутації.
   useEffect(() => {
     if (!enabled) return;
 
-    const observer = new MutationObserver(() => {
-      const cards = getGameCards();
-      if (cards.length !== totalGames) {
-        useGamepadModeStore.getState().setTotalGames(cards.length);
+    const sync = () => {
+      const total = getTotalGameCards();
+      if (total !== totalGames) {
+        useGamepadModeStore.getState().setTotalGames(total);
       }
-    });
+    };
+    sync();
 
+    const observer = new MutationObserver(sync);
     observer.observe(document.body, {
-      childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ['data-gamepad-total'],
     });
 
     return () => observer.disconnect();
-  }, [enabled, getGameCards, totalGames]);
+  }, [enabled, getTotalGameCards, totalGames]);
 }

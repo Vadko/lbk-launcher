@@ -68,20 +68,44 @@ export const App: React.FC = () => {
 
   // Listen for sync status from main process
   useEffect(() => {
-    let hideTimeout: NodeJS.Timeout | null = null;
-    const loaderStartTime = Date.now();
+    let rafId = 0;
+    let hideStarted = false;
+    const loaderStartTime = performance.now();
     const MIN_LOADER_DISPLAY_MS = 1000; // Minimum time to show loader for animations
+    const STABLE_FRAMES = 20;
+    // 45мс покриває 24-120Hz: на 30Hz (Low Power Mode) кадр ~33мс, на 40Hz
+    // (Steam Deck) ~25мс — з меншим бюджетом стрік ніколи не набирався і
+    // лоадер завжди висів повні MAX_WAIT_AFTER_READY_MS
+    const FRAME_BUDGET_MS = 45;
+    const MAX_WAIT_AFTER_READY_MS = 8000;
 
-    const hideLoaderWithDelay = () => {
-      const elapsed = Date.now() - loaderStartTime;
-      const remainingTime = Math.max(0, MIN_LOADER_DISPLAY_MS - elapsed);
+    const hideLoaderWhenStable = () => {
+      if (hideStarted) return;
+      hideStarted = true;
 
-      hideTimeout = setTimeout(() => setLoaderVisible(false), remainingTime);
+      const readyAt = performance.now();
+      let lastFrame = readyAt;
+      let stableStreak = 0;
+
+      const tick = (now: number) => {
+        stableStreak = now - lastFrame <= FRAME_BUDGET_MS ? stableStreak + 1 : 0;
+        lastFrame = now;
+
+        const minShown = now - loaderStartTime >= MIN_LOADER_DISPLAY_MS;
+        const timedOut = now - readyAt >= MAX_WAIT_AFTER_READY_MS;
+
+        if ((stableStreak >= STABLE_FRAMES && minShown) || timedOut) {
+          setLoaderVisible(false);
+          return;
+        }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
     };
 
     if (!window.electronAPI?.getSyncStatus) {
       // No electron API - probably in browser, show app after minimum time
-      hideLoaderWithDelay();
+      hideLoaderWhenStable();
       return;
     }
 
@@ -90,7 +114,7 @@ export const App: React.FC = () => {
       console.log('[App] Initial sync status:', status);
       setSyncStatus(status);
       if (status === 'ready' || status === 'error') {
-        hideLoaderWithDelay();
+        hideLoaderWhenStable();
       }
     });
 
@@ -99,13 +123,13 @@ export const App: React.FC = () => {
       console.log('[App] Sync status changed:', status);
       setSyncStatus(status);
       if (status === 'ready' || status === 'error') {
-        hideLoaderWithDelay();
+        hideLoaderWhenStable();
       }
     });
 
     return () => {
       unsubscribe();
-      if (hideTimeout) clearTimeout(hideTimeout);
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, [setSyncStatus, setLoaderVisible]);
 
