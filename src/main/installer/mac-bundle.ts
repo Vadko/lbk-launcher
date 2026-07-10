@@ -6,13 +6,13 @@ const MAX_ANCHORS = 5;
 const toPosix = (p: string): string => p.split(path.sep).join('/');
 const segmentCount = (p: string): number => p.split('/').length;
 
-export interface MacBundleResolution {
+interface MacBundleResolution {
   target: string | null;
   appBundleFound: boolean;
   matchedInsideBundle: number;
 }
 
-export function findAppBundles(gameRoot: string): string[] {
+function findAppBundles(gameRoot: string): string[] {
   try {
     return fs
       .readdirSync(gameRoot, { withFileTypes: true })
