@@ -2,10 +2,15 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
+import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
+import { useSettingsStore } from '@/renderer/store/useSettingsStore';
+import { teamToSlug } from '@/shared/search-utils';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';
+import { ShareModal } from '../Modal/ShareModal';
+import { Button } from '../ui/Button';
 
 interface GameHeroProps {
   game: Game;
@@ -48,6 +53,15 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   const [logoError, setLogoError] = useState(false);
   const [shouldRoundLogo, setShouldRoundLogo] = useState(false);
 
+  const { toggleFavoriteGame, isFavoriteGame } = useSettingsStore();
+  const isFavorite = game ? isFavoriteGame(game.id) : false;
+  // Toggle favorite handler
+  const handleToggleFavorite = useCallback(() => {
+    if (game) {
+      toggleFavoriteGame(game.id, game.name);
+    }
+  }, [game, toggleFavoriteGame]);
+
   // Reset state when game changes
   /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
   useEffect(() => {
@@ -65,6 +79,10 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
 
   const showBanner = bannerUrl && !bannerError;
   const showLogo = logoUrl && !logoError;
+
+  const hasShareButton = game.slug && game.team;
+  const teamSlug = teamToSlug(game.team);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div className="relative h-[300px] rounded-2xl overflow-hidden mb-6 select-none">
@@ -167,6 +185,37 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             </span>
           </motion.div>
         )}
+        <div className="absolute bottom-4 right-4 flex gap-2">
+          {hasShareButton && (
+            <>
+              <ShareModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                gameSlug={game.slug}
+                teamSlug={teamSlug}
+                gameName={game.name}
+                teamName={game.team}
+              />
+              <Button
+                variant="secondary"
+                icon={<Share2 size={20} />}
+                onClick={() => setIsModalOpen(true)}
+                data-nav-group="main-links"
+                data-gamepad-action
+                className="!px-4"
+                title="Поділитися"
+              />
+            </>
+          )}
+          <Button
+            variant="secondary"
+            icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+            onClick={handleToggleFavorite}
+            data-gamepad-action
+            className="!px-4"
+            title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+          />
+        </div>
       </AnimatePresence>
     </div>
   );

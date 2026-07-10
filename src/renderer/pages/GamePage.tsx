@@ -1,10 +1,8 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
-  AlertTriangle,
-  Bookmark,
-  BookmarkCheck,
   Download,
   EyeOff,
+  FileEdit,
   Heart,
   Play,
   RefreshCw,
@@ -65,13 +63,8 @@ export const GamePage: React.FC = () => {
   } = useStore();
 
   const { showModal } = useModalStore();
-  const {
-    showAdultGames,
-    openSettingsModal,
-    createBackupBeforeInstall,
-    toggleFavoriteGame,
-    isFavoriteGame,
-  } = useSettingsStore();
+  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
+    useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -104,14 +97,6 @@ export const GamePage: React.FC = () => {
     ? isTranslationInstallable(selectedGame.status)
     : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
-  const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
-
-  // Toggle favorite handler
-  const handleToggleFavorite = useCallback(() => {
-    if (selectedGame) {
-      toggleFavoriteGame(selectedGame.id, selectedGame.name);
-    }
-  }, [selectedGame, toggleFavoriteGame]);
 
   // Завантажити гру якщо її ще немає в selectedGame
   useEffect(() => {
@@ -536,7 +521,7 @@ export const GamePage: React.FC = () => {
                   disabled={isLaunching || isInstalling || isUninstalling}
                   data-gamepad-action
                 >
-                  {isLaunching ? 'Запуск...' : 'Грати'}
+                  Грати
                 </Button>
               )}
               <Button
@@ -568,17 +553,6 @@ export const GamePage: React.FC = () => {
               >
                 {getInstallButtonText()}
               </Button>
-              {installationInfo && !isInstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<Trash2 size={20} />}
-                  onClick={handleUninstall}
-                  disabled={isUninstalling}
-                  data-gamepad-action
-                >
-                  {isUninstalling ? 'Видалення...' : 'Видалити'}
-                </Button>
-              )}
               {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
                 <Button
                   variant="secondary"
@@ -589,6 +563,15 @@ export const GamePage: React.FC = () => {
                 >
                   Перевстановити
                 </Button>
+              )}
+              {installationInfo && !isInstalling && (
+                <Button
+                  variant="secondary"
+                  icon={<Trash2 size={20} />}
+                  onClick={handleUninstall}
+                  disabled={isUninstalling}
+                  data-gamepad-action
+                ></Button>
               )}
 
               {/* Separator */}
@@ -604,15 +587,6 @@ export const GamePage: React.FC = () => {
                   data-gamepad-action
                 />
               )}
-              <Button
-                variant="secondary"
-                icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-                onClick={handleToggleFavorite}
-                data-gamepad-action
-                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
-              >
-                {isFavorite ? 'В улюблених' : 'До улюблених'}
-              </Button>
               {selectedGame.support_url &&
                 bannerInfo.placementType &&
                 !(
@@ -625,24 +599,39 @@ export const GamePage: React.FC = () => {
                     data-gamepad-action
                     className="support-button"
                   >
-                    Підтримати переклад
+                    Підтримати
                   </Button>
                 )}
+              {isTranslationInstalled && (
+                <Button
+                  variant="secondary"
+                  icon={<FileEdit size={20} />}
+                  onClick={() => setShowFeedbackModal(true)}
+                  data-gamepad-action
+                  className="support-button"
+                >
+                  Лишити відгук
+                </Button>
+              )}
             </div>
 
-            <ImportantNotice game={selectedGame} />
+            <div className="flex gap-3">
+              {installationInfo && !isCheckingInstallation && !isInstalling && (
+                <>
+                  <InstallationStatusBadge
+                    isUpdateAvailable={!!isUpdateAvailable}
+                    installedVersion={installationInfo.version}
+                    hasInstallError={installationInfo.hasInstallError}
+                    newVersion={selectedGame?.version}
+                  />
+                  <div className="w-0 h-auto border-l border-border-hover last:hidden" />
+                </>
+              )}
+              <ImportantNotice game={selectedGame} />
+            </div>
           </div>
 
           <div className="space-y-4 mb-6">
-            {installationInfo && !isCheckingInstallation && !isInstalling && (
-              <InstallationStatusBadge
-                isUpdateAvailable={!!isUpdateAvailable}
-                installedVersion={installationInfo.version}
-                hasInstallError={installationInfo.hasInstallError}
-                newVersion={selectedGame?.version}
-              />
-            )}
-
             {(isInstalling || isPaused || isWaitingForNetwork) && (
               <div className="glass-card-no-motion">
                 {downloadProgress && downloadProgress.totalBytes > 0 ? (
@@ -870,31 +859,6 @@ export const GamePage: React.FC = () => {
             <div className="flex-1 min-w-0">
               <SocialLinksCard game={selectedGame} />
             </div>
-            <AnimatePresence>
-              {isTranslationInstalled && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 320, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="overflow-visible flex-shrink-0"
-                >
-                  <div className="glass-card-no-motion h-full flex flex-col justify-center gap-4 w-[320px] p-6">
-                    <h3 className="text-base font-semibold text-text-main">
-                      Знайшли помилку?
-                    </h3>
-                    <button
-                      onClick={() => setShowFeedbackModal(true)}
-                      data-gamepad-action
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-text-main hover:bg-glass-hover transition-colors"
-                    >
-                      <AlertTriangle size={16} />
-                      Повідомити про помилку
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         </LayoutGroup>
       </div>
