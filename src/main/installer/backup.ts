@@ -67,11 +67,13 @@ export async function backupFiles(
   sourceDir: string,
   targetDir: string,
   backupDir?: string,
-  relativePath = ''
+  relativePath = '',
+  backupRootTarget?: string
 ): Promise<void> {
   try {
-    // Initialize backup directory on first call
-    const rootBackupDir = backupDir || findBackupDir(targetDir);
+    // `backupRootTarget` anchors `.lbk-backup` at the game root even when files
+    // go into a subfolder, so uninstall can find it.
+    const rootBackupDir = backupDir || findBackupDir(backupRootTarget ?? targetDir);
 
     if (!backupDir) {
       // First call - create backup directory if needed

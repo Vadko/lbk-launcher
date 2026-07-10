@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import logo from '../../../../resources/logo.svg';
+import { ShaderWarmup } from './ShaderWarmup';
 
 interface AppLoaderProps {
   status: 'syncing' | 'ready' | 'error' | 'loading';
@@ -27,6 +28,9 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
     >
       {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-color-main/10" />
+
+      {/* Прогрів шейдерних пайплайнів, поки лоадер прикриває екран */}
+      <ShaderWarmup />
 
       {/* Animated glow behind logo */}
       <motion.div

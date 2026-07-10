@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import type { InstallationInfo } from '../../../shared/types';
+import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -19,6 +20,7 @@ interface GameGroupItemProps {
   gamesWithUpdates: Set<string>;
   isGameDetected: (gameId: string) => boolean;
   getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
+  imageDeferred?: boolean;
 }
 
 export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
@@ -31,14 +33,16 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     gamesWithUpdates,
     isGameDetected,
     getInstallationInfo,
+    imageDeferred = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
-    const [imageError, setImageError] = useState(false);
+    const [erroredUrl, setErroredUrl] = useState<string | null>(null);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
     const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
     const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
 
     const primaryGame = group.translations[0];
+    const imageSettled = useDeferredImage(imageDeferred, primaryGame.id);
     const isAnySelected = group.translations.some((t) => selectedGameId === t.id);
     const anyHasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
@@ -49,7 +53,11 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     );
 
     // Use thumbnail from the first translation
-    const thumbnailUrl = getGameImageUrl(primaryGame.thumbnail_path);
+    const thumbnailUrl = getGameImageUrl(
+      primaryGame.thumbnail_path,
+      primaryGame.updated_at
+    );
+    const imageError = erroredUrl === thumbnailUrl;
 
     // Check if primary game is adult
     const isAdultBlurred = primaryGame.is_adult && !showAdultGames;
@@ -101,19 +109,22 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       <Loader size="sm" />
                     </div>
                   )}
-                  <img
-                    src={thumbnailUrl}
-                    alt={group.name}
-                    draggable={false}
-                    className={`w-full h-full object-cover transition-opacity duration-300 ${
-                      imageLoading ? 'opacity-0' : 'opacity-100'
-                    }`}
-                    onLoad={() => setImageLoading(false)}
-                    onError={() => {
-                      setImageError(true);
-                      setImageLoading(false);
-                    }}
-                  />
+                  {imageSettled && (
+                    <img
+                      src={thumbnailUrl}
+                      alt={group.name}
+                      draggable={false}
+                      decoding="async"
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        imageLoading ? 'opacity-0' : 'opacity-100'
+                      }`}
+                      onLoad={() => setImageLoading(false)}
+                      onError={() => {
+                        setErroredUrl(thumbnailUrl);
+                        setImageLoading(false);
+                      }}
+                    />
+                  )}
                 </>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-sm">

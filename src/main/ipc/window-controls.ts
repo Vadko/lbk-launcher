@@ -161,8 +161,10 @@ export function setupWindowControls(): void {
 
       // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
+      // 'shadercache' навмисно НЕ чистимо: це кеш скомпільованих GPU-пайплайнів,
+      // без нього наступний запуск ловить шторм компіляції шейдерів (лаги анімацій)
       await session.defaultSession.clearStorageData({
-        storages: ['cookies', 'filesystem', 'shadercache', 'cachestorage'],
+        storages: ['cookies', 'filesystem', 'cachestorage'],
       });
 
       // Clear Steam library file cache stored in userData
@@ -203,12 +205,12 @@ export function setupWindowControls(): void {
       // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
+        // 'shadercache' навмисно не входить — див. коментар у clear-cache-only
         storages: [
           'cookies',
           'filesystem',
           'indexdb',
           'localstorage',
-          'shadercache',
           'websql',
           'serviceworkers',
           'cachestorage',

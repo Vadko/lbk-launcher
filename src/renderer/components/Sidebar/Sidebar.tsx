@@ -221,6 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
 
     const listRef = useRef<HTMLDivElement>(null);
+    const stripRef = useRef<HTMLDivElement>(null);
 
     // Resize state
     const [isResizing, setIsResizing] = useState(false);
@@ -343,13 +344,16 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
           {/* Games strip */}
           <div
+            ref={stripRef}
             data-gamepad-game-list
+            data-gamepad-total={gameGroups.length}
             className="px-4 py-3 overflow-x-auto custom-scrollbar"
           >
             <HorizontalGameList
               gameGroups={gameGroups}
               totalGames={totalGames}
               isLoading={isLoading}
+              scrollRef={stripRef}
               animationsEnabled={animationsEnabled}
               selectedGameId={selectedGame?.id}
               gamesWithUpdates={gamesWithUpdates}
@@ -411,6 +415,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             gameGroups={gameGroups}
             totalGames={totalGames}
             isLoading={isLoading}
+            scrollRef={listRef}
             animationsEnabled={animationsEnabled}
             expandedGroups={expandedGroups}
             selectedGameId={selectedGame?.id}

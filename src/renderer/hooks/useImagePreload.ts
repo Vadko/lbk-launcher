@@ -2,13 +2,7 @@ import { useEffect, useRef } from 'react';
 
 const preloadedUrls = new Set<string>();
 
-/**
- * Preloads images when element becomes visible in viewport
- */
-export function useImagePreload(
-  urls: (string | null)[],
-  options?: { rootMargin?: string }
-) {
+export function useImagePreload(urls: (string | null)[]) {
   const elementRef = useRef<HTMLDivElement>(null);
   const hasPreloaded = useRef(false);
 
@@ -16,38 +10,28 @@ export function useImagePreload(
     const element = elementRef.current;
     if (!element || hasPreloaded.current) return;
 
-    const validUrls = urls.filter(
-      (url): url is string => url !== null && !preloadedUrls.has(url)
-    );
-
-    if (validUrls.length === 0) {
+    const preload = () => {
+      if (hasPreloaded.current) return;
       hasPreloaded.current = true;
-      return;
-    }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && !hasPreloaded.current) {
-          hasPreloaded.current = true;
-
-          validUrls.forEach((url) => {
-            if (!preloadedUrls.has(url)) {
-              const img = new Image();
-              img.src = url;
-              preloadedUrls.add(url);
-            }
-          });
-
-          observer.disconnect();
+      for (const url of urls) {
+        if (url && !preloadedUrls.has(url)) {
+          const img = new Image();
+          img.src = url;
+          preloadedUrls.add(img.src);
+          preloadedUrls.add(url);
         }
-      },
-      { rootMargin: options?.rootMargin ?? '200px' }
-    );
+      }
+    };
 
-    observer.observe(element);
+    element.addEventListener('mouseenter', preload, { once: true });
+    element.addEventListener('focusin', preload, { once: true });
 
-    return () => observer.disconnect();
-  }, [urls, options?.rootMargin]);
+    return () => {
+      element.removeEventListener('mouseenter', preload);
+      element.removeEventListener('focusin', preload);
+    };
+  }, [urls]);
 
   return elementRef;
 }

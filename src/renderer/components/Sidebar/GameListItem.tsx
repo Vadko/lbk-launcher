@@ -1,6 +1,7 @@
 import { Bookmark, BookmarkCheck, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
+import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -24,6 +25,7 @@ interface GameListItemProps {
   showDownloadCounter?: boolean;
   isTranslationAvailable?: boolean;
   variant?: string;
+  imageDeferred?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -39,9 +41,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     showDownloadCounter = false,
     isTranslationAvailable = true,
     variant,
+    imageDeferred = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
-    const [imageError, setImageError] = useState(false);
+    const [erroredUrl, setErroredUrl] = useState<string | null>(null);
+    const imageSettled = useDeferredImage(imageDeferred, game.id);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
     const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
     const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
@@ -58,6 +62,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
       (isCardStyle ? game.capsule_path : null) ?? game.thumbnail_path,
       game.updated_at
     );
+    const imageError = erroredUrl === thumbnailUrl;
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
@@ -112,19 +117,22 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     <Loader size="sm" />
                   </div>
                 )}
-                <img
-                  src={thumbnailUrl}
-                  alt={game.name}
-                  draggable={false}
-                  className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
-                    imageLoading ? 'opacity-0' : 'opacity-100'
-                  } ${isAdultBlurred ? 'blur-lg' : ''}`}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoading(false);
-                  }}
-                />
+                {imageSettled && (
+                  <img
+                    src={thumbnailUrl}
+                    alt={game.name}
+                    draggable={false}
+                    decoding="async"
+                    className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
+                      imageLoading ? 'opacity-0' : 'opacity-100'
+                    } ${isAdultBlurred ? 'blur-lg' : ''}`}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => {
+                      setErroredUrl(thumbnailUrl);
+                      setImageLoading(false);
+                    }}
+                  />
+                )}
               </>
             ) : (
               <div
@@ -243,19 +251,22 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     <Loader size="sm" />
                   </div>
                 )}
-                <img
-                  src={thumbnailUrl}
-                  alt={game.name}
-                  draggable={false}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imageLoading ? 'opacity-0' : 'opacity-100'
-                  } ${isAdultBlurred ? 'blur-md' : ''}`}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoading(false);
-                  }}
-                />
+                {imageSettled && (
+                  <img
+                    src={thumbnailUrl}
+                    alt={game.name}
+                    draggable={false}
+                    decoding="async"
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${
+                      imageLoading ? 'opacity-0' : 'opacity-100'
+                    } ${isAdultBlurred ? 'blur-md' : ''}`}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => {
+                      setErroredUrl(thumbnailUrl);
+                      setImageLoading(false);
+                    }}
+                  />
+                )}
               </>
             ) : (
               <div
