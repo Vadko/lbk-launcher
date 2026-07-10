@@ -51,7 +51,9 @@ export function findInstallationInfoFile(gamePath: string) {
  */
 export function readInstallationInfo(gamePath: string): InstallationInfo | null {
   const infoPath = findInstallationInfoFile(gamePath);
-  if (!fs.existsSync(infoPath)) return null;
+  if (!fs.existsSync(infoPath)) {
+    return null;
+  }
   try {
     return JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
   } catch (error) {
@@ -275,7 +277,9 @@ export function invalidateInstalledGameIdsCache(): void {
 export async function removeOrphanedInstallationMetadata(
   gameIds: string[]
 ): Promise<void> {
-  if (gameIds.length === 0) return;
+  if (gameIds.length === 0) {
+    return;
+  }
 
   console.log(
     `[Installer] Removing ${gameIds.length} orphaned installation metadata files`

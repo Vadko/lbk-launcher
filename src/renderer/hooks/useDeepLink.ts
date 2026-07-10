@@ -10,7 +10,9 @@ export function useDeepLink() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!window.electronAPI?.onDeepLink) return;
+    if (!window.electronAPI?.onDeepLink) {
+      return;
+    }
 
     const handleDeepLink = async (data: { slug: string; team: string }) => {
       console.log('[DeepLink] Navigating to:', data);

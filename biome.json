@@ -22,7 +22,13 @@
     "lineWidth": 90
   },
   "linter": {
-    "enabled": false
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "style": {
+        "useBlockStatements": "error"
+      }
+    }
   },
   "javascript": {
     "formatter": {

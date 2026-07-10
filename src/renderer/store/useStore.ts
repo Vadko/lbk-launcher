@@ -106,7 +106,9 @@ export const useStore = create<Store>((set, get) => ({
 
   // UI Actions
   setSelectedGame: (game) => {
-    if (game) trackEvent('Select game', { 'Game Id': game.id, 'Game Name': game.name });
+    if (game) {
+      trackEvent('Select game', { 'Game Id': game.id, 'Game Name': game.name });
+    }
     set({ selectedGame: game });
   },
 
@@ -118,7 +120,9 @@ export const useStore = create<Store>((set, get) => ({
 
   // Steam Actions
   loadSteamGames: async () => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     console.log('[Store] Loading Steam games...');
     const steamGamesObj = await window.electronAPI.getAllInstalledSteamGames();
@@ -135,7 +139,9 @@ export const useStore = create<Store>((set, get) => ({
 
   // Installation Actions
   loadInstalledGamesFromSystem: async () => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     console.log('[Store] Loading installed translations from installation-cache');
 
@@ -248,7 +254,9 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   checkInstallationStatus: async (gameId: string, game: Game) => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     set((state) => {
       const newMap = new Map(state.isCheckingInstallation);
@@ -332,7 +340,9 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   detectInstalledGames: async (games: Game[]) => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     try {
       const state = get();
@@ -373,7 +383,9 @@ export const useStore = create<Store>((set, get) => ({
         // Перевіряємо шляхи встановлення
         if (game.install_paths && game.install_paths.length > 0) {
           for (const installPath of game.install_paths) {
-            if (!installPath.path) continue;
+            if (!installPath.path) {
+              continue;
+            }
 
             // Нормалізуємо шлях з бази даних
             // З Steam шляхів ("steamapps/common/Game") витягуємо назву папки
@@ -463,7 +475,9 @@ export const useStore = create<Store>((set, get) => ({
     // Check each subscribed game
     subscribedGames.forEach((gameId) => {
       const game = gamesMap.get(gameId);
-      if (!game) return;
+      if (!game) {
+        return;
+      }
 
       const savedStatus = getSubscribedStatus(gameId);
       const savedProgress = getSubscribedProgress(gameId);
@@ -560,7 +574,9 @@ export const useStore = create<Store>((set, get) => ({
       notifications,
     } = useSubscriptionsStore.getState();
 
-    if (!updatedGame.team || !isSubscribedToTeam(updatedGame.team)) return;
+    if (!updatedGame.team || !isSubscribedToTeam(updatedGame.team)) {
+      return;
+    }
 
     // Skip if user is also subscribed to this specific game (to avoid duplicate notifications)
     const isAlsoSubscribedToGame = subscribedGames.has(updatedGame.id);

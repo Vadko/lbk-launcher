@@ -44,7 +44,9 @@ function showAndFocusWindow(): void {
 }
 
 function createTray() {
-  if (tray) return tray;
+  if (tray) {
+    return tray;
+  }
 
   const icon = nativeImage.createFromPath(getIcon('tray'));
 

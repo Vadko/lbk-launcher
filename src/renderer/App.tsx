@@ -80,7 +80,9 @@ export const App: React.FC = () => {
     const MAX_WAIT_AFTER_READY_MS = 8000;
 
     const hideLoaderWhenStable = () => {
-      if (hideStarted) return;
+      if (hideStarted) {
+        return;
+      }
       hideStarted = true;
 
       const readyAt = performance.now();
@@ -129,13 +131,17 @@ export const App: React.FC = () => {
 
     return () => {
       unsubscribe();
-      if (rafId) cancelAnimationFrame(rafId);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [setSyncStatus, setLoaderVisible]);
 
   // Відстеження першого запуску додатку
   useEffect(() => {
-    if (!window.storeStorage) return;
+    if (!window.storeStorage) {
+      return;
+    }
 
     const hasLaunchedBefore = window.storeStorage.getItem('has-launched-before');
     if (!hasLaunchedBefore) {
@@ -158,7 +164,9 @@ export const App: React.FC = () => {
     const tick = () => {
       if (!useGamepadModeStore.getState().isGamepadMode) {
         for (const pad of navigator.getGamepads()) {
-          if (!pad || !pad.connected || !isValidGamepad(pad)) continue;
+          if (!pad || !pad.connected || !isValidGamepad(pad)) {
+            continue;
+          }
           const anyButtonPressed = pad.buttons.some((b) => b.pressed);
           const anyAxisMoved = pad.axes.some(
             (axis) => Math.abs(axis) > MODE_SWITCH_DEADZONE
@@ -173,18 +181,24 @@ export const App: React.FC = () => {
     };
 
     const startPolling = () => {
-      if (rafId) return;
+      if (rafId) {
+        return;
+      }
       rafId = requestAnimationFrame(tick);
     };
 
     const stopPolling = () => {
-      if (!rafId) return;
+      if (!rafId) {
+        return;
+      }
       cancelAnimationFrame(rafId);
       rafId = 0;
     };
 
     const handleGamepadConnected = (e: GamepadEvent) => {
-      if (!isValidGamepad(e.gamepad)) return;
+      if (!isValidGamepad(e.gamepad)) {
+        return;
+      }
       console.log('[App] Gamepad connected:', e.gamepad.id);
       setGamepadMode(true);
       startPolling();
@@ -201,7 +215,9 @@ export const App: React.FC = () => {
 
     const handleMouseMove = () => {
       const now = Date.now();
-      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
+      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) {
+        return;
+      }
       lastMouseMoveRef.current = now;
       if (useGamepadModeStore.getState().isGamepadMode) {
         setGamepadMode(false);
@@ -263,7 +279,9 @@ export const App: React.FC = () => {
 
   // Детекція встановлених ігор на початку (якщо увімкнено)
   useIdleEffect(async () => {
-    if (!autoDetectInstalledGames || !window.electronAPI) return;
+    if (!autoDetectInstalledGames || !window.electronAPI) {
+      return;
+    }
 
     // Отримати всі ігри з локальної бази
     const result = await window.electronAPI.fetchGames();
@@ -277,7 +295,9 @@ export const App: React.FC = () => {
 
   // Слухати зміни Steam бібліотеки
   useEffect(() => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     const handleSteamLibraryChange = async () => {
       console.log('[App] Steam library changed, clearing cache and reloading');
@@ -313,7 +333,9 @@ export const App: React.FC = () => {
   // Слухати зміни встановлених українізаторів
   // Цей listener потрібен для всіх змін: інсталяція, деінсталяція, зовнішні зміни
   useEffect(() => {
-    if (!window.electronAPI?.onInstalledGamesChanged) return;
+    if (!window.electronAPI?.onInstalledGamesChanged) {
+      return;
+    }
 
     const handleInstalledGamesChanged = () => {
       console.log('[App] Installed games changed, reloading from system');
@@ -329,7 +351,9 @@ export const App: React.FC = () => {
 
   // [DEV ONLY] Listen for test games changes and broadcast to components
   useEffect(() => {
-    if (!window.electronAPI?.onTestGamesChanged) return;
+    if (!window.electronAPI?.onTestGamesChanged) {
+      return;
+    }
 
     const handleTestGamesChanged = () => {
       window.dispatchEvent(new Event('test-games-updated'));
@@ -344,7 +368,9 @@ export const App: React.FC = () => {
   // the flag file Steam reads on startup; one restart enables live config
   // updates for all future installs.
   useEffect(() => {
-    if (!window.electronAPI?.onSteamRestartRequired) return;
+    if (!window.electronAPI?.onSteamRestartRequired) {
+      return;
+    }
     const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
       useModalStore.getState().showModal({
         title: 'Перезапустіть Steam',

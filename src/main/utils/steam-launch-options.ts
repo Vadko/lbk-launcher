@@ -51,8 +51,12 @@ interface WriteLaunchOptionsResult {
 }
 
 function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | null {
-  if (isWindows()) return params.windowsOptions;
-  if (isLinux() || isMacOS()) return params.linuxOptions;
+  if (isWindows()) {
+    return params.windowsOptions;
+  }
+  if (isLinux() || isMacOS()) {
+    return params.linuxOptions;
+  }
   return null;
 }
 
@@ -78,9 +82,15 @@ const COMMAND_TOKEN = '%command%';
  */
 function mergeLaunchOptions(existing: string | null, ours: string): string {
   const existingTrim = (existing ?? '').trim();
-  if (!existingTrim) return ours;
-  if (existingTrim === ours) return existingTrim;
-  if (existingTrim.includes(ours)) return existingTrim;
+  if (!existingTrim) {
+    return ours;
+  }
+  if (existingTrim === ours) {
+    return existingTrim;
+  }
+  if (existingTrim.includes(ours)) {
+    return existingTrim;
+  }
 
   if (ours.includes(COMMAND_TOKEN)) {
     // Extract whatever args the user had after their own %command% (if any),
@@ -91,8 +101,12 @@ function mergeLaunchOptions(existing: string | null, ours: string): string {
           .trim()
       : existingTrim;
 
-    if (!userArgs) return ours;
-    if (ours.includes(userArgs)) return ours;
+    if (!userArgs) {
+      return ours;
+    }
+    if (ours.includes(userArgs)) {
+      return ours;
+    }
     return ours.replace(COMMAND_TOKEN, `${COMMAND_TOKEN} ${userArgs}`);
   }
 
@@ -116,7 +130,9 @@ function readNestedPairValue(
   let cursor: KeyVSet | KeyVRoot = root;
   for (const seg of segments) {
     const next: KeyVSet | null = cursor.dir(seg, null);
-    if (!next) return null;
+    if (!next) {
+      return null;
+    }
     cursor = next;
   }
   const pair: KeyV | null = cursor.pair(pairKey, null);

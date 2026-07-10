@@ -16,7 +16,6 @@ export function useListCompositionKey(
     return `${items.length}_${first}_${last}`;
   }, [items]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: скидаємо скрол саме на зміну складу списку
   useEffect(() => {
     scrollRef.current?.scrollTo(axis === 'vertical' ? { top: 0 } : { left: 0 });
   }, [compositionKey, scrollRef, axis]);

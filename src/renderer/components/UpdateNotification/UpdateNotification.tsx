@@ -16,7 +16,9 @@ export const UpdateNotification = () => {
   const notifiedVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     // Listen for update events
     const unsubAvailable = window.electronAPI.onUpdateAvailable(async (info) => {
@@ -82,14 +84,17 @@ export const UpdateNotification = () => {
     ?.downloadUrl;
 
   const handleOpenExternal = () => {
-    if (!externalDownloadUrl) return;
+    if (!externalDownloadUrl) {
+      return;
+    }
     useSubscriptionsStore.getState().markAppUpdateNotificationsAsRead();
     window.electronAPI.openExternal(externalDownloadUrl);
     setUpdateAvailable(false);
   };
 
-  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded))
+  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded)) {
     return null;
+  }
 
   const content = (
     <>

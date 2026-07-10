@@ -26,6 +26,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
  * @returns Localized language name in accusative case or null if not found
  */
 export function getLanguageHint(code: string | null | undefined): string | null {
-  if (!code) return null;
+  if (!code) {
+    return null;
+  }
   return LANGUAGE_NAMES[code.toUpperCase()] ?? null;
 }

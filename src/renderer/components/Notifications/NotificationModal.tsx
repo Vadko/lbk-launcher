@@ -82,10 +82,18 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return 'Щойно';
-    if (minutes < 60) return `${minutes} хв тому`;
-    if (hours < 24) return `${hours} год тому`;
-    if (days < 7) return `${days} дн тому`;
+    if (minutes < 1) {
+      return 'Щойно';
+    }
+    if (minutes < 60) {
+      return `${minutes} хв тому`;
+    }
+    if (hours < 24) {
+      return `${hours} год тому`;
+    }
+    if (days < 7) {
+      return `${days} дн тому`;
+    }
 
     return date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });
   };

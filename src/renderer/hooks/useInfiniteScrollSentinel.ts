@@ -16,7 +16,9 @@ export function useInfiniteScrollSentinel({
   const attachSentinel = useCallback(
     (node: HTMLDivElement | null) => {
       observerRef.current?.disconnect();
-      if (!node) return;
+      if (!node) {
+        return;
+      }
       observerRef.current = new IntersectionObserver((entries) => {
         if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
           fetchNextPage();

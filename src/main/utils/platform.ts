@@ -17,14 +17,22 @@ export function isPortable(): boolean {
 }
 
 export function getPlatform(): 'macos' | 'windows' | 'linux' | 'unknown' {
-  if (isMacOS()) return 'macos';
-  if (isWindows()) return 'windows';
-  if (isLinux()) return 'linux';
+  if (isMacOS()) {
+    return 'macos';
+  }
+  if (isWindows()) {
+    return 'windows';
+  }
+  if (isLinux()) {
+    return 'linux';
+  }
   return 'unknown';
 }
 
 function getMacOSVersion(): number {
-  if (!isMacOS()) return 0;
+  if (!isMacOS()) {
+    return 0;
+  }
 
   // Parse Darwin kernel version from os.release()
   // Darwin kernel version is typically one less than macOS marketing version:
@@ -38,7 +46,9 @@ function getMacOSVersion(): number {
 }
 
 export function supportsMacOSLiquidGlass(): boolean {
-  if (!isMacOS()) return false;
+  if (!isMacOS()) {
+    return false;
+  }
 
   const macOSVersion = getMacOSVersion();
   // macOS 26 (Darwin 25.x) or later supports liquid glass

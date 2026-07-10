@@ -47,7 +47,9 @@ function getEpicPath(): string | null {
   try {
     if (isWindows()) {
       const programData = process.env.PROGRAMDATA;
-      if (!programData) return null;
+      if (!programData) {
+        return null;
+      }
       const manifestPath = path.join(
         programData,
         'Epic',
@@ -368,7 +370,9 @@ export function getEpicLibrary(): string[] {
  * Get Epic App Name from Heroic/Legendary config by path
  */
 export function getHeroicEpicAppName(gamePath: string): string | null {
-  if (!isLinux()) return null;
+  if (!isLinux()) {
+    return null;
+  }
 
   try {
     const configPaths = getHeroicConfigPaths().flatMap((p) => [
@@ -406,8 +410,12 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
         });
 
         if (game) {
-          if (game.app_name) return game.app_name;
-          if (game.appName) return game.appName;
+          if (game.app_name) {
+            return game.app_name;
+          }
+          if (game.appName) {
+            return game.appName;
+          }
         }
 
         // 1.5 Try path match in Object keys loop (if gamesById was populated)

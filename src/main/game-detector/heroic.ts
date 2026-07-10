@@ -11,7 +11,9 @@ import { isLinux } from '../utils/platform';
  * Get Heroic game installation paths (native + Flatpak)
  */
 export function getHeroicGamePaths(): string[] {
-  if (!isLinux()) return [];
+  if (!isLinux()) {
+    return [];
+  }
 
   const home = os.homedir();
   return [
@@ -24,7 +26,9 @@ export function getHeroicGamePaths(): string[] {
  * Get Heroic config paths (native + Flatpak)
  */
 export function getHeroicConfigPaths(): string[] {
-  if (!isLinux()) return [];
+  if (!isLinux()) {
+    return [];
+  }
 
   const home = os.homedir();
   return [

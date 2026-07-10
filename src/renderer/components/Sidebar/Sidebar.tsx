@@ -138,7 +138,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     }, []);
 
     useEffect(() => {
-      if (syncStatus !== 'ready' && syncStatus !== 'error') return;
+      if (syncStatus !== 'ready' && syncStatus !== 'error') {
+        return;
+      }
       loadAuthors();
 
       const unsub = window.electronAPI?.onGameUpdated?.(() => loadAuthors());
@@ -239,7 +241,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     );
 
     useEffect(() => {
-      if (!isResizing) return;
+      if (!isResizing) {
+        return;
+      }
 
       // Set cursor on body to maintain it when mouse leaves the handle
       document.body.style.cursor = 'col-resize';

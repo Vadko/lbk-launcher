@@ -36,7 +36,9 @@ function parseDeepLink(url: string): { slug: string; team: string } | null {
   try {
     // URL format: lbk://games/{slug}/{team}
     const urlObj = new URL(url);
-    if (urlObj.protocol !== `${PROTOCOL}:`) return null;
+    if (urlObj.protocol !== `${PROTOCOL}:`) {
+      return null;
+    }
 
     const pathParts = urlObj.pathname.replace(/^\/+/, '').split('/');
     // pathParts: ['games', 'slug', 'team'] or hostname might be 'games'
@@ -234,7 +236,9 @@ if (!gotTheLock) {
   app.whenReady().then(async () => {
     if (isWindows() || isLinux()) {
       const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
-      if (deepLinkUrl) pendingDeepLink = deepLinkUrl;
+      if (deepLinkUrl) {
+        pendingDeepLink = deepLinkUrl;
+      }
     }
 
     // Install React DevTools in development
@@ -381,7 +385,9 @@ if (!gotTheLock) {
   });
 
   app.on('will-quit', (event) => {
-    if (isQuitting || skipQuitTracking) return; // Already processing or skipped by clear-cache
+    if (isQuitting || skipQuitTracking) {
+      return; // Already processing or skipped by clear-cache
+    }
 
     event.preventDefault();
     isQuitting = true;

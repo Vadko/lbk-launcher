@@ -102,8 +102,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       const fileArray = Array.from(files);
 
       for (const file of fileArray) {
-        if (!ALLOWED_TYPES.includes(file.type)) continue;
-        if (screenshots.length + newFiles.length >= MAX_SCREENSHOTS) break;
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          continue;
+        }
+        if (screenshots.length + newFiles.length >= MAX_SCREENSHOTS) {
+          break;
+        }
 
         newFiles.push({
           name: file.name,
@@ -140,7 +144,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const handleSubmit = useCallback(async () => {
     const trimmedMessage = message.trim();
-    if (!trimmedMessage || isSubmitting) return;
+    if (!trimmedMessage || isSubmitting) {
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -339,7 +345,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) addFiles(e.target.files);
+              if (e.target.files) {
+                addFiles(e.target.files);
+              }
               e.target.value = '';
             }}
           />

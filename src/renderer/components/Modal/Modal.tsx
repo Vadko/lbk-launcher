@@ -31,7 +31,9 @@ export const Modal: React.FC<ModalProps> = ({
 
   // Закриття модалки по Escape
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      return;
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();

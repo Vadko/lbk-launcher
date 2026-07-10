@@ -7,7 +7,9 @@ import { Modal } from './Modal';
 export const GlobalModal: React.FC = () => {
   const { isOpen, config, closeModal } = useModalStore();
 
-  if (!config) return null;
+  if (!config) {
+    return null;
+  }
 
   const getIcon = () => {
     switch (config.type) {

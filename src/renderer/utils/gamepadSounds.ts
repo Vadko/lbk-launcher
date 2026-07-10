@@ -19,14 +19,20 @@ function getAudioContext(): AudioContext {
 }
 
 function shouldPlay(opts?: PlayOptions): boolean {
-  if (opts?.ignoreSettings) return true;
-  if (!document.hasFocus()) return false;
+  if (opts?.ignoreSettings) {
+    return true;
+  }
+  if (!document.hasFocus()) {
+    return false;
+  }
   return useSettingsStore.getState().gamepadSoundsEnabled;
 }
 
 /** Soft click when moving between items. */
 export function playNavigateSound(opts?: PlayOptions): void {
-  if (!shouldPlay(opts)) return;
+  if (!shouldPlay(opts)) {
+    return;
+  }
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -54,7 +60,9 @@ export function playNavigateSound(opts?: PlayOptions): void {
 
 /** Positive confirmation: two quick ascending tones (C5 → E5). */
 export function playConfirmSound(opts?: PlayOptions): void {
-  if (!shouldPlay(opts)) return;
+  if (!shouldPlay(opts)) {
+    return;
+  }
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
@@ -83,7 +91,9 @@ export function playConfirmSound(opts?: PlayOptions): void {
 
 /** Back/cancel: descending tone. */
 export function playBackSound(opts?: PlayOptions): void {
-  if (!shouldPlay(opts)) return;
+  if (!shouldPlay(opts)) {
+    return;
+  }
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;

@@ -41,10 +41,14 @@ export async function resolveMacBundleTarget(
     appBundleFound: appBundles.length > 0,
     matchedInsideBundle: 0,
   };
-  if (appBundles.length === 0) return empty;
+  if (appBundles.length === 0) {
+    return empty;
+  }
 
   const archiveFiles = (await getAllFiles(extractDir)).map(toPosix);
-  if (archiveFiles.length === 0) return empty;
+  if (archiveFiles.length === 0) {
+    return empty;
+  }
 
   // Deepest paths first — distinctive anchors avoid matching generic filenames.
   const anchors = [...archiveFiles]
@@ -80,7 +84,9 @@ export async function resolveMacBundleTarget(
       let score = 0;
       for (const rel of archiveFiles) {
         const relLower = rel.toLowerCase();
-        if (bundleSetLower.has(base ? `${baseLower}/${relLower}` : relLower)) score++;
+        if (bundleSetLower.has(base ? `${baseLower}/${relLower}` : relLower)) {
+          score++;
+        }
       }
       if (!best || score > best.score) {
         best = { baseAbs: base ? path.join(bundle, base) : bundle, score };
@@ -91,7 +97,9 @@ export async function resolveMacBundleTarget(
     }
   }
 
-  if (!best) return empty;
+  if (!best) {
+    return empty;
+  }
 
   const confident =
     best.score >= Math.max(1, Math.ceil(archiveFiles.length / 2)) && bestTies === 1;

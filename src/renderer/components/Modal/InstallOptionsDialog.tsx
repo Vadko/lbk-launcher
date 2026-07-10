@@ -171,7 +171,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 
   // Compute approximate backup size (same as what will be installed)
   const backupSize = useMemo(() => {
-    if (isReinstall) return null;
+    if (isReinstall) {
+      return null;
+    }
 
     const sizes: (string | null)[] = [game.archive_size];
 
@@ -617,12 +619,18 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
  * Calculate total size from size strings like "150.00 MB" and "50.00 MB"
  */
 function calculateTotalSize(sizes: string[]): string {
-  if (sizes.length === 0) return 'N/A';
-  if (sizes.length === 1) return sizes[0];
+  if (sizes.length === 0) {
+    return 'N/A';
+  }
+  if (sizes.length === 1) {
+    return sizes[0];
+  }
 
   const parseSize = (sizeStr: string): number => {
     const match = sizeStr.trim().match(/([\d.]+)\s*(B|KB|MB|GB)/i);
-    if (!match) return 0;
+    if (!match) {
+      return 0;
+    }
 
     const value = parseFloat(match[1]);
     const unit = match[2].toUpperCase();
@@ -638,9 +646,15 @@ function calculateTotalSize(sizes: string[]): string {
   };
 
   const formatSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(2)} KB`;
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    }
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 

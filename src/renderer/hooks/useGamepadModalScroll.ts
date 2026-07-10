@@ -23,7 +23,9 @@ export function useGamepadModalScroll<T extends HTMLElement = HTMLElement>(
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
 
   useEffect(() => {
-    if (!isOpen || !isGamepadMode) return;
+    if (!isOpen || !isGamepadMode) {
+      return;
+    }
 
     let rafId = 0;
 

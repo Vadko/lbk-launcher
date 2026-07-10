@@ -19,13 +19,17 @@ async function fetchReplyBatch(
     success: boolean;
     replies: FeedbackReplyPayload[];
   }>('get-feedback-replies', { body: { machineId, since } });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data?.replies ?? [];
 }
 
 export async function syncFeedbackReplies(): Promise<void> {
   const machineId = getMachineId();
-  if (!machineId) return;
+  if (!machineId) {
+    return;
+  }
 
   let since = getSyncMetadata(WATERMARK_KEY);
   if (!since) {
@@ -36,7 +40,9 @@ export async function syncFeedbackReplies(): Promise<void> {
   try {
     let batch = await fetchReplyBatch(machineId, since);
     while (batch.length > 0) {
-      for (const reply of batch) deliverReply(reply, false);
+      for (const reply of batch) {
+        deliverReply(reply, false);
+      }
       since = batch[batch.length - 1].createdAt;
       setSyncMetadata(WATERMARK_KEY, since);
       batch = await fetchReplyBatch(machineId, since);
@@ -48,7 +54,9 @@ export async function syncFeedbackReplies(): Promise<void> {
 
 export function createFeedbackReplyBroadcastSubscription(): BroadcastSubscription | null {
   const machineId = getMachineId();
-  if (!machineId) return null;
+  if (!machineId) {
+    return null;
+  }
 
   return {
     topic: `feedback-replies:machine:${machineId}`,
@@ -57,7 +65,9 @@ export function createFeedbackReplyBroadcastSubscription(): BroadcastSubscriptio
         event: 'INSERT',
         handler: (message) => {
           const reply = message.payload as FeedbackReplyPayload;
-          if (reply?.replyId) deliverReply(reply, true);
+          if (reply?.replyId) {
+            deliverReply(reply, true);
+          }
         },
       },
     ],

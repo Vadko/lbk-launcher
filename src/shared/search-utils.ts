@@ -42,7 +42,9 @@ function escapeFtsToken(token: string): string {
 }
 
 export function buildFtsQuery(input: string): string {
-  if (!input) return '';
+  if (!input) {
+    return '';
+  }
 
   const buildExpr = (tokens: string[]) =>
     tokens.map((t) => `"${escapeFtsToken(t)}"*`).join(' AND ');
@@ -52,8 +54,12 @@ export function buildFtsQuery(input: string): string {
   const translitTokens = translit ? tokenize(translit) : [];
 
   const exprs: string[] = [];
-  if (primary.length) exprs.push(`(${buildExpr(primary)})`);
-  if (translitTokens.length) exprs.push(`(${buildExpr(translitTokens)})`);
+  if (primary.length) {
+    exprs.push(`(${buildExpr(primary)})`);
+  }
+  if (translitTokens.length) {
+    exprs.push(`(${buildExpr(translitTokens)})`);
+  }
 
   return exprs.join(' OR ');
 }
