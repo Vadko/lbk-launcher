@@ -33,7 +33,6 @@
     "find-unused": "knip",
     "format": "biome check --write .",
     "format:check": "biome check --max-diagnostics=200 .",
-    "types:generate": "npx --yes supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts",
     "postinstall": "electron-builder install-app-deps",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "prepare": "husky"
