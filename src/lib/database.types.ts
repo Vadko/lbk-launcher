@@ -319,7 +319,6 @@ export type Database = {
           app_version: string | null
           arch: string | null
           created_at: string
-          error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id: string
           machine_id: string
@@ -327,6 +326,7 @@ export type Database = {
           platform: string | null
           screenshot_paths: string[] | null
           status: Database["public"]["Enums"]["feedback_status"]
+          type: Database["public"]["Enums"]["feedback_type"]
           updated_at: string
         }
         Insert: {
@@ -334,7 +334,6 @@ export type Database = {
           app_version?: string | null
           arch?: string | null
           created_at?: string
-          error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id?: string
           machine_id: string
@@ -342,6 +341,7 @@ export type Database = {
           platform?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
+          type: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
         Update: {
@@ -349,7 +349,6 @@ export type Database = {
           app_version?: string | null
           arch?: string | null
           created_at?: string
-          error_type?: Database["public"]["Enums"]["feedback_error_type"]
           game_id?: string
           id?: string
           machine_id?: string
@@ -357,6 +356,7 @@ export type Database = {
           platform?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
+          type?: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
         Relationships: [
@@ -2399,11 +2399,8 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
-      feedback_error_type:
-        | "missing_translation"
-        | "translation_error"
-        | "technical"
       feedback_status: "new" | "in_progress" | "fixed" | "rejected"
+      feedback_type: "feedback" | "error"
       game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
         | "steam"
@@ -2557,12 +2554,8 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
-      feedback_error_type: [
-        "missing_translation",
-        "translation_error",
-        "technical",
-      ],
       feedback_status: ["new", "in_progress", "fixed", "rejected"],
+      feedback_type: ["feedback", "error"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],
       install_source: [
         "steam",
