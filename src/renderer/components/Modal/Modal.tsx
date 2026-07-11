@@ -144,5 +144,7 @@ export const Modal: React.FC<ModalProps> = ({
     </AnimatePresence>
   );
 
-  return usePortal ? createPortal(content, document.body) : content;
+  return usePortal
+    ? createPortal(content, document.getElementById('root') ?? document.body)
+    : content;
 };

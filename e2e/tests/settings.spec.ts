@@ -33,7 +33,7 @@ test('settings modal contains expected toggles', async () => {
   const modal = page.locator('div[role="dialog"]');
 
   // Use getByRole('heading') to avoid matching description text
-  await expect(modal.getByRole('heading', { name: 'Анімації' })).toBeVisible();
+  await expect(modal.getByRole('heading', { name: 'Режим продуктивності' })).toBeVisible();
   await expect(
     modal.getByRole('heading', { name: 'Створювати резервну копію' }),
   ).toBeVisible();

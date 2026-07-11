@@ -319,7 +319,7 @@ export type Database = {
           app_version: string | null
           arch: string | null
           created_at: string
-          error_type: Database["public"]["Enums"]["feedback_error_type"]
+          error_type: Database["public"]["Enums"]["feedback_type"]
           game_id: string
           id: string
           machine_id: string
@@ -334,7 +334,7 @@ export type Database = {
           app_version?: string | null
           arch?: string | null
           created_at?: string
-          error_type: Database["public"]["Enums"]["feedback_error_type"]
+          error_type: Database["public"]["Enums"]["feedback_type"]
           game_id: string
           id?: string
           machine_id: string
@@ -349,7 +349,7 @@ export type Database = {
           app_version?: string | null
           arch?: string | null
           created_at?: string
-          error_type?: Database["public"]["Enums"]["feedback_error_type"]
+          error_type?: Database["public"]["Enums"]["feedback_type"]
           game_id?: string
           id?: string
           machine_id?: string
@@ -2399,10 +2399,9 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
-      feedback_error_type:
-        | "missing_translation"
-        | "translation_error"
-        | "technical"
+      feedback_type:
+        | "feedback"
+        | "error"
       feedback_status: "new" | "in_progress" | "fixed" | "rejected"
       game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
@@ -2557,10 +2556,9 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
-      feedback_error_type: [
-        "missing_translation",
-        "translation_error",
-        "technical",
+      feedback_type: [
+        "feedback",
+        "error",
       ],
       feedback_status: ["new", "in_progress", "fixed", "rejected"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],

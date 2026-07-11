@@ -9,7 +9,7 @@ export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
-export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
+export type FeedbackType = Database['public']['Enums']['feedback_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
@@ -327,7 +327,7 @@ export interface ElectronAPI {
   // Submit feedback for a game translation
   submitFeedback: (
     gameId: string,
-    errorType: FeedbackErrorType,
+    errorType: FeedbackType,
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
