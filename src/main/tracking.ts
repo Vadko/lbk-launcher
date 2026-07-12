@@ -343,7 +343,7 @@ export async function trackFailedSearch(query: string): Promise<TrackingResponse
  */
 export async function submitFeedback(
   gameId: string,
-  errorType: string,
+  type: string,
   message: string,
   screenshotPaths?: string[]
 ): Promise<{ success: boolean; error?: string }> {
@@ -367,7 +367,7 @@ export async function submitFeedback(
       body: {
         gameId,
         machineId,
-        errorType,
+        type,
         message,
         ...(screenshotPaths?.length && { screenshotPaths }),
         version: app.getVersion(),

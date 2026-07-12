@@ -105,10 +105,10 @@ export function setupGamesHandlers(): void {
     async (
       _,
       gameId: string,
-      errorType: string,
+      type: string,
       message: string,
       screenshotPaths?: string[]
-    ) => submitFeedback(gameId, errorType, message, screenshotPaths)
+    ) => submitFeedback(gameId, type, message, screenshotPaths)
   );
 
   // Send logs handler

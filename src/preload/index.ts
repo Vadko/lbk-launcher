@@ -9,6 +9,7 @@ import type {
   DownloadProgress,
   ElectronAPI,
   FeedbackReplyPayload,
+  FeedbackType,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -252,10 +253,10 @@ const electronAPI: ElectronAPI = {
   // Submit feedback for a game translation
   submitFeedback: (
     gameId: string,
-    errorType: string,
+    type: FeedbackType,
     message: string,
     screenshotPaths?: string[]
-  ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  ) => ipcRenderer.invoke('submit-feedback', gameId, type, message, screenshotPaths),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
   getFeedbackUploadUrls: (fileNames: string[]) =>

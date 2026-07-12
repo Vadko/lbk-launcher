@@ -327,7 +327,7 @@ export interface ElectronAPI {
   // Submit feedback for a game translation
   submitFeedback: (
     gameId: string,
-    errorType: FeedbackType,
+    type: FeedbackType,
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;

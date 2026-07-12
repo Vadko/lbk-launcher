@@ -9,7 +9,7 @@ const MAX_MESSAGE_LENGTH = 1000;
 const MAX_SCREENSHOTS = 5;
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
-const ERROR_TYPES: {
+const FEEDBACK_TYPES: {
   value: FeedbackType;
   label: string;
   icon: React.ReactNode;
@@ -232,7 +232,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         <div>
           <p className="text-sm font-medium text-text-muted mb-3">Тип</p>
           <div className="flex gap-3">
-            {ERROR_TYPES.map((type) => (
+            {FEEDBACK_TYPES.map((type) => (
               <button
                 key={type.value}
                 onClick={() => setFeedbackType(type.value)}
