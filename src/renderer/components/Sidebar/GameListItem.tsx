@@ -52,7 +52,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
-    const isFavorite = isFavoriteGame(game.id);
+    const [isFavorite, setIsFavorite] = useState(isFavoriteGame(game.id));
 
     const averageProgress = Math.round(
       (game.translation_progress + game.editing_progress) / 2
@@ -93,6 +93,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
     const handleToggleFavorite = (e: React.MouseEvent) => {
       e.stopPropagation();
+      setIsFavorite((prev) => !prev);
       toggleFavoriteGame(game.id, game.name);
     };
 
@@ -177,14 +178,18 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 variant="ghost"
                 onClick={handleToggleFavorite}
                 className="!rounded-lg !px-1"
+                icon={
+                  isFavorite ? (
+                    <BookmarkCheck size={20} className="text-color-accent" />
+                  ) : (
+                    <Bookmark
+                      size={20}
+                      className="text-text-muted group-hover/button:text-text-main"
+                    />
+                  )
+                }
                 title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
-              >
-                {isFavorite ? (
-                  <BookmarkCheck size={20} className="text-color-accent" />
-                ) : (
-                  <Bookmark size={20} className="text-text-muted hover:text-text-main" />
-                )}
-              </Button>
+              />
             </div>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">

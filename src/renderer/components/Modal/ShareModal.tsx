@@ -99,6 +99,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   teamName,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
   const shareUrl = `https://lbklauncher.com/open/${gameSlug}/${teamSlug}`;
   const shareText = `${gameName} з українською локалізацією від ${teamName} можна зручно встановити у LBK Launcher`;
   const socialPlatforms = createSocialPlatforms();
@@ -116,12 +117,21 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyUrl = (e: React.MouseEvent<HTMLInputElement>) => {
+    e.currentTarget.select();
+    navigator.clipboard?.writeText(shareUrl).catch(() => {
+      document.execCommand('copy');
+    });
+    setUrlCopied(true);
+    setTimeout(() => setUrlCopied(false), 1000);
+  };
+
   const handleShare = (platform: SocialPlatform) => {
     const url = platform.getShareUrl(shareUrl, shareText);
     trackEvent('Share', {
-      platform: platform.name,
-      game: gameName,
-      team: teamName,
+      Platform: platform.name,
+      'Game Name': gameName,
+      Team: teamName,
     });
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -159,8 +169,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               type="text"
               value={shareUrl}
               readOnly
-              className="flex-1 px-4 py-3 bg-glass border border-border rounded-xl text-sm text-text-main focus:outline-none focus:border-border-hover cursor-text"
-              onClick={(e) => e.currentTarget.select()}
+              className={`flex-1 px-4 py-3 bg-glass border rounded-xl text-sm text-text-main focus:outline-none cursor-text transition-colors duration-300 ${
+                urlCopied
+                  ? 'border-color-main focus:border-color-main'
+                  : 'border-border focus:border-border-hover'
+              }`}
+              onClick={handleCopyUrl}
             />
             <Button
               onClick={handleCopy}

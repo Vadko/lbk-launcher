@@ -469,9 +469,13 @@ export function useGamepadModeNavigation(enabled = true) {
       const currentFocused = document.activeElement as HTMLElement;
       let currentIndex = actionButtons.indexOf(currentFocused);
 
-      // Auto-focus first button only when first entering this area
+      // Auto-focus a button when first entering this area, or when the
+      // previously focused button no longer exists (e.g. its DOM node was
+      // unmounted because the action buttons changed while switching games -
+      // the primary/install/play buttons are conditionally rendered per game,
+      // so React destroys and recreates them and focus is lost).
       const justEntered = prevNavigationAreaRef.current !== 'main-content';
-      if (justEntered && actionButtons.length > 0) {
+      if ((justEntered || currentIndex === -1) && actionButtons.length > 0) {
         // Focus the primary action or first available button
         const primaryButton = actionButtons.find((b) =>
           b.hasAttribute('data-gamepad-primary-action')
@@ -567,7 +571,6 @@ export function useGamepadModeNavigation(enabled = true) {
     [
       canInput,
       isButtonJustPressed,
-      focusedGameIndex,
       getActionButtons,
       refocusCurrentCard,
       scrollMainContent,

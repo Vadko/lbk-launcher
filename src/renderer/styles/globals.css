@@ -413,10 +413,22 @@ input[type="search"]::-webkit-search-cancel-button {
 /* Disable backdrop blur in no-animations mode for better performance */
 .no-animations .glass-panel,
 .no-animations .glass-card,
+.no-animations .glass-card-no-motion,
 .no-animations .glass-button,
-.no-animations [class*="backdrop-blur"] {
+.no-animations [class*="backdrop-blur"],
+.no-animations + * > [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+.no-animations .glass-panel,
+.no-animations .glass-card,
+.no-animations .glass-card-no-motion {
+  background: rgba(15, 15, 16, 0.6) !important;
+}
+
+.no-animations [class*="group-hover:scale-"] {
+  transform: none !important;
 }
 
 /* Disable expensive `filter: drop-shadow(...)` (regular filter, not backdrop). */
@@ -433,6 +445,7 @@ input[type="search"]::-webkit-search-cancel-button {
 /* Disable hover transforms */
 .no-animations .glass-card:hover,
 .no-animations .glass-button:hover,
+.no-animations .group\/button:hover,
 .no-animations .hover-lift:hover {
   transform: none !important;
 }

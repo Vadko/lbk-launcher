@@ -15,7 +15,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'px-8 py-3.5 min-h-[54px] rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed';
+    'group/button px-8 py-3.5 min-h-[54px] rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary:
@@ -28,7 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
     accent:
       'bg-color-accent text-text-dark shadow-[0_4px_15px_rgba(255,164,122,0.4)] hover:shadow-[0_8px_25px_rgba(255,164,122,0.6)] hover:brightness-110 hover:-translate-y-0.5',
     ghost:
-      '!px-2 !py-1 !gap-1 !rounded-full bg-transparent text-text-main hover:bg-white/5 focus-visible:bg-white/5 focus:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-white !outline-offset-0',
+      '!px-2 !py-1 !gap-1 !min-h-0 !rounded-full bg-transparent text-text-main hover:bg-white/5 focus-visible:bg-white/5 focus:bg-white/10 focus-visible:outline focus-visible:outline-1 focus-visible:outline-white !outline-offset-0',
   };
 
   return (

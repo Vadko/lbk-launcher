@@ -198,9 +198,6 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
           <>
             <p className="text-base font-head font-semibold text-text-muted mb-2">Інше</p>
             <div className="flex flex-wrap items-center gap-3">
-              {links.length > 0 && game.steam_app_id && (
-                <div className="hidden sm:block w-0 h-10 border-l border-border-hover" />
-              )}
               {links.map((link, index) => (
                 <SocialLink key={index} {...link} />
               ))}
