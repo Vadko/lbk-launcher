@@ -38,15 +38,18 @@ export {
 // ============================================================================
 
 export function detectGamePath(
-  installPath: InstallPath | null | undefined
+  installPath: InstallPath | null | undefined,
+  steamAppId?: number | null
 ): GamePath | null {
-  if (!installPath || !installPath.type || !installPath.path) return null;
+  if (!installPath || !installPath.type || !installPath.path) {
+    return null;
+  }
 
   let foundPath: string | null = null;
 
   switch (installPath.type) {
     case 'steam':
-      foundPath = findSteamGame(installPath.path);
+      foundPath = findSteamGame(installPath.path, steamAppId);
       return {
         platform: 'steam',
         path: foundPath || '',
@@ -101,11 +104,14 @@ export function detectGamePath(
 /**
  * Detect all possible paths for a game
  */
-export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
+export function detectGamePaths(
+  installPaths: InstallPath[],
+  steamAppId?: number | null
+): GamePath[] {
   const results: GamePath[] = [];
 
   for (const installPath of installPaths) {
-    const gamePath = detectGamePath(installPath);
+    const gamePath = detectGamePath(installPath, steamAppId);
     if (gamePath) {
       results.push(gamePath);
     }
@@ -117,8 +123,11 @@ export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
 /**
  * Get the first available game path
  */
-export function getFirstAvailableGamePath(installPaths: InstallPath[]): GamePath | null {
-  const paths = detectGamePaths(installPaths);
+export function getFirstAvailableGamePath(
+  installPaths: InstallPath[],
+  steamAppId?: number | null
+): GamePath | null {
+  const paths = detectGamePaths(installPaths, steamAppId);
   return paths.find((p) => p.exists) || null;
 }
 
@@ -184,10 +193,14 @@ interface HeroicGameInfo {
 
 export function getHeroicGame(gamePath: string): HeroicGameInfo | null {
   const gogId = getHeroicGOGId(gamePath);
-  if (gogId) return { appName: gogId, runner: 'gog' };
+  if (gogId) {
+    return { appName: gogId, runner: 'gog' };
+  }
 
   const epicAppName = getHeroicEpicAppName(gamePath);
-  if (epicAppName) return { appName: epicAppName, runner: 'legendary' };
+  if (epicAppName) {
+    return { appName: epicAppName, runner: 'legendary' };
+  }
 
   return null;
 }

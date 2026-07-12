@@ -8,7 +8,7 @@ import {
   removeLiquidGlass,
 } from './liquid-glass';
 import { openExternalUrl } from './utils/open-external';
-import { supportsMacOSLiquidGlass } from './utils/platform';
+import { isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
 import { readStoreFile } from './utils/store-storage';
 import { getIcon } from './utils/theme';
 
@@ -18,10 +18,13 @@ let liquidGlassId: number | null = null;
 export async function createMainWindow(): Promise<BrowserWindow> {
   console.log('[Window] Creating main window...');
 
-  // App is dark-only. Force the native appearance to dark so the macOS liquid
-  // glass material renders dark even when the system is in light mode (otherwise
-  // the transparent body shows a bright "light theme" through the glass).
-  nativeTheme.themeSource = 'dark';
+  // macOS-only: force native appearance to dark so Liquid Glass renders dark
+  // even when the system is in light mode. On Windows/Linux leaving themeSource
+  // as 'system' lets nativeTheme.shouldUseDarkColors reflect the actual system
+  // theme, which the tray/window icon swap depends on.
+  if (isMacOS()) {
+    nativeTheme.themeSource = 'dark';
+  }
 
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();
@@ -181,7 +184,9 @@ export function getMainWindow(): BrowserWindow | null {
 
 // IPC handler for toggling liquid glass
 ipcMain.handle('liquid-glass:toggle', async (_event, enabled: boolean) => {
-  if (!mainWindow) return;
+  if (!mainWindow) {
+    return;
+  }
 
   if (enabled && supportsMacOSLiquidGlass()) {
     // Apply liquid glass if not already applied

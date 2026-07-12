@@ -6,7 +6,9 @@ let errorDisplayed = false;
 
 function showErrorScreen(title: string, message: string, stack?: string): void {
   // Prevent showing multiple error screens
-  if (errorDisplayed) return;
+  if (errorDisplayed) {
+    return;
+  }
   errorDisplayed = true;
 
   // Log to console
@@ -231,12 +233,16 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
   ) as HTMLElement | null;
 
   sendLogsBtn?.addEventListener('click', () => {
-    if (sendLogsForm) sendLogsForm.style.display = 'block';
+    if (sendLogsForm) {
+      sendLogsForm.style.display = 'block';
+    }
     sendLogsBtn.style.display = 'none';
   });
 
   sendLogsSubmit?.addEventListener('click', async () => {
-    if (!sendLogsSubmit || !sendLogsStatus) return;
+    if (!sendLogsSubmit || !sendLogsStatus) {
+      return;
+    }
     sendLogsSubmit.disabled = true;
     sendLogsSubmit.textContent = 'Надсилання...';
     sendLogsStatus.textContent = '';

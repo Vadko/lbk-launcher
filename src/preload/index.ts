@@ -8,6 +8,8 @@ import type { ImpressionType } from '@/main/db/banners-api';
 import type {
   DownloadProgress,
   ElectronAPI,
+  FeedbackReplyPayload,
+  FeedbackType,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -192,6 +194,13 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-tombstoned', handler);
     return () => ipcRenderer.removeListener('game-tombstoned', handler);
   },
+  onFeedbackReply: (callback) => {
+    const handler = (_: unknown, reply: FeedbackReplyPayload, live: boolean) =>
+      callback(reply, live);
+    ipcRenderer.on('feedback-reply', handler);
+    return () => ipcRenderer.removeListener('feedback-reply', handler);
+  },
+  syncFeedbackReplies: () => ipcRenderer.invoke('feedback-replies:sync'),
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();
@@ -244,10 +253,10 @@ const electronAPI: ElectronAPI = {
   // Submit feedback for a game translation
   submitFeedback: (
     gameId: string,
-    errorType: string,
+    type: FeedbackType,
     message: string,
     screenshotPaths?: string[]
-  ) => ipcRenderer.invoke('submit-feedback', gameId, errorType, message, screenshotPaths),
+  ) => ipcRenderer.invoke('submit-feedback', gameId, type, message, screenshotPaths),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
   getFeedbackUploadUrls: (fileNames: string[]) =>
@@ -260,6 +269,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
+  notifyReady: () => ipcRenderer.send('renderer-ready'),
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {
     const handler = (_: unknown, status: 'syncing' | 'ready' | 'error') =>

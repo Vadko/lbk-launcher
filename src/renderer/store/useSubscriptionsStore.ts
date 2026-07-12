@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { FeedbackReplyPayload } from '../../shared/types';
 import {
   createNotification,
   createToast,
@@ -98,6 +99,10 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     gameName: string,
     showToast?: boolean
   ) => void;
+  addFeedbackReplyNotification: (
+    reply: FeedbackReplyPayload,
+    showToast?: boolean
+  ) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   markAppUpdateNotificationsAsRead: () => void;
@@ -119,6 +124,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       unreadCount: 0,
       toasts: [],
       notifiedVersions: new Map<string, string>(),
+      seenFeedbackReplyIds: [],
 
       // Game subscription methods
       subscribe: (gameId, status, progress) => {
@@ -499,6 +505,46 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         }
       },
 
+      addFeedbackReplyNotification: (reply, showToast = true) => {
+        if ((get().seenFeedbackReplyIds ?? []).includes(reply.replyId)) {
+          return;
+        }
+
+        const notification: Notification = {
+          id: `feedback-reply-${reply.replyId}`,
+          type: 'feedback-reply',
+          gameId: reply.gameId,
+          gameName: reply.gameName,
+          message: reply.message,
+          sourceId: reply.replyId,
+          timestamp: new Date(reply.createdAt).getTime(),
+          read: false,
+        };
+
+        set((state) => ({
+          notifications: [notification, ...state.notifications],
+          unreadCount: state.unreadCount + 1,
+          seenFeedbackReplyIds: [reply.replyId, ...(state.seenFeedbackReplyIds ?? [])],
+        }));
+
+        if (showToast) {
+          // The toast renders "gameName • message", so pass just the reply text.
+          const toast = createToast(notification, reply.message);
+
+          set((state) => ({
+            toasts: [...state.toasts, toast],
+          }));
+
+          playNotificationSoundIfEnabled('status-change');
+          scheduleToastDismissal(notification.id, get().dismissToast);
+          showSystemNotificationIfHidden(
+            `Відповідь на відгук: ${reply.gameName}`,
+            reply.message,
+            reply.gameId
+          );
+        }
+      },
+
       markNotificationAsRead: (notificationId) => {
         set((state) => {
           const notifications = state.notifications.map((n) =>
@@ -558,6 +604,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         notifications: state.notifications,
         unreadCount: state.unreadCount,
         notifiedVersions: state.notifiedVersions,
+        seenFeedbackReplyIds: state.seenFeedbackReplyIds,
         // toasts are NOT persisted - they are temporary
       }),
       onRehydrateStorage: () => (state) => {

@@ -18,7 +18,9 @@ export const MainPage: React.FC = () => {
     }
 
     const isGamepadMode = useGamepadModeStore.getState().isGamepadMode;
-    if (!isGamepadMode) return;
+    if (!isGamepadMode) {
+      return;
+    }
     document
       .querySelector<HTMLElement>(
         `[data-gamepad-main-content] .main-page:not([style*="display: none"]) [data-gamepad-card]`

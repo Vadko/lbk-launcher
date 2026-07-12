@@ -10,15 +10,21 @@ import type { StateStorage } from 'zustand/middleware';
  */
 export const electronStorage: StateStorage = {
   getItem: (key: string): string | null => {
-    if (!window.storeStorage) return null;
+    if (!window.storeStorage) {
+      return null;
+    }
     return window.storeStorage.getItem(key);
   },
   setItem: (key: string, value: string): void => {
-    if (!window.storeStorage) return;
+    if (!window.storeStorage) {
+      return;
+    }
     window.storeStorage.setItem(key, value);
   },
   removeItem: (key: string): void => {
-    if (!window.storeStorage) return;
+    if (!window.storeStorage) {
+      return;
+    }
     window.storeStorage.removeItem(key);
   },
 };
@@ -35,14 +41,18 @@ const MIGRATION_KEY = '__migration-v1-done';
     return;
   }
 
-  if (window.storeStorage.getItem(MIGRATION_KEY) !== null) return;
+  if (window.storeStorage.getItem(MIGRATION_KEY) !== null) {
+    return;
+  }
 
   const keysToMigrate = ['lbk-settings', 'subscriptions-storage', 'has-launched-before'];
 
   for (const key of keysToMigrate) {
     try {
       const localData = localStorage.getItem(key);
-      if (localData === null) continue;
+      if (localData === null) {
+        continue;
+      }
 
       window.storeStorage.setItem(key, localData);
       localStorage.removeItem(key);

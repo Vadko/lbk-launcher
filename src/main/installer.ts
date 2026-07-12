@@ -17,6 +17,7 @@ import { downloadAndExtractArchive } from './installer/download-and-extract';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
+import { resolveMacBundleTarget } from './installer/mac-bundle';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
@@ -72,12 +73,12 @@ export async function installTranslation(
       const customPlatform = platform === 'auto' ? 'steam' : platform;
       gamePath = { platform: customPlatform, path: customGamePath, exists: true };
     } else if (platform === 'auto') {
-      gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      gamePath = getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id);
     } else {
       const selectedInstallPath = (game.install_paths || []).find(
         (p) => p.type === platform
       );
-      gamePath = detectGamePath(selectedInstallPath);
+      gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
     }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
@@ -366,7 +367,24 @@ export async function installTranslation(
     }
 
     // 7. Copy files to game directory
-    const additionalPath = game.additional_path || '';
+    let additionalPath = game.additional_path || '';
+
+    // On macOS, redirect the copy into the `.app` bundle (data lives inside it,
+    // not at the game root). Skip when a macOS archive was used — it already
+    // carries the bundle path.
+    if ((installText || installVoice) && isMacOS() && !game.steam_mac_archive_path) {
+      const macBundle = await resolveMacBundleTarget(gamePath.path, extractDir);
+      if (macBundle.target) {
+        additionalPath = macBundle.target;
+        console.log(`[Installer] macOS .app bundle — installing into: ${additionalPath}`);
+      } else if (macBundle.appBundleFound && macBundle.matchedInsideBundle > 0) {
+        throw new Error(
+          'Не вдалося визначити місце встановлення всередині macOS-бандла (.app).\n\n' +
+            'Для цієї гри потрібен окремий macOS-архів перекладу.'
+        );
+      }
+    }
+
     const fullTargetPath = additionalPath
       ? path.join(gamePath.path, additionalPath)
       : gamePath.path;
@@ -387,7 +405,13 @@ export async function installTranslation(
 
       if (createBackup) {
         onStatus?.({ message: 'Створення резервної копії...', phase: 'install' });
-        await backupFiles(extractDir, fullTargetPath);
+        await backupFiles(
+          extractDir,
+          fullTargetPath,
+          undefined,
+          additionalPath,
+          gamePath.path
+        );
       }
 
       onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });

@@ -28,7 +28,9 @@ class DbWorkerClient {
    * Ініціалізувати worker
    */
   async init(): Promise<void> {
-    if (this.worker) return;
+    if (this.worker) {
+      return;
+    }
 
     // Шлях до скомпільованого worker файлу
     const workerPath = app.isPackaged
@@ -53,7 +55,9 @@ class DbWorkerClient {
           }
 
           const pending = this.pendingRequests.get(message.id);
-          if (!pending) return;
+          if (!pending) {
+            return;
+          }
 
           this.pendingRequests.delete(message.id);
 
@@ -89,7 +93,9 @@ class DbWorkerClient {
    * Дочекатись готовності worker
    */
   private async ensureReady(): Promise<void> {
-    if (this.isReady) return;
+    if (this.isReady) {
+      return;
+    }
     if (this.readyPromise) {
       await this.readyPromise;
     } else {

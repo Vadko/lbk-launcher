@@ -10,12 +10,19 @@ let updateCheckInterval: NodeJS.Timeout | null = null;
 async function checkOnce(): Promise<void> {
   try {
     const res = await net.fetch(LATEST_YML_URL);
-    if (!res.ok) return;
+    if (!res.ok) {
+      return;
+    }
     const yml = await res.text();
     const remoteVersion = yml.match(/^version:\s*(\S+)/m)?.[1];
-    if (!remoteVersion) return;
-    if (remoteVersion.localeCompare(app.getVersion(), undefined, { numeric: true }) <= 0)
+    if (!remoteVersion) {
       return;
+    }
+    if (
+      remoteVersion.localeCompare(app.getVersion(), undefined, { numeric: true }) <= 0
+    ) {
+      return;
+    }
 
     const downloadUrl = `${RELEASES_BASE}/download/v${remoteVersion}/${PORTABLE_ARTIFACT}`;
     const win = getMainWindow();
@@ -28,7 +35,9 @@ async function checkOnce(): Promise<void> {
 }
 
 export function checkForPortableUpdates(): void {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged) {
+    return;
+  }
   setTimeout(() => {
     checkOnce();
   }, 3000);

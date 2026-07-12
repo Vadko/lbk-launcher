@@ -51,7 +51,9 @@ export function getCleanEnv(): NodeJS.ProcessEnv {
  * Check if system 7z is available (for Linux/Steam Deck compatibility)
  */
 function getSystem7zPath(): string | null {
-  if (!isLinux()) return null;
+  if (!isLinux()) {
+    return null;
+  }
 
   try {
     // Try common 7z command names
@@ -152,9 +154,13 @@ export async function extractArchive(
     // value so the UI doesn't flicker between the real percent and 0.
     let lastPercent = -1;
     stream.on('progress', (progress: { percent?: number; fileCount?: number }) => {
-      if (progress.percent === undefined) return;
+      if (progress.percent === undefined) {
+        return;
+      }
       const percent = Math.round(progress.percent);
-      if (percent <= lastPercent) return;
+      if (percent <= lastPercent) {
+        return;
+      }
       lastPercent = percent;
       console.log(`[Installer] Extraction progress: ${percent}%`);
       onStatus?.({

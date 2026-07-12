@@ -81,7 +81,9 @@ export const PromoModal: React.FC = () => {
 
   // Fetch banner data
   const fetchBanner = useCallback(async () => {
-    if (!window.electronAPI?.fetchPromoBanner) return null;
+    if (!window.electronAPI?.fetchPromoBanner) {
+      return null;
+    }
     setIsLoading(true);
 
     try {
@@ -99,7 +101,9 @@ export const PromoModal: React.FC = () => {
   // Record banner impression
   const recordImpression = useCallback(
     async (impressionType: 'view' | 'click') => {
-      if (!banner?.id || !window.electronAPI?.recordPromoBannerImpression) return;
+      if (!banner?.id || !window.electronAPI?.recordPromoBannerImpression) {
+        return;
+      }
 
       try {
         await window.electronAPI.recordPromoBannerImpression({
@@ -115,19 +119,25 @@ export const PromoModal: React.FC = () => {
 
   // Promo modal initialization - runs only once on mount
   useEffect(() => {
-    if (window.electronAPI?.isE2E?.()) return;
+    if (window.electronAPI?.isE2E?.()) {
+      return;
+    }
 
     const { devMode } = usePromoModalStore.getState();
 
     // Dev mode only works in development
-    if (import.meta.env.DEV && devMode === 'never') return;
+    if (import.meta.env.DEV && devMode === 'never') {
+      return;
+    }
 
     // Reset neverShowAgain if needed before checking shouldShowModal
     checkAndResetNeverShow();
 
     // Basic check (ignore checkbox - we don't know yet if there's a banner)
     // Full check with checkbox will be in setTimeout after fetch
-    if (!shouldShowModal(true)) return;
+    if (!shouldShowModal(true)) {
+      return;
+    }
 
     // Listen to dev mode changes and close modal if set to 'never' (dev only)
     const unsubscribe = usePromoModalStore.subscribe((state) => {
@@ -164,7 +174,9 @@ export const PromoModal: React.FC = () => {
     }
 
     // If already recorded impression for this session - don't record again
-    if (viewImpressionRecorded.current) return;
+    if (viewImpressionRecorded.current) {
+      return;
+    }
 
     viewImpressionRecorded.current = true;
 

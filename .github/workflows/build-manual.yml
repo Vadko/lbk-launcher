@@ -62,7 +62,7 @@ jobs:
           fi
           if [ "${{ github.event.inputs.macos }}" = "true" ]; then
             [ "$FIRST" = false ] && MATRIX="${MATRIX},"
-            MATRIX="${MATRIX}{\"os\":\"macos-latest\",\"platform\":\"macos\"}"
+            MATRIX="${MATRIX}{\"os\":\"macos-26\",\"platform\":\"macos\"}"
           fi
           MATRIX="${MATRIX}]}"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
@@ -172,14 +172,14 @@ jobs:
         run: pnpm dist:linux --publish never
 
       - name: Setup Apple API Key for notarization
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-26'
         run: |
           set +x
           echo "${{ secrets.APPLE_API_KEY }}" > /tmp/apple-api-key.p8
           chmod 600 /tmp/apple-api-key.p8
 
       - name: Build dist (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-26'
         timeout-minutes: 30
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -212,7 +212,7 @@ jobs:
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Remove macOS quarantine
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-26'
         run: xattr -cr release/*/mac-arm64/*.app || xattr -cr release/*/mac/*.app || true
 
       - name: Run E2E tests

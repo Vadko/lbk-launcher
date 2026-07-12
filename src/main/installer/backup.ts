@@ -44,10 +44,17 @@ export function findBackupDir(targetDir: string) {
  * Set hidden attribute on a folder (Windows only)
  */
 async function setHiddenAttribute(dirPath: string): Promise<void> {
-  if (process.platform !== 'win32') return;
+  if (process.platform !== 'win32') {
+    return;
+  }
 
   try {
-    await execPromise(`attrib +h "${dirPath}"`);
+    const attribPath = path.join(
+      process.env.SystemRoot || 'C:\\Windows',
+      'System32',
+      'attrib.exe'
+    );
+    await execPromise(`"${attribPath}" +h "${dirPath}"`);
     console.log(`[Backup] Set hidden attribute on: ${dirPath}`);
   } catch (error) {
     console.warn(`[Backup] Failed to set hidden attribute:`, error);
@@ -62,11 +69,13 @@ export async function backupFiles(
   sourceDir: string,
   targetDir: string,
   backupDir?: string,
-  relativePath = ''
+  relativePath = '',
+  backupRootTarget?: string
 ): Promise<void> {
   try {
-    // Initialize backup directory on first call
-    const rootBackupDir = backupDir || findBackupDir(targetDir);
+    // `backupRootTarget` anchors `.lbk-backup` at the game root even when files
+    // go into a subfolder, so uninstall can find it.
+    const rootBackupDir = backupDir || findBackupDir(backupRootTarget ?? targetDir);
 
     if (!backupDir) {
       // First call - create backup directory if needed
@@ -284,7 +293,9 @@ export async function cleanupEmptyDirectories(
   rootDir: string
 ): Promise<void> {
   try {
-    if (!fs.existsSync(dir)) return;
+    if (!fs.existsSync(dir)) {
+      return;
+    }
 
     // Never clean up inside backup directory
     if (

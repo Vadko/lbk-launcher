@@ -16,7 +16,9 @@ export const UpdateNotification = () => {
   const notifiedVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     // Listen for update events
     const unsubAvailable = window.electronAPI.onUpdateAvailable(async (info) => {
@@ -82,14 +84,17 @@ export const UpdateNotification = () => {
     ?.downloadUrl;
 
   const handleOpenExternal = () => {
-    if (!externalDownloadUrl) return;
+    if (!externalDownloadUrl) {
+      return;
+    }
     useSubscriptionsStore.getState().markAppUpdateNotificationsAsRead();
     window.electronAPI.openExternal(externalDownloadUrl);
     setUpdateAvailable(false);
   };
 
-  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded))
+  if (!appUpdateNotificationsEnabled || (!updateAvailable && !updateDownloaded)) {
     return null;
+  }
 
   const content = (
     <>
@@ -106,7 +111,7 @@ export const UpdateNotification = () => {
           </div>
           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-500 transition-all duration-300"
+              className="h-full bg-color-main transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -121,7 +126,7 @@ export const UpdateNotification = () => {
         <button
           onClick={handleOpenExternal}
           data-gamepad-confirm
-          className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-black rounded-lg transition-colors"
         >
           Скачати нову версію
         </button>
@@ -129,7 +134,7 @@ export const UpdateNotification = () => {
         <button
           onClick={handleInstall}
           data-gamepad-confirm
-          className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-black rounded-lg transition-colors"
         >
           Перезапустити
         </button>
@@ -138,7 +143,7 @@ export const UpdateNotification = () => {
           onClick={handleDownload}
           disabled={downloading}
           data-gamepad-confirm
-          className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
         >
           {downloading ? 'Завантаження...' : 'Завантажити'}
         </button>

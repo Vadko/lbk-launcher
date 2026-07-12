@@ -12,7 +12,9 @@ export function useNewsFeed(filter: NewsFeedFilter) {
     queryFn: ({ pageParam }) => window.electronAPI.fetchNewsFeed(filter, pageParam),
     initialPageParam: undefined as Cursor,
     getNextPageParam: (lastPage: NewsFeedItem[]): Cursor => {
-      if (lastPage.length < PAGE_SIZE) return undefined;
+      if (lastPage.length < PAGE_SIZE) {
+        return undefined;
+      }
       return lastPage[lastPage.length - 1]?.publishedAt;
     },
     staleTime: THIRTY_MINUTES,

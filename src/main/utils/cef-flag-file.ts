@@ -48,13 +48,17 @@ const MILLENNIUM_MARKERS = [
  */
 function getFlagFilePath(): string | null {
   const steamPath = getSteamPath();
-  if (!steamPath) return null;
+  if (!steamPath) {
+    return null;
+  }
   return path.join(steamPath, FLAG_FILE_NAME);
 }
 
 function isMillenniumInstalled(): boolean {
   const steamPath = getSteamPath();
-  if (!steamPath) return false;
+  if (!steamPath) {
+    return false;
+  }
   return MILLENNIUM_MARKERS.some((marker) => fs.existsSync(path.join(steamPath, marker)));
 }
 
@@ -68,7 +72,9 @@ function ensureCefFlagFile(): void {
     return;
   }
 
-  if (fs.existsSync(filePath)) return;
+  if (fs.existsSync(filePath)) {
+    return;
+  }
 
   try {
     // `wx` = create exclusively; treat EEXIST as already-there so two parallel
@@ -78,7 +84,9 @@ function ensureCefFlagFile(): void {
       `[CEFFlagFile] Created ${filePath} — Steam restart needed for it to take effect`
     );
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return;
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      return;
+    }
     console.error('[CEFFlagFile] Failed to create flag file:', error);
   }
 }
@@ -101,8 +109,12 @@ export async function bootstrapCefDebugging(): Promise<void> {
 
   ensureCefFlagFile();
 
-  if (!(await isSteamRunning())) return;
-  if (await isCefAvailable()) return;
+  if (!(await isSteamRunning())) {
+    return;
+  }
+  if (await isCefAvailable()) {
+    return;
+  }
 
   getMainWindow()?.webContents.send('steam-restart-required');
 }

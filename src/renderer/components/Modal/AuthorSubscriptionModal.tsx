@@ -26,7 +26,9 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
 
   // Parse authors from comma-separated team string
   const authors = useMemo(() => {
-    if (!team) return [];
+    if (!team) {
+      return [];
+    }
     return team
       .split(',')
       .map((a) => a.trim())

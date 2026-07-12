@@ -20,7 +20,9 @@ export async function findSteamAppId(gamePath: string): Promise<string | null> {
     // Go up max 5 levels to find steamapps
     for (let i = 0; i < 5; i++) {
       const parentPath = path.dirname(currentPath);
-      if (parentPath === currentPath) break; // reached root
+      if (parentPath === currentPath) {
+        break; // reached root
+      }
 
       const steamappsCandidate = path.join(parentPath, 'steamapps');
       if (fs.existsSync(steamappsCandidate)) {

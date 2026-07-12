@@ -1,4 +1,5 @@
-import { spawn } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import { app } from 'electron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -11,6 +12,43 @@ import { isLinux } from '../utils/platform';
 
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
+
+function getLatestProtonLog(logDir: string): string | null {
+  try {
+    const logs = fs
+      .readdirSync(logDir)
+      .filter((f) => f.startsWith('steam-') && f.endsWith('.log'))
+      .map((f) => path.join(logDir, f))
+      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    return logs[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Point to the full Proton log; on failure also surface the notable lines
+// (skipping the verbose unwind/relay trace spam).
+function logProtonOutcome(logDir: string, code: number | null): void {
+  try {
+    const logFile = getLatestProtonLog(logDir);
+    if (!logFile) {
+      return;
+    }
+    console.log(`[Proton log] ${logFile}`);
+    if (code !== 0) {
+      const notable = fs
+        .readFileSync(logFile, 'utf8')
+        .split('\n')
+        .filter((l) => /err:|:warn:|fixme:|exception|fork|fail/i.test(l))
+        .slice(-40);
+      if (notable.length) {
+        console.error(`[Proton log] notable:\n${notable.join('\n')}`);
+      }
+    }
+  } catch (err) {
+    console.warn('[Proton] Failed to read Proton log:', err);
+  }
+}
 
 // TODO: Registry functionality - commented out for future implementation
 /*
@@ -219,6 +257,26 @@ function checkNewProtonUninstallKeys(
 }
 */
 
+// umu-run launches Proton in-process (no flatpak-spawn host escape), so its window
+// is a normal client — the only way it renders under gamescope Game Mode. Bundled
+// via extraResources (like 7z): prod reads it from resourcesPath, dev from the
+// repo's resources/. The Flatpak extracts the same AppImage resources. Falls back
+// to a system-installed umu-run.
+function resolveUmuRun(): string | null {
+  const base = app.isPackaged
+    ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), 'umu')
+    : path.join(app.getAppPath(), 'resources', 'umu');
+  const bundled = path.join(base, 'umu-run');
+  if (fs.existsSync(bundled)) {
+    return bundled;
+  }
+  try {
+    return execSync('command -v umu-run', { encoding: 'utf8' }).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 function ensureTempDirectory(prefix: string): void {
   const tempDir = path.join(
     prefix,
@@ -275,7 +333,9 @@ async function findOrCreateProtonPrefix(
 }
 
 export function findProtons() {
-  if (!isLinux()) return [];
+  if (!isLinux()) {
+    return [];
+  }
 
   const steamGames = getAllInstalledSteamGames();
   const result = [] as Array<{ name: string; path: string }>;
@@ -291,6 +351,11 @@ export function findProtons() {
     }
   });
 
+  // Default to the highest numbered Proton; Experimental/Hotfix (no number) last.
+  const version = (name: string) =>
+    Number.parseFloat(name.match(/\d+(\.\d+)?/)?.[0] ?? '0');
+  result.sort((a, b) => version(b.name) - version(a.name));
+
   return result;
 }
 
@@ -303,7 +368,9 @@ export function runProton({
   filePath: string | undefined;
   args?: string[];
 }): Promise<number | null> {
-  if (!isLinux() || !protonPath || !filePath) return Promise.resolve(null);
+  if (!isLinux() || !protonPath || !filePath) {
+    return Promise.resolve(null);
+  }
   return new Promise((resolve, reject) => {
     (async () => {
       const enFilePath = renameFileToTranslit(filePath);
@@ -347,28 +414,63 @@ export function runProton({
 
       const steamPath = fs.realpathSync(`${HOME}/.steam/root`);
 
+      // Proton writes its log into the prefix (mounted RW inside the container).
+      const protonLogDir = path.join(prefix, 'lbk-logs');
+      try {
+        fs.mkdirSync(protonLogDir, { recursive: true });
+      } catch {
+        // Best-effort — logging must never block the install.
+      }
+
       const protonEnv: Record<string, string> = {
         STEAM_COMPAT_DATA_PATH: prefix,
         STEAM_COMPAT_CLIENT_INSTALL_PATH: steamPath,
-        STEAM_COMPAT_LIBRARY_PATHS: steamPath,
-        STEAM_ROOT_PATH: `Z:${steamPath.replace(/\//g, '\\')}`,
+        PROTON_LOG: '1',
+        PROTON_LOG_DIR: protonLogDir,
       };
 
-      const installerArgs = ['run', enFilePath, ...(args || [])];
-      // Pressure-vessel (Steam Linux Runtime, used by Proton 5.13+) creates its
-      // own bubblewrap container and can't nest inside Flatpak's sandbox. Escape
-      // to the host via flatpak-spawn so pressure-vessel runs unconstrained.
-      const inFlatpak = !!process.env.FLATPAK_ID;
-      const cmd = inFlatpak ? 'flatpak-spawn' : protonPath;
-      const cmdArgs = inFlatpak
-        ? [
-            '--host',
-            ...Object.entries(protonEnv).map(([k, v]) => `--env=${k}=${v}`),
-            protonPath,
-            ...installerArgs,
-          ]
-        : installerArgs;
-      const env = inFlatpak ? process.env : { ...process.env, ...protonEnv };
+      // Steam Deck game mode = gamescope compositor. Inside Flatpak umu only
+      // brings the Proton window to the foreground when its steammode monitor
+      // fires, which needs all three: gamescope session + STEAM_MULTIPLE_XWAYLANDS
+      // + PROTON_VERB=waitforexitandrun. Without them the installer renders
+      // off-screen. (Native AppImage doesn't need this — the window shows itself.)
+      const inGameMode =
+        process.env.XDG_CURRENT_DESKTOP === 'gamescope' ||
+        process.env.XDG_SESSION_DESKTOP === 'gamescope' ||
+        Boolean(process.env.GAMESCOPE_WAYLAND_DISPLAY);
+
+      // Prefer umu-run (in-sandbox) — required for the installer window to render
+      // under gamescope in Flatpak. Fall back to launching Proton directly, which
+      // works on the native AppImage where umu isn't available.
+      const umuRun = resolveUmuRun();
+      let cmd: string;
+      let cmdArgs: string[];
+      if (umuRun) {
+        cmd = umuRun;
+        cmdArgs = [enFilePath, ...(args ?? [])];
+        Object.assign(protonEnv, {
+          PROTONPATH: path.dirname(protonPath),
+          WINEPREFIX: prefix,
+          GAMEID: 'umu-0',
+          PROTON_VERB: 'waitforexitandrun',
+          UMU_RUNTIME_UPDATE: '0',
+        });
+        if (inGameMode) {
+          Object.assign(protonEnv, {
+            XDG_CURRENT_DESKTOP: 'gamescope',
+            STEAM_MULTIPLE_XWAYLANDS: '1',
+          });
+        }
+      } else {
+        cmd = protonPath;
+        cmdArgs = ['waitforexitandrun', enFilePath, ...(args ?? [])];
+      }
+
+      // Pass the environment through untouched (like Heroic): umu clears
+      // LD_PRELOAD itself in a gamescope session, and the Flatpak manifest
+      // unsets STEAM_RUNTIME/SDL_VIDEODRIVER.
+      const env: NodeJS.ProcessEnv = { ...process.env, ...protonEnv };
+
       const child = spawn(cmd, cmdArgs, {
         env,
         stdio: ['inherit', 'pipe', 'pipe'],
@@ -406,6 +508,8 @@ export function runProton({
           // Error handling
         }
         */
+
+        logProtonOutcome(protonLogDir, code);
 
         if (!keepPrefix && prefix.startsWith(PREFIX_BASE)) {
           setTimeout(() => {

@@ -803,7 +803,9 @@ const migrations: Migration[] = [
         )
         .get() as { count: number };
 
-      if (done.count > 0) return;
+      if (done.count > 0) {
+        return;
+      }
 
       console.log('[Migrations] Running: add_search_keywords_to_fts');
 

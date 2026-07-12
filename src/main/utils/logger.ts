@@ -136,14 +136,18 @@ export function createTimer(label: string): { end: () => number } {
 function cleanupOldLogs(): void {
   try {
     const logsDir = getLogFileDirectory();
-    if (!existsSync(logsDir)) return;
+    if (!existsSync(logsDir)) {
+      return;
+    }
 
     const files = readdirSync(logsDir);
     const now = Date.now();
     const maxAge = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
     for (const file of files) {
-      if (!file.startsWith('lbk-') || !file.endsWith('.log')) continue;
+      if (!file.startsWith('lbk-') || !file.endsWith('.log')) {
+        continue;
+      }
 
       const filePath = join(logsDir, file);
       try {

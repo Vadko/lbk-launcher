@@ -3,257 +3,72 @@ import {
   type RealtimeChannel,
   type SupabaseClient,
 } from '@supabase/supabase-js';
-import type { Game } from '@/shared/types.ts';
-import { getMainWindow } from '../window';
 import { getSupabaseCredentials } from './supabase-credentials';
 
-/**
- * Тип для broadcast payload від realtime.send
- */
-interface BroadcastPayload {
+export interface BroadcastMessage<T = unknown> {
   event: string;
   type: 'broadcast';
-  payload: Game;
+  payload: T;
 }
 
-const MAX_RETRY_ATTEMPTS = 5;
-const INITIAL_RETRY_DELAY_MS = 1000;
-const MAX_RETRY_DELAY_MS = 30000;
+export interface BroadcastSubscription {
+  topic: string;
+  handlers: Array<{ event: string; handler: (message: BroadcastMessage) => void }>;
+  onResubscribe?: () => void;
+}
 
-/**
- * Supabase Realtime Manager для підписки на зміни в таблиці games
- */
 export class SupabaseRealtimeManager {
-  private channel: RealtimeChannel | null = null;
   private supabase: SupabaseClient | null = null;
-  private supabaseUrl: string;
-  private supabaseKey: string;
-  private retryCount = 0;
-  private retryTimeout: NodeJS.Timeout | null = null;
-  private onUpdateCallback: ((game: Game) => void) | null = null;
-  private onDeleteCallback: ((gameId: string) => void) | null = null;
+  private channels: RealtimeChannel[] = [];
+  private joinedTopics = new Set<string>();
 
-  constructor() {
+  subscribe(subscriptions: Array<BroadcastSubscription | null | undefined>): void {
+    if (this.channels.length > 0) {
+      return;
+    }
+    const subs = subscriptions.filter((s): s is BroadcastSubscription => s != null);
+    if (subs.length === 0) {
+      return;
+    }
+
     const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
-    this.supabaseUrl = SUPABASE_URL;
-    this.supabaseKey = SUPABASE_ANON_KEY;
-  }
+    this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  /**
-   * Розрахувати затримку з exponential backoff
-   */
-  private getRetryDelay(): number {
-    const delay = Math.min(
-      INITIAL_RETRY_DELAY_MS * Math.pow(2, this.retryCount),
-      MAX_RETRY_DELAY_MS
-    );
-    // Додаємо jitter для уникнення thundering herd
-    return delay + Math.random() * 1000;
-  }
-
-  /**
-   * Спробувати перепідключитися
-   */
-  private scheduleRetry(): void {
-    if (this.retryCount >= MAX_RETRY_ATTEMPTS) {
-      console.error('[SupabaseRealtime] Max retry attempts reached, giving up');
-      return;
-    }
-
-    // Скасувати попередній retry щоб уникнути каскадних реконнектів
-    if (this.retryTimeout) {
-      clearTimeout(this.retryTimeout);
-      this.retryTimeout = null;
-    }
-
-    const delay = this.getRetryDelay();
-    console.log(
-      `[SupabaseRealtime] Scheduling retry #${this.retryCount + 1} in ${Math.round(delay)}ms`
-    );
-
-    this.retryTimeout = setTimeout(() => {
-      this.retryCount++;
-      this.reconnect();
-    }, delay);
-  }
-
-  /**
-   * Перепідключитися до realtime
-   */
-  private reconnect(): void {
-    if (!this.onUpdateCallback || !this.onDeleteCallback) {
-      console.error('[SupabaseRealtime] Cannot reconnect: callbacks not set');
-      return;
-    }
-
-    console.log('[SupabaseRealtime] Attempting to reconnect...');
-
-    // Очистити попереднє підключення та клієнт
-    // Спочатку обнуляємо this.channel, щоб CLOSED callback від unsubscribe
-    // не запланував паразитний retry
-    if (this.channel) {
-      const oldChannel = this.channel;
-      this.channel = null;
-      oldChannel.unsubscribe();
-    }
-
-    // Закрити старий Supabase client перед створенням нового
-    if (this.supabase) {
-      console.log('[SupabaseRealtime] Closing old Supabase client');
-      this.supabase.realtime.disconnect();
-      this.supabase.removeAllChannels();
-      this.supabase = null;
-    }
-
-    // Створити нове підключення
-    this.subscribeInternal(this.onUpdateCallback, this.onDeleteCallback);
-  }
-
-  /**
-   * Підписатися на realtime оновлення games (публічний метод)
-   */
-  subscribe(onUpdate: (game: Game) => void, onDelete: (gameId: string) => void): void {
-    // Зберігаємо callbacks для reconnect
-    this.onUpdateCallback = onUpdate;
-    this.onDeleteCallback = onDelete;
-
-    this.subscribeInternal(onUpdate, onDelete);
-  }
-
-  /**
-   * Обробити broadcast подію
-   */
-  private handleBroadcastEvent(
-    event: string,
-    payload: BroadcastPayload,
-    onUpdate: (game: Game) => void,
-    onDelete: (gameId: string) => void
-  ): void {
-    const game = payload.payload;
-    console.log(`[SupabaseRealtime] Game ${event}:`, game.name, `(${game.id})`);
-
-    if (event === 'DELETE') {
-      // SyncManager сам вирішить — видаляти зараз чи відкласти (якщо встановлено),
-      // і він же відправить 'game-removed' рендереру, коли реально видалить.
-      onDelete(game.id);
-      return;
-    }
-
-    // INSERT або UPDATE
-    if (!game.approved) {
-      if (event === 'UPDATE') {
-        console.log('[SupabaseRealtime] Game unapproved, removing:', game.name);
-        onDelete(game.id);
-      } else {
-        console.log('[SupabaseRealtime] New game not approved, skipping:', game.name);
+    for (const sub of subs) {
+      let channel = this.supabase.channel(sub.topic);
+      for (const { event, handler } of sub.handlers) {
+        channel = channel.on('broadcast', { event }, handler);
       }
-      return;
-    }
-
-    onUpdate(game);
-    const mainWindow = getMainWindow();
-    if (mainWindow) {
-      mainWindow.webContents.send('game-updated', game);
-      console.log(`[SupabaseRealtime] Sent ${event} to renderer:`, game.name);
-    }
-  }
-
-  /**
-   * Внутрішній метод підписки
-   */
-  private subscribeInternal(
-    onUpdate: (game: Game) => void,
-    onDelete: (gameId: string) => void
-  ): void {
-    if (this.channel) {
-      console.log('[SupabaseRealtime] Already subscribed, skipping');
-      return;
-    }
-
-    console.log('[SupabaseRealtime] Subscribing to games-broadcast channel...');
-
-    this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
-
-    this.channel = this.supabase
-      .channel('games-broadcast')
-      .on('broadcast', { event: 'INSERT' }, (payload: BroadcastPayload) => {
-        this.handleBroadcastEvent('INSERT', payload, onUpdate, onDelete);
-      })
-      .on('broadcast', { event: 'UPDATE' }, (payload: BroadcastPayload) => {
-        this.handleBroadcastEvent('UPDATE', payload, onUpdate, onDelete);
-      })
-      .on('broadcast', { event: 'DELETE' }, (payload: BroadcastPayload) => {
-        this.handleBroadcastEvent('DELETE', payload, onUpdate, onDelete);
-      })
-      .subscribe((status, err) => {
-        console.log('[SupabaseRealtime] Subscription status:', status);
-
-        if (status === 'SUBSCRIBED') {
-          // Скасувати pending retry — з'єднання вже відновлено
-          if (this.retryTimeout) {
-            clearTimeout(this.retryTimeout);
-            this.retryTimeout = null;
-          }
-          this.retryCount = 0;
-          console.log('[SupabaseRealtime] Successfully connected to broadcast channel');
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('[SupabaseRealtime] Connection error:', err);
-          this.channel = null;
-          this.scheduleRetry();
-        } else if (status === 'CLOSED') {
-          // Ігноруємо CLOSED від unsubscribe під час reconnect
-          // (this.channel вже null якщо reconnect обнулив його)
-          if (!this.channel) {
-            console.log('[SupabaseRealtime] Channel already cleaned up, ignoring CLOSED');
-            return;
-          }
-          console.log('[SupabaseRealtime] Channel closed, attempting to reconnect...');
-          this.channel = null;
-          this.scheduleRetry();
+      channel.subscribe((status) => {
+        if (status !== 'SUBSCRIBED') {
+          console.warn(`[SupabaseRealtime] ${sub.topic}: ${status}`);
+          return;
+        }
+        console.log(`[SupabaseRealtime] Subscribed to ${sub.topic}`);
+        if (this.joinedTopics.has(sub.topic)) {
+          sub.onResubscribe?.();
+        } else {
+          this.joinedTopics.add(sub.topic);
         }
       });
+      this.channels.push(channel);
+    }
   }
 
-  /**
-   * Відписатися від realtime оновлень
-   */
   unsubscribe(): void {
-    // Скасувати retry якщо запланований
-    if (this.retryTimeout) {
-      clearTimeout(this.retryTimeout);
-      this.retryTimeout = null;
+    for (const channel of this.channels) {
+      channel.unsubscribe();
     }
-
-    if (this.channel) {
-      console.log('[SupabaseRealtime] Unsubscribing from games table changes...');
-      this.channel.unsubscribe();
-      this.channel = null;
-    }
-
-    // Закрити Supabase client щоб звільнити WebSocket підключення
+    this.channels = [];
+    this.joinedTopics.clear();
     if (this.supabase) {
-      console.log('[SupabaseRealtime] Closing Supabase client');
       this.supabase.realtime.disconnect();
       this.supabase.removeAllChannels();
       this.supabase = null;
     }
-
-    this.onUpdateCallback = null;
-    this.onDeleteCallback = null;
-    this.retryCount = 0;
   }
 
-  /**
-   * Скинути лічильник спроб (для ручного retry)
-   */
-  resetRetryCount(): void {
-    this.retryCount = 0;
-  }
-
-  /**
-   * Чи активна підписка
-   */
   get isSubscribed(): boolean {
-    return this.channel !== null;
+    return this.channels.length > 0;
   }
 }

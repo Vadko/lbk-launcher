@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { AlertTriangle, Ban, CheckCircle, ImageIcon, Wrench, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileEdit, ImageIcon, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { FeedbackErrorType } from '@/shared/types';
+import type { FeedbackType } from '@/shared/types';
 import { trackEvent } from '../../utils/analytics';
 import { Modal } from './Modal';
 
@@ -9,29 +9,20 @@ const MAX_MESSAGE_LENGTH = 1000;
 const MAX_SCREENSHOTS = 5;
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
-const ERROR_TYPES: {
-  value: FeedbackErrorType;
+const FEEDBACK_TYPES: {
+  value: FeedbackType;
   label: string;
-  sublabel: string;
   icon: React.ReactNode;
 }[] = [
   {
-    value: 'missing_translation',
-    label: 'Відсутній',
-    sublabel: 'переклад',
-    icon: <Ban size={18} />,
+    value: 'feedback',
+    label: 'Відгук',
+    icon: <FileEdit size={18} />,
   },
   {
-    value: 'translation_error',
+    value: 'error',
     label: 'Помилка',
-    sublabel: 'перекладу',
     icon: <AlertTriangle size={18} />,
-  },
-  {
-    value: 'technical',
-    label: 'Технічна',
-    sublabel: 'помилка',
-    icon: <Wrench size={18} />,
   },
 ];
 
@@ -55,8 +46,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   gameId,
   gameName,
 }) => {
-  const [errorType, setFeedbackErrorType] =
-    useState<FeedbackErrorType>('missing_translation');
+  const [feedbackType, setFeedbackType] = useState<FeedbackType>('feedback');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +58,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setFeedbackErrorType('missing_translation');
+      setFeedbackType('feedback');
       setMessage('');
       setScreenshots([]);
       setIsSubmitting(false);
@@ -102,8 +92,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       const fileArray = Array.from(files);
 
       for (const file of fileArray) {
-        if (!ALLOWED_TYPES.includes(file.type)) continue;
-        if (screenshots.length + newFiles.length >= MAX_SCREENSHOTS) break;
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          continue;
+        }
+        if (screenshots.length + newFiles.length >= MAX_SCREENSHOTS) {
+          break;
+        }
 
         newFiles.push({
           name: file.name,
@@ -140,7 +134,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const handleSubmit = useCallback(async () => {
     const trimmedMessage = message.trim();
-    if (!trimmedMessage || isSubmitting) return;
+    if (!trimmedMessage || isSubmitting) {
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -180,7 +176,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
       const result = await window.electronAPI.submitFeedback(
         gameId,
-        errorType,
+        feedbackType,
         trimmedMessage,
         uploadedPaths
       );
@@ -190,7 +186,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         trackEvent('Feedback Submitted', {
           'Game Id': gameId,
           'Game Name': gameName,
-          'Error Type': errorType,
+          'Feedback Type': feedbackType,
           'Message Length': trimmedMessage.length,
           Screenshots: screenshots.length,
         });
@@ -206,7 +202,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [gameId, gameName, errorType, message, screenshots, isSubmitting]);
+  }, [gameId, gameName, feedbackType, message, screenshots, isSubmitting]);
 
   // Success state
   if (isSubmitted) {
@@ -230,29 +226,25 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Повідомити про помилку">
+    <Modal isOpen={isOpen} onClose={onClose} title="Лишити відгук">
       <div className="flex flex-col gap-5">
         {/* Error type selector */}
         <div>
-          <p className="text-sm font-medium text-text-muted mb-3">Тип помилки</p>
+          <p className="text-sm font-medium text-text-muted mb-3">Тип</p>
           <div className="flex gap-3">
-            {ERROR_TYPES.map((type) => (
+            {FEEDBACK_TYPES.map((type) => (
               <button
                 key={type.value}
-                onClick={() => setFeedbackErrorType(type.value)}
+                onClick={() => setFeedbackType(type.value)}
                 data-gamepad-modal-item
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-lg border transition-all ${
-                  errorType === type.value
+                  feedbackType === type.value
                     ? 'border-color-main bg-color-main/10 text-text-main'
                     : 'border-border bg-glass text-text-muted hover:border-border-hover'
                 }`}
               >
                 {type.icon}
-                <span className="text-sm leading-tight text-left">
-                  {type.label}
-                  <br />
-                  {type.sublabel}
-                </span>
+                <span className="text-sm leading-tight text-left">{type.label}</span>
               </button>
             ))}
           </div>
@@ -268,7 +260,12 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 setMessage(e.target.value);
               }
             }}
-            placeholder="Опишіть де саме помилка, яка мова в грі встановлена ..."
+            placeholder={
+              feedbackType === 'feedback'
+                ? 'Опишіть ваш відгук та пропозиції ...'
+                : 'Опишіть де саме помилка, яка мова в грі встановлена ...'
+            }
+            // maxLength={MAX_MESSAGE_LENGTH}
             rows={5}
             data-gamepad-modal-item
             className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-none transition-all duration-300 backdrop-blur-lg resize-none glass-input"
@@ -339,7 +336,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             multiple
             className="hidden"
             onChange={(e) => {
-              if (e.target.files) addFiles(e.target.files);
+              if (e.target.files) {
+                addFiles(e.target.files);
+              }
               e.target.value = '';
             }}
           />

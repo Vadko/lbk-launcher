@@ -30,7 +30,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     'tech-improvement': {
       textLabel: 'Технічна доробка',
       capsuleColor: 'bg-[rgba(148,163,184,0.25)]',
-      textColor: 'text-[rgb(148,163,184)]',
+      textColor: 'text-white',
     },
     unknown: {
       textLabel: 'Невідомо',

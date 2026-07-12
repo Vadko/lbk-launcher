@@ -53,14 +53,22 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
 
   // Select games based on active tab
   const games = useMemo(() => {
-    if (activeTab?.sortOrder === 'newest') return newestGames;
-    if (activeTab?.sortOrder === 'updated') return updatedGames;
+    if (activeTab?.sortOrder === 'newest') {
+      return newestGames;
+    }
+    if (activeTab?.sortOrder === 'updated') {
+      return updatedGames;
+    }
     return [];
   }, [activeTab, newestGames, updatedGames]);
 
   const isLoading = useMemo(() => {
-    if (activeTab?.sortOrder === 'newest') return isLoadingNewest;
-    if (activeTab?.sortOrder === 'updated') return isLoadingUpdated;
+    if (activeTab?.sortOrder === 'newest') {
+      return isLoadingNewest;
+    }
+    if (activeTab?.sortOrder === 'updated') {
+      return isLoadingUpdated;
+    }
     return false;
   }, [activeTab, isLoadingNewest, isLoadingUpdated]);
 

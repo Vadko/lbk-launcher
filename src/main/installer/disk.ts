@@ -5,7 +5,9 @@ import fs from 'fs';
  */
 export function parseSizeToBytes(sizeString: string): number {
   const match = sizeString.trim().match(/([\d.]+)\s*(B|KB|MB|GB)/i);
-  if (!match) return 0;
+  if (!match) {
+    return 0;
+  }
 
   const value = parseFloat(match[1]);
   const unit = match[2].toUpperCase();

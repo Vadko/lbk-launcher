@@ -271,7 +271,9 @@ export class GamesRepository {
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
-        if (!game.team) return false;
+        if (!game.team) {
+          return false;
+        }
         return authors.some((author) => game.team?.includes(author));
       });
     }
@@ -295,7 +297,9 @@ export class GamesRepository {
         .split(/\s+/)
         .filter((w) => w.length >= 3);
 
-      if (queryWords.length === 0) return [];
+      if (queryWords.length === 0) {
+        return [];
+      }
 
       const correctedWords: string[] = [];
       const spellfixStmt = this.db.prepare(
@@ -341,7 +345,9 @@ export class GamesRepository {
     // Parse comma-separated teams into individual authors
     const allAuthors = rows
       .flatMap((row) => {
-        if (!row.team) return [];
+        if (!row.team) {
+          return [];
+        }
         return row.team.split(',').map((author) => author.trim());
       })
       .filter((author) => author.length > 0);
@@ -364,7 +370,9 @@ export class GamesRepository {
     useSteamIdField = false,
     sortOrder: SortOrderType = 'name'
   ): Game[] {
-    if (gameIds.length === 0) return [];
+    if (gameIds.length === 0) {
+      return [];
+    }
 
     const whereConditions = [
       `${useSteamIdField ? 'steam_app_id' : 'id'} IN (${gameIds.map(() => '?').join(',')})`,
@@ -461,10 +469,14 @@ export class GamesRepository {
     });
 
     const matchedGames = allGames.filter((game) => {
-      if (!game.install_paths || !Array.isArray(game.install_paths)) return false;
+      if (!game.install_paths || !Array.isArray(game.install_paths)) {
+        return false;
+      }
 
       return game.install_paths.some((installPath) => {
-        if (!installPath || !installPath.path) return false;
+        if (!installPath || !installPath.path) {
+          return false;
+        }
 
         // В БД тепер зберігаються тільки назви папок
         const dbPath = installPath.path.toLowerCase();

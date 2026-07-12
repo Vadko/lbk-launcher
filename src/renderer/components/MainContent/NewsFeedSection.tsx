@@ -14,10 +14,14 @@ const feedTabs: { label: string; filter: NewsFeedFilter }[] = [
 ];
 
 const formatDate = (date?: string) => {
-  if (!date) return null;
+  if (!date) {
+    return null;
+  }
 
   const parsedDate = new Date(date);
-  if (Number.isNaN(parsedDate.getTime())) return null;
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
 
   return new Intl.DateTimeFormat('uk-UA', {
     day: 'numeric',

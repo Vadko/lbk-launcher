@@ -1,10 +1,8 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
-  AlertTriangle,
-  Bookmark,
-  BookmarkCheck,
   Download,
   EyeOff,
+  FileEdit,
   Heart,
   Play,
   RefreshCw,
@@ -40,6 +38,7 @@ import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
+import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
@@ -65,13 +64,8 @@ export const GamePage: React.FC = () => {
   } = useStore();
 
   const { showModal } = useModalStore();
-  const {
-    showAdultGames,
-    openSettingsModal,
-    createBackupBeforeInstall,
-    toggleFavoriteGame,
-    isFavoriteGame,
-  } = useSettingsStore();
+  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
+    useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const [isLaunching, setIsLaunching] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -104,14 +98,6 @@ export const GamePage: React.FC = () => {
     ? isTranslationInstallable(selectedGame.status)
     : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
-  const isFavorite = selectedGame ? isFavoriteGame(selectedGame.id) : false;
-
-  // Toggle favorite handler
-  const handleToggleFavorite = useCallback(() => {
-    if (selectedGame) {
-      toggleFavoriteGame(selectedGame.id, selectedGame.name);
-    }
-  }, [selectedGame, toggleFavoriteGame]);
 
   // Завантажити гру якщо її ще немає в selectedGame
   useEffect(() => {
@@ -124,12 +110,15 @@ export const GamePage: React.FC = () => {
 
     const loadGame = async () => {
       // Якщо вже є вибрана гра з правильним ID, не треба перезавантажувати
-      if (selectedGame?.id === gameId) return;
+      if (selectedGame?.id === gameId) {
+        return;
+      }
 
       // Очищаємо selectedGame якщо змінився gameId (щоб не показувати стару гру)
-      if (selectedGame?.id && selectedGame.id !== gameId) {
-        setSelectedGame(null);
-      }
+      // Я хз нашо додавав але здається це викликає проблеми з геймпадом і зміною ігр
+      // if (selectedGame?.id && selectedGame.id !== gameId) {
+      //   setSelectedGame(null);
+      // }
 
       try {
         const games = await window.electronAPI.fetchGamesByIds([gameId]);
@@ -193,7 +182,9 @@ export const GamePage: React.FC = () => {
           selectedGame.id,
           selectedGame.slug
         );
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         // Cache the result
         bannerCacheRef.current.set(selectedGame.id, result);
@@ -203,7 +194,9 @@ export const GamePage: React.FC = () => {
           setLoadedBannerGameId(selectedGame.id);
         }
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
         console.error('Error loading banner data:', error);
         setBannerData(null);
         setLoadedBannerGameId(selectedGame.id);
@@ -387,7 +380,9 @@ export const GamePage: React.FC = () => {
   }, [selectedGame, isInstalling, isPaused, isWaitingForNetwork]);
 
   const handleSupport = useCallback(() => {
-    if (!selectedGame?.support_url) return;
+    if (!selectedGame?.support_url) {
+      return;
+    }
 
     // Track support click
     if (window.electronAPI?.trackSupportClick) {
@@ -407,8 +402,9 @@ export const GamePage: React.FC = () => {
       isLaunching ||
       !isGameInstalledOnSystem ||
       !isTranslationInstalled
-    )
+    ) {
       return;
+    }
 
     setIsLaunching(true);
     try {
@@ -512,20 +508,20 @@ export const GamePage: React.FC = () => {
 
       <div
         data-gamepad-main-content
-        className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar"
+        className={`flex-1 overflow-y-auto px-8 custom-scrollbar grid gap-6 ${useGamepadModeStore.getState().isGamepadMode && 'py-6'}`}
       >
         <LayoutGroup>
           <GameHero game={selectedGame} />
 
           {isTombstoned && (
-            <div className="glass-card-no-motion mb-6 border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
+            <div className="glass-card-no-motion border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
               Цей переклад більше не доступний у каталозі. Ви можете лише видалити
               локалізацію — повторне встановлення недоступне.
             </div>
           )}
 
           {/* Actions block */}
-          <div className="glass-card-no-motion mb-6 grid gap-6">
+          <div className="glass-card-no-motion grid gap-6">
             <div className="flex flex-wrap items-center gap-3">
               {/* Primary actions */}
               {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
@@ -535,8 +531,9 @@ export const GamePage: React.FC = () => {
                   onClick={handleLaunchGame}
                   disabled={isLaunching || isInstalling || isUninstalling}
                   data-gamepad-action
+                  data-gamepad-primary-action
                 >
-                  {isLaunching ? 'Запуск...' : 'Грати'}
+                  Грати
                 </Button>
               )}
               <Button
@@ -568,17 +565,6 @@ export const GamePage: React.FC = () => {
               >
                 {getInstallButtonText()}
               </Button>
-              {installationInfo && !isInstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<Trash2 size={20} />}
-                  onClick={handleUninstall}
-                  disabled={isUninstalling}
-                  data-gamepad-action
-                >
-                  {isUninstalling ? 'Видалення...' : 'Видалити'}
-                </Button>
-              )}
               {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
                 <Button
                   variant="secondary"
@@ -589,6 +575,15 @@ export const GamePage: React.FC = () => {
                 >
                   Перевстановити
                 </Button>
+              )}
+              {installationInfo && !isInstalling && (
+                <Button
+                  variant="secondary"
+                  icon={<Trash2 size={20} />}
+                  onClick={handleUninstall}
+                  disabled={isUninstalling}
+                  data-gamepad-action
+                ></Button>
               )}
 
               {/* Separator */}
@@ -604,15 +599,6 @@ export const GamePage: React.FC = () => {
                   data-gamepad-action
                 />
               )}
-              <Button
-                variant="secondary"
-                icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-                onClick={handleToggleFavorite}
-                data-gamepad-action
-                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
-              >
-                {isFavorite ? 'В улюблених' : 'До улюблених'}
-              </Button>
               {selectedGame.support_url &&
                 bannerInfo.placementType &&
                 !(
@@ -625,73 +611,90 @@ export const GamePage: React.FC = () => {
                     data-gamepad-action
                     className="support-button"
                   >
-                    Підтримати переклад
+                    Підтримати
                   </Button>
                 )}
+              {isTranslationInstalled && (
+                <Button
+                  variant="secondary"
+                  icon={<FileEdit size={20} />}
+                  onClick={() => setShowFeedbackModal(true)}
+                  data-gamepad-action
+                  className="support-button"
+                >
+                  Лишити відгук
+                </Button>
+              )}
             </div>
 
-            <ImportantNotice game={selectedGame} />
-          </div>
-
-          <div className="space-y-4 mb-6">
-            {installationInfo && !isCheckingInstallation && !isInstalling && (
-              <InstallationStatusBadge
-                isUpdateAvailable={!!isUpdateAvailable}
-                installedVersion={installationInfo.version}
-                hasInstallError={installationInfo.hasInstallError}
-                newVersion={selectedGame?.version}
-              />
-            )}
-
-            {(isInstalling || isPaused || isWaitingForNetwork) && (
-              <div className="glass-card-no-motion">
-                {downloadProgress && downloadProgress.totalBytes > 0 ? (
-                  <DownloadProgressCard
-                    progress={installProgress}
-                    downloadProgress={downloadProgress}
-                    isPaused={isPaused}
-                    onPause={handlePauseDownload}
-                    onResume={handleResumeDownload}
-                    onCancel={handleCancelDownload}
+            <div className="flex gap-3 flex-wrap">
+              {installationInfo && !isCheckingInstallation && !isInstalling && (
+                <>
+                  <InstallationStatusBadge
+                    isUpdateAvailable={!!isUpdateAvailable}
+                    installedVersion={installationInfo.version}
+                    hasInstallError={installationInfo.hasInstallError}
+                    newVersion={selectedGame?.version}
                   />
-                ) : (
-                  <div>
-                    <InstallationStatusMessage
-                      statusMessage={statusMessage}
-                      isUpdateAvailable={!!isUpdateAvailable}
-                      isOnline={isOnline}
-                      isInstalling={isInstalling}
-                    />
-                    {isWaitingForNetwork && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={handleCancelDownload}
-                          className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
-                        >
-                          Скасувати
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {isUninstalling && (
-              <div className="glass-card-no-motion">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm font-medium text-text-main">
-                    Видалення українізатора та відновлення оригінальних файлів...
-                  </span>
-                </div>
-              </div>
-            )}
+                  <div className="w-0 h-auto border-l border-border-hover last:hidden" />
+                </>
+              )}
+              <ImportantNotice game={selectedGame} />
+            </div>
           </div>
+
+          {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) ?? (
+            <div className="space-y-4">
+              {(isInstalling || isPaused || isWaitingForNetwork) && (
+                <div className="glass-card-no-motion">
+                  {downloadProgress && downloadProgress.totalBytes > 0 ? (
+                    <DownloadProgressCard
+                      progress={installProgress}
+                      downloadProgress={downloadProgress}
+                      isPaused={isPaused}
+                      onPause={handlePauseDownload}
+                      onResume={handleResumeDownload}
+                      onCancel={handleCancelDownload}
+                    />
+                  ) : (
+                    <div>
+                      <InstallationStatusMessage
+                        statusMessage={statusMessage}
+                        isUpdateAvailable={!!isUpdateAvailable}
+                        isOnline={isOnline}
+                        isInstalling={isInstalling}
+                      />
+                      {isWaitingForNetwork && (
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={handleCancelDownload}
+                            className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
+                          >
+                            Скасувати
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isUninstalling && (
+                <div className="glass-card-no-motion">
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm font-medium text-text-main">
+                      Видалення українізатора та відновлення оригінальних файлів...
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Author card */}
           {selectedGame.team && (
-            <div className="glass-card-no-motion mb-6">
+            <div className="glass-card-no-motion">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div
@@ -752,7 +755,7 @@ export const GamePage: React.FC = () => {
           </AnimatePresence>
 
           {/* Info cards */}
-          <div className="flex flex-col lg:flex-row gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-w-0">
               <StatusCard game={selectedGame} />
               <InfoCard game={selectedGame} />
@@ -784,11 +787,7 @@ export const GamePage: React.FC = () => {
 
           {/* Donate */}
           {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="mb-6"
-            >
+            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
               <FundraisingProgressCard
                 current={selectedGame.fundraising_current || 0}
                 goal={selectedGame.fundraising_goal}
@@ -802,7 +801,7 @@ export const GamePage: React.FC = () => {
             <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion mb-6"
+              className="glass-card-no-motion"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про українізатор
@@ -815,11 +814,7 @@ export const GamePage: React.FC = () => {
 
           {/* Video */}
           {selectedGame.video_url && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="mb-6"
-            >
+            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
               <VideoCard videoUrl={selectedGame.video_url} />
             </motion.div>
           )}
@@ -829,7 +824,6 @@ export const GamePage: React.FC = () => {
             <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="mb-6"
             >
               <div className="glass-card-no-motion">
                 <SwiperSlider
@@ -850,7 +844,7 @@ export const GamePage: React.FC = () => {
             <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion mb-6"
+              className="glass-card-no-motion"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про гру
@@ -865,36 +859,11 @@ export const GamePage: React.FC = () => {
           <motion.div
             layout="position"
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="flex gap-4 mb-6"
+            className="flex gap-4"
           >
             <div className="flex-1 min-w-0">
               <SocialLinksCard game={selectedGame} />
             </div>
-            <AnimatePresence>
-              {isTranslationInstalled && (
-                <motion.div
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 320, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="overflow-visible flex-shrink-0"
-                >
-                  <div className="glass-card-no-motion h-full flex flex-col justify-center gap-4 w-[320px] p-6">
-                    <h3 className="text-base font-semibold text-text-main">
-                      Знайшли помилку?
-                    </h3>
-                    <button
-                      onClick={() => setShowFeedbackModal(true)}
-                      data-gamepad-action
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-text-main hover:bg-glass-hover transition-colors"
-                    >
-                      <AlertTriangle size={16} />
-                      Повідомити про помилку
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         </LayoutGroup>
       </div>
