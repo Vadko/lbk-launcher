@@ -101,6 +101,7 @@
     "knip": "5.85.0",
     "lint-staged": "16.4.0",
     "lucide-react": "0.577.0",
+    "node-addon-api": "8.5.0",
     "postcss": "8.5.10",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",
