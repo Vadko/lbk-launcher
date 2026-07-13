@@ -68,7 +68,8 @@
   },
   "optionalDependencies": {
     "electron-liquid-glass": "1.1.1",
-    "node-gyp-build": "4.8.4"
+    "node-gyp-build": "4.8.4",
+    "win-verify-signature": "^1.8.0"
   },
   "devDependencies": {
     "7zip-bin-full": "26.1.0",

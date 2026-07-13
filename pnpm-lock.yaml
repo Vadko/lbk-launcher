@@ -187,6 +187,9 @@ importers:
       node-gyp-build:
         specifier: 4.8.4
         version: 4.8.4
+      win-verify-signature:
+        specifier: ^1.8.0
+        version: 1.8.0
 
 packages:
 
@@ -4324,6 +4327,9 @@ packages:
     resolution: {integrity: sha512-JEdGzHwwkrbWoGOlIHqQ5gtprKGOenpDHpxE9zVR1bWbOtYRyPPHMe9FaP6x61CmNaTThSkb0DAJte5jD+DmzQ==}
     engines: {node: ^18.17.0 || >=20.5.0}
     hasBin: true
+
+  win-verify-signature@1.8.0:
+    resolution: {integrity: sha512-XvZsUL9rAbx5vOw0j3vzJlw3cd0lzpvUltYFSME2laI8kVPxlHFjyORgU+bhd6NfJmj/fCFU5/SnEMDupIe6kA==}
 
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
@@ -8862,6 +8868,11 @@ snapshots:
   which@5.0.0:
     dependencies:
       isexe: 3.1.5
+
+  win-verify-signature@1.8.0:
+    dependencies:
+      bindings: 1.5.0
+    optional: true
 
   word-wrap@1.2.5: {}
 
