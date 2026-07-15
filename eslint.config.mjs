@@ -101,7 +101,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/main/liquid-glass.ts'],
+    files: ['src/main/liquid-glass.ts', 'src/main/auto-updater.ts'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
 );

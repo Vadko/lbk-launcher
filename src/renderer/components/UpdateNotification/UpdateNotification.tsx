@@ -72,7 +72,12 @@ export const UpdateNotification = () => {
 
   const handleDownload = async () => {
     setDownloading(true);
-    await window.electronAPI.downloadUpdate();
+    try {
+      await window.electronAPI.downloadUpdate();
+    } catch (error) {
+      console.error('Update download failed:', error);
+      setDownloading(false);
+    }
   };
 
   const handleInstall = () => {

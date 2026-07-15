@@ -68,7 +68,8 @@
   },
   "optionalDependencies": {
     "electron-liquid-glass": "1.1.1",
-    "node-gyp-build": "4.8.4"
+    "node-gyp-build": "4.8.4",
+    "win-verify-signature": "^1.8.0"
   },
   "devDependencies": {
     "7zip-bin-full": "26.1.0",
@@ -87,7 +88,7 @@
     "@vitejs/plugin-react-swc": "4.2.3",
     "autoprefixer": "10.5.0",
     "electron": "39.8.10",
-    "electron-builder": "26.8.2",
+    "electron-builder": "26.15.3",
     "electron-devtools-installer": "4.0.0",
     "electron-updater": "6.8.3",
     "electron-vite": "5.0.0",
@@ -100,6 +101,7 @@
     "knip": "5.85.0",
     "lint-staged": "16.4.0",
     "lucide-react": "0.577.0",
+    "node-addon-api": "8.5.0",
     "postcss": "8.5.10",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",

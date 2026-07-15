@@ -1,8 +1,14 @@
 import { app, ipcMain } from 'electron';
-import { autoUpdater } from 'electron-updater';
+import { autoUpdater, NsisUpdater } from 'electron-updater';
+import type * as WinVerifySignature from 'win-verify-signature';
 import { checkForPortableUpdates, stopPortableUpdateCheck } from './portable-updater';
-import { isPortable } from './utils/platform';
+import { isPortable, isWindows } from './utils/platform';
 import { getMainWindow } from './window';
+
+// Conditionally import based on platform
+const winVerifySignature: typeof WinVerifySignature | null = isWindows()
+  ? require('win-verify-signature')
+  : null;
 
 let updateCheckInterval: NodeJS.Timeout | null = null;
 
@@ -14,6 +20,18 @@ export function setupAutoUpdater(): void {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+
+  // Native WinVerifyTrust instead of the default PowerShell Get-AuthenticodeSignature,
+  // which intermittently fails (AV locks, 20s timeout): electron-builder#2589
+  if (winVerifySignature && autoUpdater instanceof NsisUpdater) {
+    autoUpdater.verifyUpdateCodeSignature = async (publisherNames, path) => {
+      const result = await winVerifySignature.verifySignatureByPublishNameAsync(
+        path,
+        publisherNames
+      );
+      return result.signed ? null : result.message;
+    };
+  }
 
   autoUpdater.on('update-available', (info) => {
     getMainWindow()?.webContents.send('update-available', info);
@@ -27,7 +45,20 @@ export function setupAutoUpdater(): void {
     getMainWindow()?.webContents.send('update-progress', progress);
   });
 
-  ipcMain.handle('download-update', () => autoUpdater.downloadUpdate());
+  autoUpdater.on('error', (error) => {
+    console.error('[AutoUpdater] Error:', error);
+    getMainWindow()?.webContents.send('update-error', error);
+  });
+
+  ipcMain.handle('download-update', async () => {
+    try {
+      return await autoUpdater.downloadUpdate();
+    } catch (error) {
+      // Already reported to the renderer via the 'error' event above.
+      console.error('[AutoUpdater] Download failed:', error);
+      return null;
+    }
+  });
   ipcMain.handle('install-update', () => autoUpdater.quitAndInstall());
 }
 
