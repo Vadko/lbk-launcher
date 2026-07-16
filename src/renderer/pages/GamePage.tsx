@@ -636,7 +636,7 @@ export const GamePage: React.FC = () => {
                     hasInstallError={installationInfo.hasInstallError}
                     newVersion={selectedGame?.version}
                   />
-                  <div className="w-0 h-auto border-l border-border-hover last:hidden" />
+                  <div className="divider w-0 h-auto border-l border-border-hover last:hidden" />
                 </>
               )}
               <ImportantNotice game={selectedGame} />
