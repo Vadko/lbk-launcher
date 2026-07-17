@@ -9,6 +9,7 @@
  * EA changes the encryption scheme.
  */
 
+import { sha3_256 } from '@noble/hashes/sha3.js';
 import { execSync } from 'child_process';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -113,10 +114,9 @@ function getEADecryptionKey(): Buffer | null {
     .digest('hex')
     .toLowerCase();
 
-  cachedDecryptionKey = crypto
-    .createHash('sha3-256')
-    .update(`allUsersGenericIdIS${hardwareHash}`, 'ascii')
-    .digest();
+  cachedDecryptionKey = Buffer.from(
+    sha3_256(Buffer.from(`allUsersGenericIdIS${hardwareHash}`, 'ascii'))
+  );
 
   return cachedDecryptionKey;
 }
