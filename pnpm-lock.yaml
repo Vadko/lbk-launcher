@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@noble/hashes':
-        specifier: ^2.2.0
-        version: 2.2.0
       '@sentry/electron':
         specifier: 7.13.0
         version: 7.13.0
