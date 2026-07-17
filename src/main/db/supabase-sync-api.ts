@@ -17,6 +17,8 @@ type ExcludedFields =
   | 'epic_archive_file_list'
   | 'gog_archive_file_list'
   | 'xbox_archive_file_list'
+  | 'uplay_archive_file_list'
+  | 'ea_archive_file_list'
   | 'steam_linux_archive_file_list'
   | 'steam_mac_archive_file_list'
   | 'name_fts'
@@ -88,6 +90,12 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'xbox_archive_path',
   'xbox_archive_hash',
   'xbox_archive_size',
+  'uplay_archive_path',
+  'uplay_archive_hash',
+  'uplay_archive_size',
+  'ea_archive_path',
+  'ea_archive_hash',
+  'ea_archive_size',
   'steam_linux_archive_path',
   'steam_linux_archive_hash',
   'steam_linux_archive_size',
@@ -99,6 +107,8 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'epic_store_url',
   'gog_store_url',
   'xbox_store_url',
+  'uplay_store_url',
+  'ea_store_url',
   'ai',
   'hide',
   'additional_path',

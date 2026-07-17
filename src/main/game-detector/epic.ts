@@ -275,6 +275,10 @@ export function getInstalledEpicGamePaths(): string[] {
     console.error('[Epic] Error getting game paths:', error);
   }
 
+  if (paths.length > 0) {
+    console.log(`[Epic] Found ${paths.length} installed games: ${paths.join(', ')}`);
+  }
+
   return paths;
 }
 

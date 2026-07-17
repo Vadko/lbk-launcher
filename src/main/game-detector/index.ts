@@ -4,11 +4,13 @@
  */
 
 import type { InstallPath } from '../../shared/types';
+import { findEAGame, getInstalledEAGamePaths } from './ea';
 import { findEpicGame, getHeroicEpicAppName, getInstalledEpicGamePaths } from './epic';
 import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
 import { findSteamGame, getInstalledSteamGamePaths } from './steam';
 import type { GamePath } from './types'; // Used locally
+import { findUplayGame, getInstalledUplayGamePaths } from './uplay';
 import { findXboxGame, getInstalledXboxGamePaths } from './xbox';
 
 // ============================================================================
@@ -32,6 +34,8 @@ export {
   invalidateSteamPathCache,
   updateLastKnownLicensecacheSize,
 } from './steam';
+// Uplay
+export { getUplayGameId } from './uplay';
 
 // ============================================================================
 // Main Detection Logic
@@ -84,6 +88,22 @@ export function detectGamePath(
       foundPath = findXboxGame(installPath.path);
       return {
         platform: 'xbox',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'uplay':
+      foundPath = findUplayGame(installPath.path);
+      return {
+        platform: 'uplay',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'ea':
+      foundPath = findEAGame(installPath.path);
+      return {
+        platform: 'ea',
         path: foundPath || '',
         exists: !!foundPath,
       };
@@ -171,6 +191,20 @@ export function getAllInstalledGamePaths(): string[] {
     installedPaths.push(...getInstalledXboxGamePaths());
   } catch (error) {
     console.error('[GameDetector] Error getting Xbox games:', error);
+  }
+
+  // Ubisoft Connect games
+  try {
+    installedPaths.push(...getInstalledUplayGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting Uplay games:', error);
+  }
+
+  // EA App games
+  try {
+    installedPaths.push(...getInstalledEAGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting EA games:', error);
   }
 
   console.log(
