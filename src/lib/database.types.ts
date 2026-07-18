@@ -555,11 +555,6 @@ export type Database = {
           ea_archive_size: string | null
           ea_store_url: string | null
           editing_progress: number
-          ea_archive_file_list: Json | null
-          ea_archive_hash: string | null
-          ea_archive_path: string | null
-          ea_archive_size: string | null
-          ea_store_url: string | null
           epic_archive_file_list: Json | null
           epic_archive_hash: string | null
           epic_archive_path: string | null
@@ -628,11 +623,6 @@ export type Database = {
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
           xbox_archive_size: string | null
-          uplay_archive_file_list: Json | null
-          uplay_archive_hash: string | null
-          uplay_archive_path: string | null
-          uplay_archive_size: string | null
-          uplay_store_url: string | null
           xbox_store_url: string | null
           youtube: string | null
         }
@@ -662,11 +652,6 @@ export type Database = {
           ea_archive_size?: string | null
           ea_store_url?: string | null
           editing_progress?: number
-          ea_archive_file_list?: Json | null
-          ea_archive_hash?: string | null
-          ea_archive_path?: string | null
-          ea_archive_size?: string | null
-          ea_store_url?: string | null
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
@@ -735,11 +720,6 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
-          uplay_archive_file_list?: Json | null
-          uplay_archive_hash?: string | null
-          uplay_archive_path?: string | null
-          uplay_archive_size?: string | null
-          uplay_store_url?: string | null
           xbox_store_url?: string | null
           youtube?: string | null
         }
@@ -769,11 +749,6 @@ export type Database = {
           ea_archive_size?: string | null
           ea_store_url?: string | null
           editing_progress?: number
-          ea_archive_file_list?: Json | null
-          ea_archive_hash?: string | null
-          ea_archive_path?: string | null
-          ea_archive_size?: string | null
-          ea_store_url?: string | null
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
@@ -842,11 +817,6 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
-          uplay_archive_file_list?: Json | null
-          uplay_archive_hash?: string | null
-          uplay_archive_path?: string | null
-          uplay_archive_size?: string | null
-          uplay_store_url?: string | null
           xbox_store_url?: string | null
           youtube?: string | null
         }
@@ -906,11 +876,6 @@ export type Database = {
           ea_archive_size: string | null
           ea_store_url: string | null
           editing_progress: number
-          ea_archive_file_list: Json | null
-          ea_archive_hash: string | null
-          ea_archive_path: string | null
-          ea_archive_size: string | null
-          ea_store_url: string | null
           epic_archive_file_list: Json | null
           epic_archive_hash: string | null
           epic_archive_path: string | null
@@ -985,11 +950,6 @@ export type Database = {
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
           xbox_archive_size: string | null
-          uplay_archive_file_list: Json | null
-          uplay_archive_hash: string | null
-          uplay_archive_path: string | null
-          uplay_archive_size: string | null
-          uplay_store_url: string | null
           xbox_store_url: string | null
           youtube: string | null
         }
@@ -1021,11 +981,6 @@ export type Database = {
           ea_archive_size?: string | null
           ea_store_url?: string | null
           editing_progress?: number
-          ea_archive_file_list?: Json | null
-          ea_archive_hash?: string | null
-          ea_archive_path?: string | null
-          ea_archive_size?: string | null
-          ea_store_url?: string | null
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
@@ -1100,11 +1055,6 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
-          uplay_archive_file_list?: Json | null
-          uplay_archive_hash?: string | null
-          uplay_archive_path?: string | null
-          uplay_archive_size?: string | null
-          uplay_store_url?: string | null
           xbox_store_url?: string | null
           youtube?: string | null
         }
@@ -1136,11 +1086,6 @@ export type Database = {
           ea_archive_size?: string | null
           ea_store_url?: string | null
           editing_progress?: number
-          ea_archive_file_list?: Json | null
-          ea_archive_hash?: string | null
-          ea_archive_path?: string | null
-          ea_archive_size?: string | null
-          ea_store_url?: string | null
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
           epic_archive_path?: string | null
@@ -1215,11 +1160,6 @@ export type Database = {
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
           xbox_archive_size?: string | null
-          uplay_archive_file_list?: Json | null
-          uplay_archive_hash?: string | null
-          uplay_archive_path?: string | null
-          uplay_archive_size?: string | null
-          uplay_store_url?: string | null
           xbox_store_url?: string | null
           youtube?: string | null
         }
@@ -2530,8 +2470,6 @@ export type Database = {
         | "rockstar"
         | "other"
         | "xbox"
-        | "uplay"
-        | "ea"
       notification_type:
         | "news"
         | "feedback"
@@ -2687,8 +2625,6 @@ export const Constants = {
         "rockstar",
         "other",
         "xbox",
-        "uplay",
-        "ea",
       ],
       notification_type: [
         "news",
