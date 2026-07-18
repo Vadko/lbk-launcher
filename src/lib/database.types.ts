@@ -549,6 +549,11 @@ export type Database = {
           created_by: string
           description: string | null
           discord: string | null
+          ea_archive_file_list: Json | null
+          ea_archive_hash: string | null
+          ea_archive_path: string | null
+          ea_archive_size: string | null
+          ea_store_url: string | null
           editing_progress: number
           ea_archive_file_list: Json | null
           ea_archive_hash: string | null
@@ -606,6 +611,11 @@ export type Database = {
           translation_progress: number
           twitter: string | null
           updated_at: string
+          uplay_archive_file_list: Json | null
+          uplay_archive_hash: string | null
+          uplay_archive_path: string | null
+          uplay_archive_size: string | null
+          uplay_store_url: string | null
           version: string | null
           video_url: string | null
           voice_archive_file_list: Json | null
@@ -646,6 +656,11 @@ export type Database = {
           created_by: string
           description?: string | null
           discord?: string | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           ea_archive_file_list?: Json | null
           ea_archive_hash?: string | null
@@ -703,6 +718,11 @@ export type Database = {
           translation_progress?: number
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -743,6 +763,11 @@ export type Database = {
           created_by?: string
           description?: string | null
           discord?: string | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           ea_archive_file_list?: Json | null
           ea_archive_hash?: string | null
@@ -800,6 +825,11 @@ export type Database = {
           translation_progress?: number
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -870,6 +900,11 @@ export type Database = {
           description: string | null
           discord: string | null
           downloads: number | null
+          ea_archive_file_list: Json | null
+          ea_archive_hash: string | null
+          ea_archive_path: string | null
+          ea_archive_size: string | null
+          ea_store_url: string | null
           editing_progress: number
           ea_archive_file_list: Json | null
           ea_archive_hash: string | null
@@ -933,6 +968,11 @@ export type Database = {
           translation_updated_at: string
           twitter: string | null
           updated_at: string
+          uplay_archive_file_list: Json | null
+          uplay_archive_hash: string | null
+          uplay_archive_path: string | null
+          uplay_archive_size: string | null
+          uplay_store_url: string | null
           version: string | null
           video_url: string | null
           voice_archive_file_list: Json | null
@@ -975,6 +1015,11 @@ export type Database = {
           description?: string | null
           discord?: string | null
           downloads?: number | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           ea_archive_file_list?: Json | null
           ea_archive_hash?: string | null
@@ -1038,6 +1083,11 @@ export type Database = {
           translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -1080,6 +1130,11 @@ export type Database = {
           description?: string | null
           discord?: string | null
           downloads?: number | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           ea_archive_file_list?: Json | null
           ea_archive_hash?: string | null
@@ -1143,6 +1198,11 @@ export type Database = {
           translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
