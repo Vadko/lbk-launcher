@@ -17,11 +17,6 @@ function detectWeakHardware(): boolean {
     return false;
   }
 
-  // Respect the OS-level reduced-motion preference first.
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-    return true;
-  }
-
   const info = window.electronAPI?.getSystemInfo?.();
   if (info) {
     return info.cpuCount <= 4 || info.totalRamGB <= 8;
