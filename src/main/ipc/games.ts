@@ -38,6 +38,7 @@ import {
   getInstalledXboxGamePaths,
   getLutrisSlug,
   getSteamLibraryAppIds,
+  getUplayGameId,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
 import { checkInstallation } from '../installer/cache';
@@ -57,6 +58,7 @@ import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
+import { launchUplayGame } from '../utils/uplay-launcher';
 
 export function setupGamesHandlers(): void {
   // Version
@@ -507,6 +509,20 @@ export function setupGamesHandlers(): void {
           }
         } else {
           console.warn('[LaunchGame] Epic App ID not found for:', gamePath.path);
+        }
+      }
+
+      // For Ubisoft Connect games, try to launch via uplay:// protocol
+      if (gamePath.platform === 'uplay') {
+        const uplayGameId = getUplayGameId(gamePath.path);
+
+        if (uplayGameId) {
+          const result = await launchUplayGame(uplayGameId);
+          if (result.success) {
+            return { success: true };
+          }
+        } else {
+          console.warn('[LaunchGame] Uplay install id not found for:', gamePath.path);
         }
       }
 

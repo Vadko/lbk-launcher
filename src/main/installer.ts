@@ -91,7 +91,7 @@ export async function installTranslation(
       if (game.license_only) {
         throw new Error(
           `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через Steam, GOG чи Epic Games.`
+            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через офіційний магазин (Steam, GOG, Epic Games, Ubisoft Connect, EA App тощо).`
         );
       }
 
@@ -112,7 +112,7 @@ export async function installTranslation(
     if (installText) {
       // Pick the matching archive size in priority order:
       //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
-      //   2. Store-specific variant (Epic/GOG/Xbox) — only if user is on that store.
+      //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only if user is on that store.
       //   3. Main archive — default fallback (typically Windows).
       let textArchiveSize: string | null | undefined = game.archive_size;
       if (isLinux() && game.steam_linux_archive_size) {
@@ -125,6 +125,10 @@ export async function installTranslation(
         textArchiveSize = game.gog_archive_size;
       } else if (gamePath.platform === 'xbox' && game.xbox_archive_size) {
         textArchiveSize = game.xbox_archive_size;
+      } else if (gamePath.platform === 'uplay' && game.uplay_archive_size) {
+        textArchiveSize = game.uplay_archive_size;
+      } else if (gamePath.platform === 'ea' && game.ea_archive_size) {
+        textArchiveSize = game.ea_archive_size;
       }
       if (textArchiveSize) {
         requiredSpace += parseSizeToBytes(textArchiveSize);
@@ -166,7 +170,7 @@ export async function installTranslation(
       // Selection priority (matches the disk-space check above):
       //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
       //      Translator uploads these when files differ for Linux/macOS builds.
-      //   2. Store-specific variant (Epic/GOG/Xbox) — only when user is on
+      //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only when user is on
       //      that store.
       //   3. Main archive — default fallback.
       let archivePath = game.archive_path;
@@ -192,6 +196,14 @@ export async function installTranslation(
         archivePath = game.xbox_archive_path;
         archiveHash = game.xbox_archive_hash;
         console.log('[Installer] Using Xbox-specific archive');
+      } else if (gamePath.platform === 'uplay' && game.uplay_archive_path) {
+        archivePath = game.uplay_archive_path;
+        archiveHash = game.uplay_archive_hash;
+        console.log('[Installer] Using Uplay-specific archive');
+      } else if (gamePath.platform === 'ea' && game.ea_archive_path) {
+        archivePath = game.ea_archive_path;
+        archiveHash = game.ea_archive_hash;
+        console.log('[Installer] Using EA-specific archive');
       }
 
       textFiles = await downloadAndExtractArchive({

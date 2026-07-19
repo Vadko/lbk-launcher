@@ -16,6 +16,8 @@ type ExcludedLocalFields =
   | 'epic_archive_file_list'
   | 'gog_archive_file_list'
   | 'xbox_archive_file_list'
+  | 'uplay_archive_file_list'
+  | 'ea_archive_file_list'
   | 'steam_linux_archive_file_list'
   | 'steam_mac_archive_file_list'
   | 'name_fts' // Generated column in Supabase for FTS
@@ -112,6 +114,12 @@ function gameToInsertParams(game: Game): GameInsertParams {
     xbox_archive_hash: game.xbox_archive_hash ?? null,
     xbox_archive_path: game.xbox_archive_path ?? null,
     xbox_archive_size: game.xbox_archive_size ?? null,
+    uplay_archive_hash: game.uplay_archive_hash ?? null,
+    uplay_archive_path: game.uplay_archive_path ?? null,
+    uplay_archive_size: game.uplay_archive_size ?? null,
+    ea_archive_hash: game.ea_archive_hash ?? null,
+    ea_archive_path: game.ea_archive_path ?? null,
+    ea_archive_size: game.ea_archive_size ?? null,
     steam_linux_archive_hash: game.steam_linux_archive_hash ?? null,
     steam_linux_archive_path: game.steam_linux_archive_path ?? null,
     steam_linux_archive_size: game.steam_linux_archive_size ?? null,
@@ -123,6 +131,8 @@ function gameToInsertParams(game: Game): GameInsertParams {
     epic_store_url: game.epic_store_url ?? null,
     gog_store_url: game.gog_store_url ?? null,
     xbox_store_url: game.xbox_store_url ?? null,
+    uplay_store_url: game.uplay_store_url ?? null,
+    ea_store_url: game.ea_store_url ?? null,
     steam_app_id: game.steam_app_id ?? null,
     website: game.website ?? null,
     youtube: game.youtube ?? null,
@@ -150,10 +160,12 @@ const UPSERT_GAME_SQL = `
     epic_archive_hash, epic_archive_path, epic_archive_size,
     gog_archive_hash, gog_archive_path, gog_archive_size,
     xbox_archive_hash, xbox_archive_path, xbox_archive_size,
+    uplay_archive_hash, uplay_archive_path, uplay_archive_size,
+    ea_archive_hash, ea_archive_path, ea_archive_size,
     steam_linux_archive_hash, steam_linux_archive_path, steam_linux_archive_size,
     steam_mac_archive_hash, steam_mac_archive_path, steam_mac_archive_size,
     steam_launch_options_windows, steam_launch_options_linux,
-    epic_store_url, gog_store_url, xbox_store_url,
+    epic_store_url, gog_store_url, xbox_store_url, uplay_store_url, ea_store_url,
     steam_app_id, website, youtube, ai, hide, search_keywords, source_language
   ) VALUES (
     @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
@@ -168,10 +180,12 @@ const UPSERT_GAME_SQL = `
     @epic_archive_hash, @epic_archive_path, @epic_archive_size,
     @gog_archive_hash, @gog_archive_path, @gog_archive_size,
     @xbox_archive_hash, @xbox_archive_path, @xbox_archive_size,
+    @uplay_archive_hash, @uplay_archive_path, @uplay_archive_size,
+    @ea_archive_hash, @ea_archive_path, @ea_archive_size,
     @steam_linux_archive_hash, @steam_linux_archive_path, @steam_linux_archive_size,
     @steam_mac_archive_hash, @steam_mac_archive_path, @steam_mac_archive_size,
     @steam_launch_options_windows, @steam_launch_options_linux,
-    @epic_store_url, @gog_store_url, @xbox_store_url,
+    @epic_store_url, @gog_store_url, @xbox_store_url, @uplay_store_url, @ea_store_url,
     @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
   )
 `;

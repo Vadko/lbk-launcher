@@ -7,6 +7,8 @@ export const getReadablePlatform = (platform: string): string => {
     gog: 'GOG',
     rockstar: 'Rockstar Games Launcher',
     xbox: 'Xbox app',
+    uplay: 'Ubisoft Connect',
+    ea: 'EA App',
     emulator: 'Емулятор',
     other: 'Інша',
   };

@@ -3,9 +3,11 @@ import React from 'react';
 import type { Game } from '../../types/game';
 import {
   DiscordIcon,
+  EAIcon,
   EpicIcon,
   GOGIcon,
   SteamIcon,
+  UbisoftIcon,
   XboxIcon,
   XIcon,
   YouTubeIcon,
@@ -23,7 +25,7 @@ interface SocialLinkProps {
 }
 
 interface StoreLinkProps {
-  type: 'steam' | 'gog' | 'epic-store' | 'xbox';
+  type: 'steam' | 'gog' | 'epic-store' | 'xbox' | 'uplay' | 'ea';
   appId?: number | string;
   url?: string;
 }
@@ -85,6 +87,24 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
           label: 'Microsoft Store',
           hoverColor: 'hover:border-[#107C10]/60 hover:shadow-[#107C10]/20',
           color: 'text-[#107C10]',
+        };
+      case 'uplay':
+        return {
+          url,
+          icon: <UbisoftIcon size={18} />,
+          title: 'Ubisoft Store',
+          label: 'Ubisoft Store',
+          hoverColor: 'hover:border-[#0070FF]/60 hover:shadow-[#0070FF]/20',
+          color: 'text-[#0070FF]',
+        };
+      case 'ea':
+        return {
+          url,
+          icon: <EAIcon size={18} />,
+          title: 'EA App',
+          label: 'EA App',
+          hoverColor: 'hover:border-[#FF4747]/60 hover:shadow-[#FF4747]/20',
+          color: 'text-[#FF4747]',
         };
     }
   };
@@ -170,6 +190,14 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
     game.xbox_store_url && {
       type: 'xbox',
       url: game.xbox_store_url,
+    },
+    game.uplay_store_url && {
+      type: 'uplay',
+      url: game.uplay_store_url,
+    },
+    game.ea_store_url && {
+      type: 'ea',
+      url: game.ea_store_url,
     },
   ].filter(Boolean) as StoreLinkProps[];
 

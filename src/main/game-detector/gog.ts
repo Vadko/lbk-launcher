@@ -430,6 +430,10 @@ export function getInstalledGOGGamePaths(): string[] {
     console.error('[GOG] Error getting game paths:', error);
   }
 
+  if (paths.length > 0) {
+    console.log(`[GOG] Found ${paths.length} installed games: ${paths.join(', ')}`);
+  }
+
   return paths;
 }
 
