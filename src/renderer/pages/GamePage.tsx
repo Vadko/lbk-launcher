@@ -643,7 +643,7 @@ export const GamePage: React.FC = () => {
             </div>
           </div>
 
-          {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) ?? (
+          {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) && (
             <div className="space-y-4">
               {(isInstalling || isPaused || isWaitingForNetwork) && (
                 <div className="glass-card-no-motion">
@@ -723,13 +723,6 @@ export const GamePage: React.FC = () => {
             </div>
           )}
 
-          {/* Recommended */}
-          <RecommendedGamesSection
-            gameId={selectedGame.id}
-            gameName={selectedGame.name}
-            showLimit={3}
-          />
-
           {/* Narrow placement */}
           <AnimatePresence mode="wait">
             {bannerInfo.placementType === 'narrow' && (
@@ -784,6 +777,13 @@ export const GamePage: React.FC = () => {
               </div>
             </motion.div>
           </div>
+
+          {/* Recommended */}
+          <RecommendedGamesSection
+            gameId={selectedGame.id}
+            gameName={selectedGame.name}
+            showLimit={3}
+          />
 
           {/* Donate */}
           {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
