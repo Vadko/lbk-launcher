@@ -35,7 +35,9 @@ const GAME_TITLE_MAPPING: Record<string, string | string[]> = {
  * Get clean title from mapping or return original
  */
 export function getCleanTitle(title: string): string {
-  if (!title) return title;
+  if (!title) {
+    return title;
+  }
 
   const lowerTitle = title.toLowerCase();
 

@@ -44,7 +44,9 @@ export function useTrendingGames(days = 30) {
     queryKey: trendingKeys.withDetails(days),
     queryFn: async (): Promise<TrendingGameWithDetails[]> => {
       const trending = await window.electronAPI.fetchTrendingGames(days, 30);
-      if (!trending || trending.length === 0) return [];
+      if (!trending || trending.length === 0) {
+        return [];
+      }
 
       const gameIds = trending.map((t) => t.game_id);
       const games = await window.electronAPI.fetchGamesByIds(gameIds);

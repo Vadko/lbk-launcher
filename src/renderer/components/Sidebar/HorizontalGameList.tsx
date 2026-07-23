@@ -1,17 +1,15 @@
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import type { InstallationInfo } from '../../../shared/types';
 import { useListAnimation } from '../../hooks/useListAnimation';
-import { useVirtualizedList } from '../../hooks/useVirtualizedList';
+import { useListCompositionKey } from '../../hooks/useListCompositionKey';
+import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import type { Game } from '../../types/game';
 import { Loader } from '../ui/Loader';
+import { GAMEPAD_CARD_STRIDE } from './constants';
 import { GamepadCard } from './GamepadCard';
 import type { GameGroup } from './types';
-
-/** How many items to render initially (progressive rendering) */
-const INITIAL_RENDER = 15;
-/** Approximate width of one card in px (w-36 + gap-3 = 156) */
-const ITEM_WIDTH_ESTIMATE = 156;
 
 interface HorizontalGameListProps {
   gameGroups: GameGroup[];
@@ -20,6 +18,7 @@ interface HorizontalGameListProps {
   animationsEnabled: boolean;
   selectedGameId: string | undefined;
   gamesWithUpdates: Set<string>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   onSelectGame: (game: Game) => void;
   onOpenTranslationPicker: (
     translations: Game[],
@@ -38,6 +37,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     animationsEnabled,
     selectedGameId,
     gamesWithUpdates,
+    scrollRef,
     onSelectGame,
     onOpenTranslationPicker,
     isGameDetected,
@@ -52,24 +52,28 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
       direction: 'x',
     });
 
-    const { renderCount, sentinelRef } = useVirtualizedList({
-      totalItems: gameGroups.length,
-      initialRenderCount: INITIAL_RENDER,
-      incrementCount: 10,
-      rootMargin: '100px',
-      enabled: true,
+    const virtualizer = useVirtualizer({
+      horizontal: true,
+      count: gameGroups.length,
+      getScrollElement: () => scrollRef.current,
+      estimateSize: () => GAMEPAD_CARD_STRIDE,
+      overscan: 8,
+      getItemKey: (index) => gameGroups[index].key,
     });
 
-    const visibleGroups = useMemo(
-      () => gameGroups.slice(0, renderCount),
-      [gameGroups, renderCount]
+    // Даємо геймпад-навігації канонічний scrollToIndex віртуалізатора,
+    // щоб вона могла доскролити до ще не змонтованої картки
+    const setScrollGameListToIndex = useGamepadModeStore(
+      (s) => s.setScrollGameListToIndex
     );
+    useEffect(() => {
+      setScrollGameListToIndex((index) =>
+        virtualizer.scrollToIndex(index, { align: 'auto' })
+      );
+      return () => setScrollGameListToIndex(null);
+    }, [virtualizer, setScrollGameListToIndex]);
 
-    const keyPrefix = useMemo(() => {
-      const first = gameGroups[0]?.key ?? '';
-      const last = gameGroups[gameGroups.length - 1]?.key ?? '';
-      return `${gameGroups.length}_${first}_${last}`;
-    }, [gameGroups]);
+    const keyPrefix = useListCompositionKey(gameGroups, scrollRef, 'horizontal');
 
     if (isLoading) {
       return (
@@ -88,8 +92,9 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     }
 
     return (
-      <div className="flex gap-3">
-        {visibleGroups.map((group, index) => {
+      <div className="relative h-48" style={{ width: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((virtualCol) => {
+          const group = gameGroups[virtualCol.index];
           const primaryGame = group.translations[0];
           const isSelected = group.translations.some((t) => selectedGameId === t.id);
           const hasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
@@ -103,40 +108,36 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
             }
           };
 
-          const animProps = getAnimationProps(group.key, index);
+          const animProps = getAnimationProps(group.key, virtualCol.index);
 
           return (
-            <motion.div
-              key={`${keyPrefix}_${group.key}`}
-              className="flex-shrink-0"
-              initial={animProps?.initial ?? false}
-              animate={animProps?.animate ?? { opacity: 1, x: 0 }}
-              transition={animProps?.transition}
+            <div
+              key={virtualCol.key}
+              data-gamepad-index={virtualCol.index}
+              className="absolute inset-y-0 left-0"
+              style={{ transform: `translateX(${virtualCol.start}px)` }}
             >
-              <GamepadCard
-                game={primaryGame}
-                translations={group.translations}
-                translationIndex={0}
-                isSelected={isSelected}
-                hasUpdate={hasUpdate}
-                isDetected={detected}
-                isInstalled={!!getInstallationInfo(primaryGame.id)}
-                onClick={handleClick}
-              />
-            </motion.div>
+              <motion.div
+                key={`${keyPrefix}_${group.key}`}
+                initial={animProps?.initial ?? false}
+                animate={animProps?.animate ?? { opacity: 1, x: 0 }}
+                transition={animProps?.transition}
+              >
+                <GamepadCard
+                  game={primaryGame}
+                  translations={group.translations}
+                  translationIndex={0}
+                  isSelected={isSelected}
+                  hasUpdate={hasUpdate}
+                  isDetected={detected}
+                  isInstalled={!!getInstallationInfo(primaryGame.id)}
+                  onClick={handleClick}
+                  imageDeferred={virtualizer.isScrolling}
+                />
+              </motion.div>
+            </div>
           );
         })}
-
-        {renderCount < gameGroups.length && (
-          <div
-            ref={sentinelRef}
-            className="flex-shrink-0"
-            style={{
-              width: (gameGroups.length - renderCount) * ITEM_WIDTH_ESTIMATE,
-            }}
-            aria-hidden="true"
-          />
-        )}
       </div>
     );
   }

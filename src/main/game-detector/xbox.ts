@@ -37,7 +37,9 @@ interface XboxRoot {
  * List drive letters available on Windows (e.g. ["C:\\", "D:\\"]).
  */
 function getWindowsDrives(): string[] {
-  if (!isWindows()) return [];
+  if (!isWindows()) {
+    return [];
+  }
 
   const drives: string[] = [];
   // Iterate A..Z; existsSync on a drive root is fast and avoids spawning wmic.
@@ -82,7 +84,9 @@ function readNullTerminatedUtf16LE(
 function parseGamingRoot(filePath: string): string[] {
   try {
     const buffer = fs.readFileSync(filePath);
-    if (buffer.length < 8) return [];
+    if (buffer.length < 8) {
+      return [];
+    }
 
     if (buffer.toString('ascii', 0, 4) !== GAMING_ROOT_MAGIC) {
       console.warn(`[Xbox] ${filePath} has unexpected magic`);
@@ -107,7 +111,9 @@ function parseGamingRoot(filePath: string): string[] {
       }
       // Strip a leading ".\" if present (some files include it).
       const cleaned = entry.text.replace(/^\.[\\/]/, '').trim();
-      if (cleaned) folders.push(cleaned);
+      if (cleaned) {
+        folders.push(cleaned);
+      }
       cursor = entry.next;
     }
     return folders;
@@ -122,12 +128,16 @@ function parseGamingRoot(filePath: string): string[] {
  * the resolved Xbox install roots.
  */
 function getXboxRoots(): XboxRoot[] {
-  if (!isWindows()) return [];
+  if (!isWindows()) {
+    return [];
+  }
 
   const roots: XboxRoot[] = [];
   for (const drive of getWindowsDrives()) {
     const markerPath = path.join(drive, GAMING_ROOT_FILE);
-    if (!fs.existsSync(markerPath)) continue;
+    if (!fs.existsSync(markerPath)) {
+      continue;
+    }
 
     for (const relative of parseGamingRoot(markerPath)) {
       const gamingRootPath = path.join(drive, relative);
@@ -146,7 +156,9 @@ function getXboxRoots(): XboxRoot[] {
  */
 function getXboxGamePaths(): Map<string, string> {
   const games = new Map<string, string>();
-  if (!isWindows()) return games;
+  if (!isWindows()) {
+    return games;
+  }
 
   try {
     for (const root of getXboxRoots()) {
@@ -159,7 +171,9 @@ function getXboxGamePaths(): Map<string, string> {
       }
 
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
 
         const gameFolder = path.join(root.gamingRootPath, entry.name);
         // Xbox installs put the playable game under a `Content` subfolder.
@@ -187,7 +201,9 @@ function getXboxGamePaths(): Map<string, string> {
  * absolute path to the game's Content directory, or null if not installed.
  */
 export function findXboxGame(gameFolderName: string): string | null {
-  if (!isWindows()) return null;
+  if (!isWindows()) {
+    return null;
+  }
 
   console.log(`[Xbox] Searching for game: "${gameFolderName}"`);
   const games = getXboxGamePaths();
@@ -221,7 +237,9 @@ export function findXboxGame(gameFolderName: string): string | null {
  * "installed games on this PC" list for the launcher's library matching.
  */
 export function getInstalledXboxGamePaths(): string[] {
-  if (!isWindows()) return [];
+  if (!isWindows()) {
+    return [];
+  }
 
   const paths: string[] = [];
   try {

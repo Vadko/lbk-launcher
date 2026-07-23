@@ -23,7 +23,9 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
     }).format(amount);
 
   const handleClick = () => {
-    if (!supportUrl) return;
+    if (!supportUrl) {
+      return;
+    }
     if (window.electronAPI) {
       window.electronAPI.openExternal(supportUrl);
     } else {

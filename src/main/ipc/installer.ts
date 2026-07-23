@@ -170,18 +170,7 @@ export function setupInstallerHandlers(): void {
     }
   });
 
-  ipcMain.handle('open-external', async (_, url: string) => {
-    try {
-      await openExternalUrl(url);
-      return { success: true };
-    } catch (error) {
-      console.error('[IPC] open-external failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  });
+  ipcMain.handle('open-external', async (_, url: string) => await openExternalUrl(url));
 
   ipcMain.handle('select-game-folder', async () => {
     const result = await dialog.showOpenDialog({

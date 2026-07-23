@@ -57,7 +57,7 @@ jobs:
             fi
             if [ "${{ github.event.inputs.macos }}" = "true" ]; then
               [ "$FIRST" = false ] && MATRIX="${MATRIX},"
-              MATRIX="${MATRIX}{\"os\":\"macos-latest\",\"platform\":\"macos\"}"
+              MATRIX="${MATRIX}{\"os\":\"macos-26\",\"platform\":\"macos\"}"
             fi
             MATRIX="${MATRIX}]}"
             echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
@@ -123,7 +123,7 @@ jobs:
         run: pnpm dist:linux --publish never
 
       - name: Build dist (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-26'
         timeout-minutes: 20
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -146,7 +146,7 @@ jobs:
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Sign spellfix extension and fix quarantine (macOS)
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-26'
         run: |
           # Sign spellfix.dylib (ad-hoc build skips extraResources dylibs)
           find release -name "spellfix.dylib" -exec codesign --force --sign - {} \;

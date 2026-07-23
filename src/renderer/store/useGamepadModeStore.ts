@@ -15,6 +15,11 @@ interface GamepadModeStore {
   totalGames: number;
   setTotalGames: (count: number) => void;
 
+  // Віртуалізована стрічка реєструє свій virtualizer.scrollToIndex, щоб
+  // геймпад-навігація могла доскролити до ще не змонтованої картки
+  scrollGameListToIndex: ((index: number) => void) | null;
+  setScrollGameListToIndex: (fn: ((index: number) => void) | null) => void;
+
   // Reset navigation when mode changes
   resetNavigation: () => void;
 }
@@ -37,6 +42,9 @@ export const useGamepadModeStore = create<GamepadModeStore>((set) => ({
 
   totalGames: 0,
   setTotalGames: (count) => set({ totalGames: count }),
+
+  scrollGameListToIndex: null,
+  setScrollGameListToIndex: (fn) => set({ scrollGameListToIndex: fn }),
 
   resetNavigation: () =>
     set({

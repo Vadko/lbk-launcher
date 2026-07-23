@@ -1,6 +1,5 @@
-import got from 'got';
 import type { Database } from '../../lib/database.types';
-import { getSupabaseCredentials } from './supabase-credentials';
+import { getSupabaseClient } from './supabase-client';
 
 type BannerCampaignRow = Database['public']['Tables']['banner_campaigns']['Row'];
 
@@ -77,7 +76,7 @@ export async function fetchBannersForGame(params: {
   machineId?: string;
 }): Promise<GameBannersResult> {
   try {
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+    const supabase = getSupabaseClient();
 
     const searchParams = new URLSearchParams({
       game_slug: params.gameSlug,
@@ -88,33 +87,23 @@ export async function fetchBannersForGame(params: {
       searchParams.set('machine_id', params.machineId);
     }
 
-    const url = `${SUPABASE_URL}/functions/v1/get-banners?${searchParams.toString()}`;
+    const { data, error } = await supabase.functions.invoke<GetBannersResponse>(
+      `get-banners?${searchParams.toString()}`,
+      { method: 'GET' }
+    );
 
-    const response = await got<GetBannersResponse>(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        apikey: SUPABASE_ANON_KEY,
-      },
-      responseType: 'json',
-      timeout: {
-        connect: 5000,
-        response: 10_000,
-      },
-    });
-
-    if (response.body.success) {
-      console.log(
-        `[banners-api] Fetched banner=${response.body.banner?.id ?? 'none'} for game=${params.gameSlug}, kuli=${response.body.is_kuli}`
-      );
-      return {
-        banner: response.body.banner,
-        isKuli: response.body.is_kuli ?? false,
-      };
+    if (error || !data?.success) {
+      console.warn('[banners-api] Failed to fetch banners:', error ?? data?.error);
+      return { banner: null, isKuli: false };
     }
 
-    console.warn('[banners-api] Failed to fetch banners:', response.body.error);
-    return { banner: null, isKuli: false };
+    console.log(
+      `[banners-api] Fetched banner=${data.banner?.id ?? 'none'} for game=${params.gameSlug}, kuli=${data.is_kuli}`
+    );
+    return {
+      banner: data.banner,
+      isKuli: data.is_kuli ?? false,
+    };
   } catch (error) {
     console.error('[banners-api] Error fetching banners:', error);
     return { banner: null, isKuli: false };
@@ -130,7 +119,7 @@ export async function fetchGlobalBanner(params?: {
   machineId?: string;
 }): Promise<BannerData | null> {
   try {
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+    const supabase = getSupabaseClient();
 
     const searchParams = new URLSearchParams({ placement: 'global' });
 
@@ -138,30 +127,18 @@ export async function fetchGlobalBanner(params?: {
       searchParams.set('machine_id', params.machineId);
     }
 
-    const url = `${SUPABASE_URL}/functions/v1/get-banners?${searchParams.toString()}`;
+    const { data, error } = await supabase.functions.invoke<GetBannersResponse>(
+      `get-banners?${searchParams.toString()}`,
+      { method: 'GET' }
+    );
 
-    const response = await got<GetBannersResponse>(url, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        apikey: SUPABASE_ANON_KEY,
-      },
-      responseType: 'json',
-      timeout: {
-        connect: 5000,
-        response: 10_000,
-      },
-    });
-
-    if (response.body.success) {
-      console.log(
-        `[banners-api] Fetched global banner=${response.body.banner?.id ?? 'none'}`
-      );
-      return response.body.banner;
+    if (error || !data?.success) {
+      console.warn('[banners-api] Failed to fetch global banner:', error ?? data?.error);
+      return null;
     }
 
-    console.warn('[banners-api] Failed to fetch global banner:', response.body.error);
-    return null;
+    console.log(`[banners-api] Fetched global banner=${data.banner?.id ?? 'none'}`);
+    return data.banner;
   } catch (error) {
     console.error('[banners-api] Error fetching global banner:', error);
     return null;
@@ -216,7 +193,7 @@ export async function recordBannerImpression(params: {
   gameSlug?: string | null;
 }): Promise<boolean> {
   try {
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+    const supabase = getSupabaseClient();
 
     const body: BannerImpressionInsert = {
       campaign_id: params.campaignId,
@@ -225,30 +202,17 @@ export async function recordBannerImpression(params: {
       game_slug: params.gameSlug ?? null,
     };
 
-    const response = await got(`${SUPABASE_URL}/rest/v1/banner_impressions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        Prefer: 'return=minimal',
-      },
-      json: body,
-      timeout: {
-        connect: 5000,
-        response: 10_000,
-      },
-    });
+    const { error } = await supabase.from('banner_impressions').insert(body);
 
-    if (response.statusCode === 201) {
-      console.log(
-        `[banners-api] Recorded ${params.impressionType} for campaign=${params.campaignId}`
-      );
-      return true;
+    if (error) {
+      console.warn(`[banners-api] Failed to record impression: ${error.message}`);
+      return false;
     }
 
-    console.warn(`[banners-api] Failed to record impression: ${response.statusCode}`);
-    return false;
+    console.log(
+      `[banners-api] Recorded ${params.impressionType} for campaign=${params.campaignId}`
+    );
+    return true;
   } catch (error) {
     console.error('[banners-api] Error recording impression:', error);
     return false;
@@ -264,14 +228,15 @@ export async function recordBannerImpression(params: {
  *
  * @example
  * ```ts
- * const { SUPABASE_URL } = getSupabaseCredentials();
  * const imgUrl = buildBannerImageUrl(banner.image_path);
  * // https://xxx.supabase.co/storage/v1/object/public/banner-images/banners/promo.webp
  * ```
  */
 export function buildBannerImageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  const { SUPABASE_URL } = getSupabaseCredentials();
+  if (!path) {
+    return null;
+  }
 
-  return `${SUPABASE_URL}/storage/v1/object/public/banner-images/${path}`;
+  return getSupabaseClient().storage.from('banner-images').getPublicUrl(path).data
+    .publicUrl;
 }

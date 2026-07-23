@@ -803,7 +803,9 @@ const migrations: Migration[] = [
         )
         .get() as { count: number };
 
-      if (done.count > 0) return;
+      if (done.count > 0) {
+        return;
+      }
 
       console.log('[Migrations] Running: add_search_keywords_to_fts');
 
@@ -1109,6 +1111,55 @@ const migrations: Migration[] = [
       `);
       console.log(
         '[Migrations] Completed: resync_for_store_urls - will resync on next startup'
+      );
+    },
+  },
+  {
+    name: 'add_uplay_ea_store_columns',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='uplay_archive_path'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_uplay_ea_store_columns');
+        db.exec(`
+          ALTER TABLE games ADD COLUMN uplay_archive_hash TEXT;
+          ALTER TABLE games ADD COLUMN uplay_archive_path TEXT;
+          ALTER TABLE games ADD COLUMN uplay_archive_size TEXT;
+          ALTER TABLE games ADD COLUMN ea_archive_hash TEXT;
+          ALTER TABLE games ADD COLUMN ea_archive_path TEXT;
+          ALTER TABLE games ADD COLUMN ea_archive_size TEXT;
+          ALTER TABLE games ADD COLUMN uplay_store_url TEXT;
+          ALTER TABLE games ADD COLUMN ea_store_url TEXT;
+        `);
+        console.log('[Migrations] Completed: add_uplay_ea_store_columns');
+      }
+    },
+  },
+  {
+    name: 'resync_for_uplay_ea_stores',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_uplay_ea_stores_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: resync_for_uplay_ea_stores');
+      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_resync_uplay_ea_stores_done', '1', datetime('now'))
+      `);
+      console.log(
+        '[Migrations] Completed: resync_for_uplay_ea_stores - will resync on next startup'
       );
     },
   },

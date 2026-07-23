@@ -13,10 +13,9 @@ import { useSubscriptionsStore } from './useSubscriptionsStore';
  * `navigator.deviceMemory` (Chromium-capped at 8GB, useless for thresholding).
  */
 function detectWeakHardware(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  // Respect the OS-level reduced-motion preference first.
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return true;
+  if (typeof window === 'undefined') {
+    return false;
+  }
 
   const info = window.electronAPI?.getSystemInfo?.();
   if (info) {
@@ -122,7 +121,9 @@ export const useSettingsStore = create<SettingsStore>()(
       // No-op on weak hardware — UI also disables the toggle, but guard the
       // setter too in case it's called from elsewhere (keyboard shortcut, etc.).
       toggleAnimations: () => {
-        if (isHardwareWeak) return;
+        if (isHardwareWeak) {
+          return;
+        }
         set((state) => ({ animationsEnabled: !state.animationsEnabled }));
       },
 
@@ -149,7 +150,9 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({ hideAiTranslations: !state.hideAiTranslations })),
 
       toggleLiquidGlass: () => {
-        if (isHardwareWeak) return;
+        if (isHardwareWeak) {
+          return;
+        }
         set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled }));
       },
 

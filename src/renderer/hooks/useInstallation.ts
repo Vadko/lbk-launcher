@@ -102,7 +102,9 @@ export function useInstallation({
 
   const performInstallation = useCallback(
     async (customGamePath?: string, options?: InstallOptions) => {
-      if (!selectedGame) return;
+      if (!selectedGame) {
+        return;
+      }
 
       const platform =
         options?.platform || (selectedGame.platforms[0] as Platform) || 'steam';
@@ -388,8 +390,9 @@ export function useInstallation({
 
   // Auto-retry download when network is restored (or immediately if still online)
   useEffect(() => {
-    if (!isOnline || !isWaitingForNetwork || !networkRetryRef.current || !selectedGame)
+    if (!isOnline || !isWaitingForNetwork || !networkRetryRef.current || !selectedGame) {
       return;
+    }
 
     const retryContext = networkRetryRef.current;
     retryContext.autoRetried = true;
@@ -489,9 +492,13 @@ export function useInstallation({
 
   const handleInstall = useCallback(
     async (customGamePath?: string) => {
-      if (!selectedGame || isInstalling || isCheckingInstallation) return;
+      if (!selectedGame || isInstalling || isCheckingInstallation) {
+        return;
+      }
 
-      if (!isTranslationInstallable(selectedGame.status)) return;
+      if (!isTranslationInstallable(selectedGame.status)) {
+        return;
+      }
 
       if (!isOnline) {
         showModal({
@@ -542,7 +549,9 @@ export function useInstallation({
       installOptions: InstallOptions,
       removeOptions: { removeVoice: boolean; removeAchievements: boolean }
     ) => {
-      if (!selectedGame) return;
+      if (!selectedGame) {
+        return;
+      }
 
       // First, remove components if requested
       if (removeOptions.removeVoice || removeOptions.removeAchievements) {
@@ -705,7 +714,9 @@ export function useInstallation({
   );
 
   const handleUninstall = useCallback(async () => {
-    if (!selectedGame || !installationInfo) return;
+    if (!selectedGame || !installationInfo) {
+      return;
+    }
 
     const hasBackup = installationInfo.hasBackup !== false;
     const backupWarning = !hasBackup
@@ -773,7 +784,9 @@ export function useInstallation({
   ]);
 
   const handlePauseDownload = useCallback(async () => {
-    if (!selectedGame || !isInstalling || isPaused) return;
+    if (!selectedGame || !isInstalling || isPaused) {
+      return;
+    }
 
     if (!window.electronAPI?.pauseDownload) {
       console.warn('[useInstallation] pauseDownload not available');
@@ -796,7 +809,9 @@ export function useInstallation({
   }, [selectedGame, isInstalling, isPaused, setInstallationProgress, showModal]);
 
   const handleResumeDownload = useCallback(async () => {
-    if (!selectedGame || !isPaused) return;
+    if (!selectedGame || !isPaused) {
+      return;
+    }
 
     if (!window.electronAPI?.resumeDownload) {
       console.warn('[useInstallation] resumeDownload not available');
@@ -855,7 +870,9 @@ export function useInstallation({
   ]);
 
   const handleCancelDownload = useCallback(async () => {
-    if (!selectedGame) return;
+    if (!selectedGame) {
+      return;
+    }
 
     // Clear network retry context
     networkRetryRef.current = null;
@@ -872,9 +889,15 @@ export function useInstallation({
   }, [selectedGame, isPaused, isInstalling, clearInstallationProgress]);
 
   const getInstallButtonText = useCallback((): string => {
-    if (!isOnline) return '❌ Немає інтернету';
-    if (isPlanned) return 'Заплановано';
-    if (isTechImprovement) return 'Технічна доробка';
+    if (!isOnline) {
+      return '❌ Немає інтернету';
+    }
+    if (isPlanned) {
+      return 'Заплановано';
+    }
+    if (isTechImprovement) {
+      return 'Технічна доробка';
+    }
     if (isWaitingForNetwork) {
       return "Очікування з'єднання...";
     }

@@ -5,7 +5,9 @@ import { Modal } from './Modal';
 export const ConfirmModal: React.FC = () => {
   const { isOpen, config, closeConfirm, confirm } = useConfirmStore();
 
-  if (!config) return null;
+  if (!config) {
+    return null;
+  }
 
   return (
     <Modal

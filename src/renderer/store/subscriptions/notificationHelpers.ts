@@ -35,6 +35,10 @@ export function getNotificationMessage(
       return `${notification.teamName}: стан змінено на "${notification.newValue}"`;
     case 'first-favorite':
       return 'Натисніть, щоб відфільтрувати список улюблених';
+    case 'feedback-reply':
+      return notification.message
+        ? `${notification.gameName}: ${notification.message}`
+        : 'Нова відповідь на ваш відгук';
     default:
       return 'Нове сповіщення';
   }

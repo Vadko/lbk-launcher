@@ -256,7 +256,9 @@ function getCurrentSteamUserId(steamPath: string): string | null {
   // Fallback: use first available userdata folder
   try {
     const userdataPath = path.join(steamPath, 'userdata');
-    if (!fs.existsSync(userdataPath)) return null;
+    if (!fs.existsSync(userdataPath)) {
+      return null;
+    }
 
     const userFolders = fs
       .readdirSync(userdataPath, { withFileTypes: true })
@@ -286,10 +288,14 @@ function getCurrentSteamUserId(steamPath: string): string | null {
  */
 function getUserConfigPath(filename: string): string | null {
   const steamPath = getSteamPath();
-  if (!steamPath) return null;
+  if (!steamPath) {
+    return null;
+  }
 
   const steamUserId = getCurrentSteamUserId(steamPath);
-  if (!steamUserId) return null;
+  if (!steamUserId) {
+    return null;
+  }
 
   return path.join(steamPath, 'userdata', steamUserId, 'config', filename);
 }
@@ -307,7 +313,9 @@ export function getLocalConfigPath(): string | null {
  */
 function readLocalConfigContent(): string | null {
   const localConfigPath = getLocalConfigPath();
-  if (!localConfigPath) return null;
+  if (!localConfigPath) {
+    return null;
+  }
 
   try {
     if (!fs.existsSync(localConfigPath)) {
@@ -333,7 +341,9 @@ export function getLicensecachePath(): string | null {
  */
 export function getLicensecacheSize(): number | null {
   const licensecachePath = getLicensecachePath();
-  if (!licensecachePath || !fs.existsSync(licensecachePath)) return null;
+  if (!licensecachePath || !fs.existsSync(licensecachePath)) {
+    return null;
+  }
 
   try {
     return fs.statSync(licensecachePath).size;
@@ -467,10 +477,50 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
 }
 
 /**
+ * Resolve a Steam game's install path directly from its appmanifest, keyed by
+ * App ID. This is authoritative and order-independent: when several games share
+ * a base installdir, Steam suffixes the second one's folder with the app id
+ * (e.g. "WW1GameSeries 242860"), and only the manifest knows the real
+ * installdir for each app.
+ */
+function resolveSteamGameByAppId(
+  libraryFolders: string[],
+  steamAppId: number
+): string | null {
+  for (const folder of libraryFolders) {
+    const manifestPath = path.join(folder, `appmanifest_${steamAppId}.acf`);
+    if (!fs.existsSync(manifestPath)) {
+      continue;
+    }
+
+    try {
+      const manifest = parseAppManifest(fs.readFileSync(manifestPath, 'utf8'));
+      if (!manifest?.installdir) {
+        continue;
+      }
+
+      const gamePath = path.join(folder, 'common', manifest.installdir);
+      if (fs.existsSync(gamePath)) {
+        return gamePath;
+      }
+    } catch {
+      // Ignore and try the next library
+    }
+  }
+
+  return null;
+}
+
+/**
  * Find Steam game by folder name
  */
-export function findSteamGame(gameFolderName: string): string | null {
-  console.log(`[Steam] Searching for game: "${gameFolderName}"`);
+export function findSteamGame(
+  gameFolderName: string,
+  steamAppId?: number | null
+): string | null {
+  console.log(
+    `[Steam] Searching for game: "${gameFolderName}"${steamAppId != null ? ` (appid ${steamAppId})` : ''}`
+  );
 
   // Normalize the folder name
   const normalizedFolderName = gameFolderName
@@ -488,6 +538,19 @@ export function findSteamGame(gameFolderName: string): string | null {
   }
 
   const libraryFolders = getSteamLibraryFolders(steamPath);
+
+  // Authoritative resolution by Steam App ID. The folder name in the database
+  // is ambiguous when several games share a base installdir (Steam suffixes the
+  // second one with the app id), so the manifest's installdir keyed by app id
+  // is the only reliable source and is independent of install order.
+  if (steamAppId != null) {
+    const pathByAppId = resolveSteamGameByAppId(libraryFolders, steamAppId);
+    if (pathByAppId) {
+      console.log(`[Steam] ✓ Game found via appid ${steamAppId}: ${pathByAppId}`);
+      return pathByAppId;
+    }
+  }
+
   const installedGames = getAllSteamGames(libraryFolders);
 
   // Try exact match via appmanifest

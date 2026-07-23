@@ -230,16 +230,22 @@ export type Database = {
           deleted_at: string
           game_id: string
           id: string
+          slug: string | null
+          team: string | null
         }
         Insert: {
           deleted_at?: string
           game_id: string
           id?: string
+          slug?: string | null
+          team?: string | null
         }
         Update: {
           deleted_at?: string
           game_id?: string
           id?: string
+          slug?: string | null
+          team?: string | null
         }
         Relationships: []
       }
@@ -270,13 +276,49 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_replies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          feedback_id: string
+          id: string
+          message: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          feedback_id: string
+          id?: string
+          message: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          feedback_id?: string
+          id?: string
+          message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_replies_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_replies_feedback_id_fkey"
+            columns: ["feedback_id"]
+            referencedRelation: "feedbacks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedbacks: {
         Row: {
           admin_note: string | null
           app_version: string | null
           arch: string | null
           created_at: string
-          error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id: string
           machine_id: string
@@ -284,6 +326,7 @@ export type Database = {
           platform: string | null
           screenshot_paths: string[] | null
           status: Database["public"]["Enums"]["feedback_status"]
+          type: Database["public"]["Enums"]["feedback_type"]
           updated_at: string
         }
         Insert: {
@@ -291,7 +334,6 @@ export type Database = {
           app_version?: string | null
           arch?: string | null
           created_at?: string
-          error_type: Database["public"]["Enums"]["feedback_error_type"]
           game_id: string
           id?: string
           machine_id: string
@@ -299,6 +341,7 @@ export type Database = {
           platform?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
+          type: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
         Update: {
@@ -306,7 +349,6 @@ export type Database = {
           app_version?: string | null
           arch?: string | null
           created_at?: string
-          error_type?: Database["public"]["Enums"]["feedback_error_type"]
           game_id?: string
           id?: string
           machine_id?: string
@@ -314,6 +356,7 @@ export type Database = {
           platform?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
+          type?: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
         Relationships: [
@@ -414,6 +457,73 @@ export type Database = {
           },
         ]
       }
+      game_fundraising: {
+        Row: {
+          created_at: string
+          donatello_goal_id: string | null
+          donatello_slug: string | null
+          game_id: string
+          last_sync_error: string | null
+          last_sync_status: string | null
+          last_synced_at: string | null
+          monobank_jar_long_id: string | null
+          monobank_jar_short_id: string | null
+          retry_after: string | null
+          source: string
+          synced_currency: string
+          synced_current: number | null
+          synced_goal: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          donatello_goal_id?: string | null
+          donatello_slug?: string | null
+          game_id: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          monobank_jar_long_id?: string | null
+          monobank_jar_short_id?: string | null
+          retry_after?: string | null
+          source: string
+          synced_currency?: string
+          synced_current?: number | null
+          synced_goal?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          donatello_goal_id?: string | null
+          donatello_slug?: string | null
+          game_id?: string
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          last_synced_at?: string | null
+          monobank_jar_long_id?: string | null
+          monobank_jar_short_id?: string | null
+          retry_after?: string | null
+          source?: string
+          synced_currency?: string
+          synced_current?: number | null
+          synced_goal?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_fundraising_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_fundraising_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       game_subscriptions: {
         Row: {
           game_id: string
@@ -485,6 +595,46 @@ export type Database = {
           },
         ]
       }
+      game_version_fundraising: {
+        Row: {
+          created_at: string
+          donatello_goal_id: string | null
+          donatello_slug: string | null
+          game_version_id: string
+          monobank_jar_long_id: string | null
+          monobank_jar_short_id: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          donatello_goal_id?: string | null
+          donatello_slug?: string | null
+          game_version_id: string
+          monobank_jar_long_id?: string | null
+          monobank_jar_short_id?: string | null
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          donatello_goal_id?: string | null
+          donatello_slug?: string | null
+          game_version_id?: string
+          monobank_jar_long_id?: string | null
+          monobank_jar_short_id?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_version_fundraising_game_version_id_fkey"
+            columns: ["game_version_id"]
+            referencedRelation: "game_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_versions: {
         Row: {
           achievements_archive_file_list: Json | null
@@ -506,6 +656,11 @@ export type Database = {
           created_by: string
           description: string | null
           discord: string | null
+          ea_archive_file_list: Json | null
+          ea_archive_hash: string | null
+          ea_archive_path: string | null
+          ea_archive_size: string | null
+          ea_store_url: string | null
           editing_progress: number
           epic_archive_file_list: Json | null
           epic_archive_hash: string | null
@@ -558,6 +713,11 @@ export type Database = {
           translation_progress: number
           twitter: string | null
           updated_at: string
+          uplay_archive_file_list: Json | null
+          uplay_archive_hash: string | null
+          uplay_archive_path: string | null
+          uplay_archive_size: string | null
+          uplay_store_url: string | null
           version: string | null
           video_url: string | null
           voice_archive_file_list: Json | null
@@ -593,6 +753,11 @@ export type Database = {
           created_by: string
           description?: string | null
           discord?: string | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
@@ -645,6 +810,11 @@ export type Database = {
           translation_progress?: number
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -680,6 +850,11 @@ export type Database = {
           created_by?: string
           description?: string | null
           discord?: string | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
@@ -732,6 +907,11 @@ export type Database = {
           translation_progress?: number
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -797,6 +977,11 @@ export type Database = {
           description: string | null
           discord: string | null
           downloads: number | null
+          ea_archive_file_list: Json | null
+          ea_archive_hash: string | null
+          ea_archive_path: string | null
+          ea_archive_size: string | null
+          ea_store_url: string | null
           editing_progress: number
           epic_archive_file_list: Json | null
           epic_archive_hash: string | null
@@ -820,6 +1005,8 @@ export type Database = {
           installation_file_linux_path: string | null
           installation_file_windows_path: string | null
           is_adult: boolean
+          last_download_milestone: number
+          last_subscriber_milestone: number
           license_only: boolean
           logo_path: string | null
           name: string
@@ -853,6 +1040,11 @@ export type Database = {
           translation_updated_at: string
           twitter: string | null
           updated_at: string
+          uplay_archive_file_list: Json | null
+          uplay_archive_hash: string | null
+          uplay_archive_path: string | null
+          uplay_archive_size: string | null
+          uplay_store_url: string | null
           version: string | null
           video_url: string | null
           voice_archive_file_list: Json | null
@@ -890,6 +1082,11 @@ export type Database = {
           description?: string | null
           discord?: string | null
           downloads?: number | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
@@ -913,6 +1110,8 @@ export type Database = {
           installation_file_linux_path?: string | null
           installation_file_windows_path?: string | null
           is_adult?: boolean
+          last_download_milestone?: number
+          last_subscriber_milestone?: number
           license_only?: boolean
           logo_path?: string | null
           name: string
@@ -946,6 +1145,11 @@ export type Database = {
           translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -983,6 +1187,11 @@ export type Database = {
           description?: string | null
           discord?: string | null
           downloads?: number | null
+          ea_archive_file_list?: Json | null
+          ea_archive_hash?: string | null
+          ea_archive_path?: string | null
+          ea_archive_size?: string | null
+          ea_store_url?: string | null
           editing_progress?: number
           epic_archive_file_list?: Json | null
           epic_archive_hash?: string | null
@@ -1006,6 +1215,8 @@ export type Database = {
           installation_file_linux_path?: string | null
           installation_file_windows_path?: string | null
           is_adult?: boolean
+          last_download_milestone?: number
+          last_subscriber_milestone?: number
           license_only?: boolean
           logo_path?: string | null
           name?: string
@@ -1039,6 +1250,11 @@ export type Database = {
           translation_updated_at?: string
           twitter?: string | null
           updated_at?: string
+          uplay_archive_file_list?: Json | null
+          uplay_archive_hash?: string | null
+          uplay_archive_path?: string | null
+          uplay_archive_size?: string | null
+          uplay_store_url?: string | null
           version?: string | null
           video_url?: string | null
           voice_archive_file_list?: Json | null
@@ -1350,6 +1566,21 @@ export type Database = {
           },
         ]
       }
+      news_broadcasts: {
+        Row: {
+          created_at: string
+          key: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+        }
+        Relationships: []
+      }
       news_posts: {
         Row: {
           channel_id: number
@@ -1400,6 +1631,73 @@ export type Database = {
           title?: string | null
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          body: string | null
+          created_at: string
+          game_id: string | null
+          id: string
+          is_read: boolean
+          link: string | null
+          metadata: Json | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body?: string | null
+          created_at?: string
+          game_id?: string | null
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          metadata?: Json | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          body?: string | null
+          created_at?: string
+          game_id?: string | null
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          metadata?: Json | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       slug_redirects: {
         Row: {
@@ -1950,6 +2248,7 @@ export type Database = {
           feedback_email_notifications: boolean
           full_name: string | null
           id: string
+          notification_prefs: Json
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
           telegram_link_token: string | null
@@ -1968,6 +2267,7 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
+          notification_prefs?: Json
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -1986,6 +2286,7 @@ export type Database = {
           feedback_email_notifications?: boolean
           full_name?: string | null
           id?: string
+          notification_prefs?: Json
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -2095,7 +2396,14 @@ export type Database = {
         }[]
       }
       get_failed_searches_statistics: {
-        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Args: {
+          p_end_date?: string
+          p_limit?: number
+          p_search?: string
+          p_sort?: string
+          p_source?: string
+          p_start_date?: string
+        }
         Returns: {
           last_searched_at: string
           query_normalized: string
@@ -2250,6 +2558,7 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
+      sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
       sync_steam_apps_cron: { Args: never; Returns: undefined }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
@@ -2257,11 +2566,8 @@ export type Database = {
       ai_status: "edited" | "non-edited"
       banner_placement: "game_page" | "global"
       banner_type: "narrow" | "small_square" | "large_popup" | "wide"
-      feedback_error_type:
-        | "missing_translation"
-        | "translation_error"
-        | "technical"
       feedback_status: "new" | "in_progress" | "fixed" | "rejected"
+      feedback_type: "feedback" | "error"
       game_status: "completed" | "in-progress" | "planned" | "tech-improvement"
       install_source:
         | "steam"
@@ -2271,6 +2577,18 @@ export type Database = {
         | "rockstar"
         | "other"
         | "xbox"
+        | "uplay"
+        | "ea"
+      notification_type:
+        | "news"
+        | "feedback"
+        | "ownership_revoked"
+        | "ownership_granted"
+        | "translation_edited"
+        | "visibility_changed"
+        | "download_milestone"
+        | "subscriber_milestone"
+        | "role_changed"
       user_role: "admin" | "moderator" | "translator" | "user"
     }
     CompositeTypes: {
@@ -2405,12 +2723,8 @@ export const Constants = {
       ai_status: ["edited", "non-edited"],
       banner_placement: ["game_page", "global"],
       banner_type: ["narrow", "small_square", "large_popup", "wide"],
-      feedback_error_type: [
-        "missing_translation",
-        "translation_error",
-        "technical",
-      ],
       feedback_status: ["new", "in_progress", "fixed", "rejected"],
+      feedback_type: ["feedback", "error"],
       game_status: ["completed", "in-progress", "planned", "tech-improvement"],
       install_source: [
         "steam",
@@ -2420,6 +2734,19 @@ export const Constants = {
         "rockstar",
         "other",
         "xbox",
+        "uplay",
+        "ea",
+      ],
+      notification_type: [
+        "news",
+        "feedback",
+        "ownership_revoked",
+        "ownership_granted",
+        "translation_edited",
+        "visibility_changed",
+        "download_milestone",
+        "subscriber_milestone",
+        "role_changed",
       ],
       user_role: ["admin", "moderator", "translator", "user"],
     },

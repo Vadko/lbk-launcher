@@ -36,7 +36,9 @@ export const Placement: React.FC<PlacementProps> = ({
   // Record view when element appears in viewport
   useEffect(() => {
     const element = elementRef.current;
-    if (!element || hasTrackedView.current) return;
+    if (!element || hasTrackedView.current) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {

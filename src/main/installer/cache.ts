@@ -51,7 +51,9 @@ export function findInstallationInfoFile(gamePath: string) {
  */
 export function readInstallationInfo(gamePath: string): InstallationInfo | null {
   const infoPath = findInstallationInfoFile(gamePath);
-  if (!fs.existsSync(infoPath)) return null;
+  if (!fs.existsSync(infoPath)) {
+    return null;
+  }
   try {
     return JSON.parse(fs.readFileSync(infoPath, 'utf-8'));
   } catch (error) {
@@ -100,7 +102,10 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
     // PRIORITY 1: Check standard library paths first (Steam, GOG, Epic, etc.)
     // This ensures that if user installed game via Steam after manual installation,
     // the library path takes priority
-    const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    const gamePath = getFirstAvailableGamePath(
+      game.install_paths || [],
+      game.steam_app_id
+    );
 
     if (gamePath && gamePath.exists) {
       // Check for installation info file in library path
@@ -272,7 +277,9 @@ export function invalidateInstalledGameIdsCache(): void {
 export async function removeOrphanedInstallationMetadata(
   gameIds: string[]
 ): Promise<void> {
-  if (gameIds.length === 0) return;
+  if (gameIds.length === 0) {
+    return;
+  }
 
   console.log(
     `[Installer] Removing ${gameIds.length} orphaned installation metadata files`
@@ -322,11 +329,10 @@ export async function getAllInstalledGameIds(): Promise<string[]> {
 
     // Read all files in the directory
     const files = await readdir(installInfoDir);
+    const jsonFiles = files.filter((file) => file.endsWith('.json'));
 
-    // Extract game IDs from filenames (remove .json extension)
-    const gameIds = files
-      .filter((file) => file.endsWith('.json'))
-      .map((file) => file.replace('.json', ''));
+    // Extract game IDs from filenames (errors, if any, are surfaced in the UI)
+    const gameIds = jsonFiles.map((file) => file.replace('.json', ''));
 
     console.log(`[Installer] Found ${gameIds.length} installed games:`, gameIds);
 
@@ -365,7 +371,10 @@ export async function getConflictingTranslation(
   game: Game
 ): Promise<ConflictingTranslation | null> {
   try {
-    const gamePath = getFirstAvailableGamePath(game.install_paths || []);
+    const gamePath = getFirstAvailableGamePath(
+      game.install_paths || [],
+      game.steam_app_id
+    );
 
     if (!gamePath || !gamePath.exists) {
       return null;

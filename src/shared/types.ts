@@ -9,7 +9,7 @@ export type { Database };
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
-export type FeedbackErrorType = Database['public']['Enums']['feedback_error_type'];
+export type FeedbackType = Database['public']['Enums']['feedback_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
@@ -164,6 +164,14 @@ export interface LaunchGameResult {
   error?: string;
 }
 
+export interface FeedbackReplyPayload {
+  replyId: string;
+  gameId: string;
+  gameName: string;
+  message: string;
+  createdAt: string;
+}
+
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
@@ -276,6 +284,12 @@ export interface ElectronAPI {
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
+  // Feedback replies (admin/owner → this install). `live=false` = silent catch-up.
+  onFeedbackReply: (
+    callback: (reply: FeedbackReplyPayload, live: boolean) => void
+  ) => () => void;
+  /** Kick main to replay replies missed while offline (delivered via onFeedbackReply). */
+  syncFeedbackReplies: () => Promise<void>;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
   onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY
@@ -314,7 +328,7 @@ export interface ElectronAPI {
   // Submit feedback for a game translation
   submitFeedback: (
     gameId: string,
-    errorType: FeedbackErrorType,
+    type: FeedbackType,
     message: string,
     screenshotPaths?: string[]
   ) => Promise<{ success: boolean; error?: string }>;
@@ -336,6 +350,8 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
+  notifyReady: () => void;
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => () => void;
   getSyncStatus: () => Promise<'syncing' | 'ready' | 'error'>;

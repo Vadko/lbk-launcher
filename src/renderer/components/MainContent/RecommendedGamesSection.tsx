@@ -59,7 +59,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     >
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">{title}</h3>
       <div className="grid grid-cols-3 gap-8">
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence>
           {isLoading ? (
             <motion.div
               key="loader"

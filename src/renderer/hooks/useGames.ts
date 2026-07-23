@@ -69,7 +69,9 @@ export function useGames({
         const favoriteGameIds = useSettingsStore.getState().favoriteGameIds;
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (favoriteGameIds.length === 0) {
           setGames([]);
@@ -86,7 +88,9 @@ export function useGames({
         );
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(favoriteGames);
         setTotal(favoriteGames.length);
@@ -100,7 +104,9 @@ export function useGames({
         ];
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (installedGameIds.length === 0) {
           setGames([]);
@@ -117,7 +123,9 @@ export function useGames({
         );
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(installedGames);
         setTotal(installedGames.length);
@@ -129,7 +137,9 @@ export function useGames({
         const installPaths = await window.electronAPI.getAllInstalledGamePaths();
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (installPaths.length === 0) {
           setGames([]);
@@ -146,7 +156,9 @@ export function useGames({
         );
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(result.games);
         setTotal(result.total);
@@ -158,7 +170,9 @@ export function useGames({
         const steamLibraryAppIds = await window.electronAPI.getSteamLibraryAppIds();
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (steamLibraryAppIds.length === 0) {
           setGames([]);
@@ -175,7 +189,9 @@ export function useGames({
         );
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(result.games);
         setTotal(result.total);
@@ -186,7 +202,9 @@ export function useGames({
       if (specialFilter === 'owned-gog-games') {
         const titles = await window.electronAPI.getGogLibrary();
 
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (titles.length === 0) {
           setGames([]);
@@ -201,7 +219,9 @@ export function useGames({
           sortOrder
         );
 
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(result.games);
         setTotal(result.total);
@@ -212,7 +232,9 @@ export function useGames({
       if (specialFilter === 'owned-epic-games') {
         const titles = await window.electronAPI.getEpicLibrary();
 
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (titles.length === 0) {
           setGames([]);
@@ -227,7 +249,9 @@ export function useGames({
           sortOrder
         );
 
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(result.games);
         setTotal(result.total);
@@ -238,7 +262,9 @@ export function useGames({
       if (specialFilter === 'installed-xbox-games') {
         const folderNames = await window.electronAPI.getXboxInstalledPaths();
 
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         if (folderNames.length === 0) {
           setGames([]);
@@ -253,7 +279,9 @@ export function useGames({
           sortOrder
         );
 
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         setGames(result.games);
         setTotal(result.total);
@@ -273,7 +301,9 @@ export function useGames({
         const result = await window.electronAPI.fetchGames(params);
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         // Filter games that have achievements archive
         const withAchievements = result.games.filter(
@@ -298,7 +328,9 @@ export function useGames({
         const result = await window.electronAPI.fetchGames(params);
 
         // Перевірити чи запит ще актуальний
-        if (signal.aborted) return;
+        if (signal.aborted) {
+          return;
+        }
 
         // Фільтр ігор з озвученням: показувати якщо є voice_archive_path АБО voice_progress не null
         // (заплановане озвучення, в процесі або готове)
@@ -323,13 +355,17 @@ export function useGames({
       const result = await window.electronAPI.fetchGames(params);
 
       // Перевірити чи запит ще актуальний
-      if (signal.aborted) return;
+      if (signal.aborted) {
+        return;
+      }
 
       setGames(result.games);
       setTotal(result.total);
     } catch (error) {
       // Ігноруємо помилки від скасованих запитів
-      if (signal.aborted) return;
+      if (signal.aborted) {
+        return;
+      }
 
       console.error('[useGames] Error loading games:', error);
       const errorMessage =
@@ -385,7 +421,9 @@ export function useGames({
 
   // Слухати realtime оновлення окремих ігор
   useEffect(() => {
-    if (!window.electronAPI?.onGameUpdated) return;
+    if (!window.electronAPI?.onGameUpdated) {
+      return;
+    }
 
     const handleGameUpdate = (updatedGame: Game) => {
       console.log('[useGames] Game updated via realtime:', updatedGame.name);
@@ -501,7 +539,9 @@ export function useGames({
 
         if (index === -1) {
           // Гра не в списку
-          if (!shouldBeInList) return prevGames;
+          if (!shouldBeInList) {
+            return prevGames;
+          }
 
           // Додати гру в кінець (точна позиція визначиться при наступному reload)
           setTotal((prev) => prev + 1);
@@ -527,7 +567,9 @@ export function useGames({
 
   // Слухати realtime видалення ігор
   useEffect(() => {
-    if (!window.electronAPI?.onGameRemoved) return;
+    if (!window.electronAPI?.onGameRemoved) {
+      return;
+    }
 
     const handleGameRemoved = (gameId: string) => {
       console.log('[useGames] Game removed via realtime:', gameId);
@@ -549,9 +591,13 @@ export function useGames({
   // Слухати зміни у встановлених українізаторах (install/uninstall)
   // Перереєструємо listener при зміні specialFilter для коректної роботи closure
   useEffect(() => {
-    if (!window.electronAPI?.onInstalledGamesChanged) return;
+    if (!window.electronAPI?.onInstalledGamesChanged) {
+      return;
+    }
     // Підписуємось тільки якщо активний відповідний фільтр
-    if (specialFilter !== 'installed-translations') return;
+    if (specialFilter !== 'installed-translations') {
+      return;
+    }
 
     const handleInstalledGamesChanged = () => {
       console.log('[useGames] Installed translations changed, reloading list');
@@ -567,10 +613,13 @@ export function useGames({
   // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор та доступних зі Steam)
   // Перереєструємо listener при зміні specialFilter для коректної роботи closure
   useEffect(() => {
-    if (!window.electronAPI?.onSteamLibraryChanged) return;
-    // Підписуємось тільки якщо активний відповідний фільтр
-    if (specialFilter !== 'installed-games' && specialFilter !== 'available-in-steam')
+    if (!window.electronAPI?.onSteamLibraryChanged) {
       return;
+    }
+    // Підписуємось тільки якщо активний відповідний фільтр
+    if (specialFilter !== 'installed-games' && specialFilter !== 'available-in-steam') {
+      return;
+    }
 
     const handleSteamLibraryChanged = () => {
       console.log('[useGames] Steam library changed, reloading list');

@@ -74,7 +74,9 @@ export function useListAnimation({
 
   // Mark initial stagger as done after animations complete
   useEffect(() => {
-    if (loaderVisible || state.initialStaggerDone) return;
+    if (loaderVisible || state.initialStaggerDone) {
+      return;
+    }
     const splashExitMs = 300;
     const staggerMs = staggerCount * 50 + ANIMATION_DURATION_MS;
     const timer = setTimeout(
@@ -103,7 +105,9 @@ export function useListAnimation({
    */
   const getAnimationProps = useCallback(
     (key: string, index: number): AnimationProps | null => {
-      if (skipAll) return null;
+      if (skipAll) {
+        return null;
+      }
 
       if (isInitialAppear) {
         const delay =
@@ -115,7 +119,9 @@ export function useListAnimation({
         };
       }
 
-      if (!listChanged && state.prevKeys.has(key)) return null;
+      if (!listChanged && state.prevKeys.has(key)) {
+        return null;
+      }
 
       return {
         initial: offset,

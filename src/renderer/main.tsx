@@ -5,6 +5,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
+import { initFeedbackReplies } from './store/feedbackReplyBridge';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import './styles/globals.css';
 import './styles/animations.css';
@@ -24,6 +25,9 @@ sentryInit(
 
 // Initialize global error handlers before React renders
 initGlobalErrorHandlers();
+
+// Bridge feedback replies (IPC) into the notification store — once, outside React.
+initFeedbackReplies();
 
 console.log('[Renderer] Starting React application...');
 

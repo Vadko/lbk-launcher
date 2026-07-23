@@ -27,6 +27,8 @@ function isExecutableInstaller(fileName: string): boolean {
   return executableExtensions.some((ext) => lowerName.endsWith(ext));
 }
 
+const toPosix = (p: string): string => p.replace(/\\/g, '/');
+
 /**
  * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
  * If new key's DisplayName contains target words, print UninstallString.
@@ -149,11 +151,11 @@ export function getInstallerFileName(game: Game): string | null {
 
   // Linux and macOS can both run shell scripts
   if ((isLinuxOS || isMacOS) && game.installation_file_linux_path) {
-    return game.installation_file_linux_path;
+    return toPosix(game.installation_file_linux_path);
   }
 
   if (isLinuxOS && game.installation_file_windows_path) {
-    return game.installation_file_windows_path;
+    return toPosix(game.installation_file_windows_path);
   }
 
   return null;
@@ -164,7 +166,9 @@ export function getInstallerFileName(game: Game): string | null {
  */
 export function hasExecutableInstaller(game: Game): boolean {
   const installerFileName = getInstallerFileName(game);
-  if (!installerFileName) return false;
+  if (!installerFileName) {
+    return false;
+  }
   return isExecutableInstaller(installerFileName);
 }
 
@@ -275,7 +279,9 @@ export async function runInstaller(
       });
       if (exitCode !== null) {
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
-        if (exitCode === 1) throw new Error('встановлення не було завершене');
+        if (exitCode === 1) {
+          throw new Error('встановлення не було завершене');
+        }
       }
     } else if (platform === 'linux' || platform === 'macos') {
       // Check if this is a Windows-specific file that requires Proton
@@ -304,7 +310,9 @@ export async function runInstaller(
         const env: NodeJS.ProcessEnv = isLinux()
           ? { ...getCleanEnv(), ELECTRON_DISABLE_SANDBOX: '1' }
           : { ...process.env };
-        if (isAppImage) env.APPIMAGE_EXTRACT_AND_RUN = '1';
+        if (isAppImage) {
+          env.APPIMAGE_EXTRACT_AND_RUN = '1';
+        }
 
         const child = spawn(installerPath, [], {
           cwd: extractDir,
@@ -361,7 +369,9 @@ export async function runInstaller(
         if (isWindowsBatchFile) {
           child.stdout?.on('data', (data) => {
             const line = data.toString('utf8').trim();
-            if (line) console.log(`[Installer stdout] ${line}`);
+            if (line) {
+              console.log(`[Installer stdout] ${line}`);
+            }
           });
 
           child.stderr?.on('data', (data) => {

@@ -59,7 +59,9 @@ export function useFilterCounts() {
         window.electronAPI.getXboxInstalledPaths(),
       ]);
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        return;
+      }
 
       const [
         installedGamesResult,
@@ -85,7 +87,9 @@ export function useFilterCounts() {
           : Promise.resolve({ games: [], total: 0 }),
       ]);
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current) {
+        return;
+      }
 
       setCounts((prevCounts) => ({
         ...sqlCounts,

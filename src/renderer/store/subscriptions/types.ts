@@ -9,7 +9,8 @@ interface BaseNotification {
     | 'progress-change'
     | 'team-new-game'
     | 'team-status-change'
-    | 'first-favorite';
+    | 'first-favorite'
+    | 'feedback-reply';
   gameName: string;
   timestamp: number;
 }
@@ -20,6 +21,8 @@ export interface Notification extends BaseNotification {
   gameId: string;
   teamName?: string;
   read: boolean;
+  message?: string;
+  sourceId?: string;
 }
 
 export interface ToastNotification extends BaseNotification {
@@ -56,4 +59,6 @@ export type PersistedSubscriptionsState = {
   unreadCount: number;
   // Track which version updates have been shown to avoid duplicate notifications
   notifiedVersions: Map<string, string>; // gameId -> version
+  // Feedback-reply ids ever shown, so dedup survives clearing the list.
+  seenFeedbackReplyIds: string[];
 };

@@ -93,7 +93,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 const isInstalled = installedTranslations.has(game.id);
                 const hasUpdate = gamesWithUpdates.has(game.id);
                 const progress = game.translation_progress ?? 0;
-                const logoUrl = getGameImageUrl(game.logo_path);
+                const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
                 const isTranslationAvailable =
                   game.status !== 'planned' && game.status !== 'tech-improvement';
 

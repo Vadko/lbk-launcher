@@ -1,8 +1,9 @@
+import { useDeferredImage } from '@renderer/hooks/useDeferredImage';
 import type { Game } from '@renderer/types/game';
 import { getGameImageUrl } from '@renderer/utils/imageUrl';
 import { useSettingsStore } from '@store/useSettingsStore';
 import { EyeOff } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
 
@@ -15,6 +16,7 @@ interface GamepadCardProps {
   isDetected: boolean;
   isInstalled: boolean;
   onClick: () => void;
+  imageDeferred?: boolean;
 }
 
 export const GamepadCard: React.FC<GamepadCardProps> = ({
@@ -25,55 +27,34 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   isDetected,
   isInstalled,
   onClick,
+  imageDeferred = false,
 }) => {
   const hasMultipleTranslations = translations.length > 1;
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
-  const [useBanner, setUseBanner] = useState(false);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null);
+  const [bannerGameId, setBannerGameId] = useState<string | null>(null);
+  const imageSettled = useDeferredImage(imageDeferred, game.id);
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
   const isTranslationAvailable =
     game.status !== 'planned' && game.status !== 'tech-improvement';
 
-  const thumbnailUrl = getGameImageUrl(game.thumbnail_path);
-  const bannerUrl = getGameImageUrl(game.banner_path);
+  const thumbnailUrl = getGameImageUrl(game.thumbnail_path, game.updated_at);
+  const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
+  const useBanner = bannerGameId === game.id;
   const imageUrl = useBanner ? bannerUrl : thumbnailUrl;
+  const imageError = erroredUrl === imageUrl;
+  const imageLoading = loadedUrl !== imageUrl;
   const isAdultBlurred = game.is_adult && !showAdultGames;
-
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Reset state when game changes
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
-  useEffect(() => {
-    setImageLoading(true);
-    setImageError(false);
-    setUseBanner(false);
-  }, [game.id]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  // Check if image is already cached/loaded
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional check after render */
-  useEffect(() => {
-    const img = imgRef.current;
-    if (img && img.complete && img.naturalWidth > 0) {
-      // Image already loaded from cache
-      if (!useBanner && img.naturalWidth < 300 && bannerUrl) {
-        setUseBanner(true);
-      } else {
-        setImageLoading(false);
-      }
-    }
-  }, [imageUrl, useBanner, bannerUrl]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     // If thumbnail is low quality (small), switch to banner
     if (!useBanner && img.naturalWidth > 0 && img.naturalWidth < 300 && bannerUrl) {
-      setUseBanner(true);
+      setBannerGameId(game.id);
       return;
     }
-    setImageLoading(false);
+    setLoadedUrl(imageUrl);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -118,20 +99,19 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
                 <Loader size="sm" />
               </div>
             )}
-            <img
-              ref={imgRef}
-              src={imageUrl}
-              alt={game.name}
-              draggable={false}
-              className={`w-full h-full object-cover transition-opacity duration-200 ${
-                imageLoading ? 'opacity-0' : 'opacity-100'
-              } ${useBanner ? 'object-[left_center]' : ''}`}
-              onLoad={handleImageLoad}
-              onError={() => {
-                setImageError(true);
-                setImageLoading(false);
-              }}
-            />
+            {imageSettled && (
+              <img
+                src={imageUrl}
+                alt={game.name}
+                draggable={false}
+                decoding="async"
+                className={`w-full h-full object-cover transition-opacity duration-200 ${
+                  imageLoading ? 'opacity-0' : 'opacity-100'
+                } ${useBanner ? 'object-[left_center]' : ''}`}
+                onLoad={handleImageLoad}
+                onError={() => setErroredUrl(imageUrl)}
+              />
+            )}
           </>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-color-main/50 to-color-accent/50 flex items-center justify-center">

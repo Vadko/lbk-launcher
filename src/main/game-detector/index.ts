@@ -4,11 +4,13 @@
  */
 
 import type { InstallPath } from '../../shared/types';
+import { findEAGame, getInstalledEAGamePaths } from './ea';
 import { findEpicGame, getHeroicEpicAppName, getInstalledEpicGamePaths } from './epic';
 import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
 import { findSteamGame, getInstalledSteamGamePaths } from './steam';
 import type { GamePath } from './types'; // Used locally
+import { findUplayGame, getInstalledUplayGamePaths } from './uplay';
 import { findXboxGame, getInstalledXboxGamePaths } from './xbox';
 
 // ============================================================================
@@ -32,21 +34,26 @@ export {
   invalidateSteamPathCache,
   updateLastKnownLicensecacheSize,
 } from './steam';
+// Uplay
+export { getUplayGameId } from './uplay';
 
 // ============================================================================
 // Main Detection Logic
 // ============================================================================
 
 export function detectGamePath(
-  installPath: InstallPath | null | undefined
+  installPath: InstallPath | null | undefined,
+  steamAppId?: number | null
 ): GamePath | null {
-  if (!installPath || !installPath.type || !installPath.path) return null;
+  if (!installPath || !installPath.type || !installPath.path) {
+    return null;
+  }
 
   let foundPath: string | null = null;
 
   switch (installPath.type) {
     case 'steam':
-      foundPath = findSteamGame(installPath.path);
+      foundPath = findSteamGame(installPath.path, steamAppId);
       return {
         platform: 'steam',
         path: foundPath || '',
@@ -85,6 +92,22 @@ export function detectGamePath(
         exists: !!foundPath,
       };
 
+    case 'uplay':
+      foundPath = findUplayGame(installPath.path);
+      return {
+        platform: 'uplay',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
+    case 'ea':
+      foundPath = findEAGame(installPath.path);
+      return {
+        platform: 'ea',
+        path: foundPath || '',
+        exists: !!foundPath,
+      };
+
     case 'emulator':
     case 'other':
       // These platforms require manual path selection
@@ -101,11 +124,14 @@ export function detectGamePath(
 /**
  * Detect all possible paths for a game
  */
-export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
+export function detectGamePaths(
+  installPaths: InstallPath[],
+  steamAppId?: number | null
+): GamePath[] {
   const results: GamePath[] = [];
 
   for (const installPath of installPaths) {
-    const gamePath = detectGamePath(installPath);
+    const gamePath = detectGamePath(installPath, steamAppId);
     if (gamePath) {
       results.push(gamePath);
     }
@@ -117,8 +143,11 @@ export function detectGamePaths(installPaths: InstallPath[]): GamePath[] {
 /**
  * Get the first available game path
  */
-export function getFirstAvailableGamePath(installPaths: InstallPath[]): GamePath | null {
-  const paths = detectGamePaths(installPaths);
+export function getFirstAvailableGamePath(
+  installPaths: InstallPath[],
+  steamAppId?: number | null
+): GamePath | null {
+  const paths = detectGamePaths(installPaths, steamAppId);
   return paths.find((p) => p.exists) || null;
 }
 
@@ -164,6 +193,20 @@ export function getAllInstalledGamePaths(): string[] {
     console.error('[GameDetector] Error getting Xbox games:', error);
   }
 
+  // Ubisoft Connect games
+  try {
+    installedPaths.push(...getInstalledUplayGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting Uplay games:', error);
+  }
+
+  // EA App games
+  try {
+    installedPaths.push(...getInstalledEAGamePaths());
+  } catch (error) {
+    console.error('[GameDetector] Error getting EA games:', error);
+  }
+
   console.log(
     `[GameDetector] Found ${installedPaths.length} installed game paths on system`
   );
@@ -184,10 +227,14 @@ interface HeroicGameInfo {
 
 export function getHeroicGame(gamePath: string): HeroicGameInfo | null {
   const gogId = getHeroicGOGId(gamePath);
-  if (gogId) return { appName: gogId, runner: 'gog' };
+  if (gogId) {
+    return { appName: gogId, runner: 'gog' };
+  }
 
   const epicAppName = getHeroicEpicAppName(gamePath);
-  if (epicAppName) return { appName: epicAppName, runner: 'legendary' };
+  if (epicAppName) {
+    return { appName: epicAppName, runner: 'legendary' };
+  }
 
   return null;
 }

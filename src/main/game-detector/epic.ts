@@ -47,7 +47,9 @@ function getEpicPath(): string | null {
   try {
     if (isWindows()) {
       const programData = process.env.PROGRAMDATA;
-      if (!programData) return null;
+      if (!programData) {
+        return null;
+      }
       const manifestPath = path.join(
         programData,
         'Epic',
@@ -273,6 +275,10 @@ export function getInstalledEpicGamePaths(): string[] {
     console.error('[Epic] Error getting game paths:', error);
   }
 
+  if (paths.length > 0) {
+    console.log(`[Epic] Found ${paths.length} installed games: ${paths.join(', ')}`);
+  }
+
   return paths;
 }
 
@@ -368,7 +374,9 @@ export function getEpicLibrary(): string[] {
  * Get Epic App Name from Heroic/Legendary config by path
  */
 export function getHeroicEpicAppName(gamePath: string): string | null {
-  if (!isLinux()) return null;
+  if (!isLinux()) {
+    return null;
+  }
 
   try {
     const configPaths = getHeroicConfigPaths().flatMap((p) => [
@@ -406,8 +414,12 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
         });
 
         if (game) {
-          if (game.app_name) return game.app_name;
-          if (game.appName) return game.appName;
+          if (game.app_name) {
+            return game.app_name;
+          }
+          if (game.appName) {
+            return game.appName;
+          }
         }
 
         // 1.5 Try path match in Object keys loop (if gamesById was populated)
@@ -456,8 +468,8 @@ export function getEpicAppName(gamePath: string): string | null {
         const resolvedGamePath = path.resolve(gamePath);
 
         if (resolvedManifestPath === resolvedGamePath) {
-          // Prefer catalogItemId, fallback to appName
-          const appIdentifier = manifest.catalogItemId || manifest.appName;
+          // Prefer AppName: it is the ownership key Epic checks on launch.
+          const appIdentifier = manifest.appName || manifest.catalogItemId;
           if (appIdentifier) {
             console.log(`[Epic] Found app identifier for ${gamePath}: ${appIdentifier}`);
             return appIdentifier;

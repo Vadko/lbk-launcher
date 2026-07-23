@@ -228,14 +228,14 @@ export const SettingsModal: React.FC = () => {
           </a>
 
           <SettingItem
-            id="animations"
-            title="Анімації"
+            id="performance-mode"
+            title="Режим продуктивності"
             description={
               isHardwareWeak
-                ? 'Вимкнено: на цьому пристрої недостатньо ресурсів для плавних анімацій'
-                : 'Увімкнути або вимкнути анімації в інтерфейсі'
+                ? 'Увімкнено: на цьому пристрої недостатньо ресурсів для плавних анімацій, тому режим продуктивності не можна вимкнути'
+                : 'Вимикає анімації і блюр в інтерфейсі для кращої продуктивності'
             }
-            enabled={animationsEnabled}
+            enabled={!animationsEnabled}
             onChange={toggleAnimations}
             disabled={isHardwareWeak}
           />

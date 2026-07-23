@@ -1,18 +1,17 @@
-import { Book, Globe, Send, Share2 } from 'lucide-react';
-import React, { useState } from 'react';
-import { teamToSlug } from '../../../shared/search-utils';
+import { Book, Globe, Send } from 'lucide-react';
+import React from 'react';
 import type { Game } from '../../types/game';
 import {
   DiscordIcon,
+  EAIcon,
   EpicIcon,
   GOGIcon,
   SteamIcon,
+  UbisoftIcon,
   XboxIcon,
   XIcon,
   YouTubeIcon,
 } from '../Icons/BrandIcons';
-
-import { ShareModal } from '../Modal/ShareModal';
 
 interface SocialLinksCardProps {
   game: Game;
@@ -26,7 +25,7 @@ interface SocialLinkProps {
 }
 
 interface StoreLinkProps {
-  type: 'steam' | 'gog' | 'epic-store' | 'xbox';
+  type: 'steam' | 'gog' | 'epic-store' | 'xbox' | 'uplay' | 'ea';
   appId?: number | string;
   url?: string;
 }
@@ -89,6 +88,24 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
           hoverColor: 'hover:border-[#107C10]/60 hover:shadow-[#107C10]/20',
           color: 'text-[#107C10]',
         };
+      case 'uplay':
+        return {
+          url,
+          icon: <UbisoftIcon size={18} />,
+          title: 'Ubisoft Store',
+          label: 'Ubisoft Store',
+          hoverColor: 'hover:border-[#0070FF]/60 hover:shadow-[#0070FF]/20',
+          color: 'text-[#0070FF]',
+        };
+      case 'ea':
+        return {
+          url,
+          icon: <EAIcon size={18} />,
+          title: 'EA App',
+          label: 'EA App',
+          hoverColor: 'hover:border-[#FF4747]/60 hover:shadow-[#FF4747]/20',
+          color: 'text-[#FF4747]',
+        };
     }
   };
 
@@ -114,39 +131,6 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
         <span className="text-sm text-text-main font-medium">{config.label}</span>
       )}
     </a>
-  );
-};
-
-const ShareButton: React.FC<{ game: Game }> = ({ game }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  if (!game.slug || !game.team) return null;
-
-  const teamSlug = teamToSlug(game.team);
-
-  return (
-    <>
-      <button
-        onClick={() => setIsModalOpen(true)}
-        data-nav-group="main-links"
-        data-gamepad-action="true"
-        className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-neon-purple/60 transition-all duration-300"
-        title="Поділитися"
-      >
-        <div className="text-neon-purple group-hover:brightness-125 transition-all duration-300">
-          <Share2 size={18} />
-        </div>
-        <span className="text-sm font-medium">Поділитися</span>
-      </button>
-      <ShareModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        gameSlug={game.slug}
-        teamSlug={teamSlug}
-        gameName={game.name}
-        teamName={game.team}
-      />
-    </>
   );
 };
 
@@ -190,8 +174,6 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
     },
   ].filter(Boolean) as SocialLinkProps[];
 
-  const hasShareButton = game.slug && game.team;
-
   const stores = [
     game.steam_app_id && {
       type: 'steam',
@@ -209,14 +191,22 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
       type: 'xbox',
       url: game.xbox_store_url,
     },
+    game.uplay_store_url && {
+      type: 'uplay',
+      url: game.uplay_store_url,
+    },
+    game.ea_store_url && {
+      type: 'ea',
+      url: game.ea_store_url,
+    },
   ].filter(Boolean) as StoreLinkProps[];
 
-  if (links.length === 0 && stores.length === 0 && !hasShareButton) {
+  if (links.length === 0 && stores.length === 0) {
     return null;
   }
 
   return (
-    (stores.length > 0 || hasShareButton || links.length > 0) && (
+    (stores.length > 0 || links.length > 0) && (
       <div className="glass-card-no-motion">
         <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
         {stores.length > 0 && (
@@ -232,14 +222,10 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
           </>
         )}
 
-        {(hasShareButton || links.length > 0) && (
+        {links.length > 0 && (
           <>
             <p className="text-base font-head font-semibold text-text-muted mb-2">Інше</p>
             <div className="flex flex-wrap items-center gap-3">
-              {hasShareButton && <ShareButton game={game} />}
-              {links.length > 0 && (game.steam_app_id || hasShareButton) && (
-                <div className="hidden sm:block w-0 h-10 border-l border-border-hover" />
-              )}
               {links.map((link, index) => (
                 <SocialLink key={index} {...link} />
               ))}

@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Route } from 'react-router-dom';
 import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
+import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
@@ -50,7 +51,6 @@ if (!isE2E) {
 
 export const App: React.FC = () => {
   const {
-    setInitialLoadComplete,
     detectInstalledGames,
     loadSteamGames,
     clearSteamGamesCache,
@@ -68,20 +68,46 @@ export const App: React.FC = () => {
 
   // Listen for sync status from main process
   useEffect(() => {
-    let hideTimeout: NodeJS.Timeout | null = null;
-    const loaderStartTime = Date.now();
+    let rafId = 0;
+    let hideStarted = false;
+    const loaderStartTime = performance.now();
     const MIN_LOADER_DISPLAY_MS = 1000; // Minimum time to show loader for animations
+    const STABLE_FRAMES = 20;
+    // 45мс покриває 24-120Hz: на 30Hz (Low Power Mode) кадр ~33мс, на 40Hz
+    // (Steam Deck) ~25мс — з меншим бюджетом стрік ніколи не набирався і
+    // лоадер завжди висів повні MAX_WAIT_AFTER_READY_MS
+    const FRAME_BUDGET_MS = 45;
+    const MAX_WAIT_AFTER_READY_MS = 8000;
 
-    const hideLoaderWithDelay = () => {
-      const elapsed = Date.now() - loaderStartTime;
-      const remainingTime = Math.max(0, MIN_LOADER_DISPLAY_MS - elapsed);
+    const hideLoaderWhenStable = () => {
+      if (hideStarted) {
+        return;
+      }
+      hideStarted = true;
 
-      hideTimeout = setTimeout(() => setLoaderVisible(false), remainingTime);
+      const readyAt = performance.now();
+      let lastFrame = readyAt;
+      let stableStreak = 0;
+
+      const tick = (now: number) => {
+        stableStreak = now - lastFrame <= FRAME_BUDGET_MS ? stableStreak + 1 : 0;
+        lastFrame = now;
+
+        const minShown = now - loaderStartTime >= MIN_LOADER_DISPLAY_MS;
+        const timedOut = now - readyAt >= MAX_WAIT_AFTER_READY_MS;
+
+        if ((stableStreak >= STABLE_FRAMES && minShown) || timedOut) {
+          setLoaderVisible(false);
+          return;
+        }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
     };
 
     if (!window.electronAPI?.getSyncStatus) {
       // No electron API - probably in browser, show app after minimum time
-      hideLoaderWithDelay();
+      hideLoaderWhenStable();
       return;
     }
 
@@ -90,7 +116,7 @@ export const App: React.FC = () => {
       console.log('[App] Initial sync status:', status);
       setSyncStatus(status);
       if (status === 'ready' || status === 'error') {
-        hideLoaderWithDelay();
+        hideLoaderWhenStable();
       }
     });
 
@@ -99,19 +125,23 @@ export const App: React.FC = () => {
       console.log('[App] Sync status changed:', status);
       setSyncStatus(status);
       if (status === 'ready' || status === 'error') {
-        hideLoaderWithDelay();
+        hideLoaderWhenStable();
       }
     });
 
     return () => {
       unsubscribe();
-      if (hideTimeout) clearTimeout(hideTimeout);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [setSyncStatus, setLoaderVisible]);
 
   // Відстеження першого запуску додатку
   useEffect(() => {
-    if (!window.storeStorage) return;
+    if (!window.storeStorage) {
+      return;
+    }
 
     const hasLaunchedBefore = window.storeStorage.getItem('has-launched-before');
     if (!hasLaunchedBefore) {
@@ -134,7 +164,9 @@ export const App: React.FC = () => {
     const tick = () => {
       if (!useGamepadModeStore.getState().isGamepadMode) {
         for (const pad of navigator.getGamepads()) {
-          if (!pad || !pad.connected || !isValidGamepad(pad)) continue;
+          if (!pad || !pad.connected || !isValidGamepad(pad)) {
+            continue;
+          }
           const anyButtonPressed = pad.buttons.some((b) => b.pressed);
           const anyAxisMoved = pad.axes.some(
             (axis) => Math.abs(axis) > MODE_SWITCH_DEADZONE
@@ -149,18 +181,24 @@ export const App: React.FC = () => {
     };
 
     const startPolling = () => {
-      if (rafId) return;
+      if (rafId) {
+        return;
+      }
       rafId = requestAnimationFrame(tick);
     };
 
     const stopPolling = () => {
-      if (!rafId) return;
+      if (!rafId) {
+        return;
+      }
       cancelAnimationFrame(rafId);
       rafId = 0;
     };
 
     const handleGamepadConnected = (e: GamepadEvent) => {
-      if (!isValidGamepad(e.gamepad)) return;
+      if (!isValidGamepad(e.gamepad)) {
+        return;
+      }
       console.log('[App] Gamepad connected:', e.gamepad.id);
       setGamepadMode(true);
       startPolling();
@@ -177,7 +215,9 @@ export const App: React.FC = () => {
 
     const handleMouseMove = () => {
       const now = Date.now();
-      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) return;
+      if (now - lastMouseMoveRef.current < MOUSE_THROTTLE_MS) {
+        return;
+      }
       lastMouseMoveRef.current = now;
       if (useGamepadModeStore.getState().isGamepadMode) {
         setGamepadMode(false);
@@ -224,61 +264,40 @@ export const App: React.FC = () => {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialLoadComplete();
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [setInitialLoadComplete]);
-
-  // Завантажити Steam ігри при старті
-  useEffect(() => {
-    if (!window.electronAPI) return;
-
-    const timer = setTimeout(async () => {
-      await loadSteamGames();
-    }, 1000);
-
-    return () => clearTimeout(timer);
+  useIdleEffect(() => {
+    if (window.electronAPI) {
+      loadSteamGames();
+    }
   }, [loadSteamGames]);
 
   // Завантажити встановлені українізатори при старті
-  useEffect(() => {
-    if (!window.electronAPI) return;
-
-    const timer = setTimeout(async () => {
-      await useStore.getState().loadInstalledGamesFromSystem();
-    }, 1000);
-
-    return () => clearTimeout(timer);
+  useIdleEffect(() => {
+    if (window.electronAPI) {
+      useStore.getState().loadInstalledGamesFromSystem();
+    }
   }, []);
 
   // Детекція встановлених ігор на початку (якщо увімкнено)
-  useEffect(() => {
-    if (!autoDetectInstalledGames || !window.electronAPI) return;
+  useIdleEffect(async () => {
+    if (!autoDetectInstalledGames || !window.electronAPI) {
+      return;
+    }
 
-    const runDetection = async () => {
-      // Отримати всі ігри з локальної бази
-      const result = await window.electronAPI.fetchGames();
-      if (result.games.length === 0) {
-        console.log('[App] No games in database yet, skipping initial detection');
-        return;
-      }
-      console.log(
-        '[App] Running initial game detection for',
-        result.games.length,
-        'games'
-      );
-      await detectInstalledGames(result.games);
-    };
-
-    const timer = setTimeout(runDetection, 1000);
-    return () => clearTimeout(timer);
+    // Отримати всі ігри з локальної бази
+    const result = await window.electronAPI.fetchGames();
+    if (result.games.length === 0) {
+      console.log('[App] No games in database yet, skipping initial detection');
+      return;
+    }
+    console.log('[App] Running initial game detection for', result.games.length, 'games');
+    await detectInstalledGames(result.games);
   }, [autoDetectInstalledGames, detectInstalledGames]);
 
   // Слухати зміни Steam бібліотеки
   useEffect(() => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI) {
+      return;
+    }
 
     const handleSteamLibraryChange = async () => {
       console.log('[App] Steam library changed, clearing cache and reloading');
@@ -314,7 +333,9 @@ export const App: React.FC = () => {
   // Слухати зміни встановлених українізаторів
   // Цей listener потрібен для всіх змін: інсталяція, деінсталяція, зовнішні зміни
   useEffect(() => {
-    if (!window.electronAPI?.onInstalledGamesChanged) return;
+    if (!window.electronAPI?.onInstalledGamesChanged) {
+      return;
+    }
 
     const handleInstalledGamesChanged = () => {
       console.log('[App] Installed games changed, reloading from system');
@@ -330,7 +351,9 @@ export const App: React.FC = () => {
 
   // [DEV ONLY] Listen for test games changes and broadcast to components
   useEffect(() => {
-    if (!window.electronAPI?.onTestGamesChanged) return;
+    if (!window.electronAPI?.onTestGamesChanged) {
+      return;
+    }
 
     const handleTestGamesChanged = () => {
       window.dispatchEvent(new Event('test-games-updated'));
@@ -345,7 +368,9 @@ export const App: React.FC = () => {
   // the flag file Steam reads on startup; one restart enables live config
   // updates for all future installs.
   useEffect(() => {
-    if (!window.electronAPI?.onSteamRestartRequired) return;
+    if (!window.electronAPI?.onSteamRestartRequired) {
+      return;
+    }
     const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
       useModalStore.getState().showModal({
         title: 'Перезапустіть Steam',

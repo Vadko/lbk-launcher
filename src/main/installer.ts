@@ -17,6 +17,7 @@ import { downloadAndExtractArchive } from './installer/download-and-extract';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
+import { resolveMacBundleTarget } from './installer/mac-bundle';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
@@ -72,12 +73,12 @@ export async function installTranslation(
       const customPlatform = platform === 'auto' ? 'steam' : platform;
       gamePath = { platform: customPlatform, path: customGamePath, exists: true };
     } else if (platform === 'auto') {
-      gamePath = getFirstAvailableGamePath(game.install_paths || []);
+      gamePath = getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id);
     } else {
       const selectedInstallPath = (game.install_paths || []).find(
         (p) => p.type === platform
       );
-      gamePath = detectGamePath(selectedInstallPath);
+      gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
     }
 
     if (!gamePath || !gamePath.exists || !gamePath.path) {
@@ -90,7 +91,7 @@ export async function installTranslation(
       if (game.license_only) {
         throw new Error(
           `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через Steam, GOG чи Epic Games.`
+            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через офіційний магазин (Steam, GOG, Epic Games, Ubisoft Connect, EA App тощо).`
         );
       }
 
@@ -111,7 +112,7 @@ export async function installTranslation(
     if (installText) {
       // Pick the matching archive size in priority order:
       //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
-      //   2. Store-specific variant (Epic/GOG/Xbox) — only if user is on that store.
+      //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only if user is on that store.
       //   3. Main archive — default fallback (typically Windows).
       let textArchiveSize: string | null | undefined = game.archive_size;
       if (isLinux() && game.steam_linux_archive_size) {
@@ -124,6 +125,10 @@ export async function installTranslation(
         textArchiveSize = game.gog_archive_size;
       } else if (gamePath.platform === 'xbox' && game.xbox_archive_size) {
         textArchiveSize = game.xbox_archive_size;
+      } else if (gamePath.platform === 'uplay' && game.uplay_archive_size) {
+        textArchiveSize = game.uplay_archive_size;
+      } else if (gamePath.platform === 'ea' && game.ea_archive_size) {
+        textArchiveSize = game.ea_archive_size;
       }
       if (textArchiveSize) {
         requiredSpace += parseSizeToBytes(textArchiveSize);
@@ -165,7 +170,7 @@ export async function installTranslation(
       // Selection priority (matches the disk-space check above):
       //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
       //      Translator uploads these when files differ for Linux/macOS builds.
-      //   2. Store-specific variant (Epic/GOG/Xbox) — only when user is on
+      //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only when user is on
       //      that store.
       //   3. Main archive — default fallback.
       let archivePath = game.archive_path;
@@ -191,6 +196,14 @@ export async function installTranslation(
         archivePath = game.xbox_archive_path;
         archiveHash = game.xbox_archive_hash;
         console.log('[Installer] Using Xbox-specific archive');
+      } else if (gamePath.platform === 'uplay' && game.uplay_archive_path) {
+        archivePath = game.uplay_archive_path;
+        archiveHash = game.uplay_archive_hash;
+        console.log('[Installer] Using Uplay-specific archive');
+      } else if (gamePath.platform === 'ea' && game.ea_archive_path) {
+        archivePath = game.ea_archive_path;
+        archiveHash = game.ea_archive_hash;
+        console.log('[Installer] Using EA-specific archive');
       }
 
       textFiles = await downloadAndExtractArchive({
@@ -366,7 +379,24 @@ export async function installTranslation(
     }
 
     // 7. Copy files to game directory
-    const additionalPath = game.additional_path || '';
+    let additionalPath = game.additional_path || '';
+
+    // On macOS, redirect the copy into the `.app` bundle (data lives inside it,
+    // not at the game root). Skip when a macOS archive was used — it already
+    // carries the bundle path.
+    if ((installText || installVoice) && isMacOS() && !game.steam_mac_archive_path) {
+      const macBundle = await resolveMacBundleTarget(gamePath.path, extractDir);
+      if (macBundle.target) {
+        additionalPath = macBundle.target;
+        console.log(`[Installer] macOS .app bundle — installing into: ${additionalPath}`);
+      } else if (macBundle.appBundleFound && macBundle.matchedInsideBundle > 0) {
+        throw new Error(
+          'Не вдалося визначити місце встановлення всередині macOS-бандла (.app).\n\n' +
+            'Для цієї гри потрібен окремий macOS-архів перекладу.'
+        );
+      }
+    }
+
     const fullTargetPath = additionalPath
       ? path.join(gamePath.path, additionalPath)
       : gamePath.path;
@@ -387,7 +417,13 @@ export async function installTranslation(
 
       if (createBackup) {
         onStatus?.({ message: 'Створення резервної копії...', phase: 'install' });
-        await backupFiles(extractDir, fullTargetPath);
+        await backupFiles(
+          extractDir,
+          fullTargetPath,
+          undefined,
+          additionalPath,
+          gamePath.path
+        );
       }
 
       onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });

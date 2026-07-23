@@ -42,7 +42,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       gamesWithUpdates,
       isGameDetected,
       getInstallationInfo,
-      loadInstalledGamesFromSystem,
     } = useStore(
       useShallow((state) => ({
         selectedGame: state.selectedGame,
@@ -53,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         gamesWithUpdates: state.gamesWithUpdates,
         isGameDetected: state.isGameDetected,
         getInstallationInfo: state.getInstallationInfo,
-        loadInstalledGamesFromSystem: state.loadInstalledGamesFromSystem,
       }))
     );
     const {
@@ -140,7 +138,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     }, []);
 
     useEffect(() => {
-      if (syncStatus !== 'ready' && syncStatus !== 'error') return;
+      if (syncStatus !== 'ready' && syncStatus !== 'error') {
+        return;
+      }
       loadAuthors();
 
       const unsub = window.electronAPI?.onGameUpdated?.(() => loadAuthors());
@@ -223,6 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
 
     const listRef = useRef<HTMLDivElement>(null);
+    const stripRef = useRef<HTMLDivElement>(null);
 
     // Resize state
     const [isResizing, setIsResizing] = useState(false);
@@ -240,7 +241,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     );
 
     useEffect(() => {
-      if (!isResizing) return;
+      if (!isResizing) {
+        return;
+      }
 
       // Set cursor on body to maintain it when mouse leaves the handle
       document.body.style.cursor = 'col-resize';
@@ -288,19 +291,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       (game: Game) => navigate(`/game/${game.id}`),
       [navigate]
     );
-
-    const hasLoadedRef = useRef(false);
-
-    useEffect(() => {
-      if (hasLoadedRef.current) return;
-      hasLoadedRef.current = true;
-
-      const timer = setTimeout(() => {
-        loadInstalledGamesFromSystem();
-      }, 500);
-
-      return () => clearTimeout(timer);
-    }, [loadInstalledGamesFromSystem]);
 
     // Filter counts from dedicated hook (with debouncing)
     const { counts: filterCounts } = useFilterCounts();
@@ -358,13 +348,16 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
 
           {/* Games strip */}
           <div
+            ref={stripRef}
             data-gamepad-game-list
+            data-gamepad-total={gameGroups.length}
             className="px-4 py-3 overflow-x-auto custom-scrollbar"
           >
             <HorizontalGameList
               gameGroups={gameGroups}
               totalGames={totalGames}
               isLoading={isLoading}
+              scrollRef={stripRef}
               animationsEnabled={animationsEnabled}
               selectedGameId={selectedGame?.id}
               gamesWithUpdates={gamesWithUpdates}
@@ -426,6 +419,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             gameGroups={gameGroups}
             totalGames={totalGames}
             isLoading={isLoading}
+            scrollRef={listRef}
             animationsEnabled={animationsEnabled}
             expandedGroups={expandedGroups}
             selectedGameId={selectedGame?.id}

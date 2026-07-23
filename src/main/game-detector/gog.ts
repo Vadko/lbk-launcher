@@ -65,7 +65,9 @@ function getGOGGalaxyDBPath(): string | null {
  */
 function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
   const dbPath = getGOGGalaxyDBPath();
-  if (!dbPath) return [];
+  if (!dbPath) {
+    return [];
+  }
 
   let dbData: GOGInstalledGame[] = [];
 
@@ -120,7 +122,9 @@ function getInstalledGamesFromGalaxyDB(): GOGInstalledGame[] {
  */
 function getAllGamesFromGalaxyDB(): string[] {
   const dbPath = getGOGGalaxyDBPath();
-  if (!dbPath) return [];
+  if (!dbPath) {
+    return [];
+  }
 
   let dbData: GOGInstalledGame[] = [];
 
@@ -221,7 +225,9 @@ export function getGOGGameId(gamePath: string): number | null {
  * Get GOG Game ID from Heroic config by path
  */
 export function getHeroicGOGId(gamePath: string): string | null {
-  if (!isLinux()) return null;
+  if (!isLinux()) {
+    return null;
+  }
 
   try {
     const configPaths = getHeroicConfigPaths().map((p) =>
@@ -229,7 +235,9 @@ export function getHeroicGOGId(gamePath: string): string | null {
     );
 
     for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) continue;
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
 
       const content = fs.readFileSync(configPath, 'utf8');
       const data = JSON.parse(content);
@@ -281,7 +289,9 @@ export function findGOGGame(gameFolderName: string): string | null {
     ];
 
     for (const dir of heroicDirs) {
-      if (!fs.existsSync(dir)) continue;
+      if (!fs.existsSync(dir)) {
+        continue;
+      }
       try {
         const subdirs = fs.readdirSync(dir);
         for (const subdir of subdirs) {
@@ -314,12 +324,18 @@ export function findGOGGame(gameFolderName: string): string | null {
               const installPath = g.install_path;
               if (installPath) {
                 // Try exact basename match
-                if (path.basename(installPath) === gameFolderName) return true;
+                if (path.basename(installPath) === gameFolderName) {
+                  return true;
+                }
                 // Try normalized match
-                if (normalize(path.basename(installPath)) === targetFolder) return true;
+                if (normalize(path.basename(installPath)) === targetFolder) {
+                  return true;
+                }
               }
               // Try normalized title match if folder name matches title
-              if (g.title && normalize(g.title) === targetFolder) return true;
+              if (g.title && normalize(g.title) === targetFolder) {
+                return true;
+              }
               return false;
             });
 
@@ -382,7 +398,9 @@ export function getInstalledGOGGamePaths(): string[] {
       );
 
       for (const configPath of configPaths) {
-        if (!fs.existsSync(configPath)) continue;
+        if (!fs.existsSync(configPath)) {
+          continue;
+        }
 
         try {
           const content = fs.readFileSync(configPath, 'utf8');
@@ -412,6 +430,10 @@ export function getInstalledGOGGamePaths(): string[] {
     console.error('[GOG] Error getting game paths:', error);
   }
 
+  if (paths.length > 0) {
+    console.log(`[GOG] Found ${paths.length} installed games: ${paths.join(', ')}`);
+  }
+
   return paths;
 }
 
@@ -430,7 +452,9 @@ function getAllInstalledGOGGames(): Map<string, string> {
     );
 
     for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) continue;
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
 
       try {
         const content = fs.readFileSync(configPath, 'utf8');
@@ -451,7 +475,9 @@ function getAllInstalledGOGGames(): Map<string, string> {
     // Include Lutris GOG installations mapped via db directly (we can leverage fuzzy matching folders too)
     const lutrisDirs = getLutrisGOGDirs();
     for (const dir of lutrisDirs) {
-      if (!fs.existsSync(dir)) continue;
+      if (!fs.existsSync(dir)) {
+        continue;
+      }
       try {
         const subdirs = fs.readdirSync(dir);
         for (const subdir of subdirs) {
@@ -497,7 +523,9 @@ export function getGogLibrary(): string[] {
     const allTitles: string[] = [];
 
     for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) continue;
+      if (!fs.existsSync(configPath)) {
+        continue;
+      }
 
       try {
         const content = fs.readFileSync(configPath, 'utf8');

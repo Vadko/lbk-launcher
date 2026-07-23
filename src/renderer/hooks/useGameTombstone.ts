@@ -13,7 +13,9 @@ export function useGameTombstone(gameId: string | undefined): boolean {
   const [data, setData] = useState<{ id: string; value: boolean } | null>(null);
 
   useEffect(() => {
-    if (!window.electronAPI?.onGameRemoved || !gameId) return;
+    if (!window.electronAPI?.onGameRemoved || !gameId) {
+      return;
+    }
     const unsubscribe = window.electronAPI.onGameRemoved((removedId) => {
       if (removedId === gameId) {
         console.log('[useGameTombstone] Current game removed, navigating home');
@@ -24,17 +26,23 @@ export function useGameTombstone(gameId: string | undefined): boolean {
   }, [gameId, navigate]);
 
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId) {
+      return;
+    }
     let cancelled = false;
     window.electronAPI
       ?.isGameTombstoned(gameId)
       .then((value) => {
-        if (!cancelled) setData({ id: gameId, value });
+        if (!cancelled) {
+          setData({ id: gameId, value });
+        }
       })
       .catch((err) => console.error('[useGameTombstone] check failed:', err));
 
     const unsubscribe = window.electronAPI?.onGameTombstoned?.((tombstonedId) => {
-      if (tombstonedId === gameId) setData({ id: gameId, value: true });
+      if (tombstonedId === gameId) {
+        setData({ id: gameId, value: true });
+      }
     });
     return () => {
       cancelled = true;

@@ -1,6 +1,6 @@
 {
   "name": "lbk-launcher",
-  "version": "2.11.1",
+  "version": "2.16.0",
   "description": "Інсталятор українізаторів відеоігор",
   "author": {
     "name": "LBK Team",
@@ -27,15 +27,13 @@
     "dist:mac": "electron-builder --mac --config electron-builder.config.cjs",
     "dist:win:local": "env-cmd pnpm build && pnpm dist:win",
     "dist:linux:local": "env-cmd pnpm build && pnpm dist:linux",
-    "dist:mac:local": "env-cmd pnpm build && pnpm dist:mac",
+    "dist:mac:local": "env-cmd pnpm build && CSC_IDENTITY_AUTO_DISCOVERY=false pnpm dist:mac",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "find-unused": "knip",
     "format": "biome check --write .",
     "format:check": "biome check --max-diagnostics=200 .",
-    "types:generate": "npx --yes supabase gen types typescript --project-id qgylrzebvqayqswhewyz > src/lib/database.types.ts",
     "postinstall": "electron-builder install-app-deps",
-    "generate:icns": "bash scripts/generate-icns.sh",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "prepare": "husky"
   },
@@ -48,6 +46,7 @@
     "@sentry/electron": "7.13.0",
     "@sentry/react": "10.50.0",
     "@tanstack/react-query": "5.100.9",
+    "@tanstack/react-virtual": "^3.14.5",
     "better-sqlite3": "12.9.0",
     "chrome-remote-interface": "0.34.0",
     "cyrillic-to-translit-js": "3.2.1",
@@ -61,18 +60,20 @@
     "node-machine-id": "1.1.12",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-lazy-load-image-component": "1.6.3",
+    "react-lazy-load-image-component": "^1.6.3",
+    "react-lite-youtube-embed": "^3.6.0",
     "react-router-dom": "^7.15.0",
     "swiper": "12.1.4",
     "zustand": "4.5.7"
   },
   "optionalDependencies": {
     "electron-liquid-glass": "1.1.1",
-    "node-gyp-build": "4.8.4"
+    "node-gyp-build": "4.8.4",
+    "win-verify-signature": "^1.8.0"
   },
   "devDependencies": {
     "7zip-bin-full": "26.1.0",
-    "@biomejs/biome": "2.4.13",
+    "@biomejs/biome": "2.5.3",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.59.1",
     "@sentry/vite-plugin": "5.2.1",
@@ -87,7 +88,7 @@
     "@vitejs/plugin-react-swc": "4.2.3",
     "autoprefixer": "10.5.0",
     "electron": "39.8.10",
-    "electron-builder": "26.8.2",
+    "electron-builder": "26.15.3",
     "electron-devtools-installer": "4.0.0",
     "electron-updater": "6.8.3",
     "electron-vite": "5.0.0",
@@ -100,6 +101,7 @@
     "knip": "5.85.0",
     "lint-staged": "16.4.0",
     "lucide-react": "0.577.0",
+    "node-addon-api": "8.5.0",
     "postcss": "8.5.10",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",

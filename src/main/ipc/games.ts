@@ -38,6 +38,7 @@ import {
   getInstalledXboxGamePaths,
   getLutrisSlug,
   getSteamLibraryAppIds,
+  getUplayGameId,
 } from '../game-detector';
 import { syncKurinGames } from '../game-detector/kurin';
 import { checkInstallation } from '../installer/cache';
@@ -57,6 +58,7 @@ import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
+import { launchUplayGame } from '../utils/uplay-launcher';
 
 export function setupGamesHandlers(): void {
   // Version
@@ -105,10 +107,10 @@ export function setupGamesHandlers(): void {
     async (
       _,
       gameId: string,
-      errorType: string,
+      type: string,
       message: string,
       screenshotPaths?: string[]
-    ) => submitFeedback(gameId, errorType, message, screenshotPaths)
+    ) => submitFeedback(gameId, type, message, screenshotPaths)
   );
 
   // Send logs handler
@@ -274,7 +276,7 @@ export function setupGamesHandlers(): void {
   // Detect available platforms for a game
   ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
     try {
-      return detectGamePaths(game.install_paths || []);
+      return detectGamePaths(game.install_paths || [], game.steam_app_id);
     } catch (error) {
       console.error('Error detecting game platforms:', error);
       return [];
@@ -452,13 +454,13 @@ export function setupGamesHandlers(): void {
         const selectedInstallPath = (game.install_paths || []).find(
           (p) => p.type === installInfo.installedPlatform
         );
-        gamePath = detectGamePath(selectedInstallPath);
+        gamePath = detectGamePath(selectedInstallPath, game.steam_app_id);
       }
 
       // Fallback: use first available game path if platform not found
       if (!gamePath || !gamePath.exists) {
         console.log('[LaunchGame] Falling back to first available game path');
-        gamePath = getFirstAvailableGamePath(game.install_paths || []);
+        gamePath = getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id);
       }
 
       if (!gamePath || !gamePath.exists) {
@@ -510,13 +512,29 @@ export function setupGamesHandlers(): void {
         }
       }
 
+      // For Ubisoft Connect games, try to launch via uplay:// protocol
+      if (gamePath.platform === 'uplay') {
+        const uplayGameId = getUplayGameId(gamePath.path);
+
+        if (uplayGameId) {
+          const result = await launchUplayGame(uplayGameId);
+          if (result.success) {
+            return { success: true };
+          }
+        } else {
+          console.warn('[LaunchGame] Uplay install id not found for:', gamePath.path);
+        }
+      }
+
       // Heroic / Lutris Games Launcher (Linux)
       if (getPlatform() === 'linux') {
         // Check for GOG/Epic game in Heroic
         const heroicGame = getHeroicGame(gamePath.path);
         if (heroicGame) {
           const result = await launchHeroicGame(heroicGame.appName, heroicGame.runner);
-          if (result.success) return { success: true };
+          if (result.success) {
+            return { success: true };
+          }
         }
 
         // Check for GOG/Epic game in Lutris
@@ -524,7 +542,9 @@ export function setupGamesHandlers(): void {
         if (lutrisSlug) {
           const { launchLutrisGame } = await import('../utils/lutris-launcher');
           const result = await launchLutrisGame(lutrisSlug);
-          if (result.success) return { success: true };
+          if (result.success) {
+            return { success: true };
+          }
         }
       }
 

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { NewsFeedSection } from '../components/MainContent/NewsFeedSection';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useStore } from '../store/useStore';
+import { trackEvent } from '../utils/analytics';
 
 /**
  * Cторінка новин лаунчера
@@ -15,6 +16,10 @@ export const NewsPage: React.FC = () => {
   useEffect(() => {
     setSelectedGame(null);
   }, [setSelectedGame]);
+
+  useEffect(() => {
+    trackEvent('News Page Open');
+  }, []);
 
   return (
     <div

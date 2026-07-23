@@ -1,45 +1,28 @@
-import got from 'got';
 import type { NewsFeedFilter, NewsFeedItem } from '../../shared/types';
-import { getSupabaseCredentials } from './supabase-credentials';
+import { getSupabaseClient } from './supabase-client';
 
-const REQUEST_TIMEOUT = { connect: 5000, response: 10_000 };
 const PAGE_SIZE = 20;
-
-interface NewsPostRow {
-  channel_username: string;
-  telegram_message_id: number;
-  title: string | null;
-  content_html: string | null;
-  posted_at: string;
-}
 
 export async function fetchNewsFeed(
   filter: NewsFeedFilter,
   before?: string
 ): Promise<NewsFeedItem[]> {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = getSupabaseCredentials();
+  const supabase = getSupabaseClient();
 
-  const params = new URLSearchParams({
-    select: 'channel_username,telegram_message_id,title,content_html,posted_at',
-    tags: `cs.{${filter}}`,
-    order: 'posted_at.desc',
-    limit: String(PAGE_SIZE),
-  });
-  if (before) params.set('posted_at', `lt.${before}`);
+  const query = supabase
+    .from('news_posts')
+    .select('channel_username,telegram_message_id,title,content_html,posted_at')
+    .contains('tags', [filter])
+    .order('posted_at', { ascending: false })
+    .limit(PAGE_SIZE);
 
-  const url = `${SUPABASE_URL}/rest/v1/news_posts?${params.toString()}`;
+  const { data, error } = await (before ? query.lt('posted_at', before) : query);
 
-  const response = await got<NewsPostRow[]>(url, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      apikey: SUPABASE_ANON_KEY,
-    },
-    responseType: 'json',
-    timeout: REQUEST_TIMEOUT,
-  });
+  if (error) {
+    throw error;
+  }
 
-  return response.body.map((row) => {
+  return (data ?? []).map((row) => {
     const postUrl = `https://t.me/${row.channel_username}/${row.telegram_message_id}`;
     return {
       id: postUrl,
