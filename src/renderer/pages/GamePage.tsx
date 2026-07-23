@@ -643,7 +643,7 @@ export const GamePage: React.FC = () => {
             </div>
           </div>
 
-          {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) ?? (
+          {(isInstalling || isPaused || isWaitingForNetwork || isUninstalling) && (
             <div className="space-y-4">
               {(isInstalling || isPaused || isWaitingForNetwork) && (
                 <div className="glass-card-no-motion">
