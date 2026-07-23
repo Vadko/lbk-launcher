@@ -1112,6 +1112,26 @@ const migrations: Migration[] = [
       );
     },
   },
+  {
+    name: 'add_user_unlocked_column',
+    up: (db) => {
+      // Local-only column: tracks games the user manually unlocked via a translation
+      // code. Never populated from Supabase, so no resync is needed - and crucially,
+      // it must survive the sync upsert (see UPSERT_GAME_SQL switch to ON CONFLICT
+      // DO UPDATE) instead of being wiped by the old INSERT OR REPLACE behavior.
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='user_unlocked'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_user_unlocked_column');
+        db.exec(`ALTER TABLE games ADD COLUMN user_unlocked INTEGER NOT NULL DEFAULT 0;`);
+        console.log('[Migrations] Completed: add_user_unlocked_column');
+      }
+    },
+  },
 ];
 
 /**

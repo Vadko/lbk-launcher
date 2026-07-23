@@ -98,6 +98,7 @@ export const SettingsModal: React.FC = () => {
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
   const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
+  const [isTranslationUnlocked, setIsTranslationUnlocked] = useState(false);
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -477,15 +478,27 @@ export const SettingsModal: React.FC = () => {
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="код перекладу"
-                className="flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent"
+                placeholder="Код перекладу"
+                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent transition-colors duration-300 ${
+                  isTranslationUnlocked ? '!border-color-main' : ''
+                }`}
                 ref={unhideTranslationInputRef}
+                onChange={() => setIsTranslationUnlocked(false)}
               />
               <Button
                 onClick={async () => {
                   const translationId = unhideTranslationInputRef.current?.value;
                   if (translationId) {
-                    await window.electronAPI.setGameVisibility(translationId, false);
+                    const success = await window.electronAPI.setGameVisibility(
+                      translationId,
+                      false
+                    );
+                    if (success) {
+                      if (unhideTranslationInputRef.current) {
+                        unhideTranslationInputRef.current.value = '';
+                      }
+                      setIsTranslationUnlocked(true);
+                    }
                   }
                 }}
                 variant="secondary"

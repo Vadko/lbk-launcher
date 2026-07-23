@@ -132,46 +132,113 @@ function gameToInsertParams(game: Game): GameInsertParams {
 }
 
 /**
- * SQL для upsert гри
+ * Колонки, які приходять із Supabase і мають синхронізуватись при кожному upsert.
+ * `user_unlocked` навмисно відсутня тут - це локальне поле, яке не повинно
+ * перезаписуватись даними з сервера (див. SYNCED_COLUMNS нижче та коментар
+ * до UPSERT_GAME_SQL).
+ */
+const SYNCED_COLUMNS = [
+  'approved',
+  'approved_at',
+  'approved_by',
+  'archive_hash',
+  'archive_path',
+  'archive_size',
+  'banner_path',
+  'capsule_path',
+  'created_at',
+  'created_by',
+  'description',
+  'discord',
+  'downloads',
+  'subscriptions',
+  'editing_progress',
+  'fonts_progress',
+  'fundraising_current',
+  'fundraising_goal',
+  'game_description',
+  'install_paths',
+  'installation_file_linux_path',
+  'installation_file_windows_path',
+  'is_adult',
+  'license_only',
+  'logo_path',
+  'name',
+  'name_search',
+  'platforms',
+  'project_id',
+  'screenshots',
+  'slug',
+  'status',
+  'support_url',
+  'team',
+  'telegram',
+  'textures_progress',
+  'thumbnail_path',
+  'translation_progress',
+  'translation_updated_at',
+  'twitter',
+  'updated_at',
+  'version',
+  'video_url',
+  'voice_archive_hash',
+  'voice_archive_path',
+  'voice_archive_size',
+  'voice_progress',
+  'achievements_archive_hash',
+  'achievements_archive_path',
+  'achievements_archive_size',
+  'achievements_third_party',
+  'additional_path',
+  'epic_archive_hash',
+  'epic_archive_path',
+  'epic_archive_size',
+  'gog_archive_hash',
+  'gog_archive_path',
+  'gog_archive_size',
+  'xbox_archive_hash',
+  'xbox_archive_path',
+  'xbox_archive_size',
+  'steam_linux_archive_hash',
+  'steam_linux_archive_path',
+  'steam_linux_archive_size',
+  'steam_mac_archive_hash',
+  'steam_mac_archive_path',
+  'steam_mac_archive_size',
+  'steam_launch_options_windows',
+  'steam_launch_options_linux',
+  'epic_store_url',
+  'gog_store_url',
+  'xbox_store_url',
+  'steam_app_id',
+  'website',
+  'youtube',
+  'ai',
+  'hide',
+  'search_keywords',
+  'source_language',
+] as const;
+
+/**
+ * SQL для upsert гри.
+ *
+ * ВАЖЛИВО: використовує `ON CONFLICT ... DO UPDATE`, а не `INSERT OR REPLACE`.
+ * `INSERT OR REPLACE` на конфлікті видаляє існуючий рядок і вставляє новий,
+ * тому будь-яка колонка, не перелічена тут, скидається до дефолтного значення.
+ * Це ламає локальні (не синхронізовані з Supabase) поля, напр. `user_unlocked`.
+ * `DO UPDATE SET` оновлює лише перелічені колонки, залишаючи інші недоторканими.
+ *
+ * Список колонок для INSERT і SET формується з одного масиву SYNCED_COLUMNS,
+ * щоб не дублювати перелік вручну і не забути додати нову колонку в один з них.
  */
 const UPSERT_GAME_SQL = `
-  INSERT OR REPLACE INTO games (
-    id, approved, approved_at, approved_by, archive_hash, archive_path, archive_size,
-    banner_path, capsule_path, created_at, created_by, description, discord, downloads, subscriptions, editing_progress,
-    fonts_progress, fundraising_current, fundraising_goal, game_description, install_paths,
-    installation_file_linux_path, installation_file_windows_path, is_adult, license_only, logo_path,
-    name, name_search, platforms, project_id, screenshots, slug, status, support_url, team, telegram, textures_progress,
-    thumbnail_path, translation_progress, translation_updated_at, twitter, updated_at, version, video_url,
-    voice_archive_hash, voice_archive_path, voice_archive_size,
-    voice_progress, achievements_archive_hash, achievements_archive_path, achievements_archive_size,
-    achievements_third_party, additional_path,
-    epic_archive_hash, epic_archive_path, epic_archive_size,
-    gog_archive_hash, gog_archive_path, gog_archive_size,
-    xbox_archive_hash, xbox_archive_path, xbox_archive_size,
-    steam_linux_archive_hash, steam_linux_archive_path, steam_linux_archive_size,
-    steam_mac_archive_hash, steam_mac_archive_path, steam_mac_archive_size,
-    steam_launch_options_windows, steam_launch_options_linux,
-    epic_store_url, gog_store_url, xbox_store_url,
-    steam_app_id, website, youtube, ai, hide, search_keywords, source_language
+  INSERT INTO games (
+    id, ${SYNCED_COLUMNS.join(', ')}
   ) VALUES (
-    @id, @approved, @approved_at, @approved_by, @archive_hash, @archive_path, @archive_size,
-    @banner_path, @capsule_path, @created_at, @created_by, @description, @discord, @downloads, @subscriptions, @editing_progress,
-    @fonts_progress, @fundraising_current, @fundraising_goal, @game_description, @install_paths,
-    @installation_file_linux_path, @installation_file_windows_path, @is_adult, @license_only, @logo_path,
-    @name, @name_search, @platforms, @project_id, @screenshots, @slug, @status, @support_url, @team, @telegram, @textures_progress,
-    @thumbnail_path, @translation_progress, @translation_updated_at, @twitter, @updated_at, @version, @video_url,
-    @voice_archive_hash, @voice_archive_path, @voice_archive_size,
-    @voice_progress, @achievements_archive_hash, @achievements_archive_path, @achievements_archive_size,
-    @achievements_third_party, @additional_path,
-    @epic_archive_hash, @epic_archive_path, @epic_archive_size,
-    @gog_archive_hash, @gog_archive_path, @gog_archive_size,
-    @xbox_archive_hash, @xbox_archive_path, @xbox_archive_size,
-    @steam_linux_archive_hash, @steam_linux_archive_path, @steam_linux_archive_size,
-    @steam_mac_archive_hash, @steam_mac_archive_path, @steam_mac_archive_size,
-    @steam_launch_options_windows, @steam_launch_options_linux,
-    @epic_store_url, @gog_store_url, @xbox_store_url,
-    @steam_app_id, @website, @youtube, @ai, @hide, @search_keywords, @source_language
+    @id, ${SYNCED_COLUMNS.map((c) => `@${c}`).join(', ')}
   )
+  ON CONFLICT(id) DO UPDATE SET
+    ${SYNCED_COLUMNS.map((c) => `${c} = excluded.${c}`).join(',\n    ')}
 `;
 
 /**
@@ -211,7 +278,9 @@ function rebuildSpellfixDictionary(db: Database.Database): void {
 
   try {
     const rows = db
-      .prepare('SELECT name FROM games WHERE approved = 1 AND hide = 0')
+      .prepare(
+        'SELECT name FROM games WHERE approved = 1 AND (hide = 0 OR user_unlocked = 1)'
+      )
       .all() as { name: string }[];
 
     const games = rows.map((r) => ({ name: r.name }) as Game);
