@@ -369,7 +369,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               Надсилання...
             </>
           ) : (
-            'Надіслати звіт'
+            'Надіслати'
           )}
         </button>
       </div>

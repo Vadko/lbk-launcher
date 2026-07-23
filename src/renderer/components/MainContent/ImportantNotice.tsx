@@ -26,7 +26,7 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
           Інсталятор
         </span>
       )}
-      <div className="w-0 h-auto border-l border-border-hover last:hidden first:hidden" />
+      <div className="divider w-0 h-auto border-l border-border-hover last:hidden first:hidden" />
       {/* Language Notice */}
       {langHint && (
         <div className="flex items-center gap-2">

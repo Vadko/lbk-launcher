@@ -6,9 +6,10 @@ import { isPortable, isWindows } from './utils/platform';
 import { getMainWindow } from './window';
 
 // Conditionally import based on platform
-const winVerifySignature: typeof WinVerifySignature | null = isWindows()
-  ? require('win-verify-signature')
-  : null;
+const winVerifySignature: typeof WinVerifySignature | null =
+  isWindows() && process.env.NODE_ENV !== 'development'
+    ? require('win-verify-signature')
+    : null;
 
 let updateCheckInterval: NodeJS.Timeout | null = null;
 
