@@ -294,7 +294,7 @@ export async function installTranslation(
       achievementsInstallPath = await getSteamAchievementsPath();
       if (achievementsInstallPath) {
         console.log(`[Installer] Installing achievements to: ${achievementsInstallPath}`);
-        onStatus?.({ message: 'Копіювання перекладу ачівок...', phase: 'install' });
+        onStatus?.({ message: 'Копіювання перекладу досягнень...', phase: 'install' });
         await mkdir(achievementsInstallPath, { recursive: true });
 
         // Find all achievement files (ignore folder structure from archive)
