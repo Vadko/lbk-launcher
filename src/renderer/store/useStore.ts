@@ -78,6 +78,16 @@ interface Store {
   checkSubscribedTeamUpdate: (updatedGame: Game, oldGame: Game | null) => void;
 }
 
+// Statuses whose transition to a different status is worth notifying about
+const statusLabels: Record<string, string> = {
+  planned: 'Заплановано',
+  'in-progress': 'Ранній доступ',
+  completed: 'Завершено',
+  'tech-improvement': 'Технічна доробка',
+};
+
+const watchedStatuses = new Set(['planned', 'tech-improvement']);
+
 // detectedGames більше не персіститься - має перевірятися при кожному запуску
 // бо користувач може встановити/видалити ігри через Steam/GOG/Epic
 
@@ -482,14 +492,13 @@ export const useStore = create<Store>((set, get) => ({
       const savedStatus = getSubscribedStatus(gameId);
       const savedProgress = getSubscribedProgress(gameId);
 
-      // Check status change (from planned to something else)
-      if (savedStatus === 'planned' && game.status !== 'planned') {
-        const statusText =
-          game.status === 'completed'
-            ? 'Завершено'
-            : game.status === 'in-progress'
-              ? 'Ранній доступ'
-              : game.status;
+      // Check status change (from planned/tech-improvement to something else)
+      if (
+        savedStatus &&
+        watchedStatuses.has(savedStatus) &&
+        game.status !== savedStatus
+      ) {
+        const statusText = statusLabels[game.status] || game.status;
 
         const hasExistingNotification = notifications.some(
           (n) =>
@@ -505,15 +514,15 @@ export const useStore = create<Store>((set, get) => ({
             type: 'status-change',
             gameId: game.id,
             gameName: game.name,
-            oldValue: 'Заплановано',
+            oldValue: statusLabels[savedStatus] || savedStatus,
             newValue: statusText,
           });
         }
 
-        // Unsubscribe since the game is no longer planned
+        // Unsubscribe since the watched status has passed
         useSubscriptionsStore.getState().unsubscribe(gameId);
         console.log(
-          `[Store] Auto-unsubscribed from ${game.name} (status changed from planned)`
+          `[Store] Auto-unsubscribed from ${game.name} (status changed from ${savedStatus})`
         );
         return; // Skip progress check since we unsubscribed
       }
@@ -581,20 +590,13 @@ export const useStore = create<Store>((set, get) => ({
     // Skip if user is also subscribed to this specific game (to avoid duplicate notifications)
     const isAlsoSubscribedToGame = subscribedGames.has(updatedGame.id);
 
-    const statusLabels: Record<string, string> = {
-      planned: 'Заплановано',
-      'in-progress': 'Ранній доступ',
-      completed: 'Завершено',
-      'tech-improvement': 'Технічна доробка',
-    };
-
     if (oldGame) {
-      // Existing game - check for status change from "planned"
+      // Existing game - check for status change from "planned"/"tech-improvement"
       // Skip if user is subscribed to the game itself (checkSubscribedGamesStatus handles it)
       if (
         !isAlsoSubscribedToGame &&
-        oldGame.status === 'planned' &&
-        updatedGame.status !== 'planned'
+        watchedStatuses.has(oldGame.status) &&
+        updatedGame.status !== oldGame.status
       ) {
         const oldStatusText = statusLabels[oldGame.status] || oldGame.status;
         const newStatusText = statusLabels[updatedGame.status] || updatedGame.status;

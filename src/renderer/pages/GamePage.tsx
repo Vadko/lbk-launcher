@@ -94,6 +94,7 @@ export const GamePage: React.FC = () => {
     selectedGame.version &&
     installationInfo.version !== selectedGame.version;
   const isPlanned = selectedGame?.status === 'planned';
+  const isTechImprovement = selectedGame?.status === 'tech-improvement';
   const isInstallable = selectedGame
     ? isTranslationInstallable(selectedGame.status)
     : false;
@@ -590,7 +591,7 @@ export const GamePage: React.FC = () => {
               <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
 
               {/* Secondary actions */}
-              {isPlanned && (
+              {(isPlanned || isTechImprovement) && (
                 <SubscribeButton
                   gameId={selectedGame.id}
                   gameName={selectedGame.name}
