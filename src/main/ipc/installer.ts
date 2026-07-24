@@ -150,6 +150,17 @@ export function setupInstallerHandlers(): void {
     }
   });
 
+  ipcMain.handle('set-game-visibility', async (_, { gameId, hidden }) => {
+    try {
+      const repo = GamesRepository.getInstance();
+      const success = await repo.setGameVisibility(gameId, hidden);
+      return success;
+    } catch (error) {
+      console.error('[IPC] set-game-visibility failed:', error);
+      return false;
+    }
+  });
+
   ipcMain.handle('get-all-installed-game-ids', async () => {
     try {
       return await getAllInstalledGameIds();

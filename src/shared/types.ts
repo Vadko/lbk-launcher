@@ -241,6 +241,7 @@ export interface ElectronAPI {
   cancelPausedDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
   checkInstallation: (game: Game) => Promise<InstallationInfo | null>;
   getConflictingTranslation: (game: Game) => Promise<ConflictingTranslation | null>;
+  setGameVisibility: (gameId: string, hidden: boolean) => Promise<boolean>;
   getAllInstalledGameIds: () => Promise<string[]>;
   removeOrphanedMetadata: (gameIds: string[]) => Promise<{ success: boolean }>;
   removeComponents: (

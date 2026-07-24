@@ -209,7 +209,8 @@ class DatabaseManager {
         ai TEXT,
         hide INTEGER NOT NULL DEFAULT 0,
         search_keywords TEXT,
-        source_language TEXT
+        source_language TEXT,
+        user_unlocked INTEGER NOT NULL DEFAULT 0 -- Local-only, never synced from Supabase
       );
 
       CREATE INDEX IF NOT EXISTS idx_games_name ON games(name);
