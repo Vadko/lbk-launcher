@@ -802,12 +802,12 @@ export const GamePage: React.FC = () => {
             <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion"
+              className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про українізатор
               </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+              <p className="text-text-muted leading-relaxed whitespace-pre-line break-words">
                 {selectedGame.description}
               </p>
             </motion.section>
@@ -845,12 +845,12 @@ export const GamePage: React.FC = () => {
             <motion.section
               layout="position"
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion"
+              className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про гру
               </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line">
+              <p className="text-text-muted leading-relaxed whitespace-pre-line break-words">
                 {selectedGame.game_description}
               </p>
             </motion.section>
