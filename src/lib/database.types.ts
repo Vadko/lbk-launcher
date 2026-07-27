@@ -2002,6 +2002,60 @@ export type Database = {
         }
         Relationships: []
       }
+      store_game_map: {
+        Row: {
+          egs_namespace: string | null
+          egs_offer_id: string | null
+          fetched_at: string
+          gog_product_id: string | null
+          steam_app_id: number
+        }
+        Insert: {
+          egs_namespace?: string | null
+          egs_offer_id?: string | null
+          fetched_at?: string
+          gog_product_id?: string | null
+          steam_app_id: number
+        }
+        Update: {
+          egs_namespace?: string | null
+          egs_offer_id?: string | null
+          fetched_at?: string
+          gog_product_id?: string | null
+          steam_app_id?: number
+        }
+        Relationships: []
+      }
+      store_price_cache: {
+        Row: {
+          currency: string | null
+          discount_percent: number
+          fetched_at: string
+          original_minor: number | null
+          price_minor: number | null
+          steam_app_id: number
+          store: string
+        }
+        Insert: {
+          currency?: string | null
+          discount_percent?: number
+          fetched_at?: string
+          original_minor?: number | null
+          price_minor?: number | null
+          steam_app_id: number
+          store: string
+        }
+        Update: {
+          currency?: string | null
+          discount_percent?: number
+          fetched_at?: string
+          original_minor?: number | null
+          price_minor?: number | null
+          steam_app_id?: number
+          store?: string
+        }
+        Relationships: []
+      }
       support_clicks: {
         Row: {
           clicked_at: string | null
