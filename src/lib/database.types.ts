@@ -2355,6 +2355,7 @@ export type Database = {
     Views: {
       games_grouped: {
         Row: {
+          banner_path: string | null
           capsule_path: string | null
           created_at: string | null
           downloads: number | null
@@ -2411,6 +2412,7 @@ export type Database = {
           similarity_threshold?: number
         }
         Returns: {
+          banner_path: string
           capsule_path: string
           created_at: string
           downloads: number
