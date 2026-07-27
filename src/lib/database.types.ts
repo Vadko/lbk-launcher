@@ -2402,6 +2402,7 @@ export type Database = {
         Returns: number
       }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
       fuzzy_search_games: {
         Args: {
