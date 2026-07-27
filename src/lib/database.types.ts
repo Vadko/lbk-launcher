@@ -2364,7 +2364,6 @@ export type Database = {
           name: string | null
           name_fts: unknown
           slug: string | null
-          thumbnail_path: string | null
           translations: Json | null
           translations_count: number | null
         }
@@ -2421,7 +2420,6 @@ export type Database = {
           name: string
           name_fts: unknown
           slug: string
-          thumbnail_path: string
           translations: Json
           translations_count: number
         }[]
