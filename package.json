@@ -68,8 +68,7 @@
   },
   "optionalDependencies": {
     "electron-liquid-glass": "1.1.1",
-    "node-gyp-build": "4.8.4",
-    "win-verify-signature": "^1.8.0"
+    "node-gyp-build": "4.8.4"
   },
   "devDependencies": {
     "7zip-bin-full": "26.1.0",
@@ -101,7 +100,6 @@
     "knip": "5.85.0",
     "lint-staged": "16.4.0",
     "lucide-react": "0.577.0",
-    "node-addon-api": "8.5.0",
     "postcss": "8.5.18",
     "tailwindcss": "3.4.19",
     "typescript": "5.9.3",

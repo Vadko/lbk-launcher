@@ -36,10 +36,6 @@ img {
   --glass-hover: rgba(255, 255, 255, 0.1);
   --border: rgba(255, 255, 255, 0.1);
   --border-hover: rgba(255, 255, 255, 0.3);
-  --neon-blue: #00f2ff;
-  --neon-purple: #bd00ff;
-  --neon-pink: #ff0055;
-  --neon-orange: #ff9e00;
   --neon-green: #10b981;
   --gamepad-focus: #fbbf24;
   --text-main: #ffffff;
@@ -49,6 +45,11 @@ img {
   --color-main: 168 207 150;
   --color-accent: 255 164 122;
   --color-mixed: 239 238 173;
+
+  /* RGB-триплети для tailwind <alpha-value> (from-bg-dark, /NN-модифікатори
+     не генеруються з hex-var кольорів) */
+  --bg-dark-rgb: 15 15 16;
+  --neon-green-rgb: 16 185 129;
 }
 
 /* ==========================================================================

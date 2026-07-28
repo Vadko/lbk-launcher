@@ -21,11 +21,10 @@ export default {
         'border-hover': 'var(--border-hover)',
       },
       colors: {
-        'neon-blue': 'var(--neon-blue)',
-        'neon-purple': 'var(--neon-purple)',
-        'neon-pink': 'var(--neon-pink)',
-        'neon-orange': 'var(--neon-orange)',
-        'neon-green': 'var(--neon-green)',
+        // RGB-триплети — інакше /NN-модифікатори і градієнтні from-/to- класи
+        // мовчки не генеруються (from-bg-dark був мертвий)
+        'bg-dark': 'rgb(var(--bg-dark-rgb) / <alpha-value>)',
+        'neon-green': 'rgb(var(--neon-green-rgb) / <alpha-value>)',
         'color-main': 'rgb(var(--color-main) / <alpha-value>)',
         'color-accent': 'rgb(var(--color-accent) / <alpha-value>)',
         'color-mixed': 'rgb(var(--color-mixed) / <alpha-value>)',

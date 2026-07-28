@@ -551,7 +551,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           installAchievements &&
           game.achievements_third_party && (
             <div className="bg-glass rounded-xl p-3 border border-border flex items-center gap-2 text-sm">
-              <Info size={16} className="text-neon-blue shrink-0" />
+              <Info size={16} className="text-color-main shrink-0" />
               <span className="text-text-muted">
                 Автор перекладу досягнень:{' '}
                 <span className="text-text-main">{game.achievements_third_party}</span>

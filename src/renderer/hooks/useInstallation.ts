@@ -271,7 +271,7 @@ export function useInstallation({
 
         setPendingInstallOptions(undefined);
         useStore.getState().clearGameUpdate(selectedGame.id);
-        // Clear notified version so next version update will show notification again
+        // Now that this version is installed, re-arm notifications for future updates
         useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
 
         // Track installation event
@@ -365,6 +365,10 @@ export function useInstallation({
         }
 
         clearInstallationProgress(selectedGame.id);
+        // Re-reconcile version state now the in-progress guard is cleared: catches a
+        // newer version that was published mid-install (and thus skipped by the guard),
+        // independent of installed-games-changed watcher timing.
+        void useStore.getState().loadInstalledGamesFromSystem();
       } catch (error) {
         console.error('Installation error:', error);
         showModal({

@@ -144,7 +144,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
         {game.achievements_archive_size && (
           <motion.div layout transition={{ duration: 0.2 }}>
             <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
-              <div className={`text-neon-blue ${compact ? '' : 'mt-0.5'}`}>
+              <div className={`text-color-main ${compact ? '' : 'mt-0.5'}`}>
                 <Trophy size={18} />
               </div>
               <div

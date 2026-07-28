@@ -64,7 +64,7 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
 
         <div className="w-full bg-glass rounded-full h-4 border border-border overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-neon-green to-accent transition-all duration-500 ease-out"
+            className="h-full bg-gradient-to-r from-neon-green to-color-accent transition-all duration-500 ease-out"
             style={{ width: `${percentage}%` }}
           />
         </div>

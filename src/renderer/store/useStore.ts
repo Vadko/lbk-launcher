@@ -58,6 +58,7 @@ interface Store {
   loadInstalledGamesFromSystem: () => Promise<void>;
   clearInstalledGamesCache: () => void;
   checkInstallationStatus: (gameId: string, game: Game) => Promise<void>;
+  checkInstalledVersionUpdates: (games: Game[]) => void;
   clearGameUpdate: (gameId: string) => void;
   setInstallationProgress: (
     gameId: string,
@@ -188,7 +189,6 @@ export const useStore = create<Store>((set, get) => ({
 
       // Create fresh maps (not copying from old state to properly handle deletions)
       const installedTranslationsMap = new Map<string, InstallationInfo>();
-      const gamesWithUpdatesSet = new Set<string>();
 
       // Обробляємо результати
       const orphanedGameIds: string[] = []; // Ігри які вже не існують на диску
@@ -196,35 +196,6 @@ export const useStore = create<Store>((set, get) => ({
       for (const { game, installInfo } of checkResults) {
         if (installInfo) {
           installedTranslationsMap.set(game.id, installInfo);
-
-          // Check if installed version differs from current version in DB
-          if (game.version && installInfo.version !== game.version) {
-            gamesWithUpdatesSet.add(game.id);
-
-            // Додати нотифікацію в store (з перевіркою налаштувань та дублікатів)
-            const { gameUpdateNotificationsEnabled } = useSettingsStore.getState();
-            const { notifications, addVersionUpdateNotification } =
-              useSubscriptionsStore.getState();
-
-            if (gameUpdateNotificationsEnabled) {
-              // Перевірити чи вже є така нотифікація
-              const hasExistingNotification = notifications.some(
-                (n) =>
-                  n.type === 'version-update' &&
-                  n.gameId === game.id &&
-                  n.newValue === game.version
-              );
-
-              if (!hasExistingNotification) {
-                addVersionUpdateNotification(
-                  game.id,
-                  game.name,
-                  installInfo.version,
-                  game.version
-                );
-              }
-            }
-          }
         } else {
           // Гра була встановлена раніше але зараз не існує (видалена через Steam/GOG/Epic)
           // Треба видалити метадані з installation-cache/
@@ -245,8 +216,11 @@ export const useStore = create<Store>((set, get) => ({
 
       set({
         installedTranslations: installedTranslationsMap,
-        gamesWithUpdates: gamesWithUpdatesSet,
+        gamesWithUpdates: new Set(),
       });
+
+      // Єдина перевірка нових версій (бейджі + нотифікації) — та сама, що й для realtime
+      get().checkInstalledVersionUpdates(gamesWithTranslations);
 
       console.log(
         `[Store] Loaded ${installedTranslationsMap.size} installed translations`
@@ -300,6 +274,53 @@ export const useStore = create<Store>((set, get) => ({
         newChecking.set(gameId, false);
         return { isCheckingInstallation: newChecking };
       });
+    }
+  },
+
+  checkInstalledVersionUpdates: (games) => {
+    const { installedTranslations, installationProgress, gamesWithUpdates } = get();
+    const { gameUpdateNotificationsEnabled } = useSettingsStore.getState();
+    const { hasNotifiedVersion, addVersionUpdateNotification } =
+      useSubscriptionsStore.getState();
+
+    const updatedSet = new Set(gamesWithUpdates);
+    let changed = false;
+
+    for (const game of games) {
+      const installInfo = installedTranslations.get(game.id);
+      // Під час активної установки installedTranslations ще застарілий —
+      // installed-games-changed після її завершення перезапустить перевірку
+      if (!installInfo?.version || !game.version || installationProgress.has(game.id)) {
+        continue;
+      }
+
+      if (installInfo.version === game.version) {
+        if (updatedSet.delete(game.id)) {
+          changed = true;
+        }
+        continue;
+      }
+
+      // Бейдж завжди відображає доступне оновлення (не залежить від дедуплікації)
+      if (!updatedSet.has(game.id)) {
+        updatedSet.add(game.id);
+        changed = true;
+      }
+
+      // Нотифікація — один раз на версію (persist), тож очищення списку не ре-нагадує.
+      // addVersionUpdateNotification сам записує notifiedVersions.
+      if (gameUpdateNotificationsEnabled && !hasNotifiedVersion(game.id, game.version)) {
+        addVersionUpdateNotification(
+          game.id,
+          game.name,
+          installInfo.version,
+          game.version
+        );
+      }
+    }
+
+    if (changed) {
+      set({ gamesWithUpdates: updatedSet });
     }
   },
 

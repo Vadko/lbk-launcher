@@ -57,7 +57,7 @@ export type PersistedSubscriptionsState = {
   promptedGamesForSubscription: Set<string>;
   notifications: Notification[];
   unreadCount: number;
-  // Track which version updates have been shown to avoid duplicate notifications
+  // Track which version updates were surfaced, so a dismissed update doesn't re-nag.
   notifiedVersions: Map<string, string>; // gameId -> version
   // Feedback-reply ids ever shown, so dedup survives clearing the list.
   seenFeedbackReplyIds: string[];
