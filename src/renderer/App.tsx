@@ -349,6 +349,18 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // Перевірка нових версій встановлених українізаторів при realtime оновленні гри
+  useEffect(() => {
+    if (!window.electronAPI?.onGameUpdated) {
+      return;
+    }
+
+    const unsubscribe = window.electronAPI.onGameUpdated((game) => {
+      useStore.getState().checkInstalledVersionUpdates([game]);
+    });
+    return unsubscribe;
+  }, []);
+
   // [DEV ONLY] Listen for test games changes and broadcast to components
   useEffect(() => {
     if (!window.electronAPI?.onTestGamesChanged) {

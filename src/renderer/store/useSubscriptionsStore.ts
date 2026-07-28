@@ -51,7 +51,7 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
   markGameAsPrompted: (gameId: string) => void;
   isGamePrompted: (gameId: string) => boolean;
 
-  // Version notification tracking
+  // Version notification tracking (persists so a dismissed update doesn't re-nag)
   hasNotifiedVersion: (gameId: string, version: string) => boolean;
   clearNotifiedVersion: (gameId: string) => void;
 
@@ -318,7 +318,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         });
 
         set((state) => {
-          // Track that we've notified about this version
+          // Record that this version was surfaced, so clearing the list won't re-nag
           const newNotifiedVersions = ensureMap<string, string>(state.notifiedVersions);
           newNotifiedVersions.set(gameId, newVersion);
 

@@ -76,6 +76,15 @@ module.exports = {
           certificateProfileName: process.env.AZURE_CERT_PROFILE_NAME,
         }
       : undefined,
+    // Disable Authenticode re-verification of downloaded updates. Our installers
+    // are signed via Azure Trusted Signing, whose root (Microsoft Identity
+    // Verification Root CA 2020) is delivered by Windows Update (KB5022661) —
+    // absent on machines with WU/auto root updates disabled, a large share of
+    // our userbase, where WinVerifyTrust would reject the valid installer and
+    // brick every update. Integrity still comes from electron-updater's SHA512
+    // check against latest.yml over HTTPS. Same approach as
+    // nordicsemi/pc-nrfconnect-launcher.
+    verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
     legalTrademarks: '© 2026 LBK UA',
     extraResources: [

@@ -6,4 +6,3 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
-  win-verify-signature: true

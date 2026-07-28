@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SortOrderType } from '../../shared/types';
 import type { SpecialFilterType } from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
-import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import type { Game, GetGamesParams } from '../types/game';
 
 interface UseGamesParams {
@@ -428,14 +427,8 @@ export function useGames({
     const handleGameUpdate = (updatedGame: Game) => {
       console.log('[useGames] Game updated via realtime:', updatedGame.name);
 
-      // Перевірити зміну версії для історії
-      const { addVersionUpdateNotification, hasNotifiedVersion } =
-        useSubscriptionsStore.getState();
-      const {
-        installedTranslations,
-        checkSubscribedGamesStatus,
-        checkSubscribedTeamUpdate,
-      } = useStore.getState();
+      const { checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
+        useStore.getState();
 
       // Перевірити статус підписаних ігор (централізована обробка)
       checkSubscribedGamesStatus([updatedGame]);
@@ -446,28 +439,6 @@ export function useGames({
 
         // Перевірити підписки на команди (централізована обробка)
         checkSubscribedTeamUpdate(updatedGame, oldGame);
-
-        if (oldGame) {
-          // Перевірити оновлення версії (тільки для встановлених українізаторів)
-          const isInstalled = installedTranslations.has(updatedGame.id);
-          if (
-            isInstalled &&
-            oldGame.version &&
-            updatedGame.version &&
-            oldGame.version !== updatedGame.version
-          ) {
-            // Перевірити чи ми вже показували сповіщення для цієї версії
-            // (навіть якщо користувач закрив сповіщення)
-            if (!hasNotifiedVersion(updatedGame.id, updatedGame.version)) {
-              addVersionUpdateNotification(
-                updatedGame.id,
-                updatedGame.name,
-                oldGame.version,
-                updatedGame.version
-              );
-            }
-          }
-        }
 
         // Для спеціальних фільтрів (installed-games, installed-translations, available-in-steam)
         // просто оновлюємо дані гри якщо вона вже в списку, не додаємо/видаляємо

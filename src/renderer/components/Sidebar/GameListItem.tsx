@@ -275,7 +275,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-neon-purple to-neon-blue flex items-center justify-center text-white font-bold text-sm ${
+                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
                   isAdultBlurred ? 'blur-md' : ''
                 }`}
               >
