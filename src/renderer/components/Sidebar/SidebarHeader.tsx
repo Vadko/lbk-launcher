@@ -1,5 +1,5 @@
 import logo from '@resources/logo.svg';
-import { Home, Newspaper } from 'lucide-react';
+import { BookOpenText, Home, Medal, Newspaper } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +23,21 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
           draggable={false}
         />
         {!isCompact && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => navigate('/site/docs')}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
+              title="Відкрити документацію"
+            >
+              <BookOpenText size={20} />
+            </button>
+            <button
+              onClick={() => navigate('/site/donaters')}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
+              title="Відкрити сторінку донаторів"
+            >
+              <Medal size={20} />
+            </button>
             <button
               onClick={() => navigate('/news')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
