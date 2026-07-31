@@ -33,11 +33,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const navigate = useNavigate();
 
     // Use shallow selectors to prevent unnecessary re-renders
+    // Статуси, автори, спеціальний (бібліотечний) фільтр і типи контенту - незалежні
+    // групи, що комбінуються через AND, тож вибір в одній групі не скидає інші.
     const {
       selectedGame,
       selectedStatuses,
       searchQuery,
-      setSelectedStatuses: setSelectedStatusesRaw,
+      setSelectedStatuses,
       setSearchQuery,
       gamesWithUpdates,
       isGameDetected,
@@ -59,7 +61,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       sidebarWidth,
       setSidebarWidth,
       specialFilter,
-      setSpecialFilter: setSpecialFilterRaw,
+      setSpecialFilter,
+      selectedContentTypes,
+      setSelectedContentTypes,
       selectedAuthors,
       setSelectedAuthors,
       sortOrder,
@@ -73,6 +77,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         setSidebarWidth: state.setSidebarWidth,
         specialFilter: state.specialFilter,
         setSpecialFilter: state.setSpecialFilter,
+        selectedContentTypes: state.selectedContentTypes,
+        setSelectedContentTypes: state.setSelectedContentTypes,
         selectedAuthors: state.selectedAuthors,
         setSelectedAuthors: state.setSelectedAuthors,
         sortOrder: state.sortOrder,
@@ -84,25 +90,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const unreadCount = useSubscriptionsStore((state) => state.unreadCount);
 
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-    const setSelectedStatuses = useCallback(
-      (statuses: string[]) => {
-        setSpecialFilterRaw(null);
-        setSelectedStatusesRaw(statuses);
-      },
-      [setSpecialFilterRaw, setSelectedStatusesRaw]
-    );
-
-    const setSpecialFilter = useCallback(
-      (filter: typeof specialFilter) => {
-        if (filter !== null) {
-          setSelectedStatusesRaw([]);
-          setSelectedAuthors([]);
-        }
-        setSpecialFilterRaw(filter);
-      },
-      [setSpecialFilterRaw, setSelectedStatusesRaw, setSelectedAuthors]
-    );
 
     // Translation picker modal state. Bundled so opening/closing is atomic and
     // we never flash translations from one group with variants from another.
@@ -155,6 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       selectedStatuses,
       selectedAuthors,
       specialFilter,
+      selectedContentTypes,
       searchQuery: debouncedSearchQuery,
       sortOrder,
       hideAiTranslations,
@@ -323,6 +311,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
                 onStatusesChange={setSelectedStatuses}
                 specialFilter={specialFilter}
                 onSpecialFilterChange={setSpecialFilter}
+                selectedContentTypes={selectedContentTypes}
+                onContentTypesChange={setSelectedContentTypes}
                 counts={filterCounts}
                 sortOrder={sortOrder}
                 onSortChange={setSortOrder}
@@ -399,6 +389,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onStatusesChange={setSelectedStatuses}
             specialFilter={specialFilter}
             onSpecialFilterChange={setSpecialFilter}
+            selectedContentTypes={selectedContentTypes}
+            onContentTypesChange={setSelectedContentTypes}
             counts={filterCounts}
             sortOrder={sortOrder}
             onSortChange={setSortOrder}
