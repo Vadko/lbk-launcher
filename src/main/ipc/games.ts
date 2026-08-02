@@ -27,7 +27,7 @@ import {
   detectGamePath,
   detectGamePaths,
   getAllInstalledGamePaths,
-  getAllInstalledSteamGames,
+  getDetectedGames,
   getEpicAppName,
   getEpicLibrary,
   getFirstAvailableGamePath,
@@ -35,6 +35,7 @@ import {
   getGOGGameId,
   getGogLibrary,
   getHeroicGame,
+  getInstalledSteamAppIds,
   getInstalledXboxGamePaths,
   getLutrisSlug,
   getSteamLibraryAppIds,
@@ -249,18 +250,19 @@ export function setupGamesHandlers(): void {
     }
   });
 
-  // Get all installed Steam games
-  ipcMain.handle('get-all-installed-steam-games', async () => {
-    const timer = createTimer('IPC: get-all-installed-steam-games');
+  // Which catalog games are installed on this system (single detection pass:
+  // Steam by app id, then installdir; other platforms by folder name).
+  ipcMain.handle('get-detected-games', async () => {
+    const timer = createTimer('IPC: get-detected-games');
     try {
-      const steamGames = getAllInstalledSteamGames();
-      // Convert Map to Object for IPC
-      timer.end();
-      return Object.fromEntries(steamGames);
+      return getDetectedGames();
     } catch (error) {
+      // Rethrow so the renderer's catch preserves prior detection instead of
+      // treating a transient failure as "nothing installed".
+      console.error('[GameDetector] get-detected-games failed:', error);
+      throw error;
+    } finally {
       timer.end();
-      console.error('Error getting installed Steam games:', error);
-      return {};
     }
   });
 
@@ -295,11 +297,14 @@ export function setupGamesHandlers(): void {
       sortOrder: SortOrderType = 'name'
     ) => {
       try {
+        // Union in Steam app-id matches so this stays consistent with the
+        // sidebar badge (getDetectedGames), which is app-id-authoritative.
         return findGamesByInstallPaths(
           installPaths,
           searchQuery,
           hideAiTranslations,
-          sortOrder
+          sortOrder,
+          getInstalledSteamAppIds()
         );
       } catch (error) {
         console.error('Error finding games by install paths:', error);

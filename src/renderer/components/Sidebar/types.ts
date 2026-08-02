@@ -14,7 +14,7 @@ export interface GameGroup {
 // Status type for multi-select filter
 type StatusType = Database['public']['Enums']['game_status'];
 
-// Special filters that are single-select
+// Special filters that are single-select (library/ownership source - mutually exclusive)
 export type SpecialFilterType =
   | 'installed-translations'
   | 'installed-games'
@@ -22,9 +22,10 @@ export type SpecialFilterType =
   | 'owned-gog-games'
   | 'owned-epic-games'
   | 'installed-xbox-games'
-  | 'with-achievements'
-  | 'with-voice'
   | 'favorite-translations';
+
+// Content-type filters - multi-select, combined with AND (both can be selected at once)
+export type ContentTypeFilterType = 'with-achievements' | 'with-voice';
 
 interface StatusFilterOption {
   label: string;
@@ -34,6 +35,11 @@ interface StatusFilterOption {
 interface SpecialFilterOption {
   label: string;
   value: SpecialFilterType;
+}
+
+interface ContentTypeFilterOption {
+  label: string;
+  value: ContentTypeFilterType;
 }
 
 // Status options for multi-select
@@ -53,6 +59,10 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Доступно з GOG', value: 'owned-gog-games' },
   { label: 'Доступно з Epic', value: 'owned-epic-games' },
   { label: 'Встановлено з Xbox app', value: 'installed-xbox-games' },
+];
+
+// Content-type options (multi-select, AND'ed together - e.g. can require both)
+export const CONTENT_TYPE_OPTIONS: ContentTypeFilterOption[] = [
   { label: 'З перекладом досягнень', value: 'with-achievements' },
   { label: 'З озвученням', value: 'with-voice' },
 ];

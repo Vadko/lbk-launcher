@@ -63,12 +63,6 @@ export const SettingsModal: React.FC = () => {
     (state) => state.createBackupBeforeInstall
   );
   const toggleCreateBackup = useSettingsStore((state) => state.toggleCreateBackup);
-  const autoDetectInstalledGames = useSettingsStore(
-    (state) => state.autoDetectInstalledGames
-  );
-  const toggleAutoDetectInstalledGames = useSettingsStore(
-    (state) => state.toggleAutoDetectInstalledGames
-  );
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
   const toggleShowAdultGames = useSettingsStore((state) => state.toggleShowAdultGames);
   const hideAiTranslations = useSettingsStore((state) => state.hideAiTranslations);
@@ -274,13 +268,6 @@ export const SettingsModal: React.FC = () => {
             description="Зберігати оригінальні файли гри перед встановленням українізатора"
             enabled={createBackupBeforeInstall}
             onChange={toggleCreateBackup}
-          />
-          <SettingItem
-            id="auto-detect"
-            title="Автоматичне виявлення встановлених ігор"
-            description="Автоматично виявляти встановлені на вашому комп'ютері ігри"
-            enabled={autoDetectInstalledGames}
-            onChange={toggleAutoDetectInstalledGames}
           />
           <SettingItem
             id="steam-cef-debugging"

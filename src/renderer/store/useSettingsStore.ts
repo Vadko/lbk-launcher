@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { SortOrderType } from '../../shared/types';
-import type { SpecialFilterType } from '../components/Sidebar/types';
+import type {
+  ContentTypeFilterType,
+  SpecialFilterType,
+} from '../components/Sidebar/types';
 import { electronStorage } from './electronStorage';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 
@@ -37,7 +40,6 @@ interface SettingsStore {
   appUpdateNotificationsEnabled: boolean;
   gameUpdateNotificationsEnabled: boolean;
   createBackupBeforeInstall: boolean;
-  autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
   hideAiTranslations: boolean;
   liquidGlassEnabled: boolean;
@@ -46,12 +48,14 @@ interface SettingsStore {
   isSettingsModalOpen: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
+  selectedContentTypes: ContentTypeFilterType[];
   selectedAuthors: string[];
   favoriteGameIds: string[];
   notificationSoundsEnabled: boolean;
   setSortOrder: (order: SortOrderType) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
+  setSelectedContentTypes: (types: ContentTypeFilterType[]) => void;
   setSelectedAuthors: (authors: string[]) => void;
   toggleFavoriteGame: (gameId: string, gameName: string) => void;
   isFavoriteGame: (gameId: string) => boolean;
@@ -59,7 +63,6 @@ interface SettingsStore {
   toggleAppUpdateNotifications: () => void;
   toggleGameUpdateNotifications: () => void;
   toggleCreateBackup: () => void;
-  toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
   toggleHideAiTranslations: () => void;
   toggleLiquidGlass: () => void;
@@ -78,7 +81,6 @@ export const useSettingsStore = create<SettingsStore>()(
       appUpdateNotificationsEnabled: true,
       gameUpdateNotificationsEnabled: true,
       createBackupBeforeInstall: true,
-      autoDetectInstalledGames: true,
       showAdultGames: false,
       hideAiTranslations: false,
       liquidGlassEnabled: fancyEffectsByDefault,
@@ -87,6 +89,7 @@ export const useSettingsStore = create<SettingsStore>()(
       isSettingsModalOpen: false,
       sidebarWidth: 320,
       specialFilter: null,
+      selectedContentTypes: [],
       selectedAuthors: [],
       favoriteGameIds: [],
       notificationSoundsEnabled: true,
@@ -96,6 +99,8 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({ notificationSoundsEnabled: !state.notificationSoundsEnabled })),
 
       setSpecialFilter: (specialFilter) => set({ specialFilter }),
+
+      setSelectedContentTypes: (selectedContentTypes) => set({ selectedContentTypes }),
 
       setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
 
@@ -143,9 +148,6 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleCreateBackup: () =>
         set((state) => ({ createBackupBeforeInstall: !state.createBackupBeforeInstall })),
 
-      toggleAutoDetectInstalledGames: () =>
-        set((state) => ({ autoDetectInstalledGames: !state.autoDetectInstalledGames })),
-
       toggleShowAdultGames: () =>
         set((state) => ({ showAdultGames: !state.showAdultGames })),
 
@@ -189,7 +191,6 @@ export const useSettingsStore = create<SettingsStore>()(
         appUpdateNotificationsEnabled: state.appUpdateNotificationsEnabled,
         gameUpdateNotificationsEnabled: state.gameUpdateNotificationsEnabled,
         createBackupBeforeInstall: state.createBackupBeforeInstall,
-        autoDetectInstalledGames: state.autoDetectInstalledGames,
         showAdultGames: state.showAdultGames,
         hideAiTranslations: state.hideAiTranslations,
         liquidGlassEnabled: state.liquidGlassEnabled,
@@ -197,6 +198,7 @@ export const useSettingsStore = create<SettingsStore>()(
         steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
+        selectedContentTypes: state.selectedContentTypes,
         selectedAuthors: state.selectedAuthors,
         favoriteGameIds: state.favoriteGameIds,
         notificationSoundsEnabled: state.notificationSoundsEnabled,

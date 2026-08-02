@@ -9,6 +9,7 @@ import type {
   GetGamesResult,
   SortOrderType,
 } from '../../shared/types';
+import { normalizeInstalledFolder } from '../utils/install-path';
 import { getDatabase, isSpellfixAvailable } from './database';
 import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-queries';
 
@@ -408,22 +409,26 @@ export class GamesRepository {
   }
 
   /**
-   * Знайти ігри за install paths
+   * Find games installed on the system by folder name, unioned with installed
+   * Steam app ids (kept consistent with the getDetectedGames badge).
    */
   findGamesByInstallPaths(
     installPaths: string[],
     searchQuery?: string,
     hideAiTranslations = false,
-    sortOrder: SortOrderType = 'name'
+    sortOrder: SortOrderType = 'name',
+    steamAppIds: number[] = []
   ): GetGamesResult {
-    if (installPaths.length === 0) {
+    if (installPaths.length === 0 && steamAppIds.length === 0) {
       return { games: [], total: 0 };
     }
 
     const whereConditions = [
       'approved = 1',
       '(hide = 0 OR user_unlocked = 1)',
-      'install_paths IS NOT NULL',
+      // Keep app-id-only rows (install_paths NULL) so the steamAppIds union below
+      // can match them, staying consistent with the app-id-authoritative badge.
+      '(install_paths IS NOT NULL OR steam_app_id IS NOT NULL)',
     ];
     const queryParams: string[] = [];
 
@@ -452,43 +457,27 @@ export class GamesRepository {
     const rows = stmt.all(...queryParams) as Record<string, unknown>[];
     const allGames = rows.map((row) => this.rowToGame(row));
 
-    // Нормалізуємо всі шляхи до простих назв папок
-    const normalizedDetectedPaths = installPaths.map((path) => {
-      const p = path.toLowerCase();
-      // Витягуємо назву папки з шляху
-      // "steamapps/common/GameName" -> "gamename"
-      // "GameName" -> "gamename"
-      if (p.includes('steamapps/common/')) {
-        return p.split('steamapps/common/')[1];
-      }
-      if (p.includes('steamapps\\common\\')) {
-        return p.split('steamapps\\common\\')[1];
-      }
-      if (p.includes('common/')) {
-        return p.split('common/')[1];
-      }
-      if (p.includes('common\\')) {
-        return p.split('common\\')[1];
-      }
-      return p;
-    });
+    // Normalize both sides with the shared helper so the DB folder name and the
+    // detected system path reduce to the same key (kept in sync with the badge).
+    const normalizedDetectedPaths = new Set(installPaths.map(normalizeInstalledFolder));
+    const appIdSet = new Set(steamAppIds);
 
     const matchedGames = allGames.filter((game) => {
+      // Authoritative: installed Steam app id (immune to installdir/folder drift,
+      // keeps this in sync with the sidebar's getDetectedGames badge).
+      if (game.steam_app_id != null && appIdSet.has(game.steam_app_id)) {
+        return true;
+      }
+
       if (!game.install_paths || !Array.isArray(game.install_paths)) {
         return false;
       }
 
-      return game.install_paths.some((installPath) => {
-        if (!installPath || !installPath.path) {
-          return false;
-        }
-
-        // В БД тепер зберігаються тільки назви папок
-        const dbPath = installPath.path.toLowerCase();
-
-        // Просте порівняння
-        return normalizedDetectedPaths.includes(dbPath);
-      });
+      return game.install_paths.some(
+        (installPath) =>
+          installPath?.path &&
+          normalizedDetectedPaths.has(normalizeInstalledFolder(installPath.path))
+      );
     });
 
     // Count unique games by slug (not total translations)

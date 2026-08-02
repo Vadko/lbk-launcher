@@ -31,9 +31,6 @@ interface Store {
   searchQuery: string;
   loaderVisible: boolean;
 
-  // Steam State
-  steamGames: Map<string, string>; // installdir (lowercase) -> full path
-
   // Installation State
   installedTranslations: Map<string, InstallationInfo>; // Metadata про встановлені українізатори
   detectedGames: Map<string, DetectedGameInfo>; // Ігри знайдені на системі
@@ -49,10 +46,6 @@ interface Store {
   setSelectedStatuses: (statuses: string[]) => void;
   setSearchQuery: (query: string) => void;
   setLoaderVisible: (visible: boolean) => void;
-
-  // Steam Actions
-  loadSteamGames: () => Promise<void>;
-  clearSteamGamesCache: () => void;
 
   // Installation Actions
   loadInstalledGamesFromSystem: () => Promise<void>;
@@ -70,8 +63,7 @@ interface Store {
   isCheckingInstallationStatus: (gameId: string) => boolean;
 
   // Game Detection Actions
-  clearDetectedGamesCache: () => void;
-  detectInstalledGames: (games: Game[]) => Promise<void>;
+  detectInstalledGames: () => Promise<void>;
   isGameDetected: (gameId: string) => boolean;
 
   // Subscription Status Check
@@ -102,9 +94,6 @@ export const useStore = create<Store>((set, get) => ({
   searchQuery: '',
   loaderVisible: true,
 
-  // Steam State
-  steamGames: new Map(),
-
   // Installation State
   installedTranslations: new Map(),
   detectedGames: new Map(), // Не персиститься
@@ -128,25 +117,6 @@ export const useStore = create<Store>((set, get) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
   setLoaderVisible: (loaderVisible) => set({ loaderVisible }),
-
-  // Steam Actions
-  loadSteamGames: async () => {
-    if (!window.electronAPI) {
-      return;
-    }
-
-    console.log('[Store] Loading Steam games...');
-    const steamGamesObj = await window.electronAPI.getAllInstalledSteamGames();
-    const steamGamesMap = new Map(Object.entries(steamGamesObj));
-
-    console.log(`[Store] Loaded ${steamGamesMap.size} Steam games`);
-    set({ steamGames: steamGamesMap });
-  },
-
-  clearSteamGamesCache: () => {
-    console.log('[Store] Clearing Steam games cache');
-    set({ steamGames: new Map() });
-  },
 
   // Installation Actions
   loadInstalledGamesFromSystem: async () => {
@@ -365,112 +335,21 @@ export const useStore = create<Store>((set, get) => ({
     get().isCheckingInstallation.get(gameId) || false,
 
   // Game Detection Actions
-  clearDetectedGamesCache: () => {
-    console.log('[Store] Clearing detected games cache');
-    set({ detectedGames: new Map() });
-  },
-
-  detectInstalledGames: async (games: Game[]) => {
+  detectInstalledGames: async () => {
     if (!window.electronAPI) {
       return;
     }
 
     try {
-      const state = get();
-      const newDetectedGames = new Map(state.detectedGames); // Мержимо з існуючими
-      const steamGames = state.steamGames;
-
-      // 1. Отримати список всіх встановлених ігор (назв папок) з системи
-      // Це включає Steam, GOG, Epic, Heroic тощо
-      const allInstalledPaths = await window.electronAPI.getAllInstalledGamePaths();
-
-      // Створюємо Set нормалізованих назв папок для швидкого пошуку
-      // Нормалізація: lowercase, тільки назва папки (basename)
-      const installedFolders = new Set<string>();
-
-      for (const p of allInstalledPaths) {
-        // Деякі шляхи можуть бути повними, деякі просто назвами папок
-        // Беремо останню частину шляху (назву папки)
-        const folderName = p
-          .replace(/[\\/]$/, '')
-          .split(/[\\/]/)
-          .pop();
-        if (folderName) {
-          installedFolders.add(folderName.toLowerCase());
-        }
+      // Detection lives in one place (main getDetectedGames): app id first,
+      // installdir/folder-name second. Fetches the fresh system state each call.
+      const detected = await window.electronAPI.getDetectedGames();
+      const detectedGames = new Map<string, DetectedGameInfo>();
+      for (const { gameId, platform, path } of detected) {
+        detectedGames.set(gameId, { platform, path, exists: true });
       }
-
-      console.log(
-        `[Store] Detecting ${games.length} games. System has ${installedFolders.size} installed folders. Steam cache: ${steamGames.size}`
-      );
-
-      // Перевіряємо кожну гру
-      for (const game of games) {
-        // Пропускаємо якщо гра вже детектована
-        if (newDetectedGames.has(game.id)) {
-          continue;
-        }
-
-        // Перевіряємо шляхи встановлення
-        if (game.install_paths && game.install_paths.length > 0) {
-          for (const installPath of game.install_paths) {
-            if (!installPath.path) {
-              continue;
-            }
-
-            // Нормалізуємо шлях з бази даних
-            // З Steam шляхів ("steamapps/common/Game") витягуємо назву папки
-            let dbFolderName = installPath.path.toLowerCase();
-            if (dbFolderName.includes('steamapps/common/')) {
-              dbFolderName = dbFolderName.split('steamapps/common/')[1];
-            } else if (dbFolderName.includes('steamapps\\common\\')) {
-              dbFolderName = dbFolderName.split('steamapps\\common\\')[1];
-            } else if (dbFolderName.includes('common/')) {
-              dbFolderName = dbFolderName.split('common/')[1];
-            } else if (dbFolderName.includes('common\\')) {
-              dbFolderName = dbFolderName.split('common\\')[1];
-            }
-            // Також зачищаємо trailing slashes якщо є
-            dbFolderName = dbFolderName.replace(/[\\/]$/, '');
-
-            // 1. Steam Detection (High Priority & Precision)
-            if (installPath.type === 'steam') {
-              const steamPath = steamGames.get(dbFolderName);
-
-              if (steamPath) {
-                newDetectedGames.set(game.id, {
-                  platform: 'steam',
-                  path: steamPath,
-                  exists: true,
-                });
-                console.log(`[Store] Detected ${game.name} (Steam) at ${steamPath}`);
-                break; // Found matching install path, move to next game
-              }
-            }
-
-            // 2. Generic Detection (GOG, Epic, Heroic, etc.)
-            // Перевіряємо чи існує папка з такою назвою в списку встановлених
-            if (installedFolders.has(dbFolderName)) {
-              // Ми знайшли збіг по назві папки.
-              // Так як у нас немає повного шляху (getAllInstalledGamePaths повертає mixed data),
-              // ми просто позначаємо що гра знайдена.
-              // Платформа береться з installPath.type (best guess)
-              newDetectedGames.set(game.id, {
-                platform: installPath.type || 'other',
-                path: installPath.path, // Info only, launch logic re-detects path
-                exists: true,
-              });
-              console.log(
-                `[Store] Detected ${game.name} (${installPath.type}) by folder "${dbFolderName}"`
-              );
-              break; // Found matching install path
-            }
-          }
-        }
-      }
-
-      console.log('[Store] Detected games on system:', newDetectedGames.size);
-      set({ detectedGames: newDetectedGames });
+      console.log('[Store] Detected games on system:', detectedGames.size);
+      set({ detectedGames });
     } catch (error) {
       console.error('[Store] Error detecting games:', error);
     }

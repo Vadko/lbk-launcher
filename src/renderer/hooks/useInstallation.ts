@@ -64,7 +64,6 @@ export function useInstallation({
     setInstallationProgress,
     clearInstallationProgress,
     checkInstallationStatus,
-    steamGames,
   } = useStore();
 
   const { showModal } = useModalStore();
@@ -301,21 +300,13 @@ export function useInstallation({
           ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
           : `Українізатор ${selectedGame.name} успішно встановлено!`;
 
-        const installPath = customGamePath || installationInfo?.gamePath;
-        const isSteamPath = installPath
-          ? Array.from(steamGames.values()).some(
-              (p) => installPath.startsWith(p) || p.startsWith(installPath)
-            )
-          : platform === 'steam';
-
         // Restart Steam to make new achievement strings visible AND/OR to let
         // Steam re-read localconfig.vdf with the launch options we couldn't
-        // apply live (CEF unreachable, e.g. Millennium). Only prompt if there's
-        // something to gain — skip when achievements weren't actually rewritten.
+        // apply live (CEF unreachable, e.g. Millennium). The installer only
+        // rewrites achievements for a Steam install, so achievementsChanged
+        // already implies a Steam path.
         const needsRestartForAchievements =
-          effectiveOptions.installAchievements &&
-          isSteamPath &&
-          result.achievementsChanged;
+          effectiveOptions.installAchievements && result.achievementsChanged;
         const needsRestartForLaunchOptions = result.launchOptionsPending === true;
         const shouldOfferRestart =
           needsRestartForAchievements || needsRestartForLaunchOptions;

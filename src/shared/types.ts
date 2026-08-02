@@ -159,6 +159,12 @@ export interface DetectedGameInfo {
   exists: boolean;
 }
 
+export interface DetectedGame {
+  gameId: string;
+  platform: Database['public']['Enums']['install_source'];
+  path: string;
+}
+
 export interface LaunchGameResult {
   success: boolean;
   error?: string;
@@ -193,7 +199,7 @@ export interface ElectronAPI {
   ) => Promise<Game[]>;
   syncKurinGames: () => Promise<string[]>;
   getAllInstalledGamePaths: () => Promise<string[]>;
-  getAllInstalledSteamGames: () => Promise<Record<string, string>>;
+  getDetectedGames: () => Promise<DetectedGame[]>;
   getAvailableProtons: () => Promise<Array<{ name: string; path: string }>>;
   findGamesByInstallPaths: (
     installPaths: string[],

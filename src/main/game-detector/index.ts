@@ -3,12 +3,18 @@
  * Detects installed games from various platforms (Steam, Epic, GOG, Rockstar, Xbox)
  */
 
-import type { InstallPath } from '../../shared/types';
+import type { DetectedGame, InstallPath } from '../../shared/types';
+import { fetchGames } from '../api';
+import { normalizeInstalledFolder } from '../utils/install-path';
 import { findEAGame, getInstalledEAGamePaths } from './ea';
 import { findEpicGame, getHeroicEpicAppName, getInstalledEpicGamePaths } from './epic';
 import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
 import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
-import { findSteamGame, getInstalledSteamGamePaths } from './steam';
+import {
+  findSteamGame,
+  getInstalledSteamGamePaths,
+  getInstalledSteamGames,
+} from './steam';
 import type { GamePath } from './types'; // Used locally
 import { findUplayGame, getInstalledUplayGamePaths } from './uplay';
 import { findXboxGame, getInstalledXboxGamePaths } from './xbox';
@@ -24,6 +30,7 @@ export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
 // Steam
 export {
   getAllInstalledSteamGames,
+  getInstalledSteamAppIds,
   getLastKnownLicensecacheSize,
   getLicensecachePath,
   getLicensecacheSize,
@@ -211,6 +218,75 @@ export function getAllInstalledGamePaths(): string[] {
     `[GameDetector] Found ${installedPaths.length} installed game paths on system`
   );
   return installedPaths;
+}
+
+/**
+ * Which catalog games are installed on this system: Steam by app id first
+ * (immune to installdir/folder drift), then installdir; other platforms by
+ * folder name. One cached pass; a bad row is skipped, never fatal.
+ */
+export function getDetectedGames(): DetectedGame[] {
+  const { games } = fetchGames();
+  const { byFolder: steamByFolder, byAppId: steamByAppId } = getInstalledSteamGames();
+
+  const installedFolders = new Set<string>();
+  for (const p of getAllInstalledGamePaths()) {
+    const folder = p
+      .replace(/[\\/]$/, '')
+      .split(/[\\/]/)
+      .pop();
+    if (folder) {
+      installedFolders.add(folder.toLowerCase());
+    }
+  }
+
+  const detected: DetectedGame[] = [];
+
+  for (const game of games) {
+    try {
+      // Steam app id — authoritative primary
+      if (game.steam_app_id != null) {
+        const steamPath = steamByAppId.get(game.steam_app_id);
+        if (steamPath) {
+          detected.push({ gameId: game.id, platform: 'steam', path: steamPath });
+          continue;
+        }
+      }
+
+      if (!Array.isArray(game.install_paths)) {
+        continue;
+      }
+
+      // Fallback — installdir (Steam) / folder name (other platforms)
+      for (const installPath of game.install_paths) {
+        if (!installPath?.path) {
+          continue;
+        }
+        const folder = normalizeInstalledFolder(installPath.path);
+
+        if (installPath.type === 'steam') {
+          const steamPath = steamByFolder.get(folder);
+          if (steamPath) {
+            detected.push({ gameId: game.id, platform: 'steam', path: steamPath });
+            break;
+          }
+        }
+        if (installedFolders.has(folder)) {
+          detected.push({
+            gameId: game.id,
+            platform: installPath.type ?? 'other',
+            path: installPath.path,
+          });
+          break;
+        }
+      }
+    } catch (error) {
+      console.error(`[GameDetector] Failed to check game ${game.id}:`, error);
+    }
+  }
+
+  console.log(`[GameDetector] Detected ${detected.length} installed catalog games`);
+  return detected;
 }
 
 // Heroic Libraries

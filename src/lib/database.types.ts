@@ -2359,6 +2359,7 @@ export type Database = {
           capsule_path: string | null
           created_at: string | null
           downloads: number | null
+          has_voice: boolean | null
           is_adult: boolean | null
           latest_updated_at: string | null
           name: string | null
@@ -2416,6 +2417,7 @@ export type Database = {
           capsule_path: string
           created_at: string
           downloads: number
+          has_voice: boolean
           is_adult: boolean
           latest_updated_at: string
           name: string
@@ -2492,6 +2494,7 @@ export type Database = {
           total_creators: number
           total_downloads: number
           total_playtime_hours: number
+          total_supporters: number
           total_unique_players: number
         }[]
       }
