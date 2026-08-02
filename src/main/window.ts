@@ -9,7 +9,7 @@ import {
 } from './liquid-glass';
 import { openExternalUrl } from './utils/open-external';
 import { isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
-import { readStoreFile } from './utils/store-storage';
+import { readRendererSetting } from './utils/store-storage';
 import { getIcon } from './utils/theme';
 
 let mainWindow: BrowserWindow | null = null;
@@ -150,16 +150,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     clearTimeout(showTimeout);
     if (isSupported) {
       // Read user preference directly from settings file
-      let liquidGlassPreference = true;
-      try {
-        const settingsRaw = readStoreFile('lbk-settings');
-        if (settingsRaw) {
-          const parsed = JSON.parse(settingsRaw);
-          liquidGlassPreference = parsed.state?.liquidGlassEnabled ?? true;
-        }
-      } catch {
-        // Use default on parse error
-      }
+      const liquidGlassPreference = readRendererSetting('liquidGlassEnabled', true);
       console.log(
         '[Window] Applying liquid glass on ready-to-show, preference:',
         liquidGlassPreference

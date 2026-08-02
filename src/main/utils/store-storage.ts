@@ -9,9 +9,25 @@ const store = new ElectronStore({
  * Read a value from the store (returns raw string or null).
  * Used by sync IPC handler and directly by main process (e.g. liquid glass preference).
  */
-export function readStoreFile(key: string): string | null {
+function readStoreFile(key: string): string | null {
   const value = store.get(key) as string | undefined;
   return value ?? null;
+}
+
+/**
+ * Read one field of the renderer's persisted zustand settings ('lbk-settings',
+ * `{"state":{...}}` envelope). Returns the default on any miss or parse error.
+ */
+export function readRendererSetting<T>(field: string, defaultValue: T): T {
+  try {
+    const raw = readStoreFile('lbk-settings');
+    if (!raw) {
+      return defaultValue;
+    }
+    return (JSON.parse(raw).state?.[field] as T) ?? defaultValue;
+  } catch {
+    return defaultValue;
+  }
 }
 
 /**

@@ -337,22 +337,22 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Mandatory one-time "restart Steam" prompt — fires at launcher startup if
-  // Steam is running but its debug channel (CEF) isn't open. We just dropped
-  // the flag file Steam reads on startup; one restart enables live config
-  // updates for all future installs.
+  // "Restart Steam" prompt when the CEF port isn't open yet. Mandatory from
+  // startup bootstrap, dismissible from the settings toggle.
   useEffect(() => {
     if (!window.electronAPI?.onSteamRestartRequired) {
       return;
     }
-    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
+    const unsubscribe = window.electronAPI.onSteamRestartRequired((mandatory) => {
       useModalStore.getState().showModal({
         title: 'Перезапустіть Steam',
-        message:
-          'Для коректного встановлення перекладів потрібно перезапустити Steam. ' +
-          'Це разова дія — наступні встановлення відбуватимуться без рестартів.',
+        message: mandatory
+          ? 'Для коректного встановлення перекладів потрібно перезапустити Steam. ' +
+            'Це разова дія — наступні встановлення відбуватимуться без рестартів.'
+          : 'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
+            'Можна зробити це пізніше — налаштування вже збережено.',
         type: 'info',
-        mandatory: true,
+        mandatory,
         actions: [
           {
             label: 'Перезапустити Steam',

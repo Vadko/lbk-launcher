@@ -307,11 +307,10 @@ export interface ElectronAPI {
   applyPendingLaunchOptions: (
     game: Game
   ) => Promise<{ success: boolean; error?: string }>;
-  /**
-   * Fires when an install couldn't apply a Steam config change live and the
-   * user needs to restart Steam so the CEF debug port opens.
-   */
-  onSteamRestartRequired: (callback: () => void) => () => void;
+  /** Steam restart needed for the CEF port; `mandatory` only from startup bootstrap. */
+  onSteamRestartRequired: (callback: (mandatory: boolean) => void) => () => void;
+  /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
+  setSteamCefDebugging: (enabled: boolean) => Promise<void>;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking
