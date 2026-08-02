@@ -28,7 +28,7 @@ import {
 // ============================================================================
 
 /** Installed Steam games from one manifest scan, indexed two ways. */
-export interface InstalledSteamGames {
+interface InstalledSteamGames {
   /** installdir (lowercase) -> full path */
   byFolder: Map<string, string>;
   /** app id -> full path (authoritative; immune to installdir/folder drift) */
