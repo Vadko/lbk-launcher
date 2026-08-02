@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SortOrderType } from '../../shared/types';
-import type { SpecialFilterType } from '../components/Sidebar/types';
+import type {
+  ContentTypeFilterType,
+  SpecialFilterType,
+} from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
 import type { Game, GetGamesParams } from '../types/game';
 
@@ -8,9 +11,57 @@ interface UseGamesParams {
   selectedStatuses?: string[];
   selectedAuthors?: string[];
   specialFilter?: SpecialFilterType | null;
+  selectedContentTypes?: ContentTypeFilterType[];
   searchQuery?: string;
   sortOrder?: SortOrderType;
   hideAiTranslations?: boolean;
+}
+
+/** Status group is OR'ed internally, then AND'ed against the other groups. */
+function matchesStatuses(game: Game, statuses?: string[]): boolean {
+  return !statuses || statuses.length === 0 || statuses.includes(game.status);
+}
+
+/** Authors group is OR'ed internally, then AND'ed against the other groups. */
+function matchesAuthors(game: Game, authors?: string[]): boolean {
+  if (!authors || authors.length === 0) {
+    return true;
+  }
+  if (!game.team) {
+    return false;
+  }
+  return authors.some((author) => game.team?.includes(author));
+}
+
+/** Content-type group (achievements/voice) is AND'ed internally - selecting both requires both. */
+function matchesContentTypes(
+  game: Game,
+  contentTypes?: ContentTypeFilterType[]
+): boolean {
+  if (!contentTypes || contentTypes.length === 0) {
+    return true;
+  }
+  return contentTypes.every((type) => {
+    if (type === 'with-achievements') {
+      return !!game.achievements_archive_path;
+    }
+    return !!game.voice_archive_path || game.voice_progress !== null;
+  });
+}
+
+/** AND-combine every active filter group across a games list. */
+function applyGroupFilters(
+  games: Game[],
+  selectedStatuses?: string[],
+  selectedAuthors?: string[],
+  selectedContentTypes?: ContentTypeFilterType[]
+): Game[] {
+  return games.filter(
+    (game) =>
+      matchesStatuses(game, selectedStatuses) &&
+      matchesAuthors(game, selectedAuthors) &&
+      matchesContentTypes(game, selectedContentTypes)
+  );
 }
 
 interface UseGamesResult {
@@ -29,6 +80,7 @@ export function useGames({
   selectedStatuses,
   selectedAuthors,
   specialFilter,
+  selectedContentTypes,
   searchQuery,
   sortOrder = 'name',
   hideAiTranslations = false,
@@ -62,7 +114,10 @@ export function useGames({
     setError(null);
 
     try {
-      // Спеціальна обробка для улюблених перекладів
+      // Кожна "бібліотечна" гілка (favorite/installed/steam/gog/epic/xbox) отримує свій
+      // набір ігор через окремий IPC-виклик (за id/шляхами/назвами), а статуси, автори
+      // та типи контенту (досягнення/озвучення) застосовуються після - як AND-фільтри
+      // на клієнті, щоб усі групи фільтрів комбінувались між собою через AND.
       if (specialFilter === 'favorite-translations') {
         const { useSettingsStore } = await import('../store/useSettingsStore');
         const favoriteGameIds = useSettingsStore.getState().favoriteGameIds;
@@ -91,12 +146,17 @@ export function useGames({
           return;
         }
 
-        setGames(favoriteGames);
-        setTotal(favoriteGames.length);
+        const filtered = applyGroupFilters(
+          favoriteGames,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
-      // Спеціальна обробка для встановлених українізаторів
       if (specialFilter === 'installed-translations') {
         const installedGameIds = [
           ...new Set(await window.electronAPI.getAllInstalledGameIds()),
@@ -126,8 +186,14 @@ export function useGames({
           return;
         }
 
-        setGames(installedGames);
-        setTotal(installedGames.length);
+        const filtered = applyGroupFilters(
+          installedGames,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
@@ -159,8 +225,14 @@ export function useGames({
           return;
         }
 
-        setGames(result.games);
-        setTotal(result.total);
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
@@ -192,8 +264,14 @@ export function useGames({
           return;
         }
 
-        setGames(result.games);
-        setTotal(result.total);
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
@@ -222,8 +300,14 @@ export function useGames({
           return;
         }
 
-        setGames(result.games);
-        setTotal(result.total);
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
@@ -252,8 +336,14 @@ export function useGames({
           return;
         }
 
-        setGames(result.games);
-        setTotal(result.total);
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
@@ -282,67 +372,19 @@ export function useGames({
           return;
         }
 
-        setGames(result.games);
-        setTotal(result.total);
-        return;
-      }
-
-      // Спеціальна обробка для ігор з перекладом досягнень
-      if (specialFilter === 'with-achievements') {
-        const params: GetGamesParams = {
-          searchQuery,
-          statuses: selectedStatuses,
-          authors: selectedAuthors,
-          sortOrder,
-          hideAiTranslations,
-        };
-
-        const result = await window.electronAPI.fetchGames(params);
-
-        // Перевірити чи запит ще актуальний
-        if (signal.aborted) {
-          return;
-        }
-
-        // Filter games that have achievements archive
-        const withAchievements = result.games.filter(
-          (game) => !!game.achievements_archive_path
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes
         );
-
-        setGames(withAchievements);
-        setTotal(withAchievements.length);
+        setGames(filtered);
+        setTotal(filtered.length);
         return;
       }
 
-      // Спеціальна обробка для ігор з озвученням
-      if (specialFilter === 'with-voice') {
-        const params: GetGamesParams = {
-          searchQuery,
-          statuses: selectedStatuses,
-          authors: selectedAuthors,
-          sortOrder,
-          hideAiTranslations,
-        };
-
-        const result = await window.electronAPI.fetchGames(params);
-
-        // Перевірити чи запит ще актуальний
-        if (signal.aborted) {
-          return;
-        }
-
-        // Фільтр ігор з озвученням: показувати якщо є voice_archive_path АБО voice_progress не null
-        // (заплановане озвучення, в процесі або готове)
-        const withVoice = result.games.filter(
-          (game) => !!game.voice_archive_path || game.voice_progress !== null
-        );
-
-        setGames(withVoice);
-        setTotal(withVoice.length);
-        return;
-      }
-
-      // Для інших фільтрів - завантажити всі ігри одразу
+      // Без бібліотечного фільтру - статуси й автори фільтруються в SQL,
+      // типи контенту (досягнення/озвучення) - на клієнті (AND між собою).
       const params: GetGamesParams = {
         searchQuery,
         statuses: selectedStatuses,
@@ -358,8 +400,13 @@ export function useGames({
         return;
       }
 
-      setGames(result.games);
-      setTotal(result.total);
+      const filtered =
+        selectedContentTypes && selectedContentTypes.length > 0
+          ? result.games.filter((game) => matchesContentTypes(game, selectedContentTypes))
+          : result.games;
+
+      setGames(filtered);
+      setTotal(filtered.length);
     } catch (error) {
       // Ігноруємо помилки від скасованих запитів
       if (signal.aborted) {
@@ -383,6 +430,7 @@ export function useGames({
     searchQuery,
     selectedStatuses,
     selectedAuthors,
+    selectedContentTypes,
     sortOrder,
     hideAiTranslations,
   ]);
@@ -440,73 +488,45 @@ export function useGames({
         // Перевірити підписки на команди (централізована обробка)
         checkSubscribedTeamUpdate(updatedGame, oldGame);
 
-        // Для спеціальних фільтрів (installed-games, installed-translations, available-in-steam)
-        // просто оновлюємо дані гри якщо вона вже в списку, не додаємо/видаляємо
-        if (
+        // AND-перевірка статусів, авторів та типів контенту - завжди застосовується,
+        // незалежно від бібліотечного фільтру, бо всі групи фільтрів комбінуються через AND
+        const matchesGroups =
+          matchesStatuses(updatedGame, selectedStatuses) &&
+          matchesAuthors(updatedGame, selectedAuthors) &&
+          matchesContentTypes(updatedGame, selectedContentTypes);
+
+        // Для бібліотечних фільтрів (installed-games, available-in-steam, тощо) membership
+        // (чи гра взагалі належить бібліотеці) визначається окремими listeners, тож тут
+        // ми лише оновлюємо/видаляємо вже присутні ігри - не додаємо нових
+        const isLibraryFilter =
           specialFilter === 'installed-games' ||
           specialFilter === 'installed-translations' ||
+          specialFilter === 'favorite-translations' ||
           specialFilter === 'available-in-steam' ||
           specialFilter === 'owned-gog-games' ||
           specialFilter === 'owned-epic-games' ||
-          specialFilter === 'installed-xbox-games'
-        ) {
-          if (index !== -1) {
-            // Гра є в списку - оновити дані
-            const newGames = [...prevGames];
-            newGames[index] = updatedGame;
-            return newGames;
-          }
-          // Гра не в списку - не додаємо (membership визначається окремими listeners)
-          return prevGames;
-        }
+          specialFilter === 'installed-xbox-games';
 
-        if (specialFilter === 'with-achievements') {
-          if (!updatedGame.achievements_archive_path) {
-            // Якщо у гри зник переклад досягнень - видалити зі списку
-            if (index !== -1) {
-              setTotal((prev) => prev - 1);
-              return prevGames.filter((g) => g.id !== updatedGame.id);
-            }
+        if (isLibraryFilter) {
+          if (index === -1) {
             return prevGames;
           }
-          // Якщо гра має переклад досягнень - продовжити перевірку інших фільтрів
-        }
-
-        if (specialFilter === 'with-voice') {
-          // Перевірити чи гра відповідає фільтру: має voice_archive_path АБО voice_progress не null
-          const hasVoice =
-            !!updatedGame.voice_archive_path || updatedGame.voice_progress !== null;
-
-          if (!hasVoice) {
-            // Якщо у гри зникло озвучення - видалити зі списку
-            if (index !== -1) {
-              setTotal((prev) => prev - 1);
-              return prevGames.filter((g) => g.id !== updatedGame.id);
-            }
-            return prevGames;
+          if (!matchesGroups) {
+            setTotal((prev) => prev - 1);
+            return prevGames.filter((g) => g.id !== updatedGame.id);
           }
-          // Якщо гра має озвучення - продовжити перевірку інших фільтрів
+          const newGames = [...prevGames];
+          newGames[index] = updatedGame;
+          return newGames;
         }
 
-        // Перевірити чи гра відповідає поточному фільтру пошуку
-        // Проста перевірка - повна фільтрація відбудеться при наступному reload
+        // Проста перевірка пошуку - повна фільтрація відбудеться при наступному reload
         const matchesSearch =
           !searchQuery ||
           updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-        // Перевірити чи гра відповідає поточному фільтру статусу (multi-select)
-        const matchesStatus =
-          selectedStatuses?.length === 0 ||
-          selectedStatuses?.includes(updatedGame.status);
-
-        // Перевірити чи гра відповідає фільтру авторів (multi-select)
-        const matchesAuthors =
-          selectedAuthors?.length === 0 ||
-          selectedAuthors?.some((author) => updatedGame.team?.includes(author));
-
         // Adult games are always shown in list (with blur overlay in UI)
-        const shouldBeInList =
-          matchesSearch && matchesStatus && matchesAuthors && updatedGame.approved;
+        const shouldBeInList = matchesSearch && matchesGroups && updatedGame.approved;
 
         if (index === -1) {
           // Гра не в списку
@@ -534,7 +554,13 @@ export function useGames({
 
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
     return unsubscribe;
-  }, [searchQuery, specialFilter, selectedStatuses, selectedAuthors]);
+  }, [
+    searchQuery,
+    specialFilter,
+    selectedStatuses,
+    selectedAuthors,
+    selectedContentTypes,
+  ]);
 
   // Слухати realtime видалення ігор
   useEffect(() => {

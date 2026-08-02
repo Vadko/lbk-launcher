@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { SortOrderType } from '../../shared/types';
-import type { SpecialFilterType } from '../components/Sidebar/types';
+import type {
+  ContentTypeFilterType,
+  SpecialFilterType,
+} from '../components/Sidebar/types';
 import { electronStorage } from './electronStorage';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 
@@ -45,12 +48,14 @@ interface SettingsStore {
   isSettingsModalOpen: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
+  selectedContentTypes: ContentTypeFilterType[];
   selectedAuthors: string[];
   favoriteGameIds: string[];
   notificationSoundsEnabled: boolean;
   setSortOrder: (order: SortOrderType) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
+  setSelectedContentTypes: (types: ContentTypeFilterType[]) => void;
   setSelectedAuthors: (authors: string[]) => void;
   toggleFavoriteGame: (gameId: string, gameName: string) => void;
   isFavoriteGame: (gameId: string) => boolean;
@@ -84,6 +89,7 @@ export const useSettingsStore = create<SettingsStore>()(
       isSettingsModalOpen: false,
       sidebarWidth: 320,
       specialFilter: null,
+      selectedContentTypes: [],
       selectedAuthors: [],
       favoriteGameIds: [],
       notificationSoundsEnabled: true,
@@ -93,6 +99,8 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({ notificationSoundsEnabled: !state.notificationSoundsEnabled })),
 
       setSpecialFilter: (specialFilter) => set({ specialFilter }),
+
+      setSelectedContentTypes: (selectedContentTypes) => set({ selectedContentTypes }),
 
       setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
 
@@ -190,6 +198,7 @@ export const useSettingsStore = create<SettingsStore>()(
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
+        selectedContentTypes: state.selectedContentTypes,
         selectedAuthors: state.selectedAuthors,
         favoriteGameIds: state.favoriteGameIds,
         notificationSoundsEnabled: state.notificationSoundsEnabled,
