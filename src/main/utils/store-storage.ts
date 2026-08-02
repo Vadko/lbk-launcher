@@ -15,6 +15,22 @@ export function readStoreFile(key: string): string | null {
 }
 
 /**
+ * Read one field of the renderer's persisted zustand settings ('lbk-settings',
+ * `{"state":{...}}` envelope). Returns the default on any miss or parse error.
+ */
+export function readRendererSetting<T>(field: string, defaultValue: T): T {
+  try {
+    const raw = readStoreFile('lbk-settings');
+    if (!raw) {
+      return defaultValue;
+    }
+    return (JSON.parse(raw).state?.[field] as T) ?? defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+/**
  * Clear all data from the store.
  */
 export function clearStore(): void {

@@ -42,6 +42,7 @@ interface SettingsStore {
   hideAiTranslations: boolean;
   liquidGlassEnabled: boolean;
   gamepadSoundsEnabled: boolean;
+  steamCefDebuggingEnabled: boolean;
   isSettingsModalOpen: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
@@ -63,6 +64,7 @@ interface SettingsStore {
   toggleHideAiTranslations: () => void;
   toggleLiquidGlass: () => void;
   toggleGamepadSounds: () => void;
+  toggleSteamCefDebugging: () => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
@@ -81,6 +83,7 @@ export const useSettingsStore = create<SettingsStore>()(
       hideAiTranslations: false,
       liquidGlassEnabled: fancyEffectsByDefault,
       gamepadSoundsEnabled: true,
+      steamCefDebuggingEnabled: true,
       isSettingsModalOpen: false,
       sidebarWidth: 320,
       specialFilter: null,
@@ -159,6 +162,9 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleGamepadSounds: () =>
         set((state) => ({ gamepadSoundsEnabled: !state.gamepadSoundsEnabled })),
 
+      toggleSteamCefDebugging: () =>
+        set((state) => ({ steamCefDebuggingEnabled: !state.steamCefDebuggingEnabled })),
+
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
@@ -188,6 +194,7 @@ export const useSettingsStore = create<SettingsStore>()(
         hideAiTranslations: state.hideAiTranslations,
         liquidGlassEnabled: state.liquidGlassEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
+        steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedAuthors: state.selectedAuthors,

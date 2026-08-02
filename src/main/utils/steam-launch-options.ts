@@ -23,6 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
+import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
@@ -264,9 +265,9 @@ export async function writeSteamLaunchOptions(
     }
   }
 
-  // Steam on → only CEF is safe. The bootstrap modal at launcher startup
-  // guarantees CEF is reachable by the time we get here.
-  if (await isCefAvailable()) {
+  // Steam on → only CEF is safe. The settings check matters mid-session: the
+  // port stays open until Steam restarts even after the flag file is deleted.
+  if (isCefDebuggingEnabledInSettings() && (await isCefAvailable())) {
     try {
       await evaluateInSharedJsContext(
         `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${jsString(plan.merged)})`
@@ -281,11 +282,9 @@ export async function writeSteamLaunchOptions(
     }
   }
 
-  // Steam running but no CEF — typically Millennium nuked the flag file, or
-  // the first-run bootstrap restart hasn't happened yet. We can't safely write
-  // to localconfig.vdf while Steam is up (Steam will overwrite on exit), so
-  // surface a `needs-shutdown` signal: caller can prompt the user to restart
-  // Steam, which then takes the Steam-off file-write path.
+  // Steam running but no usable CEF (setting off, Millennium, or first-run
+  // restart pending). Editing localconfig.vdf now is unsafe (Steam overwrites
+  // on exit) → surface `needs-shutdown` so the caller can prompt a restart.
   return {
     mode: 'needs-shutdown',
     reason: 'Steam running without CEF — restart required to apply',

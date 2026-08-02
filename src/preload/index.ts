@@ -230,11 +230,14 @@ const electronAPI: ElectronAPI = {
    * Fires when an install couldn't apply a Steam config change live and the
    * user needs to restart Steam so the CEF debug port opens.
    */
-  onSteamRestartRequired: (callback: () => void) => {
-    const handler = () => callback();
+  onSteamRestartRequired: (callback: (mandatory: boolean) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, mandatory?: boolean) =>
+      callback(mandatory ?? true);
     ipcRenderer.on('steam-restart-required', handler);
     return () => ipcRenderer.removeListener('steam-restart-required', handler);
   },
+  setSteamCefDebugging: (enabled: boolean) =>
+    ipcRenderer.invoke('set-steam-cef-debugging', enabled),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
   isE2E: () => isE2EMode,

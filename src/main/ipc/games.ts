@@ -53,6 +53,7 @@ import {
   trackSupportClick,
   uploadFileToSignedUrl,
 } from '../tracking';
+import { setCefDebuggingEnabled } from '../utils/cef-flag-file';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
@@ -593,6 +594,11 @@ export function setupGamesHandlers(): void {
 
   // Restart Steam
   ipcMain.handle('restart-steam', () => restartSteam());
+
+  // Toggle Steam CEF remote debugging (creates/removes the flag file)
+  ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
+    setCefDebuggingEnabled(enabled)
+  );
 
   // ---------------------------------------------------------------------------
   // Banner API handlers - all banner functionality consolidated here

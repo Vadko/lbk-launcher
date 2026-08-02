@@ -14,6 +14,7 @@ import { getSteamPath } from '@/main/game-detector/steam';
 import { getMainWindow } from '@/main/window';
 import { isCefAvailable } from './steam-cef';
 import { isSteamRunning } from './steam-launcher';
+import { readRendererSetting } from './store-storage';
 
 const FLAG_FILE_NAME = '.cef-enable-remote-debugging';
 
@@ -54,6 +55,14 @@ function getFlagFilePath(): string | null {
   return path.join(steamPath, FLAG_FILE_NAME);
 }
 
+/**
+ * User opt-out from the Settings modal. CEF consumers must check this too —
+ * deleting the flag file doesn't close an already-open debug port.
+ */
+export function isCefDebuggingEnabledInSettings(): boolean {
+  return readRendererSetting('steamCefDebuggingEnabled', true);
+}
+
 function isMillenniumInstalled(): boolean {
   const steamPath = getSteamPath();
   if (!steamPath) {
@@ -91,14 +100,29 @@ function ensureCefFlagFile(): void {
   }
 }
 
+/** Remove the flag file. The debug port closes on the next Steam restart. */
+function removeCefFlagFile(): void {
+  const filePath = getFlagFilePath();
+  if (!filePath) {
+    return;
+  }
+  try {
+    fs.unlinkSync(filePath);
+    console.log(`[CEFFlagFile] Removed ${filePath}`);
+  } catch (error) {
+    // Already gone — the desired end state.
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
+    }
+    console.error('[CEFFlagFile] Failed to remove flag file:', error);
+  }
+}
+
 /**
- * Called once at app startup. Ensures the flag file exists, then if Steam is
- * running but the debug port isn't open yet (= Steam started before the flag
- * was created), forces a mandatory "restart Steam" prompt in the renderer.
- * After that restart the debug port stays open until the user deletes the
- * flag file, so installs never need to prompt for a restart later.
+ * Ensure the flag file exists and prompt for a Steam restart if the debug
+ * port isn't open yet. The prompt is mandatory only at startup.
  */
-export async function bootstrapCefDebugging(): Promise<void> {
+async function enableCefDebugging(mandatoryPrompt: boolean): Promise<void> {
   if (isMillenniumInstalled()) {
     // Pointless to drop the flag file or nag the user — Millennium will delete
     // it again on the next Steam start. Launch-option installs that need CEF
@@ -116,5 +140,30 @@ export async function bootstrapCefDebugging(): Promise<void> {
     return;
   }
 
-  getMainWindow()?.webContents.send('steam-restart-required');
+  // User may have toggled off (file deleted) during the awaits — don't prompt.
+  const filePath = getFlagFilePath();
+  if (!filePath || !fs.existsSync(filePath)) {
+    return;
+  }
+
+  getMainWindow()?.webContents.send('steam-restart-required', mandatoryPrompt);
+}
+
+/** Startup: sync the flag file with the persisted setting. */
+export async function bootstrapCefDebugging(): Promise<void> {
+  await setCefDebuggingEnabled(isCefDebuggingEnabledInSettings(), {
+    mandatoryPrompt: true,
+  });
+}
+
+/** Live toggle from Settings — the renderer persists the value, this syncs the file now. */
+export async function setCefDebuggingEnabled(
+  enabled: boolean,
+  opts: { mandatoryPrompt?: boolean } = {}
+): Promise<void> {
+  if (enabled) {
+    await enableCefDebugging(opts.mandatoryPrompt ?? false);
+  } else {
+    removeCefFlagFile();
+  }
 }

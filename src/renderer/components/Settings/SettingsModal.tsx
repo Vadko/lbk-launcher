@@ -86,6 +86,12 @@ export const SettingsModal: React.FC = () => {
   );
   const gamepadSoundsEnabled = useSettingsStore((state) => state.gamepadSoundsEnabled);
   const toggleGamepadSounds = useSettingsStore((state) => state.toggleGamepadSounds);
+  const steamCefDebuggingEnabled = useSettingsStore(
+    (state) => state.steamCefDebuggingEnabled
+  );
+  const toggleSteamCefDebugging = useSettingsStore(
+    (state) => state.toggleSteamCefDebugging
+  );
 
   // Promo modal dev settings
   const { devMode, setDevMode } = usePromoModalStore();
@@ -112,6 +118,13 @@ export const SettingsModal: React.FC = () => {
     toggleLiquidGlass();
     // Apply the change immediately
     await window.liquidGlassAPI?.toggle(newValue);
+  };
+
+  const handleToggleSteamCefDebugging = () => {
+    const newValue = !steamCefDebuggingEnabled;
+    toggleSteamCefDebugging();
+    // Fire-and-forget — the enable path can probe Steam for ~1.5s.
+    window.electronAPI?.setSteamCefDebugging(newValue).catch(console.error);
   };
 
   const handleKurinSync = useCallback(async () => {
@@ -268,6 +281,13 @@ export const SettingsModal: React.FC = () => {
             description="Автоматично виявляти встановлені на вашому комп'ютері ігри"
             enabled={autoDetectInstalledGames}
             onChange={toggleAutoDetectInstalledGames}
+          />
+          <SettingItem
+            id="steam-cef-debugging"
+            title="Швидке застосування параметрів запуску Steam"
+            description="Створює файл .cef-enable-remote-debugging у теці Steam, щоб застосовувати параметри запуску без перезапуску Steam (після увімкнення потрібен один перезапуск). Якщо вимкнено, файл буде видалено — зверніть увагу: цей самий файл використовує Decky Loader — а параметри запуску оновлюватимуться лише коли Steam закрито"
+            enabled={steamCefDebuggingEnabled}
+            onChange={handleToggleSteamCefDebugging}
           />
           <SettingItem
             id="adult-games"
