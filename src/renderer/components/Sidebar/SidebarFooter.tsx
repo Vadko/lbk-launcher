@@ -29,11 +29,11 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
         {isCompact && (
           <>
             <button
-              onClick={() => navigate('/site/docs')}
+              onClick={() => navigate('/site/guides&tools')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити документацію"
+              title="Відкрити посібники та інструменти"
             >
               <BookOpenText size={20} className="mx-auto text-text-muted" />
             </button>

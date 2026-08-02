@@ -25,9 +25,9 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
         {!isCompact && (
           <div className="flex items-center gap-1">
             <button
-              onClick={() => navigate('/site/docs')}
+              onClick={() => navigate('/site/guides&tools')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити документацію"
+              title="Відкрити посібники та інструменти"
             >
               <BookOpenText size={20} />
             </button>
