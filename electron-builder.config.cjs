@@ -86,6 +86,7 @@ module.exports = {
     // nordicsemi/pc-nrfconnect-launcher.
     verifyUpdateCodeSignature: false,
     forceCodeSigning: false,
+    signExts: ['.dll', '.node'],
     legalTrademarks: '© 2026 LBK UA',
     extraResources: [
       {
