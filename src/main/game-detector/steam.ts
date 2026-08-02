@@ -27,13 +27,21 @@ import {
 // Cache State
 // ============================================================================
 
+/** Installed Steam games from one manifest scan, indexed two ways. */
+export interface InstalledSteamGames {
+  /** installdir (lowercase) -> full path */
+  byFolder: Map<string, string>;
+  /** app id -> full path (authoritative; immune to installdir/folder drift) */
+  byAppId: Map<number, string>;
+}
+
 interface SteamCache {
   /** Steam installation path (undefined = not checked, null = not found) */
   steamPath: string | null | undefined;
   /** Steam library folders */
   libraryFolders: { steamPath: string; folders: string[] } | null;
-  /** Installed Steam games (installdir -> full path) */
-  installedGames: Map<string, string> | null;
+  /** Installed Steam games from one manifest scan (both indexes set together) */
+  installedSteam: InstalledSteamGames | null;
   /** Steam library App IDs (owned games) */
   libraryAppIds: number[] | null;
   /** Last known licensecache size (for watcher comparison) */
@@ -43,7 +51,7 @@ interface SteamCache {
 const cache: SteamCache = {
   steamPath: undefined,
   libraryFolders: null,
-  installedGames: null,
+  installedSteam: null,
   libraryAppIds: null,
   lastKnownLicensecacheSize: null,
 };
@@ -430,16 +438,17 @@ function getSteamLibraryFolders(steamPath: string): string[] {
 /**
  * Get all installed games from appmanifest files (with caching)
  */
-function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
-  if (cache.installedGames !== null) {
+function getAllSteamGames(libraryFolders: string[]): InstalledSteamGames {
+  if (cache.installedSteam !== null) {
     console.log(
-      `[Steam] Using cached installed games (${cache.installedGames.size} games)`
+      `[Steam] Using cached installed games (${cache.installedSteam.byFolder.size} games)`
     );
-    return cache.installedGames;
+    return cache.installedSteam;
   }
 
   console.log('[Steam] Scanning libraries for installed games...');
   const games = new Map<string, string>();
+  const byAppId = new Map<number, string>();
 
   for (const folder of libraryFolders) {
     try {
@@ -458,6 +467,10 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
             const gamePath = path.join(folder, 'common', manifest.installdir);
             if (fs.existsSync(gamePath)) {
               games.set(manifest.installdir.toLowerCase(), gamePath);
+              const appId = Number(manifest.appid);
+              if (Number.isFinite(appId) && appId > 0) {
+                byAppId.set(appId, gamePath);
+              }
               console.log(
                 `[Steam] Found game: ${manifest.name} (${manifest.installdir})`
               );
@@ -472,8 +485,8 @@ function getAllSteamGames(libraryFolders: string[]): Map<string, string> {
     }
   }
 
-  cache.installedGames = games;
-  return games;
+  cache.installedSteam = { byFolder: games, byAppId };
+  return cache.installedSteam;
 }
 
 /**
@@ -551,7 +564,7 @@ export function findSteamGame(
     }
   }
 
-  const installedGames = getAllSteamGames(libraryFolders);
+  const installedGames = getAllSteamGames(libraryFolders).byFolder;
 
   // Try exact match via appmanifest
   const gamePathFromManifest = installedGames.get(normalizedFolderName.toLowerCase());
@@ -590,7 +603,26 @@ export function getAllInstalledSteamGames(): Map<string, string> {
   }
 
   const libraryFolders = getSteamLibraryFolders(steamPath);
+  return getAllSteamGames(libraryFolders).byFolder;
+}
+
+/**
+ * Installed Steam games from one cached manifest scan, indexed by app id
+ * (authoritative — immune to installdir/folder drift) and by installdir.
+ */
+export function getInstalledSteamGames(): InstalledSteamGames {
+  const steamPath = getSteamPath();
+  if (!steamPath) {
+    return { byFolder: new Map(), byAppId: new Map() };
+  }
+
+  const libraryFolders = getSteamLibraryFolders(steamPath);
   return getAllSteamGames(libraryFolders);
+}
+
+/** App ids of installed Steam games (authoritative install signal). */
+export function getInstalledSteamAppIds(): number[] {
+  return [...getInstalledSteamGames().byAppId.keys()];
 }
 
 /**
@@ -602,7 +634,7 @@ export function getInstalledSteamGamePaths(): string[] {
 
   if (steamPath) {
     const libraryFolders = getSteamLibraryFolders(steamPath);
-    const steamGames = getAllSteamGames(libraryFolders);
+    const steamGames = getAllSteamGames(libraryFolders).byFolder;
 
     for (const [installdir] of steamGames.entries()) {
       paths.push(`steamapps/common/${installdir}`);
@@ -754,7 +786,7 @@ export function invalidateSteamPathCache(): void {
  */
 export function invalidateSteamGamesCache(): void {
   console.log('[Steam] Invalidating games cache');
-  cache.installedGames = null;
+  cache.installedSteam = null;
 }
 
 /**

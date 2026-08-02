@@ -44,14 +44,16 @@ export function findGamesByInstallPaths(
   installPaths: string[],
   searchQuery?: string,
   hideAiTranslations = false,
-  sortOrder: SortOrderType = 'name'
+  sortOrder: SortOrderType = 'name',
+  steamAppIds: number[] = []
 ): GetGamesResult {
   try {
     return gamesRepo.findGamesByInstallPaths(
       installPaths,
       searchQuery,
       hideAiTranslations,
-      sortOrder
+      sortOrder,
+      steamAppIds
     );
   } catch (error) {
     console.error('[API] Error finding games by install paths:', error);

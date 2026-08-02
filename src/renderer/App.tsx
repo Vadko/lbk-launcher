@@ -50,14 +50,8 @@ if (!isE2E) {
 })();
 
 export const App: React.FC = () => {
-  const {
-    detectInstalledGames,
-    loadSteamGames,
-    clearSteamGamesCache,
-    clearDetectedGamesCache,
-    setSyncStatus,
-  } = useStore();
-  const { autoDetectInstalledGames, liquidGlassEnabled } = useSettingsStore();
+  const { detectInstalledGames, setSyncStatus, syncStatus } = useStore();
+  const { liquidGlassEnabled } = useSettingsStore();
   const setGamepadMode = useGamepadModeStore((s) => s.setGamepadMode);
   const [online, setOnline] = useState(navigator.onLine);
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
@@ -264,12 +258,6 @@ export const App: React.FC = () => {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  useIdleEffect(() => {
-    if (window.electronAPI) {
-      loadSteamGames();
-    }
-  }, [loadSteamGames]);
-
   // Завантажити встановлені українізатори при старті
   useIdleEffect(() => {
     if (window.electronAPI) {
@@ -277,21 +265,13 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Детекція встановлених ігор на початку (якщо увімкнено)
-  useIdleEffect(async () => {
-    if (!autoDetectInstalledGames || !window.electronAPI) {
-      return;
+  // Детекція встановлених ігор — тільки коли sync завершився (інакше каталог ще
+  // порожній). Ефект перезапускається, коли syncStatus стане ready/error.
+  useIdleEffect(() => {
+    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
+      detectInstalledGames();
     }
-
-    // Отримати всі ігри з локальної бази
-    const result = await window.electronAPI.fetchGames();
-    if (result.games.length === 0) {
-      console.log('[App] No games in database yet, skipping initial detection');
-      return;
-    }
-    console.log('[App] Running initial game detection for', result.games.length, 'games');
-    await detectInstalledGames(result.games);
-  }, [autoDetectInstalledGames, detectInstalledGames]);
+  }, [detectInstalledGames, syncStatus]);
 
   // Слухати зміни Steam бібліотеки
   useEffect(() => {
@@ -300,35 +280,17 @@ export const App: React.FC = () => {
     }
 
     const handleSteamLibraryChange = async () => {
-      console.log('[App] Steam library changed, clearing cache and reloading');
-
-      // Очистити кеші (installedTranslations НЕ очищаємо - це українізатори, вони персістентні в installation-cache/)
-      clearSteamGamesCache();
-      clearDetectedGamesCache();
-
-      // Перезавантажити Steam ігри
-      await loadSteamGames();
-
-      // Якщо увімкнено автодетекцію - перезапустити її
-      if (autoDetectInstalledGames) {
-        const result = await window.electronAPI.fetchGames();
-        if (result.games.length > 0) {
-          await detectInstalledGames(result.games);
-        }
-      }
+      console.log('[App] Steam library changed, re-detecting installed games');
+      // detectInstalledGames replaces the map wholesale on success and, on
+      // error, leaves the previous detection intact — no pre-clear needed.
+      await detectInstalledGames();
     };
 
     const unsubscribe = window.electronAPI.onSteamLibraryChanged?.(
       handleSteamLibraryChange
     );
     return unsubscribe;
-  }, [
-    autoDetectInstalledGames,
-    detectInstalledGames,
-    loadSteamGames,
-    clearSteamGamesCache,
-    clearDetectedGamesCache,
-  ]);
+  }, [detectInstalledGames]);
 
   // Слухати зміни встановлених українізаторів
   // Цей listener потрібен для всіх змін: інсталяція, деінсталяція, зовнішні зміни
