@@ -40,7 +40,6 @@ interface SettingsStore {
   appUpdateNotificationsEnabled: boolean;
   gameUpdateNotificationsEnabled: boolean;
   createBackupBeforeInstall: boolean;
-  autoDetectInstalledGames: boolean;
   showAdultGames: boolean;
   hideAiTranslations: boolean;
   liquidGlassEnabled: boolean;
@@ -63,7 +62,6 @@ interface SettingsStore {
   toggleAppUpdateNotifications: () => void;
   toggleGameUpdateNotifications: () => void;
   toggleCreateBackup: () => void;
-  toggleAutoDetectInstalledGames: () => void;
   toggleShowAdultGames: () => void;
   toggleHideAiTranslations: () => void;
   toggleLiquidGlass: () => void;
@@ -81,7 +79,6 @@ export const useSettingsStore = create<SettingsStore>()(
       appUpdateNotificationsEnabled: true,
       gameUpdateNotificationsEnabled: true,
       createBackupBeforeInstall: true,
-      autoDetectInstalledGames: true,
       showAdultGames: false,
       hideAiTranslations: false,
       liquidGlassEnabled: fancyEffectsByDefault,
@@ -148,9 +145,6 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleCreateBackup: () =>
         set((state) => ({ createBackupBeforeInstall: !state.createBackupBeforeInstall })),
 
-      toggleAutoDetectInstalledGames: () =>
-        set((state) => ({ autoDetectInstalledGames: !state.autoDetectInstalledGames })),
-
       toggleShowAdultGames: () =>
         set((state) => ({ showAdultGames: !state.showAdultGames })),
 
@@ -191,7 +185,6 @@ export const useSettingsStore = create<SettingsStore>()(
         appUpdateNotificationsEnabled: state.appUpdateNotificationsEnabled,
         gameUpdateNotificationsEnabled: state.gameUpdateNotificationsEnabled,
         createBackupBeforeInstall: state.createBackupBeforeInstall,
-        autoDetectInstalledGames: state.autoDetectInstalledGames,
         showAdultGames: state.showAdultGames,
         hideAiTranslations: state.hideAiTranslations,
         liquidGlassEnabled: state.liquidGlassEnabled,

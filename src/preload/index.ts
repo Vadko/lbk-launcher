@@ -39,7 +39,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('fetch-recommended-games', gameId, limit, hideAiTranslations),
   syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),
-  getAllInstalledSteamGames: () => ipcRenderer.invoke('get-all-installed-steam-games'),
+  getDetectedGames: () => ipcRenderer.invoke('get-detected-games'),
   getAvailableProtons: () => ipcRenderer.invoke('get-available-protons'),
   findGamesByInstallPaths: (
     installPaths: string[],
