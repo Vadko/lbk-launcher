@@ -9,7 +9,7 @@ const store = new ElectronStore({
  * Read a value from the store (returns raw string or null).
  * Used by sync IPC handler and directly by main process (e.g. liquid glass preference).
  */
-export function readStoreFile(key: string): string | null {
+function readStoreFile(key: string): string | null {
   const value = store.get(key) as string | undefined;
   return value ?? null;
 }
