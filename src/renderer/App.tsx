@@ -8,6 +8,7 @@ import { useRealtimeGames } from './hooks/useRealtimeGames';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
 import { NewsPage } from './pages/NewsPage';
+import { SitePage } from './pages/SitePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
@@ -413,6 +414,7 @@ export const App: React.FC = () => {
         >
           <Route index element={<HomePage />} />
           <Route path="/news" element={<NewsPage />} />
+          <Route path="/site/:page" element={<SitePage />} />
           <Route path="/game/:gameId" element={<GamePage />} />
         </Route>
       }
