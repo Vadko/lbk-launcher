@@ -12,7 +12,9 @@ import {
   Users,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import { useNavigate, useParams } from 'react-router-dom';
+import remarkBreaks from 'remark-breaks';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
 import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
 import { AuthorsList } from '../components/MainContent/AuthorsList';
@@ -45,6 +47,19 @@ import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
+
+const ALLOWED_ELEMENTS = ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'code'];
+const COMPONENTS: Components = {
+  ul: ({ node: _node, ...props }) => (
+    <ul className="list-disc list-inside leading-none" {...props} />
+  ),
+  ol: ({ node: _node, ...props }) => (
+    <ol className="list-decimal list-inside leading-none" {...props} />
+  ),
+  code: ({ node: _node, ...props }) => (
+    <code className="bg-black/30 rounded px-1! font-mono" {...props} />
+  ),
+};
 
 /**
  * Сторінка детальної інформації про гру
@@ -807,9 +822,17 @@ export const GamePage: React.FC = () => {
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про українізатор
               </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line break-words">
-                {selectedGame.description}
-              </p>
+              <div className="text-text-muted leading-5 whitespace-pre-line break-words">
+                <ReactMarkdown
+                  // remark-breaks дозволяє переносити рядки зроблені у редакторі через Shift+Enter, бо звичайний markdown їх ігнорує
+                  remarkPlugins={[remarkBreaks]}
+                  allowedElements={ALLOWED_ELEMENTS}
+                  unwrapDisallowed
+                  components={COMPONENTS}
+                >
+                  {selectedGame.description}
+                </ReactMarkdown>
+              </div>
             </motion.section>
           )}
 
@@ -850,9 +873,17 @@ export const GamePage: React.FC = () => {
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про гру
               </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line break-words">
-                {selectedGame.game_description}
-              </p>
+              <div className="text-text-muted leading-5 whitespace-pre-line break-words">
+                <ReactMarkdown
+                  // remark-breaks дозволяє переносити рядки зроблені у редакторі через Shift+Enter, бо звичайний markdown їх ігнорує
+                  remarkPlugins={[remarkBreaks]}
+                  allowedElements={ALLOWED_ELEMENTS}
+                  unwrapDisallowed
+                  components={COMPONENTS}
+                >
+                  {selectedGame.game_description}
+                </ReactMarkdown>
+              </div>
             </motion.section>
           )}
 
