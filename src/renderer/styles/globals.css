@@ -425,7 +425,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .no-animations .glass-panel,
 .no-animations .glass-card,
 .no-animations .glass-card-no-motion {
-  background: rgba(15, 15, 16, 0.6) !important;
+  background: rgba(23, 23, 23, 0.8) !important;
 }
 
 .no-animations [class*="group-hover:scale-"] {

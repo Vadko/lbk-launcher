@@ -52,6 +52,7 @@
     "cyrillic-to-translit-js": "3.2.1",
     "electron-router-dom": "^2.1.1",
     "electron-store": "8.2.0",
+    "electron-window-state": "^5.0.3",
     "fast-vdf": "3.1.1",
     "framer-motion": "12.38.0",
     "got": "11.8.6",
