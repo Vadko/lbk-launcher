@@ -110,6 +110,91 @@ export type Database = {
           },
         ]
       }
+      archive_scan_queue: {
+        Row: {
+          archive_hash: string | null
+          archive_path: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          game_id: string | null
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          pending_bundles: Json | null
+          priority: number
+          report: Json | null
+          retry_after: string | null
+          retry_count: number
+          slot: string
+          started_at: string | null
+          status: string
+          verdict: string | null
+          version_id: string | null
+        }
+        Insert: {
+          archive_hash?: string | null
+          archive_path: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          pending_bundles?: Json | null
+          priority?: number
+          report?: Json | null
+          retry_after?: string | null
+          retry_count?: number
+          slot?: string
+          started_at?: string | null
+          status?: string
+          verdict?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          archive_hash?: string | null
+          archive_path?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          pending_bundles?: Json | null
+          priority?: number
+          report?: Json | null
+          retry_after?: string | null
+          retry_count?: number
+          slot?: string
+          started_at?: string | null
+          status?: string
+          verdict?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_scan_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_scan_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "archive_scan_queue_version_id_fkey"
+            columns: ["version_id"]
+            referencedRelation: "game_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authors: {
         Row: {
           created_at: string | null
