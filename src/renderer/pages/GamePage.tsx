@@ -33,6 +33,7 @@ import { FeedbackModal } from '../components/Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../components/Modal/InstallOptionsDialog';
 import { Placement } from '../components/Placements';
 import { Button } from '../components/ui/Button';
+import { MarkdownText } from '../components/ui/MarkdownText';
 import { SubscribeButton } from '../components/ui/SubscribeButton';
 import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
@@ -807,9 +808,10 @@ export const GamePage: React.FC = () => {
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про українізатор
               </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line break-words">
-                {selectedGame.description}
-              </p>
+              <MarkdownText
+                text={selectedGame.description}
+                className="text-text-muted leading-relaxed break-words"
+              />
             </motion.section>
           )}
 
@@ -850,9 +852,10 @@ export const GamePage: React.FC = () => {
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
                 Про гру
               </h3>
-              <p className="text-text-muted leading-relaxed whitespace-pre-line break-words">
-                {selectedGame.game_description}
-              </p>
+              <MarkdownText
+                text={selectedGame.game_description}
+                className="text-text-muted leading-relaxed break-words"
+              />
             </motion.section>
           )}
 
