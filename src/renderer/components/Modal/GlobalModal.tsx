@@ -62,7 +62,9 @@ export const GlobalModal: React.FC = () => {
                   key={index}
                   onClick={() => {
                     action.onClick();
-                    closeModal();
+                    if (!action.keepOpen) {
+                      closeModal();
+                    }
                   }}
                   className={`w-full px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity ${
                     action.variant === 'danger'

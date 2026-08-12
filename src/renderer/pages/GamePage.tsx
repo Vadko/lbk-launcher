@@ -572,7 +572,7 @@ export const GamePage: React.FC = () => {
                   icon={<ReplaceAllIcon size={20} />}
                   onClick={handleRerunInstaller}
                   data-gamepad-action
-                  title="Запустити інсталятор повторно"
+                  title="Запустити інсталятор/скрипт повторно"
                 >
                   Перевстановити
                 </Button>

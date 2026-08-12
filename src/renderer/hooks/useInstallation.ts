@@ -411,6 +411,46 @@ export function useInstallation({
     setInstallationProgress,
   ]);
 
+  // Listen for the main process asking whether to launch the freshly extracted
+  // installer/script now. It blocks the install promise until we respond.
+  useEffect(() => {
+    if (!window.electronAPI?.onRequestRunInstallerConfirm) {
+      return;
+    }
+
+    const unsubscribe = window.electronAPI.onRequestRunInstallerConfirm(
+      (gameId, installerPath, isExe) => {
+        const label = isExe ? 'інсталятор' : 'скрипт';
+        showModal({
+          title: `Запуск ${isExe ? 'інсталятора' : 'скрипта'}`,
+          message: `Українізатор завантажено та розпаковано.\n\nЗапустити ${label} зараз?`,
+          type: 'info',
+          mandatory: true,
+          actions: [
+            {
+              label: 'Відкрити папку',
+              onClick: () => window.electronAPI.showItemInFolder(installerPath),
+              variant: 'secondary',
+              keepOpen: true,
+            },
+            {
+              label: 'Так, запустити',
+              onClick: () => window.electronAPI.respondRunInstaller(gameId, true),
+              variant: 'primary',
+            },
+            {
+              label: 'Ні',
+              onClick: () => window.electronAPI.respondRunInstaller(gameId, false),
+              variant: 'secondary',
+            },
+          ],
+        });
+      }
+    );
+
+    return unsubscribe;
+  }, [showModal]);
+
   const handleConflictingTranslation = useCallback(
     async (conflict: ConflictingTranslation): Promise<boolean> =>
       new Promise((resolve) => {
@@ -613,6 +653,8 @@ export function useInstallation({
 
       if (hasInstaller) {
         const isLinux = (await window.electronAPI.getPlatform()) === 'linux';
+        const isExe =
+          selectedGame.installation_file_windows_path?.endsWith('.exe') || false;
         const needsProton =
           isLinux &&
           !selectedGame.installation_file_linux_path &&
@@ -679,9 +721,8 @@ export function useInstallation({
           }
         } else {
           showConfirm({
-            title: 'Запуск інсталятора',
-            message:
-              'Після завантаження та розпакування українізатора буде запущено інсталятор.\n\nПродовжити встановлення?',
+            title: `Запуск ${isExe ? 'інсталятора' : 'скрипта'}`,
+            message: `Після завантаження та розпакування українізатора буде запущено ${isExe ? 'інсталятор' : 'скрипт'}.\n\nПродовжити встановлення?`,
             confirmText: 'Продовжити',
             cancelText: 'Скасувати',
             onConfirm: async () => {

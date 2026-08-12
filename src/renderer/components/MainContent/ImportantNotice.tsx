@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react';
+import { Settings, TerminalSquare } from 'lucide-react';
 import React from 'react';
 import type { Game } from '@/shared/types';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
@@ -11,6 +11,7 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
   const langHint = getLanguageHint(game.source_language);
   const hasInstaller =
     !!game.installation_file_windows_path || !!game.installation_file_linux_path;
+  const isExe = game.installation_file_windows_path?.endsWith('.exe') || false;
 
   // Don't show if no important info
   if (!langHint && !hasInstaller) {
@@ -22,8 +23,12 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
       {/* Installer Notice */}
       {hasInstaller && (
         <span className="text-text-muted flex items-center gap-1">
-          <Settings size={16} className="flex-shrink-0" />
-          Інсталятор
+          {isExe ? (
+            <Settings size={16} className="flex-shrink-0" />
+          ) : (
+            <TerminalSquare size={16} className="flex-shrink-0" />
+          )}
+          {isExe ? 'Інсталятор' : 'Скрипт'}
         </span>
       )}
       <div className="divider w-0 h-auto border-l border-border-hover last:hidden first:hidden" />

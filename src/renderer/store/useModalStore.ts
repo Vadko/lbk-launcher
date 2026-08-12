@@ -28,6 +28,8 @@ interface ModalAction {
   label: string;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'danger';
+  /** Run onClick without closing the modal — for actions like "open folder". */
+  keepOpen?: boolean;
 }
 
 interface ModalStore {

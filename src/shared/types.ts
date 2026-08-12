@@ -238,6 +238,17 @@ export interface ElectronAPI {
   ) => Promise<InstallResult>;
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
+  showItemInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * Fires after the installer/script has been downloaded and extracted, before it
+   * runs, so the renderer can ask the user whether to launch it now. The renderer
+   * must eventually call `respondRunInstaller` with the same gameId or the install
+   * promise on the main process stays pending forever.
+   */
+  onRequestRunInstallerConfirm: (
+    callback: (gameId: string, installerPath: string, isExe: boolean) => void
+  ) => () => void;
+  respondRunInstaller: (gameId: string, shouldRun: boolean) => void;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
   pauseDownload: (
     gameId: string
