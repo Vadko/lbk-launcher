@@ -110,6 +110,91 @@ export type Database = {
           },
         ]
       }
+      archive_scan_queue: {
+        Row: {
+          archive_etag: string | null
+          archive_path: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          game_id: string | null
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          pending_bundles: Json | null
+          priority: number
+          report: Json | null
+          retry_after: string | null
+          retry_count: number
+          slot: string
+          started_at: string | null
+          status: string
+          verdict: string | null
+          version_id: string | null
+        }
+        Insert: {
+          archive_etag?: string | null
+          archive_path: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          pending_bundles?: Json | null
+          priority?: number
+          report?: Json | null
+          retry_after?: string | null
+          retry_count?: number
+          slot?: string
+          started_at?: string | null
+          status?: string
+          verdict?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          archive_etag?: string | null
+          archive_path?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          game_id?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          pending_bundles?: Json | null
+          priority?: number
+          report?: Json | null
+          retry_after?: string | null
+          retry_count?: number
+          slot?: string
+          started_at?: string | null
+          status?: string
+          verdict?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_scan_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_scan_queue_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "archive_scan_queue_version_id_fkey"
+            columns: ["version_id"]
+            referencedRelation: "game_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authors: {
         Row: {
           created_at: string | null
@@ -690,6 +775,9 @@ export type Database = {
           logo_path: string | null
           name: string
           platforms: string[]
+          scan_report: Json | null
+          scan_status: string | null
+          scanned_at: string | null
           screenshots: string[] | null
           search_keywords: string | null
           source_language: string | null
@@ -787,6 +875,9 @@ export type Database = {
           logo_path?: string | null
           name: string
           platforms?: string[]
+          scan_report?: Json | null
+          scan_status?: string | null
+          scanned_at?: string | null
           screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
@@ -884,6 +975,9 @@ export type Database = {
           logo_path?: string | null
           name?: string
           platforms?: string[]
+          scan_report?: Json | null
+          scan_status?: string | null
+          scanned_at?: string | null
           screenshots?: string[] | null
           search_keywords?: string | null
           source_language?: string | null
@@ -2383,6 +2477,15 @@ export type Database = {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
       }
+      apply_scan_slot: {
+        Args: {
+          p_entry: Json
+          p_expect_etag?: string
+          p_slot: string
+          p_version_id: string
+        }
+        Returns: undefined
+      }
       check_download_rate_limit: {
         Args: {
           p_game_id: string
@@ -2601,10 +2704,15 @@ export type Database = {
       is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
+      prune_scan_slots: {
+        Args: { p_slots: string[]; p_version_id: string }
+        Returns: undefined
+      }
       remove_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
       }
+      scan_verdict_rank: { Args: { verdict: string }; Returns: number }
       search_steam_apps: {
         Args: { limit_val?: number; offset_val?: number; search_query: string }
         Returns: {

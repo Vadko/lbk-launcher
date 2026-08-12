@@ -1,4 +1,7 @@
 enablePrePostScripts: true
+minimumReleaseAge: 4320
+dangerouslyAllowAllBuilds: false
+
 allowBuilds:
   '@sentry/cli': true
   '@swc/core': true
