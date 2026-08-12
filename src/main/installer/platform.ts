@@ -7,6 +7,7 @@ import { getSteamPath } from '../game-detector';
 import { getTransliteratedPath } from '../utils/files';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
 import { getCleanEnv } from './archive';
+import { readInstallationInfo, saveInstallationInfo } from './cache';
 import { runProton } from './proton';
 
 /**
@@ -586,6 +587,13 @@ export async function rerunInstaller(
     const installerFileName = path.basename(installerPath);
 
     await runInstaller(extractDir, installerFileName, undefined, protonPath);
+
+    // Installer ran successfully this time — clear a stale error badge left
+    // over from a previous failed/declined run.
+    const existingInfo = readInstallationInfo(extractDir);
+    if (existingInfo?.hasInstallError) {
+      await saveInstallationInfo(extractDir, { ...existingInfo, hasInstallError: false });
+    }
   } catch (error) {
     console.error('[Installer] Error re-running installer:', error);
     throw new Error(
