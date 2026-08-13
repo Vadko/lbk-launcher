@@ -12,7 +12,7 @@ const REMARK_REHYPE_OPTIONS: Options['remarkRehypeOptions'] = {
   },
 };
 
-const LIST_CLASS = 'list-outside pl-5 space-y-1';
+const LIST_CLASS = 'list-outside pl-5 space-y-1 leading-snug';
 
 const COMPONENTS: Components = {
   ul: ({ node: _node, ...props }) => (
