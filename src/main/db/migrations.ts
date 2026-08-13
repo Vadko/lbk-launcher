@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 
 /**
  * Interface for migration
@@ -1181,6 +1182,60 @@ const migrations: Migration[] = [
         db.exec(`ALTER TABLE games ADD COLUMN user_unlocked INTEGER NOT NULL DEFAULT 0;`);
         console.log('[Migrations] Completed: add_user_unlocked_column');
       }
+    },
+  },
+  {
+    name: 'reindex_fts_without_apostrophes',
+    up: (db) => {
+      const migrationDone = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_reindex_fts_apostrophes_done'"
+        )
+        .get() as { count: number };
+
+      if (migrationDone.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: reindex_fts_without_apostrophes');
+
+      // Індекс перебудовуємо локально з наявних рядків — на відміну від решти
+      // resync_* міграцій, тут нічого не треба заново тягнути з Supabase.
+      const rows = db.prepare('SELECT id, name, search_keywords FROM games').all() as {
+        id: string;
+        name: string;
+        search_keywords: string | null;
+      }[];
+
+      const reindex = db.transaction(() => {
+        const updateStmt = db.prepare('UPDATE games SET name_search = ? WHERE id = ?');
+        const insertStmt = db.prepare(
+          'INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)'
+        );
+
+        db.exec('DELETE FROM games_fts');
+
+        for (const row of rows) {
+          const nameSearch = generateSearchableString(row.name);
+          updateStmt.run(nameSearch, row.id);
+          insertStmt.run(
+            row.id,
+            nameSearch,
+            row.search_keywords ? withStrippedVariant(row.search_keywords) : null
+          );
+        }
+      });
+
+      reindex();
+
+      db.exec(`
+        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
+        VALUES ('migration_reindex_fts_apostrophes_done', '1', datetime('now'))
+      `);
+
+      console.log(
+        `[Migrations] Completed: reindex_fts_without_apostrophes (${rows.length} games)`
+      );
     },
   },
 ];

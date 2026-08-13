@@ -2,7 +2,7 @@ import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
-import { buildFtsQuery } from '../../shared/search-utils';
+import { buildFtsQuery, stripApostrophes } from '../../shared/search-utils';
 import type {
   Game,
   GetGamesParams,
@@ -293,7 +293,8 @@ export class GamesRepository {
     orderClause: string
   ): Game[] {
     try {
-      const queryWords = searchQuery
+      // словник spellfix — без апострофів (extractUniqueWords), запит теж стріпаємо
+      const queryWords = stripApostrophes(searchQuery)
         .toLowerCase()
         .split(/\s+/)
         .filter((w) => w.length >= 3);
