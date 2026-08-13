@@ -1,6 +1,6 @@
 import CyrillicToTranslit from 'cyrillic-to-translit-js';
 
-const translitUk = CyrillicToTranslit({preset: 'uk'});
+const translitUk = CyrillicToTranslit({ preset: 'uk' });
 
 function getTransliteration(input: string): string | null {
   const hasCyrillic = /[а-яіїєґА-ЯІЇЄҐ]/.test(input);
@@ -23,7 +23,6 @@ function getTransliteration(input: string): string | null {
   return null;
 }
 
-
 export function stripApostrophes(value: string): string {
   return value.replace(/['’ʼ‘ʻʹ′＇`´]/g, '');
 }
@@ -42,9 +41,9 @@ export function generateSearchableString(name: string): string {
 
 function tokenize(value: string): string[] {
   return value
-  .toLowerCase()
-  .split(/[^\p{L}\p{N}]+/u)
-  .filter((t) => t.length >= 2);
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 2);
 }
 
 function escapeFtsToken(token: string): string {
@@ -57,7 +56,7 @@ export function buildFtsQuery(input: string): string {
   }
 
   const buildExpr = (tokens: string[]) =>
-  tokens.map((t) => `"${escapeFtsToken(t)}"*`).join(' AND ');
+    tokens.map((t) => `"${escapeFtsToken(t)}"*`).join(' AND ');
 
   // Індекс без апострофів, тому основна форма — теж без них. Але сирий варіант
   // лишаємо в OR: інакше «heaven's» перестане ловити «Heavenly Sword», бо «s»
@@ -87,8 +86,8 @@ export function buildFtsQuery(input: string): string {
 
 export function teamToSlug(team: string): string {
   return translitUk
-  .transform(team)
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '');
+    .transform(team)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
