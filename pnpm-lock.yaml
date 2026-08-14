@@ -83,9 +83,6 @@ importers:
       remark-breaks:
         specifier: ^4.0.0
         version: 4.0.0
-      swiper:
-        specifier: 12.1.4
-        version: 12.1.4
       zustand:
         specifier: 4.5.7
         version: 4.5.7(@types/react@19.2.14)(react@19.2.6)
@@ -4188,10 +4185,6 @@ packages:
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
-
-  swiper@12.1.4:
-    resolution: {integrity: sha512-bihiwoKMOQwW8FfdUbo1DgkVH25E+4ZELIq0oopL1KTKBteLuaTMi/wwFjMxtlhTkk45k3XQ89D1Fvv0spSqBA==}
-    engines: {node: '>= 4.7.0'}
 
   tailwindcss@3.4.19:
     resolution: {integrity: sha512-3ofp+LL8E+pK/JuPLPggVAIaEuhvIz4qNcf3nA1Xn2o/7fb7s/TYpHhwGDv1ZU3PkBluUVaF8PyCHcm48cKLWQ==}
@@ -8933,8 +8926,6 @@ snapshots:
       has-flag: 4.0.0
 
   supports-preserve-symlinks-flag@1.0.0: {}
-
-  swiper@12.1.4: {}
 
   tailwindcss@3.4.19(yaml@2.9.0):
     dependencies:
