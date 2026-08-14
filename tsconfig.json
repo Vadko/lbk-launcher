@@ -21,7 +21,6 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Path mapping */
-    "baseUrl": ".",
     "types": ["electron-vite/node"],
     "paths": {
       "@/*": ["./src/*"],
