@@ -26,8 +26,13 @@
     !pragma warning disable 6030
 
     ; --- Shown during the actual install (most visible string).
-    ; "В один клац" — phrase from the landing page TypewriterText hero. ---
-    LangString installing ${LANG_UKRAINIAN} "Встановлюємо. Скоро гратимете українською в один клац!"
+    ; Keep it under ~45 characters. The one-click installer renders this with
+    ; SpiderBanner into a single-line, fixed-width static control (control 1000,
+    ; see app-builder-lib templates/nsis/installSection.nsh); anything wider is
+    ; silently clipped, with no wrap and no ellipsis. The banner's size can't be
+    ; configured — `SpiderBanner::Show` takes only position and distance — so
+    ; the text is what has to fit. ---
+    LangString installing ${LANG_UKRAINIAN} "Встановлюємо. Скоро гратимете українською!"
 
     ; --- App-already-running prompt before reinstall/update ---
     LangString appRunning ${LANG_UKRAINIAN} "Упс, ${PRODUCT_NAME} ще працює.$\r$\nНатисніть «ОК» — ми його чемно закриємо за вас.$\r$\nЯкщо не закриється — спробуйте вручну."
