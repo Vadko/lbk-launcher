@@ -1124,6 +1124,7 @@ export type Database = {
           steam_mac_archive_hash: string | null
           steam_mac_archive_path: string | null
           steam_mac_archive_size: string | null
+          steam_tag_ids: number[] | null
           subscriptions: number | null
           support_url: string | null
           team: string
@@ -1229,6 +1230,7 @@ export type Database = {
           steam_mac_archive_hash?: string | null
           steam_mac_archive_path?: string | null
           steam_mac_archive_size?: string | null
+          steam_tag_ids?: number[] | null
           subscriptions?: number | null
           support_url?: string | null
           team: string
@@ -1334,6 +1336,7 @@ export type Database = {
           steam_mac_archive_hash?: string | null
           steam_mac_archive_path?: string | null
           steam_mac_archive_size?: string | null
+          steam_tag_ids?: number[] | null
           subscriptions?: number | null
           support_url?: string | null
           team?: string
@@ -1820,18 +1823,21 @@ export type Database = {
           created_at: string
           installdir: string | null
           name: string
+          tag_ids: number[] | null
         }
         Insert: {
           app_id: number
           created_at?: string
           installdir?: string | null
           name: string
+          tag_ids?: number[] | null
         }
         Update: {
           app_id?: number
           created_at?: string
           installdir?: string | null
           name?: string
+          tag_ids?: number[] | null
         }
         Relationships: []
       }
