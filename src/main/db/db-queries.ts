@@ -3,7 +3,7 @@
  * Використовується в games-repository.ts та db-worker.ts
  */
 import type Database from 'better-sqlite3';
-import { generateSearchableString } from '../../shared/search-utils';
+import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 import type { Game, Database as SupabaseDatabase } from '../../shared/types';
 
 /**
@@ -319,6 +319,11 @@ function rebuildSpellfixDictionary(db: Database.Database): void {
   }
 }
 
+/** У колонці games лишається сире значення, нормалізуємо лише копію в FTS. */
+function ftsKeywords(value: string | null): string | null {
+  return value ? withStrippedVariant(value) : null;
+}
+
 /**
  * Batch upsert ігор в транзакції
  */
@@ -334,7 +339,7 @@ export function upsertGamesTransaction(db: Database.Database, games: Game[]): vo
       const params = gameToInsertParams(game);
       gameStmt.run(params);
       ftsDeleteStmt.run(game.id);
-      ftsInsertStmt.run(game.id, params.name_search, params.search_keywords);
+      ftsInsertStmt.run(game.id, params.name_search, ftsKeywords(params.search_keywords));
     }
   });
 
@@ -356,7 +361,7 @@ export function upsertGameSingle(db: Database.Database, game: Game): void {
   db.prepare('DELETE FROM games_fts WHERE game_id = ?').run(game.id);
   db.prepare(
     'INSERT INTO games_fts (game_id, name_search, search_keywords) VALUES (?, ?, ?)'
-  ).run(game.id, params.name_search, params.search_keywords);
+  ).run(game.id, params.name_search, ftsKeywords(params.search_keywords));
 }
 
 /**

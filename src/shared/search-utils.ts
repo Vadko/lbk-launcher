@@ -23,11 +23,20 @@ function getTransliteration(input: string): string | null {
   return null;
 }
 
+export function stripApostrophes(value: string): string {
+  return value.replace(/['’ʼ‘ʻʹ′＇`´]/g, '');
+}
+
+export function withStrippedVariant(value: string): string {
+  const stripped = stripApostrophes(value);
+  return stripped === value ? value : `${value} ${stripped}`;
+}
+
 export function generateSearchableString(name: string): string {
   const nameLower = name.toLowerCase();
   const translit = getTransliteration(name);
 
-  return translit ? `${nameLower} ${translit}` : nameLower;
+  return withStrippedVariant(translit ? `${nameLower} ${translit}` : nameLower);
 }
 
 function tokenize(value: string): string[] {
@@ -49,16 +58,27 @@ export function buildFtsQuery(input: string): string {
   const buildExpr = (tokens: string[]) =>
     tokens.map((t) => `"${escapeFtsToken(t)}"*`).join(' AND ');
 
-  const primary = tokenize(input);
+  // Індекс без апострофів, тому основна форма — теж без них. Але сирий варіант
+  // лишаємо в OR: інакше «heaven's» перестане ловити «Heavenly Sword», бо «s»
+  // приклеїться до слова й зламає префіксний матч.
   const translit = getTransliteration(input);
-  const translitTokens = translit ? tokenize(translit) : [];
+  const sources = [stripApostrophes(input), input];
+  if (translit) {
+    sources.push(stripApostrophes(translit), translit);
+  }
 
   const exprs: string[] = [];
-  if (primary.length) {
-    exprs.push(`(${buildExpr(primary)})`);
-  }
-  if (translitTokens.length) {
-    exprs.push(`(${buildExpr(translitTokens)})`);
+  const seen = new Set<string>();
+  for (const source of sources) {
+    const tokens = tokenize(source);
+    if (!tokens.length) {
+      continue;
+    }
+    const expr = `(${buildExpr(tokens)})`;
+    if (!seen.has(expr)) {
+      seen.add(expr);
+      exprs.push(expr);
+    }
   }
 
   return exprs.join(' OR ');
