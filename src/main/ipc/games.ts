@@ -177,12 +177,12 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Fetch recommended games for game page (currently from local JSON source)
+  // Fetch recommended games for game page (динамічно за перетином Steam-тегів)
   ipcMain.handle(
     'fetch-recommended-games',
-    async (_, gameId: string, limit = 3, hideAiTranslations = false) => {
+    (_, gameId: string, limit = 3, hideAiTranslations = false) => {
       try {
-        return await fetchRecommendedGames(gameId, limit, hideAiTranslations);
+        return fetchRecommendedGames(gameId, limit, hideAiTranslations);
       } catch (error) {
         console.error('Error fetching recommended games:', error);
         return [];

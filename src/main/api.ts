@@ -114,13 +114,13 @@ export function countGamesBySteamAppIds(steamAppIds: number[]): number {
   }
 }
 
-export async function fetchRecommendedGames(
+export function fetchRecommendedGames(
   gameId: string,
   limit = 3,
   hideAiTranslations = false
-): Promise<Game[]> {
+): Game[] {
   try {
-    const recommendedIds = await getRecommendedGameIds(gameId);
+    const recommendedIds = getRecommendedGameIds(gameId, Math.max(0, limit));
     const normalizedLimit = Math.max(0, limit);
     const uniqueIds = [...new Set(recommendedIds)].slice(0, normalizedLimit);
 
@@ -131,7 +131,6 @@ export async function fetchRecommendedGames(
     const games = fetchGamesByIds(uniqueIds, undefined, hideAiTranslations);
     const gamesById = new Map(games.map((game) => [game.id, game]));
 
-    // Preserve recommendation order from source (JSON now, backend later)
     return uniqueIds
       .map((id) => gamesById.get(id))
       .filter((game): game is Game => game !== undefined);

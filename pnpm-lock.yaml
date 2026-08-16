@@ -23,6 +23,9 @@ importers:
       better-sqlite3:
         specifier: 12.9.0
         version: 12.9.0
+      chance:
+        specifier: 1.1.13
+        version: 1.1.13
       chrome-remote-interface:
         specifier: 0.34.0
         version: 0.34.0
@@ -108,6 +111,9 @@ importers:
       '@types/better-sqlite3':
         specifier: 7.6.13
         version: 7.6.13
+      '@types/chance':
+        specifier: ^1.1.8
+        version: 1.1.8
       '@types/chrome-remote-interface':
         specifier: 0.33.0
         version: 0.33.0
@@ -1650,6 +1656,9 @@ packages:
   '@types/cacheable-request@6.0.3':
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
 
+  '@types/chance@1.1.8':
+    resolution: {integrity: sha512-isycXjm4a88/zl3n9lfgMcEClR9wUi+m72lkE9MvEbkgZDQrKzolWbonBiUqDNAJFIwO9GKjzmJFq79qtKVTAQ==}
+
   '@types/chrome-remote-interface@0.33.0':
     resolution: {integrity: sha512-c+VcrTFcgvpwbAF/MgWIuVzagzOSX6hDuZEwkRW3Bk1yu/xMlAh5G4ogYpQGtW7fVydVGSQ9WD/mEwqQehu73w==}
 
@@ -2101,6 +2110,9 @@ packages:
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
+
+  chance@1.1.13:
+    resolution: {integrity: sha512-V6lQCljcLznE7tUYUM9EOAnnKXbctE6j/rdQkYOHIWbfGQbrzTsAXNW9CdU5XCo4ArXQCj/rb6HgxPlmGJcaUg==}
 
   character-entities-html4@2.1.0:
     resolution: {integrity: sha512-1v7fgQRj6hnSwFpq1Eu0ynr/CDEw0rXo2B61qXrLNdHZmPKgb7fqS1a2JwF0rISo9q77jDI8VMEHoApn8qDoZA==}
@@ -5889,6 +5901,8 @@ snapshots:
       '@types/node': 20.19.35
       '@types/responselike': 1.0.3
 
+  '@types/chance@1.1.8': {}
+
   '@types/chrome-remote-interface@0.33.0':
     dependencies:
       devtools-protocol: 0.0.1173815
@@ -6454,6 +6468,8 @@ snapshots:
     dependencies:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
+
+  chance@1.1.13: {}
 
   character-entities-html4@2.1.0: {}
 

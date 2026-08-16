@@ -11,7 +11,12 @@ import type {
 } from '../../shared/types';
 import { normalizeInstalledFolder } from '../utils/install-path';
 import { getDatabase, isSpellfixAvailable } from './database';
-import { deleteGameById, upsertGameSingle, upsertGamesTransaction } from './db-queries';
+import {
+  deleteGameById,
+  upsertGameSingle,
+  upsertGamesTransaction,
+  VISIBLE_GAMES_SQL,
+} from './db-queries';
 
 /**
  * Repository для роботи з іграми в локальній базі даних
@@ -184,6 +189,15 @@ export class GamesRepository {
       typeof row.screenshots === 'string' && row.screenshots !== null
         ? (JSON.parse(row.screenshots) as string[])
         : ((row.screenshots as string[] | null) ?? null);
+    // битий JSON тегів не має класти весь каталог (rowToGame спільний для всіх вибірок)
+    let steam_tag_ids: number[] | null = null;
+    if (typeof row.steam_tag_ids === 'string') {
+      try {
+        steam_tag_ids = JSON.parse(row.steam_tag_ids) as number[];
+      } catch {
+        steam_tag_ids = null;
+      }
+    }
 
     return {
       ...row,
@@ -196,6 +210,7 @@ export class GamesRepository {
       platforms,
       install_paths,
       screenshots,
+      steam_tag_ids,
     } as Game;
   }
 
@@ -212,7 +227,7 @@ export class GamesRepository {
       hideAiTranslations = false,
     } = params;
 
-    const whereConditions: string[] = ['approved = 1', '(hide = 0 OR user_unlocked = 1)'];
+    const whereConditions: string[] = [VISIBLE_GAMES_SQL];
     const queryParams: (string | number)[] = [];
 
     // Filter AI translations (shown by default, hidden if user enabled hideAiTranslations)
@@ -318,7 +333,7 @@ export class GamesRepository {
 
       const fuzzyStmt = this.db.prepare(`
         SELECT * FROM games
-        WHERE approved = 1 AND (hide = 0 OR user_unlocked = 1)
+        WHERE ${VISIBLE_GAMES_SQL}
           AND id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)
         ORDER BY ${orderClause}
       `);
@@ -339,7 +354,7 @@ export class GamesRepository {
     const stmt = this.db.prepare(`
       SELECT team
       FROM games
-      WHERE approved = 1 AND (hide = 0 OR user_unlocked = 1) AND team IS NOT NULL AND team != ''
+      WHERE ${VISIBLE_GAMES_SQL} AND team IS NOT NULL AND team != ''
     `);
 
     const rows = stmt.all() as { team: string }[];
@@ -378,8 +393,7 @@ export class GamesRepository {
 
     const whereConditions = [
       `${useSteamIdField ? 'steam_app_id' : 'id'} IN (${gameIds.map(() => '?').join(',')})`,
-      'approved = 1',
-      '(hide = 0 OR user_unlocked = 1)',
+      VISIBLE_GAMES_SQL,
     ];
     const queryParams: string[] = [...gameIds];
 
@@ -425,8 +439,7 @@ export class GamesRepository {
     }
 
     const whereConditions = [
-      'approved = 1',
-      '(hide = 0 OR user_unlocked = 1)',
+      VISIBLE_GAMES_SQL,
       // Keep app-id-only rows (install_paths NULL) so the steamAppIds union below
       // can match them, staying consistent with the app-id-authoritative badge.
       '(install_paths IS NOT NULL OR steam_app_id IS NOT NULL)',
@@ -502,8 +515,7 @@ export class GamesRepository {
     }
 
     const whereConditions = [
-      'approved = 1',
-      '(hide = 0 OR user_unlocked = 1)',
+      VISIBLE_GAMES_SQL,
       'steam_app_id IS NOT NULL',
       `steam_app_id IN (${steamAppIds.map(() => '?').join(',')})`,
     ];
@@ -549,8 +561,7 @@ export class GamesRepository {
     const stmt = this.db.prepare(`
       SELECT COUNT(DISTINCT steam_app_id) as count
       FROM games
-      WHERE approved = 1
-        AND (hide = 0 OR user_unlocked = 1)
+      WHERE ${VISIBLE_GAMES_SQL}
         AND steam_app_id IS NOT NULL
         AND steam_app_id IN (${steamAppIds.map(() => '?').join(',')})
     `);
@@ -652,7 +663,7 @@ export class GamesRepository {
         COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
         COUNT(DISTINCT CASE WHEN (voice_archive_path IS NOT NULL AND voice_archive_path != '') OR voice_progress IS NOT NULL THEN COALESCE(slug, id) END) as with_voice
       FROM games
-      WHERE approved = 1 AND (hide = 0 OR user_unlocked = 1)
+      WHERE ${VISIBLE_GAMES_SQL}
     `);
 
     const row = stmt.get() as {
@@ -691,7 +702,7 @@ export class GamesRepository {
       return { games: [], total: 0 };
     }
 
-    const whereConditions = ['approved = 1', '(hide = 0 OR user_unlocked = 1)'];
+    const whereConditions = [VISIBLE_GAMES_SQL];
     const placeholders = trimmed.map(() => '?').join(',');
     // Кожен елемент install_paths — JSON {type, path}. Шукаємо такі де
     // type='xbox' і path COLLATE NOCASE IN (folderNames).
@@ -752,7 +763,7 @@ export class GamesRepository {
       return { games: [], total: 0 };
     }
 
-    const whereConditions = ['approved = 1', '(hide = 0 OR user_unlocked = 1)'];
+    const whereConditions = [VISIBLE_GAMES_SQL];
 
     // Create query with parameters for titles
     const placeholders = trimmedTitles.map(() => '?').join(',');

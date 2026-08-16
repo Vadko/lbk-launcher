@@ -115,6 +115,7 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'translation_updated_at',
   'source_language',
   'search_keywords',
+  'steam_tag_ids',
 ];
 
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');

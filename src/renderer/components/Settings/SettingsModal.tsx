@@ -15,6 +15,7 @@ import { useModalStore } from '@/renderer/store/useModalStore';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { type DevModeType, usePromoModalStore } from '../../store/usePromoModalStore';
 import { isHardwareWeak, useSettingsStore } from '../../store/useSettingsStore';
+import { trackEvent } from '../../utils/analytics';
 import {
   playBackSound,
   playConfirmSound,
@@ -69,6 +70,8 @@ export const SettingsModal: React.FC = () => {
   const toggleHideAiTranslations = useSettingsStore(
     (state) => state.toggleHideAiTranslations
   );
+  const showRecommendations = useSettingsStore((state) => state.showRecommendations);
+  const toggleRecommendations = useSettingsStore((state) => state.toggleRecommendations);
   const liquidGlassEnabled = useSettingsStore((state) => state.liquidGlassEnabled);
   const toggleLiquidGlass = useSettingsStore((state) => state.toggleLiquidGlass);
   // Sound settings
@@ -289,6 +292,16 @@ export const SettingsModal: React.FC = () => {
             description="Сховати переклади, створені за допомогою штучного інтелекту"
             enabled={hideAiTranslations}
             onChange={toggleHideAiTranslations}
+          />
+          <SettingItem
+            id="recommendations"
+            title="Рекомендації ігор"
+            description="Показувати блок «Вас може зацікавити» на сторінці гри"
+            enabled={showRecommendations}
+            onChange={() => {
+              trackEvent('Toggle recommendations', { Enabled: !showRecommendations });
+              toggleRecommendations();
+            }}
           />
           <SettingItem
             id="notification-sounds"

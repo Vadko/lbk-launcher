@@ -209,6 +209,7 @@ class DatabaseManager {
         ai TEXT,
         hide INTEGER NOT NULL DEFAULT 0,
         search_keywords TEXT,
+        steam_tag_ids TEXT, -- JSON array of Steam tag ids
         source_language TEXT,
         user_unlocked INTEGER NOT NULL DEFAULT 0 -- Local-only, never synced from Supabase
       );

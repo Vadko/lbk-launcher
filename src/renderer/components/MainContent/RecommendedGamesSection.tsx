@@ -23,9 +23,10 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
   showLimit = 3,
 }) => {
   const navigate = useNavigate();
-  const { hideAiTranslations } = useSettingsStore(
+  const { hideAiTranslations, showRecommendations } = useSettingsStore(
     useShallow((state) => ({
       hideAiTranslations: state.hideAiTranslations,
+      showRecommendations: state.showRecommendations,
     }))
   );
   const { gamesWithUpdates, isGameDetected, getInstallationInfo } = useStore(
@@ -39,7 +40,8 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
   const { data: recommendedGames = [], isLoading } = useRecommendedGames(
     gameId,
     showLimit,
-    hideAiTranslations
+    hideAiTranslations,
+    showRecommendations
   );
 
   const visibleGames = useMemo(
@@ -47,7 +49,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     [recommendedGames, gameId, showLimit]
   );
 
-  if (!isLoading && visibleGames.length === 0) {
+  if (!showRecommendations || (!isLoading && visibleGames.length === 0)) {
     return null;
   }
 

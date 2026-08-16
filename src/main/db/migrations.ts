@@ -10,6 +10,25 @@ interface Migration {
 }
 
 /**
+ * Разовий примусовий повний ресинк: маркер-ключ мусить збігатися з історичним
+ * байт-у-байт, інакше клієнти повторять ресинк.
+ */
+function forceResyncOnce(db: Database.Database, name: string, markerKey: string): void {
+  const done = db
+    .prepare('SELECT COUNT(*) as count FROM sync_metadata WHERE key = ?')
+    .get(markerKey) as { count: number };
+  if (done.count > 0) {
+    return;
+  }
+  console.log(`[Migrations] Running: ${name}`);
+  db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
+  db.prepare(
+    "INSERT OR REPLACE INTO sync_metadata (key, value, updated_at) VALUES (?, '1', datetime('now'))"
+  ).run(markerKey);
+  console.log(`[Migrations] Completed: ${name} - will resync on next startup`);
+}
+
+/**
  * All migrations in order of execution
  * Each migration should be idempotent (can be run multiple times safely)
  */
@@ -72,36 +91,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'fix_archive_size_nan_values',
-    up: (db) => {
-      // Check if this migration was already run by looking for marker in sync_metadata
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_fix_archive_size_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return; // Already done
-      }
-
-      // Fix archive_size values that were incorrectly converted to NaN
-      // This happened because Number("150.00 MB") returns NaN
-      // Force full resync to get correct string values from Supabase
-      console.log('[Migrations] Running: fix_archive_size_nan_values');
-
-      // Reset sync metadata to force full resync
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-
-      // Mark migration as done
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_fix_archive_size_done', '1', datetime('now'))
-      `);
-
-      console.log(
-        '[Migrations] Completed: fix_archive_size_nan_values - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'fix_archive_size_nan_values',
+        'migration_fix_archive_size_done'
+      ),
   },
   {
     name: 'add_steam_app_id_column',
@@ -121,27 +116,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_steam_app_id',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_app_id_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_steam_app_id');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_steam_app_id_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_steam_app_id - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_steam_app_id',
+        'migration_resync_steam_app_id_done'
+      ),
   },
   {
     name: 'add_epic_archive_columns',
@@ -165,27 +145,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_epic_archive',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_epic_archive_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_epic_archive');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_epic_archive_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_epic_archive - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_epic_archive',
+        'migration_resync_epic_archive_done'
+      ),
   },
   {
     name: 'add_license_only_column',
@@ -205,27 +170,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_license_only',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_license_only_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_license_only');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_license_only_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_license_only - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_license_only',
+        'migration_resync_license_only_done'
+      ),
   },
   {
     name: 'add_ai_and_hide_columns',
@@ -249,27 +199,8 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_ai_and_hide',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_ai_hide_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_ai_and_hide');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_ai_hide_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_ai_and_hide - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(db, 'resync_for_ai_and_hide', 'migration_resync_ai_hide_done'),
   },
   {
     name: 'add_additional_path_column',
@@ -289,27 +220,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_additional_path',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_additional_path_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_additional_path');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_additional_path_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_additional_path - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_additional_path',
+        'migration_resync_additional_path_done'
+      ),
   },
   {
     name: 'add_name_search_column',
@@ -360,27 +276,7 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_fts5',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_fts5_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_fts5');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_fts5_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_fts5 - will resync on next startup'
-      );
-    },
+    up: (db) => forceResyncOnce(db, 'resync_for_fts5', 'migration_resync_fts5_done'),
   },
   {
     name: 'add_achievements_third_party_column',
@@ -436,27 +332,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_capsule_path',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_capsule_path_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_capsule_path');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_capsule_path_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_capsule_path - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_capsule_path',
+        'migration_resync_capsule_path_done'
+      ),
   },
   {
     name: 'change_ai_to_text',
@@ -606,54 +487,17 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_ai_text_fix',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_ai_text_fix_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_ai_text_fix');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_ai_text_fix_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_ai_text_fix - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(db, 'resync_for_ai_text_fix', 'migration_resync_ai_text_fix_done'),
   },
   {
     name: 'resync_for_ai_migration_fix_v2',
-    up: (db) => {
-      // This migration fixes the issue where change_ai_to_text migration
-      // was incorrectly converting TEXT 'edited'/'non-edited' values to NULL
-      // because it compared TEXT with INTEGER (ai = 1)
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_ai_fix_v2_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_ai_migration_fix_v2');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_ai_fix_v2_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_ai_migration_fix_v2 - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_ai_migration_fix_v2',
+        'migration_resync_ai_fix_v2_done'
+      ),
   },
   {
     name: 'add_translation_updated_at_column',
@@ -673,27 +517,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_translation_updated_at',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_translation_updated_at_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_translation_updated_at');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_translation_updated_at_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_translation_updated_at - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_translation_updated_at',
+        'migration_resync_translation_updated_at_done'
+      ),
   },
   {
     name: 'add_spellfix_words',
@@ -922,27 +751,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_steam_os_archives',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_os_archives_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_steam_os_archives');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_steam_os_archives_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_steam_os_archives - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_steam_os_archives',
+        'migration_resync_steam_os_archives_done'
+      ),
   },
   {
     name: 'add_xbox_archive_columns',
@@ -966,27 +780,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_gog_xbox_archives',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_gog_xbox_archives_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_gog_xbox_archives');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_gog_xbox_archives_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_gog_xbox_archives - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_gog_xbox_archives',
+        'migration_resync_gog_xbox_archives_done'
+      ),
   },
   {
     name: 'add_steam_launch_options_columns',
@@ -1009,27 +808,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_steam_launch_options',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_steam_launch_options_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_steam_launch_options');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_steam_launch_options_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_steam_launch_options - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_steam_launch_options',
+        'migration_resync_steam_launch_options_done'
+      ),
   },
   {
     name: 'add_screenshots_column',
@@ -1049,27 +833,8 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_screenshots',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_screenshots_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_screenshots');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_screenshots_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_screenshots - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(db, 'resync_for_screenshots', 'migration_resync_screenshots_done'),
   },
   {
     name: 'add_store_url_columns',
@@ -1093,27 +858,8 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_store_urls',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_store_urls_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_store_urls');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_store_urls_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_store_urls - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(db, 'resync_for_store_urls', 'migration_resync_store_urls_done'),
   },
   {
     name: 'add_uplay_ea_store_columns',
@@ -1142,27 +888,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'resync_for_uplay_ea_stores',
-    up: (db) => {
-      const migrationDone = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM sync_metadata WHERE key = 'migration_resync_uplay_ea_stores_done'"
-        )
-        .get() as { count: number };
-
-      if (migrationDone.count > 0) {
-        return;
-      }
-
-      console.log('[Migrations] Running: resync_for_uplay_ea_stores');
-      db.exec(`DELETE FROM sync_metadata WHERE key = 'last_sync_timestamp'`);
-      db.exec(`
-        INSERT OR REPLACE INTO sync_metadata (key, value, updated_at)
-        VALUES ('migration_resync_uplay_ea_stores_done', '1', datetime('now'))
-      `);
-      console.log(
-        '[Migrations] Completed: resync_for_uplay_ea_stores - will resync on next startup'
-      );
-    },
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_uplay_ea_stores',
+        'migration_resync_uplay_ea_stores_done'
+      ),
   },
   {
     name: 'add_user_unlocked_column',
@@ -1237,6 +968,31 @@ const migrations: Migration[] = [
         `[Migrations] Completed: reindex_fts_without_apostrophes (${rows.length} games)`
       );
     },
+  },
+  {
+    name: 'add_steam_tag_ids_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_tag_ids'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_steam_tag_ids_column');
+        db.exec(`ALTER TABLE games ADD COLUMN steam_tag_ids TEXT;`);
+        console.log('[Migrations] Completed: add_steam_tag_ids_column');
+      }
+    },
+  },
+  {
+    name: 'resync_for_steam_tag_ids',
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_steam_tag_ids',
+        'migration_resync_steam_tag_ids_done'
+      ),
   },
 ];
 
