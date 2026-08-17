@@ -6,6 +6,23 @@ import type Database from 'better-sqlite3';
 import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 import type { Game, Database as SupabaseDatabase } from '../../shared/types';
 
+/** Видимі ігри: приховані показуються лише якщо розблоковані користувачем */
+export const VISIBLE_GAMES_SQL = 'approved = 1 AND (hide = 0 OR user_unlocked = 1)';
+
+export function parseTagIds(json: unknown): number[] | null {
+  if (typeof json !== 'string') {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed)
+      ? parsed.filter((t): t is number => typeof t === 'number')
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Поля, які не зберігаються в локальній БД
  */
@@ -39,7 +56,7 @@ type GameInsertParams = {
     ? number // boolean перетворюється на 0/1 для SQLite
     : K extends 'ai'
       ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
-      : K extends 'platforms' | 'install_paths' | 'screenshots'
+      : K extends 'platforms' | 'install_paths' | 'screenshots' | 'steam_tag_ids'
         ? string | null // JSON.stringify для SQLite
         : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
@@ -139,6 +156,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     ai: game.ai ?? null,
     hide: game.hide ? 1 : 0,
     search_keywords: game.search_keywords ?? null,
+    steam_tag_ids: game.steam_tag_ids ? JSON.stringify(game.steam_tag_ids) : null,
     source_language: game.source_language ?? null,
   };
 }
@@ -237,6 +255,7 @@ const SYNCED_COLUMNS = [
   'hide',
   'search_keywords',
   'source_language',
+  'steam_tag_ids',
 ] as const;
 
 /**
@@ -300,9 +319,7 @@ function rebuildSpellfixDictionary(db: Database.Database): void {
 
   try {
     const rows = db
-      .prepare(
-        'SELECT name FROM games WHERE approved = 1 AND (hide = 0 OR user_unlocked = 1)'
-      )
+      .prepare(`SELECT name FROM games WHERE ${VISIBLE_GAMES_SQL}`)
       .all() as { name: string }[];
 
     const games = rows.map((r) => ({ name: r.name }) as Game);

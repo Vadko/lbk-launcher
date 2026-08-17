@@ -20,7 +20,12 @@
     "fundraising_current": 2500,
     "fundraising_goal": 10000,
     "game_description": "Stray — це пригодницька гра про безпритульного кота, якого доля розлучила з рідними. Події гри розгортаються в детально опрацьованому кібермісті, що рясніє неоновими вогнями, а також у його підземній частині, де панують темрява і занедбання.\nДосліджуйте оточення вгорі та внизу, захищайтесь від неочікуваних загроз і розгадуйте загадки непривітного міста, населеного допитливими роботами та небезпечними істотами. Дивіться на світ очима кота і грайливо взаємодійте з довкіллям. Будьте непомітними, спритними, несерйозними, а іноді й дуже надокучливими. Заручіться підтримкою нового друга, щоб розплутати клубок стародавньої таємниці та повернутись додому.",
-    "install_paths": [{ "type": "steam", "path": "Stray" }],
+    "install_paths": [
+      {
+        "type": "steam",
+        "path": "Stray"
+      }
+    ],
     "installation_file_linux_path": null,
     "installation_file_windows_path": null,
     "is_adult": false,
@@ -28,7 +33,9 @@
     "logo_path": "466f48ea-2635-46a3-903e-1ebd1a99d650/logo.webp",
     "name": "Stray (без озвучення)",
     "name_search": "stray страй",
-    "platforms": ["steam"],
+    "platforms": [
+      "steam"
+    ],
     "project_id": null,
     "screenshots": [
       "466f48ea-2635-46a3-903e-1ebd1a99d650/banner.webp",
@@ -51,8 +58,7 @@
     "version": "1.0.0",
     "video_url": "https://www.youtube.com/@Aedanos",
     "voice_archive_hash": null,
-    "voice_archive_path": 
-    null,
+    "voice_archive_path": null,
     "voice_archive_size": null,
     "voice_progress": 12,
     "achievements_archive_hash": null,
@@ -90,12 +96,22 @@
     "gog_store_url": "https://www.gog.com/game/stray",
     "xbox_store_url": "https://www.microsoft.com/store/p/stray",
     "uplay_store_url": "https://www.uplay.com/store/p/stray",
-    "ea_store_url":"https://www.ea.com/store/p/stray",
+    "ea_store_url": "https://www.ea.com/store/p/stray",
     "ai": "edited",
     "hide": false,
     "search_keywords": null,
     "source_language": "PL",
-    "user_unlocked": false
+    "user_unlocked": false,
+    "steam_tag_ids": [
+      21,
+      122,
+      1695,
+      4182,
+      1742,
+      19,
+      492,
+      3871
+    ]
   },
   {
     "id": "1",
@@ -118,7 +134,12 @@
     "fundraising_current": null,
     "fundraising_goal": null,
     "game_description": "Загублений, самотній і відірваний від родини, безпритульний кіт мусить розплутати давню таємницю, щоб вирватися з давно забутого кіберміста й знайти дорогу додому.",
-    "install_paths": [{ "type": "steam", "path": "Stray" }],
+    "install_paths": [
+      {
+        "type": "steam",
+        "path": "Stray"
+      }
+    ],
     "installation_file_linux_path": null,
     "installation_file_windows_path": null,
     "is_adult": true,
@@ -126,7 +147,9 @@
     "logo_path": "da282e51-8bc2-4a58-847a-2c14f7ad99e2/logo.webp",
     "name": "Stray",
     "name_search": "stray страй",
-    "platforms": ["steam"],
+    "platforms": [
+      "steam"
+    ],
     "project_id": null,
     "screenshots": null,
     "slug": "stray",
@@ -186,6 +209,18 @@
     "hide": false,
     "search_keywords": null,
     "source_language": null,
-    "user_unlocked": false
+    "user_unlocked": false,
+    "steam_tag_ids": [
+      1695,
+      4182,
+      1742,
+      19,
+      492,
+      3871,
+      4726,
+      1756,
+      6650,
+      4166
+    ]
   }
 ]

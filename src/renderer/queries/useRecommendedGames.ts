@@ -12,7 +12,8 @@ const recommendedGamesKeys = {
 export function useRecommendedGames(
   gameId?: string,
   limit = 3,
-  hideAiTranslations = false
+  hideAiTranslations = false,
+  enabled = true
 ) {
   return useSyncAwareQuery({
     queryKey: recommendedGamesKeys.byGame(gameId ?? 'unknown', limit, hideAiTranslations),
@@ -23,7 +24,7 @@ export function useRecommendedGames(
 
       return window.electronAPI.fetchRecommendedGames(gameId, limit, hideAiTranslations);
     },
-    enabled: !!gameId,
+    enabled: !!gameId && enabled,
     staleTime: FIVE_MINUTES,
     gcTime: FIVE_MINUTES,
   });

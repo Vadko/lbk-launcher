@@ -42,6 +42,7 @@ interface SettingsStore {
   createBackupBeforeInstall: boolean;
   showAdultGames: boolean;
   hideAiTranslations: boolean;
+  showRecommendations: boolean;
   liquidGlassEnabled: boolean;
   gamepadSoundsEnabled: boolean;
   steamCefDebuggingEnabled: boolean;
@@ -65,6 +66,7 @@ interface SettingsStore {
   toggleCreateBackup: () => void;
   toggleShowAdultGames: () => void;
   toggleHideAiTranslations: () => void;
+  toggleRecommendations: () => void;
   toggleLiquidGlass: () => void;
   toggleGamepadSounds: () => void;
   toggleSteamCefDebugging: () => void;
@@ -83,6 +85,7 @@ export const useSettingsStore = create<SettingsStore>()(
       createBackupBeforeInstall: true,
       showAdultGames: false,
       hideAiTranslations: false,
+      showRecommendations: true,
       liquidGlassEnabled: fancyEffectsByDefault,
       gamepadSoundsEnabled: true,
       steamCefDebuggingEnabled: true,
@@ -154,6 +157,9 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleHideAiTranslations: () =>
         set((state) => ({ hideAiTranslations: !state.hideAiTranslations })),
 
+      toggleRecommendations: () =>
+        set((state) => ({ showRecommendations: !state.showRecommendations })),
+
       toggleLiquidGlass: () => {
         if (isHardwareWeak) {
           return;
@@ -193,6 +199,7 @@ export const useSettingsStore = create<SettingsStore>()(
         createBackupBeforeInstall: state.createBackupBeforeInstall,
         showAdultGames: state.showAdultGames,
         hideAiTranslations: state.hideAiTranslations,
+        showRecommendations: state.showRecommendations,
         liquidGlassEnabled: state.liquidGlassEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,

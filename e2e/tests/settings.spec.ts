@@ -41,6 +41,9 @@ test('settings modal contains expected toggles', async () => {
     modal.getByRole('heading', { name: 'Приховати ШІ-переклади' }),
   ).toBeVisible();
   await expect(
+    modal.getByRole('heading', { name: 'Рекомендації ігор' }),
+  ).toBeVisible();
+  await expect(
     modal.getByRole('heading', { name: 'Звуки сповіщень' }),
   ).toBeVisible();
 });
