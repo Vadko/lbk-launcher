@@ -13,6 +13,7 @@ import { normalizeInstalledFolder } from '../utils/install-path';
 import { getDatabase, isSpellfixAvailable } from './database';
 import {
   deleteGameById,
+  parseTagIds,
   upsertGameSingle,
   upsertGamesTransaction,
   VISIBLE_GAMES_SQL,
@@ -189,15 +190,7 @@ export class GamesRepository {
       typeof row.screenshots === 'string' && row.screenshots !== null
         ? (JSON.parse(row.screenshots) as string[])
         : ((row.screenshots as string[] | null) ?? null);
-    // битий JSON тегів не має класти весь каталог (rowToGame спільний для всіх вибірок)
-    let steam_tag_ids: number[] | null = null;
-    if (typeof row.steam_tag_ids === 'string') {
-      try {
-        steam_tag_ids = JSON.parse(row.steam_tag_ids) as number[];
-      } catch {
-        steam_tag_ids = null;
-      }
-    }
+    const steam_tag_ids = parseTagIds(row.steam_tag_ids);
 
     return {
       ...row,

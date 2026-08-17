@@ -9,6 +9,17 @@ interface Migration {
   up: (db: Database.Database) => void;
 }
 
+/** Додати колонку, якщо її ще нема (ідемпотентно) */
+function addColumnIfMissing(db: Database.Database, column: string, ddl: string): void {
+  const has = db
+    .prepare("SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name = ?")
+    .get(column) as { count: number };
+  if (has.count === 0) {
+    console.log(`[Migrations] Adding column: ${column}`);
+    db.exec(ddl);
+  }
+}
+
 /**
  * Разовий примусовий повний ресинк: маркер-ключ мусить збігатися з історичним
  * байт-у-байт, інакше клієнти повторять ресинк.
@@ -971,19 +982,12 @@ const migrations: Migration[] = [
   },
   {
     name: 'add_steam_tag_ids_column',
-    up: (db) => {
-      const hasColumn = db
-        .prepare(
-          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_tag_ids'"
-        )
-        .get() as { count: number };
-
-      if (hasColumn.count === 0) {
-        console.log('[Migrations] Running: add_steam_tag_ids_column');
-        db.exec(`ALTER TABLE games ADD COLUMN steam_tag_ids TEXT;`);
-        console.log('[Migrations] Completed: add_steam_tag_ids_column');
-      }
-    },
+    up: (db) =>
+      addColumnIfMissing(
+        db,
+        'steam_tag_ids',
+        'ALTER TABLE games ADD COLUMN steam_tag_ids TEXT;'
+      ),
   },
   {
     name: 'resync_for_steam_tag_ids',

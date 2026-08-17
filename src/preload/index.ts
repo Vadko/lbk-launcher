@@ -35,7 +35,7 @@ const electronAPI: ElectronAPI = {
       hideAiTranslations,
       sortOrder
     ),
-  fetchRecommendedGames: (gameId: string, limit = 3, hideAiTranslations?: boolean) =>
+  fetchRecommendedGames: (gameId: string, limit = 3, hideAiTranslations = false) =>
     ipcRenderer.invoke('fetch-recommended-games', gameId, limit, hideAiTranslations),
   syncKurinGames: () => ipcRenderer.invoke('sync-kurin-games'),
   getAllInstalledGamePaths: () => ipcRenderer.invoke('get-all-installed-game-paths'),

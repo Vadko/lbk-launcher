@@ -9,6 +9,20 @@ import type { Game, Database as SupabaseDatabase } from '../../shared/types';
 /** Видимі ігри: приховані показуються лише якщо розблоковані користувачем */
 export const VISIBLE_GAMES_SQL = 'approved = 1 AND (hide = 0 OR user_unlocked = 1)';
 
+export function parseTagIds(json: unknown): number[] | null {
+  if (typeof json !== 'string') {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return Array.isArray(parsed)
+      ? parsed.filter((t): t is number => typeof t === 'number')
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Поля, які не зберігаються в локальній БД
  */

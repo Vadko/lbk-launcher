@@ -178,17 +178,14 @@ export function setupGamesHandlers(): void {
   );
 
   // Fetch recommended games for game page (динамічно за перетином Steam-тегів)
-  ipcMain.handle(
-    'fetch-recommended-games',
-    (_, gameId: string, limit = 3, hideAiTranslations = false) => {
-      try {
-        return fetchRecommendedGames(gameId, limit, hideAiTranslations);
-      } catch (error) {
-        console.error('Error fetching recommended games:', error);
-        return [];
-      }
+  ipcMain.handle('fetch-recommended-games', (_, gameId: string, limit = 3) => {
+    try {
+      return fetchRecommendedGames(gameId, limit);
+    } catch (error) {
+      console.error('Error fetching recommended games:', error);
+      return [];
     }
-  );
+  });
 
   // Fetch unique teams - SYNC
   ipcMain.handle('fetch-teams', () => {
