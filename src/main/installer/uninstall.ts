@@ -184,6 +184,7 @@ async function restoreOrDeleteFile(
         await unlink(filePath);
       }
       await fs.promises.rename(newBackupPath, filePath);
+      await unlockSchemaFile(filePath); // restored original must stay writable for Steam
       console.log(`[Installer] Restored from backup dir: ${fileName}`);
       return;
     }
@@ -193,6 +194,7 @@ async function restoreOrDeleteFile(
         await unlink(filePath);
       }
       await fs.promises.rename(legacyBackupPath, filePath);
+      await unlockSchemaFile(filePath); // restored original must stay writable for Steam
       console.log(`[Installer] Restored from legacy backup: ${fileName}`);
       return;
     }

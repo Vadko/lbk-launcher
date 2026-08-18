@@ -18,7 +18,6 @@ import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
-import { lockSchemaFile, unlockSchemaFile } from './installer/schema-lock';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
@@ -26,6 +25,7 @@ import {
   hasExecutableInstaller,
   runInstaller,
 } from './installer/platform';
+import { lockSchemaFile, unlockSchemaFile } from './installer/schema-lock';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { isLinux, isMacOS } from './utils/platform';
 import { writeSteamLaunchOptions } from './utils/steam-launch-options';
@@ -316,6 +316,7 @@ export async function installTranslation(
             // Only backup if original exists and backup doesn't exist yet
             if (fs.existsSync(dest) && !fs.existsSync(backupPath)) {
               await fs.promises.copyFile(dest, backupPath);
+              await unlockSchemaFile(backupPath); // keep the backup writable (dest may be locked)
               console.log(`[Installer] Backed up: ${path.basename(dest)}`);
             }
           }

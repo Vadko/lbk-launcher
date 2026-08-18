@@ -7,7 +7,8 @@ import fs from 'fs';
 /** Lock a schema file read-only so Steam cannot overwrite it. */
 export async function lockSchemaFile(filePath: string): Promise<void> {
   try {
-    await fs.promises.chmod(filePath, 0o444);
+    const { mode } = await fs.promises.stat(filePath);
+    await fs.promises.chmod(filePath, mode & ~0o222); // clear all write bits
   } catch (error) {
     console.warn(`[SchemaLock] Failed to lock ${filePath}:`, error);
   }
@@ -16,8 +17,11 @@ export async function lockSchemaFile(filePath: string): Promise<void> {
 /** Unlock before any write/rename/unlink of a schema file. No-op if missing. */
 export async function unlockSchemaFile(filePath: string): Promise<void> {
   try {
-    if (!fs.existsSync(filePath)) return;
-    await fs.promises.chmod(filePath, 0o644);
+    if (!fs.existsSync(filePath)) {
+      return;
+    }
+    const { mode } = await fs.promises.stat(filePath);
+    await fs.promises.chmod(filePath, mode | 0o200); // restore owner write, keep other bits
   } catch (error) {
     console.warn(`[SchemaLock] Failed to unlock ${filePath}:`, error);
   }
