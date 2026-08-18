@@ -19,6 +19,7 @@ import {
 } from './cache';
 import { deleteDirectory } from './files';
 import { getSteamAchievementsPath, runUninstaller } from './platform';
+import { unlockSchemaFile } from './schema-lock';
 
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
@@ -174,6 +175,8 @@ async function restoreOrDeleteFile(
   const newBackupPath = path.join(newBackupDir, fileName);
 
   const legacyBackupPath = filePath + BACKUP_SUFFIX;
+
+  await unlockSchemaFile(filePath); // may be locked read-only; unlock to replace/remove
 
   try {
     if (fs.existsSync(newBackupPath)) {

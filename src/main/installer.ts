@@ -18,6 +18,7 @@ import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
+import { lockSchemaFile, unlockSchemaFile } from './installer/schema-lock';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
@@ -322,8 +323,12 @@ export async function installTranslation(
 
         // Copy files directly to achievements folder (flatten structure)
         for (const { src, dest } of achievementFilesToCopy) {
+          await unlockSchemaFile(dest); // clear a prior lock so we can overwrite
           await fs.promises.copyFile(src, dest);
-          console.log(`[Installer] Copied achievement file: ${path.basename(dest)}`);
+          await lockSchemaFile(dest); // block Steam from re-downloading over it
+          console.log(
+            `[Installer] Copied achievement file (protected): ${path.basename(dest)}`
+          );
         }
 
         // Update achievementsFiles to contain only filenames (for installation info)
