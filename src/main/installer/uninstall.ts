@@ -18,6 +18,7 @@ import {
   saveInstallationInfo,
 } from './cache';
 import { deleteDirectory } from './files';
+import { resignMacBundles } from './mac-codesign';
 import { getSteamAchievementsPath, runUninstaller } from './platform';
 
 const unlink = promisify(fs.unlink);
@@ -94,6 +95,12 @@ export async function uninstallTranslation(game: Game): Promise<void> {
 
     await cleanupEmptyDirectories(gamePath, gamePath);
 
+    try {
+      await resignMacBundles(gamePath, allFilesToDelete);
+    } catch (error) {
+      console.warn('[Uninstall] Could not re-sign macOS bundle after restore:', error);
+    }
+
     const infoPath = findInstallationInfoFile(gamePath);
     if (fs.existsSync(infoPath)) {
       await unlink(infoPath);
@@ -131,6 +138,11 @@ export async function removeComponents(
       for (const relativePath of installInfo.components.voice.files) {
         const filePath = path.join(gamePath, relativePath);
         await restoreOrDeleteFile(filePath);
+      }
+      try {
+        await resignMacBundles(gamePath, installInfo.components.voice.files);
+      } catch (error) {
+        console.warn('[Uninstall] Could not re-sign macOS bundle after restore:', error);
       }
       installInfo.components.voice = { installed: false, files: [] };
     }
