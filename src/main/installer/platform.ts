@@ -5,6 +5,7 @@ import path from 'path';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getTransliteratedPath } from '../utils/files';
+import type { GameBuildOs } from '../utils/game-build';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
 import { getCleanEnv } from './archive';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
@@ -141,10 +142,20 @@ export function checkPlatformCompatibility(game: Game): string | null {
 /**
  * Get installer file name based on platform
  */
-export function getInstallerFileName(game: Game): string | null {
+export function getInstallerFileName(game: Game, buildOs?: GameBuildOs): string | null {
   const isWindowsOS = isWindows();
   const isLinuxOS = isLinux();
   const isMacOS = !isWindowsOS && !isLinuxOS;
+
+  // Match the archive, picked the same way; another build's file isn't inside it.
+  if (buildOs === 'windows' && game.installation_file_windows_path) {
+    return isWindowsOS
+      ? game.installation_file_windows_path
+      : toPosix(game.installation_file_windows_path);
+  }
+  if (buildOs && buildOs !== 'windows' && game.installation_file_linux_path) {
+    return toPosix(game.installation_file_linux_path);
+  }
 
   if (isWindowsOS && game.installation_file_windows_path) {
     return game.installation_file_windows_path;

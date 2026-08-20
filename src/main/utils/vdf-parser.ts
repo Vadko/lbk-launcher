@@ -164,3 +164,27 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
 
   return playtimes;
 }
+
+/**
+ * Compatibility tool Steam uses for an app, from `config/config.vdf`.
+ *
+ * Empty string when the user picked "none", null when there is no entry — the
+ * common case, since Steam records one only after a manual change.
+ */
+export function parseCompatToolName(content: string, appId: number): string | null {
+  const mappingIndex = content.indexOf('"CompatToolMapping"');
+  if (mappingIndex === -1) {
+    return null;
+  }
+
+  // Flat keys only, so a brace-free match isolates one entry.
+  const entry = new RegExp(`"${appId}"\\s*\\{([^}]*)\\}`).exec(
+    content.slice(mappingIndex)
+  );
+  if (!entry) {
+    return null;
+  }
+
+  const name = /"name"\s+"([^"]*)"/.exec(entry[1]);
+  return name ? name[1] : null;
+}

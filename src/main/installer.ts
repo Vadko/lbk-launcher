@@ -27,7 +27,7 @@ import {
   runInstaller,
 } from './installer/platform';
 import { isCurrentSessionFirstLaunch } from './tracking';
-import { isLinux, isMacOS } from './utils/platform';
+import { resolveGameBuildOs } from './utils/game-build';
 import { applySteamArtwork } from './utils/steam-artwork';
 import { writeSteamLaunchOptions } from './utils/steam-launch-options';
 
@@ -106,6 +106,10 @@ export async function installTranslation(
 
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
 
+    // Not the host OS: Linux Steam titles are mostly the Windows build under Proton.
+    const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id);
+    console.log(`[Installer] Installed game build: ${buildOs}`);
+
     // 3. Create temp directory on the same disk as the game (for correct disk space check and faster file operations)
     const downloadDir = path.join(gamePath.path, '.lbk-temp');
     await mkdir(downloadDir, { recursive: true });
@@ -114,13 +118,13 @@ export async function installTranslation(
     let requiredSpace = 0;
     if (installText) {
       // Pick the matching archive size in priority order:
-      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //   1. Variant matching the installed build (Linux/macOS) — any store.
       //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only if user is on that store.
       //   3. Main archive — default fallback (typically Windows).
       let textArchiveSize: string | null | undefined = game.archive_size;
-      if (isLinux() && game.steam_linux_archive_size) {
+      if (buildOs === 'linux' && game.steam_linux_archive_size) {
         textArchiveSize = game.steam_linux_archive_size;
-      } else if (isMacOS() && game.steam_mac_archive_size) {
+      } else if (buildOs === 'macos' && game.steam_mac_archive_size) {
         textArchiveSize = game.steam_mac_archive_size;
       } else if (gamePath.platform === 'epic' && game.epic_archive_size) {
         textArchiveSize = game.epic_archive_size;
@@ -171,7 +175,7 @@ export async function installTranslation(
     let textFiles: string[] = [];
     if (installText) {
       // Selection priority (matches the disk-space check above):
-      //   1. OS-specific variant (Linux/macOS) — applies regardless of store.
+      //   1. Variant matching the installed build (Linux/macOS) — any store.
       //      Translator uploads these when files differ for Linux/macOS builds.
       //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only when user is on
       //      that store.
@@ -179,11 +183,11 @@ export async function installTranslation(
       let archivePath = game.archive_path;
       let archiveHash = game.archive_hash;
 
-      if (isLinux() && game.steam_linux_archive_path) {
+      if (buildOs === 'linux' && game.steam_linux_archive_path) {
         archivePath = game.steam_linux_archive_path;
         archiveHash = game.steam_linux_archive_hash;
         console.log('[Installer] Using Linux variant archive');
-      } else if (isMacOS() && game.steam_mac_archive_path) {
+      } else if (buildOs === 'macos' && game.steam_mac_archive_path) {
         archivePath = game.steam_mac_archive_path;
         archiveHash = game.steam_mac_archive_hash;
         console.log('[Installer] Using macOS variant archive');
@@ -207,6 +211,23 @@ export async function installTranslation(
         archivePath = game.ea_archive_path;
         archiveHash = game.ea_archive_hash;
         console.log('[Installer] Using EA-specific archive');
+      }
+
+      if (!archivePath) {
+        const otherVariants = [
+          game.steam_linux_archive_path ? 'Linux' : null,
+          game.steam_mac_archive_path ? 'macOS' : null,
+        ].filter((variant): variant is string => variant !== null);
+
+        if (otherVariants.length > 0) {
+          const buildLabel = { windows: 'Windows', linux: 'Linux', macos: 'macOS' }[
+            buildOs
+          ];
+          throw new Error(
+            `Для встановленої збірки гри (${buildLabel}) немає архіву перекладу.\n\n` +
+              `Переклад доступний лише для: ${otherVariants.join(', ')}.`
+          );
+        }
       }
 
       textFiles = await downloadAndExtractArchive({
@@ -335,7 +356,7 @@ export async function installTranslation(
     }
 
     // 6. Check for executable installer
-    const installerFileName = getInstallerFileName(game);
+    const installerFileName = getInstallerFileName(game, buildOs);
     const isExeInstaller = hasExecutableInstaller(game);
 
     if (installerFileName && isExeInstaller) {
@@ -413,7 +434,11 @@ export async function installTranslation(
     // On macOS, redirect the copy into the `.app` bundle (data lives inside it,
     // not at the game root). Skip when a macOS archive was used — it already
     // carries the bundle path.
-    if ((installText || installVoice) && isMacOS() && !game.steam_mac_archive_path) {
+    if (
+      (installText || installVoice) &&
+      buildOs === 'macos' &&
+      !game.steam_mac_archive_path
+    ) {
       const macBundle = await resolveMacBundleTarget(gamePath.path, extractDir);
       if (macBundle.target) {
         additionalPath = macBundle.target;
