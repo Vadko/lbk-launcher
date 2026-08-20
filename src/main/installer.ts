@@ -41,7 +41,8 @@ export async function installTranslation(
   options: InstallOptions,
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
-  onStatus?: (status: InstallationStatus) => void
+  onStatus?: (status: InstallationStatus) => void,
+  onConfirmRunInstaller?: (installerPath: string, isExe: boolean) => Promise<boolean>
 ): Promise<{ launchOptionsPending: boolean; achievementsChanged: boolean }> {
   const { createBackup, installText, installVoice, installAchievements, platform } =
     options;
@@ -347,6 +348,11 @@ export async function installTranslation(
       onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
       await cleanupDownloadDir(downloadDir);
 
+      const installerPath = path.join(fullTargetPath, installerFileName);
+      // "Installer" (.exe) vs "script" (.bat/.sh/etc.) label, matching the
+      // distinction the renderer already draws (ImportantNotice, install confirm).
+      const isExeFile = !!game.installation_file_windows_path?.endsWith('.exe');
+      const installerLabel = isExeFile ? 'інсталятор' : 'скрипт';
       const installationInfo: InstallationInfo = {
         gameId: game.id,
         version: game.version || '1.0.0',
@@ -355,11 +361,32 @@ export async function installTranslation(
         hasBackup: false,
         isCustomPath: !!customGamePath,
         protonPath: options.protonPath,
-        installerPath: path.join(fullTargetPath, installerFileName),
+        installerPath,
         installedFiles: [],
         installedPlatform: gamePath.platform,
         components: { text: { installed: true, files: [] } },
       };
+
+      if (onConfirmRunInstaller) {
+        onStatus?.({
+          message: `Очікування підтвердження запуску ${installerLabel}а...`,
+          phase: 'install',
+        });
+      }
+      const shouldRunInstaller = onConfirmRunInstaller
+        ? await onConfirmRunInstaller(installerPath, isExeFile)
+        : true;
+
+      if (!shouldRunInstaller) {
+        console.log('[Installer] User declined to run installer:', installerPath);
+        await saveInstallationInfo(gamePath.path, {
+          ...installationInfo,
+          hasInstallError: true,
+        });
+        throw new Error(
+          `Встановлення скасовано: запуск ${installerLabel}а було відхилено.\n\nФайли розпаковано в папку гри — ви можете запустити ${installerLabel} пізніше кнопкою «Перевстановити».`
+        );
+      }
 
       try {
         await runInstaller(

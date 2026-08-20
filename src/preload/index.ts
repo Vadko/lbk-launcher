@@ -107,6 +107,16 @@ const electronAPI: ElectronAPI = {
   uninstallTranslation: (game: Game) => ipcRenderer.invoke('uninstall-translation', game),
   rerunInstaller: (installerPath: string, protonPath?: string) =>
     ipcRenderer.invoke('rerun-installer', installerPath, protonPath),
+  showItemInFolder: (filePath: string) =>
+    ipcRenderer.invoke('show-item-in-folder', filePath),
+  onRequestRunInstallerConfirm: (callback) => {
+    const handler = (_: unknown, gameId: string, installerPath: string, isExe: boolean) =>
+      callback(gameId, installerPath, isExe);
+    ipcRenderer.on('installer:confirm-run', handler);
+    return () => ipcRenderer.removeListener('installer:confirm-run', handler);
+  },
+  respondRunInstaller: (gameId: string, shouldRun: boolean) =>
+    ipcRenderer.send('installer:run-decision', gameId, shouldRun),
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),

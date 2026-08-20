@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron';
+import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
@@ -32,7 +32,19 @@ import { writeSteamLaunchOptions } from '../utils/steam-launch-options';
 import { launchSteam, shutdownSteam } from '../utils/steam-launcher';
 import { getMainWindow } from '../window';
 
+// Resolvers for run-installer confirmations awaiting a decision from the renderer,
+// keyed by game id (one pending install per game at a time).
+const pendingRunInstallerDecisions = new Map<string, (decision: boolean) => void>();
+
 export function setupInstallerHandlers(): void {
+  ipcMain.on('installer:run-decision', (_, gameId: string, decision: boolean) => {
+    const resolve = pendingRunInstallerDecisions.get(gameId);
+    if (resolve) {
+      pendingRunInstallerDecisions.delete(gameId);
+      resolve(decision);
+    }
+  });
+
   ipcMain.handle(
     'install-translation',
     async (_, game: Game, options: InstallOptions, customGamePath?: string) => {
@@ -50,7 +62,17 @@ export function setupInstallerHandlers(): void {
           },
           (status) => {
             getMainWindow()?.webContents.send('installation-status', game.id, status);
-          }
+          },
+          (installerPath, isExe) =>
+            new Promise<boolean>((resolve) => {
+              pendingRunInstallerDecisions.set(game.id, resolve);
+              getMainWindow()?.webContents.send(
+                'installer:confirm-run',
+                game.id,
+                installerPath,
+                isExe
+              );
+            })
         );
 
         // Note: cache invalidation та installed-games-changed event
@@ -171,6 +193,22 @@ export function setupInstallerHandlers(): void {
   });
 
   ipcMain.handle('open-external', async (_, url: string) => await openExternalUrl(url));
+
+  ipcMain.handle('show-item-in-folder', async (_, filePath: string) => {
+    try {
+      if (!fs.existsSync(filePath)) {
+        return { success: false, error: 'Файл не знайдено' };
+      }
+      shell.showItemInFolder(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Error showing item in folder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Невідома помилка',
+      };
+    }
+  });
 
   ipcMain.handle('select-game-folder', async () => {
     const result = await dialog.showOpenDialog({
