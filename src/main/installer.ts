@@ -18,6 +18,7 @@ import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
+import { resignMacBundles } from './installer/mac-codesign';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
@@ -401,6 +402,7 @@ export async function installTranslation(
       ? path.join(gamePath.path, additionalPath)
       : gamePath.path;
     let installedFiles: string[] = [];
+    let macSigningFailed = false;
 
     // Helper to prefix paths with additional_path
     const prefixPaths = (files: string[]) =>
@@ -428,6 +430,20 @@ export async function installTranslation(
 
       onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
+
+      // The files are already copied by this point, so a signing problem must
+      // not abort the install — but it does leave the game unlaunchable, so it
+      // is recorded as an install error rather than swallowed.
+      try {
+        macSigningFailed = !(await resignMacBundles(
+          gamePath.path,
+          prefixPaths(installedFiles),
+          onStatus
+        ));
+      } catch (error) {
+        console.error('[Installer] Re-signing macOS bundle failed:', error);
+        macSigningFailed = true;
+      }
     }
 
     // 8. Cleanup
@@ -444,6 +460,9 @@ export async function installTranslation(
       isCustomPath: !!customGamePath,
       installedFiles: prefixPaths(installedFiles),
       installedPlatform: gamePath.platform,
+      // Signing failed means the bundle is left unsigned and the game will be
+      // killed on launch — not a success, even though every file is in place.
+      ...(macSigningFailed ? { hasInstallError: true } : {}),
       components: {
         text: { installed: installText, files: prefixPaths(textFiles) },
         ...(installVoice && voiceFiles.length > 0
