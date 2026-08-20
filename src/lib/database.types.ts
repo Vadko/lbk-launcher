@@ -643,6 +643,67 @@ export type Database = {
           },
         ]
       }
+      game_update_watch: {
+        Row: {
+          auto_tech_improvement: boolean | null
+          auto_tech_prev_status:
+            | Database["public"]["Enums"]["game_status"]
+            | null
+          created_at: string
+          game_id: string
+          last_build_at: string | null
+          last_build_id: number | null
+          last_notified_at: string | null
+          notify_email: boolean | null
+          notify_telegram: boolean | null
+          updated_at: string
+          watch: boolean | null
+        }
+        Insert: {
+          auto_tech_improvement?: boolean | null
+          auto_tech_prev_status?:
+            | Database["public"]["Enums"]["game_status"]
+            | null
+          created_at?: string
+          game_id: string
+          last_build_at?: string | null
+          last_build_id?: number | null
+          last_notified_at?: string | null
+          notify_email?: boolean | null
+          notify_telegram?: boolean | null
+          updated_at?: string
+          watch?: boolean | null
+        }
+        Update: {
+          auto_tech_improvement?: boolean | null
+          auto_tech_prev_status?:
+            | Database["public"]["Enums"]["game_status"]
+            | null
+          created_at?: string
+          game_id?: string
+          last_build_at?: string | null
+          last_build_id?: number | null
+          last_notified_at?: string | null
+          notify_email?: boolean | null
+          notify_telegram?: boolean | null
+          updated_at?: string
+          watch?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_update_watch_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_update_watch_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       game_version_authors: {
         Row: {
           author_id: string
@@ -2401,6 +2462,10 @@ export type Database = {
           email_notifications: boolean
           feedback_email_notifications: boolean
           full_name: string | null
+          game_update_auto_tech: boolean
+          game_update_email: boolean
+          game_update_telegram: boolean
+          game_update_watch: boolean
           id: string
           notification_prefs: Json
           role: Database["public"]["Enums"]["user_role"]
@@ -2420,6 +2485,10 @@ export type Database = {
           email_notifications?: boolean
           feedback_email_notifications?: boolean
           full_name?: string | null
+          game_update_auto_tech?: boolean
+          game_update_email?: boolean
+          game_update_telegram?: boolean
+          game_update_watch?: boolean
           id?: string
           notification_prefs?: Json
           role?: Database["public"]["Enums"]["user_role"]
@@ -2439,6 +2508,10 @@ export type Database = {
           email_notifications?: boolean
           feedback_email_notifications?: boolean
           full_name?: string | null
+          game_update_auto_tech?: boolean
+          game_update_email?: boolean
+          game_update_telegram?: boolean
+          game_update_watch?: boolean
           id?: string
           notification_prefs?: Json
           role?: Database["public"]["Enums"]["user_role"]
@@ -2482,6 +2555,10 @@ export type Database = {
       add_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
+      }
+      apply_auto_tech_improvement: {
+        Args: { p_game_id: string }
+        Returns: Database["public"]["Enums"]["game_status"]
       }
       apply_scan_slot: {
         Args: {
@@ -2710,6 +2787,28 @@ export type Database = {
       is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
+      list_watched_games: {
+        Args: never
+        Returns: {
+          auto_tech: boolean
+          email_notifications: boolean
+          game_id: string
+          last_build_id: number
+          name: string
+          notification_prefs: Json
+          notify_email: boolean
+          notify_telegram: boolean
+          owner_email: string
+          owner_full_name: string
+          owner_id: string
+          slug: string
+          status: Database["public"]["Enums"]["game_status"]
+          steam_app_id: number
+          telegram_chat_ids: number[]
+          telegram_notifications: boolean
+          unsubscribe_token: string
+        }[]
+      }
       prune_scan_slots: {
         Args: { p_slots: string[]; p_version_id: string }
         Returns: undefined
@@ -2761,6 +2860,7 @@ export type Database = {
         | "download_milestone"
         | "subscriber_milestone"
         | "role_changed"
+        | "game_update"
       user_role: "admin" | "moderator" | "translator" | "user"
     }
     CompositeTypes: {
@@ -2919,6 +3019,7 @@ export const Constants = {
         "download_milestone",
         "subscriber_milestone",
         "role_changed",
+        "game_update",
       ],
       user_role: ["admin", "moderator", "translator", "user"],
     },
