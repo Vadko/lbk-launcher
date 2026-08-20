@@ -59,6 +59,7 @@ import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
+import { removeAllSteamArtwork } from '../utils/steam-artwork';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 import { launchUplayGame } from '../utils/uplay-launcher';
 
@@ -601,6 +602,13 @@ export function setupGamesHandlers(): void {
   ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
     setCefDebuggingEnabled(enabled)
   );
+
+  // Switching off reverts covers already installed, not just future ones.
+  ipcMain.handle('set-steam-custom-artwork', async (_event, enabled: boolean) => {
+    if (!enabled) {
+      await removeAllSteamArtwork();
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // Banner API handlers - all banner functionality consolidated here

@@ -5,6 +5,7 @@ declare const __SENTRY_RELEASE__: string;
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string;
   readonly VITE_SUPABASE_ANON_KEY: string;
+  readonly VITE_STORAGE_IMAGES_URL: string;
   readonly VITE_GH_TOKEN: string;
   readonly VITE_DEBUG_MODE: string;
   readonly VITE_MIXPANEL_TOKEN_DEV: string;

@@ -89,6 +89,12 @@ export const SettingsModal: React.FC = () => {
   const toggleSteamCefDebugging = useSettingsStore(
     (state) => state.toggleSteamCefDebugging
   );
+  const steamCustomArtworkEnabled = useSettingsStore(
+    (state) => state.steamCustomArtworkEnabled
+  );
+  const toggleSteamCustomArtwork = useSettingsStore(
+    (state) => state.toggleSteamCustomArtwork
+  );
 
   // Promo modal dev settings
   const { devMode, setDevMode } = usePromoModalStore();
@@ -122,6 +128,13 @@ export const SettingsModal: React.FC = () => {
     toggleSteamCefDebugging();
     // Fire-and-forget — the enable path can probe Steam for ~1.5s.
     window.electronAPI?.setSteamCefDebugging(newValue).catch(console.error);
+  };
+
+  const handleToggleSteamCustomArtwork = () => {
+    const newValue = !steamCustomArtworkEnabled;
+    toggleSteamCustomArtwork();
+    // Fire-and-forget — switching off walks every app we've touched.
+    window.electronAPI?.setSteamCustomArtwork(newValue).catch(console.error);
   };
 
   const handleKurinSync = useCallback(async () => {
@@ -278,6 +291,13 @@ export const SettingsModal: React.FC = () => {
             description="Створює файл .cef-enable-remote-debugging у теці Steam, щоб застосовувати параметри запуску без перезапуску Steam (після увімкнення потрібен один перезапуск). Якщо вимкнено, файл буде видалено — зверніть увагу: цей самий файл використовує Decky Loader — а параметри запуску оновлюватимуться лише коли Steam закрито"
             enabled={steamCefDebuggingEnabled}
             onChange={handleToggleSteamCefDebugging}
+          />
+          <SettingItem
+            id="steam-custom-artwork"
+            title="Українські обкладинки в Steam"
+            description="Замінювати банер, логотип і горизонтальну обкладинку гри в бібліотеці Steam на українські версії з українізатора. Вертикальна обкладинка залишається оригінальною. Оригінали повертаються при видаленні українізатора або коли вимкнути цей перемикач"
+            enabled={steamCustomArtworkEnabled}
+            onChange={handleToggleSteamCustomArtwork}
           />
           <SettingItem
             id="adult-games"
