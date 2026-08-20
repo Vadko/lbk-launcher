@@ -9,9 +9,11 @@
  */
 
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { getMainWindow } from '@/main/window';
+import { isMacOS } from './platform';
 import { isCefAvailable } from './steam-cef';
 import { isSteamRunning } from './steam-launcher';
 import { readRendererSetting } from './store-storage';
@@ -42,17 +44,47 @@ const MILLENNIUM_MARKERS = [
 ];
 
 /**
- * Steam looks for the flag file alongside `config/`, `userdata/`, etc. — the
- * folder that `getSteamPath()` returns. On Linux that's `~/.steam/steam` or
- * the Flatpak data dir; on Windows the install dir; on macOS
- * `~/Library/Application Support/Steam`.
+ * Steam reads the flag file from its working directory. On Windows/Linux that's
+ * the data root, but on macOS the two differ and a flag file in the data root is
+ * silently ignored — verified against client build 1785799196.
  */
-function getFlagFilePath(): string | null {
+const MACOS_APP_BUNDLE_SUBPATH = 'Steam.AppBundle/Steam/Contents/MacOS';
+
+/** Most-correct first; later entries are legacy spots we clean up, never write to. */
+function getFlagFileDirs(): string[] {
   const steamPath = getSteamPath();
   if (!steamPath) {
+    return [];
+  }
+  if (!isMacOS()) {
+    return [steamPath];
+  }
+
+  // Where older builds wrote it — `detectSteamPathMacOS` may not return it.
+  const legacyDataRoot = path.join(os.homedir(), 'Library/Application Support/Steam');
+
+  // `/Applications/Steam.app/Contents/MacOS` is already the working directory.
+  const primary = steamPath.endsWith(path.join('Contents', 'MacOS'))
+    ? steamPath
+    : path.join(steamPath, MACOS_APP_BUNDLE_SUBPATH);
+
+  return [...new Set([primary, steamPath, legacyDataRoot])];
+}
+
+/** Where the flag file must live for Steam to act on it. */
+function getFlagFilePath(): string | null {
+  const dirs = getFlagFileDirs();
+  if (dirs.length === 0) {
     return null;
   }
-  return path.join(steamPath, FLAG_FILE_NAME);
+  // Falls back to the data root, which is at least guaranteed to exist.
+  const dir = dirs.find((candidate) => fs.existsSync(candidate)) ?? dirs[dirs.length - 1];
+  return path.join(dir, FLAG_FILE_NAME);
+}
+
+/** Every location a flag file could be sitting in, including stale ones. */
+function getAllFlagFilePaths(): string[] {
+  return getFlagFileDirs().map((dir) => path.join(dir, FLAG_FILE_NAME));
 }
 
 /**
@@ -71,14 +103,35 @@ function isMillenniumInstalled(): boolean {
   return MILLENNIUM_MARKERS.some((marker) => fs.existsSync(path.join(steamPath, marker)));
 }
 
+/** Delete one flag file; a missing file is already the desired end state. */
+function unlinkFlagFile(filePath: string): void {
+  try {
+    fs.unlinkSync(filePath);
+    console.log(`[CEFFlagFile] Removed ${filePath}`);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return;
+    }
+    console.error('[CEFFlagFile] Failed to remove flag file:', error);
+  }
+}
+
 /**
- * Make sure the flag file exists. Idempotent — calling it many times is fine.
+ * Make sure the flag file exists where Steam reads it, and nowhere else.
+ * Idempotent — calling it many times is fine.
  */
 function ensureCefFlagFile(): void {
   const filePath = getFlagFilePath();
   if (!filePath) {
     console.warn('[CEFFlagFile] Steam path not found, cannot create flag file');
     return;
+  }
+
+  // Older builds dropped it where Steam never looks — leave only the copy that works.
+  for (const stale of getAllFlagFilePaths()) {
+    if (stale !== filePath && fs.existsSync(stale)) {
+      unlinkFlagFile(stale);
+    }
   }
 
   if (fs.existsSync(filePath)) {
@@ -102,19 +155,8 @@ function ensureCefFlagFile(): void {
 
 /** Remove the flag file. The debug port closes on the next Steam restart. */
 function removeCefFlagFile(): void {
-  const filePath = getFlagFilePath();
-  if (!filePath) {
-    return;
-  }
-  try {
-    fs.unlinkSync(filePath);
-    console.log(`[CEFFlagFile] Removed ${filePath}`);
-  } catch (error) {
-    // Already gone — the desired end state.
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return;
-    }
-    console.error('[CEFFlagFile] Failed to remove flag file:', error);
+  for (const filePath of getAllFlagFilePaths()) {
+    unlinkFlagFile(filePath);
   }
 }
 

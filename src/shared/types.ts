@@ -311,6 +311,8 @@ export interface ElectronAPI {
   onSteamRestartRequired: (callback: (mandatory: boolean) => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
   setSteamCefDebugging: (enabled: boolean) => Promise<void>;
+  /** Turning it off reverts Ukrainian library artwork already installed. */
+  setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking

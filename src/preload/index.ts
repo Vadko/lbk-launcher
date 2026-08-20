@@ -238,6 +238,8 @@ const electronAPI: ElectronAPI = {
   },
   setSteamCefDebugging: (enabled: boolean) =>
     ipcRenderer.invoke('set-steam-cef-debugging', enabled),
+  setSteamCustomArtwork: (enabled: boolean) =>
+    ipcRenderer.invoke('set-steam-custom-artwork', enabled),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
   isE2E: () => isE2EMode,

@@ -28,6 +28,7 @@ import {
 } from './installer/platform';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { isLinux, isMacOS } from './utils/platform';
+import { applySteamArtwork } from './utils/steam-artwork';
 import { writeSteamLaunchOptions } from './utils/steam-launch-options';
 
 const mkdir = promisify(fs.mkdir);
@@ -501,6 +502,32 @@ export async function installTranslation(
         `[Installer] Steam LaunchOptions mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
       );
       launchOptionsPending = result.mode === 'needs-shutdown';
+    }
+
+    // 11. Ukrainian library artwork (Steam-only). Never fail an install over it.
+    if (
+      gamePath.platform === 'steam' &&
+      game.steam_app_id &&
+      (game.capsule_path || game.banner_path || game.logo_path)
+    ) {
+      onStatus?.({
+        message: 'Встановлення українських обкладинок Steam...',
+        phase: 'install',
+      });
+      try {
+        const artwork = await applySteamArtwork({
+          appId: game.steam_app_id,
+          capsulePath: game.capsule_path,
+          bannerPath: game.banner_path,
+          logoPath: game.logo_path,
+          updatedAt: game.updated_at,
+        });
+        console.log(
+          `[Installer] Steam artwork mode=${artwork.mode}${artwork.installed.length ? ` — ${artwork.installed.join(', ')}` : ''}${artwork.reason ? ` — ${artwork.reason}` : ''}`
+        );
+      } catch (artworkError) {
+        console.warn('[Installer] Steam artwork failed:', artworkError);
+      }
     }
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);

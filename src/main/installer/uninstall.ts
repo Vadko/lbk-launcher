@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import type { Game } from '../../shared/types';
+import { removeSteamArtwork } from '../utils/steam-artwork';
 import {
   BACKUP_DIR_NAME,
   BACKUP_DIR_NAME_LEGACY,
@@ -106,6 +107,15 @@ export async function uninstallTranslation(game: Game): Promise<void> {
       await unlink(infoPath);
     }
     await deleteCachedInstallationInfo(game.id);
+
+    // Gated on the platform, so removing an Epic copy keeps Steam's covers.
+    if (game.steam_app_id && installInfo.installedPlatform === 'steam') {
+      try {
+        await removeSteamArtwork(game.steam_app_id);
+      } catch (artworkError) {
+        console.warn('[Uninstall] Could not revert Steam artwork:', artworkError);
+      }
+    }
 
     console.log(`[Installer] Translation for ${game.id} uninstalled successfully`);
   } catch (error) {

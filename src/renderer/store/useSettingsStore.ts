@@ -46,6 +46,7 @@ interface SettingsStore {
   liquidGlassEnabled: boolean;
   gamepadSoundsEnabled: boolean;
   steamCefDebuggingEnabled: boolean;
+  steamCustomArtworkEnabled: boolean;
   isSettingsModalOpen: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
@@ -70,6 +71,7 @@ interface SettingsStore {
   toggleLiquidGlass: () => void;
   toggleGamepadSounds: () => void;
   toggleSteamCefDebugging: () => void;
+  toggleSteamCustomArtwork: () => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
@@ -89,6 +91,7 @@ export const useSettingsStore = create<SettingsStore>()(
       liquidGlassEnabled: fancyEffectsByDefault,
       gamepadSoundsEnabled: true,
       steamCefDebuggingEnabled: true,
+      steamCustomArtworkEnabled: true,
       isSettingsModalOpen: false,
       sidebarWidth: 320,
       specialFilter: null,
@@ -173,6 +176,9 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleSteamCefDebugging: () =>
         set((state) => ({ steamCefDebuggingEnabled: !state.steamCefDebuggingEnabled })),
 
+      toggleSteamCustomArtwork: () =>
+        set((state) => ({ steamCustomArtworkEnabled: !state.steamCustomArtworkEnabled })),
+
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
@@ -203,6 +209,7 @@ export const useSettingsStore = create<SettingsStore>()(
         liquidGlassEnabled: state.liquidGlassEnabled,
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,
+        steamCustomArtworkEnabled: state.steamCustomArtworkEnabled,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedContentTypes: state.selectedContentTypes,

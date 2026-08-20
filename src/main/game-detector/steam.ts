@@ -315,6 +315,11 @@ export function getLocalConfigPath(): string | null {
   return getUserConfigPath('localconfig.vdf');
 }
 
+/** Per-user custom library artwork. Steam creates the folder lazily. */
+export function getSteamGridPath(): string | null {
+  return getUserConfigPath('grid');
+}
+
 /**
  * Read localconfig.vdf content for current user
  * Returns null if Steam/user not found or file doesn't exist
