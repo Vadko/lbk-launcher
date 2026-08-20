@@ -38,7 +38,7 @@ interface Candidate {
 }
 
 // Кешуємо лише непорожні результати на період ротації.
-// Інакше добірка, запитана до синку, лишиться порожньою.
+// Інакше добірка отримана до синхронізації, лишиться порожньою.
 const memo = new Map<string, { epoch: number; ids: string[] }>();
 
 function parseTags(json: string): Set<number> {
