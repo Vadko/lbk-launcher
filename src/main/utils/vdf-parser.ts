@@ -164,3 +164,31 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
 
   return playtimes;
 }
+
+/**
+ * Read the compatibility tool Steam is configured to use for an app from
+ * `config/config.vdf`.
+ *
+ * Returns the raw tool name (`proton_9`, `steamlinuxruntime`, ...), an empty
+ * string when the user explicitly picked "none", or null when the app has no
+ * entry at all — which is the common case, since Steam only records an entry
+ * once the setting is changed by hand.
+ */
+export function parseCompatToolName(content: string, appId: number): string | null {
+  const mappingIndex = content.indexOf('"CompatToolMapping"');
+  if (mappingIndex === -1) {
+    return null;
+  }
+
+  // App entries hold only flat keys (name/config/priority), so a brace-free
+  // body match is enough to isolate one.
+  const entry = new RegExp(`"${appId}"\\s*\\{([^}]*)\\}`).exec(
+    content.slice(mappingIndex)
+  );
+  if (!entry) {
+    return null;
+  }
+
+  const name = /"name"\s+"([^"]*)"/.exec(entry[1]);
+  return name ? name[1] : null;
+}
