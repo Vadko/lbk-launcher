@@ -26,8 +26,8 @@ export const WarningFillIcon: React.FC<{ size?: number; className?: string }> = 
         y2="16.4031"
         gradientUnits="userSpaceOnUse"
       >
-        <stop stop-color="#FFA47A" />
-        <stop offset="1" stop-color="#A8CF96" />
+        <stop stopColor="#FFA47A" />
+        <stop offset="1" stopColor="#A8CF96" />
       </linearGradient>
     </defs>
   </svg>

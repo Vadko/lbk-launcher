@@ -297,6 +297,7 @@ const electronAPI: ElectronAPI = {
   }) => ipcRenderer.invoke('record-promo-banner-impression', params),
   recordBannerImpression: (bannerId: string, impressionType: ImpressionType = 'view') =>
     ipcRenderer.invoke('record-banner-impression', bannerId, impressionType),
+  fetchWorkshopGames: (params) => ipcRenderer.invoke('fetch-workshop-games', params),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

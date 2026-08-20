@@ -248,6 +248,25 @@ class DatabaseManager {
         updated_at TEXT NOT NULL
       );
     `);
+
+    // Таблиця для перекладів, розповсюджуваних через Steam Workshop.
+    // Незалежна від games - не пов'язана з основним каталогом перекладів.
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS workshop_games (
+        id TEXT PRIMARY KEY,
+        workshop_id TEXT NOT NULL,
+        steam_app_id INTEGER,
+        name TEXT NOT NULL,
+        name_search TEXT,
+        team TEXT,
+        game_name TEXT,
+        thumbnail_url TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_workshop_games_name_search ON workshop_games(name_search);
+    `);
   }
 
   /**

@@ -998,6 +998,40 @@ const migrations: Migration[] = [
         'migration_resync_steam_tag_ids_done'
       ),
   },
+  {
+    name: 'add_workshop_games_table',
+    up: (db) => {
+      const tableExists = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='workshop_games'"
+        )
+        .get() as { count: number };
+      if (tableExists.count > 0) {
+        return;
+      }
+
+      console.log('[Migrations] Running: add_workshop_games_table');
+
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS workshop_games (
+          id TEXT PRIMARY KEY,
+          workshop_id TEXT NOT NULL,
+          steam_app_id INTEGER,
+          name TEXT NOT NULL,
+          name_search TEXT,
+          team TEXT,
+          game_name TEXT,
+          thumbnail_url TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_workshop_games_name_search ON workshop_games(name_search);
+      `);
+
+      console.log('[Migrations] Completed: add_workshop_games_table');
+    },
+  },
 ];
 
 /**

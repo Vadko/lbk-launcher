@@ -144,6 +144,28 @@ export interface GetGamesResult {
   uniqueCount?: number; // Count of unique games by slug (for filters)
 }
 
+/** Переклад, розповсюджуваний через Steam Workshop. Незалежний від Game/games. */
+export interface WorkshopGame {
+  id: string;
+  workshop_id: string;
+  steam_app_id: number | null;
+  name: string;
+  team: string | null;
+  game_name: string;
+  thumbnail_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GetWorkshopGamesParams {
+  searchQuery?: string;
+}
+
+export interface GetWorkshopGamesResult {
+  games: WorkshopGame[];
+  total: number;
+}
+
 export interface FilterCountsResult {
   planned: number;
   'in-progress': number;
@@ -374,6 +396,10 @@ export interface ElectronAPI {
     bannerId: string,
     impressionType?: ImpressionType
   ) => Promise<boolean>;
+  // Steam Workshop translations (independent from the main games catalog)
+  fetchWorkshopGames: (
+    params?: GetWorkshopGamesParams
+  ) => Promise<GetWorkshopGamesResult>;
 }
 
 declare global {

@@ -126,6 +126,12 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
+import {
+  fetchAllWorkshopGamesFromSupabase,
+  fetchDeletedWorkshopGameIdsFromSupabase,
+  fetchUpdatedWorkshopGamesFromSupabase,
+} from './db/workshop-sync-api';
+import { WorkshopSyncManager } from './db/workshop-sync-manager';
 import { createFeedbackReplyBroadcastSubscription } from './feedback-replies';
 import {
   startInstallationWatcher,
@@ -136,6 +142,7 @@ import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { setupWorkshopHandlers } from './ipc/workshop';
 import {
   calculatePlaytimeDeltas,
   recordPlaytimeAtSessionStart,
@@ -147,6 +154,7 @@ import { createMainWindow, getMainWindow } from './window';
 
 // Глобальні менеджери
 let syncManager: SyncManager | null = null;
+let workshopSyncManager: WorkshopSyncManager | null = null;
 let realtimeManager: SupabaseRealtimeManager | null = null;
 let currentSyncStatus: 'syncing' | 'ready' | 'error' = 'syncing';
 
@@ -219,6 +227,7 @@ if (!gotTheLock) {
   setupInstallerHandlers();
   setupTgNewsHandlers();
   setupFeedbackReplyHandlers();
+  setupWorkshopHandlers();
   setupAutoUpdater();
 
   // IPC handler for getting current sync status
@@ -305,6 +314,22 @@ if (!gotTheLock) {
         (code && hint[code]) || error
       );
       sendSyncStatus('error');
+    }
+
+    // Окрема синхронізація Steam Workshop перекладів. Не впливає на основний
+    // sync-status застосунку - це другорядна сторінка, тож при помилці
+    // (мережа, ще не створена таблиця на старих інсталяціях) локальна
+    // таблиця workshop_games просто лишається застарілою/порожньою.
+    try {
+      workshopSyncManager = WorkshopSyncManager.getInstance();
+      await workshopSyncManager.sync(
+        fetchAllWorkshopGamesFromSupabase,
+        fetchUpdatedWorkshopGamesFromSupabase,
+        fetchDeletedWorkshopGameIdsFromSupabase
+      );
+      console.log('[Main] Workshop sync completed');
+    } catch (error) {
+      console.error('[Main] Workshop sync failed:', error);
     }
 
     console.log('[Main] Setting up realtime subscription...');

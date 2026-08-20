@@ -1,5 +1,5 @@
 import logo from '@resources/logo.svg';
-import { BookOpenText, Home, Medal, Newspaper } from 'lucide-react';
+import { BookOpenText, Home, Medal, Newspaper, PackageSearch } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -44,6 +44,13 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
               title="Відкрити новини"
             >
               <Newspaper size={20} />
+            </button>
+            <button
+              onClick={() => navigate('/workshop')}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
+              title="Відкрити переклади Steam Workshop"
+            >
+              <PackageSearch size={20} />
             </button>
             <button
               onClick={() => navigate('/')}

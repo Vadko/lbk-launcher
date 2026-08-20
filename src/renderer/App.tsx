@@ -9,6 +9,7 @@ import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
 import { NewsPage } from './pages/NewsPage';
 import { SitePage } from './pages/SitePage';
+import { WorkshopPage } from './pages/WorkshopPage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
@@ -416,6 +417,7 @@ export const App: React.FC = () => {
           <Route path="/news" element={<NewsPage />} />
           <Route path="/site/:page" element={<SitePage />} />
           <Route path="/game/:gameId" element={<GamePage />} />
+          <Route path="/workshop" element={<WorkshopPage />} />
         </Route>
       }
     />
