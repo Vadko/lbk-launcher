@@ -147,9 +147,7 @@ export function getInstallerFileName(game: Game, buildOs?: GameBuildOs): string 
   const isLinuxOS = isLinux();
   const isMacOS = !isWindowsOS && !isLinuxOS;
 
-  // Prefer the installer belonging to the build we just installed: the archive
-  // was chosen the same way, so a file for another build is likely not in it.
-  // (Windows installers still run through Proton — see runInstaller.)
+  // Match the archive, picked the same way; another build's file isn't inside it.
   if (buildOs === 'windows' && game.installation_file_windows_path) {
     return isWindowsOS
       ? game.installation_file_windows_path

@@ -106,10 +106,7 @@ export async function installTranslation(
 
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
 
-    // Which build is actually on disk? The host OS is not a reliable answer: on
-    // Linux (Steam Deck in particular) most Steam titles are installed as the
-    // Windows build and run through Proton, so a Linux-specific archive would be
-    // copied next to `game.exe` and silently do nothing.
+    // Not the host OS: Linux Steam titles are mostly the Windows build under Proton.
     const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id);
     console.log(`[Installer] Installed game build: ${buildOs}`);
 
@@ -121,8 +118,7 @@ export async function installTranslation(
     let requiredSpace = 0;
     if (installText) {
       // Pick the matching archive size in priority order:
-      //   1. Variant matching the installed game build (Linux/macOS) — applies
-      //      regardless of store. Detected from disk, not from the host OS.
+      //   1. Variant matching the installed build (Linux/macOS) — any store.
       //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only if user is on that store.
       //   3. Main archive — default fallback (typically Windows).
       let textArchiveSize: string | null | undefined = game.archive_size;
@@ -179,9 +175,7 @@ export async function installTranslation(
     let textFiles: string[] = [];
     if (installText) {
       // Selection priority (matches the disk-space check above):
-      //   1. Variant matching the installed game build (Linux/macOS) — applies
-      //      regardless of store, and is detected from the files on disk rather
-      //      than from the host OS (Proton games on Linux are Windows builds).
+      //   1. Variant matching the installed build (Linux/macOS) — any store.
       //      Translator uploads these when files differ for Linux/macOS builds.
       //   2. Store-specific variant (Epic/GOG/Xbox/Uplay/EA) — only when user is on
       //      that store.

@@ -4,22 +4,13 @@ import { getSteamPath } from '../game-detector';
 import { getPlatform } from './platform';
 import { parseCompatToolName } from './vdf-parser';
 
-/**
- * OS of the game build that is actually installed on disk.
- *
- * This is deliberately different from the host OS: on Linux (and especially on
- * Steam Deck) most Steam titles are installed as the *Windows* build and run
- * through Proton, so `process.platform === 'linux'` says nothing about which
- * files are sitting in the game folder.
- */
+/** Build installed on disk — not the host OS (Linux Steam titles are mostly Proton). */
 export type GameBuildOs = 'windows' | 'linux' | 'macos';
 
 const MAX_ENTRIES_PER_DIR = 2000;
 const MAX_SUBDIRS_SCANNED = 60;
 
-/** First four bytes of a Linux executable. */
 const ELF_MAGIC = '7f454c46';
-/** First four bytes of a macOS executable (thin 32/64-bit and fat/universal). */
 const MACH_O_MAGICS = new Set([
   'feedface',
   'feedfacf',
@@ -29,10 +20,9 @@ const MACH_O_MAGICS = new Set([
   'cefaedfe',
 ]);
 
-/** Names that mark a build by themselves, without reading the file. */
 const WINDOWS_EXTENSIONS = new Set(['.exe']);
 const LINUX_EXTENSIONS = new Set(['.sh', '.run', '.appimage']);
-/** Extensions that may hide a native binary ('' = no extension at all). */
+/** '' = no extension. */
 const BINARY_EXTENSIONS = new Set(['', '.x86_64', '.x86', '.x64', '.bin', '.elf']);
 
 interface BuildMarkers {
@@ -44,8 +34,7 @@ interface BuildMarkers {
 async function readDirectory(dir: string): Promise<fs.Dirent[]> {
   try {
     const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-    // readdir order is filesystem-dependent; sort so the cap below never makes
-    // the verdict depend on hash order.
+    // Sorted so the cap below doesn't depend on readdir order.
     entries.sort((a, b) => a.name.localeCompare(b.name));
     return entries.slice(0, MAX_ENTRIES_PER_DIR);
   } catch {
@@ -53,7 +42,6 @@ async function readDirectory(dir: string): Promise<fs.Dirent[]> {
   }
 }
 
-/** Read the executable signature of a file, or null when unreadable. */
 async function readMagic(filePath: string): Promise<string | null> {
   let handle: Awaited<ReturnType<typeof fs.promises.open>> | undefined;
   try {
@@ -77,7 +65,7 @@ async function scanDirectory(dir: string, markers: BuildMarkers): Promise<void> 
     let isDirectory = entry.isDirectory();
     let isFile = entry.isFile();
 
-    // Symlinks (and DT_UNKNOWN entries) report neither, so resolve them.
+    // Symlinks report neither.
     if (!isDirectory && !isFile) {
       try {
         const stats = await fs.promises.stat(fullPath);
@@ -111,7 +99,6 @@ async function scanDirectory(dir: string, markers: BuildMarkers): Promise<void> 
       continue;
     }
 
-    // Anything left can still be a native binary — ask the file itself.
     if ((markers.linux && markers.macos) || !BINARY_EXTENSIONS.has(extension)) {
       continue;
     }
@@ -125,11 +112,7 @@ async function scanDirectory(dir: string, markers: BuildMarkers): Promise<void> 
   }
 }
 
-/**
- * A verdict is only trustworthy when exactly one build is present. Folders that
- * ship several builds side by side (or none we recognise) are left to the
- * caller, which has stronger evidence available.
- */
+/** Only one marker is a verdict; anything else the caller resolves. */
 function decide(markers: BuildMarkers): GameBuildOs | null {
   const found: GameBuildOs[] = [];
   if (markers.windows) {
@@ -153,7 +136,7 @@ async function detectFromFiles(gamePath: string): Promise<GameBuildOs | null> {
     return topLevelVerdict;
   }
 
-  // Some stores nest the executable one level deep (game/, bin/, Windows/...).
+  // Some stores nest the executable one level deep.
   let scanned = 0;
   for (const entry of await readDirectory(gamePath)) {
     if (!entry.isDirectory() || entry.name.startsWith('.')) {
@@ -169,7 +152,6 @@ async function detectFromFiles(gamePath: string): Promise<GameBuildOs | null> {
   return decide(markers);
 }
 
-/** Map a Steam compatibility tool name onto the build it launches. */
 function compatToolToBuildOs(toolName: string): GameBuildOs | null {
   const name = toolName.toLowerCase();
   if (!name) {
@@ -184,13 +166,7 @@ function compatToolToBuildOs(toolName: string): GameBuildOs | null {
   return null;
 }
 
-/**
- * What Steam is configured to launch this app with *right now*.
- *
- * Preferred over the Wine prefix below: switching a game back to a native
- * runtime leaves the old prefix on disk, so `pfx` can outlive the setting that
- * created it, while this value is the live one.
- */
+/** Live setting — updates the moment the user switches runtime. */
 async function buildOsFromCompatTool(
   steamAppId: number | null | undefined
 ): Promise<GameBuildOs | null> {
@@ -216,18 +192,8 @@ async function buildOsFromCompatTool(
 }
 
 /**
- * Work out which build of the game is installed at `gamePath`.
- *
- * Evidence is used strongest-first:
- *   1. the files on disk — they decide what we can patch at all, and are the
- *      only signal that is always present;
- *   2. the compatibility tool Steam is set to use for this app right now, which
- *      only breaks the tie when a folder ships several builds at once;
- *   3. the host OS, as a last resort.
- *
- * Steam's Wine prefix (`compatdata/<appId>/pfx`) is deliberately *not* used: it
- * is only created on the first launch, so it is missing exactly when a freshly
- * installed game is about to be patched.
+ * Strongest evidence first: files, Steam's compat tool, host OS. The Wine prefix
+ * is skipped — it appears only on first launch, too late to be useful here.
  */
 export async function resolveGameBuildOs(
   gamePath: string,

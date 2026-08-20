@@ -166,13 +166,10 @@ export function parseLocalConfigPlaytime(content: string): Map<number, SteamAppP
 }
 
 /**
- * Read the compatibility tool Steam is configured to use for an app from
- * `config/config.vdf`.
+ * Compatibility tool Steam uses for an app, from `config/config.vdf`.
  *
- * Returns the raw tool name (`proton_9`, `steamlinuxruntime`, ...), an empty
- * string when the user explicitly picked "none", or null when the app has no
- * entry at all — which is the common case, since Steam only records an entry
- * once the setting is changed by hand.
+ * Empty string when the user picked "none", null when there is no entry — the
+ * common case, since Steam records one only after a manual change.
  */
 export function parseCompatToolName(content: string, appId: number): string | null {
   const mappingIndex = content.indexOf('"CompatToolMapping"');
@@ -180,8 +177,7 @@ export function parseCompatToolName(content: string, appId: number): string | nu
     return null;
   }
 
-  // App entries hold only flat keys (name/config/priority), so a brace-free
-  // body match is enough to isolate one.
+  // Flat keys only, so a brace-free match isolates one entry.
   const entry = new RegExp(`"${appId}"\\s*\\{([^}]*)\\}`).exec(
     content.slice(mappingIndex)
   );
