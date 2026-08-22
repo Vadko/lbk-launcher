@@ -53,7 +53,7 @@ export const SitePage: React.FC = () => {
       data-gamepad-main-content
       className={`flex-1 flex justify-center px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto custom-scrollbar`}
     >
-      <div className="main-page w-full max-w-[1317px] py-4">
+      <div className="main-page w-full max-w-[1564px] py-4">
         {/* <div className="glass-card-no-motion !p-2"> */}
         <iframe
           src={`${SITE_ORIGIN}/${page}?page=only`}
