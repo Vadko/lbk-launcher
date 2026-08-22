@@ -60,8 +60,8 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
       className="glass-card-no-motion mb-6"
     >
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">{title}</h3>
-      <div className="grid grid-cols-3 gap-8">
-        <AnimatePresence>
+      <div className="grid grid-cols-3 gap-8 max-w-[1564px] mx-auto">
+        <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
               key="loader"

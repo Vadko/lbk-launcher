@@ -48,7 +48,7 @@ export const MainPage: React.FC = () => {
       {/* Main page */}
       {currentView === 'main' && (
         <div
-          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
+          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1564px]`}
         >
           <InstalledGamesSection showLimit={3} />
           <NewGamesSection
@@ -67,7 +67,7 @@ export const MainPage: React.FC = () => {
       {/* Trending games page */}
       {currentView === 'trending' && (
         <div
-          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1317px]`}
+          className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1564px]`}
         >
           <TrendingGamesPage onBack={() => setCurrentView('main')} />
         </div>
