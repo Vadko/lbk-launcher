@@ -2613,6 +2613,17 @@ export type Database = {
           translations_count: number
         }[]
       }
+      game_update_defaults: {
+        Args: { p_game_id: string }
+        Returns: {
+          auto_tech: boolean
+          email_ready: boolean
+          notify_email: boolean
+          notify_telegram: boolean
+          telegram_ready: boolean
+          watch: boolean
+        }[]
+      }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
       get_active_users: {
         Args: { p_end_date?: string; p_start_date?: string }
