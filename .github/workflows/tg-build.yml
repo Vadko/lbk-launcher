@@ -1,4 +1,4 @@
-name: TG Build (admin-version)
+name: TG Build (admin)
 
 on:
   workflow_dispatch:
@@ -16,9 +16,14 @@ on:
         required: false
         type: string
         default: 'unknown'
+      ref:
+        description: 'Branch/tag to build (default: main)'
+        required: false
+        type: string
+        default: 'main'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: tg-build
@@ -36,36 +41,23 @@ jobs:
     outputs:
       tag_name: ${{ steps.tag.outputs.tag_name }}
     steps:
-      - name: Checkout admin-version
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: admin-version
-          fetch-depth: 0
+          ref: ${{ inputs.ref }}
 
       - name: Notify start
         env:
           TRIGGERED_BY: ${{ inputs.triggered_by }}
+          REF: ${{ inputs.ref }}
         run: node scripts/tg-notify.mjs start
-
-      - name: Merge main → admin-version
-        id: merge
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          if ! git merge origin/main --no-edit; then
-            git merge --abort || true
-            node scripts/tg-notify.mjs merge_conflict
-            exit 1
-          fi
-          git push origin admin-version
 
       - name: Compute tag
         id: tag
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          echo "tag_name=v${VERSION}-dev.admin-version.${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "tag_name=v${VERSION}-admin.${TIMESTAMP}" >> $GITHUB_OUTPUT
 
       - name: Notify build start
         env:
@@ -88,10 +80,10 @@ jobs:
           - os: macos-26
             platform: macos
     steps:
-      - name: Checkout admin-version
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: admin-version
+          ref: ${{ inputs.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -124,6 +116,8 @@ jobs:
 
       - name: Build application
         env:
+          # Адмінська збірка: приховані переклади видно без коду розблокування
+          VITE_ADMIN_MODE: 'true'
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}

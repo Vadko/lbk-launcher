@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { IS_ADMIN_BUILD } from '../../shared/admin-mode';
 import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 
 /**
@@ -590,7 +591,11 @@ const migrations: Migration[] = [
 
       // Inline spellfix population (can't import db-queries due to bundled code)
       const rows = db
-        .prepare('SELECT name FROM games WHERE approved = 1 AND hide = 0')
+        .prepare(
+          IS_ADMIN_BUILD
+            ? 'SELECT name FROM games WHERE approved = 1'
+            : 'SELECT name FROM games WHERE approved = 1 AND hide = 0'
+        )
         .all() as { name: string }[];
 
       const words = new Set<string>();

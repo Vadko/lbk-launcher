@@ -17,14 +17,15 @@ const {
   TAG_NAME,
   PLATFORM,
   RUN_URL,
+  REF,
 } = process.env;
 
 const kind = process.argv[2];
 
 const KINDS = {
-  start: () => `🔄 Старт від ${TRIGGERED_BY || 'unknown'}: мерджу main → admin-version...`,
-  merge_conflict: () => `❌ Конфлікт мержу main → admin-version. Розрули вручну й перезапусти.`,
-  build_start: () => `🏗 Мерж ок. Білджу 3 платформи. Тег: ${TAG_NAME}`,
+  start: () =>
+    `🔄 Старт від ${TRIGGERED_BY || 'unknown'}: адмінська збірка з гілки ${REF || 'main'}...`,
+  build_start: () => `🏗 Білджу 3 платформи. Тег: ${TAG_NAME}`,
   platform_success: () => `✅ ${PLATFORM}: готово`,
   platform_failure: () => `❌ ${PLATFORM}: збій. Логи: ${RUN_URL}`,
 };

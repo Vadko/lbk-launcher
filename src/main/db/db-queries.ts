@@ -3,11 +3,17 @@
  * Використовується в games-repository.ts та db-worker.ts
  */
 import type Database from 'better-sqlite3';
+import { IS_ADMIN_BUILD } from '../../shared/admin-mode';
 import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 import type { Game, Database as SupabaseDatabase } from '../../shared/types';
 
-/** Видимі ігри: приховані показуються лише якщо розблоковані користувачем */
-export const VISIBLE_GAMES_SQL = 'approved = 1 AND (hide = 0 OR user_unlocked = 1)';
+/**
+ * Видимі ігри: приховані показуються лише якщо розблоковані користувачем.
+ * В адмінській збірці (`VITE_ADMIN_MODE=true`) приховані переклади видно завжди.
+ */
+export const VISIBLE_GAMES_SQL = IS_ADMIN_BUILD
+  ? 'approved = 1'
+  : 'approved = 1 AND (hide = 0 OR user_unlocked = 1)';
 
 export function parseTagIds(json: unknown): number[] | null {
   if (typeof json !== 'string') {
