@@ -1160,6 +1160,7 @@ export type Database = {
           installation_file_linux_path: string | null
           installation_file_windows_path: string | null
           is_adult: boolean
+          kind: Database["public"]["Enums"]["translation_kind"]
           last_download_milestone: number
           last_subscriber_milestone: number
           license_only: boolean
@@ -1209,6 +1210,7 @@ export type Database = {
           voice_archive_size: string | null
           voice_progress: number | null
           website: string | null
+          workshop_id: string | null
           xbox_archive_file_list: Json | null
           xbox_archive_hash: string | null
           xbox_archive_path: string | null
@@ -1266,6 +1268,7 @@ export type Database = {
           installation_file_linux_path?: string | null
           installation_file_windows_path?: string | null
           is_adult?: boolean
+          kind?: Database["public"]["Enums"]["translation_kind"]
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
@@ -1315,6 +1318,7 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          workshop_id?: string | null
           xbox_archive_file_list?: Json | null
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
@@ -1372,6 +1376,7 @@ export type Database = {
           installation_file_linux_path?: string | null
           installation_file_windows_path?: string | null
           is_adult?: boolean
+          kind?: Database["public"]["Enums"]["translation_kind"]
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
@@ -1421,6 +1426,7 @@ export type Database = {
           voice_archive_size?: string | null
           voice_progress?: number | null
           website?: string | null
+          workshop_id?: string | null
           xbox_archive_file_list?: Json | null
           xbox_archive_hash?: string | null
           xbox_archive_path?: string | null
@@ -2872,6 +2878,8 @@ export type Database = {
         | "subscriber_milestone"
         | "role_changed"
         | "game_update"
+        | "workshop_update"
+      translation_kind: "regular" | "workshop"
       user_role: "admin" | "moderator" | "translator" | "user"
     }
     CompositeTypes: {
@@ -3031,7 +3039,9 @@ export const Constants = {
         "subscriber_milestone",
         "role_changed",
         "game_update",
+        "workshop_update",
       ],
+      translation_kind: ["regular", "workshop"],
       user_role: ["admin", "moderator", "translator", "user"],
     },
   },
