@@ -26,10 +26,9 @@ import {
   hasExecutableInstaller,
   runInstaller,
 } from './installer/platform';
+import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
-import { applySteamArtwork } from './utils/steam-artwork';
-import { writeSteamLaunchOptions } from './utils/steam-launch-options';
 
 const mkdir = promisify(fs.mkdir);
 
@@ -43,7 +42,11 @@ export async function installTranslation(
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void,
   onConfirmRunInstaller?: (installerPath: string, isExe: boolean) => Promise<boolean>
-): Promise<{ launchOptionsPending: boolean; achievementsChanged: boolean }> {
+): Promise<{
+  launchOptionsPending: boolean;
+  launchOptionsError?: string;
+  achievementsChanged: boolean;
+}> {
   const { createBackup, installText, installVoice, installAchievements, platform } =
     options;
 
@@ -425,7 +428,9 @@ export async function installTranslation(
         });
         throw error;
       }
-      return { launchOptionsPending: false, achievementsChanged };
+
+      const steam = await applySteamIntegration(game, gamePath, onStatus);
+      return { ...steam, achievementsChanged };
     }
 
     // 7. Copy files to game directory
@@ -534,56 +539,11 @@ export async function installTranslation(
     };
     await saveInstallationInfo(gamePath.path, installationInfo);
 
-    // 10. Write Steam LaunchOptions if applicable (Steam-only, when configured by translator)
-    let launchOptionsPending = false;
-    if (
-      gamePath.platform === 'steam' &&
-      game.steam_app_id &&
-      (game.steam_launch_options_windows || game.steam_launch_options_linux)
-    ) {
-      onStatus?.({
-        message: 'Налаштування параметрів запуску Steam...',
-        phase: 'install',
-      });
-      const result = await writeSteamLaunchOptions({
-        appId: game.steam_app_id,
-        windowsOptions: game.steam_launch_options_windows,
-        linuxOptions: game.steam_launch_options_linux,
-      });
-      console.log(
-        `[Installer] Steam LaunchOptions mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
-      );
-      launchOptionsPending = result.mode === 'needs-shutdown';
-    }
-
-    // 11. Ukrainian library artwork (Steam-only). Never fail an install over it.
-    if (
-      gamePath.platform === 'steam' &&
-      game.steam_app_id &&
-      (game.capsule_path || game.banner_path || game.logo_path)
-    ) {
-      onStatus?.({
-        message: 'Встановлення українських обкладинок Steam...',
-        phase: 'install',
-      });
-      try {
-        const artwork = await applySteamArtwork({
-          appId: game.steam_app_id,
-          capsulePath: game.capsule_path,
-          bannerPath: game.banner_path,
-          logoPath: game.logo_path,
-          updatedAt: game.updated_at,
-        });
-        console.log(
-          `[Installer] Steam artwork mode=${artwork.mode}${artwork.installed.length ? ` — ${artwork.installed.join(', ')}` : ''}${artwork.reason ? ` — ${artwork.reason}` : ''}`
-        );
-      } catch (artworkError) {
-        console.warn('[Installer] Steam artwork failed:', artworkError);
-      }
-    }
+    // 10. Steam-only tail: launch options + Ukrainian library artwork
+    const steam = await applySteamIntegration(game, gamePath, onStatus);
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
-    return { launchOptionsPending, achievementsChanged };
+    return { ...steam, achievementsChanged };
   } catch (error) {
     // Handle pause specially - throw PausedSignal for IPC handler
     if (error instanceof Error && error.message === 'PAUSED') {

@@ -24,9 +24,15 @@ import * as path from 'node:path';
 import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
+import {
+  mergeLaunchOptions,
+  resolveGameDirToken,
+  usesGameDirToken,
+} from '@/main/utils/launch-options-value';
 import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
+import type { Game } from '@/shared/types';
 
 interface WriteLaunchOptionsParams {
   appId: number;
@@ -37,14 +43,23 @@ interface WriteLaunchOptionsParams {
    * (Steam macOS uses the same %command% wrapper format as Linux Proton).
    */
   linuxOptions: string | null;
+  /**
+   * Where the game is installed, used to resolve `{GAME_DIR}`. Optional: values
+   * without the token don't need it.
+   */
+  gamePath?: string | null;
 }
 
 type WriteLaunchOptionsMode =
   | 'noop' // nothing to write (no options for current OS, or already in place)
   | 'cef' // applied live through Steam's CEF API
   | 'file' // wrote localconfig.vdf directly (Steam was off)
-  | 'needs-shutdown'; // Steam running + CEF unreachable (e.g. Millennium) —
-//                       caller can prompt user to restart Steam then re-apply.
+  | 'needs-shutdown' // Steam running + CEF unreachable (e.g. Millennium) —
+  //                    caller can prompt user to restart Steam then re-apply.
+  | 'unresolved' // options needed a value we could not supply (unknown game
+  //                 folder, or an unquoted token)
+  | 'failed'; // tried to write and could not. Both are kept apart from 'noop'
+//               so a write that never happened is never read as success.
 
 interface WriteLaunchOptionsResult {
   mode: WriteLaunchOptionsMode;
@@ -61,57 +76,51 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
   return null;
 }
 
-const COMMAND_TOKEN = '%command%';
+/** Fields of a translation record this module reads. */
+type LaunchOptionsSource = Pick<
+  Game,
+  'steam_app_id' | 'steam_launch_options_windows' | 'steam_launch_options_linux'
+>;
 
 /**
- * Merge user's existing Steam LaunchOptions with the translator-provided value.
+ * Build the write params from a translation record. Callers used to assemble
+ * these by hand in two places, so adding a field meant editing both — and a
+ * missed site degrades to a silent noop rather than a compile error.
  *
- * Steam's `%command%` token splits the launch string into two zones:
- *   <env / wrappers> %command% <game CLI args>
- *
- * Translator values typically include `%command%` (Proton wrappers, env vars).
- * The user's existing value can be:
- *   - empty                 → just use ours
- *   - plain CLI flags       → splice them into our args zone after %command%
- *   - their own wrapper +
- *     %command% + args      → preserve only their args; replace their wrapper
- *                              (env/Proton setup is the translator's domain
- *                              and two wrappers can't co-exist)
- *
- * Idempotent: if our value (or the resulting merge) is already present,
- * returns existing unchanged so re-runs don't accumulate duplicates.
+ * Returns null when this translation configures no launch options at all.
  */
-function mergeLaunchOptions(existing: string | null, ours: string): string {
-  const existingTrim = (existing ?? '').trim();
-  if (!existingTrim) {
-    return ours;
-  }
-  if (existingTrim === ours) {
-    return existingTrim;
-  }
-  if (existingTrim.includes(ours)) {
-    return existingTrim;
-  }
-
-  if (ours.includes(COMMAND_TOKEN)) {
-    // Extract whatever args the user had after their own %command% (if any),
-    // otherwise treat the whole existing string as plain args.
-    const userArgs = existingTrim.includes(COMMAND_TOKEN)
-      ? existingTrim
-          .slice(existingTrim.indexOf(COMMAND_TOKEN) + COMMAND_TOKEN.length)
-          .trim()
-      : existingTrim;
-
-    if (!userArgs) {
-      return ours;
-    }
-    if (ours.includes(userArgs)) {
-      return ours;
-    }
-    return ours.replace(COMMAND_TOKEN, `${COMMAND_TOKEN} ${userArgs}`);
+export function launchOptionsParamsFor(
+  game: LaunchOptionsSource,
+  gamePath: string | null
+): WriteLaunchOptionsParams | null {
+  if (
+    !game.steam_app_id ||
+    !(game.steam_launch_options_windows || game.steam_launch_options_linux)
+  ) {
+    return null;
   }
 
-  return `${existingTrim} ${ours}`;
+  return {
+    appId: game.steam_app_id,
+    windowsOptions: game.steam_launch_options_windows,
+    linuxOptions: game.steam_launch_options_linux,
+    gamePath,
+  };
+}
+
+/**
+ * True when the value this OS will actually use needs the game folder resolved.
+ * Checks one column, not both: looking up the install path is expensive, and
+ * the other platform's value is never written here.
+ */
+export function needsGameDir(game: LaunchOptionsSource): boolean {
+  if (isWindows()) {
+    return usesGameDirToken(game.steam_launch_options_windows);
+  }
+  if (isLinux() || isMacOS()) {
+    return usesGameDirToken(game.steam_launch_options_linux);
+  }
+  return false;
 }
 
 const LAUNCH_OPTIONS_PARENT = [
@@ -217,15 +226,24 @@ function jsString(s: string): string {
 export async function writeSteamLaunchOptions(
   params: WriteLaunchOptionsParams
 ): Promise<WriteLaunchOptionsResult> {
-  const value = pickOptionsForCurrentOS(params);
-  if (!value || value.trim() === '') {
+  // Trimmed once, here: the idempotency checks downstream compare against a
+  // trimmed existing value, so stray whitespace from the admin form would make
+  // every re-install look like a new value and append a duplicate.
+  const configured = pickOptionsForCurrentOS(params)?.trim();
+  if (!configured) {
     return { mode: 'noop', reason: 'No launch options for current OS' };
   }
+
+  const resolution = resolveGameDirToken(configured, params.gamePath ?? null);
+  if (resolution.value === null) {
+    return { mode: 'unresolved', reason: resolution.reason };
+  }
+  const value = resolution.value;
 
   const localConfigPath = getLocalConfigPath();
   if (!localConfigPath || !fs.existsSync(localConfigPath)) {
     return {
-      mode: 'noop',
+      mode: 'failed',
       reason: 'localconfig.vdf not found — Steam never started?',
     };
   }
@@ -236,7 +254,7 @@ export async function writeSteamLaunchOptions(
     plan = readAndPlanMerge(localConfigPath, appIdStr, value);
   } catch (error) {
     return {
-      mode: 'noop',
+      mode: 'failed',
       reason: error instanceof Error ? error.message : 'Unknown error',
     };
   }
@@ -259,7 +277,7 @@ export async function writeSteamLaunchOptions(
       return { mode: 'file' };
     } catch (error) {
       return {
-        mode: 'noop',
+        mode: 'failed',
         reason: error instanceof Error ? error.message : 'Unknown error',
       };
     }
@@ -276,7 +294,7 @@ export async function writeSteamLaunchOptions(
       return { mode: 'cef' };
     } catch (error) {
       return {
-        mode: 'noop',
+        mode: 'failed',
         reason: error instanceof Error ? error.message : 'CEF apply failed',
       };
     }

@@ -94,6 +94,12 @@ export interface InstallResult {
    */
   launchOptionsPending?: boolean;
   /**
+   * The launch options could not be written for a reason restarting Steam
+   * won't fix. The install itself succeeded; without them the translation
+   * runs unmodded, so it is surfaced rather than only logged.
+   */
+  launchOptionsError?: string;
+  /**
    * Whether achievement files were actually written this install. False when
    * the user re-runs an install whose achievement archive hash matches what's
    * already on disk — used to suppress the "restart Steam for achievements"

@@ -66,7 +66,7 @@ export function useInstallation({
     checkInstallationStatus,
   } = useStore();
 
-  const { showModal } = useModalStore();
+  const { showModal, closeModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
   const { createBackupBeforeInstall } = useSettingsStore();
 
@@ -318,6 +318,12 @@ export function useInstallation({
           message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
         }
 
+        // Files are in place, but without its launch options the translation
+        // runs unmodded — say so instead of reporting a clean success.
+        if (result.launchOptionsError) {
+          message += `\n\nНе вдалося налаштувати параметри запуску Steam: ${result.launchOptionsError}`;
+        }
+
         showModal({
           title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
           message,
@@ -327,12 +333,38 @@ export function useInstallation({
                 {
                   label: 'Перезапустити Steam',
                   onClick: () => {
-                    if (needsRestartForLaunchOptions) {
-                      window.electronAPI.applyPendingLaunchOptions(selectedGame);
-                    } else {
+                    if (!needsRestartForLaunchOptions) {
                       window.electronAPI.restartSteam();
+                      return;
                     }
+                    // Steam is force-killed and relaunched, which takes a
+                    // while, so the modal stays open as a progress indicator.
+                    // Without reading the result the write can fail in silence.
+                    window.electronAPI
+                      .applyPendingLaunchOptions(selectedGame)
+                      .then((applied) => {
+                        if (applied?.success) {
+                          closeModal();
+                          return;
+                        }
+                        showModal({
+                          title: 'Параметри запуску не застосовано',
+                          message:
+                            applied?.error ??
+                            'Не вдалося записати параметри запуску Steam.',
+                          type: 'error',
+                        });
+                      })
+                      .catch((error: unknown) => {
+                        showModal({
+                          title: 'Параметри запуску не застосовано',
+                          message:
+                            error instanceof Error ? error.message : 'Невідома помилка',
+                          type: 'error',
+                        });
+                      });
                   },
+                  keepOpen: true,
                   variant: 'primary',
                 },
                 {
@@ -378,6 +410,7 @@ export function useInstallation({
       setInstallationProgress,
       clearInstallationProgress,
       showModal,
+      closeModal,
       showConfirm,
       onFirstInstallComplete,
     ]
