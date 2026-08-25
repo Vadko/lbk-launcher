@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import changelogData from '../../shared/changelog.json';
 
-export interface ChangelogEntry {
+interface ChangelogEntry {
   version: string;
   date: string;
   title: string;
