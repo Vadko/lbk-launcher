@@ -2,6 +2,7 @@ import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import type { Game, InstallOptions } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
+import { getFirstAvailableGamePath } from '../game-detector';
 import { installTranslation } from '../installer';
 import {
   checkInstallation,
@@ -28,7 +29,11 @@ import { removeComponents, uninstallTranslation } from '../installer/uninstall';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
-import { writeSteamLaunchOptions } from '../utils/steam-launch-options';
+import {
+  launchOptionsParamsFor,
+  needsGameDir,
+  writeSteamLaunchOptions,
+} from '../utils/steam-launch-options';
 import { launchSteam, shutdownSteam } from '../utils/steam-launcher';
 import { getMainWindow } from '../window';
 
@@ -97,6 +102,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: true,
           launchOptionsPending: installResult.launchOptionsPending,
+          launchOptionsError: installResult.launchOptionsError,
           achievementsChanged: installResult.achievementsChanged,
         };
       } catch (error) {
@@ -130,17 +136,68 @@ export function setupInstallerHandlers(): void {
       if (!game.steam_app_id) {
         return { success: false, error: 'Гра не має Steam App ID' };
       }
+
+      // Only needed to expand {GAME_DIR}, and the lookup walks Steam's library
+      // folders and rewrites the install cache — too much I/O to spend on the
+      // common case. Read before Steam goes down.
+      const needsDir = needsGameDir(game);
+      const installInfo = needsDir ? await checkInstallation(game) : null;
+
+      // The recorded path is where the game was at install time; moving it to
+      // another Steam library leaves it stale. Detect the current location
+      // first and keep the recorded one only as a fallback.
+      const detected = needsDir
+        ? getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id)
+        : null;
+      const recordedPath = installInfo?.gamePath ?? null;
+
+      let gamePath: string | null = null;
+      if (detected?.exists && detected.path) {
+        gamePath = detected.path;
+      } else if (recordedPath && fs.existsSync(recordedPath)) {
+        gamePath = recordedPath;
+      }
+
+      const params = launchOptionsParamsFor(game, gamePath);
+      if (!params) {
+        return {
+          success: false,
+          error: 'Для цього перекладу не задано параметрів запуску',
+        };
+      }
+      // Knowable before Steam goes down — no point tearing down the user's
+      // session (and any running game or download) for a write that cannot land.
+      if (needsDir && !params.gamePath) {
+        return {
+          success: false,
+          error: 'Не вдалося визначити теку гри для параметрів запуску',
+        };
+      }
+
       await shutdownSteam();
-      const result = await writeSteamLaunchOptions({
-        appId: game.steam_app_id,
-        windowsOptions: game.steam_launch_options_windows,
-        linuxOptions: game.steam_launch_options_linux,
-      });
+      let result: Awaited<ReturnType<typeof writeSteamLaunchOptions>>;
+      try {
+        result = await writeSteamLaunchOptions(params);
+      } finally {
+        // Steam was force-killed above; bring it back even if the write threw,
+        // or the user is left with no Steam and an error dialog.
+        await launchSteam();
+      }
       console.log(
         `[Installer] Apply pending launch options mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
       );
-      await launchSteam();
-      return { success: result.mode === 'file' || result.mode === 'noop' };
+
+      // 'cef' counts: shutdownSteam gives up silently when Steam refuses to
+      // exit, and the value is then applied live instead of through the file.
+      // 'needs-shutdown' is the opposite — Steam stayed up and nothing was
+      // written, so it must not read as success.
+      if (result.mode === 'file' || result.mode === 'cef' || result.mode === 'noop') {
+        return { success: true };
+      }
+      return {
+        success: false,
+        error: result.reason ?? 'Не вдалося записати параметри запуску',
+      };
     } catch (error) {
       console.error('Error applying pending launch options:', error);
       return {

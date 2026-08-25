@@ -1,4 +1,4 @@
-import { exec, spawn } from 'child_process';
+import { type ChildProcess, type StdioOptions, spawn } from 'child_process';
 import { clipboard } from 'electron';
 import fs from 'fs';
 import path from 'path';
@@ -7,6 +7,7 @@ import { getSteamPath } from '../game-detector';
 import { getTransliteratedPath } from '../utils/files';
 import type { GameBuildOs } from '../utils/game-build';
 import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { isCmdSafePath } from '../utils/shell-safety';
 import { getCleanEnv } from './archive';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
 import { runProton } from './proton';
@@ -30,6 +31,17 @@ function isExecutableInstaller(fileName: string): boolean {
 }
 
 const toPosix = (p: string): string => p.replace(/\\/g, '/');
+
+/**
+ * Add execute permission without going through a shell. The `chmod +x "${path}"`
+ * this replaces interpolated a database-supplied path into a command string, so
+ * a value containing a quote could run anything. `+x` was additive, hence the
+ * bitwise or rather than a flat 0o755.
+ */
+async function makeExecutable(filePath: string): Promise<void> {
+  const { mode } = await fs.promises.stat(filePath);
+  await fs.promises.chmod(filePath, (mode & 0o7777) | 0o111);
+}
 
 /**
  * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
@@ -184,6 +196,38 @@ export function hasExecutableInstaller(game: Game): boolean {
   return isExecutableInstaller(installerFileName);
 }
 
+/** Only `.bat`/`.cmd` need a shell; everything else spawns directly. */
+function isWindowsBatchFile(installerPath: string): boolean {
+  return /\.(bat|cmd)$/i.test(installerPath);
+}
+
+/**
+ * Spawn an installer on Windows. A `.bat` cannot be spawned without `cmd.exe`,
+ * so its path is interpolated into a command string — vetted first, since it is
+ * the translation database's value joined onto the player's game folder. An
+ * `.exe` goes through an argument array and never sees a shell.
+ *
+ * Throws rather than rejecting: both callers run this inside a Promise
+ * executor, which turns a throw into a rejection.
+ */
+function spawnWindowsInstaller(
+  installerPath: string,
+  args: string[],
+  stdio: StdioOptions
+): ChildProcess {
+  const options = { cwd: path.dirname(installerPath), stdio, detached: false };
+
+  if (!isWindowsBatchFile(installerPath)) {
+    return spawn(installerPath, args, options);
+  }
+  if (!isCmdSafePath(installerPath)) {
+    throw new Error(
+      `шлях містить символи, небезпечні для командного рядка: ${installerPath}`
+    );
+  }
+  return spawn(`"${installerPath}"`, args, { ...options, shell: true });
+}
+
 function formatInstallerExitError(code: number, stderrLines: string[]): string {
   const knownCodes: Record<number, string> = {
     1: 'Встановлення завершилось з помилкою або було скасовано',
@@ -254,16 +298,7 @@ export async function runInstaller(
 
     if (platform === 'macos' || platform === 'linux') {
       // macOS or Linux - make executable first
-      await new Promise<void>((resolve, reject) => {
-        exec(`chmod +x "${installerPath}"`, (error) => {
-          if (error) {
-            console.error('[Installer] Failed to make installer executable:', error);
-            reject(error);
-            return;
-          }
-          resolve();
-        });
-      });
+      await makeExecutable(installerPath);
     }
 
     onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
@@ -359,26 +394,16 @@ export async function runInstaller(
     } else {
       // Windows platform
       await new Promise<void>((resolve, reject) => {
-        const isWindowsBatchFile =
-          installerPath.toLowerCase().endsWith('.bat') ||
-          installerPath.toLowerCase().endsWith('.cmd');
-
-        const child = isWindowsBatchFile
-          ? spawn(`"${installerPath}"`, [], {
-              cwd: path.dirname(installerPath),
-              stdio: ['ignore', 'pipe', 'pipe'],
-              detached: false,
-              shell: true,
-            })
-          : spawn(installerPath, [], {
-              cwd: path.dirname(installerPath),
-              stdio: 'ignore',
-              detached: false,
-            });
+        const isBatch = isWindowsBatchFile(installerPath);
+        const child = spawnWindowsInstaller(
+          installerPath,
+          [],
+          isBatch ? ['ignore', 'pipe', 'pipe'] : 'ignore'
+        );
 
         const stderrLines: string[] = [];
         // Add output capturing for batch files
-        if (isWindowsBatchFile) {
+        if (isBatch) {
           child.stdout?.on('data', (data) => {
             const line = data.toString('utf8').trim();
             if (line) {
@@ -489,16 +514,7 @@ export async function runUninstaller(
       }
     } else if (platform === 'linux' || platform === 'macos') {
       // Execute natively on Linux/macOS - make executable first
-      await new Promise<void>((resolve, reject) => {
-        exec(`chmod +x "${installerPath}"`, (error) => {
-          if (error) {
-            console.error('[Uninstaller] Failed to make uninstaller executable:', error);
-            reject(error);
-            return;
-          }
-          resolve();
-        });
-      });
+      await makeExecutable(installerPath);
 
       await new Promise<void>((resolve, reject) => {
         const child = spawn(installerPath, ['/uninstall', '/SILENT', '/silent'], {
@@ -520,22 +536,7 @@ export async function runUninstaller(
       // Windows
       await new Promise<void>((resolve, reject) => {
         const args = ['/uninstall', '/SILENT', '/silent'];
-        const isWindowsBatchFile =
-          installerPath.toLowerCase().endsWith('.bat') ||
-          installerPath.toLowerCase().endsWith('.cmd');
-
-        const child = isWindowsBatchFile
-          ? spawn(`"${installerPath}"`, args, {
-              cwd: path.dirname(installerPath),
-              stdio: 'pipe',
-              detached: false,
-              shell: true,
-            })
-          : spawn(installerPath, args, {
-              cwd: path.dirname(installerPath),
-              stdio: 'pipe',
-              detached: false,
-            });
+        const child = spawnWindowsInstaller(installerPath, args, 'pipe');
 
         child.stdin?.end();
         child.stdout?.on('data', (data) => {

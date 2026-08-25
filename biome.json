@@ -11,6 +11,7 @@
       "src/**",
       "!src/lib/database.types.ts",
       "electron.vite.config.ts",
+      "vitest.config.ts",
       "package.json",
       "tsconfig*.json"
     ]

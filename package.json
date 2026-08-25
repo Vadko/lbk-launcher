@@ -29,6 +29,7 @@
     "dist:linux:local": "env-cmd pnpm build && pnpm dist:linux",
     "dist:mac:local": "env-cmd pnpm build && CSC_IDENTITY_AUTO_DISCOVERY=false pnpm dist:mac",
     "type-check": "tsc --noEmit",
+    "test:unit": "vitest run",
     "lint": "eslint .",
     "find-unused": "knip",
     "format": "biome check --write .",
@@ -111,6 +112,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.59.2",
     "vite": "7.3.5",
-    "vite-plugin-node-polyfills": "0.26.0"
+    "vite-plugin-node-polyfills": "0.26.0",
+    "vitest": "4.1.11"
   }
 }

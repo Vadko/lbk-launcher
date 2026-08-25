@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'child_process';
+import { execFileSync, spawn } from 'child_process';
 import { shell } from 'electron';
 import { isLinux } from './platform';
 
@@ -19,7 +19,7 @@ function detectLinuxBrowser(): BrowserCommand | null {
 
   // 1. Try to resolve the xdg default browser directly
   try {
-    const desktopFile = execSync('xdg-settings get default-web-browser', {
+    const desktopFile = execFileSync('xdg-settings', ['get', 'default-web-browser'], {
       encoding: 'utf-8',
       timeout: 2000,
     }).trim();
@@ -29,13 +29,13 @@ function detectLinuxBrowser(): BrowserCommand | null {
 
       // Check if it's a Flatpak app
       try {
-        execSync(`flatpak info ${appId}`, execOpts);
+        execFileSync('flatpak', ['info', appId], execOpts);
         return { command: 'flatpak', args: ['run', appId] };
       } catch {
         // Not a Flatpak — try as native binary
         const binaryName = appId.includes('.') ? appId.split('.').pop()! : appId;
         try {
-          execSync(`which ${binaryName}`, execOpts);
+          execFileSync('which', [binaryName], execOpts);
           return { command: binaryName, args: [] };
         } catch {
           // Binary not found by simple name
@@ -56,7 +56,7 @@ function detectLinuxBrowser(): BrowserCommand | null {
 
   for (const appId of flatpakBrowsers) {
     try {
-      execSync(`flatpak info ${appId}`, execOpts);
+      execFileSync('flatpak', ['info', appId], execOpts);
       return { command: 'flatpak', args: ['run', appId] };
     } catch {
       // Not installed
@@ -74,7 +74,7 @@ function detectLinuxBrowser(): BrowserCommand | null {
 
   for (const browser of nativeBrowsers) {
     try {
-      execSync(`which ${browser}`, execOpts);
+      execFileSync('which', [browser], execOpts);
       return { command: browser, args: [] };
     } catch {
       // Not found
