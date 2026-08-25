@@ -20,7 +20,6 @@ import { DownloadProgressCard } from '../components/MainContent/DownloadProgress
 import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
 import Gallery from '../components/MainContent/Gallery';
 import { GameHero } from '../components/MainContent/GameHero';
-import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { ImportantNotice } from '../components/MainContent/ImportantNotice';
 import { InfoCard } from '../components/MainContent/InfoCard';
 import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
@@ -37,6 +36,7 @@ import { Button } from '../components/ui/Button';
 import { MarkdownText } from '../components/ui/MarkdownText';
 import { SubscribeButton } from '../components/ui/SubscribeButton';
 import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
+import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
@@ -542,64 +542,65 @@ export const GamePage: React.FC = () => {
                   Грати
                 </Button>
               )}
-{isWorkshop ? (
-              <WorkshopInstallButton
-                gameId={selectedGame.id}
-                workshopId={selectedGame.workshop_id ?? ''}
-                disabled={!isOnline || isTombstoned}
-              />
+              {isWorkshop ? (
+                <WorkshopInstallButton
+                  gameId={selectedGame.id}
+                  workshopId={selectedGame.workshop_id ?? ''}
+                  disabled={!isOnline || isTombstoned}
+                />
               ) : (
                 <>
-              <Button
-                variant={
-                  isGameInstalledOnSystem && isTranslationInstalled
-                    ? 'secondary'
-                    : 'primary'
-                }
-                icon={
-                  isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
-                }
-                onClick={() => handleInstall()}
-                disabled={
-                  isInstalling ||
-                  isUninstalling ||
-                  !isInstallable ||
-                  !isOnline ||
-                  isTombstoned
-                }
-                title={
-                  isTombstoned
-                    ? 'Переклад більше не доступний у каталозі'
-                    : !isOnline
-                      ? 'Відсутнє підключення до Інтернету'
-                      : undefined
-                }
-                data-gamepad-primary-action
-                data-gamepad-action
-              >
-                {getInstallButtonText()}
-              </Button>
-              {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<ReplaceAllIcon size={20} />}
-                  onClick={handleRerunInstaller}
-                  data-gamepad-action
-                  title="Запустити інсталятор/скрипт повторно"
-                >
-                  Перевстановити
-                </Button>
-              )}
-              {installationInfo && !isInstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<Trash2 size={20} />}
-                  onClick={handleUninstall}
-                  disabled={isUninstalling}
-                  data-gamepad-action
-                ></Button>
-              )}
-
+                  <Button
+                    variant={
+                      isGameInstalledOnSystem && isTranslationInstalled
+                        ? 'secondary'
+                        : 'primary'
+                    }
+                    icon={
+                      isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
+                    }
+                    onClick={() => handleInstall()}
+                    disabled={
+                      isInstalling ||
+                      isUninstalling ||
+                      !isInstallable ||
+                      !isOnline ||
+                      isTombstoned
+                    }
+                    title={
+                      isTombstoned
+                        ? 'Переклад більше не доступний у каталозі'
+                        : !isOnline
+                          ? 'Відсутнє підключення до Інтернету'
+                          : undefined
+                    }
+                    data-gamepad-primary-action
+                    data-gamepad-action
+                  >
+                    {getInstallButtonText()}
+                  </Button>
+                  {installationInfo?.installerPath &&
+                    !isInstalling &&
+                    !isUninstalling && (
+                      <Button
+                        variant="secondary"
+                        icon={<ReplaceAllIcon size={20} />}
+                        onClick={handleRerunInstaller}
+                        data-gamepad-action
+                        title="Запустити інсталятор/скрипт повторно"
+                      >
+                        Перевстановити
+                      </Button>
+                    )}
+                  {installationInfo && !isInstalling && (
+                    <Button
+                      variant="secondary"
+                      icon={<Trash2 size={20} />}
+                      onClick={handleUninstall}
+                      disabled={isUninstalling}
+                      data-gamepad-action
+                    ></Button>
+                  )}
                 </>
               )}
               {/* Separator */}

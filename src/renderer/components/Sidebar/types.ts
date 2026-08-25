@@ -25,10 +25,7 @@ export type SpecialFilterType =
   | 'favorite-translations';
 
 // Content-type filters - multi-select, combined with AND (both can be selected at once)
-export type ContentTypeFilterType =
-  | 'with-achievements'
-  | 'with-voice'
-  | 'from-workshop';
+export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
 
 interface StatusFilterOption {
   label: string;
