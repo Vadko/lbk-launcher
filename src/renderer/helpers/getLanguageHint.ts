@@ -5,6 +5,7 @@
 
 const LANGUAGE_NAMES: Record<string, string> = {
   EN: 'англійську',
+  GB: 'британську',
   FR: 'французьку',
   IT: 'італійську',
   DE: 'німецьку',
