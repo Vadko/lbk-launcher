@@ -2,9 +2,11 @@ import { AnimatePresence, MotionConfig } from 'framer-motion';
 import React, { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
+import { useChangelogNotifier } from '../../hooks/useChangelogNotifier';
 import { useDeepLink } from '../../hooks/useDeepLink';
 import { useGamepadModeNavigation } from '../../hooks/useGamepadModeNavigation';
 import { useNavigateFromNotifications } from '../../hooks/useNavigateFromNotifications';
+import { useChangelogStore } from '../../store/useChangelogStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
@@ -12,6 +14,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { AppLoader } from '../AppLoader/AppLoader';
 import { GamepadHints } from '../GamepadHints/GamepadHints';
+import { ChangelogModal } from '../Modal/ChangelogModal';
 import { ConfirmModal } from '../Modal/ConfirmModal';
 import { GlobalModal } from '../Modal/GlobalModal';
 import { PromoModal } from '../Modal/PromoModal';
@@ -49,6 +52,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const confirmOpen = useConfirmStore((s) => s.isOpen);
   const globalModalOpen = useModalStore((s) => s.isOpen);
   const settingsModalOpen = useSettingsStore((s) => s.isSettingsModalOpen);
+  const changelogModalOpen = useChangelogStore((s) => s.isOpen);
 
   const openHistory = useCallback(() => setShowNotificationHistory(true), []);
   const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
@@ -58,6 +62,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   // Обробка навігації з системних нотифікацій
   useNavigateFromNotifications();
+
+  // Одноразове сповіщення про нову версію changelog.json
+  useChangelogNotifier();
 
   // Геймпад навігація (потребує Router context)
   useGamepadModeNavigation(isGamepadMode);
@@ -128,6 +135,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {confirmOpen && <ConfirmModal />}
         {settingsModalOpen && <SettingsModal />}
         {globalModalOpen && <GlobalModal />}
+        {changelogModalOpen && <ChangelogModal />}
         {showNotificationHistory && (
           <NotificationModal isOpen={showNotificationHistory} onClose={closeHistory} />
         )}
