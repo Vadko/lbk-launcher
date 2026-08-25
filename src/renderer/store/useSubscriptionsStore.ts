@@ -80,6 +80,7 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     newVersion: string,
     showToast?: boolean
   ) => void;
+  addChangelogNotification: (version: string, title: string, showToast?: boolean) => void;
   addTeamNewGameNotification: (
     gameId: string,
     gameName: string,
@@ -405,6 +406,34 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           playNotificationSoundIfEnabled('app-update');
           scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden('LBK Launcher', message);
+        }
+      },
+
+      addChangelogNotification: (version, title, showToast = true) => {
+        const notification = createNotification({
+          type: 'changelog',
+          gameId: 'changelog',
+          gameName: 'LBK Launcher',
+          newValue: version,
+          message: title,
+          idPrefix: 'changelog',
+        });
+
+        set((state) => ({
+          notifications: [notification, ...state.notifications],
+          unreadCount: state.unreadCount + 1,
+        }));
+
+        if (showToast) {
+          const toast = createToast(notification, title);
+
+          set((state) => ({
+            toasts: [...state.toasts, toast],
+          }));
+
+          playNotificationSoundIfEnabled('changelog');
+          scheduleToastDismissal(notification.id, get().dismissToast);
+          showSystemNotificationIfHidden('LBK Launcher', title);
         }
       },
 
