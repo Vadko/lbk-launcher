@@ -845,6 +845,7 @@ export type Database = {
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           steam_launch_options_linux: string | null
+          steam_launch_options_macos: string | null
           steam_launch_options_windows: string | null
           steam_linux_archive_file_list: Json | null
           steam_linux_archive_hash: string | null
@@ -945,6 +946,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           steam_launch_options_linux?: string | null
+          steam_launch_options_macos?: string | null
           steam_launch_options_windows?: string | null
           steam_linux_archive_file_list?: Json | null
           steam_linux_archive_hash?: string | null
@@ -1045,6 +1047,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           steam_launch_options_linux?: string | null
+          steam_launch_options_macos?: string | null
           steam_launch_options_windows?: string | null
           steam_linux_archive_file_list?: Json | null
           steam_linux_archive_hash?: string | null
@@ -1177,6 +1180,7 @@ export type Database = {
           status: Database["public"]["Enums"]["game_status"]
           steam_app_id: number | null
           steam_launch_options_linux: string | null
+          steam_launch_options_macos: string | null
           steam_launch_options_windows: string | null
           steam_linux_archive_file_list: Json | null
           steam_linux_archive_hash: string | null
@@ -1285,6 +1289,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           steam_launch_options_linux?: string | null
+          steam_launch_options_macos?: string | null
           steam_launch_options_windows?: string | null
           steam_linux_archive_file_list?: Json | null
           steam_linux_archive_hash?: string | null
@@ -1393,6 +1398,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["game_status"]
           steam_app_id?: number | null
           steam_launch_options_linux?: string | null
+          steam_launch_options_macos?: string | null
           steam_launch_options_windows?: string | null
           steam_linux_archive_file_list?: Json | null
           steam_linux_archive_hash?: string | null
