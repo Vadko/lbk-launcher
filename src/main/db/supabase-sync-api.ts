@@ -104,6 +104,7 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'steam_mac_archive_size',
   'steam_launch_options_windows',
   'steam_launch_options_linux',
+  'steam_launch_options_macos',
   'epic_store_url',
   'gog_store_url',
   'xbox_store_url',
@@ -116,6 +117,8 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'source_language',
   'search_keywords',
   'steam_tag_ids',
+  'kind',
+  'workshop_id',
 ];
 
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');

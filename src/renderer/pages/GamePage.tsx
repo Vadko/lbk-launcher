@@ -20,6 +20,7 @@ import { DownloadProgressCard } from '../components/MainContent/DownloadProgress
 import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
 import Gallery from '../components/MainContent/Gallery';
 import { GameHero } from '../components/MainContent/GameHero';
+import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { ImportantNotice } from '../components/MainContent/ImportantNotice';
 import { InfoCard } from '../components/MainContent/InfoCard';
 import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
@@ -437,6 +438,9 @@ export const GamePage: React.FC = () => {
     isTranslationInstalled,
     showModal,
   ]);
+  // Майстерню ставить Steam: ні архіву, ні встановлення на диск у нас немає
+  const isWorkshop = selectedGame?.kind === 'workshop';
+
   // Early return якщо немає гри (після всіх хуків!)
   if (!selectedGame) {
     return null;
@@ -538,6 +542,14 @@ export const GamePage: React.FC = () => {
                   Грати
                 </Button>
               )}
+{isWorkshop ? (
+              <WorkshopInstallButton
+                gameId={selectedGame.id}
+                workshopId={selectedGame.workshop_id ?? ''}
+                disabled={!isOnline || isTombstoned}
+              />
+              ) : (
+                <>
               <Button
                 variant={
                   isGameInstalledOnSystem && isTranslationInstalled
@@ -588,6 +600,8 @@ export const GamePage: React.FC = () => {
                 ></Button>
               )}
 
+                </>
+              )}
               {/* Separator */}
               <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
 

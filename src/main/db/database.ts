@@ -123,6 +123,8 @@ class DatabaseManager {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS games (
         id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL DEFAULT 'regular',
+        workshop_id TEXT,
         approved INTEGER NOT NULL DEFAULT 0,
         approved_at TEXT,
         approved_by TEXT,
@@ -201,6 +203,7 @@ class DatabaseManager {
         steam_mac_archive_size TEXT,
         steam_launch_options_windows TEXT,
         steam_launch_options_linux TEXT,
+        steam_launch_options_macos TEXT,
         epic_store_url TEXT,
         gog_store_url TEXT,
         xbox_store_url TEXT,

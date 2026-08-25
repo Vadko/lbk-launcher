@@ -38,11 +38,14 @@ interface WriteLaunchOptionsParams {
   appId: number;
   /** Value for Windows builds. */
   windowsOptions: string | null;
-  /**
-   * Value for Linux Proton builds. The same string is also written on macOS
-   * (Steam macOS uses the same %command% wrapper format as Linux Proton).
-   */
+  /** Value for Linux Proton builds. */
   linuxOptions: string | null;
+  /**
+   * Value for macOS. Never falls back to the Linux one: the path inside the
+   * game differs (`Contents/MacOS`), so the Linux value would point Steam at
+   * something that isn't there — silently, since the game still launches.
+   */
+  macosOptions: string | null;
   /**
    * Where the game is installed, used to resolve `{GAME_DIR}`. Optional: values
    * without the token don't need it.
@@ -70,7 +73,10 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
   if (isWindows()) {
     return params.windowsOptions;
   }
-  if (isLinux() || isMacOS()) {
+  if (isMacOS()) {
+    return params.macosOptions;
+  }
+  if (isLinux()) {
     return params.linuxOptions;
   }
   return null;
@@ -79,7 +85,10 @@ function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | nul
 /** Fields of a translation record this module reads. */
 type LaunchOptionsSource = Pick<
   Game,
-  'steam_app_id' | 'steam_launch_options_windows' | 'steam_launch_options_linux'
+  | 'steam_app_id'
+  | 'steam_launch_options_windows'
+  | 'steam_launch_options_linux'
+  | 'steam_launch_options_macos'
 >;
 
 /**
@@ -95,7 +104,11 @@ export function launchOptionsParamsFor(
 ): WriteLaunchOptionsParams | null {
   if (
     !game.steam_app_id ||
-    !(game.steam_launch_options_windows || game.steam_launch_options_linux)
+    !(
+      game.steam_launch_options_windows ||
+      game.steam_launch_options_linux ||
+      game.steam_launch_options_macos
+    )
   ) {
     return null;
   }
@@ -104,6 +117,7 @@ export function launchOptionsParamsFor(
     appId: game.steam_app_id,
     windowsOptions: game.steam_launch_options_windows,
     linuxOptions: game.steam_launch_options_linux,
+    macosOptions: game.steam_launch_options_macos,
     gamePath,
   };
 }
@@ -117,7 +131,10 @@ export function needsGameDir(game: LaunchOptionsSource): boolean {
   if (isWindows()) {
     return usesGameDirToken(game.steam_launch_options_windows);
   }
-  if (isLinux() || isMacOS()) {
+  if (isMacOS()) {
+    return usesGameDirToken(game.steam_launch_options_macos);
+  }
+  if (isLinux()) {
     return usesGameDirToken(game.steam_launch_options_linux);
   }
   return false;

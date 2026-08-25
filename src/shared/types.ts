@@ -157,6 +157,7 @@ export interface FilterCountsResult {
   'tech-improvement': number;
   'with-achievements': number;
   'with-voice': number;
+  'from-workshop': number;
 }
 
 export interface DetectedGameInfo {
@@ -347,6 +348,11 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  // Перехід у Майстерню рахується як завантаження
+  trackWorkshopOpen: (
+    gameId: string,
+    isFirstSession?: boolean
+  ) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
   // Submit feedback for a game translation
