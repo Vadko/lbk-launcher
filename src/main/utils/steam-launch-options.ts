@@ -29,7 +29,7 @@ import {
   resolveGameDirToken,
   usesGameDirToken,
 } from '@/main/utils/launch-options-value';
-import { isLinux, isMacOS, isWindows } from '@/main/utils/platform';
+import { forCurrentOS } from '@/main/utils/platform';
 import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
 import type { Game } from '@/shared/types';
@@ -70,16 +70,11 @@ interface WriteLaunchOptionsResult {
 }
 
 function pickOptionsForCurrentOS(params: WriteLaunchOptionsParams): string | null {
-  if (isWindows()) {
-    return params.windowsOptions;
-  }
-  if (isMacOS()) {
-    return params.macosOptions;
-  }
-  if (isLinux()) {
-    return params.linuxOptions;
-  }
-  return null;
+  return forCurrentOS({
+    windows: params.windowsOptions,
+    macos: params.macosOptions,
+    linux: params.linuxOptions,
+  });
 }
 
 /** Fields of a translation record this module reads. */
@@ -128,16 +123,13 @@ export function launchOptionsParamsFor(
  * the other platform's value is never written here.
  */
 export function needsGameDir(game: LaunchOptionsSource): boolean {
-  if (isWindows()) {
-    return usesGameDirToken(game.steam_launch_options_windows);
-  }
-  if (isMacOS()) {
-    return usesGameDirToken(game.steam_launch_options_macos);
-  }
-  if (isLinux()) {
-    return usesGameDirToken(game.steam_launch_options_linux);
-  }
-  return false;
+  return usesGameDirToken(
+    forCurrentOS({
+      windows: game.steam_launch_options_windows,
+      macos: game.steam_launch_options_macos,
+      linux: game.steam_launch_options_linux,
+    })
+  );
 }
 
 const LAUNCH_OPTIONS_PARENT = [

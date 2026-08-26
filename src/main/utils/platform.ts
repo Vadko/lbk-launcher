@@ -29,6 +29,24 @@ export function getPlatform(): 'macos' | 'windows' | 'linux' | 'unknown' {
   return 'unknown';
 }
 
+type KnownPlatform = Exclude<ReturnType<typeof getPlatform>, 'unknown'>;
+
+export function forCurrentOS<T>(
+  branches: Partial<Record<KnownPlatform, T>> & { other: T }
+): T;
+export function forCurrentOS<T>(branches: Record<KnownPlatform, T>): T | null;
+export function forCurrentOS<T>(
+  branches: Partial<Record<KnownPlatform, T>> & { other?: T }
+): T | null {
+  const platform = getPlatform();
+
+  if (platform !== 'unknown' && platform in branches) {
+    return branches[platform] as T;
+  }
+
+  return 'other' in branches ? (branches.other as T) : null;
+}
+
 function getMacOSVersion(): number {
   if (!isMacOS()) {
     return 0;

@@ -7,7 +7,7 @@ import { type ChildProcess, exec, execSync, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { promisify } from 'util';
-import { isLinux, isMacOS, isWindows } from './platform';
+import { forCurrentOS, isLinux, isMacOS, isWindows } from './platform';
 
 const execAsync = promisify(exec);
 
@@ -123,23 +123,23 @@ function detectLinuxSteamType(): SteamInstallationType {
  * Check if Steam is running
  */
 export async function isSteamRunning(): Promise<boolean> {
+  const probe = forCurrentOS({
+    windows: () => execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe'),
+    linux: () => execOnHost('pgrep -x steam'),
+    macos: () => execAsync('pgrep -x Steam'),
+  });
+
+  if (!probe) {
+    return false;
+  }
+
   try {
-    if (isWindows()) {
-      await execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe');
-      return true;
-    }
-    if (isLinux()) {
-      await execOnHost('pgrep -x steam');
-      return true;
-    }
-    if (isMacOS()) {
-      await execAsync('pgrep -x Steam');
-      return true;
-    }
+    await probe();
+    return true;
   } catch {
     // Process not found
+    return false;
   }
-  return false;
 }
 
 /**

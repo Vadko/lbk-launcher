@@ -22,9 +22,15 @@ export function WorkshopInstallButton({
         .trackWorkshopOpen(gameId)
         .catch((error: unknown) => console.error('[Workshop] tracking failed', error));
 
-      await window.electronAPI.openExternal(
+      const result = await window.electronAPI.openExternal(
         `steam://url/CommunityFilePage/${workshopId}`
       );
+
+      if (!result.success) {
+        await window.electronAPI.openExternal(
+          `https://steamcommunity.com/sharedfiles/filedetails/?id=${workshopId}`
+        );
+      }
     } finally {
       setIsOpening(false);
     }

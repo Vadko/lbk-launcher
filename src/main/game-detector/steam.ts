@@ -14,7 +14,7 @@ import {
   steam3ToSteam64,
   writeSteamLibraryCache,
 } from '../steam-library-api';
-import { getPlatform, isLinux, isMacOS, isWindows } from '../utils/platform';
+import { forCurrentOS, getPlatform } from '../utils/platform';
 import {
   parseAppManifest,
   parseLibraryFolders,
@@ -83,24 +83,16 @@ export function getSteamPath(): string | null {
   console.log('[Steam] Platform:', getPlatform());
 
   try {
-    if (isWindows()) {
-      const result = detectSteamPathWindows();
-      if (result) {
-        cache.steamPath = result;
-        return result;
-      }
-    } else if (isMacOS()) {
-      const result = detectSteamPathMacOS();
-      if (result) {
-        cache.steamPath = result;
-        return result;
-      }
-    } else if (isLinux()) {
-      const result = detectSteamPathLinux();
-      if (result) {
-        cache.steamPath = result;
-        return result;
-      }
+    const detect = forCurrentOS({
+      windows: detectSteamPathWindows,
+      macos: detectSteamPathMacOS,
+      linux: detectSteamPathLinux,
+    });
+
+    const result = detect?.();
+    if (result) {
+      cache.steamPath = result;
+      return result;
     }
   } catch (error) {
     console.error('[Steam] Error detecting path:', error);

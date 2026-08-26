@@ -270,6 +270,23 @@ const SYNCED_COLUMNS = [
   'steam_tag_ids',
 ] as const;
 
+function _assertNever<_T extends never>(): void {
+  /* compiler check */
+}
+
+type SyncedColumn = (typeof SYNCED_COLUMNS)[number];
+type SyncableColumn = Exclude<keyof GameInsertParams, 'id'>;
+
+_assertNever<Exclude<SyncableColumn, SyncedColumn>>();
+_assertNever<Exclude<SyncedColumn, keyof GameInsertParams>>();
+
+type SqliteBindable = string | number | bigint | null;
+type UnbindableColumn = {
+  [K in keyof GameInsertParams]-?: GameInsertParams[K] extends SqliteBindable ? never : K;
+}[keyof GameInsertParams];
+
+_assertNever<UnbindableColumn>();
+
 /**
  * SQL для upsert гри.
  *
