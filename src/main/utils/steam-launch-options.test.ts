@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The module reaches into Steam and the filesystem; the OS split and the
 // no-fallback rule are decided long before any of that, so it is all stubbed.
@@ -11,22 +11,23 @@ vi.mock('@/main/utils/steam-cef', () => ({
   isCefAvailable: () => false,
 }));
 vi.mock('@/main/utils/steam-launcher', () => ({ isSteamRunning: () => false }));
-vi.mock('@/main/utils/platform', () => ({
-  isWindows: vi.fn(() => false),
-  isLinux: vi.fn(() => false),
-  isMacOS: vi.fn(() => false),
-}));
 
-const platform = await import('@/main/utils/platform');
 const { needsGameDir, writeSteamLaunchOptions } = await import(
   '@/main/utils/steam-launch-options'
 );
 
-function runningOn(os: 'windows' | 'linux' | 'macos'): void {
-  vi.mocked(platform.isWindows).mockReturnValue(os === 'windows');
-  vi.mocked(platform.isLinux).mockReturnValue(os === 'linux');
-  vi.mocked(platform.isMacOS).mockReturnValue(os === 'macos');
+const NODE_PLATFORM = { windows: 'win32', linux: 'linux', macos: 'darwin' } as const;
+
+function setPlatform(value: NodeJS.Platform): void {
+  Object.defineProperty(process, 'platform', { value, configurable: true });
 }
+
+function runningOn(os: keyof typeof NODE_PLATFORM): void {
+  setPlatform(NODE_PLATFORM[os]);
+}
+
+const realPlatform = process.platform;
+afterAll(() => setPlatform(realPlatform));
 
 /** Only the fields this module reads. */
 function game(options: {

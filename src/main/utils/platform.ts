@@ -40,6 +40,9 @@ export function forCurrentOS<T>(
 ): T | null {
   const platform = getPlatform();
 
+  // `in` rather than a truthiness or `??` check: a branch whose value is
+  // legitimately null/undefined (launch options for an OS that has none, say)
+  // must win over `other`, not fall through to it.
   if (platform !== 'unknown' && platform in branches) {
     return branches[platform] as T;
   }
