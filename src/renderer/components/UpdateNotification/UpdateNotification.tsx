@@ -1,18 +1,28 @@
 import { Download, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useChangelogStore } from '../../store/useChangelogStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import {
+  APP_UPDATE_GAME_ID,
+  useSubscriptionsStore,
+} from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
+
+interface UpdateInfo {
+  version?: string;
+  downloadUrl?: string;
+}
 
 export const UpdateNotification = () => {
   const { appUpdateNotificationsEnabled } = useSettingsStore();
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
+  const changelogEntries = useChangelogStore((s) => s.entries);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [updateInfo, setUpdateInfo] = useState<unknown>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const notifiedVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -23,25 +33,27 @@ export const UpdateNotification = () => {
     // Listen for update events
     const unsubAvailable = window.electronAPI.onUpdateAvailable(async (info) => {
       console.log('Update available:', info);
+      const update = info as UpdateInfo;
+      const newVersion = update?.version;
+
+      if (newVersion) {
+        void useChangelogStore.getState().loadForVersion(newVersion);
+      }
+
       if (appUpdateNotificationsEnabled) {
         setUpdateAvailable(true);
-        setUpdateInfo(info);
+        setUpdateInfo(update);
 
         // Додати в історію сповіщень (тільки один раз для кожної версії)
-        const newVersion = (info as { version?: string })?.version;
         if (newVersion && notifiedVersionRef.current !== newVersion) {
           notifiedVersionRef.current = newVersion;
+
           const currentVersion = await window.electronAPI.getVersion();
-          const { addAppUpdateNotification, notifications } =
+          const { addAppUpdateNotification, hasNotifiedVersion } =
             useSubscriptionsStore.getState();
 
-          // Перевірити чи вже є таке сповіщення
-          const hasExisting = notifications.some(
-            (n) => n.type === 'app-update' && n.newValue === newVersion
-          );
-
-          if (!hasExisting) {
-            addAppUpdateNotification(currentVersion, newVersion, false); // false = без toast, бо вже є floating notification
+          if (!hasNotifiedVersion(APP_UPDATE_GAME_ID, newVersion)) {
+            addAppUpdateNotification(currentVersion, newVersion);
           }
         }
       }
@@ -85,8 +97,9 @@ export const UpdateNotification = () => {
     window.electronAPI.installUpdate();
   };
 
-  const externalDownloadUrl = (updateInfo as { downloadUrl?: string } | null)
-    ?.downloadUrl;
+  const externalDownloadUrl = updateInfo?.downloadUrl;
+  const pendingVersion = updateInfo?.version;
+  const pendingEntry = changelogEntries.find((entry) => entry.version === pendingVersion);
 
   const handleOpenExternal = () => {
     if (!externalDownloadUrl) {
@@ -106,8 +119,29 @@ export const UpdateNotification = () => {
       <p className="text-gray-400 text-sm mb-3">
         {updateDownloaded
           ? 'Оновлення завантажено та готове до встановлення'
-          : `Версія ${(updateInfo as { version?: string })?.version || 'нова'} доступна для завантаження`}
+          : `Версія ${pendingVersion || 'нова'} доступна для завантаження`}
       </p>
+      {pendingEntry && (
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-text-main mb-1">
+            {pendingEntry.title}
+          </p>
+          <ul
+            className={`list-disc list-inside space-y-1 ${
+              isGamepadMode ? '' : 'max-h-32 overflow-y-auto'
+            }`}
+          >
+            {pendingEntry.highlights.map((item, index) => (
+              <li
+                key={`${pendingEntry.version}-${index}`}
+                className="text-xs text-gray-400"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {downloading && (
         <div className="mb-3">
           <div className="flex justify-between text-xs text-gray-400 mb-1">

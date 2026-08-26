@@ -28,6 +28,8 @@ import type {
 // Re-export types for external use
 export type { Notification, ToastNotification } from './subscriptions/types';
 
+export const APP_UPDATE_GAME_ID = 'app';
+
 interface SubscriptionsStore extends PersistedSubscriptionsState {
   // Toast notifications (non-persisted, auto-dismiss)
   toasts: ToastNotification[];
@@ -80,7 +82,6 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     newVersion: string,
     showToast?: boolean
   ) => void;
-  addChangelogNotification: (version: string, title: string, showToast?: boolean) => void;
   addTeamNewGameNotification: (
     gameId: string,
     gameName: string,
@@ -383,17 +384,23 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       addAppUpdateNotification: (oldVersion, newVersion, showToast = true) => {
         const notification = createNotification({
           type: 'app-update',
-          gameId: 'app',
+          gameId: APP_UPDATE_GAME_ID,
           gameName: 'LBK Launcher',
           oldValue: oldVersion,
           newValue: newVersion,
           idPrefix: 'app-update',
         });
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => {
+          const newNotifiedVersions = ensureMap<string, string>(state.notifiedVersions);
+          newNotifiedVersions.set(APP_UPDATE_GAME_ID, newVersion);
+
+          return {
+            notifications: [notification, ...state.notifications],
+            unreadCount: state.unreadCount + 1,
+            notifiedVersions: newNotifiedVersions,
+          };
+        });
 
         if (showToast) {
           const message = `Доступна версія ${newVersion}`;
@@ -406,34 +413,6 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           playNotificationSoundIfEnabled('app-update');
           scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden('LBK Launcher', message);
-        }
-      },
-
-      addChangelogNotification: (version, title, showToast = true) => {
-        const notification = createNotification({
-          type: 'changelog',
-          gameId: 'changelog',
-          gameName: 'LBK Launcher',
-          newValue: version,
-          message: title,
-          idPrefix: 'changelog',
-        });
-
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
-
-        if (showToast) {
-          const toast = createToast(notification, title);
-
-          set((state) => ({
-            toasts: [...state.toasts, toast],
-          }));
-
-          playNotificationSoundIfEnabled('changelog');
-          scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden('LBK Launcher', title);
         }
       },
 

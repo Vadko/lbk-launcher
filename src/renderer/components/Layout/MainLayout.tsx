@@ -2,7 +2,6 @@ import { AnimatePresence, MotionConfig } from 'framer-motion';
 import React, { useCallback, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
-import { useChangelogNotifier } from '../../hooks/useChangelogNotifier';
 import { useDeepLink } from '../../hooks/useDeepLink';
 import { useGamepadModeNavigation } from '../../hooks/useGamepadModeNavigation';
 import { useNavigateFromNotifications } from '../../hooks/useNavigateFromNotifications';
@@ -62,9 +61,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   // Обробка навігації з системних нотифікацій
   useNavigateFromNotifications();
-
-  // Одноразове сповіщення про нову версію changelog.json
-  useChangelogNotifier();
 
   // Геймпад навігація (потребує Router context)
   useGamepadModeNavigation(isGamepadMode);

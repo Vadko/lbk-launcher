@@ -24,6 +24,13 @@ export interface NewsFeedItem {
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
+export interface ChangelogEntry {
+  version: string;
+  date: string;
+  title: string;
+  highlights: string[];
+}
+
 export interface GamePath {
   platform: Platform;
   path: string;
@@ -302,6 +309,7 @@ export interface ElectronAPI {
     }) => void
   ) => () => void;
   onUpdateError: (callback: (error: Error) => void) => () => void;
+  fetchChangelog: (version: string) => Promise<ChangelogEntry[] | null>;
   // Real-time updates (автоматично керуються в main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;

@@ -119,6 +119,21 @@ Located in `src/main/installer/errors.ts`:
 - `RateLimitError` - API rate limited
 - `PausedSignal` - Download paused (not error)
 
+## Changelog
+
+`src/shared/changelog.json` is **append-only** — never rewrite or trim it.
+
+It ships inside every build *and* is fetched back at runtime from the tag of a
+pending release (`src/main/changelog.ts`), so it both previews a newer version
+before install and serves as the full history behind Settings → «Що нового».
+Trimming it deletes that history for everyone.
+
+Add an entry per release, oldest-first, **before tagging** — the release job
+checks out the tag, so anything committed after it is cut is never seen.
+
+There is one notification channel: `app-update`. It carries the pending
+version's highlights and opens «Що нового» on click.
+
 ## Localization Context
 
 This app handles Ukrainian game localizations. Detection keywords:

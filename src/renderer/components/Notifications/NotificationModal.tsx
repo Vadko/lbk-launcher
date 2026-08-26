@@ -64,13 +64,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     // Позначити як прочитане
     markNotificationAsRead(notification.id);
 
-    // Для app-update нотифікацій не переходимо на гру
     if (notification.type === 'app-update') {
-      return;
-    }
-
-    // Для changelog нотифікацій відкриваємо модалку "Що нового"
-    if (notification.type === 'changelog') {
       useChangelogStore.getState().openModal();
       onClose();
       return;
@@ -122,8 +116,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return <Users className="w-4 h-4 text-cyan-400" />;
       case 'feedback-reply':
         return <MessageSquare className="w-4 h-4 text-color-main" />;
-      case 'changelog':
-        return <Sparkles className="w-4 h-4 text-color-accent" />;
       default:
         return <Bell className="w-4 h-4 text-color-accent" />;
     }
@@ -145,8 +137,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return 'bg-cyan-500/20';
       case 'feedback-reply':
         return 'bg-color-main/20';
-      case 'changelog':
-        return 'bg-color-accent/20';
       default:
         return 'bg-color-accent/20';
     }
@@ -189,12 +179,6 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           <>
             <span className="text-color-main">Відповідь на ваш відгук:</span>{' '}
             {notification.message}
-          </>
-        );
-      case 'changelog':
-        return (
-          <>
-            {notification.message} • версія {notification.newValue}
           </>
         );
       default:
