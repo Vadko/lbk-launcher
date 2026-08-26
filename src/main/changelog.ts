@@ -1,7 +1,7 @@
 import { ipcMain, net } from 'electron';
+import { REPO_RAW_BASE } from '../shared/repo';
 import type { ChangelogEntry } from '../shared/types';
 
-const RAW_BASE = 'https://raw.githubusercontent.com/Vadko/lbk-launcher';
 const CHANGELOG_PATH = 'src/shared/changelog.json';
 const FETCH_TIMEOUT_MS = 10000;
 
@@ -22,7 +22,7 @@ function isChangelogEntry(value: unknown): value is ChangelogEntry {
 }
 
 async function fetchFromTag(version: string): Promise<ChangelogEntry[] | null> {
-  const res = await net.fetch(`${RAW_BASE}/v${version}/${CHANGELOG_PATH}`, {
+  const res = await net.fetch(`${REPO_RAW_BASE}/v${version}/${CHANGELOG_PATH}`, {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {

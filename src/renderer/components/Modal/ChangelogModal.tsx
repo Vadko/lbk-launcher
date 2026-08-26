@@ -1,11 +1,10 @@
 import { ChevronDown, ExternalLink, Sparkles } from 'lucide-react';
 import React, { useState } from 'react';
+import { REPO_RELEASES_URL } from '../../../shared/repo';
 import type { ChangelogEntry } from '../../../shared/types';
 import { APP_VERSION } from '../../constants/appVersion';
 import { compareVersions, useChangelogStore } from '../../store/useChangelogStore';
 import { Modal } from './Modal';
-
-const RELEASES_URL = 'https://github.com/Vadko/lbk-launcher/releases';
 
 const Entry: React.FC<{ entry: ChangelogEntry }> = ({ entry }) => (
   <div className="flex flex-col gap-2">
@@ -86,7 +85,7 @@ export const ChangelogModal: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => window.electronAPI?.openExternal?.(RELEASES_URL)}
+          onClick={() => window.electronAPI?.openExternal?.(REPO_RELEASES_URL)}
           className="flex items-center gap-2 text-xs text-text-muted hover:text-text-main transition-colors"
         >
           <ExternalLink size={14} />
