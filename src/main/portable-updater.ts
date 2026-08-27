@@ -1,8 +1,8 @@
 import { app, net } from 'electron';
+import { REPO_RELEASES_URL } from '../shared/repo';
 import { getMainWindow } from './window';
 
-const RELEASES_BASE = 'https://github.com/Vadko/lbk-launcher/releases';
-const LATEST_YML_URL = `${RELEASES_BASE}/latest/download/latest.yml`;
+const LATEST_YML_URL = `${REPO_RELEASES_URL}/latest/download/latest.yml`;
 const PORTABLE_ARTIFACT = 'LBK-Launcher-win-Portable.exe';
 
 let updateCheckInterval: NodeJS.Timeout | null = null;
@@ -24,7 +24,7 @@ async function checkOnce(): Promise<void> {
       return;
     }
 
-    const downloadUrl = `${RELEASES_BASE}/download/v${remoteVersion}/${PORTABLE_ARTIFACT}`;
+    const downloadUrl = `${REPO_RELEASES_URL}/download/v${remoteVersion}/${PORTABLE_ARTIFACT}`;
     const win = getMainWindow();
     if (win && !win.isDestroyed()) {
       win.webContents.send('update-available', { version: remoteVersion, downloadUrl });
