@@ -221,6 +221,35 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
 }
 
 /**
+ * Перехід у Майстерню замінює завантаження архіву, тож рахується тим самим
+ * лічильником. Сервер зараховує лише перший перехід з цієї машини.
+ */
+export async function trackWorkshopOpen(
+  gameId: string,
+  isFirstSession = false
+): Promise<TrackingResponse> {
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping workshop open tracking');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  console.log('[Tracking] Tracking workshop open for game:', gameId);
+
+  const result = await invokeTrack({
+    type: 'workshop_open',
+    gameId,
+    userIdentifier: machineId,
+    isFirstSession,
+  });
+  console.log('[Tracking] Workshop open tracking response:', result);
+  return result;
+}
+
+/**
  * Track session start (when launcher opens)
  * The server determines is_first_launch
  * and returns it in the response.

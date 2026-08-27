@@ -22,12 +22,16 @@ type ExcludedFields =
   | 'steam_linux_archive_file_list'
   | 'steam_mac_archive_file_list'
   | 'name_fts'
-  | 'name_search';
+  | 'name_search'
+  // Лічильники-віхи живуть лише локально: сервер їх не віддає, а замок нижче
+  // інакше вважав би їх забутими.
+  | 'last_download_milestone'
+  | 'last_subscriber_milestone';
 
 /**
  * Колонки для вибірки (type-safe)
  */
-const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
+const GAME_SELECT_COLUMNS = [
   'id',
   'slug',
   'name',
@@ -104,6 +108,7 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'steam_mac_archive_size',
   'steam_launch_options_windows',
   'steam_launch_options_linux',
+  'steam_launch_options_macos',
   'epic_store_url',
   'gog_store_url',
   'xbox_store_url',
@@ -116,7 +121,16 @@ const GAME_SELECT_COLUMNS: (keyof Omit<Game, ExcludedFields>)[] = [
   'source_language',
   'search_keywords',
   'steam_tag_ids',
-];
+  'kind',
+  'workshop_id',
+] as const satisfies readonly (keyof Omit<Game, ExcludedFields>)[];
+
+function _assertNever<_T extends never>(): void {
+  /* only for compiler */
+}
+_assertNever<
+  Exclude<keyof Omit<Game, ExcludedFields>, (typeof GAME_SELECT_COLUMNS)[number]>
+>();
 
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
 

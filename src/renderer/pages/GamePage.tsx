@@ -36,6 +36,7 @@ import { Button } from '../components/ui/Button';
 import { MarkdownText } from '../components/ui/MarkdownText';
 import { SubscribeButton } from '../components/ui/SubscribeButton';
 import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
+import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
@@ -437,6 +438,9 @@ export const GamePage: React.FC = () => {
     isTranslationInstalled,
     showModal,
   ]);
+  // Майстерню ставить Steam: ні архіву, ні встановлення на диск у нас немає
+  const isWorkshop = selectedGame?.kind === 'workshop';
+
   // Early return якщо немає гри (після всіх хуків!)
   if (!selectedGame) {
     return null;
@@ -538,56 +542,67 @@ export const GamePage: React.FC = () => {
                   Грати
                 </Button>
               )}
-              <Button
-                variant={
-                  isGameInstalledOnSystem && isTranslationInstalled
-                    ? 'secondary'
-                    : 'primary'
-                }
-                icon={
-                  isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
-                }
-                onClick={() => handleInstall()}
-                disabled={
-                  isInstalling ||
-                  isUninstalling ||
-                  !isInstallable ||
-                  !isOnline ||
-                  isTombstoned
-                }
-                title={
-                  isTombstoned
-                    ? 'Переклад більше не доступний у каталозі'
-                    : !isOnline
-                      ? 'Відсутнє підключення до Інтернету'
-                      : undefined
-                }
-                data-gamepad-primary-action
-                data-gamepad-action
-              >
-                {getInstallButtonText()}
-              </Button>
-              {installationInfo?.installerPath && !isInstalling && !isUninstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<ReplaceAllIcon size={20} />}
-                  onClick={handleRerunInstaller}
-                  data-gamepad-action
-                  title="Запустити інсталятор/скрипт повторно"
-                >
-                  Перевстановити
-                </Button>
+              {isWorkshop ? (
+                <WorkshopInstallButton
+                  gameId={selectedGame.id}
+                  workshopId={selectedGame.workshop_id ?? ''}
+                  disabled={!isOnline || isTombstoned}
+                />
+              ) : (
+                <>
+                  <Button
+                    variant={
+                      isGameInstalledOnSystem && isTranslationInstalled
+                        ? 'secondary'
+                        : 'primary'
+                    }
+                    icon={
+                      isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
+                    }
+                    onClick={() => handleInstall()}
+                    disabled={
+                      isInstalling ||
+                      isUninstalling ||
+                      !isInstallable ||
+                      !isOnline ||
+                      isTombstoned
+                    }
+                    title={
+                      isTombstoned
+                        ? 'Переклад більше не доступний у каталозі'
+                        : !isOnline
+                          ? 'Відсутнє підключення до Інтернету'
+                          : undefined
+                    }
+                    data-gamepad-primary-action
+                    data-gamepad-action
+                  >
+                    {getInstallButtonText()}
+                  </Button>
+                  {installationInfo?.installerPath &&
+                    !isInstalling &&
+                    !isUninstalling && (
+                      <Button
+                        variant="secondary"
+                        icon={<ReplaceAllIcon size={20} />}
+                        onClick={handleRerunInstaller}
+                        data-gamepad-action
+                        title="Запустити інсталятор/скрипт повторно"
+                      >
+                        Перевстановити
+                      </Button>
+                    )}
+                  {installationInfo && !isInstalling && (
+                    <Button
+                      variant="secondary"
+                      icon={<Trash2 size={20} />}
+                      onClick={handleUninstall}
+                      disabled={isUninstalling}
+                      data-gamepad-action
+                    ></Button>
+                  )}
+                </>
               )}
-              {installationInfo && !isInstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<Trash2 size={20} />}
-                  onClick={handleUninstall}
-                  disabled={isUninstalling}
-                  data-gamepad-action
-                ></Button>
-              )}
-
               {/* Separator */}
               <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
 

@@ -82,6 +82,7 @@ export function fetchFilterCounts(): FilterCountsResult {
       'tech-improvement': 0,
       'with-achievements': 0,
       'with-voice': 0,
+      'from-workshop': 0,
     };
   }
 }

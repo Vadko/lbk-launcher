@@ -995,12 +995,61 @@ const migrations: Migration[] = [
       ),
   },
   {
+    name: 'add_translation_kind_columns',
+    up: (db) => {
+      addColumnIfMissing(
+        db,
+        'kind',
+        "ALTER TABLE games ADD COLUMN kind TEXT NOT NULL DEFAULT 'regular';"
+      );
+      addColumnIfMissing(
+        db,
+        'workshop_id',
+        'ALTER TABLE games ADD COLUMN workshop_id TEXT;'
+      );
+    },
+  },
+  {
+    name: 'resync_for_translation_kind',
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_translation_kind',
+        'migration_resync_translation_kind_done'
+      ),
+  },
+  {
     name: 'resync_for_steam_tag_ids',
     up: (db) =>
       forceResyncOnce(
         db,
         'resync_for_steam_tag_ids',
         'migration_resync_steam_tag_ids_done'
+      ),
+  },
+  {
+    name: 'add_steam_launch_options_macos_column',
+    up: (db) => {
+      const hasColumn = db
+        .prepare(
+          "SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name='steam_launch_options_macos'"
+        )
+        .get() as { count: number };
+
+      if (hasColumn.count === 0) {
+        console.log('[Migrations] Running: add_steam_launch_options_macos_column');
+        db.exec(`ALTER TABLE games ADD COLUMN steam_launch_options_macos TEXT;`);
+        console.log('[Migrations] Completed: add_steam_launch_options_macos_column');
+      }
+    },
+  },
+  {
+    name: 'resync_for_steam_launch_options_macos',
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_steam_launch_options_macos',
+        'migration_resync_steam_launch_options_macos_done'
       ),
   },
 ];

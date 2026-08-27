@@ -76,6 +76,8 @@ type GameInsertParams = {
 function gameToInsertParams(game: Game): GameInsertParams {
   return {
     id: game.id,
+    kind: game.kind ?? 'regular',
+    workshop_id: game.workshop_id ?? null,
     approved: game.approved ? 1 : 0,
     approved_at: game.approved_at ?? null,
     approved_by: game.approved_by ?? null,
@@ -151,6 +153,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     steam_mac_archive_size: game.steam_mac_archive_size ?? null,
     steam_launch_options_windows: game.steam_launch_options_windows ?? null,
     steam_launch_options_linux: game.steam_launch_options_linux ?? null,
+    steam_launch_options_macos: game.steam_launch_options_macos ?? null,
     epic_store_url: game.epic_store_url ?? null,
     gog_store_url: game.gog_store_url ?? null,
     xbox_store_url: game.xbox_store_url ?? null,
@@ -174,6 +177,8 @@ function gameToInsertParams(game: Game): GameInsertParams {
  * до UPSERT_GAME_SQL).
  */
 const SYNCED_COLUMNS = [
+  'kind',
+  'workshop_id',
   'approved',
   'approved_at',
   'approved_by',
@@ -249,6 +254,7 @@ const SYNCED_COLUMNS = [
   'steam_mac_archive_size',
   'steam_launch_options_windows',
   'steam_launch_options_linux',
+  'steam_launch_options_macos',
   'epic_store_url',
   'gog_store_url',
   'xbox_store_url',
@@ -263,6 +269,23 @@ const SYNCED_COLUMNS = [
   'source_language',
   'steam_tag_ids',
 ] as const;
+
+function _assertNever<_T extends never>(): void {
+  /* compiler check */
+}
+
+type SyncedColumn = (typeof SYNCED_COLUMNS)[number];
+type SyncableColumn = Exclude<keyof GameInsertParams, 'id'>;
+
+_assertNever<Exclude<SyncableColumn, SyncedColumn>>();
+_assertNever<Exclude<SyncedColumn, keyof GameInsertParams>>();
+
+type SqliteBindable = string | number | bigint | null;
+type UnbindableColumn = {
+  [K in keyof GameInsertParams]-?: GameInsertParams[K] extends SqliteBindable ? never : K;
+}[keyof GameInsertParams];
+
+_assertNever<UnbindableColumn>();
 
 /**
  * SQL для upsert гри.

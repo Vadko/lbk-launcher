@@ -25,7 +25,7 @@ export type SpecialFilterType =
   | 'favorite-translations';
 
 // Content-type filters - multi-select, combined with AND (both can be selected at once)
-export type ContentTypeFilterType = 'with-achievements' | 'with-voice';
+export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
 
 interface StatusFilterOption {
   label: string;
@@ -65,6 +65,7 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
 export const CONTENT_TYPE_OPTIONS: ContentTypeFilterOption[] = [
   { label: 'З перекладом досягнень', value: 'with-achievements' },
   { label: 'З озвученням', value: 'with-voice' },
+  { label: 'З Майстерні Steam', value: 'from-workshop' },
 ];
 
 export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [

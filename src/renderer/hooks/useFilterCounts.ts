@@ -23,6 +23,7 @@ const INITIAL_COUNTS: FilterCounts = {
   'installed-xbox-games': 0,
   'with-achievements': 0,
   'with-voice': 0,
+  'from-workshop': 0,
   planned: 0,
   'in-progress': 0,
   completed: 0,

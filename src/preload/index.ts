@@ -266,6 +266,9 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
+  // Перехід у Майстерню рахується як завантаження
+  trackWorkshopOpen: (gameId: string, isFirstSession?: boolean) =>
+    ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
   // Submit feedback for a game translation

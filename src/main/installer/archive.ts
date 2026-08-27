@@ -5,7 +5,7 @@ import { extractFull } from 'node-7z';
 import path from 'path';
 import { promisify } from 'util';
 import type { InstallationStatus } from '../../shared/types';
-import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import { forCurrentOS, isLinux } from '../utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 
@@ -16,13 +16,11 @@ function get7zBinaryPath(basePath: string): string {
   const arch = process.arch;
   const archFolder = arch === 'x64' ? 'x64' : arch === 'arm64' ? 'arm64' : 'ia32';
 
-  if (isWindows()) {
-    return path.join(basePath, 'win', archFolder, '7z.exe');
-  }
-  if (isMacOS()) {
-    return path.join(basePath, 'mac', arch, '7zz');
-  }
-  return path.join(basePath, 'linux', archFolder, '7zz');
+  return forCurrentOS({
+    windows: path.join(basePath, 'win', archFolder, '7z.exe'),
+    macos: path.join(basePath, 'mac', arch, '7zz'),
+    other: path.join(basePath, 'linux', archFolder, '7zz'),
+  });
 }
 
 /**

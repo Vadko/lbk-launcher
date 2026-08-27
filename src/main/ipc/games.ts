@@ -52,6 +52,7 @@ import {
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
+  trackWorkshopOpen,
   uploadFileToSignedUrl,
 } from '../tracking';
 import { setCefDebuggingEnabled } from '../utils/cef-flag-file';
@@ -97,6 +98,13 @@ export function setupGamesHandlers(): void {
   // Track support click
   ipcMain.handle('track-support-click', async (_, gameId: string) =>
     trackSupportClick(gameId)
+  );
+
+  // Перехід у Майстерню = встановлення: сервер зарахує лише перший з машини
+  ipcMain.handle(
+    'track-workshop-open',
+    async (_, gameId: string, isFirstSession?: boolean) =>
+      trackWorkshopOpen(gameId, isFirstSession)
   );
 
   // Track failed search (0 results)

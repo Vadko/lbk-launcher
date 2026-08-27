@@ -45,6 +45,9 @@ function matchesContentTypes(
     if (type === 'with-achievements') {
       return !!game.achievements_archive_path;
     }
+    if (type === 'from-workshop') {
+      return game.kind === 'workshop';
+    }
     return !!game.voice_archive_path || game.voice_progress !== null;
   });
 }
