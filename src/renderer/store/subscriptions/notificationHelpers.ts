@@ -39,8 +39,6 @@ export function getNotificationMessage(
       return notification.message
         ? `${notification.gameName}: ${notification.message}`
         : 'Нова відповідь на ваш відгук';
-    case 'changelog':
-      return notification.message || 'Дізнайтесь, що змінилось';
     default:
       return 'Нове сповіщення';
   }

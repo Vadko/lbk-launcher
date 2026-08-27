@@ -8,11 +8,14 @@ import {
   RefreshCw,
   Settings2,
   Shield,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
+import { APP_VERSION } from '../../constants/appVersion';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
+import { useChangelogStore } from '../../store/useChangelogStore';
 import { type DevModeType, usePromoModalStore } from '../../store/usePromoModalStore';
 import { isHardwareWeak, useSettingsStore } from '../../store/useSettingsStore';
 import { trackEvent } from '../../utils/analytics';
@@ -201,6 +204,10 @@ export const SettingsModal: React.FC = () => {
 
   const handleOpenPrivacyModal = useCallback(() => {
     setIsPrivacyModalOpen(true);
+  }, []);
+
+  const handleOpenChangelogModal = useCallback(() => {
+    useChangelogStore.getState().openModal();
   }, []);
 
   const handleClosePrivacyModal = useCallback(() => {
@@ -548,6 +555,19 @@ export const SettingsModal: React.FC = () => {
               </Button>
             </div>
           </div>
+
+          <button
+            onClick={handleOpenChangelogModal}
+            className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
+              <Sparkles size={20} className="text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-semibold text-text-main">Що нового</h4>
+              <p className="text-xs text-text-muted">Історія оновлень · v{APP_VERSION}</p>
+            </div>
+          </button>
 
           {/* Legal section */}
           <div className="grid grid-cols-2 gap-3">

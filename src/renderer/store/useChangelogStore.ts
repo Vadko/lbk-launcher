@@ -1,27 +1,45 @@
 import { create } from 'zustand';
 import changelogData from '../../shared/changelog.json';
+import type { ChangelogEntry } from '../../shared/types';
 
-interface ChangelogEntry {
-  version: string;
-  date: string;
-  title: string;
-  highlights: string[];
+export function compareVersions(a: string, b: string): number {
+  const [aMajor, aMinor, aPatch] = a.split('.').map(Number);
+  const [bMajor, bMinor, bPatch] = b.split('.').map(Number);
+  return aMajor - bMajor || aMinor - bMinor || aPatch - bPatch;
 }
 
-// changelog.json is maintained oldest-first; reversed here so index 0 is always
-// the newest entry, which is what drives the notification.
-export const CHANGELOG: ChangelogEntry[] = [...changelogData].reverse();
+function sortNewestFirst(entries: ChangelogEntry[]): ChangelogEntry[] {
+  return [...entries].sort((a, b) => compareVersions(b.version, a.version));
+}
+
+const BUNDLED: ChangelogEntry[] = sortNewestFirst(changelogData);
+
+function merge(remote: ChangelogEntry[]): ChangelogEntry[] {
+  const byVersion = new Map(BUNDLED.map((entry) => [entry.version, entry]));
+  for (const entry of remote) {
+    byVersion.set(entry.version, entry);
+  }
+  return sortNewestFirst([...byVersion.values()]);
+}
 
 interface ChangelogStore {
   isOpen: boolean;
+  entries: ChangelogEntry[];
   openModal: () => void;
   closeModal: () => void;
+  loadForVersion: (version: string) => Promise<void>;
 }
 
-// "Already notified" state lives in useSubscriptionsStore.notifications (persisted),
-// same as the app-update flow — no need to duplicate it here.
 export const useChangelogStore = create<ChangelogStore>()((set) => ({
   isOpen: false,
+  entries: BUNDLED,
   openModal: () => set({ isOpen: true }),
   closeModal: () => set({ isOpen: false }),
+
+  loadForVersion: async (version) => {
+    const remote = await window.electronAPI?.fetchChangelog?.(version);
+    if (remote?.length) {
+      set({ entries: merge(remote) });
+    }
+  },
 }));

@@ -189,6 +189,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('update-error', handler);
     return () => ipcRenderer.removeListener('update-error', handler);
   },
+  fetchChangelog: (version) => ipcRenderer.invoke('fetch-changelog', version),
   // Real-time updates (автоматично керуються в main process)
   onGameUpdated: (callback) => {
     const handler = (_: unknown, game: Game) => callback(game);

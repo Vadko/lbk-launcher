@@ -5,7 +5,6 @@ import {
   Languages,
   MessageSquare,
   RefreshCw,
-  Sparkles,
   TrendingUp,
   X,
 } from 'lucide-react';
@@ -32,8 +31,6 @@ const getToastIcon = (type: ToastNotification['type']) => {
       return <BookmarkCheck size={20} className="text-text-dark" />;
     case 'feedback-reply':
       return <MessageSquare size={20} className="text-white" />;
-    case 'changelog':
-      return <Sparkles size={20} className="text-white" />;
     default:
       return <RefreshCw size={20} className="text-white" />;
   }
@@ -53,8 +50,6 @@ const getToastGradient = (type: ToastNotification['type']) => {
       return 'from-color-mixed to-color-mixed';
     case 'feedback-reply':
       return 'from-color-main to-color-accent';
-    case 'changelog':
-      return 'from-color-accent to-color-main';
     default:
       return 'from-color-accent to-color-main';
   }
@@ -74,8 +69,6 @@ const getToastBorder = (type: ToastNotification['type']) => {
       return 'border-color-mixed';
     case 'feedback-reply':
       return 'border-color-main';
-    case 'changelog':
-      return 'border-color-accent';
     default:
       return 'border-color-accent';
   }
@@ -95,8 +88,6 @@ const getToastTitle = (type: ToastNotification['type']) => {
       return 'Оновлення прогресу';
     case 'feedback-reply':
       return 'Відповідь на відгук';
-    case 'changelog':
-      return 'Що нового?';
     default:
       return 'Сповіщення';
   }
@@ -110,13 +101,7 @@ export const ToastNotifications: React.FC = () => {
 
   const handleToastClick = useCallback(
     (toast: ToastNotification) => {
-      // Don't navigate for app-update notifications
       if (toast.type === 'app-update') {
-        return;
-      }
-
-      // Open the changelog modal instead of navigating to a game
-      if (toast.type === 'changelog') {
         useChangelogStore.getState().openModal();
         dismissToast(toast.id);
         return;

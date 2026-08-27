@@ -10,8 +10,7 @@ interface BaseNotification {
     | 'team-new-game'
     | 'team-status-change'
     | 'first-favorite'
-    | 'feedback-reply'
-    | 'changelog';
+    | 'feedback-reply';
   gameName: string;
   timestamp: number;
 }

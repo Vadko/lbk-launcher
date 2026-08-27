@@ -117,6 +117,7 @@ if (isLinux()) {
 }
 
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
+import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
 import { createGamesBroadcastSubscription } from './db/games-realtime';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
@@ -220,6 +221,7 @@ if (!gotTheLock) {
   setupTgNewsHandlers();
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
+  setupChangelogHandlers();
 
   // IPC handler for getting current sync status
   ipcMain.handle('get-sync-status', () => currentSyncStatus);
