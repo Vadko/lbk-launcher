@@ -609,6 +609,52 @@ export type Database = {
           },
         ]
       }
+      game_owners: {
+        Row: {
+          game_id: string
+          granted_at: string
+          granted_by: string | null
+          user_id: string
+        }
+        Insert: {
+          game_id: string
+          granted_at?: string
+          granted_by?: string | null
+          user_id: string
+        }
+        Update: {
+          game_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_owners_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_owners_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "game_owners_granted_by_fkey"
+            columns: ["granted_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_owners_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_subscriptions: {
         Row: {
           game_id: string
@@ -643,9 +689,8 @@ export type Database = {
           },
         ]
       }
-      game_update_watch: {
+      game_update_state: {
         Row: {
-          auto_tech_improvement: boolean | null
           auto_tech_prev_status:
             | Database["public"]["Enums"]["game_status"]
             | null
@@ -654,13 +699,9 @@ export type Database = {
           last_build_at: string | null
           last_build_id: number | null
           last_notified_at: string | null
-          notify_email: boolean | null
-          notify_telegram: boolean | null
           updated_at: string
-          watch: boolean | null
         }
         Insert: {
-          auto_tech_improvement?: boolean | null
           auto_tech_prev_status?:
             | Database["public"]["Enums"]["game_status"]
             | null
@@ -669,13 +710,9 @@ export type Database = {
           last_build_at?: string | null
           last_build_id?: number | null
           last_notified_at?: string | null
-          notify_email?: boolean | null
-          notify_telegram?: boolean | null
           updated_at?: string
-          watch?: boolean | null
         }
         Update: {
-          auto_tech_improvement?: boolean | null
           auto_tech_prev_status?:
             | Database["public"]["Enums"]["game_status"]
             | null
@@ -684,9 +721,52 @@ export type Database = {
           last_build_at?: string | null
           last_build_id?: number | null
           last_notified_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_update_state_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_update_state_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
+      game_update_watch: {
+        Row: {
+          auto_tech_improvement: boolean | null
+          created_at: string
+          game_id: string
+          notify_email: boolean | null
+          notify_telegram: boolean | null
+          updated_at: string
+          user_id: string
+          watch: boolean | null
+        }
+        Insert: {
+          auto_tech_improvement?: boolean | null
+          created_at?: string
+          game_id: string
           notify_email?: boolean | null
           notify_telegram?: boolean | null
           updated_at?: string
+          user_id: string
+          watch?: boolean | null
+        }
+        Update: {
+          auto_tech_improvement?: boolean | null
+          created_at?: string
+          game_id?: string
+          notify_email?: boolean | null
+          notify_telegram?: boolean | null
+          updated_at?: string
+          user_id?: string
           watch?: boolean | null
         }
         Relationships: [
@@ -701,6 +781,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "trending_games_cache"
             referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "game_update_watch_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2632,6 +2718,7 @@ export type Database = {
           email_ready: boolean
           notify_email: boolean
           notify_telegram: boolean
+          target_user_id: string
           telegram_ready: boolean
           watch: boolean
         }[]
@@ -2807,6 +2894,7 @@ export type Database = {
           }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_moderator: { Args: never; Returns: boolean }
+      is_game_owner: { Args: { gid: string }; Returns: boolean }
       is_kuli_game: { Args: { p_game_id: string }; Returns: boolean }
       is_moderator: { Args: never; Returns: boolean }
       is_verified_user: { Args: never; Returns: boolean }
