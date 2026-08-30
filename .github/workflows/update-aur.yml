@@ -42,7 +42,7 @@ jobs:
           gh release download "${{ steps.release.outputs.tag }}" \
             --repo Vadko/lbk-launcher \
             --pattern "LBK-Launcher-linux.AppImage" \
-            --dir aur/
+            --output "aur/LBK-Launcher-linux-${{ steps.release.outputs.version }}.AppImage"
 
       - name: Update PKGBUILD version, checksums and .SRCINFO
         uses: docker://archlinux:base-devel
