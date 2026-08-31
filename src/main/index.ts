@@ -281,7 +281,7 @@ if (!gotTheLock) {
       }
     };
 
-    // Запустити синхронізацію з retry та загальним таймаутом
+    // Запустити синхронізацію (кожна сторінка запиту має власний retry — див. supabase-sync-api.ts)
     console.log('[Main] Starting sync with Supabase...');
     syncManager = SyncManager.getInstance();
 

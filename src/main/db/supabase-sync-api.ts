@@ -136,6 +136,67 @@ const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
 
 const GAMES_PAGE_SIZE = 100;
 
+const RETRYABLE_PATTERNS = [
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'terminated',
+  'fetch failed',
+  'network',
+];
+
+/**
+ * Чи варто повторити запит після цієї помилки (транзієнтна мережева проблема),
+ * а не позначати весь sync як провалений.
+ */
+function isRetryableError(error: unknown): boolean {
+  const text = [
+    (error as { message?: string })?.message,
+    (error as { details?: string })?.details,
+    (error as { code?: string })?.code,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return RETRYABLE_PATTERNS.some((pattern) =>
+    text.toLowerCase().includes(pattern.toLowerCase())
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Виконати запит з повторними спробами при транзієнтних мережевих помилках
+ * (ECONNRESET, timeout тощо). Без цього одна коротка обірвана сторінка
+ * валила увесь full/delta sync, і наступна спроба починалась знову з нуля.
+ */
+async function withRetry<T>(
+  fn: () => PromiseLike<T>,
+  label: string,
+  maxAttempts = 3
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts || !isRetryableError(error)) {
+        throw error;
+      }
+      const delayMs = 500 * 2 ** (attempt - 1);
+      console.warn(
+        `[SupabaseSync] ${label} failed (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms:`,
+        (error as { message?: string })?.message ?? error
+      );
+      await sleep(delayMs);
+    }
+  }
+  throw lastError;
+}
+
 /**
  * Завантажити всі затверджені ігри з Supabase
  */
@@ -146,13 +207,18 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
   let hasMore = true;
 
   while (hasMore) {
-    const { data, error } = await supabase
-      .from('games')
-      .select(GAME_SELECT_STRING)
-      .eq('approved', true)
-      .order('name', { ascending: true })
-      .range(offset, offset + GAMES_PAGE_SIZE - 1)
-      .overrideTypes<Game[], { merge: false }>();
+    const currentOffset = offset;
+    const { data, error } = await withRetry(
+      () =>
+        supabase
+          .from('games')
+          .select(GAME_SELECT_STRING)
+          .eq('approved', true)
+          .order('name', { ascending: true })
+          .range(currentOffset, currentOffset + GAMES_PAGE_SIZE - 1)
+          .overrideTypes<Game[], { merge: false }>(),
+      `fetchAllGames page (offset ${currentOffset})`
+    );
 
     if (error) {
       throw error;
@@ -182,14 +248,19 @@ export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game
   console.log(`[SupabaseSync] Fetching games updated since ${since}`);
 
   while (hasMore) {
-    const { data, error } = await supabase
-      .from('games')
-      .select(GAME_SELECT_STRING)
-      .eq('approved', true)
-      .gt('updated_at', since)
-      .order('updated_at', { ascending: true })
-      .range(offset, offset + GAMES_PAGE_SIZE - 1)
-      .overrideTypes<Game[], { merge: false }>();
+    const currentOffset = offset;
+    const { data, error } = await withRetry(
+      () =>
+        supabase
+          .from('games')
+          .select(GAME_SELECT_STRING)
+          .eq('approved', true)
+          .gt('updated_at', since)
+          .order('updated_at', { ascending: true })
+          .range(currentOffset, currentOffset + GAMES_PAGE_SIZE - 1)
+          .overrideTypes<Game[], { merge: false }>(),
+      `fetchUpdatedGames page (offset ${currentOffset})`
+    );
 
     if (error) {
       throw error;
@@ -219,7 +290,10 @@ export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<s
   }
 
   const query = supabase.from('deleted_games').select('game_id');
-  const { data, error } = await (since ? query.gt('deleted_at', since) : query);
+  const { data, error } = await withRetry(
+    () => (since ? query.gt('deleted_at', since) : query),
+    'fetchDeletedGameIds'
+  );
 
   if (error) {
     throw error;
