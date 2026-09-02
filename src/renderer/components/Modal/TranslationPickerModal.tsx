@@ -3,6 +3,7 @@ import { Check, Users, X } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
@@ -27,7 +28,8 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   variantById,
 }) => {
   const navigate = useNavigate();
-  const { selectedGame, installedTranslations, gamesWithUpdates } = useStore();
+  const { selectedGame, gamesWithUpdates } = useStore();
+  const isInstalled = useIsTranslationInstalled();
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const setNavigationArea = useGamepadModeStore((s) => s.setNavigationArea);
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
@@ -90,7 +92,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
             <div className="p-2 max-h-[60vh] overflow-y-auto">
               {translations.map((game, index) => {
                 const isSelected = selectedGame?.id === game.id;
-                const isInstalled = installedTranslations.has(game.id);
+                const installed = isInstalled(game.id);
                 const hasUpdate = gamesWithUpdates.has(game.id);
                 const progress = game.translation_progress ?? 0;
                 const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
@@ -149,7 +151,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                         </span>
                         <StatusIcons
                           hasUpdate={hasUpdate}
-                          isInstalled={isInstalled}
+                          isInstalled={installed}
                           aiType={game.ai}
                           isTranslationAvailable={isTranslationAvailable}
                           isFavorite={isFavoriteGame(game.id)}

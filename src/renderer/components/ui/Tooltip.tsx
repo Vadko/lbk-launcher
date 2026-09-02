@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface TooltipProps {
-  content: string;
+  content: string | null;
   children: React.ReactNode;
   className?: string;
   align?: 'center' | 'left' | 'right';
@@ -53,6 +53,10 @@ export const Tooltip: React.FC<TooltipProps> = ({
     }
   }, [isVisible, mouseX]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  if (!content) {
+    return <>{children}</>;
+  }
 
   return (
     <span

@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useEffect, useMemo } from 'react';
-import type { InstallationInfo } from '../../../shared/types';
+import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useListCompositionKey } from '../../hooks/useListCompositionKey';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
@@ -26,7 +26,6 @@ interface HorizontalGameListProps {
     variantById: Map<string, string>
   ) => void;
   isGameDetected: (gameId: string) => boolean;
-  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
 }
 
 export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
@@ -41,8 +40,8 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     onSelectGame,
     onOpenTranslationPicker,
     isGameDetected,
-    getInstallationInfo,
   }) => {
+    const isInstalled = useIsTranslationInstalled();
     const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
 
     const { getAnimationProps } = useListAnimation({
@@ -130,7 +129,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
                   isSelected={isSelected}
                   hasUpdate={hasUpdate}
                   isDetected={detected}
-                  isInstalled={!!getInstallationInfo(primaryGame.id)}
+                  isInstalled={isInstalled(primaryGame.id)}
                   onClick={handleClick}
                   imageDeferred={virtualizer.isScrolling}
                 />

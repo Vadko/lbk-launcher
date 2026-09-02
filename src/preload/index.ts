@@ -266,6 +266,17 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
+  // Підписка на переклад у Майстерні без відкриття Steam
+  setWorkshopSubscription: (
+    gameId: string,
+    appId: number,
+    workshopId: string,
+    subscribe: boolean
+  ) =>
+    ipcRenderer.invoke('set-workshop-subscription', gameId, appId, workshopId, subscribe),
+  listInstalledWorkshopGames: () => ipcRenderer.invoke('list-installed-workshop-games'),
+  isWorkshopItemDownloaded: (appId: number, workshopId: string) =>
+    ipcRenderer.invoke('is-workshop-item-downloaded', appId, workshopId),
   // Перехід у Майстерню рахується як завантаження
   trackWorkshopOpen: (gameId: string, isFirstSession?: boolean) =>
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),

@@ -126,7 +126,7 @@ export async function isSteamRunning(): Promise<boolean> {
   const probe = forCurrentOS({
     windows: () => execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe'),
     linux: () => execOnHost('pgrep -x steam'),
-    macos: () => execAsync('pgrep -x Steam'),
+    macos: () => execAsync('pgrep -x steam_osx'),
   });
 
   if (!probe) {

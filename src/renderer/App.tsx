@@ -13,6 +13,7 @@ import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
+import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
 import { trackEvent } from './utils/analytics';
 import { isValidGamepad } from './utils/isValidGamepad';
 
@@ -265,6 +266,12 @@ export const App: React.FC = () => {
       useStore.getState().loadInstalledGamesFromSystem();
     }
   }, []);
+
+  useIdleEffect(() => {
+    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
+      void useWorkshopInstallsStore.getState().reconcileAll();
+    }
+  }, [syncStatus]);
 
   // Детекція встановлених ігор — тільки коли sync завершився (інакше каталог ще
   // порожній). Ефект перезапускається, коли syncStatus стане ready/error.

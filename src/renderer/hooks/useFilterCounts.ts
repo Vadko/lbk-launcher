@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FilterCountsResult } from '../../shared/types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
+import { useWorkshopInstallsStore } from '../store/useWorkshopInstallsStore';
+import { allInstalledTranslationIds } from './useInstalledTranslations';
 
 export type FilterCounts = FilterCountsResult & {
   'favorite-translations': number;
@@ -52,7 +54,7 @@ export function useFilterCounts() {
         xboxFolderNames,
       ] = await Promise.all([
         window.electronAPI.fetchFilterCounts(),
-        window.electronAPI.getAllInstalledGameIds(),
+        allInstalledTranslationIds(),
         window.electronAPI.getAllInstalledGamePaths(),
         window.electronAPI.getSteamLibraryAppIds(),
         window.electronAPI.getGogLibrary(),
@@ -143,6 +145,8 @@ export function useFilterCounts() {
 
     const unsubInstalled =
       window.electronAPI?.onInstalledGamesChanged?.(debouncedFetchCounts);
+
+    const unsubWorkshop = useWorkshopInstallsStore.subscribe(debouncedFetchCounts);
     const unsubSteam = window.electronAPI?.onSteamLibraryChanged?.(debouncedFetchCounts);
     const unsubGame = window.electronAPI?.onGameUpdated?.(debouncedFetchCounts);
 
@@ -150,6 +154,7 @@ export function useFilterCounts() {
       isMountedRef.current = false;
       window.removeEventListener('test-games-updated', handleTestGamesUpdate);
       unsubInstalled?.();
+      unsubWorkshop();
       unsubSteam?.();
       unsubGame?.();
       if (debounceTimerRef.current) {

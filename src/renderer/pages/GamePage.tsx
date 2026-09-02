@@ -40,6 +40,7 @@ import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
+import { useIsTranslationInstalledForGame } from '../hooks/useInstalledTranslations';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -86,10 +87,7 @@ export const GamePage: React.FC = () => {
     : false;
 
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
-  const isTranslationInstalled =
-    installationInfo &&
-    !installationInfo.hasInstallError &&
-    installationInfo.gameId === selectedGame?.id;
+  const isTranslationInstalled = useIsTranslationInstalledForGame(selectedGame?.id);
   const isUpdateAvailable =
     installationInfo &&
     selectedGame &&
@@ -322,6 +320,7 @@ export const GamePage: React.FC = () => {
   const {
     isInstalling,
     isUninstalling,
+    isWorkshopChangePending,
     isPaused,
     isWaitingForNetwork,
     installProgress,
@@ -350,7 +349,7 @@ export const GamePage: React.FC = () => {
 
   // Check installation status when game changes
   useEffect(() => {
-    if (selectedGame) {
+    if (selectedGame && selectedGame.kind !== 'workshop') {
       checkInstallationStatus(selectedGame.id, selectedGame);
     }
   }, [selectedGame, checkInstallationStatus]);
@@ -535,7 +534,12 @@ export const GamePage: React.FC = () => {
                   variant="primary"
                   icon={<Play size={20} />}
                   onClick={handleLaunchGame}
-                  disabled={isLaunching || isInstalling || isUninstalling}
+                  disabled={
+                    isLaunching ||
+                    isInstalling ||
+                    isUninstalling ||
+                    isWorkshopChangePending
+                  }
                   data-gamepad-action
                   data-gamepad-primary-action
                 >
@@ -546,6 +550,8 @@ export const GamePage: React.FC = () => {
                 <WorkshopInstallButton
                   gameId={selectedGame.id}
                   workshopId={selectedGame.workshop_id ?? ''}
+                  steamAppId={selectedGame.steam_app_id}
+                  isGameInstalledOnSystem={isGameInstalledOnSystem}
                   disabled={!isOnline || isTombstoned}
                 />
               ) : (
