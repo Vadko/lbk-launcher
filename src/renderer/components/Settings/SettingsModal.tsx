@@ -2,6 +2,7 @@ import {
   BrushCleaning,
   FileText,
   FolderOpen,
+  Gamepad,
   Heart,
   Library,
   MessageCircle,
@@ -135,6 +136,7 @@ export const SettingsModal: React.FC = () => {
   const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
   const [isTranslationUnlocked, setIsTranslationUnlocked] = useState(false);
   const [isSyncingSteamCollection, setIsSyncingSteamCollection] = useState(false);
+  const [isTogglingLbkShortcut, setIsTogglingLbkShortcut] = useState(false);
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -193,6 +195,35 @@ export const SettingsModal: React.FC = () => {
       });
     } finally {
       setIsSyncingSteamCollection(false);
+    }
+  }, [showModal]);
+
+  const handleAddLbkToSteamLibrary = useCallback(async () => {
+    setIsTogglingLbkShortcut(true);
+    try {
+      const result = await window.electronAPI.addLbkLauncherToSteamLibrary();
+      if (result.ok) {
+        showModal({
+          title: 'Готово',
+          message: 'LBK Launcher додано в бібліотеку Steam.',
+          type: 'info',
+        });
+      } else {
+        showModal({
+          title: 'Не вдалося додати в Steam',
+          message: steamCollectionSyncErrorMessage(result.reason),
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('[Settings] Adding LBK to Steam library failed:', error);
+      showModal({
+        title: 'Сталася помилка',
+        message: 'Спробуйте ще раз пізніше.',
+        type: 'error',
+      });
+    } finally {
+      setIsTogglingLbkShortcut(false);
     }
   }, [showModal]);
 
@@ -438,6 +469,25 @@ export const SettingsModal: React.FC = () => {
               </h4>
               <p className="text-xs text-text-muted">
                 Знайти встановлені ігри, додані через Kurin`, та імпортувати їх
+              </p>
+            </div>
+          </button>
+
+          {/* Add LBK Launcher itself as a non-Steam shortcut */}
+          <button
+            onClick={handleAddLbkToSteamLibrary}
+            disabled={isTogglingLbkShortcut}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
+              <Gamepad size={20} className="text-text-dark" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-semibold text-text-main">
+                LBK Launcher в бібліотеці Steam
+              </h4>
+              <p className="text-xs text-text-muted">
+                {isTogglingLbkShortcut ? 'Додавання...' : 'Додати лаунчер як гру в Steam'}
               </p>
             </div>
           </button>

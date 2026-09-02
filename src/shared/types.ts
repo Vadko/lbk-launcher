@@ -363,6 +363,20 @@ export interface ElectronAPI {
         error?: string;
       }
   >;
+  /**
+   * Add (or update) LBK Launcher itself as a non-Steam shortcut in the
+   * user's Steam library, with name/icon/artwork — so it's launchable from
+   * Big Picture / Steam Deck Gaming Mode. Safe to call repeatedly: reuses
+   * the shortcut it created before instead of adding a duplicate.
+   */
+  addLbkLauncherToSteamLibrary: () => Promise<
+    | { ok: true; appId: number; created: boolean }
+    | {
+        ok: false;
+        reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
+        error?: string;
+      }
+  >;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking

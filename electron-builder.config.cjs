@@ -30,6 +30,11 @@ module.exports = {
       from: 'resources/trayIconTemplate@2x.png',
       to: 'trayIconTemplate@2x.png',
     },
+    {
+      from: 'resources/steam-shortcut',
+      to: 'steam-shortcut',
+      filter: ['**/*'],
+    },
   ],
 
   asarUnpack: ['**/*.node'],

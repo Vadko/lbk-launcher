@@ -252,6 +252,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('set-steam-custom-artwork', enabled),
   syncSteamTranslatedCollection: () =>
     ipcRenderer.invoke('sync-steam-translated-collection'),
+  addLbkLauncherToSteamLibrary: () =>
+    ipcRenderer.invoke('add-lbk-launcher-to-steam-library'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
   isE2E: () => isE2EMode,
