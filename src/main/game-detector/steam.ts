@@ -15,6 +15,8 @@ import {
   writeSteamLibraryCache,
 } from '../steam-library-api';
 import { forCurrentOS, getPlatform } from '../utils/platform';
+import { evaluateInSharedJsContext, isCefAvailable } from '../utils/steam-cef';
+import { readRendererSetting } from '../utils/store-storage';
 import {
   parseAppManifest,
   parseLibraryFolders,
@@ -648,6 +650,35 @@ export function getInstalledSteamGamePaths(): string[] {
 // ============================================================================
 
 /**
+ * Read owned apps straight from the running client's library store via CEF —
+ * no network call, no rate limit, and (unlike the Web API path) it includes
+ * family-shared games. `null` means the bridge isn't usable right now and the
+ * caller should fall through to the API/file-cache chain.
+ */
+async function getSteamLibraryAppIdsFromCef(): Promise<number[] | null> {
+  if (
+    !(readRendererSetting('steamCefDebuggingEnabled', true) && (await isCefAvailable()))
+  ) {
+    return null;
+  }
+
+  try {
+    const result = await evaluateInSharedJsContext<number[] | 'unavailable'>(
+      `(() => {
+        if (typeof collectionStore?.allGamesCollection?.allApps === 'undefined') {
+          return 'unavailable';
+        }
+        return collectionStore.allGamesCollection.allApps.map((a) => a.appid);
+      })()`
+    );
+    return result === 'unavailable' ? null : result;
+  } catch (error) {
+    console.error('[Steam] CEF library read failed:', error);
+    return null;
+  }
+}
+
+/**
  * Get all Steam App IDs from user's library (owned games, installed or not)
  */
 export async function getSteamLibraryAppIds(): Promise<number[]> {
@@ -657,6 +688,28 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
       `[Steam] Library: using in-memory cache (${cache.libraryAppIds.length} apps)`
     );
     return cache.libraryAppIds;
+  }
+
+  const cefAppIds = await getSteamLibraryAppIdsFromCef();
+  if (cefAppIds !== null) {
+    console.log(`[Steam] Library: using CEF (${cefAppIds.length} apps)`);
+    cache.libraryAppIds = cefAppIds;
+
+    // Best-effort: persist so a later run without CEF still has a recent
+    // snapshot instead of falling all the way back to the Web API.
+    const steamPathForCache = getSteamPath();
+    const steam3IdForCache =
+      steamPathForCache && getCurrentSteamUserId(steamPathForCache);
+    if (steam3IdForCache) {
+      writeSteamLibraryCache({
+        steamId: steam3ToSteam64(steam3IdForCache),
+        appIds: cefAppIds,
+        licensecacheSize: getLicensecacheSize() ?? 0,
+        cachedAt: new Date().toISOString(),
+      });
+    }
+
+    return cefAppIds;
   }
 
   const steamPath = getSteamPath();
