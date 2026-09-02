@@ -3,6 +3,7 @@ import {
   FileText,
   FolderOpen,
   Heart,
+  Library,
   MessageCircle,
   Play,
   RefreshCw,
@@ -56,6 +57,28 @@ const SettingItem = React.memo<{
 ));
 
 SettingItem.displayName = 'SettingItem';
+
+function steamCollectionSyncErrorMessage(
+  reason:
+    | 'cef-unavailable'
+    | 'steam-not-running'
+    | 'no-translated-games'
+    | 'no-matches'
+    | 'failed'
+): string {
+  switch (reason) {
+    case 'steam-not-running':
+      return 'Steam не запущено. Запустіть Steam і спробуйте ще раз.';
+    case 'cef-unavailable':
+      return 'Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг керувати колекціями.';
+    case 'no-translated-games':
+      return 'У каталозі поки немає перекладів, доступних через Майстерню Steam.';
+    case 'no-matches':
+      return 'Серед ваших ігор у бібліотеці Steam немає жодної з перекладом.';
+    default:
+      return 'Спробуйте ще раз пізніше.';
+  }
+}
 
 export const SettingsModal: React.FC = () => {
   const { showModal } = useModalStore();
@@ -111,6 +134,7 @@ export const SettingsModal: React.FC = () => {
   const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
   const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
   const [isTranslationUnlocked, setIsTranslationUnlocked] = useState(false);
+  const [isSyncingSteamCollection, setIsSyncingSteamCollection] = useState(false);
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -139,6 +163,38 @@ export const SettingsModal: React.FC = () => {
     // Fire-and-forget — switching off walks every app we've touched.
     window.electronAPI?.setSteamCustomArtwork(newValue).catch(console.error);
   };
+
+  const handleSyncSteamCollection = useCallback(async () => {
+    setIsSyncingSteamCollection(true);
+    try {
+      const result = await window.electronAPI.syncSteamTranslatedCollection();
+      if (result.ok) {
+        showModal({
+          title: 'Колекція оновлена',
+          message:
+            result.total === 0
+              ? 'У колекції «З українізаторами» тепер немає ігор.'
+              : `У колекції «З українізаторами» тепер ${result.total} ${result.total === 1 ? 'гра' : 'ігор'}.`,
+          type: 'info',
+        });
+      } else {
+        showModal({
+          title: 'Не вдалося оновити колекцію',
+          message: steamCollectionSyncErrorMessage(result.reason),
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('[Settings] Steam collection sync failed:', error);
+      showModal({
+        title: 'Не вдалося оновити колекцію',
+        message: 'Сталася непередбачена помилка.',
+        type: 'error',
+      });
+    } finally {
+      setIsSyncingSteamCollection(false);
+    }
+  }, [showModal]);
 
   const handleKurinSync = useCallback(async () => {
     closeSettingsModal();
@@ -306,6 +362,7 @@ export const SettingsModal: React.FC = () => {
             enabled={steamCustomArtworkEnabled}
             onChange={handleToggleSteamCustomArtwork}
           />
+
           <SettingItem
             id="adult-games"
             title="Показувати ігри з порнографічним вмістом"
@@ -345,6 +402,27 @@ export const SettingsModal: React.FC = () => {
             enabled={gamepadSoundsEnabled}
             onChange={toggleGamepadSounds}
           />
+
+          {/* Steam collection sync */}
+          <button
+            onClick={handleSyncSteamCollection}
+            disabled={isSyncingSteamCollection}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
+              <Library size={20} className="text-text-dark" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-semibold text-text-main">
+                Колекція «З українізаторами» в Steam
+              </h4>
+              <p className="text-xs text-text-muted">
+                {isSyncingSteamCollection
+                  ? 'Оновлення...'
+                  : 'Створити або оновити колекцію бібліотеки Steam з іграми, на які є переклад'}
+              </p>
+            </div>
+          </button>
 
           {/* Kurin sync */}
           <button

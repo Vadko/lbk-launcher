@@ -339,6 +339,30 @@ export interface ElectronAPI {
   setSteamCefDebugging: (enabled: boolean) => Promise<void>;
   /** Turning it off reverts Ukrainian library artwork already installed. */
   setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
+  /**
+   * Create or update the Steam library collection «З українізаторами» with
+   * every owned game that has a translation in the catalog. Re-running it
+   * also drops games whose translation disappeared since the last sync.
+   */
+  syncSteamTranslatedCollection: () => Promise<
+    | {
+        ok: true;
+        created: boolean;
+        total: number;
+        added: number;
+        removed: number;
+      }
+    | {
+        ok: false;
+        reason:
+          | 'cef-unavailable'
+          | 'steam-not-running'
+          | 'no-translated-games'
+          | 'no-matches'
+          | 'failed';
+        error?: string;
+      }
+  >;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking

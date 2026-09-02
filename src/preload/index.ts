@@ -250,6 +250,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('set-steam-cef-debugging', enabled),
   setSteamCustomArtwork: (enabled: boolean) =>
     ipcRenderer.invoke('set-steam-custom-artwork', enabled),
+  syncSteamTranslatedCollection: () =>
+    ipcRenderer.invoke('sync-steam-translated-collection'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
   isE2E: () => isE2EMode,

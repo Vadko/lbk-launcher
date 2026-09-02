@@ -62,6 +62,7 @@ import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { removeAllSteamArtwork } from '../utils/steam-artwork';
+import { syncTranslatedGamesCollection } from '../utils/steam-collections';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
 import {
   installedWorkshopGameIds,
@@ -648,6 +649,12 @@ export function setupGamesHandlers(): void {
     if (!enabled) {
       await removeAllSteamArtwork();
     }
+  });
+
+  // Створити/оновити Steam-колекцію з іграми з бібліотеки, на які є переклад
+  ipcMain.handle('sync-steam-translated-collection', async () => {
+    const appIds = GamesRepository.getInstance().getTranslatedSteamAppIds();
+    return syncTranslatedGamesCollection(appIds);
   });
 
   // ---------------------------------------------------------------------------
