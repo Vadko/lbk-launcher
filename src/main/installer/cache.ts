@@ -348,10 +348,7 @@ export async function getAllInstalledGameIds(): Promise<string[]> {
 }
 
 export async function getLocallyInstalledGameIds(): Promise<Set<string>> {
-  return new Set([
-    ...(await getAllInstalledGameIds()),
-    ...getWorkshopInstalledGameIds(),
-  ]);
+  return new Set([...(await getAllInstalledGameIds()), ...getWorkshopInstalledGameIds()]);
 }
 
 /**
