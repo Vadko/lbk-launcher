@@ -578,7 +578,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <div className="text-text-muted">
               <p>
                 Цей переклад встановить власні{' '}
-                <span className="text-text-main">параметри запуску Steam</span> для гри.
+                <span className="text-text-main">параметри запуску</span> для гри в Steam.
               </p>
               {steamLaunchOptionsWindows && (
                 <p className="mt-1">
