@@ -15,7 +15,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getDatabase } from './db/database';
 import { getSteamPlaytimesForApps } from './game-detector/steam';
-import { getAllInstalledGameIds } from './installer/cache';
+import { getLocallyInstalledGameIds } from './installer/cache';
 
 // ============================================================================
 // Types
@@ -112,13 +112,13 @@ async function getInstalledGamesWithSteamIds(): Promise<InstalledGameWithSteamId
   const result: InstalledGameWithSteamId[] = [];
 
   try {
-    // Get all installed game IDs from our cache
-    const installedGameIds = await getAllInstalledGameIds();
+    // File installs plus workshop installs
+    const installedGameIds = await getLocallyInstalledGameIds();
     console.log(
-      `[PlaytimeTracker] Found ${installedGameIds.length} installed localizations`
+      `[PlaytimeTracker] Found ${installedGameIds.size} installed localizations`
     );
 
-    if (installedGameIds.length === 0) {
+    if (installedGameIds.size === 0) {
       return result;
     }
 

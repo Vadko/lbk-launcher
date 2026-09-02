@@ -13,6 +13,7 @@ import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
+import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
 import { trackEvent } from './utils/analytics';
 import { isValidGamepad } from './utils/isValidGamepad';
 
@@ -266,6 +267,12 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  useIdleEffect(() => {
+    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
+      void useWorkshopInstallsStore.getState().reconcileAll();
+    }
+  }, [syncStatus]);
+
   // Детекція встановлених ігор — тільки коли sync завершився (інакше каталог ще
   // порожній). Ефект перезапускається, коли syncStatus стане ready/error.
   useIdleEffect(() => {
@@ -338,22 +345,19 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // "Restart Steam" prompt when the CEF port isn't open yet. Mandatory from
-  // startup bootstrap, dismissible from the settings toggle.
+  // "Restart Steam" prompt from the Settings CEF toggle when the port isn't
+  // open yet. Dismissible — installs that need CEF show their own mandatory one.
   useEffect(() => {
     if (!window.electronAPI?.onSteamRestartRequired) {
       return;
     }
-    const unsubscribe = window.electronAPI.onSteamRestartRequired((mandatory) => {
+    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
       useModalStore.getState().showModal({
         title: 'Перезапустіть Steam',
-        message: mandatory
-          ? 'Для коректного встановлення перекладів потрібно перезапустити Steam. ' +
-            'Це разова дія — наступні встановлення відбуватимуться без рестартів.'
-          : 'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
-            'Можна зробити це пізніше — налаштування вже збережено.',
+        message:
+          'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
+          'Можна зробити це пізніше — налаштування вже збережено.',
         type: 'info',
-        mandatory,
         actions: [
           {
             label: 'Перезапустити Steam',

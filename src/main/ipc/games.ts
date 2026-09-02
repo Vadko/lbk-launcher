@@ -52,6 +52,7 @@ import {
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
+  trackUninstall,
   trackWorkshopOpen,
   uploadFileToSignedUrl,
 } from '../tracking';
@@ -62,6 +63,11 @@ import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { removeAllSteamArtwork } from '../utils/steam-artwork';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
+import {
+  installedWorkshopGameIds,
+  isWorkshopItemDownloaded,
+  setWorkshopSubscription,
+} from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
 
 export function setupGamesHandlers(): void {
@@ -98,6 +104,32 @@ export function setupGamesHandlers(): void {
   // Track support click
   ipcMain.handle('track-support-click', async (_, gameId: string) =>
     trackSupportClick(gameId)
+  );
+
+  // Спроба підписати через CEF; рендерер за невдачі відкриє диплінк
+  ipcMain.handle(
+    'set-workshop-subscription',
+    async (_, gameId: string, appId: number, workshopId: string, subscribe: boolean) => {
+      const result = await setWorkshopSubscription(appId, workshopId, subscribe);
+      // Відписка = видалення перекладу, рахуємо як звичайне видалення
+      if (result.ok && !subscribe) {
+        void trackUninstall(gameId).catch((err) =>
+          console.error('[Workshop] uninstall tracking failed:', err)
+        );
+      }
+      return result;
+    }
+  );
+
+  // Виявлення: які воркшоп-переклади вже стоять, коли кеш порожній або скинутий
+  ipcMain.handle('list-installed-workshop-games', async () =>
+    installedWorkshopGameIds(GamesRepository.getInstance().getWorkshopTargets())
+  );
+
+  ipcMain.handle(
+    'is-workshop-item-downloaded',
+    async (_, appId: number, workshopId: string) =>
+      isWorkshopItemDownloaded(appId, workshopId)
   );
 
   // Перехід у Майстерню = встановлення: сервер зарахує лише перший з машини

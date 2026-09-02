@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
-import { getAllInstalledGameIds } from '../installer/cache';
+import { getLocallyInstalledGameIds } from '../installer/cache';
 import { createTimer } from '../utils/logger';
 import { getMainWindow } from '../window';
 import { getDatabase } from './database';
@@ -145,7 +145,7 @@ export class SyncManager {
     if (deletedIds.length === 0) {
       return { safe: [], deferred: [] };
     }
-    const installedIds = new Set(await getAllInstalledGameIds());
+    const installedIds = await getLocallyInstalledGameIds();
     const safe: string[] = [];
     const deferred: string[] = [];
     for (const id of deletedIds) {
@@ -199,7 +199,7 @@ export class SyncManager {
     }
 
     try {
-      const installedIds = new Set(await getAllInstalledGameIds());
+      const installedIds = await getLocallyInstalledGameIds();
       const stillInstalled: string[] = [];
       const readyToDelete: string[] = [];
       for (const id of pending) {
@@ -413,7 +413,7 @@ export class SyncManager {
    */
   async handleRealtimeDelete(gameId: string): Promise<void> {
     console.log(`[SyncManager] Handling realtime delete for game: ${gameId}`);
-    const installedIds = new Set(await getAllInstalledGameIds());
+    const installedIds = await getLocallyInstalledGameIds();
     if (installedIds.has(gameId)) {
       console.log(
         `[SyncManager] Game ${gameId} is installed — deferring deletion until uninstall`

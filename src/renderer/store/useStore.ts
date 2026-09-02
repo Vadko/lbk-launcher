@@ -59,7 +59,6 @@ interface Store {
   ) => void;
   clearInstallationProgress: (gameId: string) => void;
   getInstallationProgress: (gameId: string) => InstallationProgress | undefined;
-  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
   isCheckingInstallationStatus: (gameId: string) => boolean;
 
   // Game Detection Actions
@@ -328,9 +327,6 @@ export const useStore = create<Store>((set, get) => ({
   },
 
   getInstallationProgress: (gameId: string) => get().installationProgress.get(gameId),
-
-  getInstallationInfo: (gameId: string) => get().installedTranslations.get(gameId),
-
   isCheckingInstallationStatus: (gameId: string) =>
     get().isCheckingInstallation.get(gameId) || false,
 

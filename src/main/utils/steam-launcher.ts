@@ -126,7 +126,7 @@ export async function isSteamRunning(): Promise<boolean> {
   const probe = forCurrentOS({
     windows: () => execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe'),
     linux: () => execOnHost('pgrep -x steam'),
-    macos: () => execAsync('pgrep -x Steam'),
+    macos: () => execAsync('pgrep -x steam_osx'),
   });
 
   if (!probe) {
@@ -192,9 +192,9 @@ export async function shutdownSteam(): Promise<void> {
       await execOnHost('pkill -TERM steam').catch(() => void 0);
     }
   } else if (isMacOS()) {
-    // macOS: osascript for graceful quit, then pkill
+    // macOS: osascript for graceful quit, then pkill (the process is steam_osx)
     await execAsync('osascript -e \'quit app "Steam"\'').catch(() =>
-      execAsync('pkill -TERM Steam').catch(() => void 0)
+      execAsync('pkill -TERM steam_osx').catch(() => void 0)
     );
   }
 

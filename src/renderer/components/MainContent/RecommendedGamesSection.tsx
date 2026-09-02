@@ -6,6 +6,7 @@ import { useRecommendedGames } from '@/renderer/queries/useRecommendedGames';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { trackEvent } from '@/renderer/utils/analytics';
+import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
@@ -22,6 +23,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
   title = 'Вас може зацікавити',
   showLimit = 3,
 }) => {
+  const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
   const { hideAiTranslations, showRecommendations } = useSettingsStore(
     useShallow((state) => ({
@@ -29,11 +31,10 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
       showRecommendations: state.showRecommendations,
     }))
   );
-  const { gamesWithUpdates, isGameDetected, getInstallationInfo } = useStore(
+  const { gamesWithUpdates, isGameDetected } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
       isGameDetected: state.isGameDetected,
-      getInstallationInfo: state.getInstallationInfo,
     }))
   );
 
@@ -92,7 +93,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
                   isCardStyle={true}
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
-                  isInstalled={!!getInstallationInfo(game.id)}
+                  isInstalled={isInstalled(game.id)}
                   isTranslationAvailable={
                     game.status !== 'planned' && game.status !== 'tech-improvement'
                   }

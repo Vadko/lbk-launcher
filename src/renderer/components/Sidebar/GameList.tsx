@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useMemo } from 'react';
-import type { InstallationInfo } from '../../../shared/types';
+import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useListCompositionKey } from '../../hooks/useListCompositionKey';
 import type { Game } from '../../types/game';
@@ -23,7 +23,6 @@ interface GameListProps {
   onToggleGroup: (key: string) => void;
   onSelectGame: (game: Game) => void;
   isGameDetected: (gameId: string) => boolean;
-  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
 }
 
 export const GameList: React.FC<GameListProps> = React.memo(
@@ -39,8 +38,8 @@ export const GameList: React.FC<GameListProps> = React.memo(
     onToggleGroup,
     onSelectGame,
     isGameDetected,
-    getInstallationInfo,
   }) => {
+    const isInstalled = useIsTranslationInstalled();
     const keys = useMemo(() => gameGroups.map((g) => g.key), [gameGroups]);
 
     const { getAnimationProps } = useListAnimation({
@@ -94,7 +93,6 @@ export const GameList: React.FC<GameListProps> = React.memo(
               onSelectGame={onSelectGame}
               gamesWithUpdates={gamesWithUpdates}
               isGameDetected={isGameDetected}
-              getInstallationInfo={getInstallationInfo}
               imageDeferred={isScrolling}
             />
           ) : (
@@ -104,7 +102,7 @@ export const GameList: React.FC<GameListProps> = React.memo(
               onClick={() => onSelectGame(primaryGame)}
               hasUpdate={gamesWithUpdates.has(primaryGame.id)}
               isGameDetected={isGameDetected(primaryGame.id)}
-              isInstalled={!!getInstallationInfo(primaryGame.id)}
+              isInstalled={isInstalled(primaryGame.id)}
               isTranslationAvailable={
                 primaryGame.status !== 'planned' &&
                 primaryGame.status !== 'tech-improvement'

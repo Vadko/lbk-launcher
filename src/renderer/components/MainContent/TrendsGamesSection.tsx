@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
+import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Button } from '../ui/Button';
@@ -22,13 +23,13 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
   showDownloadCounter = false,
   onViewAll,
 }) => {
+  const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
 
-  const { gamesWithUpdates, isGameDetected, getInstallationInfo } = useStore(
+  const { gamesWithUpdates, isGameDetected } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
       isGameDetected: state.isGameDetected,
-      getInstallationInfo: state.getInstallationInfo,
     }))
   );
   const { data: trendingGames, isLoading } = useTrendingGames(30);
@@ -93,7 +94,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
                   showDownloadCounter={showDownloadCounter}
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
-                  isInstalled={!!getInstallationInfo(game.id)}
+                  isInstalled={isInstalled(game.id)}
                   isTranslationAvailable={
                     game.status !== 'planned' && game.status !== 'tech-improvement'
                   }

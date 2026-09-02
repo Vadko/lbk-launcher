@@ -333,8 +333,8 @@ export interface ElectronAPI {
   applyPendingLaunchOptions: (
     game: Game
   ) => Promise<{ success: boolean; error?: string }>;
-  /** Steam restart needed for the CEF port; `mandatory` only from startup bootstrap. */
-  onSteamRestartRequired: (callback: (mandatory: boolean) => void) => () => void;
+  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
+  onSteamRestartRequired: (callback: () => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
   setSteamCefDebugging: (enabled: boolean) => Promise<void>;
   /** Turning it off reverts Ukrainian library artwork already installed. */
@@ -356,6 +356,27 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  // Підписка й відписка на переклад у Майстерні без відкриття Steam
+  setWorkshopSubscription: (
+    gameId: string,
+    appId: number,
+    workshopId: string,
+    subscribe: boolean
+  ) => Promise<
+    | { ok: true }
+    | {
+        ok: false;
+        reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
+        error?: string;
+      }
+  >;
+  /** Які воркшоп-переклади з каталогу вже на диску; null — містка немає */
+  listInstalledWorkshopGames: () => Promise<string[] | null>;
+  /** Факт наявності на диску; null — CEF-місток недоступний, відповіді немає */
+  isWorkshopItemDownloaded: (
+    appId: number,
+    workshopId: string
+  ) => Promise<boolean | null>;
   // Перехід у Майстерню рахується як завантаження
   trackWorkshopOpen: (
     gameId: string,
