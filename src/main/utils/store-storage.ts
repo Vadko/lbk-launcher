@@ -34,14 +34,20 @@ export function readRendererSetting<T>(field: string, defaultValue: T): T {
   return readPersistedStateField('lbk-settings', field, defaultValue);
 }
 
+const WORKSHOP_INSTALLS_KEY = 'workshop-installs-storage';
+
 export function getWorkshopInstalledGameIds(): string[] {
   return Object.keys(
     readPersistedStateField<Record<string, unknown>>(
-      'workshop-installs-storage',
+      WORKSHOP_INSTALLS_KEY,
       'installedAt',
       {}
     )
   );
+}
+
+export function onWorkshopInstallsChanged(callback: () => void): () => void {
+  return store.onDidChange(WORKSHOP_INSTALLS_KEY, callback);
 }
 
 /**
