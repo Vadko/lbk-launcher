@@ -15,12 +15,12 @@ function readStoreFile(key: string): string | null {
 }
 
 /**
- * Read one field of the renderer's persisted zustand settings ('lbk-settings',
- * `{"state":{...}}` envelope). Returns the default on any miss or parse error.
+ * Read one field of a renderer zustand persist envelope (`{"state":{...}}`).
+ * Returns the default on any miss or parse error.
  */
-export function readRendererSetting<T>(field: string, defaultValue: T): T {
+function readPersistedStateField<T>(storeKey: string, field: string, defaultValue: T): T {
   try {
-    const raw = readStoreFile('lbk-settings');
+    const raw = readStoreFile(storeKey);
     if (!raw) {
       return defaultValue;
     }
@@ -28,6 +28,20 @@ export function readRendererSetting<T>(field: string, defaultValue: T): T {
   } catch {
     return defaultValue;
   }
+}
+
+export function readRendererSetting<T>(field: string, defaultValue: T): T {
+  return readPersistedStateField('lbk-settings', field, defaultValue);
+}
+
+export function getWorkshopInstalledGameIds(): string[] {
+  return Object.keys(
+    readPersistedStateField<Record<string, unknown>>(
+      'workshop-installs-storage',
+      'installedAt',
+      {}
+    )
+  );
 }
 
 /**

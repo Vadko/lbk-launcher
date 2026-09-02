@@ -10,7 +10,8 @@ interface WorkshopInstallButtonProps {
   workshopId: string;
   steamAppId: number | null;
   isGameInstalledOnSystem: boolean;
-  disabled?: boolean;
+  isOnline: boolean;
+  isTombstoned: boolean;
 }
 
 export function WorkshopInstallButton({
@@ -18,7 +19,8 @@ export function WorkshopInstallButton({
   workshopId,
   steamAppId,
   isGameInstalledOnSystem,
-  disabled,
+  isOnline,
+  isTombstoned,
 }: WorkshopInstallButtonProps) {
   const installed = useWorkshopInstallsStore((s) => Boolean(s.installedAt[gameId]));
   const pending = useWorkshopInstallsStore((s) => s.pending[gameId]);
@@ -38,11 +40,15 @@ export function WorkshopInstallButton({
       : 'Завантаження в Steam…'
     : 'Встановити зі Steam';
 
-  const hint = !isGameInstalledOnSystem
-    ? 'Гру не встановлено на цьому пристрої'
-    : pending === 'downloading'
-      ? 'Прогрес показано в клієнті Steam'
-      : null;
+  const hint = isTombstoned
+    ? 'Переклад більше не доступний у каталозі'
+    : !isOnline
+      ? 'Відсутнє підключення до Інтернету'
+      : !isGameInstalledOnSystem
+        ? 'Гру не встановлено на цьому пристрої'
+        : pending === 'downloading'
+          ? 'Прогрес показано в клієнті Steam'
+          : null;
 
   const showActionSlot = !installed || Boolean(pending);
 
@@ -60,7 +66,9 @@ export function WorkshopInstallButton({
             variant="primary"
             icon={icon}
             onClick={() => void install({ gameId, appId: steamAppId, workshopId })}
-            disabled={disabled || !isGameInstalledOnSystem || Boolean(pending)}
+            disabled={
+              !isOnline || isTombstoned || !isGameInstalledOnSystem || Boolean(pending)
+            }
             data-gamepad-primary-action
             data-gamepad-action
           >
@@ -72,7 +80,6 @@ export function WorkshopInstallButton({
         variant="secondary"
         icon={<ExternalLink size={20} />}
         onClick={() => void openWorkshopPage(workshopId)}
-        disabled={disabled}
         title="Відкрити сторінку в Майстерні"
         data-gamepad-action
       >
@@ -83,7 +90,6 @@ export function WorkshopInstallButton({
           variant="secondary"
           icon={<Trash2 size={20} />}
           onClick={() => void remove({ gameId, appId: steamAppId, workshopId })}
-          disabled={disabled}
           title="Скасувати підписку в Steam"
           data-gamepad-action
         />

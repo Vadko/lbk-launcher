@@ -5,6 +5,8 @@ import { electronStorage } from './electronStorage';
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_LIMIT_MS = 10 * 60 * 1000;
+/** Стільки null-відповідей поспіль означає, що місток зник і чекати далі нема чого */
+const UNKNOWN_STREAK_LIMIT = 3;
 
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -33,6 +35,13 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
       pending: {},
 
       setInstalled: (gameId, installed) => {
+        const current = get();
+        if (
+          installed === Boolean(current.installedAt[gameId]) &&
+          !(gameId in current.pending)
+        ) {
+          return;
+        }
         set((state) => {
           const pending = { ...state.pending };
           delete pending[gameId];
@@ -75,20 +84,22 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
       },
 
       remove: async ({ gameId, appId, workshopId }) => {
-        if (!appId) {
-          return;
-        }
         setPending(set, gameId, 'removing');
         try {
-          const result = await window.electronAPI.setWorkshopSubscription(
-            gameId,
-            appId,
-            workshopId,
-            false
-          );
-          if (result.ok) {
-            watchDisk(set, get, { gameId, appId, workshopId, wanted: false });
+          if (appId) {
+            const result = await window.electronAPI.setWorkshopSubscription(
+              gameId,
+              appId,
+              workshopId,
+              false
+            );
+            if (result.ok) {
+              watchDisk(set, get, { gameId, appId, workshopId, wanted: false });
+              return;
+            }
           }
+
+          await openWorkshopPage(workshopId);
         } catch (error) {
           console.error('[Workshop] remove failed', error);
         } finally {
@@ -105,24 +116,37 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
           workshopId
         );
         // null — містка немає або API Steam змінилось: кеш лишається як є
-        if (actual !== null) {
-          get().setInstalled(gameId, actual);
+        if (actual === null) {
+          return;
         }
+
+        if (get().pending[gameId]) {
+          return;
+        }
+        get().setInstalled(gameId, actual);
       },
 
       reconcileAll: async () => {
+        const before = get().installedAt;
         const installed = await window.electronAPI.listInstalledWorkshopGames();
         if (installed === null) {
           return;
         }
+        if (get().installedAt !== before) {
+          return;
+        }
+        if (
+          installed.length === Object.keys(before).length &&
+          installed.every((gameId) => gameId in before)
+        ) {
+          return;
+        }
 
-        set((state) => {
-          const next: Record<string, string> = {};
-          for (const gameId of installed) {
-            next[gameId] = state.installedAt[gameId] ?? new Date().toISOString();
-          }
-          return { installedAt: next };
-        });
+        const next: Record<string, string> = {};
+        for (const gameId of installed) {
+          next[gameId] = before[gameId] ?? new Date().toISOString();
+        }
+        set({ installedAt: next });
       },
     }),
     {
@@ -170,11 +194,17 @@ function watchDisk(
 ): void {
   clearTimeout(timers.get(gameId));
   const deadline = Date.now() + POLL_LIMIT_MS;
+  let unknownStreak = 0;
+
+  function stopWatching(): void {
+    timers.delete(gameId);
+    clearPending(set, gameId);
+  }
 
   function scheduleNext(): void {
     if (Date.now() >= deadline) {
-      timers.delete(gameId);
-      clearPending(set, gameId);
+      stopWatching();
+      void get().reconcile(gameId, appId, workshopId);
       return;
     }
     timers.set(gameId, setTimeout(poll, POLL_INTERVAL_MS));
@@ -188,6 +218,15 @@ function watchDisk(
           timers.delete(gameId);
           get().setInstalled(gameId, wanted);
           return;
+        }
+        if (installed === null) {
+          unknownStreak += 1;
+          if (unknownStreak >= UNKNOWN_STREAK_LIMIT) {
+            stopWatching();
+            return;
+          }
+        } else {
+          unknownStreak = 0;
         }
         scheduleNext();
       })
@@ -204,4 +243,15 @@ function trackOpen(gameId: string): void {
   void window.electronAPI
     .trackWorkshopOpen(gameId)
     .catch((error: unknown) => console.error('[Workshop] tracking failed', error));
+}
+
+export function subscribeToWorkshopInstalledChanges(listener: () => void): () => void {
+  let prev = useWorkshopInstallsStore.getState().installedAt;
+  return useWorkshopInstallsStore.subscribe((state) => {
+    if (state.installedAt === prev) {
+      return;
+    }
+    prev = state.installedAt;
+    listener();
+  });
 }

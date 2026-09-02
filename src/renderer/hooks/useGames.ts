@@ -5,7 +5,7 @@ import type {
   SpecialFilterType,
 } from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
-import { useWorkshopInstallsStore } from '../store/useWorkshopInstallsStore';
+import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
 import type { Game, GetGamesParams } from '../types/game';
 import { allInstalledTranslationIds } from './useInstalledTranslations';
 
@@ -608,7 +608,7 @@ export function useGames({
       handleInstalledGamesChanged
     );
 
-    const unsubscribeWorkshop = useWorkshopInstallsStore.subscribe(
+    const unsubscribeWorkshop = subscribeToWorkshopInstalledChanges(
       handleInstalledGamesChanged
     );
     return () => {

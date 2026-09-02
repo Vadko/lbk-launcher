@@ -333,8 +333,8 @@ export interface ElectronAPI {
   applyPendingLaunchOptions: (
     game: Game
   ) => Promise<{ success: boolean; error?: string }>;
-  /** Steam restart needed for the CEF port; `mandatory` only from startup bootstrap. */
-  onSteamRestartRequired: (callback: (mandatory: boolean) => void) => () => void;
+  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
+  onSteamRestartRequired: (callback: () => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
   setSteamCefDebugging: (enabled: boolean) => Promise<void>;
   /** Turning it off reverts Ukrainian library artwork already installed. */

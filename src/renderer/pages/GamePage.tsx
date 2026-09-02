@@ -552,7 +552,8 @@ export const GamePage: React.FC = () => {
                   workshopId={selectedGame.workshop_id ?? ''}
                   steamAppId={selectedGame.steam_app_id}
                   isGameInstalledOnSystem={isGameInstalledOnSystem}
-                  disabled={!isOnline || isTombstoned}
+                  isOnline={isOnline}
+                  isTombstoned={isTombstoned}
                 />
               ) : (
                 <>

@@ -345,22 +345,19 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // "Restart Steam" prompt when the CEF port isn't open yet. Mandatory from
-  // startup bootstrap, dismissible from the settings toggle.
+  // "Restart Steam" prompt from the Settings CEF toggle when the port isn't
+  // open yet. Dismissible — installs that need CEF show their own mandatory one.
   useEffect(() => {
     if (!window.electronAPI?.onSteamRestartRequired) {
       return;
     }
-    const unsubscribe = window.electronAPI.onSteamRestartRequired((mandatory) => {
+    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
       useModalStore.getState().showModal({
         title: 'Перезапустіть Steam',
-        message: mandatory
-          ? 'Для коректного встановлення перекладів потрібно перезапустити Steam. ' +
-            'Це разова дія — наступні встановлення відбуватимуться без рестартів.'
-          : 'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
-            'Можна зробити це пізніше — налаштування вже збережено.',
+        message:
+          'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
+          'Можна зробити це пізніше — налаштування вже збережено.',
         type: 'info',
-        mandatory,
         actions: [
           {
             label: 'Перезапустити Steam',

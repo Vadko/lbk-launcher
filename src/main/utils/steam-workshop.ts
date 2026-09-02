@@ -25,14 +25,15 @@ export interface WorkshopTarget {
 /**
  * Які з перекладів уже лежать на диску. Один похід у Steam на весь список:
  * окрема CDP-сесія на кожен переклад коштувала б секунди при десятках записів.
- * `null` — містка немає, відповіді немає.
+ * `null` — відповіді немає (місток недоступний, Steam не відповів або каталог
+ * порожній), і кеш встановлень чіпати не можна.
  */
 export async function installedWorkshopGameIds(
   targets: WorkshopTarget[]
 ): Promise<string[] | null> {
   const valid = targets.filter((t) => isValidTarget(t.steam_app_id, t.workshop_id));
   if (valid.length === 0) {
-    return [];
+    return null;
   }
   if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
     return null;
@@ -55,9 +56,12 @@ export async function installedWorkshopGameIds(
           if (!byApp.has(t.appId)) {
             try {
               const items = await SteamClient.Apps.GetDownloadedWorkshopItems(t.appId);
-              byApp.set(t.appId, Array.isArray(items) ? items : []);
+              if (!Array.isArray(items)) {
+                return 'unknown';
+              }
+              byApp.set(t.appId, items);
             } catch {
-              byApp.set(t.appId, []);
+              return 'unknown';
             }
           }
           const items = byApp.get(t.appId);

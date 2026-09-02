@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FilterCountsResult } from '../../shared/types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
-import { useWorkshopInstallsStore } from '../store/useWorkshopInstallsStore';
+import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
 import { allInstalledTranslationIds } from './useInstalledTranslations';
 
 export type FilterCounts = FilterCountsResult & {
@@ -146,7 +146,7 @@ export function useFilterCounts() {
     const unsubInstalled =
       window.electronAPI?.onInstalledGamesChanged?.(debouncedFetchCounts);
 
-    const unsubWorkshop = useWorkshopInstallsStore.subscribe(debouncedFetchCounts);
+    const unsubWorkshop = subscribeToWorkshopInstalledChanges(debouncedFetchCounts);
     const unsubSteam = window.electronAPI?.onSteamLibraryChanged?.(debouncedFetchCounts);
     const unsubGame = window.electronAPI?.onGameUpdated?.(debouncedFetchCounts);
 
