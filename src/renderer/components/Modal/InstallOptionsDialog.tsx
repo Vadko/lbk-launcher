@@ -126,9 +126,6 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const willRemoveAchievements =
     hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
 
-  // Steam launch options this translation would set on install. Applied
-  // whenever the target is Steam, regardless of which components are checked
-  // (see applySteamIntegration), so shown independent of the checkboxes above.
   const steamLaunchOptionsWindows = game.steam_launch_options_windows?.trim() || null;
   const steamLaunchOptionsLinux = game.steam_launch_options_linux?.trim() || null;
   const willApplyLaunchOptions =
