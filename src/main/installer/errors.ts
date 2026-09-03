@@ -1,3 +1,5 @@
+import { plural } from '@/shared/plural';
+
 /**
  * Error that requires manual folder selection
  */
@@ -65,8 +67,8 @@ export class RateLimitError extends Error {
 
     super(
       `Перевищено ліміт завантажень.\n\n` +
-        `Ви вже завантажили цю гру ${downloadsToday} раз(и) за останні 24 години.\n` +
-        `Максимум дозволено: ${maxAllowed} завантаження на добу для великих ігор.\n\n` +
+        `Ви вже завантажили цю гру ${downloadsToday} ${plural(downloadsToday, 'раз', 'рази', 'разів')} за останні 24 години.\n` +
+        `Максимум дозволено: ${maxAllowed} ${plural(maxAllowed, 'завантаження', 'завантаження', 'завантажень')} на добу для великих ігор.\n\n` +
         `Спробуйте знову після ${timeStr}.`
     );
     this.name = 'RateLimitError';

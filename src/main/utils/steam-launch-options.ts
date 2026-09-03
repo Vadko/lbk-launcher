@@ -23,14 +23,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
-import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
 import {
   mergeLaunchOptions,
   resolveGameDirToken,
   usesGameDirToken,
 } from '@/main/utils/launch-options-value';
 import { forCurrentOS } from '@/main/utils/platform';
-import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
+import { evaluateInSharedJsContext, isCefUsable } from '@/main/utils/steam-cef';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
 import type { Game } from '@/shared/types';
 
@@ -223,11 +222,6 @@ function writeMergedToLocalConfig(
   fs.renameSync(tmp, localConfigPath);
 }
 
-/** CDP-quote helper for embedding our value into an evaluated JS expression. */
-function jsString(s: string): string {
-  return JSON.stringify(s);
-}
-
 /**
  * Apply the requested LaunchOptions value for `params.appId`, choosing CEF or
  * file based on Steam's current state. See module docstring for details.
@@ -294,10 +288,10 @@ export async function writeSteamLaunchOptions(
 
   // Steam on → only CEF is safe. The settings check matters mid-session: the
   // port stays open until Steam restarts even after the flag file is deleted.
-  if (isCefDebuggingEnabledInSettings() && (await isCefAvailable())) {
+  if (await isCefUsable()) {
     try {
       await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${jsString(plan.merged)})`
+        `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${JSON.stringify(plan.merged)})`
       );
       console.log(`[SteamLaunchOptions] App ${params.appId} updated live via CEF`);
       return { mode: 'cef' };

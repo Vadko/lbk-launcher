@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
+import { plural } from '@/shared/plural';
+import type { SteamCollectionSyncFailure } from '@/shared/types';
 import { APP_VERSION } from '../../constants/appVersion';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { useChangelogStore } from '../../store/useChangelogStore';
@@ -59,21 +61,19 @@ const SettingItem = React.memo<{
 
 SettingItem.displayName = 'SettingItem';
 
-function steamCollectionSyncErrorMessage(
-  reason:
-    | 'cef-unavailable'
-    | 'steam-not-running'
-    | 'no-translated-games'
-    | 'no-matches'
-    | 'failed'
+function steamActionErrorMessage(
+  reason: SteamCollectionSyncFailure,
+  purpose: string
 ): string {
   switch (reason) {
     case 'steam-not-running':
       return 'Steam не запущено. Запустіть Steam і спробуйте ще раз.';
     case 'cef-unavailable':
-      return 'Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг керувати колекціями.';
+      return `Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг ${purpose}.`;
+    case 'library-unavailable':
+      return 'Бібліотека Steam ще завантажується. Спробуйте за кілька секунд.';
     case 'no-translated-games':
-      return 'У каталозі поки немає перекладів, доступних через Майстерню Steam.';
+      return 'У каталозі немає перекладів до ігор Steam. Якщо каталог ще синхронізується, спробуйте за хвилину.';
     case 'no-matches':
       return 'Серед ваших ігор у бібліотеці Steam немає жодної з перекладом.';
     default:
@@ -167,6 +167,9 @@ export const SettingsModal: React.FC = () => {
   };
 
   const handleSyncSteamCollection = useCallback(async () => {
+    if (isSyncingSteamCollection) {
+      return;
+    }
     setIsSyncingSteamCollection(true);
     try {
       const result = await window.electronAPI.syncSteamTranslatedCollection();
@@ -176,13 +179,13 @@ export const SettingsModal: React.FC = () => {
           message:
             result.total === 0
               ? 'У колекції «З українізаторами» тепер немає ігор.'
-              : `У колекції «З українізаторами» тепер ${result.total} ${result.total === 1 ? 'гра' : 'ігор'}.`,
+              : `У колекції «З українізаторами» тепер ${result.total} ${plural(result.total, 'гра', 'гри', 'ігор')}.`,
           type: 'info',
         });
       } else {
         showModal({
           title: 'Не вдалося оновити колекцію',
-          message: steamCollectionSyncErrorMessage(result.reason),
+          message: steamActionErrorMessage(result.reason, 'керувати колекціями'),
           type: 'error',
         });
       }
@@ -196,9 +199,12 @@ export const SettingsModal: React.FC = () => {
     } finally {
       setIsSyncingSteamCollection(false);
     }
-  }, [showModal]);
+  }, [showModal, isSyncingSteamCollection]);
 
   const handleAddLbkToSteamLibrary = useCallback(async () => {
+    if (isTogglingLbkShortcut) {
+      return;
+    }
     setIsTogglingLbkShortcut(true);
     try {
       const result = await window.electronAPI.addLbkLauncherToSteamLibrary();
@@ -211,7 +217,7 @@ export const SettingsModal: React.FC = () => {
       } else {
         showModal({
           title: 'Не вдалося додати в Steam',
-          message: steamCollectionSyncErrorMessage(result.reason),
+          message: steamActionErrorMessage(result.reason, 'додати ярлик у бібліотеку'),
           type: 'error',
         });
       }
@@ -225,7 +231,7 @@ export const SettingsModal: React.FC = () => {
     } finally {
       setIsTogglingLbkShortcut(false);
     }
-  }, [showModal]);
+  }, [showModal, isTogglingLbkShortcut]);
 
   const handleKurinSync = useCallback(async () => {
     closeSettingsModal();
@@ -233,7 +239,7 @@ export const SettingsModal: React.FC = () => {
     if (syncedGameNames && syncedGameNames.length > 0) {
       showModal({
         title: 'Синхронізація завершена',
-        message: `Синхронізовано ${syncedGameNames.length} ${syncedGameNames.length === 1 ? 'гру' : 'ігор'}: ${syncedGameNames.join(', ')}`,
+        message: `Синхронізовано ${syncedGameNames.length} ${plural(syncedGameNames.length, 'гру', 'гри', 'ігор')}: ${syncedGameNames.join(', ')}`,
         type: 'info',
       });
     } else {
@@ -437,8 +443,8 @@ export const SettingsModal: React.FC = () => {
           {/* Steam collection sync */}
           <button
             onClick={handleSyncSteamCollection}
-            disabled={isSyncingSteamCollection}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-busy={isSyncingSteamCollection}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
               <Library size={20} className="text-text-dark" />
@@ -476,8 +482,8 @@ export const SettingsModal: React.FC = () => {
           {/* Add LBK Launcher itself as a non-Steam shortcut */}
           <button
             onClick={handleAddLbkToSteamLibrary}
-            disabled={isTogglingLbkShortcut}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-busy={isTogglingLbkShortcut}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
               <Gamepad size={20} className="text-text-dark" />

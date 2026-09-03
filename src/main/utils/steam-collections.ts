@@ -21,13 +21,26 @@
  * саме «доступно зі Steam» для цього акаунта: перетин каталогу перекладів із
  * цим списком робимо прямо в CEF-виразі, без окремого походу через
  * `getSteamLibraryAppIds()` з диска.
+ *
+ * Прибираємо ігри лише з колекції, яку створили самі (її id записано на
+ * акаунт): однойменну колекцію, зібрану користувачем вручну, тільки
+ * доповнюємо — інакше один клік вимів би звідти все, чого немає в каталозі.
  */
 
-import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
-import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
-import { isSteamRunning } from '@/main/utils/steam-launcher';
+import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
+import {
+  ensureCefBridge,
+  evaluateInSharedJsContext,
+  libraryAppsGuard,
+} from '@/main/utils/steam-cef';
+import {
+  readSteamAccountValue,
+  writeSteamAccountValue,
+} from '@/main/utils/store-storage';
+import type { SteamCollectionSyncFailure } from '@/shared/types';
 
 const COLLECTION_NAME = 'З українізаторами';
+const RECORD_KEY = 'steam-collection';
 
 interface SyncStats {
   created: boolean;
@@ -36,24 +49,20 @@ interface SyncStats {
   removed: number;
 }
 
+type CefSyncAnswer =
+  | (SyncStats & { collectionId: string | null })
+  | 'library-unavailable'
+  | 'no-matches'
+  | { error: string };
+
 type SyncTranslatedCollectionResult =
-  | ({ ok: true } & SyncStats)
-  | {
-      ok: false;
-      reason:
-        | 'cef-unavailable'
-        | 'steam-not-running'
-        | 'no-translated-games'
-        | 'no-matches'
-        | 'failed';
-      error?: string;
-    };
+  | { ok: true; total: number }
+  | { ok: false; reason: SteamCollectionSyncFailure; error?: string };
 
 /**
- * Створює (за відсутності) або оновлює колекцію так, щоб у ній опинилися рівно
- * ті ігри з `appIds`, які є в бібліотеці Steam цього користувача — не більше
- * й не менше, тобто повторний виклик прибирає ігри, чий переклад зник із
- * каталогу відтоді.
+ * Створює (за відсутності) або оновлює колекцію так, щоб у ній опинилися ті
+ * ігри з `appIds`, які є в бібліотеці Steam цього користувача. Для власної
+ * колекції зайве прибирається, для чужої однойменної — лише додається.
  */
 export async function syncTranslatedGamesCollection(
   appIds: number[]
@@ -63,73 +72,96 @@ export async function syncTranslatedGamesCollection(
     return { ok: false, reason: 'no-translated-games' };
   }
 
-  if (!(await isSteamRunning())) {
-    return { ok: false, reason: 'steam-not-running' };
+  const blocked = await ensureCefBridge();
+  if (blocked) {
+    return { ok: false, reason: blocked };
   }
 
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
-    return { ok: false, reason: 'cef-unavailable' };
-  }
+  const accountId = getCurrentSteamAccountId();
+  const stored = accountId ? readSteamAccountValue(RECORD_KEY, accountId) : null;
+  const recordedId = typeof stored === 'string' ? stored : null;
 
   try {
-    const result = await evaluateInSharedJsContext<SyncStats | 'no-matches' | 'failed'>(
-      `(() => {
+    const result = await evaluateInSharedJsContext<CefSyncAnswer>(
+      `(async () => {
         try {
           const NAME = ${JSON.stringify(COLLECTION_NAME)};
           const targetIds = new Set(${JSON.stringify(valid)});
+          const recordedId = ${JSON.stringify(recordedId)};
 
-          const owned = collectionStore.allGamesCollection.allApps.filter(
-            (a) => targetIds.has(a.appid)
-          );
-          const ownedIds = owned.map((a) => a.appid);
+          ${libraryAppsGuard("'library-unavailable'")}
 
-          const existing = collectionStore.GetUserCollectionsByName(NAME);
-          const coll = existing && existing[0];
+          const owned = apps.filter((a) => targetIds.has(a.appid));
+          const wantedIds = new Set(owned.map((a) => a.appid));
+
+          const byName = collectionStore.GetUserCollectionsByName(NAME) || [];
+          const coll =
+            (recordedId && byName.find((c) => c.id === recordedId)) || byName[0] || null;
 
           if (!coll) {
             if (owned.length === 0) {
               return 'no-matches';
             }
-            const created = collectionStore.NewUnsavedCollection(NAME, null, owned);
-            collectionStore.SaveCollection(created);
-            return { created: true, total: owned.length, added: owned.length, removed: 0 };
+            const fresh = collectionStore.NewUnsavedCollection(NAME, null, owned);
+            await collectionStore.SaveCollection(fresh);
+            const saved = collectionStore.GetUserCollectionsByName(NAME) || [];
+            return {
+              created: true,
+              collectionId: (saved[0] && saved[0].id) || fresh.id || null,
+              total: owned.length,
+              added: owned.length,
+              removed: 0,
+            };
           }
+
+          const mine =
+            coll.id === recordedId || coll.allApps.every((a) => targetIds.has(a.appid));
 
           const currentIds = new Set(coll.allApps.map((a) => a.appid));
-          const wantedIds = new Set(ownedIds);
-          const toAdd = ownedIds.filter((id) => !currentIds.has(id));
-          const toRemove = [...currentIds].filter((id) => !wantedIds.has(id));
+          const toAdd = [...wantedIds].filter((id) => !currentIds.has(id));
+          const toRemove = mine
+            ? [...currentIds].filter((id) => !wantedIds.has(id))
+            : [];
 
           if (toAdd.length > 0) {
-            collectionStore.AddOrRemoveApp(toAdd, true, coll.id);
+            await collectionStore.AddOrRemoveApp(toAdd, true, coll.id);
           }
           if (toRemove.length > 0) {
-            collectionStore.AddOrRemoveApp(toRemove, false, coll.id);
+            await collectionStore.AddOrRemoveApp(toRemove, false, coll.id);
           }
 
           return {
             created: false,
-            total: owned.length,
+            collectionId: mine ? coll.id : null,
+            total: currentIds.size + toAdd.length - toRemove.length,
             added: toAdd.length,
             removed: toRemove.length,
           };
         } catch (e) {
-          return 'failed';
+          return { error: String((e && e.message) || e) };
         }
       })()`
     );
 
-    if (result === 'failed') {
+    if (result === 'library-unavailable' || result === 'no-matches') {
+      return { ok: false, reason: result };
+    }
+    if (typeof result !== 'object' || result === null) {
       return { ok: false, reason: 'failed' };
     }
-    if (result === 'no-matches') {
-      return { ok: false, reason: 'no-matches' };
+    if ('error' in result) {
+      console.error('[SteamCollections] In-page failure:', result.error);
+      return { ok: false, reason: 'failed', error: result.error };
+    }
+
+    if (accountId && result.collectionId) {
+      writeSteamAccountValue(RECORD_KEY, accountId, result.collectionId);
     }
 
     console.log(
       `[SteamCollections] "${COLLECTION_NAME}": ${result.created ? 'created' : 'updated'}, total=${result.total}, +${result.added}/-${result.removed}`
     );
-    return { ok: true, ...result };
+    return { ok: true, total: result.total };
   } catch (error) {
     console.error('[SteamCollections] Sync failed:', error);
     return {

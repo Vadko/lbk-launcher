@@ -10,68 +10,66 @@
  *   - The `name` argument is ignored — Steam derives the display name from
  *     the exe's own metadata until it's overridden with a separate
  *     `SetShortcutName` call.
+ *   - Args 3 and 4 are start dir and launch options; the icon has no slot
+ *     here and is set with `SetShortcutIcon`.
+ *   - Exe and start dir are stored verbatim, so they go in quoted — Steam's
+ *     own flow quotes them too, and an unquoted space splits the command at
+ *     launch. The icon is a plain path Steam only reads, never executes, and
+ *     it is stored unquoted there as well.
  *   - It is NOT idempotent: calling it twice with identical arguments creates
- *     two separate shortcuts, each with its own generated app id. So we keep
- *     a small local record of "our" app id and reuse/update it in place
- *     instead of re-adding on every click.
- *   - Artwork applies the same way as `steam-artwork.ts` — live via CEF when
- *     small enough, else written straight into `grid/` (multi-megabyte
- *     base64, e.g. the hero image, can blow the CDP eval timeout).
+ *     two separate shortcuts, each with its own generated app id. So before
+ *     adding we look ours up in the client itself — the local record of the
+ *     app id is only a hint, and a data reset wipes it while Steam keeps the
+ *     shortcut.
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { app } from 'electron';
-import { getSteamGridPath } from '@/main/game-detector/steam';
-import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
-import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
-import { isSteamRunning } from '@/main/utils/steam-launcher';
-import { getIcon } from '@/main/utils/theme';
+import { getCurrentSteamAccountId, getSteamGridPath } from '@/main/game-detector/steam';
+import { isLinux } from '@/main/utils/platform';
+import { ARTWORK_SLOTS, applyArtworkSlot } from '@/main/utils/steam-artwork';
+import {
+  ensureCefBridge,
+  evaluateInSharedJsContext,
+  isCefUsable,
+  libraryAppsGuard,
+} from '@/main/utils/steam-cef';
+import {
+  readSteamAccountValue,
+  writeSteamAccountValue,
+} from '@/main/utils/store-storage';
+import { getIcon, resolveResource } from '@/main/utils/theme';
+import type { SteamLibraryFailure } from '@/shared/types';
 
 const SHORTCUT_NAME = 'LBK Launcher';
+const LINUX_LAUNCH_OPTIONS = '--no-sandbox --disable-gpu-sandbox';
+const RECORD_KEY = 'steam-self-shortcut';
 
-interface ShortcutRecord {
-  appId: number;
-  exePath: string;
+function getStableExePath(): string {
+  return (
+    process.env.APPIMAGE || process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe')
+  );
 }
 
-function getRecordPath(): string {
-  return path.join(app.getPath('userData'), 'steam-self-shortcut.json');
-}
-
-function readRecord(): ShortcutRecord | null {
+function getStableIconPath(): string {
+  const source = getIcon('window');
+  const target = path.join(app.getPath('userData'), 'steam-shortcut-icon.png');
   try {
-    const raw = fs.readFileSync(getRecordPath(), 'utf8');
-    const parsed = JSON.parse(raw) as Partial<ShortcutRecord>;
-    return typeof parsed.appId === 'number' && typeof parsed.exePath === 'string'
-      ? { appId: parsed.appId, exePath: parsed.exePath }
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeRecord(record: ShortcutRecord): void {
-  try {
-    fs.writeFileSync(getRecordPath(), JSON.stringify(record, null, 2), 'utf8');
+    if (!fs.existsSync(target) || fs.statSync(target).size !== fs.statSync(source).size) {
+      fs.copyFileSync(source, target);
+    }
+    return target;
   } catch (error) {
-    console.warn('[SteamSelfShortcut] Failed to persist record:', error);
+    console.warn('[SteamSelfShortcut] Icon copy failed, using bundled path:', error);
+    return source;
   }
 }
 
-function resolveResource(filename: string): string {
-  return app.isPackaged
-    ? path.join(process.resourcesPath, filename)
-    : path.join(app.getAppPath(), 'resources', filename);
-}
-
-/** Same three slots as `steam-artwork.ts`, plus the vertical capsule it skips (no source there — we have one here). */
-const ARTWORK_SLOTS = [
-  { key: 'header', assetType: 3, suffix: '' },
-  { key: 'hero', assetType: 1, suffix: '_hero' },
-  { key: 'logo', assetType: 2, suffix: '_logo' },
+const SHORTCUT_ARTWORK_SLOTS = [
+  ...ARTWORK_SLOTS,
   { key: 'capsule-vertical', assetType: 0, suffix: 'p' },
-] as const;
+];
 
 const ART_EXTENSIONS = ['png', 'jpg', 'jpeg'];
 
@@ -87,57 +85,73 @@ function findArtworkFile(key: string): { path: string; extension: string } | nul
   return null;
 }
 
-function jsString(value: string): string {
-  return JSON.stringify(value);
+function quotedPath(value: string): string {
+  return `"${value}"`;
 }
 
 async function applyArtwork(appId: number): Promise<void> {
   const gridDir = getSteamGridPath();
+  const cefUsable = await isCefUsable();
 
-  for (const slot of ARTWORK_SLOTS) {
+  for (const slot of SHORTCUT_ARTWORK_SLOTS) {
     const asset = findArtworkFile(slot.key);
     if (!asset) {
       continue;
     }
 
-    const bytes = fs.readFileSync(asset.path);
-
-    try {
-      await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetCustomArtworkForApp(${appId}, ${jsString(
-          bytes.toString('base64')
-        )}, ${jsString(asset.extension)}, ${slot.assetType})`
-      );
-      continue;
-    } catch (error) {
-      console.warn(
-        `[SteamSelfShortcut] CEF artwork apply failed for ${slot.key}, writing file instead:`,
-        error
-      );
-    }
-
-    if (!gridDir) {
-      continue;
-    }
-    try {
-      fs.mkdirSync(gridDir, { recursive: true });
-      const target = path.join(gridDir, `${appId}${slot.suffix}.${asset.extension}`);
-      const tmp = `${target}.lbk.tmp`;
-      fs.writeFileSync(tmp, bytes);
-      fs.renameSync(tmp, target);
-    } catch (error) {
-      console.warn(`[SteamSelfShortcut] Failed to write ${slot.key} to grid/:`, error);
-    }
+    await applyArtworkSlot({
+      appId,
+      assetType: slot.assetType,
+      suffix: slot.suffix,
+      extension: asset.extension,
+      bytes: fs.readFileSync(asset.path),
+      gridDir,
+      cefUsable,
+      label: `self-shortcut/${slot.key}`,
+    });
   }
 }
 
+const NON_STEAM_APPID_MIN = 2147483648;
+
+function findOurShortcut(
+  recordedAppId: number | null
+): Promise<number | null | 'unknown'> {
+  return evaluateInSharedJsContext<number | null | 'unknown'>(
+    `(() => {${libraryAppsGuard("'unknown'")}
+      const recorded = ${recordedAppId ?? 'null'};
+      if (recorded !== null && apps.some((a) => a.appid === recorded)) {
+        return recorded;
+      }
+      const match = apps.find(
+        (a) =>
+          a.appid >= ${NON_STEAM_APPID_MIN} &&
+          a.display_name === ${JSON.stringify(SHORTCUT_NAME)}
+      );
+      return match ? match.appid : null;
+    })()`
+  );
+}
+
+async function createShortcut(
+  exePath: string,
+  startDir: string,
+  launchOptions: string
+): Promise<number> {
+  const appId = await evaluateInSharedJsContext<unknown>(
+    `SteamClient.Apps.AddShortcut(${JSON.stringify(SHORTCUT_NAME)}, ${JSON.stringify(
+      quotedPath(exePath)
+    )}, ${JSON.stringify(quotedPath(startDir))}, ${JSON.stringify(launchOptions)})`
+  );
+  if (typeof appId !== 'number' || !Number.isInteger(appId)) {
+    throw new Error(`AddShortcut returned ${String(appId)} instead of an app id`);
+  }
+  return appId;
+}
+
 type AddShortcutResult =
-  | { ok: true; appId: number; created: boolean }
-  | {
-      ok: false;
-      reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
-      error?: string;
-    };
+  | { ok: true }
+  | { ok: false; reason: SteamLibraryFailure; error?: string };
 
 /**
  * Idempotent: safe to call every time the user hits the Settings button.
@@ -146,54 +160,48 @@ type AddShortcutResult =
  * partial prior failure gets completed on retry.
  */
 export async function addLbkLauncherToSteamLibrary(): Promise<AddShortcutResult> {
-  if (!(await isSteamRunning())) {
-    return { ok: false, reason: 'steam-not-running' };
-  }
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
-    return { ok: false, reason: 'cef-unavailable' };
+  const blocked = await ensureCefBridge();
+  if (blocked) {
+    return { ok: false, reason: blocked };
   }
 
-  const exePath = app.getPath('exe');
+  const accountId = getCurrentSteamAccountId();
+  if (!accountId) {
+    return { ok: false, reason: 'failed', error: 'No logged-in Steam account found' };
+  }
+
+  const exePath = getStableExePath();
   const startDir = path.dirname(exePath);
-  const iconPath = getIcon('window');
+  const iconPath = getStableIconPath();
+  const launchOptions = isLinux() ? LINUX_LAUNCH_OPTIONS : '';
 
   try {
-    const existing = readRecord();
-    let appId: number | null = null;
-
-    if (existing) {
-      const stillThere = await evaluateInSharedJsContext<boolean>(
-        `collectionStore.allGamesCollection.allApps.some((a) => a.appid === ${existing.appId})`
-      );
-      if (stillThere) {
-        appId = existing.appId;
-      }
+    const stored = readSteamAccountValue(RECORD_KEY, accountId);
+    const recorded = typeof stored === 'number' ? stored : null;
+    const found = await findOurShortcut(recorded);
+    if (found === 'unknown') {
+      return { ok: false, reason: 'library-unavailable' };
     }
 
-    let created = false;
-    if (appId === null) {
-      appId = await evaluateInSharedJsContext<number>(
-        `SteamClient.Apps.AddShortcut(${jsString(SHORTCUT_NAME)}, ${jsString(exePath)}, '', ${jsString(iconPath)})`
-      );
-      created = true;
-    }
+    const appId = found ?? (await createShortcut(exePath, startDir, launchOptions));
+    writeSteamAccountValue(RECORD_KEY, accountId, appId);
 
     await evaluateInSharedJsContext(
       `(async () => {
-        await SteamClient.Apps.SetShortcutName(${appId}, ${jsString(SHORTCUT_NAME)});
-        await SteamClient.Apps.SetShortcutExe(${appId}, ${jsString(exePath)});
-        await SteamClient.Apps.SetShortcutStartDir(${appId}, ${jsString(startDir)});
-        await SteamClient.Apps.SetShortcutIcon(${appId}, ${jsString(iconPath)});
+        await SteamClient.Apps.SetShortcutName(${appId}, ${JSON.stringify(SHORTCUT_NAME)});
+        await SteamClient.Apps.SetShortcutExe(${appId}, ${JSON.stringify(quotedPath(exePath))});
+        await SteamClient.Apps.SetShortcutStartDir(${appId}, ${JSON.stringify(quotedPath(startDir))});
+        await SteamClient.Apps.SetShortcutIcon(${appId}, ${JSON.stringify(iconPath)});
+        await SteamClient.Apps.SetShortcutLaunchOptions(${appId}, ${JSON.stringify(launchOptions)});
       })()`
     );
 
     await applyArtwork(appId);
 
-    writeRecord({ appId, exePath });
     console.log(
-      `[SteamSelfShortcut] ${created ? 'Added' : 'Updated'} "${SHORTCUT_NAME}", app id ${appId}`
+      `[SteamSelfShortcut] ${found === null ? 'Added' : 'Updated'} "${SHORTCUT_NAME}", app id ${appId}`
     );
-    return { ok: true, appId, created };
+    return { ok: true };
   } catch (error) {
     console.error('[SteamSelfShortcut] Failed:', error);
     return {

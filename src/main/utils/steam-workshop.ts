@@ -11,9 +11,12 @@
  * рендерер за невдачі відкриває звичайний steam:// диплінк.
  */
 
-import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
-import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
-import { isSteamRunning } from '@/main/utils/steam-launcher';
+import {
+  ensureCefBridge,
+  evaluateInSharedJsContext,
+  isCefUsable,
+} from '@/main/utils/steam-cef';
+import type { SteamBridgeFailure } from '@/shared/types';
 
 /** Рядок games як є — перейменовувати ці три поля дорогою нема навіщо */
 export interface WorkshopTarget {
@@ -35,7 +38,7 @@ export async function installedWorkshopGameIds(
   if (valid.length === 0) {
     return null;
   }
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
+  if (!(await isCefUsable())) {
     return null;
   }
 
@@ -103,7 +106,7 @@ export async function isWorkshopItemDownloaded(
   if (!isValidTarget(appId, workshopId)) {
     return null;
   }
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
+  if (!(await isCefUsable())) {
     return null;
   }
 
@@ -131,11 +134,7 @@ export async function isWorkshopItemDownloaded(
 
 type SubscribeWorkshopResult =
   | { ok: true }
-  | {
-      ok: false;
-      reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
-      error?: string;
-    };
+  | { ok: false; reason: SteamBridgeFailure; error?: string };
 
 export async function setWorkshopSubscription(
   appId: number,
@@ -146,12 +145,9 @@ export async function setWorkshopSubscription(
     return { ok: false, reason: 'failed', error: 'Invalid appId or workshopId' };
   }
 
-  if (!(await isSteamRunning())) {
-    return { ok: false, reason: 'steam-not-running' };
-  }
-
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
-    return { ok: false, reason: 'cef-unavailable' };
+  const blocked = await ensureCefBridge();
+  if (blocked) {
+    return { ok: false, reason: blocked };
   }
 
   try {

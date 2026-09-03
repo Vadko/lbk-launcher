@@ -15,8 +15,11 @@ import {
   writeSteamLibraryCache,
 } from '../steam-library-api';
 import { forCurrentOS, getPlatform } from '../utils/platform';
-import { evaluateInSharedJsContext, isCefAvailable } from '../utils/steam-cef';
-import { readRendererSetting } from '../utils/store-storage';
+import {
+  evaluateInSharedJsContext,
+  isCefUsable,
+  libraryAppsGuard,
+} from '../utils/steam-cef';
 import {
   parseAppManifest,
   parseLibraryFolders,
@@ -300,6 +303,11 @@ function getUserConfigPath(filename: string): string | null {
   }
 
   return path.join(steamPath, 'userdata', steamUserId, 'config', filename);
+}
+
+export function getCurrentSteamAccountId(): string | null {
+  const steamPath = getSteamPath();
+  return steamPath ? getCurrentSteamUserId(steamPath) : null;
 }
 
 /**
@@ -649,6 +657,17 @@ export function getInstalledSteamGamePaths(): string[] {
 // Steam Library App IDs (Owned Games)
 // ============================================================================
 
+/** Скільки CEF-знімок вважається свіжим, поки його нема чим перевірити. */
+const CEF_SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Не-Steam ярлики мають старший біт — це не ігри бібліотеки. */
+const NON_STEAM_APPID_MIN = 2147483648;
+
+function isCefSnapshotFresh(cachedAt: string): boolean {
+  const age = Date.now() - new Date(cachedAt).getTime();
+  return Number.isFinite(age) && age >= 0 && age < CEF_SNAPSHOT_TTL_MS;
+}
+
 /**
  * Read owned apps straight from the running client's library store via CEF —
  * no network call, no rate limit, and (unlike the Web API path) it includes
@@ -656,27 +675,29 @@ export function getInstalledSteamGamePaths(): string[] {
  * caller should fall through to the API/file-cache chain.
  */
 async function getSteamLibraryAppIdsFromCef(): Promise<number[] | null> {
-  if (
-    !(readRendererSetting('steamCefDebuggingEnabled', true) && (await isCefAvailable()))
-  ) {
+  if (!(await isCefUsable())) {
     return null;
   }
 
   try {
     const result = await evaluateInSharedJsContext<number[] | 'unavailable'>(
-      `(() => {
-        if (typeof collectionStore?.allGamesCollection?.allApps === 'undefined') {
-          return 'unavailable';
-        }
-        return collectionStore.allGamesCollection.allApps.map((a) => a.appid);
+      `(() => {${libraryAppsGuard("'unavailable'")}
+        return apps
+          .map((a) => a.appid)
+          .filter((id) => Number.isInteger(id) && id > 0 && id < ${NON_STEAM_APPID_MIN});
       })()`
     );
-    return result === 'unavailable' ? null : result;
+    if (result === 'unavailable') {
+      return null;
+    }
+    return Array.isArray(result) && result.length > 0 ? result : null;
   } catch (error) {
     console.error('[Steam] CEF library read failed:', error);
     return null;
   }
 }
+
+let inFlightLibraryRead: Promise<number[]> | null = null;
 
 /**
  * Get all Steam App IDs from user's library (owned games, installed or not)
@@ -690,28 +711,19 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
     return cache.libraryAppIds;
   }
 
-  const cefAppIds = await getSteamLibraryAppIdsFromCef();
-  if (cefAppIds !== null) {
-    console.log(`[Steam] Library: using CEF (${cefAppIds.length} apps)`);
-    cache.libraryAppIds = cefAppIds;
-
-    // Best-effort: persist so a later run without CEF still has a recent
-    // snapshot instead of falling all the way back to the Web API.
-    const steamPathForCache = getSteamPath();
-    const steam3IdForCache =
-      steamPathForCache && getCurrentSteamUserId(steamPathForCache);
-    if (steam3IdForCache) {
-      writeSteamLibraryCache({
-        steamId: steam3ToSteam64(steam3IdForCache),
-        appIds: cefAppIds,
-        licensecacheSize: getLicensecacheSize() ?? 0,
-        cachedAt: new Date().toISOString(),
-      });
-    }
-
-    return cefAppIds;
+  if (inFlightLibraryRead) {
+    return inFlightLibraryRead;
   }
 
+  inFlightLibraryRead = readSteamLibraryAppIds();
+  try {
+    return await inFlightLibraryRead;
+  } finally {
+    inFlightLibraryRead = null;
+  }
+}
+
+async function readSteamLibraryAppIds(): Promise<number[]> {
   const steamPath = getSteamPath();
   if (!steamPath) {
     console.log('[Steam] Steam not found, returning empty App IDs');
@@ -725,7 +737,24 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
   }
 
   const steam64Id = steam3ToSteam64(steam3Id);
+
   const currentLicensecacheSize = getLicensecacheSize();
+
+  const cefAppIds = await getSteamLibraryAppIdsFromCef();
+  if (cefAppIds !== null) {
+    console.log(`[Steam] Library: using CEF (${cefAppIds.length} apps)`);
+    cache.libraryAppIds = cefAppIds;
+
+    writeSteamLibraryCache({
+      steamId: steam64Id,
+      appIds: cefAppIds,
+      licensecacheSize: currentLicensecacheSize,
+      cachedAt: new Date().toISOString(),
+      source: 'cef',
+    });
+
+    return cefAppIds;
+  }
 
   if (currentLicensecacheSize !== null) {
     updateLastKnownLicensecacheSize(currentLicensecacheSize);
@@ -739,9 +768,13 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
   const fileCache = readSteamLibraryCache();
   if (fileCache) {
     const isSameUser = fileCache.steamId === steam64Id;
-    const isSameLicensecacheSize = fileCache.licensecacheSize === currentLicensecacheSize;
+    const isSameLicensecacheSize =
+      (fileCache.licensecacheSize ?? 0) === (currentLicensecacheSize ?? 0);
+    // Розшарені сімейні ігри бачить лише CEF, і їх відкликання не змінює
+    // licensecache — тому такий знімок додатково обмежений терміном.
+    const isFresh = fileCache.source !== 'cef' || isCefSnapshotFresh(fileCache.cachedAt);
 
-    if (isSameUser && isSameLicensecacheSize) {
+    if (isSameUser && isSameLicensecacheSize && isFresh) {
       console.log(
         `[Steam] Library: using file cache (${fileCache.appIds.length} apps, cached at ${fileCache.cachedAt})`
       );
@@ -757,6 +790,8 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
       console.log(
         `[Steam] Library: cache invalid - licensecache size changed (${fileCache.licensecacheSize} -> ${currentLicensecacheSize}), refreshing...`
       );
+    } else {
+      console.log('[Steam] Library: CEF snapshot too old, refreshing...');
     }
   } else {
     console.log('[Steam] Library: no cache found, fetching from API...');
@@ -782,8 +817,9 @@ export async function getSteamLibraryAppIds(): Promise<number[]> {
   writeSteamLibraryCache({
     steamId: steam64Id,
     appIds,
-    licensecacheSize: currentLicensecacheSize ?? 0,
+    licensecacheSize: currentLicensecacheSize,
     cachedAt: new Date().toISOString(),
+    source: 'api',
   });
 
   cache.libraryAppIds = appIds;

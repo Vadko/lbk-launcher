@@ -192,6 +192,15 @@ export interface FeedbackReplyPayload {
   createdAt: string;
 }
 
+export type SteamBridgeFailure = 'cef-unavailable' | 'steam-not-running' | 'failed';
+
+export type SteamLibraryFailure = SteamBridgeFailure | 'library-unavailable';
+
+export type SteamCollectionSyncFailure =
+  | SteamLibraryFailure
+  | 'no-translated-games'
+  | 'no-matches';
+
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
@@ -345,23 +354,8 @@ export interface ElectronAPI {
    * also drops games whose translation disappeared since the last sync.
    */
   syncSteamTranslatedCollection: () => Promise<
-    | {
-        ok: true;
-        created: boolean;
-        total: number;
-        added: number;
-        removed: number;
-      }
-    | {
-        ok: false;
-        reason:
-          | 'cef-unavailable'
-          | 'steam-not-running'
-          | 'no-translated-games'
-          | 'no-matches'
-          | 'failed';
-        error?: string;
-      }
+    | { ok: true; total: number }
+    | { ok: false; reason: SteamCollectionSyncFailure; error?: string }
   >;
   /**
    * Add (or update) LBK Launcher itself as a non-Steam shortcut in the
@@ -370,12 +364,7 @@ export interface ElectronAPI {
    * the shortcut it created before instead of adding a duplicate.
    */
   addLbkLauncherToSteamLibrary: () => Promise<
-    | { ok: true; appId: number; created: boolean }
-    | {
-        ok: false;
-        reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
-        error?: string;
-      }
+    { ok: true } | { ok: false; reason: SteamLibraryFailure; error?: string }
   >;
   // Version
   getVersion: () => string;
@@ -400,14 +389,7 @@ export interface ElectronAPI {
     appId: number,
     workshopId: string,
     subscribe: boolean
-  ) => Promise<
-    | { ok: true }
-    | {
-        ok: false;
-        reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
-        error?: string;
-      }
-  >;
+  ) => Promise<{ ok: true } | { ok: false; reason: SteamBridgeFailure; error?: string }>;
   /** Які воркшоп-переклади з каталогу вже на диску; null — містка немає */
   listInstalledWorkshopGames: () => Promise<string[] | null>;
   /** Факт наявності на диску; null — CEF-місток недоступний, відповіді немає */

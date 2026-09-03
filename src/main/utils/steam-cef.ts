@@ -14,6 +14,9 @@
  */
 
 import CDP from 'chrome-remote-interface';
+import { isSteamRunning } from '@/main/utils/steam-launcher';
+import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
+import type { SteamBridgeFailure } from '@/shared/types';
 
 const CEF_HOST = '127.0.0.1';
 const CEF_PORT = 8080;
@@ -54,6 +57,30 @@ export async function isCefAvailable(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export function isCefUsable(): Promise<boolean> {
+  return isCefDebuggingEnabledInSettings() ? isCefAvailable() : Promise.resolve(false);
+}
+
+type CefBridgeBlocker = Exclude<SteamBridgeFailure, 'failed'>;
+
+export async function ensureCefBridge(): Promise<CefBridgeBlocker | null> {
+  if (await isCefUsable()) {
+    return null;
+  }
+  return (await isSteamRunning()) ? 'cef-unavailable' : 'steam-not-running';
+}
+
+export function libraryAppsGuard(bail: string): string {
+  return `
+    if (typeof collectionStore === 'undefined') {
+      return ${bail};
+    }
+    const apps = collectionStore.allGamesCollection?.allApps;
+    if (!Array.isArray(apps) || apps.length === 0) {
+      return ${bail};
+    }`;
 }
 
 /**
