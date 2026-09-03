@@ -33,6 +33,7 @@ import {
   ensureCefBridge,
   evaluateInSharedJsContext,
   isCefUsable,
+  jsLiteral,
   libraryAppsGuard,
 } from '@/main/utils/steam-cef';
 import {
@@ -126,7 +127,7 @@ function findOurShortcut(
       const match = apps.find(
         (a) =>
           a.appid >= ${NON_STEAM_APPID_MIN} &&
-          a.display_name === ${JSON.stringify(SHORTCUT_NAME)}
+          a.display_name === ${jsLiteral(SHORTCUT_NAME)}
       );
       return match ? match.appid : null;
     })()`
@@ -139,9 +140,9 @@ async function createShortcut(
   launchOptions: string
 ): Promise<number> {
   const appId = await evaluateInSharedJsContext<unknown>(
-    `SteamClient.Apps.AddShortcut(${JSON.stringify(SHORTCUT_NAME)}, ${JSON.stringify(
+    `SteamClient.Apps.AddShortcut(${jsLiteral(SHORTCUT_NAME)}, ${jsLiteral(
       quotedPath(exePath)
-    )}, ${JSON.stringify(quotedPath(startDir))}, ${JSON.stringify(launchOptions)})`
+    )}, ${jsLiteral(quotedPath(startDir))}, ${jsLiteral(launchOptions)})`
   );
   if (typeof appId !== 'number' || !Number.isInteger(appId)) {
     throw new Error(`AddShortcut returned ${String(appId)} instead of an app id`);
@@ -188,11 +189,11 @@ export async function addLbkLauncherToSteamLibrary(): Promise<AddShortcutResult>
 
     await evaluateInSharedJsContext(
       `(async () => {
-        await SteamClient.Apps.SetShortcutName(${appId}, ${JSON.stringify(SHORTCUT_NAME)});
-        await SteamClient.Apps.SetShortcutExe(${appId}, ${JSON.stringify(quotedPath(exePath))});
-        await SteamClient.Apps.SetShortcutStartDir(${appId}, ${JSON.stringify(quotedPath(startDir))});
-        await SteamClient.Apps.SetShortcutIcon(${appId}, ${JSON.stringify(iconPath)});
-        await SteamClient.Apps.SetShortcutLaunchOptions(${appId}, ${JSON.stringify(launchOptions)});
+        await SteamClient.Apps.SetShortcutName(${appId}, ${jsLiteral(SHORTCUT_NAME)});
+        await SteamClient.Apps.SetShortcutExe(${appId}, ${jsLiteral(quotedPath(exePath))});
+        await SteamClient.Apps.SetShortcutStartDir(${appId}, ${jsLiteral(quotedPath(startDir))});
+        await SteamClient.Apps.SetShortcutIcon(${appId}, ${jsLiteral(iconPath)});
+        await SteamClient.Apps.SetShortcutLaunchOptions(${appId}, ${jsLiteral(launchOptions)});
       })()`
     );
 

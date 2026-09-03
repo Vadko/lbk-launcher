@@ -29,7 +29,11 @@ import {
   usesGameDirToken,
 } from '@/main/utils/launch-options-value';
 import { forCurrentOS } from '@/main/utils/platform';
-import { evaluateInSharedJsContext, isCefUsable } from '@/main/utils/steam-cef';
+import {
+  evaluateInSharedJsContext,
+  isCefUsable,
+  jsLiteral,
+} from '@/main/utils/steam-cef';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
 import type { Game } from '@/shared/types';
 
@@ -291,7 +295,7 @@ export async function writeSteamLaunchOptions(
   if (await isCefUsable()) {
     try {
       await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${JSON.stringify(plan.merged)})`
+        `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${jsLiteral(plan.merged)})`
       );
       console.log(`[SteamLaunchOptions] App ${params.appId} updated live via CEF`);
       return { mode: 'cef' };

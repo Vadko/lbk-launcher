@@ -31,6 +31,7 @@ import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import {
   ensureCefBridge,
   evaluateInSharedJsContext,
+  jsLiteral,
   libraryAppsGuard,
 } from '@/main/utils/steam-cef';
 import {
@@ -85,9 +86,9 @@ export async function syncTranslatedGamesCollection(
     const result = await evaluateInSharedJsContext<CefSyncAnswer>(
       `(async () => {
         try {
-          const NAME = ${JSON.stringify(COLLECTION_NAME)};
-          const targetIds = new Set(${JSON.stringify(valid)});
-          const recordedId = ${JSON.stringify(recordedId)};
+          const NAME = ${jsLiteral(COLLECTION_NAME)};
+          const targetIds = new Set(${jsLiteral(valid)});
+          const recordedId = ${jsLiteral(recordedId)};
 
           ${libraryAppsGuard("'library-unavailable'")}
 

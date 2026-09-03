@@ -72,6 +72,18 @@ export async function ensureCefBridge(): Promise<CefBridgeBlocker | null> {
   return (await isSteamRunning()) ? 'cef-unavailable' : 'steam-not-running';
 }
 
+const CODE_ESCAPES: Record<string, string> = {
+  '<': '\\u003C',
+  '>': '\\u003E',
+  '\u2028': '\\u2028',
+  '\u2029': '\\u2029',
+};
+
+export function jsLiteral(value: unknown): string {
+  const json = JSON.stringify(value) ?? 'null';
+  return json.replace(/[<>\u2028\u2029]/g, (char) => CODE_ESCAPES[char]);
+}
+
 export function libraryAppsGuard(bail: string): string {
   return `
     if (typeof collectionStore === 'undefined') {

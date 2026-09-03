@@ -15,6 +15,7 @@ import {
   ensureCefBridge,
   evaluateInSharedJsContext,
   isCefUsable,
+  jsLiteral,
 } from '@/main/utils/steam-cef';
 import type { SteamBridgeFailure } from '@/shared/types';
 
@@ -42,7 +43,7 @@ export async function installedWorkshopGameIds(
     return null;
   }
 
-  const payload = JSON.stringify(
+  const payload = jsLiteral(
     valid.map((t) => ({ id: t.id, appId: t.steam_app_id, itemId: t.workshop_id }))
   );
 
@@ -119,7 +120,7 @@ export async function isWorkshopItemDownloaded(
         try {
           const items = await SteamClient.Apps.GetDownloadedWorkshopItems(${appId});
           return Array.isArray(items)
-            && items.some((i) => String(i.publishedfileid) === ${JSON.stringify(workshopId)});
+            && items.some((i) => String(i.publishedfileid) === ${jsLiteral(workshopId)});
         } catch {
           return false;
         }
@@ -153,7 +154,7 @@ export async function setWorkshopSubscription(
   try {
     // Метод нічого не повертає — успіх тут означає лише «Steam прийняв команду»
     await evaluateInSharedJsContext(
-      `SteamClient.Apps.SubscribeWorkshopItem(${appId}, ${JSON.stringify(workshopId)}, ${subscribe})`
+      `SteamClient.Apps.SubscribeWorkshopItem(${appId}, ${jsLiteral(workshopId)}, ${subscribe})`
     );
     console.log(
       `[SteamWorkshop] ${subscribe ? 'Subscribed to' : 'Unsubscribed from'} ${workshopId} (app ${appId}) via CEF`

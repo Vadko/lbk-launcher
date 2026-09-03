@@ -19,7 +19,11 @@ import * as path from 'node:path';
 import { app } from 'electron';
 import got from 'got';
 import { getSteamGridPath } from '@/main/game-detector/steam';
-import { evaluateInSharedJsContext, isCefUsable } from '@/main/utils/steam-cef';
+import {
+  evaluateInSharedJsContext,
+  isCefUsable,
+  jsLiteral,
+} from '@/main/utils/steam-cef';
 import { readRendererSetting } from '@/main/utils/store-storage';
 import { getMainWindow } from '@/main/window';
 
@@ -221,7 +225,7 @@ async function transcodeToPng(
   const dataUrl = `data:image/${sourceFormat};base64,${bytes.toString('base64')}`;
   const script = `(async () => {
     const img = new Image();
-    img.src = ${JSON.stringify(dataUrl)};
+    img.src = ${jsLiteral(dataUrl)};
     await img.decode();
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth;
@@ -368,9 +372,9 @@ export async function applyArtworkSlot(
   if (write.cefUsable) {
     try {
       await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetCustomArtworkForApp(${write.appId}, ${JSON.stringify(
+        `SteamClient.Apps.SetCustomArtworkForApp(${write.appId}, ${jsLiteral(
           write.bytes.toString('base64')
-        )}, ${JSON.stringify(write.extension)}, ${write.assetType})`
+        )}, ${jsLiteral(write.extension)}, ${write.assetType})`
       );
       return 'cef';
     } catch (error) {
