@@ -1052,6 +1052,17 @@ const migrations: Migration[] = [
         'migration_resync_steam_launch_options_macos_done'
       ),
   },
+  {
+    name: 'add_steam_tag_names_table',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS steam_tag_names (
+          tagid INTEGER PRIMARY KEY,
+          name TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 /**

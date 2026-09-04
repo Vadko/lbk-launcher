@@ -410,6 +410,20 @@ export function upsertGameSingle(db: Database.Database, game: Game): void {
   ).run(game.id, params.name_search, ftsKeywords(params.search_keywords));
 }
 
+export function upsertTagNames(
+  db: Database.Database,
+  rows: { tagid: number; name: string }[]
+): void {
+  const stmt = db.prepare(
+    'INSERT INTO steam_tag_names (tagid, name) VALUES (?, ?) ON CONFLICT(tagid) DO UPDATE SET name = excluded.name'
+  );
+  db.transaction(() => {
+    for (const row of rows) {
+      stmt.run(row.tagid, row.name);
+    }
+  })();
+}
+
 /**
  * Видалити гру
  */

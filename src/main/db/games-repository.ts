@@ -8,6 +8,7 @@ import type {
   GetGamesParams,
   GetGamesResult,
   SortOrderType,
+  TagOption,
 } from '../../shared/types';
 import { normalizeInstalledFolder } from '../utils/install-path';
 import type { WorkshopTarget } from '../utils/steam-workshop';
@@ -217,6 +218,7 @@ export class GamesRepository {
       searchQuery = '',
       statuses = [],
       authors = [],
+      tagIds = [],
       sortOrder = 'name',
       hideAiTranslations = false,
     } = params;
@@ -234,6 +236,14 @@ export class GamesRepository {
       const placeholders = statuses.map(() => '?').join(', ');
       whereConditions.push(`status IN (${placeholders})`);
       queryParams.push(...statuses);
+    }
+
+    if (tagIds.length > 0) {
+      const placeholders = tagIds.map(() => '?').join(', ');
+      whereConditions.push(
+        `EXISTS (SELECT 1 FROM json_each(games.steam_tag_ids) WHERE json_each.value IN (${placeholders}))`
+      );
+      queryParams.push(...tagIds);
     }
 
     // Filter by search query using FTS5 (min 2 chars to avoid expensive single-char prefix scans)
@@ -658,6 +668,24 @@ export class GamesRepository {
 
     const row = stmt.get(gameId) as Record<string, unknown> | undefined;
     return row ? this.rowToGame(row) : null;
+  }
+
+  /**
+   * Теги для фільтра: лише ті, що є у видимих іграх, з локалізованими назвами.
+   * JOIN зі словником водночас відсіює id, для яких назви ще не синкнулись.
+   */
+  getTagOptions(): TagOption[] {
+    return this.db
+      .prepare(
+        `SELECT t.tagid AS tagid, t.name AS name, COUNT(DISTINCT COALESCE(g.slug, g.id)) AS count
+         FROM games g
+         JOIN json_each(g.steam_tag_ids) je
+         JOIN steam_tag_names t ON t.tagid = je.value
+         WHERE ${VISIBLE_GAMES_SQL}
+         GROUP BY t.tagid, t.name
+         ORDER BY count DESC, t.name`
+      )
+      .all() as TagOption[];
   }
 
   /**

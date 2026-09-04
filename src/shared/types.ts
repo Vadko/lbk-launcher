@@ -146,6 +146,7 @@ export interface GetGamesParams {
   searchQuery?: string;
   statuses?: string[];
   authors?: string[];
+  tagIds?: number[];
   showAdultGames?: boolean;
   hideAiTranslations?: boolean;
   sortOrder?: SortOrderType;
@@ -155,6 +156,12 @@ export interface GetGamesResult {
   games: Game[];
   total: number;
   uniqueCount?: number; // Count of unique games by slug (for filters)
+}
+
+export interface TagOption {
+  tagid: number;
+  name: string;
+  count: number;
 }
 
 export interface FilterCountsResult {
@@ -203,6 +210,7 @@ export type SteamCollectionSyncFailure =
 
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
+  fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
   fetchFilterCounts: () => Promise<FilterCountsResult>;
   fetchTrendingGames: (
