@@ -5,6 +5,7 @@ import {
   Info,
   Monitor,
   Shield,
+  Terminal,
   Trash2,
   Trophy,
   Volume2,
@@ -124,6 +125,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const willRemoveVoice = hasVoiceArchive && !installVoice && isVoiceInstalled;
   const willRemoveAchievements =
     hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
+
+  const steamLaunchOptionsWindows = game.steam_launch_options_windows?.trim() || null;
+  const steamLaunchOptionsLinux = game.steam_launch_options_linux?.trim() || null;
+  const willApplyLaunchOptions =
+    isSteamGame &&
+    !!game.steam_app_id &&
+    (selectedPlatform === 'auto' || selectedPlatform === 'steam') &&
+    (steamLaunchOptionsWindows !== null || steamLaunchOptionsLinux !== null);
 
   const handleConfirm = () => {
     onConfirm(
@@ -558,6 +567,31 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               </span>
             </div>
           )}
+
+        {/* Steam launch options info */}
+        {willApplyLaunchOptions && (
+          <div className="bg-glass rounded-xl p-3 border border-border flex items-start gap-2 text-sm">
+            <Terminal size={16} className="text-color-main shrink-0 mt-0.5" />
+            <div className="text-text-muted">
+              <p>
+                Цей переклад встановить власні{' '}
+                <span className="text-text-main">параметри запуску</span> для гри в Steam.
+              </p>
+              {steamLaunchOptionsWindows && (
+                <p className="mt-1">
+                  <span className="text-text-main">Windows:</span>{' '}
+                  <code className="text-color-main">{steamLaunchOptionsWindows}</code>
+                </p>
+              )}
+              {steamLaunchOptionsLinux && (
+                <p className="mt-1">
+                  <span className="text-text-main">Linux (Proton):</span>{' '}
+                  <code className="text-color-main">{steamLaunchOptionsLinux}</code>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Info about what will happen */}
         {(totalDownloadSize !== 'N/A' || willRemoveVoice || willRemoveAchievements) && (

@@ -238,12 +238,11 @@ const electronAPI: ElectronAPI = {
   applyPendingLaunchOptions: (game: Game) =>
     ipcRenderer.invoke('apply-pending-launch-options', game),
   /**
-   * Fires when an install couldn't apply a Steam config change live and the
-   * user needs to restart Steam so the CEF debug port opens.
+   * Fires when the Settings CEF toggle was turned on but the debug port isn't
+   * open yet — the user needs to restart Steam for it to take effect.
    */
-  onSteamRestartRequired: (callback: (mandatory: boolean) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, mandatory?: boolean) =>
-      callback(mandatory ?? true);
+  onSteamRestartRequired: (callback: () => void) => {
+    const handler = () => callback();
     ipcRenderer.on('steam-restart-required', handler);
     return () => ipcRenderer.removeListener('steam-restart-required', handler);
   },
@@ -251,6 +250,10 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('set-steam-cef-debugging', enabled),
   setSteamCustomArtwork: (enabled: boolean) =>
     ipcRenderer.invoke('set-steam-custom-artwork', enabled),
+  syncSteamTranslatedCollection: () =>
+    ipcRenderer.invoke('sync-steam-translated-collection'),
+  addLbkLauncherToSteamLibrary: () =>
+    ipcRenderer.invoke('add-lbk-launcher-to-steam-library'),
   // Version
   getVersion: () => ipcRenderer.sendSync('get-version'),
   isE2E: () => isE2EMode,
@@ -266,6 +269,17 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
+  // Підписка на переклад у Майстерні без відкриття Steam
+  setWorkshopSubscription: (
+    gameId: string,
+    appId: number,
+    workshopId: string,
+    subscribe: boolean
+  ) =>
+    ipcRenderer.invoke('set-workshop-subscription', gameId, appId, workshopId, subscribe),
+  listInstalledWorkshopGames: () => ipcRenderer.invoke('list-installed-workshop-games'),
+  isWorkshopItemDownloaded: (appId: number, workshopId: string) =>
+    ipcRenderer.invoke('is-workshop-item-downloaded', appId, workshopId),
   // Перехід у Майстерню рахується як завантаження
   trackWorkshopOpen: (gameId: string, isFirstSession?: boolean) =>
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),

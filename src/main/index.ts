@@ -3,7 +3,10 @@ import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
-import { setupStoreStorageHandlers } from './utils/store-storage';
+import {
+  onWorkshopInstallsChanged,
+  setupStoreStorageHandlers,
+} from './utils/store-storage';
 
 // E2E: enable remote debugging for packaged apps.
 // Electron 30+ ignores --remote-debugging-port CLI arg for packaged binaries,
@@ -353,6 +356,11 @@ if (!gotTheLock) {
     setImmediate(() => {
       startSteamWatcher(getMainWindow());
       startInstallationWatcher(getMainWindow(), () => {
+        syncManager?.processPendingDeletions().catch((err) => {
+          console.error('[Main] Failed to process pending deletions:', err);
+        });
+      });
+      onWorkshopInstallsChanged(() => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
         });

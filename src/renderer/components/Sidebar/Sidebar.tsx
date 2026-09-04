@@ -43,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setSearchQuery,
       gamesWithUpdates,
       isGameDetected,
-      getInstallationInfo,
     } = useStore(
       useShallow((state) => ({
         selectedGame: state.selectedGame,
@@ -53,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         setSearchQuery: state.setSearchQuery,
         gamesWithUpdates: state.gamesWithUpdates,
         isGameDetected: state.isGameDetected,
-        getInstallationInfo: state.getInstallationInfo,
       }))
     );
     const {
@@ -354,7 +352,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
               onSelectGame={handleSelectGame}
               onOpenTranslationPicker={openTranslationPicker}
               isGameDetected={isGameDetected}
-              getInstallationInfo={getInstallationInfo}
             />
           </div>
 
@@ -419,7 +416,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onToggleGroup={toggleGroupExpanded}
             onSelectGame={handleSelectGame}
             isGameDetected={isGameDetected}
-            getInstallationInfo={getInstallationInfo}
           />
         </div>
 

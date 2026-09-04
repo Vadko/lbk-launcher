@@ -15,12 +15,12 @@ function readStoreFile(key: string): string | null {
 }
 
 /**
- * Read one field of the renderer's persisted zustand settings ('lbk-settings',
- * `{"state":{...}}` envelope). Returns the default on any miss or parse error.
+ * Read one field of a renderer zustand persist envelope (`{"state":{...}}`).
+ * Returns the default on any miss or parse error.
  */
-export function readRendererSetting<T>(field: string, defaultValue: T): T {
+function readPersistedStateField<T>(storeKey: string, field: string, defaultValue: T): T {
   try {
-    const raw = readStoreFile('lbk-settings');
+    const raw = readStoreFile(storeKey);
     if (!raw) {
       return defaultValue;
     }
@@ -28,6 +28,45 @@ export function readRendererSetting<T>(field: string, defaultValue: T): T {
   } catch {
     return defaultValue;
   }
+}
+
+export function readRendererSetting<T>(field: string, defaultValue: T): T {
+  return readPersistedStateField('lbk-settings', field, defaultValue);
+}
+
+/** Opt-out from Settings. Lives here so `steam-cef.ts` reads it cycle-free. */
+export function isCefDebuggingEnabledInSettings(): boolean {
+  return readRendererSetting('steamCefDebuggingEnabled', true);
+}
+
+const WORKSHOP_INSTALLS_KEY = 'workshop-installs-storage';
+
+export function getWorkshopInstalledGameIds(): string[] {
+  return Object.keys(
+    readPersistedStateField<Record<string, unknown>>(
+      WORKSHOP_INSTALLS_KEY,
+      'installedAt',
+      {}
+    )
+  );
+}
+
+export function onWorkshopInstallsChanged(callback: () => void): () => void {
+  return store.onDidChange(WORKSHOP_INSTALLS_KEY, callback);
+}
+
+export function readSteamAccountValue(key: string, accountId: string): unknown {
+  const all = store.get(key) as Record<string, unknown> | undefined;
+  return all?.[accountId];
+}
+
+export function writeSteamAccountValue(
+  key: string,
+  accountId: string,
+  value: unknown
+): void {
+  const all = (store.get(key) as Record<string, unknown> | undefined) ?? {};
+  store.set(key, { ...all, [accountId]: value });
 }
 
 /**

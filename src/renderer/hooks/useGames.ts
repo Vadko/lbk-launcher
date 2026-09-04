@@ -5,7 +5,9 @@ import type {
   SpecialFilterType,
 } from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
+import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
 import type { Game, GetGamesParams } from '../types/game';
+import { allInstalledTranslationIds } from './useInstalledTranslations';
 
 interface UseGamesParams {
   selectedStatuses?: string[];
@@ -161,9 +163,7 @@ export function useGames({
       }
 
       if (specialFilter === 'installed-translations') {
-        const installedGameIds = [
-          ...new Set(await window.electronAPI.getAllInstalledGameIds()),
-        ];
+        const installedGameIds = await allInstalledTranslationIds();
 
         // Перевірити чи запит ще актуальний
         if (signal.aborted) {
@@ -607,7 +607,14 @@ export function useGames({
     const unsubscribe = window.electronAPI.onInstalledGamesChanged(
       handleInstalledGamesChanged
     );
-    return unsubscribe;
+
+    const unsubscribeWorkshop = subscribeToWorkshopInstalledChanges(
+      handleInstalledGamesChanged
+    );
+    return () => {
+      unsubscribe();
+      unsubscribeWorkshop();
+    };
   }, [specialFilter, loadGames]);
 
   // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор та доступних зі Steam)

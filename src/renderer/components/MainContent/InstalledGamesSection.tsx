@@ -3,6 +3,7 @@ import { ListFilter } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
+import { useIsTranslationInstalled } from '@/renderer/hooks/useInstalledTranslations';
 import {
   useInstalledGamePathsCount,
   useInstalledGamesForHome,
@@ -45,12 +46,11 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   );
 
   const { data: installedPathsCount = 0 } = useInstalledGamePathsCount();
+  const isInstalled = useIsTranslationInstalled();
 
   // Filter and sort games
   const gamesWithoutInstalls = useMemo(() => {
-    const withoutTranslations = allInstalledGames.filter(
-      (game) => !installedTranslations.has(game.id)
-    );
+    const withoutTranslations = allInstalledGames.filter((game) => !isInstalled(game.id));
 
     // If no games without translations, show all installed games
     const gamesToShow =
@@ -69,7 +69,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       // Sort: games with updates first (descending)
       return bHasUpdate - aHasUpdate;
     });
-  }, [allInstalledGames, installedTranslations]);
+  }, [allInstalledGames, installedTranslations, isInstalled]);
 
   const visibleGames = useMemo(
     () => gamesWithoutInstalls.slice(0, showLimit),

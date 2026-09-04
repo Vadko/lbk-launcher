@@ -16,6 +16,7 @@ import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
+import { useIsWorkshopChangePending } from './useInstalledTranslations';
 
 interface UseInstallationParams {
   selectedGame: Game | null;
@@ -29,6 +30,7 @@ interface UseInstallationParams {
 interface UseInstallationResult {
   isInstalling: boolean;
   isUninstalling: boolean;
+  isWorkshopChangePending: boolean;
   isPaused: boolean;
   isWaitingForNetwork: boolean;
   installProgress: number;
@@ -77,6 +79,8 @@ export function useInstallation({
   >();
   const [selectedProton, setSelectedProton] = useState<string | undefined>();
   const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
+
+  const isWorkshopChangePending = useIsWorkshopChangePending(selectedGame?.id);
 
   const gameProgress = selectedGame
     ? getInstallationProgress(selectedGame.id)
@@ -1053,6 +1057,7 @@ export function useInstallation({
   return {
     isInstalling,
     isUninstalling,
+    isWorkshopChangePending,
     isPaused,
     isWaitingForNetwork,
     installProgress,

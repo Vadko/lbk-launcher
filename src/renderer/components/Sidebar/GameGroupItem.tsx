@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
-import type { InstallationInfo } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
+import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -19,7 +19,6 @@ interface GameGroupItemProps {
   onSelectGame: (game: Game) => void;
   gamesWithUpdates: Set<string>;
   isGameDetected: (gameId: string) => boolean;
-  getInstallationInfo: (gameId: string) => InstallationInfo | undefined;
   imageDeferred?: boolean;
 }
 
@@ -32,7 +31,6 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     onSelectGame,
     gamesWithUpdates,
     isGameDetected,
-    getInstallationInfo,
     imageDeferred = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
@@ -46,7 +44,8 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
     const isAnySelected = group.translations.some((t) => selectedGameId === t.id);
     const anyHasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
     const anyGameDetected = group.translations.some((t) => isGameDetected(t.id));
-    const anyGameInstalled = group.translations.some((t) => !!getInstallationInfo(t.id));
+    const isInstalled = useIsTranslationInstalled();
+    const anyGameInstalled = group.translations.some((t) => isInstalled(t.id));
     const anyIsFavorite = group.translations.some((t) => isFavoriteGame(t.id));
     const anyTranslationAvailable = group.translations.some(
       (t) => t.status !== 'planned' && t.status !== 'tech-improvement'
@@ -195,7 +194,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       onClick={() => onSelectGame(game)}
                       hasUpdate={gamesWithUpdates.has(game.id)}
                       isGameDetected={isGameDetected(game.id)}
-                      isInstalled={!!getInstallationInfo(game.id)}
+                      isInstalled={isInstalled(game.id)}
                       isTranslationAvailable={
                         game.status !== 'planned' && game.status !== 'tech-improvement'
                       }
@@ -218,7 +217,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   onClick={() => onSelectGame(game)}
                   hasUpdate={gamesWithUpdates.has(game.id)}
                   isGameDetected={isGameDetected(game.id)}
-                  isInstalled={!!getInstallationInfo(game.id)}
+                  isInstalled={isInstalled(game.id)}
                   isTranslationAvailable={
                     game.status !== 'planned' && game.status !== 'tech-improvement'
                   }

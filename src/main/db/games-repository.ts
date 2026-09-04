@@ -10,6 +10,7 @@ import type {
   SortOrderType,
 } from '../../shared/types';
 import { normalizeInstalledFolder } from '../utils/install-path';
+import type { WorkshopTarget } from '../utils/steam-workshop';
 import { getDatabase, isSpellfixAvailable } from './database';
 import {
   deleteGameById,
@@ -598,6 +599,31 @@ export class GamesRepository {
     const stmt = this.db.prepare('UPDATE games SET user_unlocked = ? WHERE id = ?');
     const result = stmt.run(hidden ? 0 : 1, gameId);
     return result.changes > 0;
+  }
+
+  getWorkshopTargets(): WorkshopTarget[] {
+    return this.db
+      .prepare(
+        `SELECT id, steam_app_id, workshop_id FROM games
+         WHERE kind = 'workshop' AND workshop_id IS NOT NULL AND steam_app_id IS NOT NULL`
+      )
+      .all() as WorkshopTarget[];
+  }
+
+  /**
+   * Steam App ID усіх ігор каталогу, для яких є переклад — незалежно від
+   * способу встановлення (Workshop чи архів). На відміну від
+   * `getWorkshopTargets`, який бере лише `kind = 'workshop'` (це рідкість —
+   * абсолютна більшість перекладів встановлюються архівом).
+   */
+  getTranslatedSteamAppIds(): number[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT steam_app_id FROM games
+         WHERE ${VISIBLE_GAMES_SQL} AND steam_app_id IS NOT NULL`
+      )
+      .all() as { steam_app_id: number }[];
+    return rows.map((row) => row.steam_app_id);
   }
 
   /**

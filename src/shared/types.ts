@@ -192,6 +192,15 @@ export interface FeedbackReplyPayload {
   createdAt: string;
 }
 
+export type SteamBridgeFailure = 'cef-unavailable' | 'steam-not-running' | 'failed';
+
+export type SteamLibraryFailure = SteamBridgeFailure | 'library-unavailable';
+
+export type SteamCollectionSyncFailure =
+  | SteamLibraryFailure
+  | 'no-translated-games'
+  | 'no-matches';
+
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
@@ -333,12 +342,30 @@ export interface ElectronAPI {
   applyPendingLaunchOptions: (
     game: Game
   ) => Promise<{ success: boolean; error?: string }>;
-  /** Steam restart needed for the CEF port; `mandatory` only from startup bootstrap. */
-  onSteamRestartRequired: (callback: (mandatory: boolean) => void) => () => void;
+  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
+  onSteamRestartRequired: (callback: () => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
   setSteamCefDebugging: (enabled: boolean) => Promise<void>;
   /** Turning it off reverts Ukrainian library artwork already installed. */
   setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
+  /**
+   * Create or update the Steam library collection «З українізаторами» with
+   * every owned game that has a translation in the catalog. Re-running it
+   * also drops games whose translation disappeared since the last sync.
+   */
+  syncSteamTranslatedCollection: () => Promise<
+    | { ok: true; total: number }
+    | { ok: false; reason: SteamCollectionSyncFailure; error?: string }
+  >;
+  /**
+   * Add (or update) LBK Launcher itself as a non-Steam shortcut in the
+   * user's Steam library, with name/icon/artwork — so it's launchable from
+   * Big Picture / Steam Deck Gaming Mode. Safe to call repeatedly: reuses
+   * the shortcut it created before instead of adding a duplicate.
+   */
+  addLbkLauncherToSteamLibrary: () => Promise<
+    { ok: true } | { ok: false; reason: SteamLibraryFailure; error?: string }
+  >;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking
@@ -356,6 +383,20 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  // Підписка й відписка на переклад у Майстерні без відкриття Steam
+  setWorkshopSubscription: (
+    gameId: string,
+    appId: number,
+    workshopId: string,
+    subscribe: boolean
+  ) => Promise<{ ok: true } | { ok: false; reason: SteamBridgeFailure; error?: string }>;
+  /** Які воркшоп-переклади з каталогу вже на диску; null — містка немає */
+  listInstalledWorkshopGames: () => Promise<string[] | null>;
+  /** Факт наявності на диску; null — CEF-місток недоступний, відповіді немає */
+  isWorkshopItemDownloaded: (
+    appId: number,
+    workshopId: string
+  ) => Promise<boolean | null>;
   // Перехід у Майстерню рахується як завантаження
   trackWorkshopOpen: (
     gameId: string,

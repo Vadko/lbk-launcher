@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { join } from 'path';
 
-function resolveResource(filename: string): string {
+export function resolveResource(filename: string): string {
   return app.isPackaged
     ? join(process.resourcesPath, filename)
     : join(app.getAppPath(), 'resources', filename);

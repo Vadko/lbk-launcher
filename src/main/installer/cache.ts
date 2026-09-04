@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import type { ConflictingTranslation, Game, InstallationInfo } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
 import { getFirstAvailableGamePath } from '../game-detector';
+import { getWorkshopInstalledGameIds } from '../utils/store-storage';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -344,6 +345,10 @@ export async function getAllInstalledGameIds(): Promise<string[]> {
     installedGameIdsCache = [];
     return [];
   }
+}
+
+export async function getLocallyInstalledGameIds(): Promise<Set<string>> {
+  return new Set([...(await getAllInstalledGameIds()), ...getWorkshopInstalledGameIds()]);
 }
 
 /**

@@ -2240,24 +2240,21 @@ export type Database = {
         }
         Relationships: []
       }
-      steam_sync_metadata: {
+      steam_tag_names: {
         Row: {
-          id: number
-          last_sync_at: string | null
-          sync_status: string | null
-          total_apps: number | null
+          name: string
+          tagid: number
+          updated_at: string
         }
         Insert: {
-          id?: number
-          last_sync_at?: string | null
-          sync_status?: string | null
-          total_apps?: number | null
+          name: string
+          tagid: number
+          updated_at?: string
         }
         Update: {
-          id?: number
-          last_sync_at?: string | null
-          sync_status?: string | null
-          total_apps?: number | null
+          name?: string
+          tagid?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2941,7 +2938,6 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
-      sync_steam_apps_cron: { Args: never; Returns: undefined }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
