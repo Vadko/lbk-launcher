@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
+import type { TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFilterCounts } from '../../hooks/useFilterCounts';
 import { useGames } from '../../hooks/useGames';
@@ -18,10 +19,12 @@ import { SearchBar } from './SearchBar';
 import { SidebarFooter } from './SidebarFooter';
 import { SidebarHeader } from './SidebarHeader';
 import { StatusFilterDropdown } from './StatusFilterDropdown';
+import { TagsFilterDropdown } from './TagsFilterDropdown';
 import type { GameGroup } from './types';
 
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
+const FILTERS_RELOAD_DEBOUNCE = 300;
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -64,6 +67,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setSelectedContentTypes,
       selectedAuthors,
       setSelectedAuthors,
+      selectedTagIds,
+      setSelectedTagIds,
       sortOrder,
       setSortOrder,
       hideAiTranslations,
@@ -79,6 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         setSelectedContentTypes: state.setSelectedContentTypes,
         selectedAuthors: state.selectedAuthors,
         setSelectedAuthors: state.setSelectedAuthors,
+        selectedTagIds: state.selectedTagIds,
+        setSelectedTagIds: state.setSelectedTagIds,
         sortOrder: state.sortOrder,
         setSortOrder: state.setSortOrder,
         hideAiTranslations: state.hideAiTranslations,
@@ -106,10 +113,13 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     );
     const closeTranslationPicker = useCallback(() => setPickerPayload(null), []);
 
-    // Fetch authors list (wait for sync to complete)
+    // Fetch authors and tag options (wait for sync to complete)
     const syncStatus = useStore((state) => state.syncStatus);
     const [authors, setAuthors] = useState<string[]>([]);
     const [authorsLoading, setAuthorsLoading] = useState(true);
+    const [tags, setTags] = useState<TagOption[]>([]);
+    const [tagsLoading, setTagsLoading] = useState(true);
+    const reloadFiltersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const loadAuthors = useCallback(async () => {
       try {
@@ -122,15 +132,42 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       }
     }, []);
 
+    const loadTags = useCallback(async () => {
+      try {
+        const fetchedTags = await window.electronAPI.fetchTagOptions();
+        setTags(fetchedTags);
+      } catch (error) {
+        console.error('[Sidebar] Error fetching tags:', error);
+      } finally {
+        setTagsLoading(false);
+      }
+    }, []);
+
     useEffect(() => {
       if (syncStatus !== 'ready' && syncStatus !== 'error') {
         return;
       }
       loadAuthors();
+      loadTags();
 
-      const unsub = window.electronAPI?.onGameUpdated?.(() => loadAuthors());
-      return () => unsub?.();
-    }, [syncStatus, loadAuthors]);
+      // Пачка бродкастів при масовому апдейті каталогу інакше дала б N
+      // синхронних сканів games у main-процесі поспіль
+      const unsub = window.electronAPI?.onGameUpdated?.(() => {
+        if (reloadFiltersTimerRef.current) {
+          clearTimeout(reloadFiltersTimerRef.current);
+        }
+        reloadFiltersTimerRef.current = setTimeout(() => {
+          loadAuthors();
+          loadTags();
+        }, FILTERS_RELOAD_DEBOUNCE);
+      });
+      return () => {
+        unsub?.();
+        if (reloadFiltersTimerRef.current) {
+          clearTimeout(reloadFiltersTimerRef.current);
+        }
+      };
+    }, [syncStatus, loadAuthors, loadTags]);
 
     const {
       games: visibleGames,
@@ -139,6 +176,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     } = useGames({
       selectedStatuses,
       selectedAuthors,
+      selectedTagIds,
       specialFilter,
       selectedContentTypes,
       searchQuery: debouncedSearchQuery,
@@ -324,6 +362,15 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
                 isLoading={authorsLoading}
               />
             </div>
+            <div className="flex-1 min-w-0 max-w-[220px]" data-gamepad-header-item>
+              <TagsFilterDropdown
+                selectedTagIds={selectedTagIds}
+                onTagsChange={setSelectedTagIds}
+                tags={tags}
+                isLoading={tagsLoading}
+                wideMenu
+              />
+            </div>
 
             {/* Actions */}
             <SidebarFooter
@@ -397,6 +444,15 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onAuthorsChange={setSelectedAuthors}
             authors={authors}
             isLoading={authorsLoading}
+          />
+        </div>
+
+        <div className="flex gap-2 px-4 pb-4">
+          <TagsFilterDropdown
+            selectedTagIds={selectedTagIds}
+            onTagsChange={setSelectedTagIds}
+            tags={tags}
+            isLoading={tagsLoading}
           />
         </div>
 

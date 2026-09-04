@@ -127,6 +127,7 @@ import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
   fetchAllGamesFromSupabase,
   fetchDeletedGameIdsFromSupabase,
+  fetchTagNamesFromSupabase,
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
@@ -295,6 +296,12 @@ if (!gotTheLock) {
         fetchUpdatedGamesFromSupabase,
         fetchDeletedGameIdsFromSupabase
       );
+
+      try {
+        await syncManager.syncTagNames(fetchTagNamesFromSupabase);
+      } catch (error) {
+        console.error('[Main] Tag names sync failed:', error);
+      }
       console.log('[Main] Initial sync completed');
       sendSyncStatus('ready');
     } catch (error) {

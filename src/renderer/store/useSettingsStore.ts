@@ -52,12 +52,14 @@ interface SettingsStore {
   specialFilter: SpecialFilterType | null;
   selectedContentTypes: ContentTypeFilterType[];
   selectedAuthors: string[];
+  selectedTagIds: number[];
   favoriteGameIds: string[];
   notificationSoundsEnabled: boolean;
   setSortOrder: (order: SortOrderType) => void;
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
   setSelectedContentTypes: (types: ContentTypeFilterType[]) => void;
+  setSelectedTagIds: (tagIds: number[]) => void;
   setSelectedAuthors: (authors: string[]) => void;
   toggleFavoriteGame: (gameId: string, gameName: string) => void;
   isFavoriteGame: (gameId: string) => boolean;
@@ -97,6 +99,7 @@ export const useSettingsStore = create<SettingsStore>()(
       specialFilter: null,
       selectedContentTypes: [],
       selectedAuthors: [],
+      selectedTagIds: [],
       favoriteGameIds: [],
       notificationSoundsEnabled: true,
       setSortOrder: (sortOrder) => set({ sortOrder }),
@@ -109,6 +112,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setSelectedContentTypes: (selectedContentTypes) => set({ selectedContentTypes }),
 
       setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
+
+      setSelectedTagIds: (selectedTagIds) => set({ selectedTagIds }),
 
       toggleFavoriteGame: (gameId, gameName) => {
         const state = get();
@@ -214,6 +219,7 @@ export const useSettingsStore = create<SettingsStore>()(
         specialFilter: state.specialFilter,
         selectedContentTypes: state.selectedContentTypes,
         selectedAuthors: state.selectedAuthors,
+        selectedTagIds: state.selectedTagIds,
         favoriteGameIds: state.favoriteGameIds,
         notificationSoundsEnabled: state.notificationSoundsEnabled,
       }),

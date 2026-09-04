@@ -7,6 +7,8 @@ import { getSupabaseClient } from './supabase-client';
  * Цей модуль викликається ТІЛЬКИ в main process.
  */
 
+export type TagNameRow = Database['public']['Tables']['steam_tag_names']['Row'];
+
 /**
  * Поля, які НЕ потрібно завантажувати (великі file_list та FTS поля)
  */
@@ -135,6 +137,7 @@ _assertNever<
 const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
 
 const GAMES_PAGE_SIZE = 100;
+const TAG_NAMES_PAGE_SIZE = 500;
 
 /**
  * Завантажити всі затверджені ігри з Supabase
@@ -257,4 +260,33 @@ export async function fetchTrendingGames(days = 30, limit = 10): Promise<Trendin
 
   console.log(`[SupabaseSync] Fetched ${data?.length ?? 0} trending games`);
   return data ?? [];
+}
+
+export async function fetchTagNamesFromSupabase(since?: string): Promise<TagNameRow[]> {
+  const supabase = getSupabaseClient();
+  const rows: TagNameRow[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const query = supabase
+      .from('steam_tag_names')
+      .select('tagid,name,updated_at')
+      .order('updated_at', { ascending: true })
+      .order('tagid', { ascending: true })
+      .range(offset, offset + TAG_NAMES_PAGE_SIZE - 1);
+
+    const { data, error } = await (since ? query.gt('updated_at', since) : query);
+
+    if (error) {
+      throw error;
+    }
+
+    rows.push(...(data ?? []));
+    hasMore = (data?.length ?? 0) === TAG_NAMES_PAGE_SIZE;
+    offset += TAG_NAMES_PAGE_SIZE;
+  }
+
+  console.log(`[SupabaseSync] Fetched ${rows.length} tag names`);
+  return rows;
 }
