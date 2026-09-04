@@ -16,7 +16,7 @@ import { getMainWindow } from '@/main/window';
 import { isMacOS } from './platform';
 import { isCefAvailable } from './steam-cef';
 import { isSteamRunning } from './steam-launcher';
-import { readRendererSetting } from './store-storage';
+import { isCefDebuggingEnabledInSettings } from './store-storage';
 
 const FLAG_FILE_NAME = '.cef-enable-remote-debugging';
 
@@ -85,14 +85,6 @@ function getFlagFilePath(): string | null {
 /** Every location a flag file could be sitting in, including stale ones. */
 function getAllFlagFilePaths(): string[] {
   return getFlagFileDirs().map((dir) => path.join(dir, FLAG_FILE_NAME));
-}
-
-/**
- * User opt-out from the Settings modal. CEF consumers must check this too —
- * deleting the flag file doesn't close an already-open debug port.
- */
-export function isCefDebuggingEnabledInSettings(): boolean {
-  return readRendererSetting('steamCefDebuggingEnabled', true);
 }
 
 function isMillenniumInstalled(): boolean {

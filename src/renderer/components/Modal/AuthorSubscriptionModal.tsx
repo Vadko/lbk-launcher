@@ -1,5 +1,6 @@
 import { Bell, Star, Users } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
+import { plural } from '@/shared/plural';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -98,7 +99,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             <p className="text-sm text-text-muted">
               {authors.length === 1
                 ? 'Автор локалізації'
-                : `${authors.length} автори локалізації`}
+                : `${authors.length} ${plural(authors.length, 'автор', 'автори', 'авторів')} локалізації`}
             </p>
           </div>
         </div>

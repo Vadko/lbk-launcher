@@ -192,6 +192,15 @@ export interface FeedbackReplyPayload {
   createdAt: string;
 }
 
+export type SteamBridgeFailure = 'cef-unavailable' | 'steam-not-running' | 'failed';
+
+export type SteamLibraryFailure = SteamBridgeFailure | 'library-unavailable';
+
+export type SteamCollectionSyncFailure =
+  | SteamLibraryFailure
+  | 'no-translated-games'
+  | 'no-matches';
+
 export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTeams: () => Promise<string[]>;
@@ -339,6 +348,24 @@ export interface ElectronAPI {
   setSteamCefDebugging: (enabled: boolean) => Promise<void>;
   /** Turning it off reverts Ukrainian library artwork already installed. */
   setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
+  /**
+   * Create or update the Steam library collection «З українізаторами» with
+   * every owned game that has a translation in the catalog. Re-running it
+   * also drops games whose translation disappeared since the last sync.
+   */
+  syncSteamTranslatedCollection: () => Promise<
+    | { ok: true; total: number }
+    | { ok: false; reason: SteamCollectionSyncFailure; error?: string }
+  >;
+  /**
+   * Add (or update) LBK Launcher itself as a non-Steam shortcut in the
+   * user's Steam library, with name/icon/artwork — so it's launchable from
+   * Big Picture / Steam Deck Gaming Mode. Safe to call repeatedly: reuses
+   * the shortcut it created before instead of adding a duplicate.
+   */
+  addLbkLauncherToSteamLibrary: () => Promise<
+    { ok: true } | { ok: false; reason: SteamLibraryFailure; error?: string }
+  >;
   // Version
   getVersion: () => string;
   // E2E test mode — disables analytics/tracking
@@ -362,14 +389,7 @@ export interface ElectronAPI {
     appId: number,
     workshopId: string,
     subscribe: boolean
-  ) => Promise<
-    | { ok: true }
-    | {
-        ok: false;
-        reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
-        error?: string;
-      }
-  >;
+  ) => Promise<{ ok: true } | { ok: false; reason: SteamBridgeFailure; error?: string }>;
   /** Які воркшоп-переклади з каталогу вже на диску; null — містка немає */
   listInstalledWorkshopGames: () => Promise<string[] | null>;
   /** Факт наявності на диску; null — CEF-місток недоступний, відповіді немає */

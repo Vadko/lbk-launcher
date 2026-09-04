@@ -26,6 +26,8 @@ import { Modal } from '../Modal/Modal';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
 
+const RELATIVE_TIME = new Intl.RelativeTimeFormat('uk-UA', { numeric: 'always' });
+
 interface NotificationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -88,13 +90,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       return 'Щойно';
     }
     if (minutes < 60) {
-      return `${minutes} хв тому`;
+      return RELATIVE_TIME.format(-minutes, 'minute');
     }
     if (hours < 24) {
-      return `${hours} год тому`;
+      return RELATIVE_TIME.format(-hours, 'hour');
     }
     if (days < 7) {
-      return `${days} дн тому`;
+      return RELATIVE_TIME.format(-days, 'day');
     }
 
     return date.toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv' });

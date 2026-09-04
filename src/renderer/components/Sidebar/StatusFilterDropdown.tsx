@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ListFilter, X } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { plural } from '@/shared/plural';
 import type { FilterCounts } from '../../hooks/useFilterCounts';
 import {
   CONTENT_TYPE_OPTIONS,
@@ -66,7 +67,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = React.m
           selectedStatuses[0]
         );
       }
-      return `${activeFilterCount} фільтри`;
+      return `${activeFilterCount} ${plural(activeFilterCount, 'фільтр', 'фільтри', 'фільтрів')}`;
     }, [activeFilterCount, selectedStatuses, selectedContentTypes, specialFilter]);
 
     const hasActiveFilter = activeFilterCount > 0;

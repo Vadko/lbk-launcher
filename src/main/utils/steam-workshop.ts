@@ -11,9 +11,13 @@
  * рендерер за невдачі відкриває звичайний steam:// диплінк.
  */
 
-import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
-import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
-import { isSteamRunning } from '@/main/utils/steam-launcher';
+import {
+  ensureCefBridge,
+  evaluateInSharedJsContext,
+  isCefUsable,
+  jsLiteral,
+} from '@/main/utils/steam-cef';
+import type { SteamBridgeFailure } from '@/shared/types';
 
 /** Рядок games як є — перейменовувати ці три поля дорогою нема навіщо */
 export interface WorkshopTarget {
@@ -35,11 +39,11 @@ export async function installedWorkshopGameIds(
   if (valid.length === 0) {
     return null;
   }
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
+  if (!(await isCefUsable())) {
     return null;
   }
 
-  const payload = JSON.stringify(
+  const payload = jsLiteral(
     valid.map((t) => ({ id: t.id, appId: t.steam_app_id, itemId: t.workshop_id }))
   );
 
@@ -103,7 +107,7 @@ export async function isWorkshopItemDownloaded(
   if (!isValidTarget(appId, workshopId)) {
     return null;
   }
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
+  if (!(await isCefUsable())) {
     return null;
   }
 
@@ -116,7 +120,7 @@ export async function isWorkshopItemDownloaded(
         try {
           const items = await SteamClient.Apps.GetDownloadedWorkshopItems(${appId});
           return Array.isArray(items)
-            && items.some((i) => String(i.publishedfileid) === ${JSON.stringify(workshopId)});
+            && items.some((i) => String(i.publishedfileid) === ${jsLiteral(workshopId)});
         } catch {
           return false;
         }
@@ -131,11 +135,7 @@ export async function isWorkshopItemDownloaded(
 
 type SubscribeWorkshopResult =
   | { ok: true }
-  | {
-      ok: false;
-      reason: 'cef-unavailable' | 'steam-not-running' | 'failed';
-      error?: string;
-    };
+  | { ok: false; reason: SteamBridgeFailure; error?: string };
 
 export async function setWorkshopSubscription(
   appId: number,
@@ -146,18 +146,15 @@ export async function setWorkshopSubscription(
     return { ok: false, reason: 'failed', error: 'Invalid appId or workshopId' };
   }
 
-  if (!(await isSteamRunning())) {
-    return { ok: false, reason: 'steam-not-running' };
-  }
-
-  if (!(isCefDebuggingEnabledInSettings() && (await isCefAvailable()))) {
-    return { ok: false, reason: 'cef-unavailable' };
+  const blocked = await ensureCefBridge();
+  if (blocked) {
+    return { ok: false, reason: blocked };
   }
 
   try {
     // Метод нічого не повертає — успіх тут означає лише «Steam прийняв команду»
     await evaluateInSharedJsContext(
-      `SteamClient.Apps.SubscribeWorkshopItem(${appId}, ${JSON.stringify(workshopId)}, ${subscribe})`
+      `SteamClient.Apps.SubscribeWorkshopItem(${appId}, ${jsLiteral(workshopId)}, ${subscribe})`
     );
     console.log(
       `[SteamWorkshop] ${subscribe ? 'Subscribed to' : 'Unsubscribed from'} ${workshopId} (app ${appId}) via CEF`

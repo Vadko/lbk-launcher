@@ -611,6 +611,22 @@ export class GamesRepository {
   }
 
   /**
+   * Steam App ID усіх ігор каталогу, для яких є переклад — незалежно від
+   * способу встановлення (Workshop чи архів). На відміну від
+   * `getWorkshopTargets`, який бере лише `kind = 'workshop'` (це рідкість —
+   * абсолютна більшість перекладів встановлюються архівом).
+   */
+  getTranslatedSteamAppIds(): number[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT steam_app_id FROM games
+         WHERE ${VISIBLE_GAMES_SQL} AND steam_app_id IS NOT NULL`
+      )
+      .all() as { steam_app_id: number }[];
+    return rows.map((row) => row.steam_app_id);
+  }
+
+  /**
    * Видалити гру
    */
   deleteGame(gameId: string): void {

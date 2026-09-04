@@ -12,8 +12,9 @@ import { getMachineId } from './tracking';
 interface SteamLibraryCache {
   steamId: string;
   appIds: number[];
-  licensecacheSize: number;
+  licensecacheSize: number | null;
   cachedAt: string;
+  source: 'cef' | 'api';
 }
 
 interface EdgeFunctionResponse {
@@ -48,13 +49,13 @@ export function readSteamLibraryCache(): SteamLibraryCache | null {
     if (
       !cache.steamId ||
       !Array.isArray(cache.appIds) ||
-      typeof cache.licensecacheSize !== 'number'
+      !(typeof cache.licensecacheSize === 'number' || cache.licensecacheSize === null)
     ) {
       console.log('[SteamLibraryAPI] Invalid cache structure, ignoring');
       return null;
     }
 
-    return cache;
+    return { ...cache, source: cache.source === 'cef' ? 'cef' : 'api' };
   } catch (error) {
     console.error('[SteamLibraryAPI] Error reading cache:', error);
     return null;

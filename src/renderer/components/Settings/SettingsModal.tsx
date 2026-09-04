@@ -2,7 +2,9 @@ import {
   BrushCleaning,
   FileText,
   FolderOpen,
+  Gamepad,
   Heart,
+  Library,
   MessageCircle,
   Play,
   RefreshCw,
@@ -13,6 +15,8 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
+import { plural } from '@/shared/plural';
+import type { SteamCollectionSyncFailure } from '@/shared/types';
 import { APP_VERSION } from '../../constants/appVersion';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
 import { useChangelogStore } from '../../store/useChangelogStore';
@@ -56,6 +60,26 @@ const SettingItem = React.memo<{
 ));
 
 SettingItem.displayName = 'SettingItem';
+
+function steamActionErrorMessage(
+  reason: SteamCollectionSyncFailure,
+  purpose: string
+): string {
+  switch (reason) {
+    case 'steam-not-running':
+      return 'Steam не запущено. Запустіть Steam і спробуйте ще раз.';
+    case 'cef-unavailable':
+      return `Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг ${purpose}.`;
+    case 'library-unavailable':
+      return 'Бібліотека Steam ще завантажується. Спробуйте за кілька секунд.';
+    case 'no-translated-games':
+      return 'У каталозі немає перекладів до ігор Steam. Якщо каталог ще синхронізується, спробуйте за хвилину.';
+    case 'no-matches':
+      return 'Серед ваших ігор у бібліотеці Steam немає жодної з перекладом.';
+    default:
+      return 'Спробуйте ще раз пізніше.';
+  }
+}
 
 export const SettingsModal: React.FC = () => {
   const { showModal } = useModalStore();
@@ -111,6 +135,8 @@ export const SettingsModal: React.FC = () => {
   const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
   const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
   const [isTranslationUnlocked, setIsTranslationUnlocked] = useState(false);
+  const [isSyncingSteamCollection, setIsSyncingSteamCollection] = useState(false);
+  const [isTogglingLbkShortcut, setIsTogglingLbkShortcut] = useState(false);
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -140,13 +166,80 @@ export const SettingsModal: React.FC = () => {
     window.electronAPI?.setSteamCustomArtwork(newValue).catch(console.error);
   };
 
+  const handleSyncSteamCollection = useCallback(async () => {
+    if (isSyncingSteamCollection) {
+      return;
+    }
+    setIsSyncingSteamCollection(true);
+    try {
+      const result = await window.electronAPI.syncSteamTranslatedCollection();
+      if (result.ok) {
+        showModal({
+          title: 'Колекція оновлена',
+          message:
+            result.total === 0
+              ? 'У колекції «З українізаторами» тепер немає ігор.'
+              : `У колекції «З українізаторами» тепер ${result.total} ${plural(result.total, 'гра', 'гри', 'ігор')}.`,
+          type: 'info',
+        });
+      } else {
+        showModal({
+          title: 'Не вдалося оновити колекцію',
+          message: steamActionErrorMessage(result.reason, 'керувати колекціями'),
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('[Settings] Steam collection sync failed:', error);
+      showModal({
+        title: 'Не вдалося оновити колекцію',
+        message: 'Сталася непередбачена помилка.',
+        type: 'error',
+      });
+    } finally {
+      setIsSyncingSteamCollection(false);
+    }
+  }, [showModal, isSyncingSteamCollection]);
+
+  const handleAddLbkToSteamLibrary = useCallback(async () => {
+    if (isTogglingLbkShortcut) {
+      return;
+    }
+    setIsTogglingLbkShortcut(true);
+    try {
+      const result = await window.electronAPI.addLbkLauncherToSteamLibrary();
+      if (result.ok) {
+        showModal({
+          title: 'Готово',
+          message: 'LBK Launcher додано в бібліотеку Steam.',
+          type: 'info',
+        });
+      } else {
+        showModal({
+          title: 'Не вдалося додати в Steam',
+          message: steamActionErrorMessage(result.reason, 'додати ярлик у бібліотеку'),
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('[Settings] Adding LBK to Steam library failed:', error);
+      showModal({
+        title: 'Сталася помилка',
+        message: 'Спробуйте ще раз пізніше.',
+        type: 'error',
+      });
+    } finally {
+      setIsTogglingLbkShortcut(false);
+    }
+  }, [showModal, isTogglingLbkShortcut]);
+
   const handleKurinSync = useCallback(async () => {
     closeSettingsModal();
     const syncedGameNames = await window.electronAPI?.syncKurinGames();
     if (syncedGameNames && syncedGameNames.length > 0) {
       showModal({
         title: 'Синхронізація завершена',
-        message: `Синхронізовано ${syncedGameNames.length} ${syncedGameNames.length === 1 ? 'гру' : 'ігор'}: ${syncedGameNames.join(', ')}`,
+        message: `Синхронізовано ${syncedGameNames.length} ${plural(syncedGameNames.length, 'гру', 'гри', 'ігор')}: ${syncedGameNames.join(', ')}`,
         type: 'info',
       });
     } else {
@@ -306,6 +399,7 @@ export const SettingsModal: React.FC = () => {
             enabled={steamCustomArtworkEnabled}
             onChange={handleToggleSteamCustomArtwork}
           />
+
           <SettingItem
             id="adult-games"
             title="Показувати ігри з порнографічним вмістом"
@@ -346,6 +440,27 @@ export const SettingsModal: React.FC = () => {
             onChange={toggleGamepadSounds}
           />
 
+          {/* Steam collection sync */}
+          <button
+            onClick={handleSyncSteamCollection}
+            aria-busy={isSyncingSteamCollection}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
+              <Library size={20} className="text-text-dark" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-semibold text-text-main">
+                Колекція «З українізаторами» в Steam
+              </h4>
+              <p className="text-xs text-text-muted">
+                {isSyncingSteamCollection
+                  ? 'Оновлення...'
+                  : 'Створити або оновити колекцію бібліотеки Steam з іграми, на які є переклад'}
+              </p>
+            </div>
+          </button>
+
           {/* Kurin sync */}
           <button
             onClick={handleKurinSync}
@@ -360,6 +475,25 @@ export const SettingsModal: React.FC = () => {
               </h4>
               <p className="text-xs text-text-muted">
                 Знайти встановлені ігри, додані через Kurin`, та імпортувати їх
+              </p>
+            </div>
+          </button>
+
+          {/* Add LBK Launcher itself as a non-Steam shortcut */}
+          <button
+            onClick={handleAddLbkToSteamLibrary}
+            aria-busy={isTogglingLbkShortcut}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
+          >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
+              <Gamepad size={20} className="text-text-dark" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="text-sm font-semibold text-text-main">
+                LBK Launcher в бібліотеці Steam
+              </h4>
+              <p className="text-xs text-text-muted">
+                {isTogglingLbkShortcut ? 'Додавання...' : 'Додати лаунчер як гру в Steam'}
               </p>
             </div>
           </button>

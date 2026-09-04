@@ -62,7 +62,9 @@ import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { removeAllSteamArtwork } from '../utils/steam-artwork';
+import { syncTranslatedGamesCollection } from '../utils/steam-collections';
 import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
+import { addLbkLauncherToSteamLibrary } from '../utils/steam-self-shortcut';
 import {
   installedWorkshopGameIds,
   isWorkshopItemDownloaded,
@@ -649,6 +651,17 @@ export function setupGamesHandlers(): void {
       await removeAllSteamArtwork();
     }
   });
+
+  // Створити/оновити Steam-колекцію з іграми з бібліотеки, на які є переклад
+  ipcMain.handle('sync-steam-translated-collection', async () => {
+    const appIds = GamesRepository.getInstance().getTranslatedSteamAppIds();
+    return syncTranslatedGamesCollection(appIds);
+  });
+
+  // Додати LBK Launcher як нестімову гру в бібліотеку Steam (для деки/Big Picture)
+  ipcMain.handle('add-lbk-launcher-to-steam-library', () =>
+    addLbkLauncherToSteamLibrary()
+  );
 
   // ---------------------------------------------------------------------------
   // Banner API handlers - all banner functionality consolidated here

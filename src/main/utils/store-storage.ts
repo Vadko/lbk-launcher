@@ -34,6 +34,11 @@ export function readRendererSetting<T>(field: string, defaultValue: T): T {
   return readPersistedStateField('lbk-settings', field, defaultValue);
 }
 
+/** Opt-out from Settings. Lives here so `steam-cef.ts` reads it cycle-free. */
+export function isCefDebuggingEnabledInSettings(): boolean {
+  return readRendererSetting('steamCefDebuggingEnabled', true);
+}
+
 const WORKSHOP_INSTALLS_KEY = 'workshop-installs-storage';
 
 export function getWorkshopInstalledGameIds(): string[] {
@@ -48,6 +53,20 @@ export function getWorkshopInstalledGameIds(): string[] {
 
 export function onWorkshopInstallsChanged(callback: () => void): () => void {
   return store.onDidChange(WORKSHOP_INSTALLS_KEY, callback);
+}
+
+export function readSteamAccountValue(key: string, accountId: string): unknown {
+  const all = store.get(key) as Record<string, unknown> | undefined;
+  return all?.[accountId];
+}
+
+export function writeSteamAccountValue(
+  key: string,
+  accountId: string,
+  value: unknown
+): void {
+  const all = (store.get(key) as Record<string, unknown> | undefined) ?? {};
+  store.set(key, { ...all, [accountId]: value });
 }
 
 /**

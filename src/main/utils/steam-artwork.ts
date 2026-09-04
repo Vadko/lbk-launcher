@@ -19,8 +19,11 @@ import * as path from 'node:path';
 import { app } from 'electron';
 import got from 'got';
 import { getSteamGridPath } from '@/main/game-detector/steam';
-import { isCefDebuggingEnabledInSettings } from '@/main/utils/cef-flag-file';
-import { evaluateInSharedJsContext, isCefAvailable } from '@/main/utils/steam-cef';
+import {
+  evaluateInSharedJsContext,
+  isCefUsable,
+  jsLiteral,
+} from '@/main/utils/steam-cef';
 import { readRendererSetting } from '@/main/utils/store-storage';
 import { getMainWindow } from '@/main/window';
 
@@ -34,7 +37,7 @@ type SteamImageExtension = 'jpg' | 'png';
 const STEAM_EXTENSIONS: SteamImageExtension[] = ['jpg', 'png'];
 
 /** The three slots we have artwork for. `header` has no filename suffix. */
-const ARTWORK_SLOTS = [
+export const ARTWORK_SLOTS = [
   { key: 'header', assetType: 3, suffix: '' },
   { key: 'hero', assetType: 1, suffix: '_hero' },
   { key: 'logo', assetType: 2, suffix: '_logo' },
@@ -222,7 +225,7 @@ async function transcodeToPng(
   const dataUrl = `data:image/${sourceFormat};base64,${bytes.toString('base64')}`;
   const script = `(async () => {
     const img = new Image();
-    img.src = ${JSON.stringify(dataUrl)};
+    img.src = ${jsLiteral(dataUrl)};
     await img.decode();
     const canvas = document.createElement('canvas');
     canvas.width = img.naturalWidth;
@@ -348,26 +351,58 @@ function displaceExistingArtwork(
   }
 }
 
-/** CDP-quote helper for embedding values into an evaluated JS expression. */
-function jsString(value: string): string {
-  return JSON.stringify(value);
+function artworkFileName(appId: number, suffix: string, extension: string): string {
+  return `${appId}${suffix}.${extension}`;
 }
 
-async function applyViaCef(appId: number, asset: PreparedAsset): Promise<void> {
-  await evaluateInSharedJsContext(
-    `SteamClient.Apps.SetCustomArtworkForApp(${appId}, ${jsString(
-      asset.bytes.toString('base64')
-    )}, ${jsString(asset.extension)}, ${asset.slot.assetType})`
-  );
+interface ArtworkSlotWrite {
+  appId: number;
+  assetType: number;
+  suffix: string;
+  extension: string;
+  bytes: Buffer;
+  gridDir: string | null;
+  cefUsable: boolean;
+  label: string;
 }
 
-function applyViaFile(gridDir: string, appId: number, asset: PreparedAsset): void {
-  fs.mkdirSync(gridDir, { recursive: true });
-  const target = path.join(gridDir, `${appId}${asset.slot.suffix}.${asset.extension}`);
-  // Write beside the target then rename, so Steam can't read a half-written image.
-  const tmp = `${target}.lbk.tmp`;
-  fs.writeFileSync(tmp, asset.bytes);
-  fs.renameSync(tmp, target);
+export async function applyArtworkSlot(
+  write: ArtworkSlotWrite
+): Promise<'cef' | 'file' | null> {
+  if (write.cefUsable) {
+    try {
+      await evaluateInSharedJsContext(
+        `SteamClient.Apps.SetCustomArtworkForApp(${write.appId}, ${jsLiteral(
+          write.bytes.toString('base64')
+        )}, ${jsLiteral(write.extension)}, ${write.assetType})`
+      );
+      return 'cef';
+    } catch (error) {
+      console.warn(
+        `[SteamArtwork] CEF apply failed for ${write.label}, writing file instead:`,
+        error
+      );
+    }
+  }
+
+  if (!write.gridDir) {
+    return null;
+  }
+  try {
+    fs.mkdirSync(write.gridDir, { recursive: true });
+    const target = path.join(
+      write.gridDir,
+      artworkFileName(write.appId, write.suffix, write.extension)
+    );
+    // Write beside the target then rename, so Steam can't read a half-written image.
+    const tmp = `${target}.lbk.tmp`;
+    fs.writeFileSync(tmp, write.bytes);
+    fs.renameSync(tmp, target);
+    return 'file';
+  } catch (error) {
+    console.warn(`[SteamArtwork] Failed to apply ${write.label}:`, error);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -431,39 +466,29 @@ export async function applySteamArtwork(
     (entry) => !refreshedTypes.has(entry.assetType) && isStillOurs(gridDir, entry)
   );
 
-  const cefUsable = isCefDebuggingEnabledInSettings() && (await isCefAvailable());
+  const cefUsable = await isCefUsable();
   const installed: ArtworkSlotKey[] = [];
   let anyViaFile = false;
 
   for (const asset of prepared) {
-    let applied = false;
-
-    if (cefUsable) {
-      try {
-        await applyViaCef(params.appId, asset);
-        applied = true;
-      } catch (error) {
-        // Multi-megabyte base64 can blow the CDP eval timeout; the file path can't.
-        console.warn(
-          `[SteamArtwork] CEF apply failed for ${asset.slot.key}, writing file instead:`,
-          error
-        );
-      }
-    }
-
-    if (!applied) {
-      try {
-        applyViaFile(gridDir, params.appId, asset);
-        applied = true;
-        anyViaFile = true;
-      } catch (error) {
-        console.warn(`[SteamArtwork] Failed to apply ${asset.slot.key}:`, error);
-      }
+    const mode = await applyArtworkSlot({
+      appId: params.appId,
+      assetType: asset.slot.assetType,
+      suffix: asset.slot.suffix,
+      extension: asset.extension,
+      bytes: asset.bytes,
+      gridDir,
+      cefUsable,
+      label: asset.slot.key,
+    });
+    const applied = mode !== null;
+    if (mode === 'file') {
+      anyViaFile = true;
     }
 
     if (applied) {
       written.push({
-        name: `${params.appId}${asset.slot.suffix}.${asset.extension}`,
+        name: artworkFileName(params.appId, asset.slot.suffix, asset.extension),
         hash: sha256(asset.bytes),
         assetType: asset.slot.assetType,
       });
@@ -501,7 +526,7 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
     return false;
   }
 
-  const cefUsable = isCefDebuggingEnabledInSettings() && (await isCefAvailable());
+  const cefUsable = await isCefUsable();
 
   for (const entry of record.written) {
     const fullPath = path.join(gridDir, entry.name);

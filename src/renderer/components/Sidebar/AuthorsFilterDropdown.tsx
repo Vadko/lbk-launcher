@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Search, Users, X } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { plural } from '@/shared/plural';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 
 interface AuthorsFilterDropdownProps {
@@ -27,7 +28,7 @@ export const AuthorsFilterDropdown: React.FC<AuthorsFilterDropdownProps> = React
       if (selectedAuthors.length === 1) {
         return selectedAuthors[0];
       }
-      return `${selectedAuthors.length} авторів`;
+      return `${selectedAuthors.length} ${plural(selectedAuthors.length, 'автор', 'автори', 'авторів')}`;
     }, [selectedAuthors]);
 
     const hasActiveFilter = selectedAuthors.length > 0;
