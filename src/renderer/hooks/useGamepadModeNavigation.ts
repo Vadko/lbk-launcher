@@ -280,24 +280,11 @@ export function useGamepadModeNavigation(enabled = true) {
         return true;
       });
 
-      // Sort: inputs/checkboxes first (in DOM order), then buttons in DOM order
-      const focusableElements = [...allFocusable].sort((a, b) => {
-        const aIsInput =
-          a.tagName === 'INPUT' || a.tagName === 'SELECT' || a.tagName === 'TEXTAREA';
-        const bIsInput =
-          b.tagName === 'INPUT' || b.tagName === 'SELECT' || b.tagName === 'TEXTAREA';
-
-        // Inputs/checkboxes come first
-        if (aIsInput && !bIsInput) {
-          return -1;
-        }
-        if (!aIsInput && bIsInput) {
-          return 1;
-        }
-
-        // Keep DOM order for buttons
-        return 0;
-      });
+      // Natural DOM order - matches the modal's visual/reading order. An
+      // earlier "inputs always first" sort put search fields ahead of
+      // whatever else was on screen regardless of where they actually sit,
+      // which made the very first focus landing spot unpredictable.
+      const focusableElements = allFocusable;
 
       if (focusableElements.length === 0) {
         return;
@@ -326,21 +313,44 @@ export function useGamepadModeNavigation(enabled = true) {
       // 2nd B = blur input + close modal
       // Use pressed (not justPressed) because Steam Deck keyboard consumes
       // the first B press to close itself.
+      // A modal with several independent inputs/fields (not one dominant
+      // textarea) opts out via data-gamepad-keep-open-on-blur - there, B just
+      // blurs and lets the user keep navigating instead of losing the modal.
       if (isInputActive && gp.buttons[BUTTON.B]?.pressed && canInput('modal-button-b')) {
         playBackSound();
+        const keepOpenOnBlur = !!modal.querySelector('[data-gamepad-keep-open-on-blur]');
         activeElement.blur();
-        // Immediately close the modal after blurring (combine two actions into one B press)
-        const cancelButton = modal.querySelector<HTMLButtonElement>(
-          '[data-gamepad-cancel]'
-        );
-        if (cancelButton) {
-          cancelButton.click();
+        if (keepOpenOnBlur) {
+          // Land back on the same field (now unfocused) instead of falling
+          // through to the currentIndex===-1 case above, which would jump
+          // back to the very first element in the modal.
+          setGamepadSelected(activeElement);
+        } else {
+          // Immediately close the modal after blurring (combine two actions into one B press)
+          const cancelButton = modal.querySelector<HTMLButtonElement>(
+            '[data-gamepad-cancel]'
+          );
+          if (cancelButton) {
+            cancelButton.click();
+          }
         }
         return;
       }
 
-      // B button - cancel/close modal (no input focused)
+      // B button - cancel/close modal (no input focused). A "drilled into" sub-list
+      // (e.g. picking one author out of a list stop) registers a hidden
+      // data-gamepad-drill-back button - B steps back out of that instead of
+      // closing the whole modal when one is present.
       if (gp.buttons[BUTTON.B]?.pressed && canInput('modal-button-b')) {
+        const drillBack = modal.querySelector<HTMLButtonElement>(
+          '[data-gamepad-drill-back]'
+        );
+        if (drillBack) {
+          playBackSound();
+          drillBack.click();
+          return;
+        }
+
         const cancelButton = modal.querySelector<HTMLButtonElement>(
           '[data-gamepad-cancel]'
         );

@@ -34,7 +34,7 @@ export const FilterPillGroup: React.FC<FilterPillGroupProps> = ({
           <span>{option.label}</span>
           {option.count !== undefined && (
             <span
-              className={`text-xs leading-4 ${selected ? 'text-color-main' : 'text-text-muted'}`}
+              className={`bg-glass px-1.5 py-0.5 rounded-lg text-xs leading-4 ${selected ? 'text-color-main' : 'text-text-muted'}`}
             >
               {option.count}
             </span>
