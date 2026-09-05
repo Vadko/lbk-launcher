@@ -859,33 +859,34 @@ export function useGamepadModeNavigation(enabled = true) {
   const handleGamesNavigation = useCallback(
     (gp: Gamepad) => {
       const totalCards = getTotalGameCards();
-      if (totalCards === 0) {
-        return;
-      }
 
-      // Left/Right - navigate between games
-      const leftPressed =
-        (gp.buttons[BUTTON.DPAD_LEFT]?.pressed && canInput('games-left')) ||
-        (gp.axes[AXIS.LEFT_X] < -DEADZONE && canInput('games-stick-left'));
-      const rightPressed =
-        (gp.buttons[BUTTON.DPAD_RIGHT]?.pressed && canInput('games-right')) ||
-        (gp.axes[AXIS.LEFT_X] > DEADZONE && canInput('games-stick-right'));
+      // An empty filtered list must not swallow input entirely - Up/Down/Y
+      // below need to keep working so the user can navigate back out.
+      if (totalCards > 0) {
+        // Left/Right - navigate between games
+        const leftPressed =
+          (gp.buttons[BUTTON.DPAD_LEFT]?.pressed && canInput('games-left')) ||
+          (gp.axes[AXIS.LEFT_X] < -DEADZONE && canInput('games-stick-left'));
+        const rightPressed =
+          (gp.buttons[BUTTON.DPAD_RIGHT]?.pressed && canInput('games-right')) ||
+          (gp.axes[AXIS.LEFT_X] > DEADZONE && canInput('games-stick-right'));
 
-      // Індекс міг лишитись поза межами після звуження списку фільтром —
-      // клампимо, інакше left/A мовчки впираються в bounds check navigateToGame
-      const currentIndex = Math.min(focusedGameIndex, totalCards - 1);
+        // Індекс міг лишитись поза межами після звуження списку фільтром —
+        // клампимо, інакше left/A мовчки впираються в bounds check navigateToGame
+        const currentIndex = Math.min(focusedGameIndex, totalCards - 1);
 
-      if (leftPressed) {
-        const newIndex = Math.max(0, currentIndex - 1);
-        if (newIndex !== focusedGameIndex) {
-          navigateToGame(newIndex);
+        if (leftPressed) {
+          const newIndex = Math.max(0, currentIndex - 1);
+          if (newIndex !== focusedGameIndex) {
+            navigateToGame(newIndex);
+          }
         }
-      }
 
-      if (rightPressed) {
-        const newIndex = Math.min(totalCards - 1, currentIndex + 1);
-        if (newIndex !== focusedGameIndex) {
-          navigateToGame(newIndex);
+        if (rightPressed) {
+          const newIndex = Math.min(totalCards - 1, currentIndex + 1);
+          if (newIndex !== focusedGameIndex) {
+            navigateToGame(newIndex);
+          }
         }
       }
 
