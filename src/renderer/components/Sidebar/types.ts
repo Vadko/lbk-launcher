@@ -61,6 +61,16 @@ export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
   { label: 'Встановлено з Xbox app', value: 'installed-xbox-games' },
 ];
 
+// Same field as SPECIAL_FILTER_OPTIONS, minus the two options exposed as
+// standalone quick-filter buttons on the sidebar panel (favorites, installed
+// translations) - shown in the filters modal's "Бібліотека" section instead.
+export const LIBRARY_FILTER_OPTIONS: SpecialFilterOption[] =
+  SPECIAL_FILTER_OPTIONS.filter(
+    (option) =>
+      option.value !== 'favorite-translations' &&
+      option.value !== 'installed-translations'
+  );
+
 // Content-type options (multi-select, AND'ed together - e.g. can require both)
 export const CONTENT_TYPE_OPTIONS: ContentTypeFilterOption[] = [
   { label: 'З перекладом досягнень', value: 'with-achievements' },
