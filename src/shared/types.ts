@@ -164,14 +164,59 @@ export interface TagOption {
   count: number;
 }
 
-export interface FilterCountsResult {
-  planned: number;
-  'in-progress': number;
-  completed: number;
-  'tech-improvement': number;
-  'with-achievements': number;
-  'with-voice': number;
-  'from-workshop': number;
+// Content-type filters - multi-select, combined with AND (both can be selected at once)
+export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
+
+// Special filters that are single-select (library/ownership source - mutually exclusive)
+export type SpecialFilterType =
+  | 'installed-translations'
+  | 'installed-games'
+  | 'available-in-steam'
+  | 'owned-gog-games'
+  | 'owned-epic-games'
+  | 'installed-xbox-games'
+  | 'favorite-translations';
+
+/**
+ * Input for faceted (real e-commerce style) filter counts: the current staged
+ * filter selection plus the raw system/library data needed to resolve the
+ * 7 special-filter membership sets - resolved client-side the same way the
+ * game list itself resolves them (see useGames.ts), since favorites/installed
+ * translations/Steam-GOG-Epic-Xbox libraries aren't SQL-native concepts.
+ */
+export interface FacetedFilterCountsRequest {
+  searchQuery?: string;
+  statuses?: string[];
+  authors?: string[];
+  tagIds?: number[];
+  contentTypes?: ContentTypeFilterType[];
+  specialFilter?: SpecialFilterType | null;
+  hideAiTranslations?: boolean;
+  /** Full author list (e.g. getUniqueAuthors()/the already-loaded `authors` prop) to compute per-author counts against. */
+  knownAuthors: string[];
+
+  favoriteGameIds: string[];
+  installedTranslationGameIds: string[];
+  installedGamePaths: string[];
+  steamLibraryAppIds: number[];
+  gogTitles: string[];
+  epicTitles: string[];
+  xboxFolderNames: string[];
+}
+
+export interface FacetOptionCount {
+  /** Resulting count if this option is the only active value in its group, combined with every other active filter. */
+  total: number;
+  /** How many games this option would ADD to the currently visible list if also selected (OR-groups only). */
+  added: number;
+}
+
+export interface FacetedFilterCounts {
+  statuses: Record<string, FacetOptionCount>;
+  tags: Record<number, FacetOptionCount>;
+  authors: Record<string, FacetOptionCount>;
+  contentTypes: Record<ContentTypeFilterType, number>;
+  specialFilters: Record<SpecialFilterType, number>;
 }
 
 export interface DetectedGameInfo {
@@ -212,7 +257,9 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
-  fetchFilterCounts: () => Promise<FilterCountsResult>;
+  fetchFacetedFilterCounts: (
+    request: FacetedFilterCountsRequest
+  ) => Promise<FacetedFilterCounts>;
   fetchTrendingGames: (
     days?: number,
     limit?: number

@@ -1,5 +1,6 @@
 import type {
-  FilterCountsResult,
+  FacetedFilterCounts,
+  FacetedFilterCountsRequest,
   Game,
   GetGamesParams,
   GetGamesResult,
@@ -80,19 +81,27 @@ export function fetchTeams(): string[] {
   }
 }
 
-export function fetchFilterCounts(): FilterCountsResult {
+export function fetchFacetedFilterCounts(
+  request: FacetedFilterCountsRequest
+): FacetedFilterCounts {
   try {
-    return gamesRepo.getFilterCounts();
+    return gamesRepo.getFacetedFilterCounts(request);
   } catch (error) {
-    console.error('[API] Error fetching filter counts:', error);
+    console.error('[API] Error fetching faceted filter counts:', error);
     return {
-      planned: 0,
-      'in-progress': 0,
-      completed: 0,
-      'tech-improvement': 0,
-      'with-achievements': 0,
-      'with-voice': 0,
-      'from-workshop': 0,
+      statuses: {},
+      tags: {},
+      authors: {},
+      contentTypes: { 'with-achievements': 0, 'with-voice': 0, 'from-workshop': 0 },
+      specialFilters: {
+        'favorite-translations': 0,
+        'installed-translations': 0,
+        'installed-games': 0,
+        'available-in-steam': 0,
+        'owned-gog-games': 0,
+        'owned-epic-games': 0,
+        'installed-xbox-games': 0,
+      },
     };
   }
 }

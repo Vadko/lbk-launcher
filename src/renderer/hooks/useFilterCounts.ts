@@ -1,43 +1,60 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FilterCountsResult } from '../../shared/types';
+import type { FacetedFilterCounts, FacetedFilterCountsRequest } from '../../shared/types';
+import type {
+  ContentTypeFilterType,
+  SpecialFilterType,
+} from '../components/Sidebar/types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
 import { allInstalledTranslationIds } from './useInstalledTranslations';
 
-export type FilterCounts = FilterCountsResult & {
-  'favorite-translations': number;
-  'installed-translations': number;
-  'installed-games': number;
-  'available-in-steam': number;
-  'owned-gog-games': number;
-  'owned-epic-games': number;
-  'installed-xbox-games': number;
-};
+interface UseFilterCountsParams {
+  selectedStatuses?: string[];
+  selectedAuthors?: string[];
+  selectedTagIds?: number[];
+  specialFilter?: SpecialFilterType | null;
+  selectedContentTypes?: ContentTypeFilterType[];
+  searchQuery?: string;
+  hideAiTranslations?: boolean;
+  /** Full author list to compute per-author counts against. */
+  authors: string[];
+  /** Only fetch while the filters modal is actually open - counts aren't shown otherwise. */
+  enabled: boolean;
+}
 
-const INITIAL_COUNTS: FilterCounts = {
-  'favorite-translations': 0,
-  'installed-translations': 0,
-  'installed-games': 0,
-  'available-in-steam': 0,
-  'owned-gog-games': 0,
-  'owned-epic-games': 0,
-  'installed-xbox-games': 0,
-  'with-achievements': 0,
-  'with-voice': 0,
-  'from-workshop': 0,
-  planned: 0,
-  'in-progress': 0,
-  completed: 0,
-  'tech-improvement': 0,
+const EMPTY_COUNTS: FacetedFilterCounts = {
+  statuses: {},
+  tags: {},
+  authors: {},
+  contentTypes: { 'with-achievements': 0, 'with-voice': 0, 'from-workshop': 0 },
+  specialFilters: {
+    'favorite-translations': 0,
+    'installed-translations': 0,
+    'installed-games': 0,
+    'available-in-steam': 0,
+    'owned-gog-games': 0,
+    'owned-epic-games': 0,
+    'installed-xbox-games': 0,
+  },
 };
 
 const DEBOUNCE_DELAY = 300;
 
-export function useFilterCounts() {
+export function useFilterCounts({
+  selectedStatuses,
+  selectedAuthors,
+  selectedTagIds,
+  specialFilter,
+  selectedContentTypes,
+  searchQuery,
+  hideAiTranslations,
+  authors,
+  enabled,
+}: UseFilterCountsParams) {
   const syncStatus = useStore((state) => state.syncStatus);
   const favoriteGameIds = useSettingsStore((state) => state.favoriteGameIds);
-  const [counts, setCounts] = useState<FilterCounts>(INITIAL_COUNTS);
+  const [counts, setCounts] = useState<FacetedFilterCounts>(EMPTY_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
@@ -45,15 +62,13 @@ export function useFilterCounts() {
   const fetchCounts = useCallback(async () => {
     try {
       const [
-        sqlCounts,
-        installedIds,
-        installedPaths,
+        installedTranslationGameIds,
+        installedGamePaths,
         steamLibraryAppIds,
         gogTitles,
         epicTitles,
         xboxFolderNames,
       ] = await Promise.all([
-        window.electronAPI.fetchFilterCounts(),
         allInstalledTranslationIds(),
         window.electronAPI.getAllInstalledGamePaths(),
         window.electronAPI.getSteamLibraryAppIds(),
@@ -66,44 +81,31 @@ export function useFilterCounts() {
         return;
       }
 
-      const [
-        installedGamesResult,
-        steamLibraryCount,
-        gogLibraryResult,
-        epicLibraryResult,
-        xboxLibraryResult,
-      ] = await Promise.all([
-        installedPaths.length > 0
-          ? window.electronAPI.findGamesByInstallPaths(installedPaths)
-          : Promise.resolve({ games: [], total: 0, uniqueCount: 0 }),
-        steamLibraryAppIds.length > 0
-          ? window.electronAPI.countGamesBySteamAppIds(steamLibraryAppIds)
-          : Promise.resolve(0),
-        gogTitles.length > 0
-          ? window.electronAPI.findGamesByTitles(gogTitles)
-          : Promise.resolve({ games: [], total: 0 }),
-        epicTitles.length > 0
-          ? window.electronAPI.findGamesByTitles(epicTitles)
-          : Promise.resolve({ games: [], total: 0 }),
-        xboxFolderNames.length > 0
-          ? window.electronAPI.findGamesByXboxPaths(xboxFolderNames)
-          : Promise.resolve({ games: [], total: 0 }),
-      ]);
+      const request: FacetedFilterCountsRequest = {
+        searchQuery,
+        statuses: selectedStatuses,
+        authors: selectedAuthors,
+        tagIds: selectedTagIds,
+        contentTypes: selectedContentTypes,
+        specialFilter,
+        hideAiTranslations,
+        knownAuthors: authors,
+        favoriteGameIds,
+        installedTranslationGameIds,
+        installedGamePaths,
+        steamLibraryAppIds,
+        gogTitles,
+        epicTitles,
+        xboxFolderNames,
+      };
+
+      const result = await window.electronAPI.fetchFacetedFilterCounts(request);
 
       if (!isMountedRef.current) {
         return;
       }
 
-      setCounts((prevCounts) => ({
-        ...sqlCounts,
-        'favorite-translations': prevCounts['favorite-translations'], // Will be updated separately
-        'installed-translations': installedIds.length,
-        'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
-        'available-in-steam': steamLibraryCount,
-        'owned-gog-games': gogLibraryResult.total,
-        'owned-epic-games': epicLibraryResult.total,
-        'installed-xbox-games': xboxLibraryResult.total,
-      }));
+      setCounts(result);
     } catch (err) {
       console.error('[useFilterCounts] Error:', err);
     } finally {
@@ -111,7 +113,17 @@ export function useFilterCounts() {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [
+    searchQuery,
+    selectedStatuses,
+    selectedAuthors,
+    selectedTagIds,
+    selectedContentTypes,
+    specialFilter,
+    hideAiTranslations,
+    authors,
+    favoriteGameIds,
+  ]);
 
   const debouncedFetchCounts = useCallback(() => {
     if (debounceTimerRef.current) {
@@ -120,24 +132,16 @@ export function useFilterCounts() {
     debounceTimerRef.current = setTimeout(fetchCounts, DEBOUNCE_DELAY);
   }, [fetchCounts]);
 
-  // Update favorite translations count separately when favoriteGameIds changes
-  useEffect(() => {
-    setCounts((prevCounts) => ({
-      ...prevCounts,
-      'favorite-translations': favoriteGameIds.length,
-    }));
-  }, [favoriteGameIds]);
-
   useEffect(() => {
     isMountedRef.current = true;
 
-    if (syncStatus !== 'ready' && syncStatus !== 'error') {
+    if (!enabled || (syncStatus !== 'ready' && syncStatus !== 'error')) {
       return () => {
         isMountedRef.current = false;
       };
     }
 
-    fetchCounts();
+    debouncedFetchCounts();
 
     // [DEV ONLY] Listen for test games updates
     const handleTestGamesUpdate = () => debouncedFetchCounts();
@@ -161,7 +165,7 @@ export function useFilterCounts() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [fetchCounts, debouncedFetchCounts, syncStatus]);
+  }, [enabled, syncStatus, debouncedFetchCounts]);
 
   return { counts, isLoading, refetch: fetchCounts };
 }

@@ -1,8 +1,12 @@
 import type { Database } from '../../../lib/database.types';
-import type { SortOrderType } from '../../../shared/types';
+import type {
+  ContentTypeFilterType,
+  SortOrderType,
+  SpecialFilterType,
+} from '../../../shared/types';
 import type { Game } from '../../types/game';
 
-export type { SortOrderType };
+export type { ContentTypeFilterType, SortOrderType, SpecialFilterType };
 
 export interface GameGroup {
   key: string;
@@ -13,19 +17,6 @@ export interface GameGroup {
 
 // Status type for multi-select filter
 type StatusType = Database['public']['Enums']['game_status'];
-
-// Special filters that are single-select (library/ownership source - mutually exclusive)
-export type SpecialFilterType =
-  | 'installed-translations'
-  | 'installed-games'
-  | 'available-in-steam'
-  | 'owned-gog-games'
-  | 'owned-epic-games'
-  | 'installed-xbox-games'
-  | 'favorite-translations';
-
-// Content-type filters - multi-select, combined with AND (both can be selected at once)
-export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
 
 interface StatusFilterOption {
   label: string;

@@ -4,10 +4,15 @@ import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
 import { buildFtsQuery, stripApostrophes } from '../../shared/search-utils';
 import type {
+  ContentTypeFilterType,
+  FacetedFilterCounts,
+  FacetedFilterCountsRequest,
+  FacetOptionCount,
   Game,
   GetGamesParams,
   GetGamesResult,
   SortOrderType,
+  SpecialFilterType,
   TagOption,
 } from '../../shared/types';
 import { normalizeInstalledFolder } from '../utils/install-path';
@@ -20,6 +25,12 @@ import {
   upsertGamesTransaction,
   VISIBLE_GAMES_SQL,
 } from './db-queries';
+
+type SqlFragment = { clause: string; params: (string | number)[] } | null;
+
+function escapeLikeValue(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&');
+}
 
 /**
  * Repository для роботи з іграми в локальній базі даних
@@ -688,51 +699,459 @@ export class GamesRepository {
       .all() as TagOption[];
   }
 
-  /**
-   * Отримати лічильники для фільтрів (ефективний SQL запит з агрегацією)
-   * Рахує унікальні ігри за slug (або id якщо slug відсутній),
-   * щоб не дублювати ігри з кількома перекладами
-   */
-  getFilterCounts(): {
-    planned: number;
-    'in-progress': number;
-    completed: number;
-    'tech-improvement': number;
-    'with-achievements': number;
-    'with-voice': number;
-    'from-workshop': number;
-  } {
-    const stmt = this.db.prepare(`
-      SELECT
-        COUNT(DISTINCT CASE WHEN status = 'planned' THEN COALESCE(slug, id) END) as planned,
-        COUNT(DISTINCT CASE WHEN status = 'in-progress' THEN COALESCE(slug, id) END) as in_progress,
-        COUNT(DISTINCT CASE WHEN status = 'completed' THEN COALESCE(slug, id) END) as completed,
-        COUNT(DISTINCT CASE WHEN status = 'tech-improvement' THEN COALESCE(slug, id) END) as tech_improvement,
-        COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
-        COUNT(DISTINCT CASE WHEN (voice_archive_path IS NOT NULL AND voice_archive_path != '') OR voice_progress IS NOT NULL THEN COALESCE(slug, id) END) as with_voice,
-        COUNT(DISTINCT CASE WHEN kind = 'workshop' THEN COALESCE(slug, id) END) as from_workshop
-      FROM games
-      WHERE ${VISIBLE_GAMES_SQL}
-    `);
+  private static readonly STATUS_VALUES = [
+    'planned',
+    'in-progress',
+    'completed',
+    'tech-improvement',
+  ] as const;
 
-    const row = stmt.get() as {
-      planned: number;
-      in_progress: number;
-      completed: number;
-      tech_improvement: number;
-      with_achievements: number;
-      with_voice: number;
-      from_workshop: number;
+  private static readonly CONTENT_TYPES: ContentTypeFilterType[] = [
+    'with-achievements',
+    'with-voice',
+    'from-workshop',
+  ];
+
+  private static readonly CONTENT_TYPE_PREDICATES: Record<ContentTypeFilterType, string> =
+    {
+      'with-achievements': `(achievements_archive_path IS NOT NULL AND achievements_archive_path != '')`,
+      'with-voice': `((voice_archive_path IS NOT NULL AND voice_archive_path != '') OR voice_progress IS NOT NULL)`,
+      'from-workshop': `(kind = 'workshop')`,
     };
 
+  private buildFacetSearchFragment(searchQuery?: string): SqlFragment {
+    if (!searchQuery) {
+      return null;
+    }
+    const trimmed = searchQuery.trim();
+    if (trimmed.length >= 2) {
+      const ftsQuery = buildFtsQuery(searchQuery);
+      if (ftsQuery) {
+        return {
+          clause: 'id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)',
+          params: [ftsQuery],
+        };
+      }
+      return { clause: 'name LIKE ?', params: [`%${trimmed}%`] };
+    }
+    if (trimmed.length === 1) {
+      return { clause: 'name LIKE ?', params: [`${trimmed}%`] };
+    }
+    return null;
+  }
+
+  private buildFacetStatusFragment(statuses: string[]): SqlFragment {
+    if (statuses.length === 0) {
+      return null;
+    }
     return {
-      planned: row.planned || 0,
-      'in-progress': row.in_progress || 0,
-      completed: row.completed || 0,
-      'tech-improvement': row.tech_improvement || 0,
-      'with-achievements': row.with_achievements || 0,
-      'with-voice': row.with_voice || 0,
-      'from-workshop': row.from_workshop || 0,
+      clause: `status IN (${statuses.map(() => '?').join(', ')})`,
+      params: statuses,
+    };
+  }
+
+  private buildFacetTagsFragment(tagIds: number[]): SqlFragment {
+    if (tagIds.length === 0) {
+      return null;
+    }
+    return {
+      clause: `EXISTS (SELECT 1 FROM json_each(games.steam_tag_ids) WHERE json_each.value IN (${tagIds
+        .map(() => '?')
+        .join(', ')}))`,
+      params: tagIds,
+    };
+  }
+
+  private buildFacetAuthorsFragment(authors: string[]): SqlFragment {
+    if (authors.length === 0) {
+      return null;
+    }
+    return {
+      clause: `(${authors.map(() => `team LIKE ? ESCAPE '\\'`).join(' OR ')})`,
+      params: authors.map((author) => `%${escapeLikeValue(author)}%`),
+    };
+  }
+
+  private buildFacetContentTypeFragment(types: ContentTypeFilterType[]): SqlFragment {
+    if (types.length === 0) {
+      return null;
+    }
+    return {
+      clause: types
+        .map((type) => GamesRepository.CONTENT_TYPE_PREDICATES[type])
+        .join(' AND '),
+      params: [],
+    };
+  }
+
+  private mergeFacetFragments(
+    conditions: string[],
+    params: (string | number)[],
+    fragments: SqlFragment[]
+  ): { conditions: string[]; params: (string | number)[] } {
+    const outConditions = [...conditions];
+    const outParams = [...params];
+    for (const fragment of fragments) {
+      if (fragment) {
+        outConditions.push(fragment.clause);
+        outParams.push(...fragment.params);
+      }
+    }
+    return { conditions: outConditions, params: outParams };
+  }
+
+  private getStatusFacetCounts(
+    baseConditions: string[],
+    baseParams: (string | number)[],
+    currentStatuses: string[],
+    otherFragments: SqlFragment[]
+  ): Record<string, FacetOptionCount> {
+    const { conditions, params } = this.mergeFacetFragments(
+      baseConditions,
+      baseParams,
+      otherFragments
+    );
+
+    const selectSql: string[] = [];
+    const selectParams: (string | number)[] = [];
+
+    for (const status of GamesRepository.STATUS_VALUES) {
+      const alias = status.replace(/-/g, '_');
+      selectSql.push(
+        `COUNT(DISTINCT CASE WHEN status = ? THEN COALESCE(slug, id) END) AS total_${alias}`
+      );
+      selectParams.push(status);
+
+      if (currentStatuses.length > 0) {
+        selectSql.push(
+          `COUNT(DISTINCT CASE WHEN status = ? AND status NOT IN (${currentStatuses
+            .map(() => '?')
+            .join(', ')}) THEN COALESCE(slug, id) END) AS added_${alias}`
+        );
+        selectParams.push(status, ...currentStatuses);
+      } else {
+        selectSql.push(
+          `COUNT(DISTINCT CASE WHEN status = ? THEN COALESCE(slug, id) END) AS added_${alias}`
+        );
+        selectParams.push(status);
+      }
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT ${selectSql.join(', ')}
+      FROM games
+      WHERE ${conditions.join(' AND ')}
+    `);
+
+    const row = stmt.get(...selectParams, ...params) as Record<string, number>;
+
+    const result: Record<string, FacetOptionCount> = {};
+    for (const status of GamesRepository.STATUS_VALUES) {
+      const alias = status.replace(/-/g, '_');
+      result[status] = {
+        total: row[`total_${alias}`] || 0,
+        added: row[`added_${alias}`] || 0,
+      };
+    }
+    return result;
+  }
+
+  private getTagsFacetCounts(
+    baseConditions: string[],
+    baseParams: (string | number)[],
+    currentTagIds: number[],
+    otherFragments: SqlFragment[]
+  ): Record<number, FacetOptionCount> {
+    const { conditions, params } = this.mergeFacetFragments(
+      baseConditions,
+      baseParams,
+      otherFragments
+    );
+
+    const addedExpr =
+      currentTagIds.length > 0
+        ? `COUNT(DISTINCT CASE WHEN NOT EXISTS (
+             SELECT 1 FROM json_each(games.steam_tag_ids) je2
+             WHERE je2.value IN (${currentTagIds.map(() => '?').join(', ')})
+           ) THEN COALESCE(games.slug, games.id) END) AS added`
+        : `COUNT(DISTINCT COALESCE(games.slug, games.id)) AS added`;
+
+    const stmt = this.db.prepare(`
+      SELECT t.tagid AS tagid,
+        COUNT(DISTINCT COALESCE(games.slug, games.id)) AS total,
+        ${addedExpr}
+      FROM games
+      JOIN json_each(games.steam_tag_ids) je ON 1=1
+      JOIN steam_tag_names t ON t.tagid = je.value
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY t.tagid
+    `);
+
+    const allParams =
+      currentTagIds.length > 0 ? [...currentTagIds, ...params] : [...params];
+    const rows = stmt.all(...allParams) as {
+      tagid: number;
+      total: number;
+      added: number;
+    }[];
+
+    const result: Record<number, FacetOptionCount> = {};
+    for (const row of rows) {
+      result[row.tagid] = { total: row.total || 0, added: row.added || 0 };
+    }
+    return result;
+  }
+
+  /**
+   * Автори - вільний comma-separated текст без окремої таблиці, тому лічильники
+   * рахуються так само, як фільтрація по авторах у getGames()/useGames.ts:
+   * підрядковий збіг у JS, а не SQL JOIN.
+   */
+  private getAuthorsFacetCounts(
+    baseConditions: string[],
+    baseParams: (string | number)[],
+    currentAuthors: string[],
+    knownAuthors: string[],
+    otherFragments: SqlFragment[]
+  ): Record<string, FacetOptionCount> {
+    const { conditions, params } = this.mergeFacetFragments(
+      baseConditions,
+      baseParams,
+      otherFragments
+    );
+
+    const stmt = this.db.prepare(`
+      SELECT COALESCE(slug, id) AS key, team
+      FROM games
+      WHERE ${conditions.join(' AND ')} AND team IS NOT NULL AND team != ''
+    `);
+
+    const rows = stmt.all(...params) as { key: string; team: string }[];
+
+    const totals = new Map<string, Set<string>>();
+    const addeds = new Map<string, Set<string>>();
+    for (const author of knownAuthors) {
+      totals.set(author, new Set());
+      addeds.set(author, new Set());
+    }
+
+    for (const row of rows) {
+      const alreadyMatchesCurrent =
+        currentAuthors.length > 0 &&
+        currentAuthors.some((author) => row.team.includes(author));
+
+      for (const author of knownAuthors) {
+        if (!row.team.includes(author)) {
+          continue;
+        }
+        totals.get(author)?.add(row.key);
+        if (!alreadyMatchesCurrent) {
+          addeds.get(author)?.add(row.key);
+        }
+      }
+    }
+
+    const result: Record<string, FacetOptionCount> = {};
+    for (const author of knownAuthors) {
+      result[author] = {
+        total: totals.get(author)?.size ?? 0,
+        added: addeds.get(author)?.size ?? 0,
+      };
+    }
+    return result;
+  }
+
+  private getContentTypeFacetCounts(
+    baseConditions: string[],
+    baseParams: (string | number)[],
+    currentTypes: ContentTypeFilterType[],
+    otherFragments: SqlFragment[]
+  ): Record<ContentTypeFilterType, number> {
+    const { conditions, params } = this.mergeFacetFragments(
+      baseConditions,
+      baseParams,
+      otherFragments
+    );
+
+    const selectSql = GamesRepository.CONTENT_TYPES.map((type) => {
+      const otherSelected = currentTypes.filter((t) => t !== type);
+      const predicate = [
+        GamesRepository.CONTENT_TYPE_PREDICATES[type],
+        ...otherSelected.map((t) => GamesRepository.CONTENT_TYPE_PREDICATES[t]),
+      ].join(' AND ');
+      const alias = type.replace(/-/g, '_');
+      return `COUNT(DISTINCT CASE WHEN ${predicate} THEN COALESCE(slug, id) END) AS ${alias}`;
+    });
+
+    const stmt = this.db.prepare(`
+      SELECT ${selectSql.join(', ')}
+      FROM games
+      WHERE ${conditions.join(' AND ')}
+    `);
+
+    const row = stmt.get(...params) as Record<string, number>;
+
+    const result = {} as Record<ContentTypeFilterType, number>;
+    for (const type of GamesRepository.CONTENT_TYPES) {
+      result[type] = row[type.replace(/-/g, '_')] || 0;
+    }
+    return result;
+  }
+
+  private getSpecialFacetCounts(
+    coreConditions: string[],
+    coreParams: (string | number)[],
+    membershipIds: Record<SpecialFilterType, string[]>,
+    otherFragments: SqlFragment[]
+  ): Record<SpecialFilterType, number> {
+    const { conditions, params } = this.mergeFacetFragments(
+      coreConditions,
+      coreParams,
+      otherFragments
+    );
+
+    const options = Object.keys(membershipIds) as SpecialFilterType[];
+    const selectSql: string[] = [];
+    const selectParams: (string | number)[] = [];
+
+    for (const option of options) {
+      const ids = membershipIds[option];
+      const alias = option.replace(/-/g, '_');
+      if (ids.length === 0) {
+        selectSql.push(`0 AS ${alias}`);
+        continue;
+      }
+      selectSql.push(
+        `COUNT(DISTINCT CASE WHEN id IN (${ids
+          .map(() => '?')
+          .join(', ')}) THEN COALESCE(slug, id) END) AS ${alias}`
+      );
+      selectParams.push(...ids);
+    }
+
+    const stmt = this.db.prepare(`
+      SELECT ${selectSql.join(', ')}
+      FROM games
+      WHERE ${conditions.join(' AND ')}
+    `);
+
+    const row = stmt.get(...selectParams, ...params) as Record<string, number>;
+
+    const result = {} as Record<SpecialFilterType, number>;
+    for (const option of options) {
+      result[option] = row[option.replace(/-/g, '_')] || 0;
+    }
+    return result;
+  }
+
+  /**
+   * Faceted (e-commerce style) лічильники для модалки фільтрів: кожна опція
+   * рахується з урахуванням усіх ІНШИХ активних фільтрів (пошук, статуси,
+   * автори, теги, типи контенту, бібліотечний фільтр), а не глобально.
+   * Статуси/автори/теги - OR-групи (значення "додаються" одне до одного) -
+   * повертають total/added (added = скільки ігор додасться до списку, якщо
+   * опцію теж вибрати). Типи контенту (AND-група) та бібліотечний фільтр
+   * (single-select) - звужуючі, повертають лише total.
+   */
+  getFacetedFilterCounts(request: FacetedFilterCountsRequest): FacetedFilterCounts {
+    const {
+      searchQuery,
+      statuses = [],
+      authors = [],
+      tagIds = [],
+      contentTypes = [],
+      specialFilter = null,
+      hideAiTranslations = false,
+      knownAuthors = [],
+      favoriteGameIds = [],
+      installedTranslationGameIds = [],
+      installedGamePaths = [],
+      steamLibraryAppIds = [],
+      gogTitles = [],
+      epicTitles = [],
+      xboxFolderNames = [],
+    } = request;
+
+    // Мембершип бібліотечних фільтрів - повне перевикористання існуючих
+    // finder-методів без інших фільтрів (сирий склад кожної опції).
+    const membershipIds: Record<SpecialFilterType, string[]> = {
+      'favorite-translations': favoriteGameIds,
+      'installed-translations': installedTranslationGameIds,
+      'installed-games': this.findGamesByInstallPaths(installedGamePaths).games.map(
+        (g) => g.id
+      ),
+      'available-in-steam': this.findGamesBySteamAppIds(steamLibraryAppIds).games.map(
+        (g) => g.id
+      ),
+      'owned-gog-games': this.findGamesByTitles(gogTitles).games.map((g) => g.id),
+      'owned-epic-games': this.findGamesByTitles(epicTitles).games.map((g) => g.id),
+      'installed-xbox-games': this.findGamesByXboxPaths(xboxFolderNames).games.map(
+        (g) => g.id
+      ),
+    };
+
+    const search = this.buildFacetSearchFragment(searchQuery);
+    const coreConditions: string[] = [VISIBLE_GAMES_SQL];
+    const coreParams: (string | number)[] = [];
+    if (hideAiTranslations) {
+      coreConditions.push('ai IS NULL');
+    }
+    if (search) {
+      coreConditions.push(search.clause);
+      coreParams.push(...search.params);
+    }
+
+    // baseConditions/-Params: core + currently active library filter (if any) -
+    // used by every category EXCEPT the library filter itself, since that one
+    // must evaluate each candidate option standing in for the active one, not
+    // stacked on top of it.
+    const specialMembership = specialFilter ? membershipIds[specialFilter] : null;
+    const baseConditions = [...coreConditions];
+    const baseParams = [...coreParams];
+    if (specialMembership) {
+      if (specialMembership.length === 0) {
+        baseConditions.push('0');
+      } else {
+        baseConditions.push(`id IN (${specialMembership.map(() => '?').join(', ')})`);
+        baseParams.push(...specialMembership);
+      }
+    }
+
+    const statusFrag = this.buildFacetStatusFragment(statuses);
+    const tagsFrag = this.buildFacetTagsFragment(tagIds);
+    const authorsFrag = this.buildFacetAuthorsFragment(authors);
+    const contentTypeFrag = this.buildFacetContentTypeFragment(contentTypes);
+
+    return {
+      statuses: this.getStatusFacetCounts(baseConditions, baseParams, statuses, [
+        tagsFrag,
+        authorsFrag,
+        contentTypeFrag,
+      ]),
+      tags: this.getTagsFacetCounts(baseConditions, baseParams, tagIds, [
+        statusFrag,
+        authorsFrag,
+        contentTypeFrag,
+      ]),
+      authors: this.getAuthorsFacetCounts(
+        baseConditions,
+        baseParams,
+        authors,
+        knownAuthors,
+        [statusFrag, tagsFrag, contentTypeFrag]
+      ),
+      contentTypes: this.getContentTypeFacetCounts(
+        baseConditions,
+        baseParams,
+        contentTypes,
+        [statusFrag, authorsFrag, tagsFrag]
+      ),
+      specialFilters: this.getSpecialFacetCounts(
+        coreConditions,
+        coreParams,
+        membershipIds,
+        [statusFrag, authorsFrag, tagsFrag, contentTypeFrag]
+      ),
     };
   }
 

@@ -4,7 +4,12 @@ import { Button } from '../../ui/Button';
 interface FilterPillOption {
   label: string;
   value: string;
-  count?: number;
+  /**
+   * `total` is the resulting count if this option is applied.
+   * `added` (OR-groups only, e.g. status) is how many games this option
+   * would ADD to the currently visible list, shown as "+N" while unselected.
+   */
+  count?: { total: number; added?: number };
   icon?: React.ReactNode;
 }
 
@@ -36,7 +41,9 @@ export const FilterPillGroup: React.FC<FilterPillGroupProps> = ({
             <span
               className={`bg-glass px-1.5 py-0.5 rounded-lg text-xs leading-4 ${selected ? 'text-color-main' : 'text-text-muted'}`}
             >
-              {option.count}
+              {!selected && option.count.added !== undefined
+                ? `+${option.count.added}`
+                : option.count.total}
             </span>
           )}
         </Button>

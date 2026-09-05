@@ -8,6 +8,7 @@ import type { ImpressionType } from '@/main/db/banners-api';
 import type {
   DownloadProgress,
   ElectronAPI,
+  FacetedFilterCountsRequest,
   FeedbackReplyPayload,
   FeedbackType,
   Game,
@@ -20,7 +21,8 @@ const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
-  fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
+  fetchFacetedFilterCounts: (request: FacetedFilterCountsRequest) =>
+    ipcRenderer.invoke('fetch-faceted-filter-counts', request),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
   fetchGamesByIds: (

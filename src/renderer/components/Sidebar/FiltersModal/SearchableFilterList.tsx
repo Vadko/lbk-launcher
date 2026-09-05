@@ -4,7 +4,12 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 interface SearchableFilterItem {
   id: string | number;
   label: string;
-  count?: number;
+  /**
+   * `total` is the resulting count if this item is applied; `added` is how
+   * many games it would ADD to the currently visible list, shown as "+N"
+   * while unselected (authors/tags are both OR-groups).
+   */
+  count?: { total: number; added: number };
 }
 
 interface SearchableFilterListProps {
@@ -145,7 +150,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
                 <span className="truncate flex-1 text-left">{item.label}</span>
                 {item.count !== undefined && (
                   <span className="text-xs text-text-muted flex-shrink-0">
-                    {item.count}
+                    {selected ? item.count.total : `+${item.count.added}`}
                   </span>
                 )}
               </button>

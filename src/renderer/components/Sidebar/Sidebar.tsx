@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import type { TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
-import { useFilterCounts } from '../../hooks/useFilterCounts';
 import { useGames } from '../../hooks/useGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
@@ -356,9 +355,6 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       [navigate]
     );
 
-    // Filter counts from dedicated hook (with debouncing)
-    const { counts: filterCounts } = useFilterCounts();
-
     if (isHorizontal) {
       // Horizontal gamepad mode
       // Disable backdrop-blur when animations are off for performance
@@ -450,7 +446,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onTagsChange={setSelectedTagIds}
             tags={tags}
             tagsLoading={tagsLoading}
-            counts={filterCounts}
+            searchQuery={debouncedSearchQuery}
+            hideAiTranslations={hideAiTranslations}
           />
         </div>
       );
@@ -533,7 +530,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           onTagsChange={setSelectedTagIds}
           tags={tags}
           tagsLoading={tagsLoading}
-          counts={filterCounts}
+          searchQuery={debouncedSearchQuery}
+          hideAiTranslations={hideAiTranslations}
         />
       </GlassPanel>
     );

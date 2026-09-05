@@ -1,7 +1,7 @@
 import { Eye } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TagOption } from '@/shared/types';
-import type { FilterCounts } from '../../../hooks/useFilterCounts';
+import { useFilterCounts } from '../../../hooks/useFilterCounts';
 import { Modal } from '../../Modal/Modal';
 import {
   CONTENT_TYPE_OPTIONS,
@@ -33,7 +33,8 @@ interface FiltersModalProps {
   onTagsChange: (tagIds: number[]) => void;
   tags: TagOption[];
   tagsLoading: boolean;
-  counts?: FilterCounts;
+  searchQuery?: string;
+  hideAiTranslations?: boolean;
 }
 
 const SECTION_TITLE_CLASS =
@@ -56,7 +57,8 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   onTagsChange,
   tags,
   tagsLoading,
-  counts,
+  searchQuery,
+  hideAiTranslations,
 }) => {
   // Selections are staged locally while the modal is open and only committed
   // to the real filters (which re-query the game list) when the modal closes
@@ -86,6 +88,20 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     selectedTagIds,
   ]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Faceted, live counts - driven by the STAGED selection so they update as the
+  // user toggles pills, before "Переглянути" commits anything to the real list.
+  const { counts } = useFilterCounts({
+    selectedStatuses: stagedStatuses,
+    selectedAuthors: stagedAuthors,
+    selectedTagIds: stagedTagIds,
+    specialFilter: stagedSpecialFilter,
+    selectedContentTypes: stagedContentTypes,
+    searchQuery,
+    hideAiTranslations,
+    authors,
+    enabled: isOpen,
+  });
 
   const handleClose = useCallback(() => {
     if (stagedStatuses !== selectedStatuses) {
@@ -214,13 +230,6 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     tags,
   ]);
 
-  const visibleContentTypeOptions = CONTENT_TYPE_OPTIONS.filter(
-    (option) => !counts || counts[option.value] !== 0
-  );
-  const visibleLibraryOptions = LIBRARY_FILTER_OPTIONS.filter(
-    (option) => !counts || counts[option.value] !== 0
-  );
-
   return (
     <Modal
       isOpen={isOpen}
@@ -253,7 +262,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
             options={STATUS_OPTIONS.map((o) => ({
               label: o.label,
               value: o.value,
-              count: counts?.[o.value],
+              count: counts.statuses[o.value],
               icon: STATUS_ICONS[o.value],
             }))}
             isSelected={(value) => stagedStatuses.includes(value)}
@@ -261,45 +270,45 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
           />
         </div>
 
-        {visibleContentTypeOptions.length > 0 && (
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Тип контенту</p>
-            <FilterPillGroup
-              options={visibleContentTypeOptions.map((o) => ({
-                label: o.label,
-                value: o.value,
-                count: counts?.[o.value],
-                icon: CONTENT_TYPE_ICONS[o.value],
-              }))}
-              isSelected={(value) =>
-                stagedContentTypes.includes(value as ContentTypeFilterType)
-              }
-              onToggle={toggleContentType}
-            />
-          </div>
-        )}
+        <div>
+          <p className={SECTION_TITLE_CLASS}>Тип контенту</p>
+          <FilterPillGroup
+            options={CONTENT_TYPE_OPTIONS.map((o) => ({
+              label: o.label,
+              value: o.value,
+              count: { total: counts.contentTypes[o.value] },
+              icon: CONTENT_TYPE_ICONS[o.value],
+            }))}
+            isSelected={(value) =>
+              stagedContentTypes.includes(value as ContentTypeFilterType)
+            }
+            onToggle={toggleContentType}
+          />
+        </div>
 
-        {visibleLibraryOptions.length > 0 && (
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Бібліотека</p>
-            <FilterPillGroup
-              options={visibleLibraryOptions.map((o) => ({
-                label: o.label,
-                value: o.value,
-                count: counts?.[o.value],
-                icon: LIBRARY_ICONS[o.value],
-              }))}
-              isSelected={(value) => stagedSpecialFilter === value}
-              onToggle={toggleLibraryFilter}
-            />
-          </div>
-        )}
+        <div>
+          <p className={SECTION_TITLE_CLASS}>Бібліотека</p>
+          <FilterPillGroup
+            options={LIBRARY_FILTER_OPTIONS.map((o) => ({
+              label: o.label,
+              value: o.value,
+              count: { total: counts.specialFilters[o.value] },
+              icon: LIBRARY_ICONS[o.value],
+            }))}
+            isSelected={(value) => stagedSpecialFilter === value}
+            onToggle={toggleLibraryFilter}
+          />
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className={SECTION_TITLE_CLASS}>Автори</p>
             <SearchableFilterList
-              items={authors.map((author) => ({ id: author, label: author }))}
+              items={authors.map((author) => ({
+                id: author,
+                label: author,
+                count: counts.authors[author],
+              }))}
               selectedIds={stagedAuthors}
               onToggle={toggleAuthor}
               isLoading={authorsLoading}
@@ -314,7 +323,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
               items={tags.map((tag) => ({
                 id: tag.tagid,
                 label: tag.name,
-                count: tag.count,
+                count: counts.tags[tag.tagid],
               }))}
               selectedIds={stagedTagIds}
               onToggle={toggleTag}
