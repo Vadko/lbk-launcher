@@ -4,10 +4,14 @@ import { getLocallyInstalledGameIds } from '../installer/cache';
 import { createTimer } from '../utils/logger';
 import { getMainWindow } from '../window';
 import { getDatabase } from './database';
+import { upsertTagNames } from './db-queries';
 import { dbWorkerClient } from './db-worker-client';
 import { GamesRepository } from './games-repository';
+import type { TagNameRow } from './supabase-sync-api';
+import { getSyncMetadata, setSyncMetadata } from './sync-metadata';
 
 const PENDING_DELETIONS_KEY = 'pending_game_deletions';
+const TAG_NAMES_KEY = 'tag_names_synced_at';
 
 /**
  * Повідомити рендерер про видалення ігор зі списку (sidebar/головний список).
@@ -394,6 +398,19 @@ export class SyncManager {
         );
       }
     }
+  }
+
+  async syncTagNames(
+    fetchTagNames: (since?: string) => Promise<TagNameRow[]>
+  ): Promise<void> {
+    const rows = await fetchTagNames(getSyncMetadata(TAG_NAMES_KEY) ?? undefined);
+    if (rows.length === 0) {
+      return;
+    }
+
+    upsertTagNames(this.db, rows);
+    setSyncMetadata(TAG_NAMES_KEY, rows[rows.length - 1].updated_at);
+    console.log(`[SyncManager] Tag names updated: ${rows.length}`);
   }
 
   /**

@@ -225,6 +225,11 @@ class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_games_updated_at ON games(updated_at);
       CREATE INDEX IF NOT EXISTS idx_games_hide ON games(hide);
 
+      CREATE TABLE IF NOT EXISTS steam_tag_names (
+        tagid INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+      );
+
       -- FTS5 virtual table for full-text search
       CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
         game_id UNINDEXED,

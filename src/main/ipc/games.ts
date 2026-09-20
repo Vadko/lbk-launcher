@@ -7,6 +7,7 @@ import {
   fetchGames,
   fetchGamesByIds,
   fetchRecommendedGames,
+  fetchTagOptions,
   fetchTeams,
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
@@ -226,6 +227,16 @@ export function setupGamesHandlers(): void {
       return fetchRecommendedGames(gameId, limit);
     } catch (error) {
       console.error('Error fetching recommended games:', error);
+      return [];
+    }
+  });
+
+  // Fetch Steam tag filter options - SYNC
+  ipcMain.handle('fetch-tag-options', () => {
+    try {
+      return fetchTagOptions();
+    } catch (error) {
+      console.error('Error fetching tag options:', error);
       return [];
     }
   });

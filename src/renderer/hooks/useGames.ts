@@ -12,6 +12,7 @@ import { allInstalledTranslationIds } from './useInstalledTranslations';
 interface UseGamesParams {
   selectedStatuses?: string[];
   selectedAuthors?: string[];
+  selectedTagIds?: number[];
   specialFilter?: SpecialFilterType | null;
   selectedContentTypes?: ContentTypeFilterType[];
   searchQuery?: string;
@@ -33,6 +34,14 @@ function matchesAuthors(game: Game, authors?: string[]): boolean {
     return false;
   }
   return authors.some((author) => game.team?.includes(author));
+}
+
+/** Tag group is OR'ed internally, then AND'ed against the other groups. */
+function matchesTags(game: Game, tagIds?: number[]): boolean {
+  if (!tagIds || tagIds.length === 0) {
+    return true;
+  }
+  return tagIds.some((tagId) => game.steam_tag_ids?.includes(tagId));
 }
 
 /** Content-type group (achievements/voice) is AND'ed internally - selecting both requires both. */
@@ -59,13 +68,15 @@ function applyGroupFilters(
   games: Game[],
   selectedStatuses?: string[],
   selectedAuthors?: string[],
-  selectedContentTypes?: ContentTypeFilterType[]
+  selectedContentTypes?: ContentTypeFilterType[],
+  selectedTagIds?: number[]
 ): Game[] {
   return games.filter(
     (game) =>
       matchesStatuses(game, selectedStatuses) &&
       matchesAuthors(game, selectedAuthors) &&
-      matchesContentTypes(game, selectedContentTypes)
+      matchesContentTypes(game, selectedContentTypes) &&
+      matchesTags(game, selectedTagIds)
   );
 }
 
@@ -84,6 +95,7 @@ interface UseGamesResult {
 export function useGames({
   selectedStatuses,
   selectedAuthors,
+  selectedTagIds,
   specialFilter,
   selectedContentTypes,
   searchQuery,
@@ -155,7 +167,8 @@ export function useGames({
           favoriteGames,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -193,7 +206,8 @@ export function useGames({
           installedGames,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -232,7 +246,8 @@ export function useGames({
           result.games,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -271,7 +286,8 @@ export function useGames({
           result.games,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -307,7 +323,8 @@ export function useGames({
           result.games,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -343,7 +360,8 @@ export function useGames({
           result.games,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -379,19 +397,21 @@ export function useGames({
           result.games,
           selectedStatuses,
           selectedAuthors,
-          selectedContentTypes
+          selectedContentTypes,
+          selectedTagIds
         );
         setGames(filtered);
         setTotal(filtered.length);
         return;
       }
 
-      // Без бібліотечного фільтру - статуси й автори фільтруються в SQL,
+      // Без бібліотечного фільтру - статуси, автори й теги фільтруються в SQL,
       // типи контенту (досягнення/озвучення) - на клієнті (AND між собою).
       const params: GetGamesParams = {
         searchQuery,
         statuses: selectedStatuses,
         authors: selectedAuthors,
+        tagIds: selectedTagIds,
         sortOrder,
         hideAiTranslations,
       };
@@ -433,6 +453,7 @@ export function useGames({
     searchQuery,
     selectedStatuses,
     selectedAuthors,
+    selectedTagIds,
     selectedContentTypes,
     sortOrder,
     hideAiTranslations,
@@ -496,7 +517,8 @@ export function useGames({
         const matchesGroups =
           matchesStatuses(updatedGame, selectedStatuses) &&
           matchesAuthors(updatedGame, selectedAuthors) &&
-          matchesContentTypes(updatedGame, selectedContentTypes);
+          matchesContentTypes(updatedGame, selectedContentTypes) &&
+          matchesTags(updatedGame, selectedTagIds);
 
         // Для бібліотечних фільтрів (installed-games, available-in-steam, тощо) membership
         // (чи гра взагалі належить бібліотеці) визначається окремими listeners, тож тут
@@ -562,6 +584,7 @@ export function useGames({
     specialFilter,
     selectedStatuses,
     selectedAuthors,
+    selectedTagIds,
     selectedContentTypes,
   ]);
 

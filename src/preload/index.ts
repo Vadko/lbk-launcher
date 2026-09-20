@@ -18,6 +18,7 @@ import type {
 
 const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
+  fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
   fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
   fetchTrendingGames: (days?: number, limit?: number) =>

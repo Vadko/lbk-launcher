@@ -513,7 +513,8 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /* Gamepad selected state (visual selection without focus, for text inputs) */
-[data-gamepad-mode] [data-gamepad-selected] {
+[data-gamepad-mode] [data-gamepad-selected],
+[data-gamepad-mode] + div [data-gamepad-selected] {
   outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: 2px;
   box-shadow:
@@ -565,7 +566,9 @@ input[type="search"]::-webkit-search-cancel-button {
    звичайний outline (назовні) з ним же і зрізається — тримаємо рамку фокуса
    всередині боксу. */
 [data-gamepad-mode] .embla__slide__img-container:focus,
-[data-gamepad-mode] .embla__slide__img-container:focus-visible {
+[data-gamepad-mode] .embla__slide__img-container:focus-visible,
+[data-gamepad-mode] + div .searchable-filter-list :focus,
+[data-gamepad-mode] + div .searchable-filter-list :focus-visible {
   outline: 3px solid var(--gamepad-focus) !important;
   outline-offset: -3px;
   box-shadow: inset 0 0 0 6px rgba(251, 191, 36, 0.3) !important;
