@@ -12,14 +12,13 @@ import type { Game } from '../../types/game';
 import { deriveGroupNaming } from '../../utils/groupName';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
-import { AuthorsFilterDropdown } from './AuthorsFilterDropdown';
+import { FilterBar } from './FilterBar';
+import { FiltersModal } from './FiltersModal/FiltersModal';
 import { GameList } from './GameList';
 import { HorizontalGameList } from './HorizontalGameList';
 import { SearchBar } from './SearchBar';
 import { SidebarFooter } from './SidebarFooter';
 import { SidebarHeader } from './SidebarHeader';
-import { StatusFilterDropdown } from './StatusFilterDropdown';
-import { TagsFilterDropdown } from './TagsFilterDropdown';
 import type { GameGroup } from './types';
 
 const MIN_SIDEBAR_WIDTH = 280;
@@ -112,6 +111,47 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       []
     );
     const closeTranslationPicker = useCallback(() => setPickerPayload(null), []);
+
+    const [isFiltersModalOpen, setIsFiltersModalOpen] = useState(false);
+
+    // Quick-filter values are surfaced as their own toggle buttons on the panel
+    // (with their own active highlight), so they're excluded from the "Фільтри"
+    // button's count - only modal-only filters count toward it.
+    const isQuickSpecialFilter =
+      specialFilter === 'installed-translations' ||
+      specialFilter === 'favorite-translations';
+    const modalFilterCount =
+      selectedStatuses.length +
+      selectedContentTypes.length +
+      selectedAuthors.length +
+      selectedTagIds.length +
+      (specialFilter && !isQuickSpecialFilter ? 1 : 0);
+
+    const handleClearAllFilters = useCallback(() => {
+      setSelectedStatuses([]);
+      setSpecialFilter(null);
+      setSelectedContentTypes([]);
+      setSelectedAuthors([]);
+      setSelectedTagIds([]);
+    }, [
+      setSelectedStatuses,
+      setSpecialFilter,
+      setSelectedContentTypes,
+      setSelectedAuthors,
+      setSelectedTagIds,
+    ]);
+
+    const handleToggleInstalledQuick = useCallback(() => {
+      setSpecialFilter(
+        specialFilter === 'installed-translations' ? null : 'installed-translations'
+      );
+    }, [specialFilter, setSpecialFilter]);
+
+    const handleToggleFavoriteQuick = useCallback(() => {
+      setSpecialFilter(
+        specialFilter === 'favorite-translations' ? null : 'favorite-translations'
+      );
+    }, [specialFilter, setSpecialFilter]);
 
     // Fetch authors and tag options (wait for sync to complete)
     const syncStatus = useStore((state) => state.syncStatus);
@@ -341,36 +381,18 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             </div>
 
             {/* Filters */}
-            <div className="flex-1 min-w-0 max-w-[200px]" data-gamepad-header-item>
-              <StatusFilterDropdown
-                selectedStatuses={selectedStatuses}
-                onStatusesChange={setSelectedStatuses}
-                specialFilter={specialFilter}
-                onSpecialFilterChange={setSpecialFilter}
-                selectedContentTypes={selectedContentTypes}
-                onContentTypesChange={setSelectedContentTypes}
-                counts={filterCounts}
-                sortOrder={sortOrder}
-                onSortChange={setSortOrder}
-              />
-            </div>
-            <div className="flex-1 min-w-0 max-w-[220px]" data-gamepad-header-item>
-              <AuthorsFilterDropdown
-                selectedAuthors={selectedAuthors}
-                onAuthorsChange={setSelectedAuthors}
-                authors={authors}
-                isLoading={authorsLoading}
-              />
-            </div>
-            <div className="flex-1 min-w-0 max-w-[220px]" data-gamepad-header-item>
-              <TagsFilterDropdown
-                selectedTagIds={selectedTagIds}
-                onTagsChange={setSelectedTagIds}
-                tags={tags}
-                isLoading={tagsLoading}
-                wideMenu
-              />
-            </div>
+            <FilterBar
+              isHorizontal
+              activeFilterCount={modalFilterCount}
+              onOpenFilters={() => setIsFiltersModalOpen(true)}
+              onClearAll={handleClearAllFilters}
+              isInstalledQuickActive={specialFilter === 'installed-translations'}
+              onToggleInstalledQuick={handleToggleInstalledQuick}
+              isFavoriteQuickActive={specialFilter === 'favorite-translations'}
+              onToggleFavoriteQuick={handleToggleFavoriteQuick}
+              sortOrder={sortOrder}
+              onSortChange={setSortOrder}
+            />
 
             {/* Actions */}
             <SidebarFooter
@@ -410,6 +432,26 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             gameName={pickerPayload?.gameName ?? ''}
             variantById={pickerPayload?.variantById}
           />
+
+          <FiltersModal
+            isOpen={isFiltersModalOpen}
+            onClose={() => setIsFiltersModalOpen(false)}
+            selectedStatuses={selectedStatuses}
+            onStatusesChange={setSelectedStatuses}
+            selectedContentTypes={selectedContentTypes}
+            onContentTypesChange={setSelectedContentTypes}
+            specialFilter={specialFilter}
+            onSpecialFilterChange={setSpecialFilter}
+            selectedAuthors={selectedAuthors}
+            onAuthorsChange={setSelectedAuthors}
+            authors={authors}
+            authorsLoading={authorsLoading}
+            selectedTagIds={selectedTagIds}
+            onTagsChange={setSelectedTagIds}
+            tags={tags}
+            tagsLoading={tagsLoading}
+            counts={filterCounts}
+          />
         </div>
       );
     }
@@ -427,32 +469,17 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         </div>
 
         {/* Filters row */}
-        <div className="flex gap-2 px-4 pb-4">
-          <StatusFilterDropdown
-            selectedStatuses={selectedStatuses}
-            onStatusesChange={setSelectedStatuses}
-            specialFilter={specialFilter}
-            onSpecialFilterChange={setSpecialFilter}
-            selectedContentTypes={selectedContentTypes}
-            onContentTypesChange={setSelectedContentTypes}
-            counts={filterCounts}
+        <div className="px-4 pb-4">
+          <FilterBar
+            activeFilterCount={modalFilterCount}
+            onOpenFilters={() => setIsFiltersModalOpen(true)}
+            onClearAll={handleClearAllFilters}
+            isInstalledQuickActive={specialFilter === 'installed-translations'}
+            onToggleInstalledQuick={handleToggleInstalledQuick}
+            isFavoriteQuickActive={specialFilter === 'favorite-translations'}
+            onToggleFavoriteQuick={handleToggleFavoriteQuick}
             sortOrder={sortOrder}
             onSortChange={setSortOrder}
-          />
-          <AuthorsFilterDropdown
-            selectedAuthors={selectedAuthors}
-            onAuthorsChange={setSelectedAuthors}
-            authors={authors}
-            isLoading={authorsLoading}
-          />
-        </div>
-
-        <div className="flex gap-2 px-4 pb-4">
-          <TagsFilterDropdown
-            selectedTagIds={selectedTagIds}
-            onTagsChange={setSelectedTagIds}
-            tags={tags}
-            isLoading={tagsLoading}
           />
         </div>
 
@@ -488,6 +515,26 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         >
           <div className="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-12 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
+
+        <FiltersModal
+          isOpen={isFiltersModalOpen}
+          onClose={() => setIsFiltersModalOpen(false)}
+          selectedStatuses={selectedStatuses}
+          onStatusesChange={setSelectedStatuses}
+          selectedContentTypes={selectedContentTypes}
+          onContentTypesChange={setSelectedContentTypes}
+          specialFilter={specialFilter}
+          onSpecialFilterChange={setSpecialFilter}
+          selectedAuthors={selectedAuthors}
+          onAuthorsChange={setSelectedAuthors}
+          authors={authors}
+          authorsLoading={authorsLoading}
+          selectedTagIds={selectedTagIds}
+          onTagsChange={setSelectedTagIds}
+          tags={tags}
+          tagsLoading={tagsLoading}
+          counts={filterCounts}
+        />
       </GlassPanel>
     );
   }
