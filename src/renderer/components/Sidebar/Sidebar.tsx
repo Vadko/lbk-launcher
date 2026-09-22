@@ -64,6 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setSpecialFilter,
       selectedContentTypes,
       setSelectedContentTypes,
+      selectedTranslationTypes,
+      setSelectedTranslationTypes,
       selectedAuthors,
       setSelectedAuthors,
       selectedTagIds,
@@ -81,6 +83,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
         setSpecialFilter: state.setSpecialFilter,
         selectedContentTypes: state.selectedContentTypes,
         setSelectedContentTypes: state.setSelectedContentTypes,
+        selectedTranslationTypes: state.selectedTranslationTypes,
+        setSelectedTranslationTypes: state.setSelectedTranslationTypes,
         selectedAuthors: state.selectedAuthors,
         setSelectedAuthors: state.setSelectedAuthors,
         selectedTagIds: state.selectedTagIds,
@@ -123,6 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const modalFilterCount =
       selectedStatuses.length +
       selectedContentTypes.length +
+      selectedTranslationTypes.length +
       selectedAuthors.length +
       selectedTagIds.length +
       (specialFilter && !isQuickSpecialFilter ? 1 : 0);
@@ -131,12 +136,14 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       setSelectedStatuses([]);
       setSpecialFilter(null);
       setSelectedContentTypes([]);
+      setSelectedTranslationTypes([]);
       setSelectedAuthors([]);
       setSelectedTagIds([]);
     }, [
       setSelectedStatuses,
       setSpecialFilter,
       setSelectedContentTypes,
+      setSelectedTranslationTypes,
       setSelectedAuthors,
       setSelectedTagIds,
     ]);
@@ -219,6 +226,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       selectedTagIds,
       specialFilter,
       selectedContentTypes,
+      selectedTranslationTypes,
       searchQuery: debouncedSearchQuery,
       sortOrder,
       hideAiTranslations,
@@ -440,6 +448,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onStatusesChange={setSelectedStatuses}
             selectedContentTypes={selectedContentTypes}
             onContentTypesChange={setSelectedContentTypes}
+            selectedTranslationTypes={selectedTranslationTypes}
+            onTranslationTypesChange={setSelectedTranslationTypes}
+            hideAiTranslations={hideAiTranslations}
             specialFilter={specialFilter}
             onSpecialFilterChange={setSpecialFilter}
             selectedAuthors={selectedAuthors}
@@ -523,6 +534,9 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           onStatusesChange={setSelectedStatuses}
           selectedContentTypes={selectedContentTypes}
           onContentTypesChange={setSelectedContentTypes}
+          selectedTranslationTypes={selectedTranslationTypes}
+          onTranslationTypesChange={setSelectedTranslationTypes}
+          hideAiTranslations={hideAiTranslations}
           specialFilter={specialFilter}
           onSpecialFilterChange={setSpecialFilter}
           selectedAuthors={selectedAuthors}

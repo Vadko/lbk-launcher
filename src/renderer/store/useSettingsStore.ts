@@ -4,6 +4,7 @@ import type { SortOrderType } from '../../shared/types';
 import type {
   ContentTypeFilterType,
   SpecialFilterType,
+  TranslationTypeFilterType,
 } from '../components/Sidebar/types';
 import { electronStorage } from './electronStorage';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
@@ -51,6 +52,7 @@ interface SettingsStore {
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
   selectedContentTypes: ContentTypeFilterType[];
+  selectedTranslationTypes: TranslationTypeFilterType[];
   selectedAuthors: string[];
   selectedTagIds: number[];
   favoriteGameIds: string[];
@@ -59,6 +61,7 @@ interface SettingsStore {
   toggleNotificationSounds: () => void;
   setSpecialFilter: (filter: SpecialFilterType | null) => void;
   setSelectedContentTypes: (types: ContentTypeFilterType[]) => void;
+  setSelectedTranslationTypes: (types: TranslationTypeFilterType[]) => void;
   setSelectedTagIds: (tagIds: number[]) => void;
   setSelectedAuthors: (authors: string[]) => void;
   toggleFavoriteGame: (gameId: string, gameName: string) => void;
@@ -98,6 +101,7 @@ export const useSettingsStore = create<SettingsStore>()(
       sidebarWidth: 320,
       specialFilter: null,
       selectedContentTypes: [],
+      selectedTranslationTypes: [],
       selectedAuthors: [],
       selectedTagIds: [],
       favoriteGameIds: [],
@@ -110,6 +114,9 @@ export const useSettingsStore = create<SettingsStore>()(
       setSpecialFilter: (specialFilter) => set({ specialFilter }),
 
       setSelectedContentTypes: (selectedContentTypes) => set({ selectedContentTypes }),
+
+      setSelectedTranslationTypes: (selectedTranslationTypes) =>
+        set({ selectedTranslationTypes }),
 
       setSelectedAuthors: (selectedAuthors) => set({ selectedAuthors }),
 
@@ -162,8 +169,19 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleShowAdultGames: () =>
         set((state) => ({ showAdultGames: !state.showAdultGames })),
 
+      // Enabling this hides the whole "Тип перекладу" filter block (see
+      // FiltersModal), so clear any selection there - it'd otherwise stay
+      // active but be invisible and unreachable in the UI.
       toggleHideAiTranslations: () =>
-        set((state) => ({ hideAiTranslations: !state.hideAiTranslations })),
+        set((state) => {
+          const hideAiTranslations = !state.hideAiTranslations;
+          return {
+            hideAiTranslations,
+            selectedTranslationTypes: hideAiTranslations
+              ? []
+              : state.selectedTranslationTypes,
+          };
+        }),
 
       toggleRecommendations: () =>
         set((state) => ({ showRecommendations: !state.showRecommendations })),
@@ -218,6 +236,7 @@ export const useSettingsStore = create<SettingsStore>()(
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedContentTypes: state.selectedContentTypes,
+        selectedTranslationTypes: state.selectedTranslationTypes,
         selectedAuthors: state.selectedAuthors,
         selectedTagIds: state.selectedTagIds,
         favoriteGameIds: state.favoriteGameIds,
