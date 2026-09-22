@@ -27,6 +27,10 @@ export type SpecialFilterType =
 // Content-type filters - multi-select, combined with AND (both can be selected at once)
 export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
 
+// Translation-type filters - multi-select, combined with OR (a game has exactly one value).
+// Maps to the `ai` column: null -> 'manual', 'non-edited' -> 'ai', 'edited' -> 'ai-edited'.
+export type TranslationTypeFilterType = 'manual' | 'ai' | 'ai-edited';
+
 interface StatusFilterOption {
   label: string;
   value: StatusType;
@@ -40,6 +44,11 @@ interface SpecialFilterOption {
 interface ContentTypeFilterOption {
   label: string;
   value: ContentTypeFilterType;
+}
+
+interface TranslationTypeFilterOption {
+  label: string;
+  value: TranslationTypeFilterType;
 }
 
 // Status options for multi-select
@@ -76,6 +85,13 @@ export const CONTENT_TYPE_OPTIONS: ContentTypeFilterOption[] = [
   { label: 'З перекладом досягнень', value: 'with-achievements' },
   { label: 'З озвученням', value: 'with-voice' },
   { label: 'З Майстерні Steam', value: 'from-workshop' },
+];
+
+// Translation-type options (multi-select, OR'ed together - a game matches one of them)
+export const TRANSLATION_TYPE_OPTIONS: TranslationTypeFilterOption[] = [
+  { label: 'Ручний переклад', value: 'manual' },
+  { label: 'ШІ переклад', value: 'ai' },
+  { label: 'ШІ + редагування', value: 'ai-edited' },
 ];
 
 export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [

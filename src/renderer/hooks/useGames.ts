@@ -3,6 +3,7 @@ import type { SortOrderType } from '../../shared/types';
 import type {
   ContentTypeFilterType,
   SpecialFilterType,
+  TranslationTypeFilterType,
 } from '../components/Sidebar/types';
 import { useStore } from '../store/useStore';
 import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
@@ -15,6 +16,7 @@ interface UseGamesParams {
   selectedTagIds?: number[];
   specialFilter?: SpecialFilterType | null;
   selectedContentTypes?: ContentTypeFilterType[];
+  selectedTranslationTypes?: TranslationTypeFilterType[];
   searchQuery?: string;
   sortOrder?: SortOrderType;
   hideAiTranslations?: boolean;
@@ -63,20 +65,41 @@ function matchesContentTypes(
   });
 }
 
+/** Translation-type group is OR'ed internally, then AND'ed against the other groups. */
+function matchesTranslationTypes(
+  game: Game,
+  translationTypes?: TranslationTypeFilterType[]
+): boolean {
+  if (!translationTypes || translationTypes.length === 0) {
+    return true;
+  }
+  return translationTypes.some((type) => {
+    if (type === 'manual') {
+      return game.ai === null;
+    }
+    if (type === 'ai-edited') {
+      return game.ai === 'edited';
+    }
+    return game.ai === 'non-edited';
+  });
+}
+
 /** AND-combine every active filter group across a games list. */
 function applyGroupFilters(
   games: Game[],
   selectedStatuses?: string[],
   selectedAuthors?: string[],
   selectedContentTypes?: ContentTypeFilterType[],
-  selectedTagIds?: number[]
+  selectedTagIds?: number[],
+  selectedTranslationTypes?: TranslationTypeFilterType[]
 ): Game[] {
   return games.filter(
     (game) =>
       matchesStatuses(game, selectedStatuses) &&
       matchesAuthors(game, selectedAuthors) &&
       matchesContentTypes(game, selectedContentTypes) &&
-      matchesTags(game, selectedTagIds)
+      matchesTags(game, selectedTagIds) &&
+      matchesTranslationTypes(game, selectedTranslationTypes)
   );
 }
 
@@ -98,6 +121,7 @@ export function useGames({
   selectedTagIds,
   specialFilter,
   selectedContentTypes,
+  selectedTranslationTypes,
   searchQuery,
   sortOrder = 'name',
   hideAiTranslations = false,
@@ -168,7 +192,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -207,7 +232,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -247,7 +273,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -287,7 +314,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -324,7 +352,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -361,7 +390,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -398,7 +428,8 @@ export function useGames({
           selectedStatuses,
           selectedAuthors,
           selectedContentTypes,
-          selectedTagIds
+          selectedTagIds,
+          selectedTranslationTypes
         );
         setGames(filtered);
         setTotal(filtered.length);
@@ -423,10 +454,11 @@ export function useGames({
         return;
       }
 
-      const filtered =
-        selectedContentTypes && selectedContentTypes.length > 0
-          ? result.games.filter((game) => matchesContentTypes(game, selectedContentTypes))
-          : result.games;
+      const filtered = result.games.filter(
+        (game) =>
+          matchesContentTypes(game, selectedContentTypes) &&
+          matchesTranslationTypes(game, selectedTranslationTypes)
+      );
 
       setGames(filtered);
       setTotal(filtered.length);
@@ -455,6 +487,7 @@ export function useGames({
     selectedAuthors,
     selectedTagIds,
     selectedContentTypes,
+    selectedTranslationTypes,
     sortOrder,
     hideAiTranslations,
   ]);
@@ -518,7 +551,8 @@ export function useGames({
           matchesStatuses(updatedGame, selectedStatuses) &&
           matchesAuthors(updatedGame, selectedAuthors) &&
           matchesContentTypes(updatedGame, selectedContentTypes) &&
-          matchesTags(updatedGame, selectedTagIds);
+          matchesTags(updatedGame, selectedTagIds) &&
+          matchesTranslationTypes(updatedGame, selectedTranslationTypes);
 
         // Для бібліотечних фільтрів (installed-games, available-in-steam, тощо) membership
         // (чи гра взагалі належить бібліотеці) визначається окремими listeners, тож тут
@@ -586,6 +620,7 @@ export function useGames({
     selectedAuthors,
     selectedTagIds,
     selectedContentTypes,
+    selectedTranslationTypes,
   ]);
 
   // Слухати realtime видалення ігор

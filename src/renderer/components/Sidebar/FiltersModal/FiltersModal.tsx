@@ -10,10 +10,17 @@ import {
   SPECIAL_FILTER_OPTIONS,
   type SpecialFilterType,
   STATUS_OPTIONS,
+  TRANSLATION_TYPE_OPTIONS,
+  type TranslationTypeFilterType,
 } from '../types';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { FilterPillGroup } from './FilterPillGroup';
-import { CONTENT_TYPE_ICONS, LIBRARY_ICONS, STATUS_ICONS } from './filterIcons';
+import {
+  CONTENT_TYPE_ICONS,
+  LIBRARY_ICONS,
+  STATUS_ICONS,
+  TRANSLATION_TYPE_ICONS,
+} from './filterIcons';
 import { SearchableFilterList } from './SearchableFilterList';
 
 interface FiltersModalProps {
@@ -23,6 +30,9 @@ interface FiltersModalProps {
   onStatusesChange: (statuses: string[]) => void;
   selectedContentTypes: ContentTypeFilterType[];
   onContentTypesChange: (types: ContentTypeFilterType[]) => void;
+  selectedTranslationTypes: TranslationTypeFilterType[];
+  onTranslationTypesChange: (types: TranslationTypeFilterType[]) => void;
+  hideAiTranslations: boolean;
   specialFilter: SpecialFilterType | null;
   onSpecialFilterChange: (filter: SpecialFilterType | null) => void;
   selectedAuthors: string[];
@@ -46,6 +56,9 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   onStatusesChange,
   selectedContentTypes,
   onContentTypesChange,
+  selectedTranslationTypes,
+  onTranslationTypesChange,
+  hideAiTranslations,
   specialFilter,
   onSpecialFilterChange,
   selectedAuthors,
@@ -64,6 +77,9 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   // so the list doesn't reshuffle under the user while they're still picking.
   const [stagedStatuses, setStagedStatuses] = useState(selectedStatuses);
   const [stagedContentTypes, setStagedContentTypes] = useState(selectedContentTypes);
+  const [stagedTranslationTypes, setStagedTranslationTypes] = useState(
+    selectedTranslationTypes
+  );
   const [stagedSpecialFilter, setStagedSpecialFilter] = useState(specialFilter);
   const [stagedAuthors, setStagedAuthors] = useState(selectedAuthors);
   const [stagedTagIds, setStagedTagIds] = useState(selectedTagIds);
@@ -73,6 +89,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     if (isOpen) {
       setStagedStatuses(selectedStatuses);
       setStagedContentTypes(selectedContentTypes);
+      setStagedTranslationTypes(selectedTranslationTypes);
       setStagedSpecialFilter(specialFilter);
       setStagedAuthors(selectedAuthors);
       setStagedTagIds(selectedTagIds);
@@ -81,6 +98,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     isOpen,
     selectedStatuses,
     selectedContentTypes,
+    selectedTranslationTypes,
     specialFilter,
     selectedAuthors,
     selectedTagIds,
@@ -93,6 +111,9 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     }
     if (stagedContentTypes !== selectedContentTypes) {
       onContentTypesChange(stagedContentTypes);
+    }
+    if (stagedTranslationTypes !== selectedTranslationTypes) {
+      onTranslationTypesChange(stagedTranslationTypes);
     }
     if (stagedSpecialFilter !== specialFilter) {
       onSpecialFilterChange(stagedSpecialFilter);
@@ -111,6 +132,9 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     stagedContentTypes,
     selectedContentTypes,
     onContentTypesChange,
+    stagedTranslationTypes,
+    selectedTranslationTypes,
+    onTranslationTypesChange,
     stagedSpecialFilter,
     specialFilter,
     onSpecialFilterChange,
@@ -132,6 +156,13 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const toggleContentType = (value: string) => {
     const type = value as ContentTypeFilterType;
     setStagedContentTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
+
+  const toggleTranslationType = (value: string) => {
+    const type = value as TranslationTypeFilterType;
+    setStagedTranslationTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
     );
   };
@@ -176,6 +207,16 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       });
     }
 
+    for (const type of stagedTranslationTypes) {
+      const label = TRANSLATION_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
+      result.push({
+        key: `translation-${type}`,
+        label,
+        onRemove: () =>
+          setStagedTranslationTypes((prev) => prev.filter((t) => t !== type)),
+      });
+    }
+
     if (stagedSpecialFilter) {
       const label =
         SPECIAL_FILTER_OPTIONS.find((o) => o.value === stagedSpecialFilter)?.label ??
@@ -208,6 +249,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   }, [
     stagedStatuses,
     stagedContentTypes,
+    stagedTranslationTypes,
     stagedSpecialFilter,
     stagedAuthors,
     stagedTagIds,
@@ -275,6 +317,23 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
                 stagedContentTypes.includes(value as ContentTypeFilterType)
               }
               onToggle={toggleContentType}
+            />
+          </div>
+        )}
+
+        {!hideAiTranslations && (
+          <div>
+            <p className={SECTION_TITLE_CLASS}>Тип перекладу</p>
+            <FilterPillGroup
+              options={TRANSLATION_TYPE_OPTIONS.map((o) => ({
+                label: o.label,
+                value: o.value,
+                icon: TRANSLATION_TYPE_ICONS[o.value],
+              }))}
+              isSelected={(value) =>
+                stagedTranslationTypes.includes(value as TranslationTypeFilterType)
+              }
+              onToggle={toggleTranslationType}
             />
           </div>
         )}
