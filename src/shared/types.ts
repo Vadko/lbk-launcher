@@ -391,6 +391,11 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  // Track like/unlike events
+  trackLike: (
+    gameId: string,
+    action: 'like' | 'unlike'
+  ) => Promise<{ success: boolean; error?: string }>;
   // Підписка й відписка на переклад у Майстерні без відкриття Steam
   setWorkshopSubscription: (
     gameId: string,

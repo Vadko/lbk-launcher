@@ -270,6 +270,9 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
+  // Track like/unlike events
+  trackLike: (gameId: string, action: 'like' | 'unlike') =>
+    ipcRenderer.invoke('track-like', gameId, action),
   // Підписка на переклад у Майстерні без відкриття Steam
   setWorkshopSubscription: (
     gameId: string,

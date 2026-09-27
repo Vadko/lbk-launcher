@@ -314,6 +314,34 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
 }
 
 /**
+ * Track game like/unlike
+ */
+export async function trackLike(
+  gameId: string,
+  action: 'like' | 'unlike'
+): Promise<TrackingResponse> {
+  if (IS_E2E) {
+    return { success: false, error: 'E2E mode' } as TrackingResponse;
+  }
+  const machineId = getMachineId();
+  if (!machineId) {
+    console.warn('[Tracking] Could not get machine ID, skipping like tracking');
+    return { success: false, error: 'Machine ID not available' };
+  }
+
+  console.log(`[Tracking] Tracking ${action} for game:`, gameId);
+
+  const result = await invokeTrack({
+    type: 'like',
+    gameId,
+    userIdentifier: machineId,
+    action,
+  });
+  console.log('[Tracking] Like tracking response:', result);
+  return result;
+}
+
+/**
  * Track translation uninstall
  */
 export async function trackUninstall(gameId: string): Promise<TrackingResponse> {

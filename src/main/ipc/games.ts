@@ -51,6 +51,7 @@ import {
   submitFeedback,
   submitLogs,
   trackFailedSearch,
+  trackLike,
   trackSubscription,
   trackSupportClick,
   trackUninstall,
@@ -102,6 +103,11 @@ export function setupGamesHandlers(): void {
     'track-subscription',
     async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
       trackSubscription(gameId, action)
+  );
+
+  // Track like/unlike
+  ipcMain.handle('track-like', async (_, gameId: string, action: 'like' | 'unlike') =>
+    trackLike(gameId, action)
   );
 
   // Track support click

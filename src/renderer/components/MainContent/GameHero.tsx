@@ -2,7 +2,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Share2, ThumbsUp } from 'lucide-react';
+import { useIsTranslationInstalledForGame } from '@/renderer/hooks/useInstalledTranslations';
+import { useLikesStore } from '@/renderer/store/useLikesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { teamToSlug } from '@/shared/search-utils';
 import type { Game } from '../../types/game';
@@ -63,6 +65,17 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
       toggleFavoriteGame(game.id, game.name);
     }
   }, [game, toggleFavoriteGame]);
+
+  const isTranslationInstalled = useIsTranslationInstalledForGame(game.id);
+  const isLiked = useLikesStore((state) => state.isLiked(game.id));
+  const likesCount = useLikesStore((state) =>
+    state.getDisplayedCount(game.id, game.likes_count)
+  );
+  const handleLike = useCallback(() => {
+    if (game && isTranslationInstalled) {
+      useLikesStore.getState().toggleLike(game.id, game.likes_count);
+    }
+  }, [game, isTranslationInstalled]);
 
   // Reset state when game changes
   /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
@@ -188,6 +201,24 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           </motion.div>
         )}
         <div className="absolute bottom-4 right-4 flex gap-2">
+          <div className="hidden sm:block w-0 h-10 my-auto border-l border-border-hover mx-2 last:hidden first:hidden" />
+          <Button
+            variant="secondary"
+            icon={<ThumbsUp size={20} className={isLiked ? 'fill-current' : undefined} />}
+            onClick={handleLike}
+            disabled={!isTranslationInstalled}
+            data-gamepad-action
+            className="!px-4 !gap-1"
+            title={
+              isTranslationInstalled
+                ? isLiked
+                  ? 'Зняти оцінку'
+                  : 'Оцінити'
+                : 'Встановіть переклад, щоб оцінити'
+            }
+          >
+            {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
+          </Button>
           {hasShareButton && (
             <>
               <ShareModal
