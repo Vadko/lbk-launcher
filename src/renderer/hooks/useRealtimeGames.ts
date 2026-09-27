@@ -8,29 +8,28 @@ import type { Game } from '../types/game';
  * Підписка на Supabase керується автоматично в main process
  */
 export function useRealtimeGames() {
-  const { selectedGame, setSelectedGame } = useStore();
-
   useEffect(() => {
     if (!window.electronAPI) {
       return;
     }
 
-    // Обробник оновлень гри
     const handleGameUpdate = (updatedGame: Game) => {
       console.log('[useRealtimeGames] Game updated via real-time:', updatedGame.name);
-
-      // Оновити selectedGame якщо це та сама гра
-      if (selectedGame && selectedGame.id === updatedGame.id) {
-        console.log('[useRealtimeGames] Updating selectedGame in store');
-        setSelectedGame(updatedGame);
-      }
+      useStore.getState().syncSelectedGame(updatedGame);
 
       // Нотифікації про оновлення версій та зміни статусів обробляються в useGames.ts
     };
 
-    // Підписатися на оновлення
     console.log('[useRealtimeGames] Subscribing to game updates');
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
-    return unsubscribe;
-  }, [selectedGame, setSelectedGame]);
+    const unsubscribeCounters = window.electronAPI.onGameCountersUpdated?.(
+      (game: Game) => {
+        useStore.getState().syncSelectedGame(game);
+      }
+    );
+    return () => {
+      unsubscribe();
+      unsubscribeCounters?.();
+    };
+  }, []);
 }

@@ -16,7 +16,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ label, value, color })
     </div>
     <div className="h-2 bg-white/10 rounded-full overflow-hidden">
       <div
-        className="h-full rounded-full transition-all duration-500 ease-out"
+        className="h-full rounded-full transition-all duration-300 ease-out"
         style={{
           width: `${value}%`,
           background: `linear-gradient(90deg, ${color}, ${color}dd)`,

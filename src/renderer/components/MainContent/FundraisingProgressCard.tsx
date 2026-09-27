@@ -1,5 +1,13 @@
 import { DollarSign, ExternalLink } from 'lucide-react';
 import React from 'react';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
+
+const UAH_FORMAT = {
+  style: 'currency',
+  currency: 'UAH',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+} as const;
 
 interface FundraisingProgressCardProps {
   current: number;
@@ -13,14 +21,6 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
   supportUrl,
 }) => {
   const percentage = goal > 0 ? Math.min(Math.round((current / goal) * 100), 100) : 0;
-
-  const formatAmount = (amount: number): string =>
-    new Intl.NumberFormat('uk-UA', {
-      style: 'currency',
-      currency: 'UAH',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
 
   const handleClick = () => {
     if (!supportUrl) {
@@ -59,23 +59,29 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
       <div className="space-y-3">
         <div className="flex justify-between items-center text-sm">
           <span className="text-text-muted">Зібрано</span>
-          <span className="text-text-main font-semibold">{formatAmount(current)}</span>
+          <span className="text-text-main font-semibold">
+            <AppNumberFlow value={current} format={UAH_FORMAT} />
+          </span>
         </div>
 
         <div className="w-full bg-glass rounded-full h-4 border border-border overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-neon-green to-color-accent transition-all duration-500 ease-out"
+            className="h-full bg-gradient-to-r from-neon-green to-color-accent transition-all duration-300 ease-out"
             style={{ width: `${percentage}%` }}
           />
         </div>
 
         <div className="flex justify-between items-center text-sm">
           <span className="text-text-muted">Ціль</span>
-          <span className="text-text-muted">{formatAmount(goal)}</span>
+          <span className="text-text-muted">
+            <AppNumberFlow value={goal} format={UAH_FORMAT} />
+          </span>
         </div>
 
         <div className="text-center pt-2 border-t border-border">
-          <span className="text-2xl font-bold text-neon-green">{percentage}%</span>
+          <span className="text-2xl font-bold text-neon-green">
+            <AppNumberFlow value={percentage} suffix="%" />
+          </span>
         </div>
       </div>
     </div>

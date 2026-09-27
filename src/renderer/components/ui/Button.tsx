@@ -23,7 +23,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    'group/button px-8 py-3.5 min-h-[54px] rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed';
+    'group/button px-8 py-3.5 min-h-[54px] rounded-xl font-semibold text-base flex items-center justify-center gap-3 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary:
@@ -43,7 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button {...props} className={`${baseStyles} ${variants[variant]}  ${className}`}>
-      {icon && <span>{icon}</span>}
+      {icon && <span className="inline-flex shrink-0 items-center">{icon}</span>}
       {children}
     </button>
   );

@@ -1,4 +1,6 @@
+import { CircleCheck, CircleX, Zap } from 'lucide';
 import React from 'react';
+import { AppActionIcon } from '../ui/AppActionIcon';
 
 interface InstallationStatusBadgeProps {
   isUpdateAvailable: boolean;
@@ -7,34 +9,47 @@ interface InstallationStatusBadgeProps {
   newVersion?: string | null;
 }
 
+const STATUS = {
+  error: {
+    icon: CircleX,
+    className: 'text-red-500 animate-pulse',
+    text: 'Помилка встановлення',
+  },
+  update: {
+    icon: Zap,
+    className: 'text-color-accent animate-pulse',
+    text: 'Доступне оновлення:',
+  },
+  installed: {
+    icon: CircleCheck,
+    className: 'text-color-main',
+    text: 'Українізатор встановлено:',
+  },
+};
+
 export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = ({
   isUpdateAvailable,
   installedVersion,
   hasInstallError,
   newVersion,
-}) => (
-  <div className="flex items-center gap-1">
-    <div
-      className={`w-2 h-2 rounded-full ${
-        hasInstallError
-          ? 'bg-red-500 animate-pulse'
-          : isUpdateAvailable
-            ? 'bg-color-accent animate-pulse'
-            : 'bg-color-main'
-      }`}
-    />
+}) => {
+  const status =
+    STATUS[hasInstallError ? 'error' : isUpdateAvailable ? 'update' : 'installed'];
 
-    <div className="text-text-main">
-      {hasInstallError
-        ? '❌ Помилка встановлення'
-        : isUpdateAvailable
-          ? '⚡ Доступне оновлення:'
-          : '✓ Українізатор встановлено:'}
+  return (
+    <div className="flex items-center gap-1.5">
+      <AppActionIcon
+        phase="idle"
+        icon={status.icon}
+        size={16}
+        className={status.className}
+      />
+      <div className="text-text-main">{status.text}</div>
+      {!hasInstallError && (
+        <div className="text-sm text-text-muted mt-0.5">
+          v{installedVersion} {isUpdateAvailable ? `→ v${newVersion}` : ''}
+        </div>
+      )}
     </div>
-    {!hasInstallError && (
-      <div className="text-sm text-text-muted mt-0.5">
-        v{installedVersion} {isUpdateAvailable ? `→ v${newVersion}` : ''}
-      </div>
-    )}
-  </div>
-);
+  );
+};

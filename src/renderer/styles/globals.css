@@ -101,7 +101,7 @@ html.maximized #root {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 24px;
-  transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .glass-card:hover {
@@ -134,7 +134,7 @@ html.maximized #root {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 12px;
-  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  transition: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
   cursor: pointer;
   user-select: none;
 }
@@ -334,7 +334,7 @@ input[type="search"]::-webkit-search-cancel-button {
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 10px;
-  transition: background 0.3s ease;
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -359,7 +359,7 @@ input[type="search"]::-webkit-search-cancel-button {
   border-radius: 10px;
   border: 3px solid transparent;
   background-clip: content-box;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -603,7 +603,7 @@ input[type="search"]::-webkit-search-cancel-button {
   background: rgba(255, 255, 255, 0.3);
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   padding: 0;
 }
 
@@ -667,7 +667,7 @@ input[type="search"]::-webkit-search-cancel-button {
   background-color: white;
   border-radius: 8px;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
   inset: 0;
   pointer-events: none;
 }

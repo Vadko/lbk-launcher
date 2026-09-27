@@ -1,16 +1,15 @@
 import {
-  Bell,
-  BookOpenText,
-  Home,
-  Medal,
-  Newspaper,
-  Settings,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+  Bell as BellData,
+  BellRing as BellRingData,
+  Volume2 as Volume2Data,
+  VolumeX as VolumeXData,
+} from 'lucide';
+import { BookOpenText, Home, Medal, Newspaper, Settings } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { AppActionIcon } from '../ui/AppActionIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 
 interface SidebarFooterProps {
   onOpenHistory: () => void;
@@ -32,7 +31,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/site/guides&tools')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
               title="Відкрити посібники та інструменти"
             >
               <BookOpenText size={20} className="mx-auto text-text-muted" />
@@ -41,7 +40,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/site/donaters')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
               title="Відкрити сторінку донаторів"
             >
               <Medal size={20} className="mx-auto text-text-muted" />
@@ -50,7 +49,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/news')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
               title="Відкрити новини"
             >
               <Newspaper size={20} className="mx-auto text-text-muted" />
@@ -59,7 +58,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
               title="Відкрити головну сторінку"
             >
               <Home size={20} className="mx-auto text-text-muted" />
@@ -68,18 +67,19 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={toggleGamepadSounds}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
               title={
                 gamepadSoundsEnabled
                   ? 'Вимкнути звуки геймпада'
                   : 'Увімкнути звуки геймпада'
               }
             >
-              {gamepadSoundsEnabled ? (
-                <Volume2 size={20} className="mx-auto text-text-muted" />
-              ) : (
-                <VolumeX size={20} className="mx-auto text-text-muted opacity-50" />
-              )}
+              <AppActionIcon
+                phase="idle"
+                icon={gamepadSoundsEnabled ? Volume2Data : VolumeXData}
+                size={20}
+                className={`text-text-muted transition-opacity ${gamepadSoundsEnabled ? '' : 'opacity-50'}`}
+              />
             </button>
           </>
         )}
@@ -87,13 +87,21 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           onClick={onOpenHistory}
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
-          className={`relative glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+          className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-200 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
           title="Сповіщення"
         >
-          <Bell size={20} className="mx-auto text-text-muted" />
+          <AppActionIcon
+            phase="idle"
+            icon={unreadCount > 0 ? BellRingData : BellData}
+            size={20}
+            className="text-text-muted"
+          />
           {unreadCount > 0 && (
             <span className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-              {unreadCount > 9 ? '9+' : unreadCount}
+              <AppNumberFlow
+                value={Math.min(unreadCount, 9)}
+                suffix={unreadCount > 9 ? '+' : undefined}
+              />
             </span>
           )}
         </button>
@@ -101,7 +109,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           onClick={onOpenSettings}
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
-          className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+          className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-200 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
           title="Налаштування"
         >
           <Settings size={20} className="mx-auto text-text-muted" />

@@ -197,6 +197,11 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-updated', handler);
     return () => ipcRenderer.removeListener('game-updated', handler);
   },
+  onGameCountersUpdated: (callback) => {
+    const handler = (_: unknown, game: Game) => callback(game);
+    ipcRenderer.on('game-counters-updated', handler);
+    return () => ipcRenderer.removeListener('game-counters-updated', handler);
+  },
   onGameRemoved: (callback: (gameId: string) => void) => {
     const handler = (_: unknown, gameId: string) => callback(gameId);
     ipcRenderer.on('game-removed', handler);

@@ -33,21 +33,28 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const headerItemProps = isHorizontal ? { 'data-gamepad-header-item': true } : {};
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex">
+    <div
+      className={`flex items-center gap-2 ${isHorizontal ? '' : '[container-type:inline-size]'}`}
+    >
+      <div className="flex min-w-0">
         <Button
           variant="filter"
           onClick={onOpenFilters}
+          title="Фільтри"
           {...headerItemProps}
           className={`
-            !transition-[color,background-color,border-color]
+            min-w-0 !transition-[color,background-color,border-color]
           ${hasModalFilters ? '!bg-glass-hover !text-text-main !border-border-hover rounded-r-none' : ''}
         `}
         >
-          <SlidersHorizontal size={14} />
-          <span>Фільтри</span>
+          <SlidersHorizontal size={14} className="shrink-0" />
+          <span
+            className={`truncate ${hasModalFilters ? '[@container(max-width:296px)]:hidden' : ''}`}
+          >
+            Фільтри
+          </span>
           {hasModalFilters && (
-            <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-color-accent text-text-dark text-xs font-semibold">
+            <span className="flex shrink-0 items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-color-accent text-text-dark text-xs font-semibold">
               {activeFilterCount}
             </span>
           )}
@@ -58,7 +65,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             variant="filter"
             onClick={onClearAll}
             {...headerItemProps}
-            className={'rounded-l-none'}
+            className="rounded-l-none shrink-0"
             title="Очистити всі фільтри"
           >
             <X size={14} />
@@ -72,7 +79,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         onSortChange={onSortChange}
       />
 
-      <div className="flex-1 justify-end flex gap-2">
+      <div className="flex-1 justify-end flex gap-2 shrink-0">
         <Button
           variant="filter"
           title={`${

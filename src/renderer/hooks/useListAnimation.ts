@@ -115,7 +115,7 @@ export function useListAnimation({
         return {
           initial: offset,
           animate: target,
-          transition: { duration: 0.4, delay, ease: EASE_OUT_EXPO },
+          transition: { duration: 0.25, delay, ease: EASE_OUT_EXPO },
         };
       }
 
@@ -126,7 +126,7 @@ export function useListAnimation({
       return {
         initial: offset,
         animate: target,
-        transition: { duration: 0.35, ease: EASE_OUT_EXPO },
+        transition: { duration: 0.25, ease: EASE_OUT_EXPO },
       };
     },
     [skipAll, isInitialAppear, staggerCount, offset, target, listChanged, state.prevKeys]

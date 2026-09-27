@@ -72,6 +72,7 @@ import {
   setWorkshopSubscription,
 } from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
+import { getMainWindow } from '../window';
 
 export function setupGamesHandlers(): void {
   // Version
@@ -100,8 +101,22 @@ export function setupGamesHandlers(): void {
   // Track subscription (subscribe/unsubscribe) from renderer
   ipcMain.handle(
     'track-subscription',
-    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') =>
-      trackSubscription(gameId, action)
+    async (_, gameId: string, action: 'subscribe' | 'unsubscribe') => {
+      const result = await trackSubscription(gameId, action);
+      if (result.success && typeof result.subscriptions === 'number') {
+        try {
+          const repo = GamesRepository.getInstance();
+          repo.setSubscriptions(gameId, result.subscriptions);
+          const updatedGame = repo.getGameById(gameId);
+          if (updatedGame) {
+            getMainWindow()?.webContents.send('game-counters-updated', updatedGame);
+          }
+        } catch (err) {
+          console.error('[Games] Failed to update local subscriptions count:', err);
+        }
+      }
+      return result;
+    }
   );
 
   // Track support click

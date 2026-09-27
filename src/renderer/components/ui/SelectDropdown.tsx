@@ -120,14 +120,14 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
         <button
           ref={buttonRef}
           onClick={handleToggle}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-150"
         >
           <span className="text-text-main truncate" title={displayText}>
             {displayText}
           </span>
           <ChevronDown
             size={16}
-            className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+            className={`text-text-muted transition-transform duration-150 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
@@ -137,14 +137,14 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
               initial={{ opacity: 0, y: dropdownPosition === 'below' ? -10 : 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: dropdownPosition === 'below' ? -10 : 10 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.1 }}
               className={`absolute left-0 right-0 ${
                 dropdownPosition === 'below' ? 'top-full mt-1' : 'bottom-full mb-1'
               } bg-bg-dark border border-border rounded-lg shadow-xl z-[60] overflow-hidden`}
               data-gamepad-dropdown
             >
               <div
-                className={`overflow-y-auto custom-scrollbar py-1 transition-opacity duration-100 ${
+                className={`overflow-y-auto custom-scrollbar py-1 transition-opacity duration-75 ${
                   isReady ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{

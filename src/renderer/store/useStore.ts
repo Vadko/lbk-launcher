@@ -3,6 +3,7 @@ import type {
   DetectedGameInfo,
   DownloadProgress,
   InstallationInfo,
+  InstallationStatusTone,
 } from '../../shared/types';
 import type { Game } from '../types/game';
 import { trackEvent } from '../utils/analytics';
@@ -17,6 +18,7 @@ interface InstallationProgress {
   progress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
+  statusTone: InstallationStatusTone | null;
 }
 
 type SyncStatus = 'loading' | 'syncing' | 'ready' | 'error';
@@ -43,6 +45,7 @@ interface Store {
 
   // UI Actions
   setSelectedGame: (game: Game | null) => void;
+  syncSelectedGame: (game: Game) => void;
   setSelectedStatuses: (statuses: string[]) => void;
   setSearchQuery: (query: string) => void;
   setLoaderVisible: (visible: boolean) => void;
@@ -109,6 +112,10 @@ export const useStore = create<Store>((set, get) => ({
       trackEvent('Select game', { 'Game Id': game.id, 'Game Name': game.name });
     }
     set({ selectedGame: game });
+  },
+
+  syncSelectedGame: (game) => {
+    set((state) => (state.selectedGame?.id === game.id ? { selectedGame: game } : state));
   },
 
   setSelectedStatuses: (selectedStatuses) => set({ selectedStatuses }),
@@ -312,6 +319,7 @@ export const useStore = create<Store>((set, get) => ({
         progress: 0,
         downloadProgress: null,
         statusMessage: null,
+        statusTone: null,
       };
       newMap.set(gameId, { ...currentProgress, ...progress });
       return { installationProgress: newMap };

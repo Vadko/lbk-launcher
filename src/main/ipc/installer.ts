@@ -92,7 +92,7 @@ export function setupInstallerHandlers(): void {
             repo.incrementDownloads(game.id);
             const updatedGame = repo.getGameById(game.id);
             if (updatedGame) {
-              getMainWindow()?.webContents.send('game-updated', updatedGame);
+              getMainWindow()?.webContents.send('game-counters-updated', updatedGame);
             }
           } catch (err) {
             console.error('[Installer] Failed to update local downloads count:', err);
@@ -371,8 +371,9 @@ export function setupInstallerHandlers(): void {
         }
       ).catch((error) => {
         console.error('Error during resumed download:', error);
-        getMainWindow()?.webContents.send('installation-status', {
-          message: `❌ ${error instanceof Error ? error.message : 'Помилка завантаження'}`,
+        getMainWindow()?.webContents.send('installation-status', gameId, {
+          message: error instanceof Error ? error.message : 'Помилка завантаження',
+          tone: 'error',
         });
       });
 

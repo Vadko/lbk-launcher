@@ -15,6 +15,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import type { Game } from '../../types/game';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Tooltip } from '../ui/Tooltip';
 
 interface InfoCardProps {
@@ -24,7 +25,7 @@ interface InfoCardProps {
 interface InfoItemProps {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
   compact?: boolean;
 }
 
@@ -32,7 +33,7 @@ const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value, compact }) => (
   <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
     <div className={`text-color-main ${compact ? '' : 'mt-0.5'}`}>{icon}</div>
     <div
-      className={`flex gap-1 transition-all duration-200 ${compact ? 'items-center flex-row' : 'flex-col'}`}
+      className={`flex gap-1 transition-all duration-150 ${compact ? 'items-center flex-row' : 'flex-col'}`}
     >
       <div className="text-xs text-text-muted">{label}</div>
       <div className="text-sm font-medium text-text-main">{value}</div>
@@ -100,10 +101,10 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
       </div>
       <motion.div
         layout
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        transition={{ duration: 0.15, ease: 'easeOut' }}
         className={`grid ${compact ? 'grid-cols-1 gap-3' : 'grid-cols-2 gap-4'}`}
       >
-        <motion.div layout transition={{ duration: 0.2 }}>
+        <motion.div layout transition={{ duration: 0.15 }}>
           <InfoItem
             icon={<Gamepad2 size={18} />}
             label="Платформи"
@@ -112,7 +113,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           />
         </motion.div>
         {game.version && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<Calendar size={18} />}
               label="Версія"
@@ -122,7 +123,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           </motion.div>
         )}
         {game.archive_size && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<HardDrive size={18} />}
               label="Розмір"
@@ -132,7 +133,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           </motion.div>
         )}
         {game.voice_archive_size && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<Volume2 size={18} />}
               label="Озвучення"
@@ -142,13 +143,13 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           </motion.div>
         )}
         {game.achievements_archive_size && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <div className={`flex gap-3 ${compact ? 'items-center' : 'items-start'}`}>
               <div className={`text-color-main ${compact ? '' : 'mt-0.5'}`}>
                 <Trophy size={18} />
               </div>
               <div
-                className={`flex gap-1 transition-all duration-200 ${compact ? 'items-center flex-row' : 'flex-col'}`}
+                className={`flex gap-1 transition-all duration-150 ${compact ? 'items-center flex-row' : 'flex-col'}`}
               >
                 <div className="text-xs text-text-muted">Досягнення</div>
                 <div className="text-sm font-medium text-text-main">
@@ -164,31 +165,34 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           </motion.div>
         )}
         {isPlanned && hasSubscriptions && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<Bell size={18} />}
               label="Підписників"
-              value={game.subscriptions!.toLocaleString('uk-UA')}
+              // ключ по грі: перемикання між іграми — не зміна значення, анімувати нічого
+              value={<AppNumberFlow key={game.id} value={game.subscriptions!} />}
               compact={compact}
             />
           </motion.div>
         )}
         {!isPlanned && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<Download size={18} />}
               label="Завантажень"
               value={
-                !game.downloads || game.downloads < 20
-                  ? 'до 20'
-                  : game.downloads!.toLocaleString('uk-UA')
+                !game.downloads || game.downloads < 20 ? (
+                  'до 20'
+                ) : (
+                  <AppNumberFlow key={game.id} value={game.downloads} />
+                )
               }
               compact={compact}
             />
           </motion.div>
         )}
         {game.created_at && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<CalendarPlus size={18} />}
               label="Створено"
@@ -198,7 +202,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           </motion.div>
         )}
         {game.translation_updated_at && (
-          <motion.div layout transition={{ duration: 0.2 }}>
+          <motion.div layout transition={{ duration: 0.15 }}>
             <InfoItem
               icon={<CalendarClock size={18} />}
               label="Оновлено"

@@ -598,6 +598,13 @@ export class GamesRepository {
     stmt.run(gameId);
   }
 
+  /** Лічильник підписників із відповіді трекінгу — до наступного синку каталогу */
+  setSubscriptions(gameId: string, subscriptions: number): void {
+    this.db
+      .prepare('UPDATE games SET subscriptions = ? WHERE id = ?')
+      .run(subscriptions, gameId);
+  }
+
   /**
    * Розблокувати/заблокувати приховану гру локально для користувача.
    * Записує в `user_unlocked` - локальну колонку, яка НЕ синхронізується з Supabase

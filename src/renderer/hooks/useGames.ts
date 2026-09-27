@@ -612,7 +612,23 @@ export function useGames({
     };
 
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
-    return unsubscribe;
+    const unsubscribeCounters = window.electronAPI.onGameCountersUpdated?.(
+      (updatedGame: Game) => {
+        setGames((prevGames) => {
+          const index = prevGames.findIndex((g) => g.id === updatedGame.id);
+          if (index === -1) {
+            return prevGames;
+          }
+          const newGames = [...prevGames];
+          newGames[index] = updatedGame;
+          return newGames;
+        });
+      }
+    );
+    return () => {
+      unsubscribe();
+      unsubscribeCounters?.();
+    };
   }, [
     searchQuery,
     specialFilter,

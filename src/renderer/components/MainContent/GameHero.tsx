@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
+import { BookmarkCheck as BookmarkCheckData, Bookmark as BookmarkData } from 'lucide';
+import { Share2 } from 'lucide-react';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { teamToSlug } from '@/shared/search-utils';
 import type { Game } from '../../types/game';
@@ -10,6 +11,7 @@ import { getGameImageUrl } from '../../utils/imageUrl';
 import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';
 import { ShareModal } from '../Modal/ShareModal';
+import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 
 interface GameHeroProps {
@@ -65,13 +67,14 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   }, [game, toggleFavoriteGame]);
 
   // Reset state when game changes
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
-  useEffect(() => {
+  const [prevGameId, setPrevGameId] = useState(game.id);
+
+  if (prevGameId !== game.id) {
+    setPrevGameId(game.id);
     setBannerError(false);
     setLogoError(false);
     setShouldRoundLogo(false);
-  }, [game.id]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }
 
   // Перевірити прозорість при завантаженні лого
   const handleLogoLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -103,7 +106,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{
-              duration: 0.2,
+              duration: 0.15,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
           >
@@ -133,7 +136,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{
-                duration: 0.2,
+                duration: 0.15,
                 delay: 0.05,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
@@ -141,7 +144,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               <img
                 src={logoUrl}
                 alt={game.name}
-                className={`max-h-32 max-w-md object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] transition-[border-radius] duration-300 ${shouldRoundLogo ? 'rounded-xl' : 'rounded-none'}`}
+                className={`max-h-32 max-w-md object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] transition-[border-radius] duration-200 ${shouldRoundLogo ? 'rounded-xl' : 'rounded-none'}`}
                 draggable={false}
                 crossOrigin="anonymous"
                 onLoad={handleLogoLoad}
@@ -156,7 +159,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{
-                duration: 0.2,
+                duration: 0.15,
                 delay: 0.05,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
@@ -177,7 +180,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             animate={{ opacity: 1, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             exit={{ opacity: 0, scale: 0.9, rotate: 45, x: '50%', y: '-50%' }}
             transition={{
-              duration: 0.3,
+              duration: 0.2,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
           >
@@ -211,7 +214,13 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           )}
           <Button
             variant="secondary"
-            icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+            icon={
+              <AppActionIcon
+                phase="idle"
+                icon={isFavorite ? BookmarkCheckData : BookmarkData}
+                size={20}
+              />
+            }
             onClick={handleToggleFavorite}
             data-gamepad-action
             className="!px-4"

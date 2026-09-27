@@ -10,7 +10,7 @@ import {
   Trophy,
   Volume2,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   Game,
   GamePath,
@@ -91,27 +91,41 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     defaultPlatform
   );
 
-  // Reset state when dialog opens
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
+  const defaultsRef = useRef({
+    defaultCreateBackup,
+    isVoiceInstalled,
+    isAchievementsInstalled,
+    isReinstall,
+    defaultPlatform,
+  });
+
   useEffect(() => {
-    if (isOpen) {
-      setCreateBackup(defaultCreateBackup);
-      // For reinstall, text is checked by default (to reinstall/update)
-      setInstallText(true);
-      // Set defaults based on what's already installed
-      setInstallVoice(isVoiceInstalled || !isReinstall);
-      setInstallAchievements(isAchievementsInstalled || !isReinstall);
-      setSelectedPlatform(defaultPlatform);
-    }
+    defaultsRef.current = {
+      defaultCreateBackup,
+      isVoiceInstalled,
+      isAchievementsInstalled,
+      isReinstall,
+      defaultPlatform,
+    };
   }, [
-    isOpen,
     defaultCreateBackup,
     isVoiceInstalled,
     isAchievementsInstalled,
     isReinstall,
     defaultPlatform,
   ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const defaults = defaultsRef.current;
+    setCreateBackup(defaults.defaultCreateBackup);
+    setInstallText(true);
+    setInstallVoice(defaults.isVoiceInstalled || !defaults.isReinstall);
+    setInstallAchievements(defaults.isAchievementsInstalled || !defaults.isReinstall);
+    setSelectedPlatform(defaults.defaultPlatform);
+  }, [isOpen]);
 
   // Calculate what will be downloaded/removed
   const willDownloadVoice = hasVoiceArchive && installVoice && !isVoiceInstalled;
@@ -155,8 +169,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const totalDownloadSize = useMemo(() => {
     const sizes: (string | null)[] = [];
 
-    // Always downloading text if not a reinstall, or if installText is checked
-    if (!isReinstall || installText) {
+    if (installText) {
       sizes.push(game.archive_size);
     }
 
@@ -171,7 +184,6 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     return calculateTotalSize(sizes.filter(Boolean) as string[]);
   }, [
     game,
-    isReinstall,
     installText,
     willDownloadVoice,
     willDownloadAchievements,
@@ -184,7 +196,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       return null;
     }
 
-    const sizes: (string | null)[] = [game.archive_size];
+    const sizes: (string | null)[] = installText ? [game.archive_size] : [];
 
     if (installVoice && hasVoiceArchive) {
       sizes.push(game.voice_archive_size ?? null);
@@ -199,6 +211,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   }, [
     game,
     isReinstall,
+    installText,
     installVoice,
     installAchievements,
     hasVoiceArchive,

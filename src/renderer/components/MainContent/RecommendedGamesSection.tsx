@@ -57,7 +57,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
   return (
     <motion.section
       layout="position"
-      transition={{ duration: 0.2, ease: 'easeOut' }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
       className="glass-card-no-motion mb-6"
     >
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">{title}</h3>
@@ -69,7 +69,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="flex items-center justify-center py-12"
             >
               <Loader size="md" />
@@ -82,7 +82,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  duration: 0.3,
+                  duration: 0.2,
                   delay: index * 0.05,
                   ease: 'easeInOut',
                 }}

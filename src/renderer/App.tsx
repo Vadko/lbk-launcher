@@ -319,6 +319,26 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    const unsubProgress = window.electronAPI?.onDownloadProgress?.((gameId, progress) => {
+      useStore.getState().setInstallationProgress(gameId, {
+        progress: progress.percent,
+        downloadProgress: progress,
+      });
+    });
+    const unsubStatus = window.electronAPI?.onInstallationStatus?.((gameId, status) => {
+      useStore.getState().setInstallationProgress(gameId, {
+        statusMessage: status.message,
+        statusTone: status.tone ?? null,
+        ...(status.phase !== 'download' && { downloadProgress: null, progress: 0 }),
+      });
+    });
+    return () => {
+      unsubProgress?.();
+      unsubStatus?.();
+    };
+  }, []);
+
   // Перевірка нових версій встановлених українізаторів при realtime оновленні гри
   useEffect(() => {
     if (!window.electronAPI?.onGameUpdated) {

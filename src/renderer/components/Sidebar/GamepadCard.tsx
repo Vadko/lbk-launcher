@@ -73,7 +73,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       data-gamepad-card
       className={`
         relative flex-shrink-0 w-36 rounded-xl overflow-hidden cursor-pointer
-        transition-all duration-200 outline-none
+        transition-all duration-150 outline-none
         ${
           isSelected
             ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.5)] scale-105 z-10'
@@ -105,7 +105,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
                 alt={game.name}
                 draggable={false}
                 decoding="async"
-                className={`w-full h-full object-cover transition-opacity duration-200 ${
+                className={`w-full h-full object-cover transition-opacity duration-150 ${
                   imageLoading ? 'opacity-0' : 'opacity-100'
                 } ${useBanner ? 'object-[left_center]' : ''}`}
                 onLoad={handleImageLoad}

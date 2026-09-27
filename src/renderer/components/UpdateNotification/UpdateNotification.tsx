@@ -1,4 +1,4 @@
-import { Download, RefreshCw } from 'lucide-react';
+import { Download } from 'lucide';
 import { useEffect, useRef, useState } from 'react';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
@@ -8,6 +8,8 @@ import {
   useSubscriptionsStore,
 } from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
+import { AppActionIcon } from '../ui/AppActionIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 
 interface UpdateInfo {
   version?: string;
@@ -83,6 +85,9 @@ export const UpdateNotification = () => {
   }, []);
 
   const handleDownload = async () => {
+    if (downloading) {
+      return;
+    }
     setDownloading(true);
     try {
       await window.electronAPI.downloadUpdate();
@@ -146,11 +151,13 @@ export const UpdateNotification = () => {
         <div className="mb-3">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
             <span>Завантаження...</span>
-            <span>{progress}%</span>
+            <span>
+              <AppNumberFlow value={progress} suffix="%" />
+            </span>
           </div>
           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-color-main transition-all duration-300"
+              className="h-full bg-color-main transition-all duration-200"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -180,11 +187,11 @@ export const UpdateNotification = () => {
       ) : (
         <button
           onClick={handleDownload}
-          disabled={downloading}
+          aria-busy={downloading}
           data-gamepad-confirm
-          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-white rounded-lg transition-colors aria-busy:opacity-60 aria-busy:cursor-wait"
         >
-          {downloading ? 'Завантаження...' : 'Завантажити'}
+          Завантажити
         </button>
       )}
       {!updateDownloaded && (
@@ -218,12 +225,15 @@ export const UpdateNotification = () => {
   return (
     <div className="fixed bottom-4 right-4 glass-panel notification-toast border border-color-accent rounded-xl p-4 shadow-xl max-w-sm z-50">
       <div className="flex items-start gap-3">
-        <div className="p-2 bg-blue-500/20 rounded-lg">
-          {downloading ? (
-            <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
-          ) : (
-            <Download className="w-5 h-5 text-blue-400" />
-          )}
+        <div className="flex items-center justify-center p-2 bg-blue-500/20 rounded-lg">
+          <AppActionIcon
+            phase={downloading ? 'pending' : updateDownloaded ? 'done' : 'idle'}
+            icon={Download}
+            size={20}
+            className="text-blue-400"
+            doneClassName="text-blue-400"
+            pendingClassName="text-blue-400"
+          />
         </div>
         <div className="flex-1">
           <h3 className="text-white font-semibold mb-1">

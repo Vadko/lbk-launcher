@@ -23,6 +23,7 @@ import {
   useSubscriptionsStore,
 } from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
 
@@ -208,7 +209,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             </h2>
             {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
               <span className="px-2 py-1 bg-color-accent text-text-dark text-xs font-bold rounded-full">
-                {notifications.filter((n) => !n.read).length}
+                <AppNumberFlow value={notifications.filter((n) => !n.read).length} />
               </span>
             )}
           </div>
@@ -241,7 +242,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.15, ease: 'easeInOut' }}
               className="space-y-4 min-h-[400px]"
             >
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
@@ -282,7 +283,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.15, ease: 'easeInOut' }}
               className="min-h-[400px]"
             >
               {notifications.length === 0 ? (
@@ -323,7 +324,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     {notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
+                        className={`p-4 rounded-lg border cursor-pointer transition-all duration-150 ${
                           notification.read
                             ? 'notification-item bg-glass border-border opacity-70 hover:opacity-100'
                             : 'notification-item-unread bg-glass-hover border-color-accent/30 hover:bg-glass'
@@ -381,7 +382,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.1 }}
               className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10"
             >
               <motion.div
@@ -389,7 +390,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.1 }}
                 className="bg-bg-dark border border-border rounded-xl p-6 mx-4 max-w-sm w-full"
               >
                 <div className="flex items-center gap-3 mb-4">

@@ -246,6 +246,7 @@ export async function downloadFile(
         console.log(`[Downloader] Retry attempt ${attempt}/${maxRetries}`);
         onStatus?.({
           message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.`,
+          tone: 'retry',
           phase: 'download',
         });
         // Wait before retry (exponential backoff)
@@ -303,6 +304,7 @@ export async function downloadFile(
       if (error instanceof NetworkError && attempt < maxRetries) {
         onStatus?.({
           message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...`,
+          tone: 'retry',
           phase: 'download',
         });
         // Don't clean up partial file on network error - we can resume
@@ -552,12 +554,12 @@ async function downloadFileAttempt(
 
       // Check for cancellation
       if (message.includes('скасовано') || message.includes('aborted')) {
-        onStatus?.({ message: `❌ ${error.message}` });
+        onStatus?.({ message: error.message, tone: 'error' });
         throw error;
       }
 
       if (message.includes('enotfound') || message.includes('getaddrinfo')) {
-        onStatus?.({ message: '❌ Відсутнє підключення до Інтернету' });
+        onStatus?.({ message: 'Відсутнє підключення до Інтернету', tone: 'error' });
         throw new NetworkError(
           'Не вдалося підключитися до сервера. Перевірте підключення до Інтернету.'
         );
@@ -565,7 +567,8 @@ async function downloadFileAttempt(
 
       if (message.includes('etimedout') || message.includes('timeout')) {
         onStatus?.({
-          message: '❌ Час очікування вичерпано. Перевірте підключення до Інтернету.',
+          message: 'Час очікування вичерпано. Перевірте підключення до Інтернету.',
+          tone: 'error',
         });
         throw new NetworkError(
           'Час очікування вичерпано. Перевірте підключення до Інтернету.'
@@ -574,7 +577,8 @@ async function downloadFileAttempt(
 
       if (message.includes('econnreset') || message.includes('socket hang up')) {
         onStatus?.({
-          message: "❌ З'єднання розірвано. Перевірте підключення до Інтернету.",
+          message: "З'єднання розірвано. Перевірте підключення до Інтернету.",
+          tone: 'error',
         });
         throw new NetworkError(
           "З'єднання розірвано. Перевірте підключення до Інтернету."
@@ -582,7 +586,7 @@ async function downloadFileAttempt(
       }
 
       if (message.includes('econnrefused')) {
-        onStatus?.({ message: '❌ Сервер недоступний' });
+        onStatus?.({ message: 'Сервер недоступний', tone: 'error' });
         throw new NetworkError('Сервер недоступний. Спробуйте пізніше.');
       }
 
@@ -593,7 +597,8 @@ async function downloadFileAttempt(
     }
 
     onStatus?.({
-      message: '❌ Помилка завантаження. Перевірте підключення до Інтернету.',
+      message: 'Помилка завантаження. Перевірте підключення до Інтернету.',
+      tone: 'error',
     });
     throw new Error(
       `Помилка завантаження: ${error instanceof Error ? error.message : 'Невідома помилка'}`

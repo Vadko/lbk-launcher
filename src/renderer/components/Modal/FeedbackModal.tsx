@@ -1,8 +1,12 @@
 import { motion } from 'framer-motion';
+import { Send as SendData } from 'lucide';
 import { AlertTriangle, CheckCircle, FileEdit, ImageIcon, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import type { FeedbackType } from '@/shared/types';
 import { trackEvent } from '../../utils/analytics';
+import { AppActionIcon } from '../ui/AppActionIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Modal } from './Modal';
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -49,25 +53,44 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('feedback');
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    phase: submitPhase,
+    isPending: isSubmitting,
+    run: runSubmit,
+  } = useActionPhase();
 
-  // Reset state when modal opens
+  const gameRef = useRef({ gameId, gameName });
+
   useEffect(() => {
+    gameRef.current = { gameId, gameName };
+  }, [gameId, gameName]);
+
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
       setFeedbackType('feedback');
       setMessage('');
       setScreenshots([]);
-      setIsSubmitting(false);
       setIsSubmitted(false);
       setError(null);
       setIsDragOver(false);
-      trackEvent('Feedback Modal Open', { 'Game Id': gameId, 'Game Name': gameName });
     }
-  }, [isOpen, gameId, gameName]);
+  }
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    trackEvent('Feedback Modal Open', {
+      'Game Id': gameRef.current.gameId,
+      'Game Name': gameRef.current.gameName,
+    });
+  }, [isOpen]);
 
   // Cleanup preview URLs
   useEffect(() => {
@@ -134,51 +157,54 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const handleSubmit = useCallback(async () => {
     const trimmedMessage = message.trim();
+    // aria-busy замість disabled: нативний disabled вибиває кнопку з кільця фокуса геймпада
     if (!trimmedMessage || isSubmitting) {
       return;
     }
 
-    setIsSubmitting(true);
     setError(null);
 
     try {
-      let uploadedPaths: string[] | undefined;
+      const result = await runSubmit(
+        async (): Promise<{ success: boolean; error?: string }> => {
+          let uploadedPaths: string[] | undefined;
 
-      // Upload screenshots if any
-      if (screenshots.length > 0) {
-        const urlsResult = await window.electronAPI.getFeedbackUploadUrls(
-          screenshots.map((s) => s.name)
-        );
+          if (screenshots.length > 0) {
+            const urlsResult = await window.electronAPI.getFeedbackUploadUrls(
+              screenshots.map((s) => s.name)
+            );
 
-        if (!urlsResult.success || !urlsResult.uploadUrls) {
-          setError('Не вдалося завантажити скріншоти');
-          setIsSubmitting(false);
-          return;
-        }
+            if (!urlsResult.success || !urlsResult.uploadUrls) {
+              return { success: false, error: 'Не вдалося завантажити скріншоти' };
+            }
 
-        uploadedPaths = [];
-        for (const [i, { signedUrl, path }] of urlsResult.uploadUrls.entries()) {
-          const response = await fetch(signedUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': screenshots[i].type },
-            body: screenshots[i].file,
-          });
+            uploadedPaths = [];
+            for (const [i, { signedUrl, path }] of urlsResult.uploadUrls.entries()) {
+              const response = await fetch(signedUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': screenshots[i].type },
+                body: screenshots[i].file,
+              });
 
-          if (!response.ok) {
-            setError(`Помилка завантаження скріншоту: ${screenshots[i].name}`);
-            setIsSubmitting(false);
-            return;
+              if (!response.ok) {
+                return {
+                  success: false,
+                  error: `Помилка завантаження скріншоту: ${screenshots[i].name}`,
+                };
+              }
+
+              uploadedPaths.push(path);
+            }
           }
 
-          uploadedPaths.push(path);
-        }
-      }
-
-      const result = await window.electronAPI.submitFeedback(
-        gameId,
-        feedbackType,
-        trimmedMessage,
-        uploadedPaths
+          return window.electronAPI.submitFeedback(
+            gameId,
+            feedbackType,
+            trimmedMessage,
+            uploadedPaths
+          );
+        },
+        { isSuccess: (r) => r.success }
       );
 
       if (result.success) {
@@ -199,10 +225,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       }
     } catch {
       setError('Помилка мережі. Спробуйте пізніше');
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [gameId, gameName, feedbackType, message, screenshots, isSubmitting]);
+  }, [gameId, gameName, feedbackType, message, screenshots, isSubmitting, runSubmit]);
 
   // Success state
   if (isSubmitted) {
@@ -268,13 +292,17 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             // maxLength={MAX_MESSAGE_LENGTH}
             rows={5}
             data-gamepad-modal-item
-            className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-none transition-all duration-300 backdrop-blur-lg resize-none glass-input"
+            className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-none transition-all duration-200 backdrop-blur-lg resize-none glass-input"
           />
           <div className="flex justify-end mt-1">
             <span
               className={`text-xs ${message.length >= MAX_MESSAGE_LENGTH ? 'text-red-400' : 'text-text-muted'}`}
             >
-              {message.length}/{MAX_MESSAGE_LENGTH}
+              <AppNumberFlow
+                value={message.length}
+                format={{ useGrouping: false }}
+                suffix={`/${MAX_MESSAGE_LENGTH}`}
+              />
             </span>
           </div>
         </div>
@@ -354,23 +382,25 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         {/* Submit button */}
         <button
           onClick={handleSubmit}
-          disabled={!message.trim() || isSubmitting}
+          disabled={!message.trim()}
+          aria-busy={isSubmitting}
           data-gamepad-confirm
           data-gamepad-modal-item
-          className={`w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark ${
-            !message.trim() || isSubmitting
-              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              : 'bg-color-main hover:opacity-90'
+          className={`w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark aria-busy:opacity-60 aria-busy:cursor-wait ${
+            message.trim()
+              ? 'bg-color-main hover:opacity-90'
+              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {isSubmitting ? (
-            <>
-              <div className="w-5 h-5 border-2 border-bg-dark border-t-transparent rounded-full animate-spin" />
-              Надсилання...
-            </>
-          ) : (
-            'Надіслати'
-          )}
+          <AppActionIcon
+            phase={submitPhase}
+            icon={SendData}
+            size={18}
+            doneClassName="text-text-dark"
+            pendingClassName="text-text-dark"
+            errorClassName="text-text-dark"
+          />
+          Надіслати
         </button>
       </div>
     </Modal>

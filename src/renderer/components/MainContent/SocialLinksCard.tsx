@@ -33,7 +33,7 @@ interface StoreLinkProps {
 const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => (
   <a
     data-nav-group="main-links"
-    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-300"
+    className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-200"
     title={label}
     target="_blank"
     href={url}
@@ -41,7 +41,7 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => (
     data-gamepad-action="true"
   >
     {icon && (
-      <div className={`${color} group-hover:brightness-125 transition-all duration-300`}>
+      <div className={`${color} group-hover:brightness-125 transition-all duration-200`}>
         {icon}
       </div>
     )}
@@ -115,14 +115,14 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
     <a
       data-nav-group="main-links"
       data-gamepad-action="true"
-      className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border ${config.hoverColor} hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 ease-out`}
+      className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border ${config.hoverColor} hover:shadow-lg transform hover:scale-[1.02] transition-all duration-150 ease-out`}
       title={`Відкрити в ${config.title}`}
       href={config.url}
       target="_blank"
     >
       {config.icon && (
         <div
-          className={`${config.color} group-hover:brightness-125 transition-all duration-200 ease-out`}
+          className={`${config.color} group-hover:brightness-125 transition-all duration-150 ease-out`}
         >
           {config.icon}
         </div>
