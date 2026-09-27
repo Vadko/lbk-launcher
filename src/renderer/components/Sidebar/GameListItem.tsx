@@ -1,9 +1,11 @@
 import { Bookmark, BookmarkCheck, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
+import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
+import { useLikesStore } from '../../store/useLikesStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import type { Game } from '../../types/game';
 import { isTranslationInstallable } from '../../utils/gameStatus';
@@ -49,6 +51,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
     const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
     const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
+    const likesCount = useLikesStore((state) =>
+      state.getDisplayedCount(game.id, game.likes_count)
+    );
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
@@ -155,15 +160,22 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
             {/* Indicators */}
             {!isAdultBlurred && (
-              <StatusIcons
-                hasUpdate={hasUpdate}
-                isGameDetected={isGameDetected}
-                isInstalled={isInstalled}
-                aiType={game.ai}
-                floatPosition="default"
-                isTranslationAvailable={isTranslationAvailable}
-                isFavorite={isFavorite}
-              />
+              <>
+                <StatusIcons
+                  hasUpdate={hasUpdate}
+                  isGameDetected={isGameDetected}
+                  isInstalled={isInstalled}
+                  aiType={game.ai}
+                  floatPosition="default"
+                  isTranslationAvailable={isTranslationAvailable}
+                  isFavorite={isFavorite}
+                />
+                <InfoIcons
+                  likesCount={likesCount}
+                  downloadsCount={game.downloads}
+                  floatPosition="default"
+                />
+              </>
             )}
           </div>
           <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
@@ -177,7 +189,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               <Button
                 variant="ghost"
                 onClick={handleToggleFavorite}
-                className="!rounded-lg !px-1"
+                className="!rounded-lg !px-1 mr-[-10.5px]"
                 icon={
                   isFavorite ? (
                     <BookmarkCheck size={20} className="text-color-accent" />

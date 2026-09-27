@@ -7,9 +7,17 @@ interface OptimisticOffset {
   baseCount: number;
 }
 
+/**
+ * Client-side guard only — this machine can still be rate-limited server-side
+ * too, but this stops accidental/scripted rapid toggling from spamming `track-like`.
+ */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_ACTIONS = 15;
+
 interface LikesStore {
   likedGameIds: string[];
   optimisticOffsets: Record<string, OptimisticOffset>;
+  actionTimestamps: number[];
   isLiked: (gameId: string) => boolean;
   toggleLike: (gameId: string, serverCount: number) => void;
   getDisplayedCount: (gameId: string, serverCount: number) => number;
@@ -20,10 +28,20 @@ export const useLikesStore = create<LikesStore>()(
     (set, get) => ({
       likedGameIds: [],
       optimisticOffsets: {},
+      actionTimestamps: [],
 
       isLiked: (gameId) => get().likedGameIds.includes(gameId),
 
       toggleLike: (gameId, serverCount) => {
+        const now = Date.now();
+        const recentActions = get().actionTimestamps.filter(
+          (t) => now - t < RATE_LIMIT_WINDOW_MS
+        );
+        if (recentActions.length >= RATE_LIMIT_MAX_ACTIONS) {
+          console.warn('[Likes] Rate limit reached, ignoring toggle');
+          return;
+        }
+
         const liked = !get().likedGameIds.includes(gameId);
 
         set((state) => {
@@ -43,6 +61,7 @@ export const useLikesStore = create<LikesStore>()(
               ? [...state.likedGameIds, gameId]
               : state.likedGameIds.filter((id) => id !== gameId),
             optimisticOffsets,
+            actionTimestamps: [...recentActions, now],
           };
         });
 
@@ -62,7 +81,11 @@ export const useLikesStore = create<LikesStore>()(
     {
       name: 'likes-storage',
       storage: createJSONStorage(() => electronStorage),
-      partialize: (state) => ({ likedGameIds: state.likedGameIds }),
+      partialize: (state) => ({
+        likedGameIds: state.likedGameIds,
+        optimisticOffsets: state.optimisticOffsets,
+        actionTimestamps: state.actionTimestamps,
+      }),
     }
   )
 );
