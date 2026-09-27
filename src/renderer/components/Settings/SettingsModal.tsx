@@ -834,7 +834,7 @@ export const SettingsModal: React.FC = () => {
 
           <button
             onClick={handleOpenChangelogModal}
-            className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
               <Sparkles size={20} className="text-white" />
