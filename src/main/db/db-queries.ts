@@ -167,6 +167,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     search_keywords: game.search_keywords ?? null,
     steam_tag_ids: game.steam_tag_ids ? JSON.stringify(game.steam_tag_ids) : null,
     source_language: game.source_language ?? null,
+    likes_count: game.likes_count ?? 0,
   };
 }
 
@@ -268,6 +269,7 @@ const SYNCED_COLUMNS = [
   'search_keywords',
   'source_language',
   'steam_tag_ids',
+  'likes_count',
 ] as const;
 
 function _assertNever<_T extends never>(): void {

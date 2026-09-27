@@ -1063,6 +1063,20 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    name: 'add_likes_count_column',
+    up: (db) =>
+      addColumnIfMissing(
+        db,
+        'likes_count',
+        'ALTER TABLE games ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0;'
+      ),
+  },
+  {
+    name: 'resync_for_likes_count',
+    up: (db) =>
+      forceResyncOnce(db, 'resync_for_likes_count', 'migration_resync_likes_count_done'),
+  },
 ];
 
 /**

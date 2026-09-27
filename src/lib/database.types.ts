@@ -1253,6 +1253,7 @@ export type Database = {
           last_download_milestone: number
           last_subscriber_milestone: number
           license_only: boolean
+          likes_count: number
           logo_path: string | null
           name: string
           name_fts: unknown
@@ -1362,6 +1363,7 @@ export type Database = {
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
+          likes_count?: number
           logo_path?: string | null
           name: string
           name_fts?: unknown
@@ -1471,6 +1473,7 @@ export type Database = {
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
+          likes_count?: number
           logo_path?: string | null
           name?: string
           name_fts?: unknown

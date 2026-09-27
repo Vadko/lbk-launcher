@@ -214,6 +214,7 @@ class DatabaseManager {
         search_keywords TEXT,
         steam_tag_ids TEXT, -- JSON array of Steam tag ids
         source_language TEXT,
+        likes_count INTEGER NOT NULL DEFAULT 0,
         user_unlocked INTEGER NOT NULL DEFAULT 0 -- Local-only, never synced from Supabase
       );
 
