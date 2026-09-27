@@ -3,6 +3,7 @@ import type { Game } from '../types/game';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
+const HOME_SECTION_FETCH_LIMIT = 10;
 
 /**
  * Query keys для ігор головної сторінки
@@ -26,6 +27,7 @@ export function useNewGames(hideAiTranslations = false) {
       const result = await window.electronAPI.fetchGames({
         sortOrder: 'newest',
         hideAiTranslations,
+        limit: HOME_SECTION_FETCH_LIMIT,
       });
       return result.games;
     },
@@ -44,6 +46,7 @@ export function useUpdatedGames(hideAiTranslations = false) {
       const result = await window.electronAPI.fetchGames({
         sortOrder: 'updated',
         hideAiTranslations,
+        limit: HOME_SECTION_FETCH_LIMIT,
       });
       return result.games;
     },

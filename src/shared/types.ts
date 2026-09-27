@@ -150,6 +150,7 @@ export interface GetGamesParams {
   showAdultGames?: boolean;
   hideAiTranslations?: boolean;
   sortOrder?: SortOrderType;
+  limit?: number;
 }
 
 export interface GetGamesResult {

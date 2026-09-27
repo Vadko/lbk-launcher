@@ -57,10 +57,14 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
       return newestGames;
     }
     if (activeTab?.sortOrder === 'updated') {
-      return updatedGames;
+      // Виключаємо ігри, що вже показані у вкладці "Новинки", щоб уникнути дублікатів
+      const visibleNewestIds = new Set(
+        newestGames.slice(0, showLimit).map((game) => game.id)
+      );
+      return updatedGames.filter((game) => !visibleNewestIds.has(game.id));
     }
     return [];
-  }, [activeTab, newestGames, updatedGames]);
+  }, [activeTab, newestGames, updatedGames, showLimit]);
 
   const isLoading = useMemo(() => {
     if (activeTab?.sortOrder === 'newest') {
