@@ -23,14 +23,14 @@ export const InfoIcons: React.FC<InfoIconsProps> = ({
     );
   }
 
-  if (downloadsCount && downloadsCount > 20) {
-    icons.push(
-      <div className="flex items-center gap-1">
-        <Download size={16} />
-        <span className="text-sm">{downloadsCount}</span>
-      </div>
-    );
-  }
+  icons.push(
+    <div className="flex items-center gap-1">
+      <Download size={16} />
+      <span className="text-sm">
+        {downloadsCount && downloadsCount > 20 ? downloadsCount : 'до 20'}
+      </span>
+    </div>
+  );
 
   if (icons.length === 0) {
     return null;
@@ -38,7 +38,7 @@ export const InfoIcons: React.FC<InfoIconsProps> = ({
 
   return (
     <div
-      className={`flex gap-2 ${floatPosition ? 'absolute rounded-ss-lg bg-glass p-2 -bottom-px -right-px backdrop-blur-md backdrop-brightness-50' : ''}`}
+      className={`flex gap-2 ${floatPosition ? 'absolute rounded-ss-lg bg-glass p-2 pr-4 -bottom-px -right-px backdrop-blur-md backdrop-brightness-50' : ''}`}
     >
       {icons}
     </div>
