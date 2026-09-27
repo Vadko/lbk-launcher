@@ -99,7 +99,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
             <div className="glass-card-no-motion !p-4 flex gap-6 items-center">
               <WarningFillIcon size={32} />
@@ -168,7 +168,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="flex items-center justify-center py-12"
             >
               <Loader size="md" />
@@ -181,7 +181,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  duration: 0.25,
+                  duration: 0.4,
                   delay: Math.min(index * 0.03, 0.5),
                   ease: [0.25, 0.46, 0.45, 0.94],
                 }}

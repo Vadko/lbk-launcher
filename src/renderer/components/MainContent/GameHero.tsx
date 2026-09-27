@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { Bookmark, BookmarkCheck } from 'lucide';
+import { Share2 } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { BookmarkCheck as BookmarkCheckData, Bookmark as BookmarkData } from 'lucide';
-import { Share2 } from 'lucide-react';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { teamToSlug } from '@/shared/search-utils';
 import type { Game } from '../../types/game';
@@ -106,7 +106,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{
-              duration: 0.15,
+              duration: 0.3,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
           >
@@ -136,7 +136,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{
-                duration: 0.15,
+                duration: 0.2,
                 delay: 0.05,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
@@ -144,7 +144,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               <img
                 src={logoUrl}
                 alt={game.name}
-                className={`max-h-32 max-w-md object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] transition-[border-radius] duration-200 ${shouldRoundLogo ? 'rounded-xl' : 'rounded-none'}`}
+                className={`max-h-32 max-w-md object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.8)] transition-[border-radius] duration-300 ${shouldRoundLogo ? 'rounded-xl' : 'rounded-none'}`}
                 draggable={false}
                 crossOrigin="anonymous"
                 onLoad={handleLogoLoad}
@@ -159,7 +159,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
               transition={{
-                duration: 0.15,
+                duration: 0.2,
                 delay: 0.05,
                 ease: [0.25, 0.46, 0.45, 0.94],
               }}
@@ -217,7 +217,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             icon={
               <AppActionIcon
                 phase="idle"
-                icon={isFavorite ? BookmarkCheckData : BookmarkData}
+                icon={isFavorite ? BookmarkCheck : Bookmark}
                 size={20}
               />
             }

@@ -57,7 +57,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.2 }}
           />
 
           {/* Modal */}
@@ -69,7 +69,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 30 }}
-            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border">

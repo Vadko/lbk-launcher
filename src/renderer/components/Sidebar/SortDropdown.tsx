@@ -72,7 +72,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.1 }}
+            transition={{ duration: 0.15 }}
             data-gamepad-dropdown
             className="absolute top-full left-0 mt-1 w-56 bg-bg-dark border border-border rounded-lg shadow-xl z-50 overflow-hidden filter-dropdown"
           >

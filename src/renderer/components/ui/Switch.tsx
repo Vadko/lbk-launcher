@@ -42,7 +42,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
             opacity: checked ? 1 : 0,
           }}
           transition={{
-            duration: 0.2,
+            duration: 0.3,
             ease: 'easeInOut',
           }}
           style={{
@@ -59,7 +59,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
             backgroundColor: isHovered ? '#9ca3af' : '#d1d5db',
           }}
           transition={{
-            duration: 0.2,
+            duration: 0.3,
             ease: 'easeInOut',
           }}
         />

@@ -134,7 +134,7 @@ export const ToastNotifications: React.FC = () => {
             initial={{ opacity: 0, x: 100, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.9 }}
-            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
             className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto cursor-pointer hover:scale-[1.02] transition-transform`}
             onClick={() => handleToastClick(toast)}
           >

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Send as SendData } from 'lucide';
+import { Send } from 'lucide';
 import { AlertTriangle, CheckCircle, FileEdit, ImageIcon, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
@@ -292,7 +292,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             // maxLength={MAX_MESSAGE_LENGTH}
             rows={5}
             data-gamepad-modal-item
-            className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-none transition-all duration-200 backdrop-blur-lg resize-none glass-input"
+            className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-none transition-all duration-300 backdrop-blur-lg resize-none glass-input"
           />
           <div className="flex justify-end mt-1">
             <span
@@ -392,14 +392,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               : 'bg-gray-600 text-gray-400 cursor-not-allowed'
           }`}
         >
-          <AppActionIcon
-            phase={submitPhase}
-            icon={SendData}
-            size={18}
-            doneClassName="text-text-dark"
-            pendingClassName="text-text-dark"
-            errorClassName="text-text-dark"
-          />
+          <AppActionIcon phase={submitPhase} icon={Send} size={18} inheritColor />
           Надіслати
         </button>
       </div>

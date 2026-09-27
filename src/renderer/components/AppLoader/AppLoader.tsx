@@ -23,7 +23,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
     <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
       className="app-loader fixed inset-0 bg-[#0a0a0f] flex flex-col items-center justify-center z-[9999] overflow-hidden"
     >
       {/* Subtle gradient background */}
@@ -52,7 +52,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
           className="mb-6"
         >
           <img src={logo} alt="LBK Logo" className="w-24 h-24 drop-shadow-2xl" />
@@ -62,7 +62,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
           className="text-3xl font-bold bg-gradient-to-r from-color-accent to-color-main bg-clip-text text-transparent mb-2"
         >
           LBK Launcher
@@ -72,7 +72,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.6 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
           className="text-text-muted text-sm mb-12"
         >
           Українізатор ігор

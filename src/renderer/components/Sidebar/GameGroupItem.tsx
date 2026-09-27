@@ -82,7 +82,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
               onToggle();
             }
           }}
-          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 outline-none 
+          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-none 
           } ${
             isAnySelected
               ? 'border border-[rgba(255,164,122,0.5)] shadow-[0_0_20px_rgba(255,164,122,0.2)]'
@@ -114,7 +114,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                       alt={group.name}
                       draggable={false}
                       decoding="async"
-                      className={`w-full h-full object-cover transition-opacity duration-200 ${
+                      className={`w-full h-full object-cover transition-opacity duration-300 ${
                         imageLoading ? 'opacity-0' : 'opacity-100'
                       }`}
                       onLoad={() => setImageLoading(false)}
@@ -152,7 +152,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             </div>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-300"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${avgProgress}%` }}
               />
             </div>
@@ -167,7 +167,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             )}
             <ChevronDown
               size={16}
-              className={`text-text-muted transition-transform duration-150 ${
+              className={`text-text-muted transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''
               }`}
             />
@@ -182,7 +182,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
                 <div className="pl-3 mt-1 space-y-1 border-l-2 border-border ml-3">

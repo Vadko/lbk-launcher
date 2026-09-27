@@ -1,4 +1,4 @@
-import { Pause as PauseData, Play as PlayData } from 'lucide';
+import { Pause, Play } from 'lucide';
 import { X } from 'lucide-react';
 import React, { useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
@@ -89,11 +89,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
               }`}
               title={isPaused ? 'Продовжити' : 'Пауза'}
             >
-              <AppActionIcon
-                phase="idle"
-                icon={isPaused ? PlayData : PauseData}
-                size={16}
-              />
+              <AppActionIcon phase="idle" icon={isPaused ? Play : Pause} size={16} />
             </button>
             <button
               onClick={handleCancel}
@@ -108,7 +104,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       </div>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-3">
         <div
-          className={`h-full rounded-full transition-all duration-200 ease-out ${
+          className={`h-full rounded-full transition-all duration-300 ease-out ${
             isPaused
               ? 'bg-gradient-to-r from-amber-500 to-amber-600'
               : 'bg-gradient-to-r from-color-accent to-color-main'

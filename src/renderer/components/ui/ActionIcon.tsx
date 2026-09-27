@@ -8,9 +8,7 @@ export interface ActionIconProps {
   icon?: IconInput;
   size?: number;
   className?: string;
-  doneClassName?: string;
-  errorClassName?: string;
-  pendingClassName?: string;
+  inheritColor?: boolean;
   label?: string;
   reducedMotion?: ReducedMotionMode;
 }
@@ -29,9 +27,7 @@ export const ActionIcon: React.FC<ActionIconProps> = ({
   icon,
   size = 16,
   className = '',
-  doneClassName = 'text-color-main',
-  errorClassName = 'text-red-400',
-  pendingClassName = 'text-color-main',
+  inheritColor = false,
   label,
   reducedMotion = 'user',
 }) => {
@@ -59,12 +55,12 @@ export const ActionIcon: React.FC<ActionIconProps> = ({
 
   const showPending = phase === 'pending' && pendingVisible;
   const glyph = showPending ? LoaderCircle : (PHASE_ICONS[phase] ?? icon);
-  const phaseColor = showPending
-    ? pendingClassName
-    : phase === 'done'
-      ? doneClassName
+  const phaseColor = inheritColor
+    ? ''
+    : showPending || phase === 'done'
+      ? 'text-color-main'
       : phase === 'error'
-        ? errorClassName
+        ? 'text-red-400'
         : '';
 
   return (

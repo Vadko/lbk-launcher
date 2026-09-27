@@ -125,7 +125,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     alt={game.name}
                     draggable={false}
                     decoding="async"
-                    className={`w-full h-full object-cover transition-[opacity, scale] duration-200 group-hover:scale-[1.05] ${
+                    className={`w-full h-full object-cover transition-[opacity, scale] duration-300 group-hover:scale-[1.05] ${
                       imageLoading ? 'opacity-0' : 'opacity-100'
                     } ${isAdultBlurred ? 'blur-lg' : ''}`}
                     onLoad={() => setImageLoading(false)}
@@ -225,7 +225,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   <div className="flex items-center gap-3 flex-1">
                     <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
                       <div
-                        className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-300"
+                        className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                         style={{ width: `${averageProgress}%` }}
                       />
                     </div>
@@ -248,7 +248,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
         onClick={onClick}
         onKeyDown={handleKeyDown}
         data-nav-group="game-list"
-        className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+        className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 ${
           isSelected
             ? 'border border-[rgba(168,207,150,0.5)] shadow-[0_0_20px_rgba(168,207,150,0.2)]'
             : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
@@ -269,7 +269,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     alt={game.name}
                     draggable={false}
                     decoding="async"
-                    className={`w-full h-full object-cover transition-opacity duration-200 ${
+                    className={`w-full h-full object-cover transition-opacity duration-300 ${
                       imageLoading ? 'opacity-0' : 'opacity-100'
                     } ${isAdultBlurred ? 'blur-md' : ''}`}
                     onLoad={() => setImageLoading(false)}
@@ -325,7 +325,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-300"
+                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
                 title={`${averageProgress}%`}
                 style={{ width: `${averageProgress}%` }}
               />

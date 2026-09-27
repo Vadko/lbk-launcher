@@ -1,10 +1,5 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
-import {
-  Download as DownloadData,
-  Play as PlayData,
-  RefreshCw as RefreshCwData,
-  ReplaceAll as ReplaceAllData,
-} from 'lucide';
+import { Download, Play, RefreshCw, ReplaceAll } from 'lucide';
 import { EyeOff, FileEdit, Heart, Settings, Trash2, Users } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -46,12 +41,6 @@ import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
-
-const FILLED_PHASE_CLASSES = {
-  doneClassName: 'text-inherit',
-  errorClassName: 'text-inherit',
-  pendingClassName: 'text-inherit',
-};
 
 /**
  * Сторінка детальної інформації про гру
@@ -556,9 +545,9 @@ export const GamePage: React.FC = () => {
                   icon={
                     <AppActionIcon
                       phase={launchPhase}
-                      icon={PlayData}
+                      icon={Play}
                       size={20}
-                      {...FILLED_PHASE_CLASSES}
+                      inheritColor
                     />
                   }
                   onClick={handleLaunchGame}
@@ -587,9 +576,9 @@ export const GamePage: React.FC = () => {
                   icon={
                     <AppActionIcon
                       phase={installButtonPhase}
-                      icon={isUpdateAvailable ? RefreshCwData : DownloadData}
+                      icon={isUpdateAvailable ? RefreshCw : Download}
                       size={20}
-                      {...(installVariant === 'primary' ? FILLED_PHASE_CLASSES : {})}
+                      inheritColor={installVariant === 'primary'}
                     />
                   }
                   onClick={() => void handleInstall()}
@@ -621,7 +610,7 @@ export const GamePage: React.FC = () => {
                   <Button
                     variant="secondary"
                     icon={
-                      <AppActionIcon phase={rerunPhase} icon={ReplaceAllData} size={20} />
+                      <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
                     }
                     onClick={() => void handleRerunInstaller()}
                     aria-busy={rerunPhase === 'pending'}
@@ -787,7 +776,7 @@ export const GamePage: React.FC = () => {
                 initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                 animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
                 exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.2 }}
               >
                 <Placement
                   banner={bannerInfo.data}
@@ -816,7 +805,7 @@ export const GamePage: React.FC = () => {
                 display: bannerInfo.placementType === 'small_square' ? 'block' : 'none',
               }}
               initial={false}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
               className="overflow-x-clip flex-shrink-0 mb-auto"
             >
               <div className="w-[320px] h-full">
@@ -843,10 +832,7 @@ export const GamePage: React.FC = () => {
 
           {/* Donate */}
           {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-            >
+            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
               <FundraisingProgressCard
                 key={selectedGame.id}
                 current={selectedGame.fundraising_current || 0}
@@ -860,7 +846,7 @@ export const GamePage: React.FC = () => {
           {selectedGame.description && (
             <motion.section
               layout="position"
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
               className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
@@ -875,10 +861,7 @@ export const GamePage: React.FC = () => {
 
           {/* Video */}
           {selectedGame.video_url && (
-            <motion.div
-              layout="position"
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-            >
+            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
               <VideoCard videoUrl={selectedGame.video_url} />
             </motion.div>
           )}
@@ -887,7 +870,7 @@ export const GamePage: React.FC = () => {
           {selectedGame.screenshots && (
             <motion.section
               layout="position"
-              transition={{ duration: 0.15, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <div className="glass-card-no-motion">
                 <Gallery

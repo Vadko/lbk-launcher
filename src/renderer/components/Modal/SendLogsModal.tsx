@@ -84,14 +84,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
             aria-busy={isPending}
             className="w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark bg-color-main hover:opacity-90 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <AppActionIcon
-              phase={phase}
-              icon={Send}
-              size={18}
-              doneClassName="text-text-dark"
-              pendingClassName="text-text-dark"
-              errorClassName="text-text-dark"
-            />
+            <AppActionIcon phase={phase} icon={Send} size={18} inheritColor />
             Надіслати логи
           </button>
           <p className="text-xs text-text-muted">

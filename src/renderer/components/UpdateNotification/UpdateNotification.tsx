@@ -157,7 +157,7 @@ export const UpdateNotification = () => {
           </div>
           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
             <div
-              className="h-full bg-color-main transition-all duration-200"
+              className="h-full bg-color-main transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -231,8 +231,7 @@ export const UpdateNotification = () => {
             icon={Download}
             size={20}
             className="text-blue-400"
-            doneClassName="text-blue-400"
-            pendingClassName="text-blue-400"
+            inheritColor
           />
         </div>
         <div className="flex-1">

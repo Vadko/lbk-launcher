@@ -90,7 +90,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             <img src={mainBg} alt="" className={bgImageClass} aria-hidden="true" />
             {/* Sidebar - hides when in main-content mode */}
             <div
-              className={`transition-all duration-200 ease-in-out relative z-20 ${
+              className={`transition-all duration-300 ease-in-out relative z-20 ${
                 navigationArea === 'main-content'
                   ? 'max-h-0 opacity-0 overflow-hidden'
                   : 'max-h-[300px] opacity-100'

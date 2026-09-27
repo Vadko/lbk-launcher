@@ -1,9 +1,4 @@
-import {
-  Bell as BellData,
-  BellRing as BellRingData,
-  Volume2 as Volume2Data,
-  VolumeX as VolumeXData,
-} from 'lucide';
+import { Bell, BellRing, Volume2, VolumeX } from 'lucide';
 import { BookOpenText, Home, Medal, Newspaper, Settings } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -31,7 +26,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/site/guides&tools')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити посібники та інструменти"
             >
               <BookOpenText size={20} className="mx-auto text-text-muted" />
@@ -40,7 +35,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/site/donaters')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити сторінку донаторів"
             >
               <Medal size={20} className="mx-auto text-text-muted" />
@@ -49,7 +44,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/news')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити новини"
             >
               <Newspaper size={20} className="mx-auto text-text-muted" />
@@ -58,7 +53,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={() => navigate('/')}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити головну сторінку"
             >
               <Home size={20} className="mx-auto text-text-muted" />
@@ -67,7 +62,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               onClick={toggleGamepadSounds}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-200"
+              className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title={
                 gamepadSoundsEnabled
                   ? 'Вимкнути звуки геймпада'
@@ -76,7 +71,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
             >
               <AppActionIcon
                 phase="idle"
-                icon={gamepadSoundsEnabled ? Volume2Data : VolumeXData}
+                icon={gamepadSoundsEnabled ? Volume2 : VolumeX}
                 size={20}
                 className={`text-text-muted transition-opacity ${gamepadSoundsEnabled ? '' : 'opacity-50'}`}
               />
@@ -87,12 +82,12 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           onClick={onOpenHistory}
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
-          className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-200 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+          className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
           title="Сповіщення"
         >
           <AppActionIcon
             phase="idle"
-            icon={unreadCount > 0 ? BellRingData : BellData}
+            icon={unreadCount > 0 ? BellRing : Bell}
             size={20}
             className="text-text-muted"
           />
@@ -109,7 +104,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           onClick={onOpenSettings}
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
-          className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-200 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+          className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
           title="Налаштування"
         >
           <Settings size={20} className="mx-auto text-text-muted" />

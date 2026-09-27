@@ -1,10 +1,4 @@
-import {
-  FolderOpen as FolderOpenData,
-  Gamepad as GamepadData,
-  Library as LibraryData,
-  LockOpen as LockOpenData,
-  RefreshCw as RefreshCwData,
-} from 'lucide';
+import { FolderOpen, Gamepad, Library, LockOpen, RefreshCw } from 'lucide';
 import {
   BrushCleaning,
   FileText,
@@ -458,7 +452,7 @@ export const SettingsModal: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             data-gamepad-modal-item
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
               <MessageCircle size={20} color="#ffffff" />
@@ -565,17 +559,15 @@ export const SettingsModal: React.FC = () => {
           <button
             onClick={handleSyncSteamCollection}
             aria-busy={isSyncingSteamCollection}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200 aria-busy:opacity-60 aria-busy:cursor-wait"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
               <AppActionIcon
                 phase={steamCollectionPhase}
-                icon={LibraryData}
+                icon={Library}
                 size={20}
                 className="text-text-dark"
-                doneClassName="text-text-dark"
-                pendingClassName="text-text-dark"
-                errorClassName="text-text-dark"
+                inheritColor
               />
             </div>
             <div className="flex-1 text-left">
@@ -592,17 +584,15 @@ export const SettingsModal: React.FC = () => {
           <button
             onClick={handleKurinSync}
             aria-busy={isSyncingKurin}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200 aria-busy:opacity-60 aria-busy:cursor-wait"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center flex-shrink-0">
               <AppActionIcon
                 phase={kurinSyncPhase}
-                icon={RefreshCwData}
+                icon={RefreshCw}
                 size={20}
                 className="text-text-dark"
-                doneClassName="text-text-dark"
-                pendingClassName="text-text-dark"
-                errorClassName="text-text-dark"
+                inheritColor
               />
             </div>
             <div className="flex-1 text-left">
@@ -619,17 +609,15 @@ export const SettingsModal: React.FC = () => {
           <button
             onClick={handleAddLbkToSteamLibrary}
             aria-busy={isTogglingLbkShortcut}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200 aria-busy:opacity-60 aria-busy:cursor-wait"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
               <AppActionIcon
                 phase={lbkShortcutPhase}
-                icon={GamepadData}
+                icon={Gamepad}
                 size={20}
                 className="text-text-dark"
-                doneClassName="text-text-dark"
-                pendingClassName="text-text-dark"
-                errorClassName="text-text-dark"
+                inheritColor
               />
             </div>
             <div className="flex-1 text-left">
@@ -643,7 +631,7 @@ export const SettingsModal: React.FC = () => {
           {/* Clear cache only */}
           <button
             onClick={handleClearCacheOnly}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center flex-shrink-0">
               <BrushCleaning size={20} className="text-text-dark" />
@@ -659,7 +647,7 @@ export const SettingsModal: React.FC = () => {
           {/* Clear all data */}
           <button
             onClick={handleClearAllData}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-200"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center flex-shrink-0">
               <Trash2 size={20} className="text-text-dark" />
@@ -775,17 +763,15 @@ export const SettingsModal: React.FC = () => {
           <button
             onClick={handleOpenLogsFolder}
             aria-busy={isOpeningLogsFolder}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200 aria-busy:opacity-60 aria-busy:cursor-wait"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
               <AppActionIcon
                 phase={logsFolderPhase}
-                icon={FolderOpenData}
+                icon={FolderOpen}
                 size={20}
                 className="text-white"
-                doneClassName="text-white"
-                pendingClassName="text-white"
-                errorClassName="text-white"
+                inheritColor
               />
             </div>
             <div className="flex-1 text-left">
@@ -825,7 +811,7 @@ export const SettingsModal: React.FC = () => {
                 aria-busy={isUnlockingTranslation}
                 variant="secondary"
                 className="flex-shrink-0 aria-busy:opacity-60 aria-busy:cursor-wait"
-                icon={<AppActionIcon phase={unlockPhase} icon={LockOpenData} size={16} />}
+                icon={<AppActionIcon phase={unlockPhase} icon={LockOpen} size={16} />}
               >
                 Розблокувати
               </Button>
@@ -834,7 +820,7 @@ export const SettingsModal: React.FC = () => {
 
           <button
             onClick={handleOpenChangelogModal}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
               <Sparkles size={20} className="text-white" />
@@ -849,7 +835,7 @@ export const SettingsModal: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={handleOpenTermsModal}
-              className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+              className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
                 <FileText size={20} className="text-white" />
@@ -863,7 +849,7 @@ export const SettingsModal: React.FC = () => {
 
             <button
               onClick={handleOpenPrivacyModal}
-              className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-200"
+              className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
                 <Shield size={20} className="text-white" />

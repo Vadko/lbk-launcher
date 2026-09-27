@@ -1,4 +1,4 @@
-import { Download as DownloadData, Trash2 as Trash2Data } from 'lucide';
+import { Download, Trash2 } from 'lucide';
 import { ExternalLink } from 'lucide-react';
 import { useEffect } from 'react';
 import { useActionPhase } from '../../hooks/useActionPhase';
@@ -89,11 +89,9 @@ export function WorkshopInstallButton({
             icon={
               <AppActionIcon
                 phase={installPhase}
-                icon={DownloadData}
+                icon={Download}
                 size={20}
-                doneClassName="text-text-dark"
-                pendingClassName="text-text-dark"
-                errorClassName="text-text-dark"
+                inheritColor
               />
             }
             onClick={() => void handleInstall()}
@@ -119,7 +117,7 @@ export function WorkshopInstallButton({
       {installed && (
         <Button
           variant="secondary"
-          icon={<AppActionIcon phase={removePhase} icon={Trash2Data} size={20} />}
+          icon={<AppActionIcon phase={removePhase} icon={Trash2} size={20} />}
           onClick={() => void handleRemove()}
           aria-busy={removePhase === 'pending'}
           disabled={isPending}

@@ -106,7 +106,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="flex items-center justify-center py-12"
             >
               <Loader size="md" />
@@ -117,7 +117,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="text-center text-text-muted py-8"
             >
               <p>Ігор не знайдено</p>
@@ -131,7 +131,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
-                    duration: 0.2,
+                    duration: 0.3,
                     delay: index * 0.05,
                     ease: 'easeInOut',
                   }}
