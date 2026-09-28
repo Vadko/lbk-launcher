@@ -29,7 +29,11 @@ if (!isE2E) {
       : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
     if (mpToken) {
       mixpanel.init(mpToken, {
+        // Disable geolocation tracking for privacy reasons
+        ip: false,
+        property_blacklist: ['$current_url'],
         debug: import.meta.env.DEV,
+        api_host: import.meta.env.DEV ? 'https://api-eu.mixpanel.com' : undefined,
       });
     }
   } catch (err) {
@@ -37,7 +41,7 @@ if (!isE2E) {
   }
 }
 
-// Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично
+// Реєструємо версію лаунчера і id як super property, щоб вони додавалась у всі івенти автоматично
 (async () => {
   try {
     const version = await window.electronAPI?.getVersion?.();
