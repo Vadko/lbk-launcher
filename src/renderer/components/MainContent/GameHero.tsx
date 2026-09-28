@@ -3,7 +3,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { Bookmark, BookmarkCheck, Share2, ThumbsUp } from 'lucide-react';
-import { useIsTranslationInstalledForGame } from '@/renderer/hooks/useInstalledTranslations';
+import {
+  useHasEverInstalledTranslation,
+  useIsTranslationInstalledForGame,
+} from '@/renderer/hooks/useInstalledTranslations';
 import { useLikesStore } from '@/renderer/store/useLikesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { teamToSlug } from '@/shared/search-utils';
@@ -67,15 +70,17 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   }, [game, toggleFavoriteGame]);
 
   const isTranslationInstalled = useIsTranslationInstalledForGame(game.id);
+  const hasEverInstalled = useHasEverInstalledTranslation(game.id);
+  const canRate = isTranslationInstalled || hasEverInstalled;
   const isLiked = useLikesStore((state) => state.isLiked(game.id));
   const likesCount = useLikesStore((state) =>
     state.getDisplayedCount(game.id, game.likes_count)
   );
   const handleLike = useCallback(() => {
-    if (game && isTranslationInstalled) {
+    if (game && canRate) {
       useLikesStore.getState().toggleLike(game.id, game.likes_count);
     }
-  }, [game, isTranslationInstalled]);
+  }, [game, canRate]);
 
   // Reset state when game changes
   /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
@@ -206,11 +211,11 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             variant="secondary"
             icon={<ThumbsUp size={20} className={isLiked ? 'fill-current' : undefined} />}
             onClick={handleLike}
-            disabled={!isTranslationInstalled}
+            disabled={!canRate}
             data-gamepad-action
             className="!px-4 !gap-1"
             title={
-              isTranslationInstalled
+              canRate
                 ? isLiked
                   ? 'Зняти оцінку'
                   : 'Оцінити'

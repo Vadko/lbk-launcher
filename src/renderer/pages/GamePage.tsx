@@ -40,7 +40,10 @@ import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
-import { useIsTranslationInstalledForGame } from '../hooks/useInstalledTranslations';
+import {
+  useHasEverInstalledTranslation,
+  useIsTranslationInstalledForGame,
+} from '../hooks/useInstalledTranslations';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -88,6 +91,8 @@ export const GamePage: React.FC = () => {
 
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
   const isTranslationInstalled = useIsTranslationInstalledForGame(selectedGame?.id);
+  const hasEverInstalledTranslation = useHasEverInstalledTranslation(selectedGame?.id);
+  const canLeaveFeedback = isTranslationInstalled || hasEverInstalledTranslation;
   const isUpdateAvailable =
     installationInfo &&
     selectedGame &&
@@ -638,7 +643,7 @@ export const GamePage: React.FC = () => {
                     Підтримати
                   </Button>
                 )}
-              {isTranslationInstalled && (
+              {canLeaveFeedback && (
                 <Button
                   variant="secondary"
                   icon={<FileEdit size={20} />}

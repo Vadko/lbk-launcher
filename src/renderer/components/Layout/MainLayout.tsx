@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
 import { useGamepadModeNavigation } from '../../hooks/useGamepadModeNavigation';
+import { useTrackEverInstalledTranslations } from '../../hooks/useInstalledTranslations';
 import { useNavigateFromNotifications } from '../../hooks/useNavigateFromNotifications';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -64,6 +65,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   // Геймпад навігація (потребує Router context)
   useGamepadModeNavigation(isGamepadMode);
+
+  // Пам'ятаємо переклади, які колись встановлювались, для лайків/відгуків
+  useTrackEverInstalledTranslations();
 
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
 
