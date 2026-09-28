@@ -1,6 +1,6 @@
 export const RestoreIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-    {/* Одне вікно - для відновлення з максимізованого стану */}
+    {/* Single window - for restoring from a maximized state */}
     <rect
       x="3"
       y="3"

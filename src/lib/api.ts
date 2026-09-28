@@ -4,9 +4,9 @@
 const STORAGE_IMAGES_URL = import.meta.env.VITE_STORAGE_IMAGES_URL;
 
 /**
- * Отримати URL зображення зі Storage
- * @param imagePath - шлях до зображення
- * @param updatedAt - timestamp останнього оновлення для cache-busting
+ * Get an image URL from Storage
+ * @param imagePath - path to the image
+ * @param updatedAt - timestamp of the last update, for cache-busting
  */
 export function getImageUrl(
   imagePath: string | null,
@@ -30,7 +30,7 @@ export function getImageUrl(
 
   const baseUrl = `${STORAGE_IMAGES_URL}/${cleanPath}`;
 
-  // Cache-busting: додати timestamp щоб браузер завантажив нову версію при оновленні
+  // Cache-busting: add a timestamp so the browser loads the new version on update
   if (updatedAt) {
     return `${baseUrl}?v=${new Date(updatedAt).getTime()}`;
   }

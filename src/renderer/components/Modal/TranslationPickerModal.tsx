@@ -35,7 +35,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
   const handleSelect = (game: Game) => {
-    // Навігуємо на сторінку вибраної гри замість setSelectedGame
+    // Navigate to the selected game's page instead of setSelectedGame
     navigate(`/game/${game.id}`);
     onClose();
     // Switch to main content after selection in gamepad mode

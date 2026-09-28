@@ -80,9 +80,9 @@ export function setupInstallerHandlers(): void {
             })
         );
 
-        // Note: cache invalidation та installed-games-changed event
-        // автоматично відбуваються через InstallationWatcher при зміні файлів
-        // Download tracking тепер відбувається в Edge Function при генерації signed URL
+        // Note: cache invalidation and the installed-games-changed event
+        // happen automatically via InstallationWatcher when files change
+        // Download tracking now happens in the Edge Function when generating the signed URL
 
         // Locally increment downloads counter (broadcast is skipped for downloads-only changes).
         // The server counts unique downloads, so the worst case is +1 drift until next sync.
@@ -290,8 +290,8 @@ export function setupInstallerHandlers(): void {
         console.error('[Installer] Failed to track uninstall:', err);
       });
 
-      // Note: cache invalidation та installed-games-changed event
-      // автоматично відбуваються через InstallationWatcher при зміні файлів
+      // Note: cache invalidation and the installed-games-changed event
+      // happen automatically via InstallationWatcher when files change
 
       return { success: true };
     } catch (error) {

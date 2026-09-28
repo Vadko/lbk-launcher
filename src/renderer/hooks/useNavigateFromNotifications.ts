@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Hook для обробки навігації з системних нотифікацій.
- * Слухає події від main process і навігує до потрібної гри.
+ * Hook for handling navigation from system notifications.
+ * Listens for events from the main process and navigates to the target game.
  */
 export function useNavigateFromNotifications() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export function useNavigateFromNotifications() {
 
     const unsubscribe = window.windowControls.onNavigateToGame((gameId) => {
       console.log('[App] Navigating to game from notification:', gameId);
-      // Просто навігуємо - GamePage сам завантажить гру якщо потрібно
+      // Just navigate - GamePage will load the game itself if needed
       navigate(`/game/${gameId}`);
     });
 

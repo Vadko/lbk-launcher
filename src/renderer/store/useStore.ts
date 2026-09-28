@@ -32,9 +32,9 @@ interface Store {
   loaderVisible: boolean;
 
   // Installation State
-  installedTranslations: Map<string, InstallationInfo>; // Metadata про встановлені українізатори
-  detectedGames: Map<string, DetectedGameInfo>; // Ігри знайдені на системі
-  gamesWithUpdates: Set<string>; // Ігри з доступними оновленнями
+  installedTranslations: Map<string, InstallationInfo>; // Metadata about installed translations
+  detectedGames: Map<string, DetectedGameInfo>; // Games found on the system
+  gamesWithUpdates: Set<string>; // Games with available updates
   installationProgress: Map<string, InstallationProgress>;
   isCheckingInstallation: Map<string, boolean>;
 
@@ -80,8 +80,8 @@ const statusLabels: Record<string, string> = {
 
 const watchedStatuses = new Set(['planned', 'tech-improvement']);
 
-// detectedGames більше не персіститься - має перевірятися при кожному запуску
-// бо користувач може встановити/видалити ігри через Steam/GOG/Epic
+// detectedGames is no longer persisted - it must be checked on every launch
+// because the user can install/remove games via Steam/GOG/Epic
 
 export const useStore = create<Store>((set, get) => ({
   // Sync State
@@ -95,7 +95,7 @@ export const useStore = create<Store>((set, get) => ({
 
   // Installation State
   installedTranslations: new Map(),
-  detectedGames: new Map(), // Не персиститься
+  detectedGames: new Map(), // Not persisted
   gamesWithUpdates: new Set(),
   installationProgress: new Map(),
   isCheckingInstallation: new Map(),
@@ -126,7 +126,7 @@ export const useStore = create<Store>((set, get) => ({
     console.log('[Store] Loading installed translations from installation-cache');
 
     try {
-      // 1. Отримати ID всіх ігор з встановленими українізаторами з installation-cache/
+      // 1. Get IDs of all games with installed translations from installation-cache/
       const installedGameIds = await window.electronAPI.getAllInstalledGameIds();
       console.log(
         `[Store] Found ${installedGameIds.length} games with installed translations`
@@ -141,14 +141,14 @@ export const useStore = create<Store>((set, get) => ({
         return;
       }
 
-      // 2. Отримати інфо про ці ігри з бази даних
+      // 2. Get info about these games from the database
       const gamesWithTranslations =
         await window.electronAPI.fetchGamesByIds(installedGameIds);
       console.log(
         `[Store] Fetched ${gamesWithTranslations.length} game records from database`
       );
 
-      // 3. Перевірити installation info для кожної гри (паралельно)
+      // 3. Check installation info for each game (in parallel)
       const checkResults = await Promise.all(
         gamesWithTranslations.map(async (game) => {
           const installInfo = await window.electronAPI.checkInstallation(game);
@@ -159,15 +159,15 @@ export const useStore = create<Store>((set, get) => ({
       // Create fresh maps (not copying from old state to properly handle deletions)
       const installedTranslationsMap = new Map<string, InstallationInfo>();
 
-      // Обробляємо результати
-      const orphanedGameIds: string[] = []; // Ігри які вже не існують на диску
+      // Process the results
+      const orphanedGameIds: string[] = []; // Games that no longer exist on disk
 
       for (const { game, installInfo } of checkResults) {
         if (installInfo) {
           installedTranslationsMap.set(game.id, installInfo);
         } else {
-          // Гра була встановлена раніше але зараз не існує (видалена через Steam/GOG/Epic)
-          // Треба видалити метадані з installation-cache/
+          // The game was installed before but no longer exists (removed via Steam/GOG/Epic)
+          // Need to remove metadata from installation-cache/
           orphanedGameIds.push(game.id);
           console.log(
             `[Store] Game ${game.name} no longer exists on disk, will clean up metadata`
@@ -175,7 +175,7 @@ export const useStore = create<Store>((set, get) => ({
         }
       }
 
-      // Видалити orphaned метадані
+      // Remove orphaned metadata
       if (orphanedGameIds.length > 0) {
         console.log(
           `[Store] Cleaning up ${orphanedGameIds.length} orphaned game metadata`
@@ -188,7 +188,7 @@ export const useStore = create<Store>((set, get) => ({
         gamesWithUpdates: new Set(),
       });
 
-      // Єдина перевірка нових версій (бейджі + нотифікації) — та сама, що й для realtime
+      // The single check for new versions (badges + notifications) — same as for realtime
       get().checkInstalledVersionUpdates(gamesWithTranslations);
 
       console.log(
@@ -257,8 +257,8 @@ export const useStore = create<Store>((set, get) => ({
 
     for (const game of games) {
       const installInfo = installedTranslations.get(game.id);
-      // Під час активної установки installedTranslations ще застарілий —
-      // installed-games-changed після її завершення перезапустить перевірку
+      // During an active install, installedTranslations is still stale —
+      // installed-games-changed will re-run the check once it finishes
       if (!installInfo?.version || !game.version || installationProgress.has(game.id)) {
         continue;
       }
@@ -270,14 +270,14 @@ export const useStore = create<Store>((set, get) => ({
         continue;
       }
 
-      // Бейдж завжди відображає доступне оновлення (не залежить від дедуплікації)
+      // The badge always reflects an available update (independent of deduplication)
       if (!updatedSet.has(game.id)) {
         updatedSet.add(game.id);
         changed = true;
       }
 
-      // Нотифікація — один раз на версію (persist), тож очищення списку не ре-нагадує.
-      // addVersionUpdateNotification сам записує notifiedVersions.
+      // Notification — once per version (persisted), so clearing the list doesn't re-notify.
+      // addVersionUpdateNotification itself records notifiedVersions.
       if (gameUpdateNotificationsEnabled && !hasNotifiedVersion(game.id, game.version)) {
         addVersionUpdateNotification(
           game.id,

@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Hook для обробки deep link навігації.
- * Слухає події deep-link від main process і навігує до потрібного перекладу.
- * URL формат: lbk://games/{slug}/{team}
+ * Hook for handling deep link navigation.
+ * Listens for deep-link events from the main process and navigates to the target translation.
+ * URL format: lbk://games/{slug}/{team}
  */
 export function useDeepLink() {
   const navigate = useNavigate();
@@ -18,16 +18,16 @@ export function useDeepLink() {
       console.log('[DeepLink] Navigating to:', data);
 
       try {
-        // TODO: Оптимізувати - зараз завантажуються ВСІ ігри для пошуку однієї
-        // Варіанти: 1) додати API метод для пошуку по slug, 2) використовувати кеш
+        // TODO: Optimize - currently loads ALL games to find one
+        // Options: 1) add an API method to search by slug, 2) use a cache
         const result = await window.electronAPI.fetchGames();
 
-        // Знайти гру по slug та team
+        // Find the game by slug and team
         const targetGame = result.games.find((game) => {
           const gameSlug = game.slug || game.id;
           const slugMatch = gameSlug === data.slug;
 
-          // Перевіряємо team (може бути comma-separated або точний match)
+          // Check team (can be comma-separated or an exact match)
           const teamMatch =
             game.team?.toLowerCase() === data.team.toLowerCase() ||
             game.team

@@ -1,14 +1,14 @@
 /**
- * Підписка й відписка на переклад у Майстерні через CEF-місток Steam.
+ * Subscribe/unsubscribe a translation in the Workshop via Steam's CEF bridge.
  *
- * Той самий шлях, яким ми вже правимо launch options і артворк:
+ * The same path we already use to fix launch options and artwork:
  * `SteamClient.Apps.SubscribeWorkshopItem(appId, publishedFileId, subscribe)`
- * у контексті SharedJSContext. Сигнатуру звірено з бандлом самого клієнта
- * (`Subscribe(e,t){…(e,t,!0)}` / `Unsubscribe(e,t){…(e,t,!1)}`).
+ * in the SharedJSContext context. The signature was checked against the
+ * client's own bundle (`Subscribe(e,t){…(e,t,!0)}` / `Unsubscribe(e,t){…(e,t,!1)}`).
  *
- * Місток доступний не завжди: потрібен прапорець `.cef-enable-remote-debugging`,
- * перезапуск Steam і відсутність Millennium. Тому це прискорення, а не заміна —
- * рендерер за невдачі відкриває звичайний steam:// диплінк.
+ * The bridge is not always available: it needs the `.cef-enable-remote-debugging`
+ * flag, a Steam restart, and no Millennium. So this is an optimization, not a
+ * replacement — the renderer falls back to a plain steam:// deep link on failure.
  */
 
 import {
@@ -19,7 +19,7 @@ import {
 } from '@/main/utils/steam-cef';
 import type { SteamBridgeFailure } from '@/shared/types';
 
-/** Рядок games як є — перейменовувати ці три поля дорогою нема навіщо */
+/** Mirrors the games row as-is — no point renaming these three fields along the way */
 export interface WorkshopTarget {
   id: string;
   steam_app_id: number;
@@ -27,10 +27,10 @@ export interface WorkshopTarget {
 }
 
 /**
- * Які з перекладів уже лежать на диску. Один похід у Steam на весь список:
- * окрема CDP-сесія на кожен переклад коштувала б секунди при десятках записів.
- * `null` — відповіді немає (місток недоступний, Steam не відповів або каталог
- * порожній), і кеш встановлень чіпати не можна.
+ * Which of the translations are already on disk. One round trip to Steam for
+ * the whole list: a separate CDP session per translation would cost seconds
+ * with dozens of entries. `null` means no answer (bridge unavailable, Steam
+ * didn't respond, or an empty list), and the installed cache must not be touched.
  */
 export async function installedWorkshopGameIds(
   targets: WorkshopTarget[]
@@ -84,8 +84,8 @@ export async function installedWorkshopGameIds(
 }
 
 /**
- * Обидва значення потрапляють у JS, який виконується в привілейованому контексті
- * Steam, а number-анотація на межі IPC у рантаймі нічого не гарантує.
+ * Both values flow into JS that runs in Steam's privileged context, and a
+ * number annotation across the IPC boundary guarantees nothing at runtime.
  */
 function isValidTarget(appId: number, workshopId: string): boolean {
   if (!Number.isInteger(appId) || appId <= 0) {
@@ -99,7 +99,7 @@ function isValidTarget(appId: number, workshopId: string): boolean {
   return true;
 }
 
-/** Чи лежить переклад на диску; `null` — містка немає, кеш лишається як є. */
+/** Whether the translation is on disk; `null` means no bridge, cache stays as-is. */
 export async function isWorkshopItemDownloaded(
   appId: number,
   workshopId: string
@@ -152,7 +152,7 @@ export async function setWorkshopSubscription(
   }
 
   try {
-    // Метод нічого не повертає — успіх тут означає лише «Steam прийняв команду»
+    // The method returns nothing — success here just means "Steam accepted the command"
     await evaluateInSharedJsContext(
       `SteamClient.Apps.SubscribeWorkshopItem(${appId}, ${jsLiteral(workshopId)}, ${subscribe})`
     );

@@ -4,27 +4,27 @@ import { getSupabaseClient } from './supabase-client';
 type BannerCampaignRow = Database['public']['Tables']['banner_campaigns']['Row'];
 
 /**
- * Дані банера, які повертає edge function `get-banners`.
- * Всі типи уніфіковані: image_path + link.
- * Пріоритет визначається на бекенді — повертається один найкращий банер.
+ * Banner data returned by the `get-banners` edge function.
+ * All types are unified: image_path + link.
+ * Priority is determined on the backend — a single best banner is returned.
  */
 export type BannerData = Pick<BannerCampaignRow, 'id' | 'type' | 'image_path' | 'link'>;
 
-/** Відповідь edge function get-banners */
+/** Response of the get-banners edge function */
 interface GetBannersResponse {
   success: boolean;
-  /** Один банер з найвищим пріоритетом, або null */
+  /** A single banner with the highest priority, or null */
   banner: BannerData | null;
-  /** Чи гра імпортована з Kuli (тільки для game_page запитів) */
+  /** Whether the game was imported from Kuli (game_page requests only) */
   is_kuli?: boolean;
   error?: string;
 }
 
-/** Результат запиту банерів для гри */
+/** Result of a banner request for a game */
 export interface GameBannersResult {
-  /** Один банер з найвищим пріоритетом, або null */
+  /** A single banner with the highest priority, or null */
   banner: BannerData | null;
-  /** Чи гра імпортована з Kuli */
+  /** Whether the game was imported from Kuli */
   isKuli: boolean;
 }
 
@@ -37,12 +37,12 @@ export type ImpressionType = 'view' | 'click';
 // ---------------------------------------------------------------------------
 
 /**
- * Отримати активні банери для гри з edge function `get-banners`.
+ * Fetch active banners for a game from the `get-banners` edge function.
  *
- * Edge function виконує:
- * 1. Фільтрує кампанії по is_active, placement, start_date, end_date
- * 2. Для game_page — фільтрує по таргетуванню (target_all_games, target_game_slugs)
- * 3. Застосовує frequency capping (якщо передано machine_id)
+ * The edge function:
+ * 1. Filters campaigns by is_active, placement, start_date, end_date
+ * 2. For game_page — filters by targeting (target_all_games, target_game_slugs)
+ * 3. Applies frequency capping (when machine_id is passed)
  *
  * @example
  * ```ts
@@ -55,9 +55,9 @@ export type ImpressionType = 'view' | 'click';
  * });
  *
  * if (banner) {
- *   // Картинка: buildBannerImageUrl(SUPABASE_URL, banner.image_path)
- *   // Клік -> відкрити banner.link
- *   // Розмір: narrow=970x90, small_square=300x250
+ *   // Image: buildBannerImageUrl(SUPABASE_URL, banner.image_path)
+ *   // Click -> open banner.link
+ *   // Size: narrow=970x90, small_square=300x250
  *
  *   await recordBannerImpression({
  *     campaignId: banner.id,
@@ -66,13 +66,13 @@ export type ImpressionType = 'view' | 'click';
  *   });
  * }
  *
- * // isKuli — чи гра імпортована з Kuli
+ * // isKuli — whether the game was imported from Kuli
  * ```
  */
 export async function fetchBannersForGame(params: {
   gameSlug: string;
   gameId: string;
-  /** Machine ID для frequency capping. Отримати через getMachineId() з tracking.ts */
+  /** Machine ID for frequency capping. Get it via getMachineId() from tracking.ts */
   machineId?: string;
 }): Promise<GameBannersResult> {
   try {
@@ -111,9 +111,9 @@ export async function fetchBannersForGame(params: {
 }
 
 /**
- * Отримати глобальний банер (не привʼязаний до конкретної гри).
- * Типи: wide (800x400), large_popup (800x600).
- * Повертає один банер з найвищим пріоритетом, або null.
+ * Fetch a global banner (not tied to a specific game).
+ * Types: wide (800x400), large_popup (800x600).
+ * Returns a single banner with the highest priority, or null.
  */
 export async function fetchGlobalBanner(params?: {
   machineId?: string;
@@ -150,33 +150,33 @@ export async function fetchGlobalBanner(params?: {
 // ---------------------------------------------------------------------------
 
 /**
- * Записати показ або клік банера в таблицю `banner_impressions`.
+ * Record a banner view or click into the `banner_impressions` table.
  *
- * Викликати:
- * - `impression_type: 'view'` — коли банер відобразився на екрані
- * - `impression_type: 'click'` — коли користувач клікнув на банер
+ * Call with:
+ * - `impression_type: 'view'` — when the banner was displayed on screen
+ * - `impression_type: 'click'` — when the user clicked the banner
  *
- * Дані записуються напряму в Supabase через REST API (не через edge function).
- * RLS дозволяє INSERT для anon ролі.
+ * Data is written directly to Supabase via the REST API (not through an edge function).
+ * RLS allows INSERT for the anon role.
  *
- * Таблиця `banner_impressions`:
- * | Поле             | Тип    | Обовʼязкове | Опис                              |
+ * `banner_impressions` table:
+ * | Field            | Type   | Required    | Description                       |
  * |------------------|--------|-------------|-----------------------------------|
- * | campaign_id      | uuid   | так         | ID кампанії (з BannerData.id)     |
- * | impression_type  | text   | так         | 'view' або 'click'                |
- * | machine_id       | text   | ні          | Для frequency capping і аналітики |
- * | game_slug        | text   | ні          | Slug гри де показано банер        |
+ * | campaign_id      | uuid   | yes         | Campaign ID (from BannerData.id)  |
+ * | impression_type  | text   | yes         | 'view' or 'click'                 |
+ * | machine_id       | text   | no          | For frequency capping and analytics |
+ * | game_slug        | text   | no          | Slug of the game the banner was shown on |
  *
  * @example
  * ```ts
- * // При показі банера
+ * // On banner display
  * await recordBannerImpression({
  *   campaignId: banner.id,
  *   impressionType: 'view',
  *   gameSlug: 'the-witcher-3',
  * });
  *
- * // При кліку на банер
+ * // On banner click
  * await recordBannerImpression({
  *   campaignId: banner.id,
  *   impressionType: 'click',
@@ -187,9 +187,9 @@ export async function fetchGlobalBanner(params?: {
 export async function recordBannerImpression(params: {
   campaignId: string;
   impressionType: ImpressionType;
-  /** Machine ID для аналітики. Отримати через getMachineId() з tracking.ts */
+  /** Machine ID for analytics. Get it via getMachineId() from tracking.ts */
   machineId?: string | null;
-  /** Slug гри на сторінці якої показано банер */
+  /** Slug of the game on whose page the banner was shown */
   gameSlug?: string | null;
 }): Promise<boolean> {
   try {
@@ -224,7 +224,7 @@ export async function recordBannerImpression(params: {
 // ---------------------------------------------------------------------------
 
 /**
- * Побудувати повний URL зображення з відносного шляху в Storage.
+ * Build a full image URL from a relative Storage path.
  *
  * @example
  * ```ts

@@ -44,7 +44,7 @@ export const UpdateNotification = () => {
         setUpdateAvailable(true);
         setUpdateInfo(update);
 
-        // Додати в історію сповіщень (тільки один раз для кожної версії)
+        // Add to notification history (only once per version)
         if (newVersion && notifiedVersionRef.current !== newVersion) {
           notifiedVersionRef.current = newVersion;
 

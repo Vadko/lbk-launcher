@@ -63,7 +63,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   );
 
   const handleNotificationClick = (notification: Notification) => {
-    // Позначити як прочитане
+    // Mark as read
     markNotificationAsRead(notification.id);
 
     if (notification.type === 'app-update') {
@@ -72,7 +72,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       return;
     }
 
-    // Перейти на сторінку гри
+    // Navigate to the game page
     navigate(`/game/${notification.gameId}`);
     onClose();
   };

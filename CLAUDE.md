@@ -142,6 +142,8 @@ Never narrate a function body — no step-by-step, no `// Step 1:`, no `// loop 
 
 Comments that do exist stay to **one line**; never write a multi-line comment block.
 
+**Comments are always written in English**, regardless of surrounding Ukrainian UI copy — this applies to `//` and `/* */` comments, JSDoc, and `eslint-disable` reasons alike. This is unrelated to the UI-copy rule above: user-facing Ukrainian strings (JSX text, store copy, error messages shown to the user) stay Ukrainian as always; only comments must be English.
+
 ## Testing and verification
 
 - `pnpm test:unit` is `environment: 'node'`, `include: ['src/**/*.test.ts']` (no `.tsx`), and only aliases `@`. All four suites live in `src/main/utils/` (`platform`, `shell-safety`, `launch-options-value`, `steam-launch-options`). **There are zero renderer unit tests** — do not assume this command covers UI changes. Adding the first one requires editing `vitest.config.ts` (jsdom, `.tsx` glob, `@renderer`/`@components`/`@store` aliases).

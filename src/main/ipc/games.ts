@@ -109,12 +109,12 @@ export function setupGamesHandlers(): void {
     trackSupportClick(gameId)
   );
 
-  // Спроба підписати через CEF; рендерер за невдачі відкриє диплінк
+  // Attempt to subscribe via CEF; the renderer opens a deep link on failure
   ipcMain.handle(
     'set-workshop-subscription',
     async (_, gameId: string, appId: number, workshopId: string, subscribe: boolean) => {
       const result = await setWorkshopSubscription(appId, workshopId, subscribe);
-      // Відписка = видалення перекладу, рахуємо як звичайне видалення
+      // Unsubscribing = removing the translation, counted as a regular uninstall
       if (result.ok && !subscribe) {
         void trackUninstall(gameId).catch((err) =>
           console.error('[Workshop] uninstall tracking failed:', err)
@@ -124,7 +124,7 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Виявлення: які воркшоп-переклади вже стоять, коли кеш порожній або скинутий
+  // Detection: which Workshop translations are already installed when the cache is empty or reset
   ipcMain.handle('list-installed-workshop-games', async () =>
     installedWorkshopGameIds(GamesRepository.getInstance().getWorkshopTargets())
   );
@@ -135,7 +135,7 @@ export function setupGamesHandlers(): void {
       isWorkshopItemDownloaded(appId, workshopId)
   );
 
-  // Перехід у Майстерню = встановлення: сервер зарахує лише перший з машини
+  // Navigating to the Workshop = install: the server counts only the first one from a machine
   ipcMain.handle(
     'track-workshop-open',
     async (_, gameId: string, isFirstSession?: boolean) =>
@@ -176,13 +176,13 @@ export function setupGamesHandlers(): void {
       uploadFileToSignedUrl(signedUrl, filePath, contentType)
   );
 
-  // Перевірити чи гру позначено як tombstoned
-  // (видалена з каталогу, але встановлена локально)
+  // Check whether the game is marked as tombstoned
+  // (removed from the catalog, but installed locally)
   ipcMain.handle('is-game-tombstoned', (_, gameId: string) =>
     SyncManager.getInstance().isGameTombstoned(gameId)
   );
 
-  // Fetch games with pagination - SYNC тепер, тому що локальна БД
+  // Fetch games with pagination - SYNC now, because it's the local DB
   ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {
     const timer = createTimer('IPC: fetch-games');
     try {
@@ -221,7 +221,7 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Fetch recommended games for game page (динамічно за перетином Steam-тегів)
+  // Fetch recommended games for game page (dynamically by Steam tag overlap)
   ipcMain.handle('fetch-recommended-games', (_, gameId: string, limit = 3) => {
     try {
       return fetchRecommendedGames(gameId, limit);
@@ -663,13 +663,13 @@ export function setupGamesHandlers(): void {
     }
   });
 
-  // Створити/оновити Steam-колекцію з іграми з бібліотеки, на які є переклад
+  // Create/update the Steam collection with library games that have a translation
   ipcMain.handle('sync-steam-translated-collection', async () => {
     const appIds = GamesRepository.getInstance().getTranslatedSteamAppIds();
     return syncTranslatedGamesCollection(appIds);
   });
 
-  // Додати LBK Launcher як нестімову гру в бібліотеку Steam (для деки/Big Picture)
+  // Add LBK Launcher as a non-Steam game to the Steam library (for Deck/Big Picture)
   ipcMain.handle('add-lbk-launcher-to-steam-library', () =>
     addLbkLauncherToSteamLibrary()
   );

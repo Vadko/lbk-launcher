@@ -60,8 +60,8 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
       getItemKey: (index) => gameGroups[index].key,
     });
 
-    // Даємо геймпад-навігації канонічний scrollToIndex віртуалізатора,
-    // щоб вона могла доскролити до ще не змонтованої картки
+    // Give gamepad navigation the virtualizer's canonical scrollToIndex,
+    // so it can scroll to a card that isn't mounted yet
     const setScrollGameListToIndex = useGamepadModeStore(
       (s) => s.setScrollGameListToIndex
     );

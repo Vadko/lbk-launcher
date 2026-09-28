@@ -1,14 +1,14 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 
 /**
- * Хелпери для роботи з помилками supabase Edge Functions.
+ * Helpers for working with supabase Edge Function errors.
  *
- * supabase.functions.invoke() на не-2xx кидає FunctionsHttpError, у якого
- * `context` — це сирий Response. Вбудованого способу дістати статус/тіло
- * немає, тож читаємо самі.
+ * supabase.functions.invoke() throws a FunctionsHttpError on non-2xx, whose
+ * `context` is the raw Response. There is no built-in way to get the
+ * status/body, so we read them ourselves.
  */
 
-/** HTTP-статус з помилки edge function (для 4xx-гілок), або undefined. */
+/** HTTP status from an edge function error (for 4xx branches), or undefined. */
 export function functionsErrorStatus(error: unknown): number | undefined {
   return error instanceof FunctionsHttpError
     ? (error.context as Response).status
@@ -16,8 +16,8 @@ export function functionsErrorStatus(error: unknown): number | undefined {
 }
 
 /**
- * Прочитати статус + JSON-тіло з помилки edge function (напр. деталі
- * rate-limit на 429). Повертає null, якщо це не HTTP-помилка функції.
+ * Read the status + JSON body from an edge function error (e.g. rate-limit
+ * details on 429). Returns null if this isn't an HTTP function error.
  */
 export async function readFunctionsErrorBody(
   error: unknown

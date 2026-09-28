@@ -657,10 +657,10 @@ export function getInstalledSteamGamePaths(): string[] {
 // Steam Library App IDs (Owned Games)
 // ============================================================================
 
-/** Скільки CEF-знімок вважається свіжим, поки його нема чим перевірити. */
+/** How long a CEF snapshot is considered fresh while there's nothing to verify it against. */
 const CEF_SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Не-Steam ярлики мають старший біт — це не ігри бібліотеки. */
+/** Non-Steam shortcuts have the high bit set — these aren't library games. */
 const NON_STEAM_APPID_MIN = 2147483648;
 
 function isCefSnapshotFresh(cachedAt: string): boolean {
@@ -770,8 +770,8 @@ async function readSteamLibraryAppIds(): Promise<number[]> {
     const isSameUser = fileCache.steamId === steam64Id;
     const isSameLicensecacheSize =
       (fileCache.licensecacheSize ?? 0) === (currentLicensecacheSize ?? 0);
-    // Розшарені сімейні ігри бачить лише CEF, і їх відкликання не змінює
-    // licensecache — тому такий знімок додатково обмежений терміном.
+    // Only CEF sees family-shared games, and revoking them doesn't change
+    // the licensecache — so that kind of snapshot is additionally TTL-bound.
     const isFresh = fileCache.source !== 'cef' || isCefSnapshotFresh(fileCache.cachedAt);
 
     if (isSameUser && isSameLicensecacheSize && isFresh) {

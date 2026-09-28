@@ -50,7 +50,7 @@ function createTray() {
 
   const icon = nativeImage.createFromPath(getIcon('tray'));
 
-  // На macOS потрібно встановити що це Template іконка
+  // On macOS this needs to be marked as a Template icon
   if (isMacOS()) {
     icon.setTemplateImage(true);
   }
@@ -163,8 +163,8 @@ export function setupWindowControls(): void {
 
       // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
-      // 'shadercache' навмисно НЕ чистимо: це кеш скомпільованих GPU-пайплайнів,
-      // без нього наступний запуск ловить шторм компіляції шейдерів (лаги анімацій)
+      // 'shadercache' is deliberately NOT cleared: it's the compiled GPU pipeline
+      // cache, without it the next launch hits a shader compilation storm (animation lag)
       await session.defaultSession.clearStorageData({
         storages: ['cookies', 'filesystem', 'cachestorage'],
       });
@@ -207,7 +207,7 @@ export function setupWindowControls(): void {
       // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
-        // 'shadercache' навмисно не входить — див. коментар у clear-cache-only
+        // 'shadercache' is deliberately excluded — see the comment in clear-cache-only
         storages: [
           'cookies',
           'filesystem',
