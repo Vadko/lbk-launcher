@@ -1,30 +1,30 @@
 /**
- * Синхронізація бібліотечної колекції Steam «З українізаторами» через
- * CEF-місток — той самий шлях, яким `steam-workshop.ts` підписує на Майстерню.
+ * Syncs the Steam library collection «З українізаторами» through the CEF
+ * bridge — the same path `steam-workshop.ts` uses to subscribe to the Workshop.
  *
- * Кроки, реверс-інжинирені проти `collectionStore` у SharedJSContext (той
- * самий JS-стор, яким бібліотека Steam керує drag-n-drop по колекціях):
+ * The steps were reverse-engineered against `collectionStore` in SharedJSContext
+ * (the same JS store the Steam library uses for drag-and-drop between collections):
  *
- *   - `collectionStore.GetUserCollectionsByName(name)` — знайти нашу колекцію
- *     за назвою, щоб не плодити дублікати при повторних натисканнях кнопки.
+ *   - `collectionStore.GetUserCollectionsByName(name)` — find our collection by
+ *     name so repeated button presses do not pile up duplicates.
  *   - `collectionStore.NewUnsavedCollection(name, null, apps)` +
- *     `SaveCollection(coll)` — створити нову. Другий аргумент — фільтр
- *     колекції (той, що керує «розумними» правилами на кшталт «встановлені»);
- *     `null` тут навмисно: `UpdateApps` у клієнті trактує falsy-фільтр як
- *     «членство суто ручне», що нам і треба, і водночас це звільняє від
- *     залежності від того, чи є в користувача хоч одна власна колекція, звідки
- *     можна було б позичити робочий екземпляр фільтра.
- *   - `collectionStore.AddOrRemoveApp(appIds, add, collectionId)` — додати чи
- *     прибрати ігри з уже наявної колекції.
+ *     `SaveCollection(coll)` — create a new one. The second argument is the
+ *     collection filter (the one driving "smart" rules such as "installed");
+ *     `null` is deliberate here: `UpdateApps` in the client treats a falsy filter as
+ *     "membership is purely manual", which is what we want, and it also frees us
+ *     from depending on the user having at least one collection of their own to
+ *     borrow a working filter instance from.
+ *   - `collectionStore.AddOrRemoveApp(appIds, add, collectionId)` — add or
+ *     remove games from an existing collection.
  *
- * `collectionStore.allGamesCollection.allApps` — джерело правди про те, що
- * саме «доступно зі Steam» для цього акаунта: перетин каталогу перекладів із
- * цим списком робимо прямо в CEF-виразі, без окремого походу через
- * `getSteamLibraryAppIds()` з диска.
+ * `collectionStore.allGamesCollection.allApps` is the source of truth for what
+ * is "available on Steam" for this account: the catalog is intersected with that
+ * list right inside the CEF expression, with no separate trip through
+ * `getSteamLibraryAppIds()` on disk.
  *
- * Прибираємо ігри лише з колекції, яку створили самі (її id записано на
- * акаунт): однойменну колекцію, зібрану користувачем вручну, тільки
- * доповнюємо — інакше один клік вимів би звідти все, чого немає в каталозі.
+ * We only remove games from the collection we created ourselves (its id is stored
+ * per account): a same-named collection the user assembled by hand is only added
+ * to — otherwise one click would wipe everything not in the catalog out of it.
  */
 
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
@@ -61,9 +61,9 @@ type SyncTranslatedCollectionResult =
   | { ok: false; reason: SteamCollectionSyncFailure; error?: string };
 
 /**
- * Створює (за відсутності) або оновлює колекцію так, щоб у ній опинилися ті
- * ігри з `appIds`, які є в бібліотеці Steam цього користувача. Для власної
- * колекції зайве прибирається, для чужої однойменної — лише додається.
+ * Creates (when missing) or updates the collection so it ends up holding those
+ * `appIds` present in this user's Steam library. For our own collection the extras
+ * are removed; for a same-named foreign one we only add.
  */
 export async function syncTranslatedGamesCollection(
   appIds: number[]

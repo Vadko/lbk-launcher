@@ -277,7 +277,9 @@ export interface ElectronAPI {
    * Fires after the installer/script has been downloaded and extracted, before it
    * runs, so the renderer can ask the user whether to launch it now. The renderer
    * must eventually call `respondRunInstaller` with the same gameId or the install
-   * promise on the main process stays pending forever.
+   * promise on the main process stays pending forever. `needsProton` is set when
+   * main picked a Windows installer on Linux; the response then carries the chosen
+   * Proton path.
    */
   onRequestRunInstallerConfirm: (
     callback: (gameId: string, installerPath: string, isExe: boolean) => void

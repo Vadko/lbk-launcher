@@ -3,12 +3,12 @@ import { expect, test } from '@playwright/test';
 import { launchApp, waitForAppReady } from '../helpers/launch';
 
 /**
- * Регресійний тест завантаження картинок: після різкого скролу вглиб списку
- * черга image-запитів не забивається, а банер GamePage завантажується.
- * (Регресія: preload банерів по видимості давав 240+ запитів у черзі,
- * і банер шапки не з'являвся.)
+ * Image-loading regression test: after a sharp scroll deep into the list the
+ * image request queue does not clog, and the GamePage banner still loads.
+ * (Regression: preloading banners by visibility produced 240+ queued requests,
+ * and the header banner never appeared.)
  *
- * IMGDBG=1 — додатково друкує повний CDP-таймлайн кожного image-запиту.
+ * IMGDBG=1 additionally prints the full CDP timeline of every image request.
  */
 
 test('images: hero banner loads after deep scroll, no request pileup', async () => {
@@ -60,7 +60,7 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
   await waitForAppReady(page);
   await page.waitForTimeout(1500); // початкові картинки
 
-  // Різкий скрол: стрибок скролбаром углиб + короткий флік
+  // Sharp scroll: a scrollbar jump deep into the list plus a short flick
   await page.evaluate(async () => {
     const scroller = document.querySelector('.custom-scrollbar.flex-1');
     if (!scroller) return;
@@ -73,7 +73,7 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
   });
   await page.waitForTimeout(800); // isScrolling settle + фетчі видимого вікна
 
-  // Клік по видимій глибокій грі → банер шапки має завантажитись
+  // Click a visible deep game → the header banner must load
   await page.locator('[data-nav-group="game-list"]:visible').first().click();
 
   await expect
@@ -83,7 +83,7 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
           const img = document.querySelector(
             '.h-\\[300px\\] img'
           ) as HTMLImageElement | null;
-          // або банер завантажився, або гра легітимно без банера (плейсхолдер без img)
+          // either the banner loaded, or the game legitimately has none (placeholder, no img)
           if (!img) return document.querySelector('.h-\\[300px\\]') ? 'no-banner' : null;
           return img.complete && img.naturalWidth > 0 ? 'loaded' : 'loading';
         }),
@@ -112,9 +112,9 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
     `[images] total=${list.length} pending=${pending.length} failed=${failed.length}`
   );
 
-  // Черга не забита сотнями фонових завантажень (регресія: 150+ pending)
+  // The queue is not clogged with hundreds of background loads (regression: 150+ pending)
   expect(pending.length).toBeLessThan(30);
-  // Жодного реального мережевого фейлу (скасовані при демонтажі — легітимні)
+  // No real network failures (ones cancelled on unmount are legitimate)
   expect(failed).toEqual([]);
 
   await app.close();

@@ -1,5 +1,5 @@
 /**
- * Форматує байти в читабельний вигляд (B, KB, MB, GB)
+ * Formats bytes into a readable form (B, KB, MB, GB)
  */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) {
@@ -12,7 +12,7 @@ export function formatBytes(bytes: number): string {
 }
 
 /**
- * Форматує секунди в читабельний вигляд (MM:SS)
+ * Formats seconds into a readable form (MM:SS)
  */
 export function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) {
