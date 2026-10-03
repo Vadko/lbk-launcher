@@ -1,6 +1,6 @@
 /**
- * Спільні SQL запити та утиліти для роботи з базою даних
- * Використовується в games-repository.ts та db-worker.ts
+ * Shared SQL queries and utilities for working with the database
+ * Used in games-repository.ts and db-worker.ts
  */
 import type Database from 'better-sqlite3';
 import { IS_ADMIN_BUILD } from '../../shared/admin-mode';
@@ -8,8 +8,8 @@ import { generateSearchableString, withStrippedVariant } from '../../shared/sear
 import type { Game, Database as SupabaseDatabase } from '../../shared/types';
 
 /**
- * Видимі ігри: приховані показуються лише якщо розблоковані користувачем.
- * В адмінській збірці (`VITE_ADMIN_MODE=true`) приховані переклади видно завжди.
+ * Visible games: hidden ones are only shown if unlocked by the user.
+ * In the admin build (`VITE_ADMIN_MODE=true`), hidden translations are always visible.
  */
 export const VISIBLE_GAMES_SQL = IS_ADMIN_BUILD
   ? 'approved = 1'
@@ -30,7 +30,7 @@ export function parseTagIds(json: unknown): number[] | null {
 }
 
 /**
- * Поля, які не зберігаються в локальній БД
+ * Fields that are not stored in the local DB
  */
 type ExcludedLocalFields =
   | 'archive_file_list'
@@ -48,22 +48,22 @@ type ExcludedLocalFields =
   | 'last_subscriber_milestone';
 
 /**
- * Параметри для вставки гри в БД (локальну SQLite)
- * Mapped type на основі Supabase Database типів, але з перетвореннями для SQLite:
+ * Parameters for inserting a game into the DB (local SQLite)
+ * Mapped type based on Supabase Database types, but with conversions for SQLite:
  * - boolean -> number (0/1)
  * - arrays/objects -> JSON string
- * - Виключені поля file_list
+ * - Excluded file_list fields
  */
 type GameInsertParams = {
   [K in keyof Omit<
     SupabaseDatabase['public']['Tables']['games']['Row'],
     ExcludedLocalFields
   >]: K extends 'approved' | 'is_adult' | 'license_only' | 'hide'
-    ? number // boolean перетворюється на 0/1 для SQLite
+    ? number // boolean is converted to 0/1 for SQLite
     : K extends 'ai'
-      ? string | null // ai тепер текстове поле: 'edited' | 'non-edited' | null
+      ? string | null // ai is now a text field: 'edited' | 'non-edited' | null
       : K extends 'platforms' | 'install_paths' | 'screenshots' | 'steam_tag_ids'
-        ? string | null // JSON.stringify для SQLite
+        ? string | null // JSON.stringify for SQLite
         : SupabaseDatabase['public']['Tables']['games']['Row'][K];
 } & {
   // Local-only field for search (not in Supabase)
@@ -71,7 +71,7 @@ type GameInsertParams = {
 };
 
 /**
- * Конвертувати Game в параметри для вставки в БД
+ * Convert a Game into parameters for inserting into the DB
  */
 function gameToInsertParams(game: Game): GameInsertParams {
   return {
@@ -171,10 +171,10 @@ function gameToInsertParams(game: Game): GameInsertParams {
 }
 
 /**
- * Колонки, які приходять із Supabase і мають синхронізуватись при кожному upsert.
- * `user_unlocked` навмисно відсутня тут - це локальне поле, яке не повинно
- * перезаписуватись даними з сервера (див. SYNCED_COLUMNS нижче та коментар
- * до UPSERT_GAME_SQL).
+ * Columns that come from Supabase and must be synced on every upsert.
+ * `user_unlocked` is intentionally absent here - it's a local field that must not
+ * be overwritten by server data (see SYNCED_COLUMNS below and the comment
+ * on UPSERT_GAME_SQL).
  */
 const SYNCED_COLUMNS = [
   'kind',
@@ -288,16 +288,16 @@ type UnbindableColumn = {
 _assertNever<UnbindableColumn>();
 
 /**
- * SQL для upsert гри.
+ * SQL for upserting a game.
  *
- * ВАЖЛИВО: використовує `ON CONFLICT ... DO UPDATE`, а не `INSERT OR REPLACE`.
- * `INSERT OR REPLACE` на конфлікті видаляє існуючий рядок і вставляє новий,
- * тому будь-яка колонка, не перелічена тут, скидається до дефолтного значення.
- * Це ламає локальні (не синхронізовані з Supabase) поля, напр. `user_unlocked`.
- * `DO UPDATE SET` оновлює лише перелічені колонки, залишаючи інші недоторканими.
+ * IMPORTANT: uses `ON CONFLICT ... DO UPDATE`, not `INSERT OR REPLACE`.
+ * `INSERT OR REPLACE` deletes the existing row on conflict and inserts a new one,
+ * so any column not listed here gets reset to its default value.
+ * This breaks local (not synced from Supabase) fields, e.g. `user_unlocked`.
+ * `DO UPDATE SET` only updates the listed columns, leaving others untouched.
  *
- * Список колонок для INSERT і SET формується з одного масиву SYNCED_COLUMNS,
- * щоб не дублювати перелік вручну і не забути додати нову колонку в один з них.
+ * The column list for INSERT and SET is built from the single SYNCED_COLUMNS array,
+ * so the list isn't duplicated by hand and a new column isn't forgotten in one of them.
  */
 const UPSERT_GAME_SQL = `
   INSERT INTO games (
@@ -365,13 +365,13 @@ function rebuildSpellfixDictionary(db: Database.Database): void {
   }
 }
 
-/** У колонці games лишається сире значення, нормалізуємо лише копію в FTS. */
+/** The games column keeps the raw value; only the FTS copy is normalized. */
 function ftsKeywords(value: string | null): string | null {
   return value ? withStrippedVariant(value) : null;
 }
 
 /**
- * Batch upsert ігор в транзакції
+ * Batch upsert games in a transaction
  */
 export function upsertGamesTransaction(db: Database.Database, games: Game[]): void {
   const upsert = db.transaction((gamesToInsert: Game[]) => {
@@ -396,7 +396,7 @@ export function upsertGamesTransaction(db: Database.Database, games: Game[]): vo
 }
 
 /**
- * Upsert однієї гри
+ * Upsert a single game
  */
 export function upsertGameSingle(db: Database.Database, game: Game): void {
   const params = gameToInsertParams(game);
@@ -425,7 +425,7 @@ export function upsertTagNames(
 }
 
 /**
- * Видалити гру
+ * Delete a game
  */
 export function deleteGameById(db: Database.Database, gameId: string): void {
   db.prepare('DELETE FROM games WHERE id = ?').run(gameId);

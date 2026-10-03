@@ -8,9 +8,9 @@ import { playNavigateSound } from '@/renderer/utils/gamepadSounds';
 import { getGameImageUrl } from '@/renderer/utils/imageUrl';
 import { isValidGamepad } from '@/renderer/utils/isValidGamepad';
 
-// D-pad/stick тільки для навігації по слайдах у повноекранному перегляді;
-// решта кнопок (A/B) вже обробляється спільним useGamepadModeNavigation
-// через role="dialog" + data-gamepad-cancel.
+// D-pad/stick only for navigating slides in the fullscreen view;
+// the rest of the buttons (A/B) are already handled by the shared useGamepadModeNavigation
+// via role="dialog" + data-gamepad-cancel.
 const GAMEPAD_DPAD_LEFT = 14;
 const GAMEPAD_DPAD_RIGHT = 15;
 const GAMEPAD_AXIS_LEFT_X = 0;
@@ -62,7 +62,7 @@ export default function Gallery({
     .map((slide) => getGameImageUrl(slide, updated_at) || '')
     .filter(Boolean);
 
-  // Відслідковування розміру вікна для адаптивності thumbs
+  // Tracking window size for thumb responsiveness
   useEffect(() => {
     const handleResize = () => {
       setIsVertical(window.innerWidth >= 1441);
@@ -74,7 +74,7 @@ export default function Gallery({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Перезапуск thumbs carousel при зміні орієнтації
+  // Restart thumbs carousel on orientation change
   useEffect(() => {
     if (thumbEmblaApi) {
       thumbEmblaApi.reInit();
@@ -153,12 +153,12 @@ export default function Gallery({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreenOpen, stepFullscreenSlide]);
 
-  // Гортання слайдів у повноекранному перегляді хрестовиною/стіком геймпада.
-  // A/B тут вже обробляються спільним useGamepadModeNavigation через
-  // role="dialog" + data-gamepad-cancel на кнопці закриття.
-  // Важливо: залежність саме від булевого isFullscreenOpen, а не від
-  // fullscreenIndex — інакше кожен крок гортання перезапускає ефект і
-  // обнуляє lastInputAt, і дебаунс нижче ніколи не встигає спрацювати.
+  // Cycling through slides in the fullscreen view via gamepad d-pad/stick.
+  // A/B here are already handled by the shared useGamepadModeNavigation via
+  // role="dialog" + data-gamepad-cancel on the close button.
+  // Important: the dependency is deliberately the boolean isFullscreenOpen, not
+  // fullscreenIndex — otherwise every navigation step would restart the effect
+  // and reset lastInputAt, and the debounce below would never get a chance to fire.
   useEffect(() => {
     if (!isFullscreenOpen || !isGamepadMode) {
       return;
@@ -196,7 +196,7 @@ export default function Gallery({
     return () => cancelAnimationFrame(rafId);
   }, [isFullscreenOpen, isGamepadMode, stepFullscreenSlide]);
 
-  // Розмір одного thumb-слайда з урахуванням gap, щоб усі slidesPerView вкладались у висоту без скролу
+  // Size of one thumb slide accounting for gap, so all slidesPerView fit the height without scrolling
   const thumbSlideBasis = `calc((100% - ${(slidesPerView - 1) * spaceBetween}px) / ${slidesPerView})`;
 
   return (
@@ -204,7 +204,7 @@ export default function Gallery({
       <div
         className={`slider-container slider-container--same-height ${thumbs && 'slider-container--thumbs'}`}
       >
-        {/* Великий слайдер */}
+        {/* Main slider */}
         <div className="main-slider overflow-hidden rounded-lg relative">
           <div className="embla" ref={mainEmblaRef}>
             <div className="embla__container" style={{ gap: `${spaceBetween}px` }}>
@@ -263,7 +263,7 @@ export default function Gallery({
           )}
         </div>
 
-        {/* Вертикальні прев'ю */}
+        {/* Vertical previews */}
         {thumbs && (
           <div className="main-slider-thumbs overflow-hidden">
             <div className="embla-thumbs" ref={thumbEmblaRef}>
@@ -303,7 +303,7 @@ export default function Gallery({
         )}
       </div>
 
-      {/* Повноекранний перегляд слайду */}
+      {/* Fullscreen slide view */}
       {fullscreenIndex !== null &&
         createPortal(
           <div

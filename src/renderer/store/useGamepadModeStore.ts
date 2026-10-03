@@ -15,8 +15,8 @@ interface GamepadModeStore {
   totalGames: number;
   setTotalGames: (count: number) => void;
 
-  // Віртуалізована стрічка реєструє свій virtualizer.scrollToIndex, щоб
-  // геймпад-навігація могла доскролити до ще не змонтованої картки
+  // The virtualized list registers its virtualizer.scrollToIndex so
+  // gamepad navigation can scroll to a card that isn't mounted yet
   scrollGameListToIndex: ((index: number) => void) | null;
   setScrollGameListToIndex: (fn: ((index: number) => void) | null) => void;
 

@@ -150,7 +150,7 @@ import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { bootstrapCefDebugging } from './utils/cef-flag-file';
 import { createMainWindow, getMainWindow } from './window';
 
-// Глобальні менеджери
+// Global managers
 let syncManager: SyncManager | null = null;
 let realtimeManager: SupabaseRealtimeManager | null = null;
 let currentSyncStatus: 'syncing' | 'ready' | 'error' = 'syncing';
@@ -257,7 +257,7 @@ if (!gotTheLock) {
       }
     }
 
-    // Ініціалізувати локальну базу даних
+    // Initialize the local database
     console.log('[Main] Initializing local database...');
     initDatabase();
 
@@ -272,11 +272,11 @@ if (!gotTheLock) {
       callback({ requestHeaders: details.requestHeaders });
     });
 
-    // Створити вікно ПЕРЕД синхронізацією, щоб показати лоадер
+    // Create the window BEFORE syncing, so the loader shows
     await createMainWindow();
     initTray();
 
-    // Відправити статус синхронізації в renderer
+    // Send sync status to the renderer
     const sendSyncStatus = (status: 'syncing' | 'ready' | 'error') => {
       currentSyncStatus = status;
       const mainWindow = getMainWindow();
@@ -285,7 +285,7 @@ if (!gotTheLock) {
       }
     };
 
-    // Запустити синхронізацію з retry та загальним таймаутом
+    // Start sync with retry and an overall timeout
     console.log('[Main] Starting sync with Supabase...');
     syncManager = SyncManager.getInstance();
 
@@ -323,11 +323,11 @@ if (!gotTheLock) {
     realtimeManager = new SupabaseRealtimeManager();
     const gamesChannel = createGamesBroadcastSubscription(
       (game) => {
-        // Оновити локальну БД через SyncManager
+        // Update the local DB via SyncManager
         syncManager?.handleRealtimeUpdate(game);
       },
       (gameId) => {
-        // Видалити з локальної БД через SyncManager
+        // Delete from the local DB via SyncManager
         syncManager?.handleRealtimeDelete(gameId).catch((err) => {
           console.error('[Main] Realtime delete failed:', err);
         });
@@ -378,7 +378,7 @@ if (!gotTheLock) {
     });
 
     app.on('activate', async () => {
-      // macOS: показати вікно якщо воно заховане або створити нове якщо немає
+      // macOS: show the window if hidden, or create a new one if there isn't one
       const mainWindow = getMainWindow();
       if (mainWindow) {
         if (!mainWindow.isVisible()) {
@@ -441,10 +441,10 @@ if (!gotTheLock) {
     stopSteamWatcher();
     stopInstallationWatcher();
 
-    // Відписатися від realtime оновлень (ігри + відповіді на відгуки)
+    // Unsubscribe from realtime updates (games + feedback replies)
     realtimeManager?.unsubscribe();
 
-    // Закрити базу даних
+    // Close the database
     closeDatabase();
 
     if (!isMacOS()) {

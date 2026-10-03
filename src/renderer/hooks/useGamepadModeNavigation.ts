@@ -88,9 +88,9 @@ export function useGamepadModeNavigation(enabled = true) {
     prevButtonStatesRef.current = gp.buttons.map((b) => b?.pressed ?? false);
   }, []);
 
-  // Стрічка ігор віртуалізована (@tanstack/react-virtual): у DOM лише видимі
-  // картки, тому позиція в NodeList ≠ індекс гри. Шукаємо за data-gamepad-index
-  // на обгортці, а загальну кількість читаємо з data-gamepad-total контейнера.
+  // The game list is virtualized (@tanstack/react-virtual): only visible cards
+  // exist in the DOM, so NodeList position ≠ game index. We look up by
+  // data-gamepad-index on the wrapper, and read the total from the container's data-gamepad-total.
   const getCardByIndex = useCallback(
     (index: number): HTMLElement | null =>
       document.querySelector<HTMLElement>(
@@ -157,7 +157,7 @@ export function useGamepadModeNavigation(enabled = true) {
     [getCardByIndex, getTotalGameCards, setFocusedGameIndex, scrollCardIntoView]
   );
 
-  // Refocus поточної картки з клампом (індекс може бути застарілим після фільтрів)
+  // Refocus the current card with clamping (the index may be stale after filters)
   const refocusCurrentCard = useCallback(() => {
     const total = getTotalGameCards();
     if (total === 0) {
@@ -463,9 +463,9 @@ export function useGamepadModeNavigation(enabled = true) {
     }
 
     playNavigateSound();
-    // Очищаємо selectedGame перед навігацією для миттєвого оновлення UI
+    // Clear selectedGame before navigating for an instant UI update
     setSelectedGame(null);
-    // Навігуємо на головну сторінку
+    // Navigate to the main page
     navigate('/');
     setNavigationArea('main-content');
   }, [navigationArea, selectedGame, setSelectedGame, navigate, setNavigationArea]);
@@ -881,8 +881,8 @@ export function useGamepadModeNavigation(enabled = true) {
           (gp.buttons[BUTTON.DPAD_RIGHT]?.pressed && canInput('games-right')) ||
           (gp.axes[AXIS.LEFT_X] > DEADZONE && canInput('games-stick-right'));
 
-        // Індекс міг лишитись поза межами після звуження списку фільтром —
-        // клампимо, інакше left/A мовчки впираються в bounds check navigateToGame
+        // The index may be left out of bounds after the list narrows from a filter —
+        // clamp it, otherwise left/A silently hit the bounds check in navigateToGame
         const currentIndex = Math.min(focusedGameIndex, totalCards - 1);
 
         if (leftPressed) {
@@ -1079,9 +1079,9 @@ export function useGamepadModeNavigation(enabled = true) {
   }, [enabled, focusedGameIndex, getCardByIndex]);
 
   // Update total games count when the list composition changes.
-  // Спостерігаємо лише за атрибутом data-gamepad-total (childList на body
-  // спрацьовував би на кожен чурн віртуалізатора); початкове значення
-  // синкаємо одразу, бо вставка контейнера не генерує attribute-мутації.
+  // We only watch the data-gamepad-total attribute (childList on body
+  // would fire on every virtualizer churn); the initial value is synced
+  // immediately, since the container's insertion doesn't generate an attribute mutation.
   useEffect(() => {
     if (!enabled) {
       return;

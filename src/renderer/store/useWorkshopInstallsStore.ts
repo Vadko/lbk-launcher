@@ -5,7 +5,7 @@ import { electronStorage } from './electronStorage';
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_LIMIT_MS = 10 * 60 * 1000;
-/** Стільки null-відповідей поспіль означає, що місток зник і чекати далі нема чого */
+/** This many consecutive null responses means the bridge is gone and there's no point waiting further */
 const UNKNOWN_STREAK_LIMIT = 3;
 
 type WorkshopPending = 'installing' | 'downloading' | 'removing';
@@ -132,7 +132,7 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
           appId,
           workshopId
         );
-        // null — містка немає або API Steam змінилось: кеш лишається як є
+        // null — the bridge is missing or the Steam API changed: cache stays as is
         if (actual === null) {
           return;
         }

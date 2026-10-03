@@ -12,7 +12,7 @@ export function useIsTranslationInstalled(): (gameId: string) => boolean {
   );
 }
 
-// Суворіше за предикат списків: збійне встановлення не рахуємо
+// Stricter than the list predicate: a failed install doesn't count
 export function useIsTranslationInstalledForGame(gameId: string | undefined): boolean {
   const info = useStore((state) =>
     gameId ? state.installedTranslations.get(gameId) : undefined

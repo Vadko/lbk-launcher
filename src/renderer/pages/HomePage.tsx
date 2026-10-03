@@ -3,14 +3,14 @@ import { MainPage } from '../components/MainContent/MainPage';
 import { useStore } from '../store/useStore';
 
 /**
- * Головна сторінка лаунчера
- * Показує InstalledGamesSection, NewGamesSection, TrendGamesSection
+ * Launcher home page
+ * Shows InstalledGamesSection, NewGamesSection, TrendGamesSection
  */
 export const HomePage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
 
-  // Очищаємо вибрану гру при переході на головну сторінку
-  // Це запобігає анімації від попередньої гри до нової
+  // Clear the selected game when navigating to the home page
+  // This prevents the animation from the previous game to the new one
   useEffect(() => {
     setSelectedGame(null);
   }, [setSelectedGame]);

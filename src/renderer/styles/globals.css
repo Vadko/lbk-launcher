@@ -29,7 +29,7 @@ img {
   --font-body: "Inter", system-ui, sans-serif;
 }
 
-/* Dark theme (тільки темна тема) */
+/* Dark theme (dark theme only) */
 :root {
   --bg-dark: #0f0f10;
   --glass: rgba(255, 255, 255, 0.03);
@@ -46,8 +46,8 @@ img {
   --color-accent: 255 164 122;
   --color-mixed: 239 238 173;
 
-  /* RGB-триплети для tailwind <alpha-value> (from-bg-dark, /NN-модифікатори
-     не генеруються з hex-var кольорів) */
+  /* RGB triplets for tailwind <alpha-value> (from-bg-dark, /NN modifiers
+     are not generated from hex-var colors) */
   --bg-dark-rgb: 15 15 16;
   --neon-green-rgb: 16 185 129;
 }
@@ -562,9 +562,9 @@ input[type="search"]::-webkit-search-cancel-button {
   position: relative;
 }
 
-/* .embla__slide (батько) має overflow-hidden для заокруглених кутів, тому
-   звичайний outline (назовні) з ним же і зрізається — тримаємо рамку фокуса
-   всередині боксу. */
+/* .embla__slide (parent) has overflow-hidden for rounded corners, so a
+   normal outline (drawn outside) gets clipped by it too — we keep the focus
+   ring inside the box instead. */
 [data-gamepad-mode] .embla__slide__img-container:focus,
 [data-gamepad-mode] .embla__slide__img-container:focus-visible,
 [data-gamepad-mode] + div .searchable-filter-list :focus,

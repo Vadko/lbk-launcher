@@ -331,7 +331,7 @@ export interface ElectronAPI {
   ) => () => void;
   onUpdateError: (callback: (error: Error) => void) => () => void;
   fetchChangelog: (version: string) => Promise<ChangelogEntry[] | null>;
-  // Real-time updates (автоматично керуються в main process)
+  // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (game: Game) => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
@@ -361,9 +361,10 @@ export interface ElectronAPI {
   /** Turning it off reverts Ukrainian library artwork already installed. */
   setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
   /**
-   * Create or update the Steam library collection «З українізаторами» with
-   * every owned game that has a translation in the catalog. Re-running it
-   * also drops games whose translation disappeared since the last sync.
+   * Create or update the Steam library collection «З українізаторами» (games
+   * with translations) with every owned game that has a translation in the
+   * catalog. Re-running it also drops games whose translation disappeared
+   * since the last sync.
    */
   syncSteamTranslatedCollection: () => Promise<
     | { ok: true; total: number }
@@ -395,21 +396,21 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
-  // Підписка й відписка на переклад у Майстерні без відкриття Steam
+  // Subscribe/unsubscribe from a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,
     appId: number,
     workshopId: string,
     subscribe: boolean
   ) => Promise<{ ok: true } | { ok: false; reason: SteamBridgeFailure; error?: string }>;
-  /** Які воркшоп-переклади з каталогу вже на диску; null — містка немає */
+  /** Which Workshop translations from the catalog are already on disk; null — no bridge */
   listInstalledWorkshopGames: () => Promise<string[] | null>;
-  /** Факт наявності на диску; null — CEF-місток недоступний, відповіді немає */
+  /** Whether it's present on disk; null — CEF bridge unavailable, no answer */
   isWorkshopItemDownloaded: (
     appId: number,
     workshopId: string
   ) => Promise<boolean | null>;
-  // Перехід у Майстерню рахується як завантаження
+  // Navigating to the Workshop counts as a download
   trackWorkshopOpen: (
     gameId: string,
     isFirstSession?: boolean

@@ -4,9 +4,9 @@ import { getDatabase } from './database';
 import { parseTagIds, VISIBLE_GAMES_SQL } from './db-queries';
 
 /**
- * Динамічні рекомендації за перетином Steam-тегів (games.steam_tag_ids,
- * синкається з адмінки): 2 популярні + 1 андердог, ротація раз на 3 дні.
- * ШІ-переклади рекомендуються, доки юзер не ввімкнув «Приховати ШІ-переклади».
+ * Dynamic recommendations based on Steam tag overlap (games.steam_tag_ids,
+ * synced from the admin panel): 2 popular + 1 underdog, rotating every 3 days.
+ * AI translations are recommended until the user enables "Hide AI translations".
  */
 
 const OVERLAP_THRESHOLD = 0.5;
@@ -37,8 +37,8 @@ interface Candidate {
   score: number;
 }
 
-// Кешуємо лише непорожні результати на період ротації.
-// Інакше добірка отримана до синхронізації, лишиться порожньою.
+// Cache only non-empty results for the rotation period.
+// Otherwise a selection obtained before sync would stay empty.
 const memo = new Map<string, { epoch: number; ids: string[] }>();
 
 function parseTags(json: string): Set<number> {

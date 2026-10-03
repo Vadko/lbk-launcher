@@ -10,7 +10,7 @@ interface Migration {
   up: (db: Database.Database) => void;
 }
 
-/** Додати колонку, якщо її ще нема (ідемпотентно) */
+/** Add a column if it doesn't already exist (idempotent) */
 function addColumnIfMissing(db: Database.Database, column: string, ddl: string): void {
   const has = db
     .prepare("SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name = ?")
@@ -22,8 +22,8 @@ function addColumnIfMissing(db: Database.Database, column: string, ddl: string):
 }
 
 /**
- * Разовий примусовий повний ресинк: маркер-ключ мусить збігатися з історичним
- * байт-у-байт, інакше клієнти повторять ресинк.
+ * One-time forced full resync: the marker key must match the historical one
+ * byte-for-byte, otherwise clients will repeat the resync.
  */
 function forceResyncOnce(db: Database.Database, name: string, markerKey: string): void {
   const done = db
@@ -946,8 +946,8 @@ const migrations: Migration[] = [
 
       console.log('[Migrations] Running: reindex_fts_without_apostrophes');
 
-      // Індекс перебудовуємо локально з наявних рядків — на відміну від решти
-      // resync_* міграцій, тут нічого не треба заново тягнути з Supabase.
+      // The index is rebuilt locally from existing rows — unlike the other
+      // resync_* migrations, there's nothing to re-fetch from Supabase here.
       const rows = db.prepare('SELECT id, name, search_keywords FROM games').all() as {
         id: string;
         name: string;

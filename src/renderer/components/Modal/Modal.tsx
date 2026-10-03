@@ -29,7 +29,7 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Закриття модалки по Escape
+  // Close the modal on Escape
   React.useEffect(() => {
     if (!isOpen) {
       return;

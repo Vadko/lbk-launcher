@@ -56,13 +56,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const openHistory = useCallback(() => setShowNotificationHistory(true), []);
   const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
 
-  // Обробка deep link для навігації до перекладу
+  // Handle deep link navigation to a translation
   useDeepLink();
 
-  // Обробка навігації з системних нотифікацій
+  // Handle navigation from system notifications
   useNavigateFromNotifications();
 
-  // Геймпад навігація (потребує Router context)
+  // Gamepad navigation (needs Router context)
   useGamepadModeNavigation(isGamepadMode);
 
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;

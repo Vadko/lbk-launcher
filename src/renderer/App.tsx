@@ -29,7 +29,11 @@ if (!isE2E) {
       : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
     if (mpToken) {
       mixpanel.init(mpToken, {
+        // Disable geolocation tracking for privacy reasons
+        ip: false,
+        property_blacklist: ['$current_url'],
         debug: import.meta.env.DEV,
+        api_host: import.meta.env.DEV ? 'https://api-eu.mixpanel.com' : undefined,
       });
     }
   } catch (err) {
@@ -37,7 +41,7 @@ if (!isE2E) {
   }
 }
 
-// Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично
+// Register launcher version and id as super properties so they get attached to all events automatically
 (async () => {
   try {
     const version = await window.electronAPI?.getVersion?.();
@@ -59,7 +63,7 @@ export const App: React.FC = () => {
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
-  // Підписка на real-time оновлення ігор
+  // Subscribe to real-time game updates
   useRealtimeGames();
 
   // Listen for sync status from main process
@@ -69,9 +73,9 @@ export const App: React.FC = () => {
     const loaderStartTime = performance.now();
     const MIN_LOADER_DISPLAY_MS = 1000; // Minimum time to show loader for animations
     const STABLE_FRAMES = 20;
-    // 45мс покриває 24-120Hz: на 30Hz (Low Power Mode) кадр ~33мс, на 40Hz
-    // (Steam Deck) ~25мс — з меншим бюджетом стрік ніколи не набирався і
-    // лоадер завжди висів повні MAX_WAIT_AFTER_READY_MS
+    // 45ms covers 24-120Hz: at 30Hz (Low Power Mode) a frame is ~33ms, at 40Hz
+    // (Steam Deck) ~25ms — with a smaller budget the streak never accumulated and
+    // the loader always hung around for the full MAX_WAIT_AFTER_READY_MS
     const FRAME_BUDGET_MS = 45;
     const MAX_WAIT_AFTER_READY_MS = 8000;
 
@@ -133,7 +137,7 @@ export const App: React.FC = () => {
     };
   }, [setSyncStatus, setLoaderVisible]);
 
-  // Відстеження першого запуску додатку
+  // Track the app's first launch
   useEffect(() => {
     if (!window.storeStorage) {
       return;
@@ -260,7 +264,7 @@ export const App: React.FC = () => {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  // Завантажити встановлені українізатори при старті
+  // Load installed translations on startup
   useIdleEffect(() => {
     if (window.electronAPI) {
       useStore.getState().loadInstalledGamesFromSystem();
@@ -273,15 +277,15 @@ export const App: React.FC = () => {
     }
   }, [syncStatus]);
 
-  // Детекція встановлених ігор — тільки коли sync завершився (інакше каталог ще
-  // порожній). Ефект перезапускається, коли syncStatus стане ready/error.
+  // Detect installed games — only once sync has finished (otherwise the catalog is
+  // still empty). The effect reruns when syncStatus becomes ready/error.
   useIdleEffect(() => {
     if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
       detectInstalledGames();
     }
   }, [detectInstalledGames, syncStatus]);
 
-  // Слухати зміни Steam бібліотеки
+  // Listen for Steam library changes
   useEffect(() => {
     if (!window.electronAPI) {
       return;
@@ -300,8 +304,8 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, [detectInstalledGames]);
 
-  // Слухати зміни встановлених українізаторів
-  // Цей listener потрібен для всіх змін: інсталяція, деінсталяція, зовнішні зміни
+  // Listen for changes to installed translations
+  // This listener is needed for all changes: install, uninstall, external changes
   useEffect(() => {
     if (!window.electronAPI?.onInstalledGamesChanged) {
       return;
@@ -412,7 +416,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Слухати зміни стану maximize для прибирання border-radius
+  // Listen for maximize state changes to remove border-radius
   useEffect(() => {
     window.windowControls?.onMaximizedChange((isMaximized) => {
       if (isMaximized) {

@@ -43,8 +43,8 @@ import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
 
 /**
- * Сторінка детальної інформації про гру
- * Відображає всю інформацію, банери, кнопки встановлення тощо
+ * Detailed game information page
+ * Displays all info, banners, install buttons, etc.
  */
 export const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -102,7 +102,7 @@ export const GamePage: React.FC = () => {
     : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
 
-  // Завантажити гру якщо її ще немає в selectedGame
+  // Load the game if it's not already in selectedGame
   useEffect(() => {
     if (!gameId) {
       navigate('/');
@@ -112,13 +112,13 @@ export const GamePage: React.FC = () => {
     let isCancelled = false; // Race condition protection
 
     const loadGame = async () => {
-      // Якщо вже є вибрана гра з правильним ID, не треба перезавантажувати
+      // If a game with the right ID is already selected, no need to reload
       if (selectedGame?.id === gameId) {
         return;
       }
 
-      // Очищаємо selectedGame якщо змінився gameId (щоб не показувати стару гру)
-      // Я хз нашо додавав але здається це викликає проблеми з геймпадом і зміною ігр
+      // Clear selectedGame if gameId changed (so the old game isn't shown)
+      // Not sure why this was added, but it seems to cause issues with the gamepad and switching games
       // if (selectedGame?.id && selectedGame.id !== gameId) {
       //   setSelectedGame(null);
       // }
@@ -126,27 +126,27 @@ export const GamePage: React.FC = () => {
       try {
         const games = await window.electronAPI.fetchGamesByIds([gameId]);
 
-        // Перевірка чи не відмінено запит (користувач перейшов на іншу гру)
+        // Check whether the request was cancelled (user navigated to another game)
         if (isCancelled) {
           console.log('[GamePage] Request cancelled, not updating selectedGame');
           return;
         }
 
         if (games.length > 0) {
-          // Додаткова перевірка: чи все ще той самий gameId в URL
-          // (захист від швидких кліків на різні ігри)
+          // Extra check: is it still the same gameId in the URL
+          // (protection against rapid clicks on different games)
           if (games[0].id === gameId) {
             setSelectedGame(games[0]);
           } else {
             console.log('[GamePage] Game ID mismatch, skipping setSelectedGame');
           }
         } else {
-          // Гру не знайдено, повертаємось на головну
+          // Game not found, navigating back to the home page
           navigate('/');
         }
       } catch (error) {
         console.error('[GamePage] Failed to load game:', error);
-        // Не навігуємо якщо запит відмінено
+        // Don't navigate if the request was cancelled
         if (!isCancelled) {
           navigate('/');
         }
@@ -155,7 +155,7 @@ export const GamePage: React.FC = () => {
 
     loadGame();
 
-    // Cleanup: позначити запит як скасований при розмонтуванні або зміні gameId
+    // Cleanup: mark the request as cancelled on unmount or gameId change
     return () => {
       isCancelled = true;
     };
@@ -442,7 +442,7 @@ export const GamePage: React.FC = () => {
     isTranslationInstalled,
     showModal,
   ]);
-  // Майстерню ставить Steam: ні архіву, ні встановлення на диск у нас немає
+  // Steam handles Workshop installs: we have neither an archive nor an install to disk
   const isWorkshop = selectedGame?.kind === 'workshop';
 
   const installButtonPhase: ActionPhase =
@@ -450,7 +450,7 @@ export const GamePage: React.FC = () => {
   const installVariant =
     isGameInstalledOnSystem && isTranslationInstalled ? 'secondary' : 'primary';
 
-  // Early return якщо немає гри (після всіх хуків!)
+  // Early return if there's no game (after all hooks!)
   if (!selectedGame) {
     return null;
   }

@@ -14,7 +14,7 @@ const PENDING_DELETIONS_KEY = 'pending_game_deletions';
 const TAG_NAMES_KEY = 'tag_names_synced_at';
 
 /**
- * Повідомити рендерер про видалення ігор зі списку (sidebar/головний список).
+ * Notify the renderer that games were removed from the list (sidebar/main list).
  */
 function notifyGamesRemoved(gameIds: string[]): void {
   if (gameIds.length === 0) {
@@ -30,8 +30,8 @@ function notifyGamesRemoved(gameIds: string[]): void {
 }
 
 /**
- * Повідомити рендерер що гра була позначена як tombstoned (видалена з каталогу,
- * але збережена локально бо встановлена). Використовується GamePage для banner.
+ * Notify the renderer that a game was marked as tombstoned (removed from the
+ * catalog but kept locally because it's installed). Used by GamePage for the banner.
  */
 function notifyGamesTombstoned(gameIds: string[]): void {
   if (gameIds.length === 0) {
@@ -47,7 +47,7 @@ function notifyGamesTombstoned(gameIds: string[]): void {
 }
 
 /**
- * Менеджер синхронізації між Supabase та локальною базою даних
+ * Manages synchronization between Supabase and the local database
  */
 export class SyncManager {
   private static instance: SyncManager | null = null;
@@ -61,8 +61,8 @@ export class SyncManager {
   }
 
   /**
-   * Отримати singleton (використовується IPC хендлерами та іншими споживачами,
-   * щоб не передавати референс через index.ts).
+   * Get the singleton (used by IPC handlers and other consumers so a
+   * reference doesn't need to be threaded through index.ts).
    */
   static getInstance(): SyncManager {
     if (!SyncManager.instance) {
@@ -72,7 +72,7 @@ export class SyncManager {
   }
 
   /**
-   * Перевірити чи це перший запуск (база порожня)
+   * Check whether this is the first run (database is empty)
    */
   private isFirstRun(): boolean {
     const stmt = this.db.prepare('SELECT COUNT(*) as count FROM games');
@@ -81,7 +81,7 @@ export class SyncManager {
   }
 
   /**
-   * Отримати last_sync_timestamp з метаданих
+   * Get last_sync_timestamp from metadata
    */
   private getLastSyncTimestamp(): string | null {
     const stmt = this.db.prepare('SELECT value FROM sync_metadata WHERE key = ?');
@@ -90,7 +90,7 @@ export class SyncManager {
   }
 
   /**
-   * Зберегти last_sync_timestamp
+   * Save last_sync_timestamp
    */
   private setLastSyncTimestamp(timestamp: string): void {
     const stmt = this.db.prepare(`
@@ -101,8 +101,8 @@ export class SyncManager {
   }
 
   /**
-   * Отримати список ID ігор, які сервер позначив видаленими, але які наразі
-   * встановлені у користувача і тому збережені в локальній БД.
+   * Get the list of game IDs the server marked as deleted, but that are
+   * currently installed for the user and are therefore kept in the local DB.
    */
   private getPendingDeletions(): string[] {
     const stmt = this.db.prepare('SELECT value FROM sync_metadata WHERE key = ?');
@@ -127,8 +127,8 @@ export class SyncManager {
   }
 
   /**
-   * Єдина точка реального видалення ігор: видаляє з SQLite через worker
-   * і повідомляє рендерер ('game-removed'), щоб список у sidebar оновився.
+   * The single point of actual game deletion: deletes from SQLite via the worker
+   * and notifies the renderer ('game-removed') so the sidebar list refreshes.
    */
   private async actuallyDeleteGames(ids: string[]): Promise<void> {
     if (ids.length === 0) {
@@ -140,8 +140,8 @@ export class SyncManager {
   }
 
   /**
-   * Розділити deletedIds на ті, які можна видалити одразу (гра не встановлена),
-   * та ті, які треба зберегти до моменту видалення локалізації.
+   * Split deletedIds into ones that can be deleted right away (game not installed)
+   * and ones that must be kept until the localization is uninstalled.
    */
   private async splitDeletedIds(
     deletedIds: string[]
@@ -163,7 +163,7 @@ export class SyncManager {
   }
 
   /**
-   * Додати ID до списку pending deletions (унікально).
+   * Add IDs to the pending deletions list (uniquely).
    */
   private addPendingDeletions(ids: string[]): void {
     if (ids.length === 0) {
@@ -185,16 +185,16 @@ export class SyncManager {
   }
 
   /**
-   * Чи позначена гра як tombstoned (видалена з каталогу, але встановлена локально).
+   * Whether the game is marked as tombstoned (removed from the catalog but installed locally).
    */
   isGameTombstoned(gameId: string): boolean {
     return this.getPendingDeletions().includes(gameId);
   }
 
   /**
-   * Пройтися по pending deletions і видалити з локальної БД ті, які
-   * більше не встановлені (юзер видалив переклад або файли відновлено).
-   * Викликається після зміни в installation-cache.
+   * Walk pending deletions and delete from the local DB the ones that are no
+   * longer installed (user uninstalled the translation or files were restored).
+   * Called after a change in installation-cache.
    */
   async processPendingDeletions(): Promise<void> {
     const pending = this.getPendingDeletions();
@@ -230,8 +230,8 @@ export class SyncManager {
   }
 
   /**
-   * Повний sync - завантажити всі ігри з Supabase та видалити видалені
-   * Використовує Worker Thread для batch операцій щоб не блокувати main thread
+   * Full sync - load all games from Supabase and delete removed ones
+   * Uses a Worker Thread for batch operations so the main thread isn't blocked
    */
   async fullSync(
     fetchAllGames: () => Promise<Game[]>,
@@ -246,7 +246,7 @@ export class SyncManager {
     console.log('[SyncManager] Starting full sync...');
 
     try {
-      // Ініціалізувати worker перед використанням
+      // Initialize the worker before use
       const workerTimer = createTimer('Worker initialization');
       await dbWorkerClient.init();
       workerTimer.end();
@@ -256,7 +256,7 @@ export class SyncManager {
       fetchTimer.end();
       console.log(`[SyncManager] Fetched ${games.length} games from Supabase`);
 
-      // Batch upsert через Worker Thread (не блокує main thread)
+      // Batch upsert via the Worker Thread (doesn't block the main thread)
       if (games.length > 0) {
         const upsertTimer = createTimer(`Upsert ${games.length} games via worker`);
         await dbWorkerClient.upsertGames(games);
@@ -264,7 +264,7 @@ export class SyncManager {
         console.log(`[SyncManager] Inserted/updated ${games.length} games via worker`);
       }
 
-      // Видалити ігри, які є в deleted_games (крім встановлених — їх відкладаємо)
+      // Delete games present in deleted_games (except installed ones — those are deferred)
       if (fetchDeletedGameIds) {
         const deletedIds = await fetchDeletedGameIds();
         if (deletedIds.length > 0) {
@@ -286,7 +286,7 @@ export class SyncManager {
         }
       }
 
-      // Оновити last_sync_timestamp
+      // Update last_sync_timestamp
       const now = new Date().toISOString();
       this.setLastSyncTimestamp(now);
       console.log('[SyncManager] Full sync completed successfully');
@@ -299,8 +299,8 @@ export class SyncManager {
   }
 
   /**
-   * Delta sync - завантажити тільки оновлені ігри та видалити видалені
-   * Використовує Worker Thread для batch операцій щоб не блокувати main thread
+   * Delta sync - load only updated games and delete removed ones
+   * Uses a Worker Thread for batch operations so the main thread isn't blocked
    */
   async deltaSync(
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
@@ -314,7 +314,7 @@ export class SyncManager {
     this.isSyncing = true;
 
     try {
-      // Ініціалізувати worker перед використанням
+      // Initialize the worker before use
       await dbWorkerClient.init();
 
       const lastSync = this.getLastSyncTimestamp();
@@ -331,13 +331,13 @@ export class SyncManager {
         `[SyncManager] Fetched ${updatedGames.length} updated games from Supabase`
       );
 
-      // Upsert через Worker Thread (не блокує main thread)
+      // Upsert via the Worker Thread (doesn't block the main thread)
       if (updatedGames.length > 0) {
         await dbWorkerClient.upsertGames(updatedGames);
         console.log(`[SyncManager] Updated ${updatedGames.length} games via worker`);
       }
 
-      // Видалити ігри, які були видалені на сервері (крім встановлених)
+      // Delete games that were removed on the server (except installed ones)
       if (fetchDeletedGameIds) {
         const deletedIds = await fetchDeletedGameIds(lastSync);
         if (deletedIds.length > 0) {
@@ -357,7 +357,7 @@ export class SyncManager {
         }
       }
 
-      // Оновити last_sync_timestamp
+      // Update last_sync_timestamp
       const now = new Date().toISOString();
       this.setLastSyncTimestamp(now);
       console.log('[SyncManager] Delta sync completed successfully');
@@ -370,9 +370,9 @@ export class SyncManager {
   }
 
   /**
-   * Синхронізація при старті додатка
-   * - Перший запуск: повний sync
-   * - Наступні запуски: delta sync
+   * Sync at app startup
+   * - First run: full sync
+   * - Subsequent runs: delta sync
    */
   async sync(
     fetchAllGames: () => Promise<Game[]>,
@@ -381,7 +381,7 @@ export class SyncManager {
   ): Promise<void> {
     if (this.isFirstRun()) {
       console.log('[SyncManager] First run detected, performing full sync');
-      // Для fullSync передаємо функцію без параметра since
+      // For fullSync, pass a function without the since parameter
       await this.fullSync(
         fetchAllGames,
         fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
@@ -414,7 +414,7 @@ export class SyncManager {
   }
 
   /**
-   * Обробити realtime update
+   * Handle a realtime update
    */
   handleRealtimeUpdate(game: Game): void {
     console.log(
@@ -424,9 +424,9 @@ export class SyncManager {
   }
 
   /**
-   * Обробити realtime видалення.
-   * Якщо гра встановлена — зберегти її у локальній БД до моменту, коли
-   * користувач видалить локалізацію (див. processPendingDeletions).
+   * Handle a realtime deletion.
+   * If the game is installed — keep it in the local DB until the user
+   * uninstalls the localization (see processPendingDeletions).
    */
   async handleRealtimeDelete(gameId: string): Promise<void> {
     console.log(`[SyncManager] Handling realtime delete for game: ${gameId}`);
@@ -442,7 +442,7 @@ export class SyncManager {
   }
 
   /**
-   * Чи синхронізація в процесі
+   * Whether a sync is in progress
    */
   get syncing(): boolean {
     return this.isSyncing;

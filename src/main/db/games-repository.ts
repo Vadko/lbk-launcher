@@ -22,7 +22,7 @@ import {
 } from './db-queries';
 
 /**
- * Repository для роботи з іграми в локальній базі даних
+ * Repository for working with games in the local database
  */
 export class GamesRepository {
   private static instance: GamesRepository | null = null;
@@ -49,7 +49,7 @@ export class GamesRepository {
   }
 
   /**
-   * Прочитати і розпарсити test/games.json
+   * Read and parse test/games.json
    */
   private readTestGamesFile(): Game[] {
     if (!existsSync(this.testGamesPath)) {
@@ -67,7 +67,7 @@ export class GamesRepository {
   }
 
   /**
-   * Відстежувати зміни в test/games.json
+   * Watch for changes in test/games.json
    */
   private watchTestGamesFile(): void {
     if (process.env.NODE_ENV !== 'development' || !existsSync(this.testGamesPath)) {
@@ -110,7 +110,7 @@ export class GamesRepository {
   }
 
   /**
-   * Повідомити renderer процес про зміни в іграх
+   * Notify the renderer process about changes in games
    */
   private notifyGamesChanged(): void {
     const windows = BrowserWindow.getAllWindows();
@@ -120,7 +120,7 @@ export class GamesRepository {
   }
 
   /**
-   * Завантажити тестові ігри з test/games.json в режимі розробки
+   * Load test games from test/games.json in development mode
    */
   private loadTestGamesInDevelopment(): void {
     if (process.env.NODE_ENV !== 'development') {
@@ -155,11 +155,11 @@ export class GamesRepository {
   }
 
   /**
-   * Побудувати ORDER BY clause для сортування ігор
+   * Build the ORDER BY clause for sorting games
    */
   private buildOrderClause(sortOrder: SortOrderType): string {
-    // LTRIM видаляє цифри та символи з початку назви для сортування
-    // Наприклад "112 Operator" сортується як "Operator", "[Chilla's Art]" як "Chilla's Art"
+    // LTRIM strips digits and symbols from the start of the name for sorting
+    // E.g. "112 Operator" sorts as "Operator", "[Chilla's Art]" as "Chilla's Art"
     const nameSortExpr = `LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE`;
 
     if (sortOrder === 'downloads') {
@@ -178,8 +178,8 @@ export class GamesRepository {
   }
 
   /**
-   * Конвертувати row з SQLite в Game
-   * Тільки для полів platforms та install_paths потрібен JSON.parse
+   * Convert a row from SQLite into a Game
+   * Only the platforms and install_paths fields need JSON.parse
    */
   private rowToGame(row: Record<string, unknown>): Game {
     const platforms =
@@ -199,7 +199,7 @@ export class GamesRepository {
       approved: Boolean(row.approved),
       is_adult: Boolean(row.is_adult),
       license_only: Boolean(row.license_only),
-      ai: row.ai as string | null, // ai тепер текстове: 'edited' | 'non-edited' | null
+      ai: row.ai as string | null, // ai is now a text field: 'edited' | 'non-edited' | null
       hide: Boolean(row.hide),
       achievements_third_party: row.achievements_third_party || null,
       platforms,
@@ -210,8 +210,8 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати ігри з фільтрацією
-   * Оскільки це local-first застосунок, повертаємо всі ігри одразу
+   * Get games with filtering
+   * Since this is a local-first app, we return all games at once
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
     const {
@@ -312,7 +312,7 @@ export class GamesRepository {
     orderClause: string
   ): Game[] {
     try {
-      // словник spellfix — без апострофів (extractUniqueWords), запит теж стріпаємо
+      // spellfix dictionary has no apostrophes (extractUniqueWords), so strip the query too
       const queryWords = stripApostrophes(searchQuery)
         .toLowerCase()
         .split(/\s+/)
@@ -351,8 +351,8 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати унікальних авторів
-   * Парсить comma-separated team поле і повертає унікальних авторів
+   * Get unique authors
+   * Parses the comma-separated team field and returns unique authors
    */
   getUniqueAuthors(): string[] {
     const stmt = this.db.prepare(`
@@ -382,7 +382,7 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати ігри за ID
+   * Get games by ID
    */
   getGamesByIds(
     gameIds: string[],
@@ -505,8 +505,8 @@ export class GamesRepository {
   }
 
   /**
-   * Знайти ігри за Steam App IDs
-   * Повертає всі переклади, але total рахує унікальні ігри (за steam_app_id)
+   * Find games by Steam App IDs
+   * Returns all translations, but total counts unique games (by steam_app_id)
    */
   findGamesBySteamAppIds(
     steamAppIds: number[],
@@ -554,8 +554,8 @@ export class GamesRepository {
   }
 
   /**
-   * Підрахувати кількість унікальних ігор доступних зі Steam бібліотеки
-   * (рахує унікальні steam_app_id, щоб не дублювати ігри з кількома перекладами)
+   * Count unique games available from the Steam library
+   * (counts unique steam_app_id to avoid duplicating games with multiple translations)
    */
   countGamesBySteamAppIds(steamAppIds: number[]): number {
     if (steamAppIds.length === 0) {
@@ -575,21 +575,21 @@ export class GamesRepository {
   }
 
   /**
-   * Вставити або оновити гру (upsert)
+   * Insert or update a game (upsert)
    */
   upsertGame(game: Game): void {
     upsertGameSingle(this.db, game);
   }
 
   /**
-   * Вставити або оновити декілька ігор (batch upsert)
+   * Insert or update multiple games (batch upsert)
    */
   upsertGames(games: Game[]): void {
     upsertGamesTransaction(this.db, games);
   }
 
   /**
-   * Інкрементувати лічильник завантажень для гри в локальній БД
+   * Increment the download counter for a game in the local DB
    */
   incrementDownloads(gameId: string): void {
     const stmt = this.db.prepare(
@@ -606,11 +606,11 @@ export class GamesRepository {
   }
 
   /**
-   * Розблокувати/заблокувати приховану гру локально для користувача.
-   * Записує в `user_unlocked` - локальну колонку, яка НЕ синхронізується з Supabase
-   * і тому не злітає при наступному оновленні бази (на відміну від прямого
-   * редагування `hide`, яке завжди перезаписується значенням з сервера).
-   * В WHERE-умовах запитів приховані ігри показуються, якщо `user_unlocked = 1`.
+   * Unlock/lock a hidden game locally for the user.
+   * Writes to `user_unlocked` - a local column that does NOT sync from Supabase
+   * and therefore doesn't get wiped on the next database update (unlike directly
+   * editing `hide`, which is always overwritten by the server's value).
+   * In query WHERE conditions, hidden games are shown when `user_unlocked = 1`.
    */
   setGameVisibility(gameId: string, hidden: boolean): boolean {
     const stmt = this.db.prepare('UPDATE games SET user_unlocked = ? WHERE id = ?');
@@ -628,10 +628,10 @@ export class GamesRepository {
   }
 
   /**
-   * Steam App ID усіх ігор каталогу, для яких є переклад — незалежно від
-   * способу встановлення (Workshop чи архів). На відміну від
-   * `getWorkshopTargets`, який бере лише `kind = 'workshop'` (це рідкість —
-   * абсолютна більшість перекладів встановлюються архівом).
+   * Steam App ID of every catalog game that has a translation — regardless of
+   * the install method (Workshop or archive). Unlike
+   * `getWorkshopTargets`, which only takes `kind = 'workshop'` (a rarity —
+   * the vast majority of translations are installed via archive).
    */
   getTranslatedSteamAppIds(): number[] {
     const rows = this.db
@@ -644,14 +644,14 @@ export class GamesRepository {
   }
 
   /**
-   * Видалити гру
+   * Delete a game
    */
   deleteGame(gameId: string): void {
     deleteGameById(this.db, gameId);
   }
 
   /**
-   * Отримати останній updated_at для синхронізації
+   * Get the latest updated_at for synchronization
    */
   getLastUpdatedAt(): string | null {
     const stmt = this.db.prepare(`
@@ -664,7 +664,7 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати гру за ID
+   * Get a game by ID
    */
   getGameById(gameId: string): Game | null {
     const stmt = this.db.prepare(`
@@ -678,8 +678,8 @@ export class GamesRepository {
   }
 
   /**
-   * Теги для фільтра: лише ті, що є у видимих іграх, з локалізованими назвами.
-   * JOIN зі словником водночас відсіює id, для яких назви ще не синкнулись.
+   * Tags for the filter: only those present in visible games, with localized names.
+   * The JOIN with the dictionary also filters out ids whose names haven't synced yet.
    */
   getTagOptions(): TagOption[] {
     return this.db
@@ -696,9 +696,9 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати лічильники для фільтрів (ефективний SQL запит з агрегацією)
-   * Рахує унікальні ігри за slug (або id якщо slug відсутній),
-   * щоб не дублювати ігри з кількома перекладами
+   * Get counts for filters (efficient SQL query with aggregation)
+   * Counts unique games by slug (or id if slug is absent),
+   * to avoid duplicating games with multiple translations
    */
   getFilterCounts(): {
     planned: number;
@@ -744,10 +744,10 @@ export class GamesRepository {
   }
 
   /**
-   * Знайти ігри за списком назв папок Xbox-інсталяцій. Метчимо проти
-   * `install_paths` JSON-поля (елементи `{type: 'xbox', path: 'FolderName'}`).
-   * SQLite не вміє JSON-аррей-індекси, тож використовуємо json_each для
-   * розгортання install_paths і LIKE-патерн для пошуку відповідного запису.
+   * Find games by a list of Xbox installation folder names. Matches against
+   * the `install_paths` JSON field (items `{type: 'xbox', path: 'FolderName'}`).
+   * SQLite has no JSON array indexes, so we use json_each to
+   * expand install_paths and a LIKE pattern to find the matching entry.
    */
   findGamesByXboxPaths(
     folderNames: string[],
@@ -762,8 +762,8 @@ export class GamesRepository {
 
     const whereConditions = [VISIBLE_GAMES_SQL];
     const placeholders = trimmed.map(() => '?').join(',');
-    // Кожен елемент install_paths — JSON {type, path}. Шукаємо такі де
-    // type='xbox' і path COLLATE NOCASE IN (folderNames).
+    // Each install_paths element is JSON {type, path}. We look for ones where
+    // type='xbox' and path COLLATE NOCASE IN (folderNames).
     whereConditions.push(`
       EXISTS (
         SELECT 1
@@ -802,7 +802,7 @@ export class GamesRepository {
   }
 
   /**
-   * Знайти ігри за списком назв (exact match, case-insensitive)
+   * Find games by a list of titles (exact match, case-insensitive)
    */
   findGamesByTitles(
     titles: string[],

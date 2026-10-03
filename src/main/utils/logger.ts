@@ -14,7 +14,7 @@ const LOG_RETENTION_DAYS = 1;
 
 let logFilePath: string | null = null;
 
-// Зберігаємо оригінальні console методи до override
+// Store the original console methods before overriding
 const originalConsole = {
   log: console.log.bind(console),
   error: console.error.bind(console),
@@ -80,7 +80,7 @@ function writeToFile(message: string): void {
 export function initLogger(): void {
   cleanupOldLogs();
 
-  // Header для нового лог-файлу
+  // Header for a new log file
   const filePath = getLogFilePath();
   if (!existsSync(filePath)) {
     writeFileSync(

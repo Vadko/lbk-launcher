@@ -28,7 +28,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
-  const [arrowPosition, setArrowPosition] = useState(50); // відсоток від лівого краю
+  const [arrowPosition, setArrowPosition] = useState(50); // percent from the left edge
   const mouseXRef = useRef(0);
   const containerRef = useRef<HTMLSpanElement>(null);
 

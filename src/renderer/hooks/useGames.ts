@@ -112,8 +112,8 @@ interface UseGamesResult {
 }
 
 /**
- * Хук для отримання ігор з локальної бази даних
- * Оскільки це local-first застосунок, завантажуємо всі ігри одразу
+ * Hook for fetching games from the local database
+ * Since this is a local-first app, we load all games at once
  */
 export function useGames({
   selectedStatuses,
@@ -142,10 +142,10 @@ export function useGames({
   const abortControllerRef = useRef<AbortController | null>(null);
 
   /**
-   * Завантажити ігри
+   * Load games
    */
   const loadGames = useCallback(async () => {
-    // Скасувати попередній запит якщо він ще виконується
+    // Cancel the previous request if it's still running
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -155,15 +155,15 @@ export function useGames({
     setError(null);
 
     try {
-      // Кожна "бібліотечна" гілка (favorite/installed/steam/gog/epic/xbox) отримує свій
-      // набір ігор через окремий IPC-виклик (за id/шляхами/назвами), а статуси, автори
-      // та типи контенту (досягнення/озвучення) застосовуються після - як AND-фільтри
-      // на клієнті, щоб усі групи фільтрів комбінувались між собою через AND.
+      // Each "library" branch (favorite/installed/steam/gog/epic/xbox) gets its
+      // own set of games via a separate IPC call (by id/paths/names), while statuses,
+      // authors and content types (achievements/voice) are applied afterward - as
+      // AND filters on the client, so all filter groups combine with each other via AND.
       if (specialFilter === 'favorite-translations') {
         const { useSettingsStore } = await import('../store/useSettingsStore');
         const favoriteGameIds = useSettingsStore.getState().favoriteGameIds;
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -174,7 +174,7 @@ export function useGames({
           return;
         }
 
-        // Отримати улюблені ігри (з SQL фільтрацією пошуку та AI)
+        // Get favorite games (with SQL search and AI filtering)
         const favoriteGames = await window.electronAPI.fetchGamesByIds(
           favoriteGameIds,
           searchQuery || undefined,
@@ -182,7 +182,7 @@ export function useGames({
           sortOrder
         );
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -203,7 +203,7 @@ export function useGames({
       if (specialFilter === 'installed-translations') {
         const installedGameIds = await allInstalledTranslationIds();
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -214,7 +214,7 @@ export function useGames({
           return;
         }
 
-        // Отримати ігри зі встановленими українізаторами (з SQL фільтрацією пошуку та AI)
+        // Get games with installed translations (with SQL search and AI filtering)
         const installedGames = await window.electronAPI.fetchGamesByIds(
           installedGameIds,
           searchQuery || undefined,
@@ -222,7 +222,7 @@ export function useGames({
           sortOrder
         );
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -240,11 +240,11 @@ export function useGames({
         return;
       }
 
-      // Спеціальна обробка для встановлених ігор (на комп'ютері)
+      // Special handling for installed games (on the computer)
       if (specialFilter === 'installed-games') {
         const installPaths = await window.electronAPI.getAllInstalledGamePaths();
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -255,7 +255,7 @@ export function useGames({
           return;
         }
 
-        // Знайти ігри за шляхами встановлення (з SQL фільтрацією пошуку та AI)
+        // Find games by install paths (with SQL search and AI filtering)
         const result = await window.electronAPI.findGamesByInstallPaths(
           installPaths,
           searchQuery || undefined,
@@ -263,7 +263,7 @@ export function useGames({
           sortOrder
         );
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -281,11 +281,11 @@ export function useGames({
         return;
       }
 
-      // Спеціальна обробка для ігор доступних зі Steam бібліотеки
+      // Special handling for games available from the Steam library
       if (specialFilter === 'available-in-steam') {
         const steamLibraryAppIds = await window.electronAPI.getSteamLibraryAppIds();
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -296,7 +296,7 @@ export function useGames({
           return;
         }
 
-        // Отримати ігри за Steam App IDs (з SQL фільтрацією пошуку та AI)
+        // Get games by Steam App IDs (with SQL search and AI filtering)
         const result = await window.electronAPI.findGamesBySteamAppIds(
           steamLibraryAppIds,
           searchQuery || undefined,
@@ -304,7 +304,7 @@ export function useGames({
           sortOrder
         );
 
-        // Перевірити чи запит ще актуальний
+        // Check if the request is still relevant
         if (signal.aborted) {
           return;
         }
@@ -436,8 +436,8 @@ export function useGames({
         return;
       }
 
-      // Без бібліотечного фільтру - статуси, автори й теги фільтруються в SQL,
-      // типи контенту (досягнення/озвучення) - на клієнті (AND між собою).
+      // Without a library filter - statuses, authors and tags are filtered in SQL,
+      // content types (achievements/voice) - on the client (AND'ed together).
       const params: GetGamesParams = {
         searchQuery,
         statuses: selectedStatuses,
@@ -449,7 +449,7 @@ export function useGames({
 
       const result = await window.electronAPI.fetchGames(params);
 
-      // Перевірити чи запит ще актуальний
+      // Check if the request is still relevant
       if (signal.aborted) {
         return;
       }
@@ -463,7 +463,7 @@ export function useGames({
       setGames(filtered);
       setTotal(filtered.length);
     } catch (error) {
-      // Ігноруємо помилки від скасованих запитів
+      // Ignore errors from cancelled requests
       if (signal.aborted) {
         return;
       }
@@ -475,7 +475,7 @@ export function useGames({
       setGames([]);
       setTotal(0);
     } finally {
-      // Оновлюємо isLoading тільки якщо запит не скасовано
+      // Only update isLoading if the request wasn't cancelled
       if (!signal.aborted) {
         setIsLoading(false);
       }
@@ -493,15 +493,15 @@ export function useGames({
   ]);
 
   /**
-   * Перезавантажити
+   * Reload
    */
   const reload = useCallback(() => {
     loadGames();
   }, [loadGames]);
 
-  // Завантажити при зміні параметрів (тільки коли sync завершено)
+  // Load when parameters change (only once sync is complete)
   useEffect(() => {
-    // Чекаємо поки sync завершиться (ready або error)
+    // Wait until sync completes (ready or error)
     if (syncStatus !== 'ready' && syncStatus !== 'error') {
       return;
     }
@@ -515,7 +515,7 @@ export function useGames({
     return () => window.removeEventListener('test-games-updated', handleTestGamesUpdate);
   }, [loadGames]);
 
-  // Перевірити статуси підписаних ігор після першого завантаження
+  // Check subscribed games' statuses after the initial load
   useEffect(() => {
     if (!isLoading && games.length > 0 && !hasCheckedSubscriptions.current) {
       hasCheckedSubscriptions.current = true;
@@ -523,7 +523,7 @@ export function useGames({
     }
   }, [isLoading, games, checkSubscribedGamesStatus]);
 
-  // Слухати realtime оновлення окремих ігор
+  // Listen for realtime updates of individual games
   useEffect(() => {
     if (!window.electronAPI?.onGameUpdated) {
       return;
@@ -535,18 +535,18 @@ export function useGames({
       const { checkSubscribedGamesStatus, checkSubscribedTeamUpdate } =
         useStore.getState();
 
-      // Перевірити статус підписаних ігор (централізована обробка)
+      // Check subscribed games' status (centralized handling)
       checkSubscribedGamesStatus([updatedGame]);
 
       setGames((prevGames) => {
         const index = prevGames.findIndex((g) => g.id === updatedGame.id);
         const oldGame = index !== -1 ? prevGames[index] : null;
 
-        // Перевірити підписки на команди (централізована обробка)
+        // Check team subscriptions (centralized handling)
         checkSubscribedTeamUpdate(updatedGame, oldGame);
 
-        // AND-перевірка статусів, авторів та типів контенту - завжди застосовується,
-        // незалежно від бібліотечного фільтру, бо всі групи фільтрів комбінуються через AND
+        // AND check of statuses, authors and content types - always applied,
+        // regardless of the library filter, since all filter groups combine via AND
         const matchesGroups =
           matchesStatuses(updatedGame, selectedStatuses) &&
           matchesAuthors(updatedGame, selectedAuthors) &&
@@ -554,9 +554,9 @@ export function useGames({
           matchesTags(updatedGame, selectedTagIds) &&
           matchesTranslationTypes(updatedGame, selectedTranslationTypes);
 
-        // Для бібліотечних фільтрів (installed-games, available-in-steam, тощо) membership
-        // (чи гра взагалі належить бібліотеці) визначається окремими listeners, тож тут
-        // ми лише оновлюємо/видаляємо вже присутні ігри - не додаємо нових
+        // For library filters (installed-games, available-in-steam, etc.) membership
+        // (whether a game belongs to the library at all) is determined by separate listeners,
+        // so here we only update/remove already-present games - we don't add new ones
         const isLibraryFilter =
           specialFilter === 'installed-games' ||
           specialFilter === 'installed-translations' ||
@@ -579,7 +579,7 @@ export function useGames({
           return newGames;
         }
 
-        // Проста перевірка пошуку - повна фільтрація відбудеться при наступному reload
+        // Simple search check - full filtering happens on the next reload
         const matchesSearch =
           !searchQuery ||
           updatedGame.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -588,23 +588,23 @@ export function useGames({
         const shouldBeInList = matchesSearch && matchesGroups && updatedGame.approved;
 
         if (index === -1) {
-          // Гра не в списку
+          // Game not in the list
           if (!shouldBeInList) {
             return prevGames;
           }
 
-          // Додати гру в кінець (точна позиція визначиться при наступному reload)
+          // Add the game to the end (exact position determined on next reload)
           setTotal((prev) => prev + 1);
           return [...prevGames, updatedGame];
         }
-        // Гра є в списку
+        // Game is in the list
         if (!shouldBeInList) {
-          // Видалити гру, якщо вона більше не відповідає фільтрам
+          // Remove the game if it no longer matches the filters
           setTotal((prev) => prev - 1);
           return prevGames.filter((g) => g.id !== updatedGame.id);
         }
 
-        // Оновити дані гри in-place, зберігаючи поточний порядок
+        // Update the game data in place, preserving the current order
         const newGames = [...prevGames];
         newGames[index] = updatedGame;
         return newGames;
@@ -639,7 +639,7 @@ export function useGames({
     selectedTranslationTypes,
   ]);
 
-  // Слухати realtime видалення ігор
+  // Listen for realtime game deletions
   useEffect(() => {
     if (!window.electronAPI?.onGameRemoved) {
       return;
@@ -648,7 +648,7 @@ export function useGames({
     const handleGameRemoved = (gameId: string) => {
       console.log('[useGames] Game removed via realtime:', gameId);
 
-      // Видалити гру зі списку, якщо вона там є
+      // Remove the game from the list if it's there
       setGames((prevGames) => {
         const filtered = prevGames.filter((g) => g.id !== gameId);
         if (filtered.length !== prevGames.length) {
@@ -662,13 +662,13 @@ export function useGames({
     return unsubscribe;
   }, []);
 
-  // Слухати зміни у встановлених українізаторах (install/uninstall)
-  // Перереєструємо listener при зміні specialFilter для коректної роботи closure
+  // Listen for changes in installed translations (install/uninstall)
+  // Re-register the listener when specialFilter changes so the closure stays correct
   useEffect(() => {
     if (!window.electronAPI?.onInstalledGamesChanged) {
       return;
     }
-    // Підписуємось тільки якщо активний відповідний фільтр
+    // Only subscribe if the corresponding filter is active
     if (specialFilter !== 'installed-translations') {
       return;
     }
@@ -691,13 +691,13 @@ export function useGames({
     };
   }, [specialFilter, loadGames]);
 
-  // Слухати зміни Steam бібліотеки (для вкладки встановлених ігор та доступних зі Steam)
-  // Перереєструємо listener при зміні specialFilter для коректної роботи closure
+  // Listen for Steam library changes (for the installed games and available-in-Steam tabs)
+  // Re-register the listener when specialFilter changes so the closure stays correct
   useEffect(() => {
     if (!window.electronAPI?.onSteamLibraryChanged) {
       return;
     }
-    // Підписуємось тільки якщо активний відповідний фільтр
+    // Only subscribe if the corresponding filter is active
     if (specialFilter !== 'installed-games' && specialFilter !== 'available-in-steam') {
       return;
     }
@@ -713,7 +713,7 @@ export function useGames({
     return unsubscribe;
   }, [specialFilter, loadGames]);
 
-  // Cleanup abort controller при unmount
+  // Cleanup abort controller on unmount
   useEffect(
     () => () => {
       if (abortControllerRef.current) {

@@ -3,9 +3,9 @@ import { useStore } from '../store/useStore';
 import type { Game } from '../types/game';
 
 /**
- * Хук для підписки на real-time оновлення ігор
- * Оновлює selectedGame та перевіряє наявність оновлень для встановлених ігор
- * Підписка на Supabase керується автоматично в main process
+ * Hook for subscribing to real-time game updates
+ * Updates selectedGame and checks for updates for installed games
+ * The Supabase subscription is managed automatically in the main process
  */
 export function useRealtimeGames() {
   useEffect(() => {
@@ -17,7 +17,7 @@ export function useRealtimeGames() {
       console.log('[useRealtimeGames] Game updated via real-time:', updatedGame.name);
       useStore.getState().syncSelectedGame(updatedGame);
 
-      // Нотифікації про оновлення версій та зміни статусів обробляються в useGames.ts
+      // Notifications about version updates and status changes are handled in useGames.ts
     };
 
     console.log('[useRealtimeGames] Subscribing to game updates');

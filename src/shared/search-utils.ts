@@ -58,9 +58,9 @@ export function buildFtsQuery(input: string): string {
   const buildExpr = (tokens: string[]) =>
     tokens.map((t) => `"${escapeFtsToken(t)}"*`).join(' AND ');
 
-  // Індекс без апострофів, тому основна форма — теж без них. Але сирий варіант
-  // лишаємо в OR: інакше «heaven's» перестане ловити «Heavenly Sword», бо «s»
-  // приклеїться до слова й зламає префіксний матч.
+  // The index is apostrophe-free, so the primary form is too. But we keep the
+  // raw variant in OR: otherwise "heaven's" would stop matching "Heavenly Sword",
+  // because the "s" would stick to the word and break the prefix match.
   const translit = getTransliteration(input);
   const sources = [stripApostrophes(input), input];
   if (translit) {

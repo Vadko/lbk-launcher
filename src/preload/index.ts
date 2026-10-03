@@ -191,7 +191,7 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('update-error', handler);
   },
   fetchChangelog: (version) => ipcRenderer.invoke('fetch-changelog', version),
-  // Real-time updates (автоматично керуються в main process)
+  // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback) => {
     const handler = (_: unknown, game: Game) => callback(game);
     ipcRenderer.on('game-updated', handler);
@@ -275,7 +275,7 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
-  // Підписка на переклад у Майстерні без відкриття Steam
+  // Subscribe to a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,
     appId: number,
@@ -286,7 +286,7 @@ const electronAPI: ElectronAPI = {
   listInstalledWorkshopGames: () => ipcRenderer.invoke('list-installed-workshop-games'),
   isWorkshopItemDownloaded: (appId: number, workshopId: string) =>
     ipcRenderer.invoke('is-workshop-item-downloaded', appId, workshopId),
-  // Перехід у Майстерню рахується як завантаження
+  // Navigating to the Workshop counts as a download
   trackWorkshopOpen: (gameId: string, isFirstSession?: boolean) =>
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
   // Track failed search (0 results)
