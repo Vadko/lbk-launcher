@@ -41,7 +41,8 @@ export async function uninstallTranslation(game: Game): Promise<void> {
 
     const gamePath = installInfo.gamePath;
 
-    if (installInfo.installerPath && fs.existsSync(installInfo.installerPath)) {
+    // No existsSync here: runUninstaller resolves the transliterated name itself.
+    if (installInfo.installerPath) {
       console.log(`[Uninstaller] Running uninstaller: ${installInfo.installerPath}`);
       try {
         await runUninstaller(installInfo.installerPath, installInfo.protonPath);

@@ -1,11 +1,10 @@
 import path from 'path';
 import { isWindows } from '../utils/platform';
 
+export const WINDOWS_INSTALLER_EXTENSIONS = ['.exe', '.msi', '.bat', '.cmd'];
+
 const EXECUTABLE_EXTENSIONS = [
-  '.exe',
-  '.msi',
-  '.bat',
-  '.cmd',
+  ...WINDOWS_INSTALLER_EXTENSIONS,
   '.sh',
   '.run',
   '.bin',

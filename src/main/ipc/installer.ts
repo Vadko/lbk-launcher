@@ -1,6 +1,6 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
-import type { Game, InstallOptions } from '../../shared/types';
+import type { Game, InstallOptions, RunInstallerDecision } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
 import { getFirstAvailableGamePath } from '../game-detector';
 import { installTranslation } from '../installer';
@@ -39,16 +39,22 @@ import { getMainWindow } from '../window';
 
 // Resolvers for run-installer confirmations awaiting a decision from the renderer,
 // keyed by game id (one pending install per game at a time).
-const pendingRunInstallerDecisions = new Map<string, (decision: boolean) => void>();
+const pendingRunInstallerDecisions = new Map<
+  string,
+  (decision: RunInstallerDecision) => void
+>();
 
 export function setupInstallerHandlers(): void {
-  ipcMain.on('installer:run-decision', (_, gameId: string, decision: boolean) => {
-    const resolve = pendingRunInstallerDecisions.get(gameId);
-    if (resolve) {
-      pendingRunInstallerDecisions.delete(gameId);
-      resolve(decision);
+  ipcMain.on(
+    'installer:run-decision',
+    (_, gameId: string, decision: RunInstallerDecision) => {
+      const resolve = pendingRunInstallerDecisions.get(gameId);
+      if (resolve) {
+        pendingRunInstallerDecisions.delete(gameId);
+        resolve(decision);
+      }
     }
-  });
+  );
 
   ipcMain.handle(
     'install-translation',
@@ -68,15 +74,10 @@ export function setupInstallerHandlers(): void {
           (status) => {
             getMainWindow()?.webContents.send('installation-status', game.id, status);
           },
-          (installerPath, isExe) =>
-            new Promise<boolean>((resolve) => {
-              pendingRunInstallerDecisions.set(game.id, resolve);
-              getMainWindow()?.webContents.send(
-                'installer:confirm-run',
-                game.id,
-                installerPath,
-                isExe
-              );
+          (request) =>
+            new Promise<RunInstallerDecision>((resolve) => {
+              pendingRunInstallerDecisions.set(request.gameId, resolve);
+              getMainWindow()?.webContents.send('installer:confirm-run', request);
             })
         );
 

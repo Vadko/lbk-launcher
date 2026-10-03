@@ -13,6 +13,8 @@ import type {
   Game,
   InstallationStatus,
   InstallOptions,
+  RunInstallerDecision,
+  RunInstallerRequest,
   SortOrderType,
 } from '../shared/types';
 
@@ -111,13 +113,12 @@ const electronAPI: ElectronAPI = {
   showItemInFolder: (filePath: string) =>
     ipcRenderer.invoke('show-item-in-folder', filePath),
   onRequestRunInstallerConfirm: (callback) => {
-    const handler = (_: unknown, gameId: string, installerPath: string, isExe: boolean) =>
-      callback(gameId, installerPath, isExe);
+    const handler = (_: unknown, request: RunInstallerRequest) => callback(request);
     ipcRenderer.on('installer:confirm-run', handler);
     return () => ipcRenderer.removeListener('installer:confirm-run', handler);
   },
-  respondRunInstaller: (gameId: string, shouldRun: boolean) =>
-    ipcRenderer.send('installer:run-decision', gameId, shouldRun),
+  respondRunInstaller: (gameId: string, decision: RunInstallerDecision) =>
+    ipcRenderer.send('installer:run-decision', gameId, decision),
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),

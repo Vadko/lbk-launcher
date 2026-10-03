@@ -6,11 +6,11 @@ import type { Game, InstallationStatus } from '../../shared/types';
 import { getSteamPath } from '../game-detector';
 import { getTransliteratedPath } from '../utils/files';
 import type { GameBuildOs } from '../utils/game-build';
-import { getPlatform, isLinux, isWindows } from '../utils/platform';
+import { forCurrentOS, getPlatform, isLinux, isWindows } from '../utils/platform';
 import { isCmdSafePath } from '../utils/shell-safety';
 import { getCleanEnv } from './archive';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
-import { isExecutableInstaller } from './executable';
+import { WINDOWS_INSTALLER_EXTENSIONS } from './executable';
 import { runProton } from './proton';
 
 const toPosix = (p: string): string => p.replace(/\\/g, '/');
@@ -122,13 +122,13 @@ export function checkPlatformCompatibility(game: Game): string | null {
     return 'Цей українізатор доступний тільки для Linux. Встановлення на Windows неможливе.';
   }
 
-  // macOS: can run Linux shell scripts, but not Windows installers
-  if (isMacOS) {
-    // If only Windows installer available - block
-    if (hasWindowsInstaller && !hasLinuxInstaller) {
-      return 'Цей українізатор доступний тільки для Windows. Встановлення на macOS неможливе.';
-    }
-    // If Linux installer available - allow (macOS can run shell scripts)
+  // macOS runs the Linux file directly, so it must not be a Windows binary in disguise.
+  if (
+    isMacOS &&
+    (!game.installation_file_linux_path ||
+      isWindowsInstallerFile(game.installation_file_linux_path))
+  ) {
+    return 'Цей українізатор доступний тільки для Windows. Встановлення на macOS неможливе.';
   }
 
   return null;
@@ -138,45 +138,34 @@ export function checkPlatformCompatibility(game: Game): string | null {
  * Get installer file name based on platform
  */
 export function getInstallerFileName(game: Game, buildOs?: GameBuildOs): string | null {
-  const isWindowsOS = isWindows();
-  const isLinuxOS = isLinux();
-  const isMacOS = !isWindowsOS && !isLinuxOS;
-
-  // Match the archive, picked the same way; another build's file isn't inside it.
-  if (buildOs === 'windows' && game.installation_file_windows_path) {
-    return isWindowsOS
+  const windowsFile = game.installation_file_windows_path
+    ? isWindows()
       ? game.installation_file_windows_path
-      : toPosix(game.installation_file_windows_path);
-  }
-  if (buildOs && buildOs !== 'windows' && game.installation_file_linux_path) {
-    return toPosix(game.installation_file_linux_path);
+      : toPosix(game.installation_file_windows_path)
+    : null;
+  const linuxFile = game.installation_file_linux_path
+    ? toPosix(game.installation_file_linux_path)
+    : null;
+
+  // Windows build with split-off variants: the shared archive has no Linux script.
+  const hasBuildVariants =
+    !!game.steam_linux_archive_path || !!game.steam_mac_archive_path;
+  if (buildOs === 'windows' && hasBuildVariants && windowsFile) {
+    return windowsFile;
   }
 
-  if (isWindowsOS && game.installation_file_windows_path) {
-    return game.installation_file_windows_path;
-  }
-
-  // Linux and macOS can both run shell scripts
-  if ((isLinuxOS || isMacOS) && game.installation_file_linux_path) {
-    return toPosix(game.installation_file_linux_path);
-  }
-
-  if (isLinuxOS && game.installation_file_windows_path) {
-    return toPosix(game.installation_file_windows_path);
-  }
-
-  return null;
+  // Linux falls back to the Windows installer (Proton); macOS can't run it.
+  return forCurrentOS({
+    windows: windowsFile,
+    linux: linuxFile ?? windowsFile,
+    macos: linuxFile,
+    other: linuxFile,
+  });
 }
 
-/**
- * Check if game has an executable installer (not just any installation file)
- */
-export function hasExecutableInstaller(game: Game): boolean {
-  const installerFileName = getInstallerFileName(game);
-  if (!installerFileName) {
-    return false;
-  }
-  return isExecutableInstaller(installerFileName);
+export function isWindowsInstallerFile(fileName: string): boolean {
+  const lowerName = fileName.toLowerCase();
+  return WINDOWS_INSTALLER_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
 }
 
 /** Only `.bat`/`.cmd` need a shell; everything else spawns directly. */
@@ -236,8 +225,7 @@ export async function runInstaller(
     const installerPath = path.join(extractDir, installerFileName);
 
     if (!fs.existsSync(installerPath)) {
-      console.warn(`[Installer] Installer file not found: ${installerPath}`);
-      return;
+      throw new Error(`файл інсталятора не знайдено: ${installerPath}`);
     }
 
     console.log(`[Installer] Running installer: ${installerPath}`);
@@ -314,15 +302,10 @@ export async function runInstaller(
         }
       }
     } else if (platform === 'linux' || platform === 'macos') {
-      // Check if this is a Windows-specific file that requires Proton
-      const isWindowsFile =
-        installerPath.toLowerCase().endsWith('.bat') ||
-        installerPath.toLowerCase().endsWith('.cmd') ||
-        installerPath.toLowerCase().endsWith('.exe') ||
-        installerPath.toLowerCase().endsWith('.msi');
-
-      if (isWindowsFile) {
-        throw new Error('Windows інсталятор (.bat/.cmd/.exe/.msi) потребує Proton.');
+      if (isWindowsInstallerFile(installerPath)) {
+        throw new Error(
+          `Windows інсталятор (${WINDOWS_INSTALLER_EXTENSIONS.join('/')}) потребує Proton.`
+        );
       }
 
       // Execute native Linux/macOS scripts directly

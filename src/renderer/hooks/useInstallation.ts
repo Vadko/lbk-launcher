@@ -82,7 +82,7 @@ export function useInstallation({
   const [pendingInstallOptions, setPendingInstallOptions] = useState<
     InstallOptions | undefined
   >();
-  const [selectedProton, setSelectedProton] = useState<string | undefined>();
+  const protonSelectionRef = useRef<string | undefined>(undefined);
   const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
   const {
     phase: installPhase,
@@ -460,32 +460,63 @@ export function useInstallation({
     }
 
     const unsubscribe = window.electronAPI.onRequestRunInstallerConfirm(
-      (gameId, installerPath, isExe) => {
+      ({ gameId, installerPath, isExe, protons }) => {
         const label = isExe ? 'інсталятор' : 'скрипт';
-        showModal({
-          title: `Запуск ${isExe ? 'інсталятора' : 'скрипта'}`,
-          message: `Українізатор завантажено та розпаковано.\n\nЗапустити ${label} зараз?`,
-          type: 'info',
-          mandatory: true,
-          actions: [
-            {
-              label: 'Відкрити папку',
-              onClick: () => window.electronAPI.showItemInFolder(installerPath),
-              variant: 'secondary',
-              keepOpen: true,
-            },
-            {
-              label: 'Так, запустити',
-              onClick: () => window.electronAPI.respondRunInstaller(gameId, true),
-              variant: 'primary',
-            },
-            {
-              label: 'Ні',
-              onClick: () => window.electronAPI.respondRunInstaller(gameId, false),
-              variant: 'secondary',
-            },
-          ],
-        });
+        const message = protons
+          ? `Українізатор завантажено та розпаковано. ${isExe ? 'Інсталятор' : 'Скрипт'} для Windows буде запущено через вибрану версію Proton.\n\nШлях до папки буде скопійовано в буфер.`
+          : `Українізатор завантажено та розпаковано.\n\nЗапустити ${label} зараз?`;
+
+        // «Ні» keeps protonPath too — «Перевстановити» and uninstall reuse it.
+        const show = (protonPath?: string) => {
+          showModal({
+            title: `Запуск ${isExe ? 'інсталятора' : 'скрипта'}`,
+            message,
+            type: 'info',
+            mandatory: true,
+            selectConfig: protons
+              ? {
+                  options: protons.map((p) => ({ name: p.name, value: p.path })),
+                  selectedValue: protonPath,
+                  onSelectionChange: (value) => {
+                    protonSelectionRef.current = value;
+                    show(value);
+                  },
+                  placeholder: 'Оберіть версію Proton',
+                }
+              : undefined,
+            actions: [
+              {
+                label: 'Відкрити папку',
+                onClick: () => window.electronAPI.showItemInFolder(installerPath),
+                variant: 'secondary',
+                keepOpen: true,
+              },
+              {
+                label: 'Так, запустити',
+                onClick: () =>
+                  window.electronAPI.respondRunInstaller(gameId, {
+                    run: true,
+                    protonPath,
+                  }),
+                variant: 'primary',
+              },
+              {
+                label: 'Ні',
+                onClick: () =>
+                  window.electronAPI.respondRunInstaller(gameId, {
+                    run: false,
+                    protonPath,
+                  }),
+                variant: 'secondary',
+              },
+            ],
+          });
+        };
+
+        show(
+          protons?.find((p) => p.path === protonSelectionRef.current)?.path ??
+            protons?.[0]?.path
+        );
       }
     );
 
@@ -713,84 +744,17 @@ export function useInstallation({
         selectedGame.installation_file_linux_path;
 
       if (hasInstaller) {
-        const isLinux = (await window.electronAPI.getPlatform()) === 'linux';
-        const isExe =
-          selectedGame.installation_file_windows_path?.endsWith('.exe') || false;
-        const needsProton =
-          isLinux &&
-          !selectedGame.installation_file_linux_path &&
-          !!selectedGame.installation_file_windows_path;
-
-        if (needsProton) {
-          // Get available Proton versions for Linux (only when no native Linux installer)
-          const protons = (await window.electronAPI.getAvailableProtons?.()) || [];
-
-          if (protons) {
-            // Create a state holder for selected proton
-            if (!selectedProton && protons.length > 0) {
-              setSelectedProton(protons[0].path);
-            }
-
-            const showProtonModal = (currentSelection: string) => {
-              showModal({
-                title: 'Запуск інсталятора',
-                message:
-                  'Після завантаження та розпакування українізатора буде запущено інсталятор з вибраною версією Proton.\n\nШлях до папки буде скопійовано в буфер',
-                type: 'info',
-                selectConfig: {
-                  options: protons.map((p) => ({ name: p.name, value: p.path })),
-                  selectedValue: currentSelection,
-                  onSelectionChange: (value) => {
-                    console.log('[useInstallation] Selected Proton:', value);
-                    setSelectedProton(value);
-                    showProtonModal(value);
-                  },
-                  placeholder: 'Оберіть версію Proton',
-                },
-                actions: [
-                  {
-                    label: 'Продовжити',
-                    onClick: () => {
-                      void performInstallation(pendingInstallPath, {
-                        ...installOptions,
-                        protonPath: currentSelection,
-                      });
-                    },
-                    variant: 'primary',
-                  },
-                  {
-                    label: 'Скасувати',
-                    onClick: () => undefined,
-                    variant: 'secondary',
-                  },
-                ],
-              });
-            };
-
-            showProtonModal(selectedProton || protons[0]?.path);
-          } else {
-            showConfirm({
-              title: 'Запуск інсталятора',
-              message:
-                'Після завантаження та розпакування українізатор не вдасться запустити інсталятор через відсутність Proton.\n\nПродовжити встановлення без Proton?',
-              confirmText: 'Продовжити',
-              cancelText: 'Скасувати',
-              onConfirm: () => {
-                void performInstallation(pendingInstallPath, installOptions);
-              },
-            });
-          }
-        } else {
-          showConfirm({
-            title: `Запуск ${isExe ? 'інсталятора' : 'скрипта'}`,
-            message: `Після завантаження та розпакування українізатора буде запущено ${isExe ? 'інсталятор' : 'скрипт'}.\n\nПродовжити встановлення?`,
-            confirmText: 'Продовжити',
-            cancelText: 'Скасувати',
-            onConfirm: () => {
-              void performInstallation(pendingInstallPath, installOptions);
-            },
-          });
-        }
+        // Which file runs (and whether via Proton) is known only after extraction.
+        showConfirm({
+          title: 'Запуск інсталятора',
+          message:
+            'Після завантаження та розпакування українізатора буде запущено його інсталятор або скрипт.\n\nПродовжити встановлення?',
+          confirmText: 'Продовжити',
+          cancelText: 'Скасувати',
+          onConfirm: () => {
+            void performInstallation(pendingInstallPath, installOptions);
+          },
+        });
         return;
       }
 
@@ -806,7 +770,6 @@ export function useInstallation({
       setInstallationProgress,
       clearInstallationProgress,
       checkInstallationStatus,
-      selectedProton,
     ]
   );
 
