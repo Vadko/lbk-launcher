@@ -21,8 +21,8 @@ export default {
         'border-hover': 'var(--border-hover)',
       },
       colors: {
-        // RGB-триплети — інакше /NN-модифікатори і градієнтні from-/to- класи
-        // мовчки не генеруються (from-bg-dark був мертвий)
+        // RGB triplets — otherwise /NN modifiers and gradient from-/to- classes
+        // are silently not generated (from-bg-dark was dead)
         'bg-dark': 'rgb(var(--bg-dark-rgb) / <alpha-value>)',
         'neon-green': 'rgb(var(--neon-green-rgb) / <alpha-value>)',
         'color-main': 'rgb(var(--color-main) / <alpha-value>)',

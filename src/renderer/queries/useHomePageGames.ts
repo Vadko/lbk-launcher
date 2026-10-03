@@ -5,7 +5,7 @@ import { useSyncAwareQuery } from './useSyncAwareQuery';
 const FIVE_MINUTES = 5 * 60 * 1000;
 
 /**
- * Query keys для ігор головної сторінки
+ * Query keys for the home page games
  */
 const homeGamesKeys = {
   all: ['home-games'] as const,
@@ -17,7 +17,7 @@ const homeGamesKeys = {
 };
 
 /**
- * Отримати нові ігри (для секції "Новинки")
+ * Fetch new games (for the "Новинки" section)
  */
 export function useNewGames(hideAiTranslations = false) {
   return useSyncAwareQuery({
@@ -35,7 +35,7 @@ export function useNewGames(hideAiTranslations = false) {
 }
 
 /**
- * Отримати оновлені ігри (для секції "Новинки" -> таб "Оновлення")
+ * Fetch updated games (for the "Новинки" section -> "Оновлення" tab)
  */
 export function useUpdatedGames(hideAiTranslations = false) {
   return useSyncAwareQuery({
@@ -53,7 +53,7 @@ export function useUpdatedGames(hideAiTranslations = false) {
 }
 
 /**
- * Отримати встановлені ігри (на комп'ютері) для головної сторінки
+ * Fetch games installed on this computer for the home page
  */
 export function useInstalledGamesForHome(
   hideAiTranslations = false,
@@ -83,8 +83,8 @@ export function useInstalledGamesForHome(
 }
 
 /**
- * Кількість встановлених ігор на пристрої (незалежно від наявності перекладу).
- * Дозволяє розрізнити сценарії: ігор не знайдено взагалі vs. знайдено, але без перекладів.
+ * Number of games installed on the device (regardless of translation availability).
+ * Lets us tell the scenarios apart: no games found at all vs. found, but with no translations.
  */
 export function useInstalledGamePathsCount() {
   return useSyncAwareQuery({

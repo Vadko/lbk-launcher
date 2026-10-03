@@ -1,13 +1,13 @@
 /**
  * Playtime Tracker
  *
- * Відстежує час гри з українізатором через Steam playtime.
- * При зміні playtime для встановлених локалізацій відправляє дельту на сервер.
+ * Tracks time played with a translation installed, via Steam playtime.
+ * When playtime changes for an installed translation, the delta is sent to the server.
  *
- * Логіка:
- * 1. При запуску лаунчера - зчитуємо поточний playtime для ігор з встановленими локалізаціями
- * 2. При закритті лаунчера - порівнюємо з початковим значенням
- * 3. Якщо є різниця - відправляємо на сервер
+ * How it works:
+ * 1. On launcher start — read the current playtime for games with installed translations
+ * 2. On launcher exit — compare against the starting value
+ * 3. If there is a difference — send it to the server
  */
 
 import { app } from 'electron';
