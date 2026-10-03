@@ -598,6 +598,13 @@ export class GamesRepository {
     stmt.run(gameId);
   }
 
+  /** Subscriber count from the tracking response — holds until the next catalog sync */
+  setSubscriptions(gameId: string, subscriptions: number): void {
+    this.db
+      .prepare('UPDATE games SET subscriptions = ? WHERE id = ?')
+      .run(subscriptions, gameId);
+  }
+
   /**
    * Unlock/lock a hidden game locally for the user.
    * Writes to `user_unlocked` - a local column that does NOT sync from Supabase

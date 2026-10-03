@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface SelectOption {
@@ -125,7 +125,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           <span className="text-text-main truncate" title={displayText}>
             {displayText}
           </span>
-          <ChevronDown
+          <ChevronDownIcon
             size={16}
             className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           />

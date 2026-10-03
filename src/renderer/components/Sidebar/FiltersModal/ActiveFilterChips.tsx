@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import React from 'react';
 
 interface ActiveFilterChip {
@@ -30,7 +30,7 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips }) =
             title="Зняти фільтр"
             className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-glass text-text-muted hover:text-text-main flex-shrink-0"
           >
-            <X size={12} />
+            <XIcon size={12} />
           </button>
         </span>
       ))}

@@ -66,6 +66,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   useGamepadModeNavigation(isGamepadMode);
 
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
+  const bgImageClass =
+    'absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none';
 
   return (
     <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
@@ -85,12 +87,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           /* Gamepad layout: Header + Games strip on top, MainContent below */
           <div className="flex flex-col h-full pt-8 relative z-10">
             {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
+            <img src={mainBg} alt="" className={bgImageClass} aria-hidden="true" />
             {/* Sidebar - hides when in main-content mode */}
             <div
               className={`transition-all duration-300 ease-in-out relative z-20 ${
@@ -109,12 +106,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           /* Normal layout: Vertical sidebar on left, MainContent on right */
           <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
             {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
+            <img src={mainBg} alt="" className={bgImageClass} aria-hidden="true" />
             <Sidebar onOpenHistory={openHistory} isHorizontal={false} />
             <Outlet />
           </div>

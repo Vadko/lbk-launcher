@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeftIcon } from 'lucide-react';
 import React from 'react';
 import { Button } from '../ui/Button';
 import { TrendGamesSection } from './TrendsGamesSection';
@@ -25,7 +25,7 @@ export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) 
         data-gamepad-primary-action
         className="flex items-center gap-2 sticky"
       >
-        <ArrowLeft size={24} />
+        <ArrowLeftIcon size={24} />
         Назад
       </Button>
     </div>

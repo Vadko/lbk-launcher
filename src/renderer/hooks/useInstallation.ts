@@ -5,6 +5,7 @@ import type {
   Game,
   GamePath,
   InstallationInfo,
+  InstallationStatusTone,
   InstallOptions,
   InstallResult,
   Platform,
@@ -16,6 +17,7 @@ import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
+import { type ActionPhase, useActionPhase } from './useActionPhase';
 import { useIsWorkshopChangePending } from './useInstalledTranslations';
 
 interface UseInstallationParams {
@@ -36,19 +38,22 @@ interface UseInstallationResult {
   installProgress: number;
   downloadProgress: DownloadProgress | null;
   statusMessage: string | null;
+  statusTone: InstallationStatusTone | null;
   handleInstall: (customGamePath?: string) => Promise<void>;
   handleInstallOptionsConfirm: (
     installOptions: InstallOptions,
     removeOptions: { removeVoice: boolean; removeAchievements: boolean }
   ) => Promise<void>;
   handleUninstall: () => Promise<void>;
-  handleRerunInstaller: (event: React.MouseEvent<HTMLButtonElement>) => Promise<void>;
+  handleRerunInstaller: () => Promise<void>;
   handlePauseDownload: () => Promise<void>;
   handleResumeDownload: () => Promise<void>;
   handleCancelDownload: () => Promise<void>;
   getInstallButtonText: () => string;
+  installPhase: ActionPhase;
+  rerunPhase: ActionPhase;
   showInstallOptions: boolean;
-  setShowInstallOptions: (show: boolean) => void;
+  closeInstallOptions: () => void;
   pendingInstallPath: string | undefined;
   availablePlatforms: GamePath[];
 }
@@ -79,6 +84,30 @@ export function useInstallation({
   >();
   const [selectedProton, setSelectedProton] = useState<string | undefined>();
   const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
+  const {
+    phase: installPhase,
+    isPending: isInstallPrecheckPending,
+    run: runInstallPrecheck,
+    reset: resetInstallPrecheck,
+  } = useActionPhase();
+  const {
+    phase: rerunPhase,
+    isPending: isRerunPending,
+    run: runRerunInstaller,
+    reset: resetRerun,
+  } = useActionPhase();
+  const installFlowRef = useRef(false);
+
+  const closeInstallOptions = useCallback(() => {
+    setShowInstallOptions(false);
+    resetInstallPrecheck();
+  }, [resetInstallPrecheck]);
+
+  useEffect(() => {
+    installFlowRef.current = false;
+    resetInstallPrecheck();
+    resetRerun();
+  }, [selectedGame?.id, resetInstallPrecheck, resetRerun]);
 
   const isWorkshopChangePending = useIsWorkshopChangePending(selectedGame?.id);
 
@@ -92,6 +121,7 @@ export function useInstallation({
   const installProgress = gameProgress?.progress || 0;
   const downloadProgress = gameProgress?.downloadProgress || null;
   const statusMessage = gameProgress?.statusMessage || null;
+  const statusTone = gameProgress?.statusTone || null;
 
   const isPlanned = selectedGame?.status === 'planned';
   const isTechImprovement = selectedGame?.status === 'tech-improvement';
@@ -135,7 +165,7 @@ export function useInstallation({
           onConfirm: async () => {
             const selectedFolder = await window.electronAPI.selectGameFolder();
             if (selectedFolder) {
-              await performInstallation(selectedFolder, effectiveOptions);
+              void performInstallation(selectedFolder, effectiveOptions);
             }
           },
         });
@@ -161,40 +191,11 @@ export function useInstallation({
           Type: 'install',
         });
 
-        const unsubDownloadProgress = window.electronAPI.onDownloadProgress?.(
-          (gameId: string, progress: DownloadProgress) => {
-            setInstallationProgress(gameId, {
-              progress: progress.percent,
-              downloadProgress: progress,
-            });
-          }
+        const result: InstallResult = await window.electronAPI.installTranslation(
+          selectedGame,
+          effectiveOptions,
+          customGamePath
         );
-
-        const unsubInstallationStatus = window.electronAPI.onInstallationStatus?.(
-          (gameId: string, status) => {
-            setInstallationProgress(gameId, {
-              statusMessage: status.message,
-              // When we leave the download phase, clear download progress so UI
-              // switches from DownloadProgressCard to InstallationStatusMessage
-              ...(status.phase !== 'download' && {
-                downloadProgress: null,
-                progress: 0,
-              }),
-            });
-          }
-        );
-
-        let result: InstallResult;
-        try {
-          result = await window.electronAPI.installTranslation(
-            selectedGame,
-            effectiveOptions,
-            customGamePath
-          );
-        } finally {
-          unsubDownloadProgress?.();
-          unsubInstallationStatus?.();
-        }
 
         // Handle pause - not an error, just stop without clearing progress
         if (result.paused) {
@@ -212,7 +213,7 @@ export function useInstallation({
               onConfirm: async () => {
                 const selectedFolder = await window.electronAPI.selectGameFolder();
                 if (selectedFolder) {
-                  await performInstallation(selectedFolder, effectiveOptions);
+                  void performInstallation(selectedFolder, effectiveOptions);
                 }
               },
             });
@@ -236,7 +237,9 @@ export function useInstallation({
                 actions: [
                   {
                     label: 'Спробувати знову',
-                    onClick: () => performInstallation(customGamePath, effectiveOptions),
+                    onClick: () => {
+                      void performInstallation(customGamePath, effectiveOptions);
+                    },
                     variant: 'primary',
                   },
                 ],
@@ -255,6 +258,7 @@ export function useInstallation({
                 downloadProgress: null,
                 statusMessage:
                   "З'єднання втрачено. Завантаження продовжиться автоматично після відновлення з'єднання...",
+                statusTone: 'waiting',
               });
             }
             return;
@@ -564,7 +568,13 @@ export function useInstallation({
 
   const handleInstall = useCallback(
     async (customGamePath?: string) => {
-      if (!selectedGame || isInstalling || isCheckingInstallation) {
+      if (
+        !selectedGame ||
+        isInstalling ||
+        isCheckingInstallation ||
+        isInstallPrecheckPending ||
+        installFlowRef.current
+      ) {
         return;
       }
 
@@ -590,21 +600,32 @@ export function useInstallation({
         return;
       }
 
-      // Check for conflicting translation (different translation of the same game)
-      const conflict = await window.electronAPI.getConflictingTranslation(selectedGame);
-      if (conflict) {
-        const shouldContinue = await handleConflictingTranslation(conflict);
-        if (!shouldContinue) {
-          return;
+      installFlowRef.current = true;
+      try {
+        const conflict = await runInstallPrecheck(
+          () => window.electronAPI.getConflictingTranslation(selectedGame),
+          { holdPending: true }
+        );
+        if (conflict) {
+          resetInstallPrecheck();
+          if (!(await handleConflictingTranslation(conflict))) {
+            return;
+          }
         }
+        await runInstallPrecheck(
+          async () =>
+            setAvailablePlatforms(
+              await window.electronAPI.detectGamePlatforms(selectedGame)
+            ),
+          { holdPending: true }
+        );
+        setPendingInstallPath(customGamePath);
+        setShowInstallOptions(true);
+      } catch (error) {
+        console.error('[useInstallation] Install pre-check failed:', error);
+      } finally {
+        installFlowRef.current = false;
       }
-
-      // Detect available platforms for the game
-      const platforms = await window.electronAPI.detectGamePlatforms(selectedGame);
-      await setAvailablePlatforms(platforms);
-
-      setPendingInstallPath(customGamePath);
-      setShowInstallOptions(true);
     },
     [
       selectedGame,
@@ -613,6 +634,9 @@ export function useInstallation({
       isOnline,
       showModal,
       handleConflictingTranslation,
+      isInstallPrecheckPending,
+      runInstallPrecheck,
+      resetInstallPrecheck,
     ]
   );
 
@@ -726,8 +750,8 @@ export function useInstallation({
                 actions: [
                   {
                     label: 'Продовжити',
-                    onClick: async () => {
-                      await performInstallation(pendingInstallPath, {
+                    onClick: () => {
+                      void performInstallation(pendingInstallPath, {
                         ...installOptions,
                         protonPath: currentSelection,
                       });
@@ -751,8 +775,8 @@ export function useInstallation({
                 'Після завантаження та розпакування українізатор не вдасться запустити інсталятор через відсутність Proton.\n\nПродовжити встановлення без Proton?',
               confirmText: 'Продовжити',
               cancelText: 'Скасувати',
-              onConfirm: async () => {
-                await performInstallation(pendingInstallPath, installOptions);
+              onConfirm: () => {
+                void performInstallation(pendingInstallPath, installOptions);
               },
             });
           }
@@ -762,8 +786,8 @@ export function useInstallation({
             message: `Після завантаження та розпакування українізатора буде запущено ${isExe ? 'інсталятор' : 'скрипт'}.\n\nПродовжити встановлення?`,
             confirmText: 'Продовжити',
             cancelText: 'Скасувати',
-            onConfirm: async () => {
-              await performInstallation(pendingInstallPath, installOptions);
+            onConfirm: () => {
+              void performInstallation(pendingInstallPath, installOptions);
             },
           });
         }
@@ -793,7 +817,7 @@ export function useInstallation({
 
     const hasBackup = installationInfo.hasBackup !== false;
     const backupWarning = !hasBackup
-      ? '\n\n⚠️ УВАГА: Резервну копію не було створено при встановленні. Оригінальні файли НЕ будуть відновлені!'
+      ? '\n\nУВАГА: Резервну копію не було створено при встановленні. Оригінальні файли НЕ будуть відновлені!'
       : '\n\nОригінальні файли гри будуть відновлені з резервної копії.';
 
     showConfirm({
@@ -896,35 +920,7 @@ export function useInstallation({
       statusMessage: 'Продовження завантаження...',
     });
 
-    // Set up progress listeners again
-    const unsubDownloadProgressResume = window.electronAPI.onDownloadProgress?.(
-      (gameId: string, progress: DownloadProgress) => {
-        setInstallationProgress(gameId, {
-          progress: progress.percent,
-          downloadProgress: progress,
-        });
-      }
-    );
-
-    const unsubInstallationStatusResume = window.electronAPI.onInstallationStatus?.(
-      (gameId: string, status) => {
-        setInstallationProgress(gameId, {
-          statusMessage: status.message,
-          ...(status.phase !== 'download' && {
-            downloadProgress: null,
-            progress: 0,
-          }),
-        });
-      }
-    );
-
-    let result: Awaited<ReturnType<typeof window.electronAPI.resumeDownload>>;
-    try {
-      result = await window.electronAPI.resumeDownload(selectedGame.id);
-    } finally {
-      unsubDownloadProgressResume?.();
-      unsubInstallationStatusResume?.();
-    }
+    const result = await window.electronAPI.resumeDownload(selectedGame.id);
 
     if (!result.success) {
       showModal({
@@ -961,24 +957,16 @@ export function useInstallation({
     clearInstallationProgress(selectedGame.id);
   }, [selectedGame, isPaused, isInstalling, clearInstallationProgress]);
 
+  // The label is phase-independent: the icon and the progress card show how the install is going
   const getInstallButtonText = useCallback((): string => {
     if (!isOnline) {
-      return '❌ Немає інтернету';
+      return 'Немає інтернету';
     }
     if (isPlanned) {
       return 'Заплановано';
     }
     if (isTechImprovement) {
       return 'Технічна доробка';
-    }
-    if (isWaitingForNetwork) {
-      return "Очікування з'єднання...";
-    }
-    if (isPaused) {
-      return 'Призупинено';
-    }
-    if (isInstalling) {
-      return isUpdateAvailable ? 'Оновлення...' : 'Встановлення...';
     }
     if (
       installationInfo?.hasInstallError &&
@@ -998,61 +986,60 @@ export function useInstallation({
     isOnline,
     isPlanned,
     isTechImprovement,
-    isPaused,
-    isWaitingForNetwork,
-    isInstalling,
     isUpdateAvailable,
     isCheckingInstallation,
     selectedGame?.version,
     installationInfo,
   ]);
 
-  const handleRerunInstaller = useCallback(
-    async (event: React.MouseEvent<HTMLButtonElement>) => {
-      if (!selectedGame || !installationInfo?.installerPath) {
-        console.warn('[useInstallation] No installer path available');
-        return;
-      }
-      const button = event.currentTarget;
-      button.setAttribute('disabled', 'true');
-      button.classList.add('cursor-loading');
+  const handleRerunInstaller = useCallback(async () => {
+    const installerPath = installationInfo?.installerPath;
+    if (!selectedGame || !installerPath) {
+      console.warn('[useInstallation] No installer path available');
+      return;
+    }
+    if (isRerunPending) {
+      return;
+    }
 
-      try {
-        const result = await window.electronAPI.rerunInstaller(
-          installationInfo.installerPath,
-          installationInfo.protonPath
-        );
+    try {
+      const result = await runRerunInstaller(
+        () =>
+          window.electronAPI.rerunInstaller(installerPath, installationInfo?.protonPath),
+        { isSuccess: (r) => r.success }
+      );
 
-        if (result.success) {
-          showModal({
-            title: 'Інсталятор завершено',
-            message: 'Інсталятор успішно завершив роботу',
-            type: 'success',
-          });
+      if (result.success) {
+        showModal({
+          title: 'Інсталятор завершено',
+          message: 'Інсталятор успішно завершив роботу',
+          type: 'success',
+        });
 
-          // Refresh installation info
-          await checkInstallationStatus(selectedGame.id, selectedGame);
-        } else {
-          showModal({
-            title: 'Помилка',
-            message: result.error?.message || 'Не вдалося запустити інсталятор',
-            type: 'error',
-          });
-        }
-      } catch (error) {
-        console.error('[useInstallation] Error re-running installer:', error);
+        await checkInstallationStatus(selectedGame.id, selectedGame);
+      } else {
         showModal({
           title: 'Помилка',
-          message: 'Не вдалося запустити інсталятор',
+          message: result.error?.message || 'Не вдалося запустити інсталятор',
           type: 'error',
         });
-      } finally {
-        button.removeAttribute('disabled');
-        button.classList.remove('cursor-loading');
       }
-    },
-    [selectedGame, installationInfo, showModal, checkInstallationStatus]
-  );
+    } catch (error) {
+      console.error('[useInstallation] Error re-running installer:', error);
+      showModal({
+        title: 'Помилка',
+        message: 'Не вдалося запустити інсталятор',
+        type: 'error',
+      });
+    }
+  }, [
+    selectedGame,
+    installationInfo,
+    showModal,
+    checkInstallationStatus,
+    isRerunPending,
+    runRerunInstaller,
+  ]);
 
   return {
     isInstalling,
@@ -1063,6 +1050,7 @@ export function useInstallation({
     installProgress,
     downloadProgress,
     statusMessage,
+    statusTone,
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
@@ -1071,8 +1059,10 @@ export function useInstallation({
     handleResumeDownload,
     handleCancelDownload,
     getInstallButtonText,
+    installPhase,
+    rerunPhase,
     showInstallOptions,
-    setShowInstallOptions,
+    closeInstallOptions,
     pendingInstallPath,
     availablePlatforms,
   };

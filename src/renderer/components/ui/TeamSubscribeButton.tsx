@@ -1,6 +1,7 @@
-import { BellOff, Users } from 'lucide-react';
+import { Bell, BellOff } from 'lucide';
 import React from 'react';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
 
 interface TeamSubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -45,21 +46,12 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
       }
       {...rest}
     >
-      {subscribed ? (
-        <>
-          <BellOff className="w-4 h-4" />
-          <span>
-            Відписатися від {showTeamName ? teamName : isMultiple ? 'авторів' : 'автора'}
-          </span>
-        </>
-      ) : (
-        <>
-          <Users className="w-4 h-4" />
-          <span>
-            Слідкувати за {showTeamName ? teamName : isMultiple ? 'авторами' : 'автором'}
-          </span>
-        </>
-      )}
+      <AppActionIcon phase="idle" icon={subscribed ? BellOff : Bell} size={16} />
+      <span>
+        {subscribed
+          ? `Відписатися від ${showTeamName ? teamName : isMultiple ? 'авторів' : 'автора'}`
+          : `Слідкувати за ${showTeamName ? teamName : isMultiple ? 'авторами' : 'автором'}`}
+      </span>
     </Button>
   );
 };

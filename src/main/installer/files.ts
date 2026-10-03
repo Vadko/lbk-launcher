@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { isMacOS, isWindows } from '../utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -30,6 +31,27 @@ export async function getAllFiles(dir: string, baseDir: string = dir): Promise<s
   return files;
 }
 
+async function executableBitsFor(destPath: string): Promise<number> {
+  if (isWindows()) {
+    return 0;
+  }
+  const parent = path.dirname(destPath);
+  const inBundleBinDir =
+    path.basename(parent) === 'MacOS' &&
+    path.basename(path.dirname(parent)) === 'Contents';
+  let bits = isMacOS() && inBundleBinDir ? 0o111 : 0;
+  try {
+    bits |= (await fs.promises.stat(destPath)).mode & 0o111;
+  } catch (error) {
+    // ENOENT is the normal path: the file isn't in the game yet, so there are no bits to inherit
+    const code = error instanceof Error && 'code' in error ? error.code : undefined;
+    if (code !== 'ENOENT') {
+      console.warn(`[Installer] Could not read permissions for ${destPath}:`, error);
+    }
+  }
+  return bits;
+}
+
 /**
  * Copy directory recursively
  */
@@ -49,8 +71,12 @@ export async function copyDirectory(source: string, destination: string): Promis
         // Recursively copy subdirectory
         await copyDirectory(sourcePath, destPath);
       } else {
-        // Copy file
+        const execBits = await executableBitsFor(destPath);
         await fs.promises.copyFile(sourcePath, destPath);
+        if (execBits) {
+          const { mode } = await fs.promises.stat(destPath);
+          await fs.promises.chmod(destPath, (mode & 0o7777) | execBits);
+        }
       }
     }
 

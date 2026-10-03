@@ -323,7 +323,27 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Check for new versions of installed translations on realtime game update
+  useEffect(() => {
+    const unsubProgress = window.electronAPI?.onDownloadProgress?.((gameId, progress) => {
+      useStore.getState().setInstallationProgress(gameId, {
+        progress: progress.percent,
+        downloadProgress: progress,
+      });
+    });
+    const unsubStatus = window.electronAPI?.onInstallationStatus?.((gameId, status) => {
+      useStore.getState().setInstallationProgress(gameId, {
+        statusMessage: status.message,
+        statusTone: status.tone ?? null,
+        ...(status.phase !== 'download' && { downloadProgress: null, progress: 0 }),
+      });
+    });
+    return () => {
+      unsubProgress?.();
+      unsubStatus?.();
+    };
+  }, []);
+
+  // Check installed translations for new versions on a realtime game update
   useEffect(() => {
     if (!window.electronAPI?.onGameUpdated) {
       return;

@@ -8,8 +8,6 @@ const POLL_LIMIT_MS = 10 * 60 * 1000;
 /** This many consecutive null responses means the bridge is gone and there's no point waiting further */
 const UNKNOWN_STREAK_LIMIT = 3;
 
-const timers = new Map<string, ReturnType<typeof setTimeout>>();
-
 type WorkshopPending = 'installing' | 'downloading' | 'removing';
 
 interface WorkshopTargetParams {
@@ -22,8 +20,8 @@ interface WorkshopInstallsStore {
   installedAt: Record<string, string>;
   pending: Record<string, WorkshopPending>;
   setInstalled: (gameId: string, installed: boolean) => void;
-  install: (params: WorkshopTargetParams) => Promise<void>;
-  remove: (params: WorkshopTargetParams) => Promise<void>;
+  install: (params: WorkshopTargetParams) => Promise<boolean>;
+  remove: (params: WorkshopTargetParams) => Promise<boolean>;
   reconcile: (gameId: string, appId: number, workshopId: string) => Promise<void>;
   reconcileAll: () => Promise<void>;
 }
@@ -59,9 +57,12 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
       },
 
       install: async ({ gameId, appId, workshopId }) => {
+        if (get().pending[gameId]) {
+          return true;
+        }
+        setPending(set, gameId, 'installing');
         try {
           if (appId) {
-            setPending(set, gameId, 'installing');
             const result = await window.electronAPI.setWorkshopSubscription(
               gameId,
               appId,
@@ -70,20 +71,30 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
             );
             if (result.ok) {
               trackOpen(gameId);
-              watchDisk(set, get, { gameId, appId, workshopId, wanted: true });
-              return;
+              setPending(set, gameId, 'downloading');
+              return await watchDisk(set, get, {
+                gameId,
+                appId,
+                workshopId,
+                wanted: true,
+              });
             }
           }
           await openWorkshopPage(workshopId);
           trackOpen(gameId);
+          return true;
         } catch (error) {
           console.error('[Workshop] install failed', error);
+          return false;
         } finally {
-          clearPendingIfNotWatching(set, get, gameId);
+          clearPending(set, get, gameId);
         }
       },
 
       remove: async ({ gameId, appId, workshopId }) => {
+        if (get().pending[gameId]) {
+          return true;
+        }
         setPending(set, gameId, 'removing');
         try {
           if (appId) {
@@ -94,16 +105,22 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
               false
             );
             if (result.ok) {
-              watchDisk(set, get, { gameId, appId, workshopId, wanted: false });
-              return;
+              return await watchDisk(set, get, {
+                gameId,
+                appId,
+                workshopId,
+                wanted: false,
+              });
             }
           }
 
           await openWorkshopPage(workshopId);
+          return true;
         } catch (error) {
           console.error('[Workshop] remove failed', error);
+          return false;
         } finally {
-          clearPendingIfNotWatching(set, get, gameId);
+          clearPending(set, get, gameId);
         }
       },
 
@@ -166,20 +183,15 @@ function setPending(set: Set_, gameId: string, value: WorkshopPending): void {
   set((state) => ({ pending: { ...state.pending, [gameId]: value } }));
 }
 
-function clearPending(set: Set_, gameId: string): void {
+function clearPending(set: Set_, get: Get_, gameId: string): void {
+  if (!(gameId in get().pending)) {
+    return;
+  }
   set((state) => {
     const pending = { ...state.pending };
     delete pending[gameId];
     return { pending };
   });
-}
-
-function clearPendingIfNotWatching(set: Set_, get: Get_, gameId: string): void {
-  if (!timers.has(gameId)) {
-    clearPending(set, gameId);
-  } else if (get().pending[gameId] === 'installing') {
-    setPending(set, gameId, 'downloading');
-  }
 }
 
 function watchDisk(
@@ -191,52 +203,56 @@ function watchDisk(
     workshopId,
     wanted,
   }: { gameId: string; appId: number; workshopId: string; wanted: boolean }
-): void {
-  clearTimeout(timers.get(gameId));
+): Promise<boolean> {
   const deadline = Date.now() + POLL_LIMIT_MS;
   let unknownStreak = 0;
 
-  function stopWatching(): void {
-    timers.delete(gameId);
-    clearPending(set, gameId);
-  }
-
-  function scheduleNext(): void {
-    if (Date.now() >= deadline) {
-      stopWatching();
-      void get().reconcile(gameId, appId, workshopId);
-      return;
+  return new Promise((resolve) => {
+    function stop(confirmed: boolean): void {
+      if (confirmed) {
+        get().setInstalled(gameId, wanted);
+      } else {
+        clearPending(set, get, gameId);
+      }
+      resolve(confirmed);
     }
-    timers.set(gameId, setTimeout(poll, POLL_INTERVAL_MS));
-  }
 
-  function poll(): void {
-    window.electronAPI
-      .isWorkshopItemDownloaded(appId, workshopId)
-      .then((installed) => {
-        if (installed === wanted) {
-          timers.delete(gameId);
-          get().setInstalled(gameId, wanted);
-          return;
-        }
-        if (installed === null) {
-          unknownStreak += 1;
-          if (unknownStreak >= UNKNOWN_STREAK_LIMIT) {
-            stopWatching();
+    function scheduleNext(): void {
+      if (Date.now() >= deadline) {
+        stop(false);
+        void get().reconcile(gameId, appId, workshopId);
+        return;
+      }
+      setTimeout(poll, POLL_INTERVAL_MS);
+    }
+
+    function poll(): void {
+      window.electronAPI
+        .isWorkshopItemDownloaded(appId, workshopId)
+        .then((installed) => {
+          if (installed === wanted) {
+            stop(true);
             return;
           }
-        } else {
-          unknownStreak = 0;
-        }
-        scheduleNext();
-      })
-      .catch((error: unknown) => {
-        console.error('[Workshop] poll failed', error);
-        scheduleNext();
-      });
-  }
+          if (installed === null) {
+            unknownStreak += 1;
+            if (unknownStreak >= UNKNOWN_STREAK_LIMIT) {
+              stop(false);
+              return;
+            }
+          } else {
+            unknownStreak = 0;
+          }
+          scheduleNext();
+        })
+        .catch((error: unknown) => {
+          console.error('[Workshop] poll failed', error);
+          scheduleNext();
+        });
+    }
 
-  scheduleNext();
+    scheduleNext();
+  });
 }
 
 function trackOpen(gameId: string): void {

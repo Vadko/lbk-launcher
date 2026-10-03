@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Users, X } from 'lucide-react';
+import { CheckIcon, UsersIcon, XIcon } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -84,7 +84,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 data-gamepad-cancel
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-glass-hover transition-colors"
               >
-                <X size={18} className="text-text-muted" />
+                <XIcon size={18} className="text-text-muted" />
               </button>
             </div>
 
@@ -136,7 +136,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                       <div
                         className={`absolute inset-0 flex items-center justify-center ${logoUrl ? 'hidden' : ''}`}
                       >
-                        <Users size={20} className="text-text-muted" />
+                        <UsersIcon size={20} className="text-text-muted" />
                       </div>
                     </div>
 
@@ -173,7 +173,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                     {/* Selected indicator */}
                     {isSelected && (
                       <div className="flex-shrink-0 w-6 h-6 rounded-full bg-color-accent flex items-center justify-center">
-                        <Check size={14} className="text-white" />
+                        <CheckIcon size={14} className="text-white" />
                       </div>
                     )}
                   </button>

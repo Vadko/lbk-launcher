@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 interface TooltipProps {
@@ -29,30 +29,22 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
   const [arrowPosition, setArrowPosition] = useState(50); // percent from the left edge
-  const [mouseX, setMouseX] = useState(0);
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const mouseXRef = useRef(0);
   const containerRef = useRef<HTMLSpanElement>(null);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional position calculation after visibility change */
-  useEffect(() => {
-    if (isVisible && containerRef.current && tooltipRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-      // If tooltip would go above viewport, show it below
-      if (rect.top < 40) {
-        setPosition('bottom');
-      } else {
-        setPosition('top');
-      }
-
-      // Calculate arrow position based on mouseX
-      const relativeX = mouseX - tooltipRect.left;
-      const percentage = (relativeX / tooltipRect.width) * 100;
-      setArrowPosition(Math.max(5, Math.min(95, percentage)));
+  const measureTooltip = useCallback((node: HTMLDivElement | null) => {
+    if (!node || !containerRef.current) {
+      return;
     }
-  }, [isVisible, mouseX]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    const rect = containerRef.current.getBoundingClientRect();
+    const tooltipRect = node.getBoundingClientRect();
+
+    setPosition(rect.top < 40 ? 'bottom' : 'top');
+
+    const relativeX = mouseXRef.current - tooltipRect.left;
+    const percentage = (relativeX / tooltipRect.width) * 100;
+    setArrowPosition(Math.max(5, Math.min(95, percentage)));
+  }, []);
 
   if (!content) {
     return <>{children}</>;
@@ -63,7 +55,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       ref={containerRef}
       className={`relative inline-flex items-center ${className}`}
       onMouseEnter={(e) => {
-        setMouseX(e.clientX);
+        mouseXRef.current = e.clientX;
         setIsVisible(true);
       }}
       onMouseLeave={() => setIsVisible(false)}
@@ -71,7 +63,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       {children}
       {isVisible && (
         <div
-          ref={tooltipRef}
+          ref={measureTooltip}
           className={`absolute z-50 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-lg pointer-events-none whitespace-nowrap
             ${position === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'}
             ${getAlignClass(align)}

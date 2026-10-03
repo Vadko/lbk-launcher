@@ -1,5 +1,13 @@
-import { DollarSign, ExternalLink } from 'lucide-react';
+import { DollarSignIcon, ExternalLinkIcon } from 'lucide-react';
 import React from 'react';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
+
+const UAH_FORMAT = {
+  style: 'currency',
+  currency: 'UAH',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+} as const;
 
 interface FundraisingProgressCardProps {
   current: number;
@@ -13,14 +21,6 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
   supportUrl,
 }) => {
   const percentage = goal > 0 ? Math.min(Math.round((current / goal) * 100), 100) : 0;
-
-  const formatAmount = (amount: number): string =>
-    new Intl.NumberFormat('uk-UA', {
-      style: 'currency',
-      currency: 'UAH',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
 
   const handleClick = () => {
     if (!supportUrl) {
@@ -50,16 +50,18 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <DollarSign size={20} className="text-neon-green" />
+          <DollarSignIcon size={20} className="text-neon-green" />
           <h3 className="text-lg font-head font-semibold text-text-main">Збір коштів</h3>
         </div>
-        {isClickable && <ExternalLink size={16} className="text-text-muted" />}
+        {isClickable && <ExternalLinkIcon size={16} className="text-text-muted" />}
       </div>
 
       <div className="space-y-3">
         <div className="flex justify-between items-center text-sm">
           <span className="text-text-muted">Зібрано</span>
-          <span className="text-text-main font-semibold">{formatAmount(current)}</span>
+          <span className="text-text-main font-semibold">
+            <AppNumberFlow value={current} format={UAH_FORMAT} />
+          </span>
         </div>
 
         <div className="w-full bg-glass rounded-full h-4 border border-border overflow-hidden">
@@ -71,11 +73,15 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
 
         <div className="flex justify-between items-center text-sm">
           <span className="text-text-muted">Ціль</span>
-          <span className="text-text-muted">{formatAmount(goal)}</span>
+          <span className="text-text-muted">
+            <AppNumberFlow value={goal} format={UAH_FORMAT} />
+          </span>
         </div>
 
         <div className="text-center pt-2 border-t border-border">
-          <span className="text-2xl font-bold text-neon-green">{percentage}%</span>
+          <span className="text-2xl font-bold text-neon-green">
+            <AppNumberFlow value={percentage} suffix="%" />
+          </span>
         </div>
       </div>
     </div>

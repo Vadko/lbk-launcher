@@ -1,5 +1,5 @@
-import { Eye } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { EyeIcon } from 'lucide-react';
+import React, { useCallback, useMemo, useState } from 'react';
 import type { TagOption } from '@/shared/types';
 import type { FilterCounts } from '../../../hooks/useFilterCounts';
 import { Modal } from '../../Modal/Modal';
@@ -84,8 +84,9 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const [stagedAuthors, setStagedAuthors] = useState(selectedAuthors);
   const [stagedTagIds, setStagedTagIds] = useState(selectedTagIds);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on open */
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
       setStagedStatuses(selectedStatuses);
       setStagedContentTypes(selectedContentTypes);
@@ -94,16 +95,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       setStagedAuthors(selectedAuthors);
       setStagedTagIds(selectedTagIds);
     }
-  }, [
-    isOpen,
-    selectedStatuses,
-    selectedContentTypes,
-    selectedTranslationTypes,
-    specialFilter,
-    selectedAuthors,
-    selectedTagIds,
-  ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }
 
   const handleClose = useCallback(() => {
     if (stagedStatuses !== selectedStatuses) {
@@ -276,7 +268,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
           data-gamepad-confirm
           className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-color-main text-text-dark hover:opacity-90 transition-opacity"
         >
-          <Eye size={16} />
+          <EyeIcon size={16} />
           <span>Переглянути</span>
         </button>
       }

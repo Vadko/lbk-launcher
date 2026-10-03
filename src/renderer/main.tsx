@@ -7,6 +7,8 @@ import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initFeedbackReplies } from './store/feedbackReplyBridge';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/space-grotesk';
 import './styles/globals.css';
 import './styles/animations.css';
 

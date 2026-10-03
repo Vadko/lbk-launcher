@@ -8,29 +8,28 @@ import type { Game } from '../types/game';
  * The Supabase subscription is managed automatically in the main process
  */
 export function useRealtimeGames() {
-  const { selectedGame, setSelectedGame } = useStore();
-
   useEffect(() => {
     if (!window.electronAPI) {
       return;
     }
 
-    // Game update handler
     const handleGameUpdate = (updatedGame: Game) => {
       console.log('[useRealtimeGames] Game updated via real-time:', updatedGame.name);
-
-      // Update selectedGame if it's the same game
-      if (selectedGame && selectedGame.id === updatedGame.id) {
-        console.log('[useRealtimeGames] Updating selectedGame in store');
-        setSelectedGame(updatedGame);
-      }
+      useStore.getState().syncSelectedGame(updatedGame);
 
       // Notifications about version updates and status changes are handled in useGames.ts
     };
 
-    // Subscribe to updates
     console.log('[useRealtimeGames] Subscribing to game updates');
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
-    return unsubscribe;
-  }, [selectedGame, setSelectedGame]);
+    const unsubscribeCounters = window.electronAPI.onGameCountersUpdated?.(
+      (game: Game) => {
+        useStore.getState().syncSelectedGame(game);
+      }
+    );
+    return () => {
+      unsubscribe();
+      unsubscribeCounters?.();
+    };
+  }, []);
 }

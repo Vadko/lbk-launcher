@@ -84,10 +84,13 @@ export interface DownloadProgress {
   timeRemaining: number; // in seconds
 }
 
+export type InstallationStatusTone = 'error' | 'waiting' | 'retry';
+
 export interface InstallationStatus {
   message: string;
   progress?: number;
   phase?: 'download' | 'install';
+  tone?: InstallationStatusTone;
 }
 
 export interface InstallResult {
@@ -330,6 +333,7 @@ export interface ElectronAPI {
   fetchChangelog: (version: string) => Promise<ChangelogEntry[] | null>;
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
+  onGameCountersUpdated: (callback: (game: Game) => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;

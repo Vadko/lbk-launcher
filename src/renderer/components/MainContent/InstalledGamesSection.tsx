@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ListFilter } from 'lucide-react';
+import { ListFilterIcon } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -154,7 +154,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             onClick={handleViewAll}
           >
             Переглянути всі
-            <ListFilter size={14} />
+            <ListFilterIcon size={14} />
           </Button>
         )}
       </div>

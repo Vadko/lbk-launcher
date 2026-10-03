@@ -1,19 +1,17 @@
+import { FolderOpen, Gamepad, Library, LockOpen, RefreshCw } from 'lucide';
 import {
-  BrushCleaning,
-  FileText,
-  FolderOpen,
-  Gamepad,
-  Heart,
-  Library,
-  MessageCircle,
-  Play,
-  RefreshCw,
-  Settings2,
-  Shield,
-  Sparkles,
-  Trash2,
+  BrushCleaningIcon,
+  FileTextIcon,
+  HeartIcon,
+  MessageCircleIcon,
+  PlayIcon,
+  Settings2Icon,
+  ShieldIcon,
+  SparklesIcon,
+  Trash2Icon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { plural } from '@/shared/plural';
 import type { SteamCollectionSyncFailure } from '@/shared/types';
@@ -33,6 +31,7 @@ import { Modal } from '../Modal/Modal';
 import { PrivacyPolicyModal } from '../Modal/PrivacyPolicyModal';
 import { SendLogsModal } from '../Modal/SendLogsModal';
 import { TermsOfServiceModal } from '../Modal/TermsOfServiceModal';
+import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
@@ -134,9 +133,37 @@ export const SettingsModal: React.FC = () => {
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
   const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
-  const [isTranslationUnlocked, setIsTranslationUnlocked] = useState(false);
-  const [isSyncingSteamCollection, setIsSyncingSteamCollection] = useState(false);
-  const [isTogglingLbkShortcut, setIsTogglingLbkShortcut] = useState(false);
+  const {
+    phase: steamCollectionPhase,
+    isPending: isSyncingSteamCollection,
+    run: runSteamCollectionSync,
+  } = useActionPhase();
+  const {
+    phase: lbkShortcutPhase,
+    isPending: isTogglingLbkShortcut,
+    run: runLbkShortcut,
+  } = useActionPhase();
+  const {
+    phase: kurinSyncPhase,
+    isPending: isSyncingKurin,
+    isBusy: isKurinSyncBusy,
+    run: runKurinSync,
+  } = useActionPhase();
+
+  const kurinSyncResultRef = useRef<string[] | null>(null);
+  const {
+    phase: unlockPhase,
+    isPending: isUnlockingTranslation,
+    run: runUnlockTranslation,
+  } = useActionPhase();
+
+  const [isTogglingSteamCef, setIsTogglingSteamCef] = useState(false);
+  const [isTogglingSteamArtwork, setIsTogglingSteamArtwork] = useState(false);
+  const {
+    phase: logsFolderPhase,
+    isPending: isOpeningLogsFolder,
+    run: runOpenLogsFolder,
+  } = useActionPhase();
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -152,27 +179,50 @@ export const SettingsModal: React.FC = () => {
     await window.liquidGlassAPI?.toggle(newValue);
   };
 
-  const handleToggleSteamCefDebugging = () => {
+  const handleToggleSteamCefDebugging = async () => {
+    if (isTogglingSteamCef) {
+      return;
+    }
     const newValue = !steamCefDebuggingEnabled;
     toggleSteamCefDebugging();
-    // Fire-and-forget — the enable path can probe Steam for ~1.5s.
-    window.electronAPI?.setSteamCefDebugging(newValue).catch(console.error);
+
+    setIsTogglingSteamCef(true);
+    try {
+      await window.electronAPI.setSteamCefDebugging(newValue);
+    } catch (error) {
+      console.error('[Settings] Steam CEF debugging toggle failed:', error);
+      toggleSteamCefDebugging();
+    } finally {
+      setIsTogglingSteamCef(false);
+    }
   };
 
-  const handleToggleSteamCustomArtwork = () => {
+  const handleToggleSteamCustomArtwork = async () => {
+    if (isTogglingSteamArtwork) {
+      return;
+    }
     const newValue = !steamCustomArtworkEnabled;
     toggleSteamCustomArtwork();
-    // Fire-and-forget — switching off walks every app we've touched.
-    window.electronAPI?.setSteamCustomArtwork(newValue).catch(console.error);
+    setIsTogglingSteamArtwork(true);
+    try {
+      await window.electronAPI.setSteamCustomArtwork(newValue);
+    } catch (error) {
+      console.error('[Settings] Steam custom artwork toggle failed:', error);
+      toggleSteamCustomArtwork();
+    } finally {
+      setIsTogglingSteamArtwork(false);
+    }
   };
 
   const handleSyncSteamCollection = useCallback(async () => {
     if (isSyncingSteamCollection) {
       return;
     }
-    setIsSyncingSteamCollection(true);
     try {
-      const result = await window.electronAPI.syncSteamTranslatedCollection();
+      const result = await runSteamCollectionSync(
+        () => window.electronAPI.syncSteamTranslatedCollection(),
+        { isSuccess: (r) => r.ok }
+      );
       if (result.ok) {
         showModal({
           title: 'Колекція оновлена',
@@ -196,18 +246,18 @@ export const SettingsModal: React.FC = () => {
         message: 'Сталася непередбачена помилка.',
         type: 'error',
       });
-    } finally {
-      setIsSyncingSteamCollection(false);
     }
-  }, [showModal, isSyncingSteamCollection]);
+  }, [showModal, isSyncingSteamCollection, runSteamCollectionSync]);
 
   const handleAddLbkToSteamLibrary = useCallback(async () => {
     if (isTogglingLbkShortcut) {
       return;
     }
-    setIsTogglingLbkShortcut(true);
     try {
-      const result = await window.electronAPI.addLbkLauncherToSteamLibrary();
+      const result = await runLbkShortcut(
+        () => window.electronAPI.addLbkLauncherToSteamLibrary(),
+        { isSuccess: (r) => r.ok }
+      );
       if (result.ok) {
         showModal({
           title: 'Готово',
@@ -228,28 +278,61 @@ export const SettingsModal: React.FC = () => {
         message: 'Спробуйте ще раз пізніше.',
         type: 'error',
       });
-    } finally {
-      setIsTogglingLbkShortcut(false);
     }
-  }, [showModal, isTogglingLbkShortcut]);
+  }, [showModal, isTogglingLbkShortcut, runLbkShortcut]);
 
   const handleKurinSync = useCallback(async () => {
-    closeSettingsModal();
-    const syncedGameNames = await window.electronAPI?.syncKurinGames();
-    if (syncedGameNames && syncedGameNames.length > 0) {
-      showModal({
-        title: 'Синхронізація завершена',
-        message: `Синхронізовано ${syncedGameNames.length} ${plural(syncedGameNames.length, 'гру', 'гри', 'ігор')}: ${syncedGameNames.join(', ')}`,
-        type: 'info',
-      });
-    } else {
-      showModal({
-        title: 'Синхронізація завершена',
-        message: 'Не знайдено ігор, встановлених через Kurin, або Kurin не встановлено.',
-        type: 'info',
-      });
+    if (isSyncingKurin) {
+      return;
     }
-  }, [showModal, closeSettingsModal]);
+    kurinSyncResultRef.current = null;
+    let syncedGameNames: string[];
+    try {
+      syncedGameNames = await runKurinSync(() => window.electronAPI.syncKurinGames());
+    } catch (error) {
+      console.error('[Settings] Kurin sync failed:', error);
+      showModal({
+        title: 'Не вдалося синхронізувати',
+        message: 'Сталася непередбачена помилка.',
+        type: 'error',
+      });
+      return;
+    }
+    kurinSyncResultRef.current = syncedGameNames;
+  }, [showModal, isSyncingKurin, runKurinSync]);
+
+  const showKurinSyncResult = useCallback((synced: string[]) => {
+    useModalStore.getState().showModal({
+      title: 'Синхронізація завершена',
+      message:
+        synced.length > 0
+          ? `Синхронізовано ${synced.length} ${plural(synced.length, 'гру', 'гри', 'ігор')}: ${synced.join(', ')}`
+          : 'Не знайдено ігор, встановлених через Kurin, або Kurin не встановлено.',
+      type: 'info',
+    });
+  }, []);
+
+  useEffect(() => {
+    const synced = kurinSyncResultRef.current;
+    if (synced === null || isKurinSyncBusy) {
+      return;
+    }
+    kurinSyncResultRef.current = null;
+    closeSettingsModal();
+    showKurinSyncResult(synced);
+  }, [isKurinSyncBusy, closeSettingsModal, showKurinSyncResult]);
+
+  useEffect(
+    () => () => {
+      const synced = kurinSyncResultRef.current;
+      if (synced === null) {
+        return;
+      }
+      kurinSyncResultRef.current = null;
+      showKurinSyncResult(synced);
+    },
+    [showKurinSyncResult]
+  );
 
   const handleClearCacheOnly = useCallback(() => {
     showModal({
@@ -284,8 +367,38 @@ export const SettingsModal: React.FC = () => {
   }, [showModal]);
 
   const handleOpenLogsFolder = useCallback(async () => {
-    await window.loggerAPI?.openLogsFolder();
-  }, []);
+    if (isOpeningLogsFolder) {
+      return;
+    }
+    try {
+      const result = await runOpenLogsFolder(() => window.loggerAPI.openLogsFolder(), {
+        isSuccess: (r) => r.success,
+      });
+      if (!result.success) {
+        console.error('[Settings] Opening logs folder failed:', result.error);
+      }
+    } catch (error) {
+      console.error('[Settings] Opening logs folder failed:', error);
+    }
+  }, [isOpeningLogsFolder, runOpenLogsFolder]);
+
+  const handleUnlockTranslation = useCallback(async () => {
+    const translationId = unhideTranslationInputRef.current?.value;
+    if (!translationId || isUnlockingTranslation) {
+      return;
+    }
+    try {
+      const success = await runUnlockTranslation(
+        () => window.electronAPI.setGameVisibility(translationId, false),
+        { isSuccess: (ok) => ok }
+      );
+      if (success && unhideTranslationInputRef.current) {
+        unhideTranslationInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('[Settings] Unlocking hidden translation failed:', error);
+    }
+  }, [isUnlockingTranslation, runUnlockTranslation]);
 
   const handleOpenTermsModal = useCallback(() => {
     setIsTermsModalOpen(true);
@@ -342,7 +455,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
-              <MessageCircle size={20} color="#ffffff" />
+              <MessageCircleIcon size={20} color="#ffffff" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Зворотний зв'язок</h4>
@@ -391,6 +504,7 @@ export const SettingsModal: React.FC = () => {
             description="Створює файл .cef-enable-remote-debugging у теці Steam, щоб застосовувати параметри запуску без перезапуску Steam (після увімкнення потрібен один перезапуск). Якщо вимкнено, файл буде видалено — зверніть увагу: цей самий файл використовує Decky Loader — а параметри запуску оновлюватимуться лише коли Steam закрито"
             enabled={steamCefDebuggingEnabled}
             onChange={handleToggleSteamCefDebugging}
+            disabled={isTogglingSteamCef}
           />
           <SettingItem
             id="steam-custom-artwork"
@@ -398,6 +512,7 @@ export const SettingsModal: React.FC = () => {
             description="Замінювати банер, логотип і горизонтальну обкладинку гри в бібліотеці Steam на українські версії з українізатора. Вертикальна обкладинка залишається оригінальною. Оригінали повертаються при видаленні українізатора або коли вимкнути цей перемикач"
             enabled={steamCustomArtworkEnabled}
             onChange={handleToggleSteamCustomArtwork}
+            disabled={isTogglingSteamArtwork}
           />
 
           <SettingItem
@@ -447,16 +562,20 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
-              <Library size={20} className="text-text-dark" />
+              <AppActionIcon
+                phase={steamCollectionPhase}
+                icon={Library}
+                size={20}
+                className="text-text-dark"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
                 Колекція «З українізаторами» в Steam
               </h4>
               <p className="text-xs text-text-muted">
-                {isSyncingSteamCollection
-                  ? 'Оновлення...'
-                  : 'Створити або оновити колекцію бібліотеки Steam з іграми, на які є переклад'}
+                Створити або оновити колекцію бібліотеки Steam з іграми, на які є переклад
               </p>
             </div>
           </button>
@@ -464,10 +583,17 @@ export const SettingsModal: React.FC = () => {
           {/* Kurin sync */}
           <button
             onClick={handleKurinSync}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+            aria-busy={isSyncingKurin}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center flex-shrink-0">
-              <RefreshCw size={20} className="text-text-dark" />
+              <AppActionIcon
+                phase={kurinSyncPhase}
+                icon={RefreshCw}
+                size={20}
+                className="text-text-dark"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
@@ -486,15 +612,19 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-              <Gamepad size={20} className="text-text-dark" />
+              <AppActionIcon
+                phase={lbkShortcutPhase}
+                icon={Gamepad}
+                size={20}
+                className="text-text-dark"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
                 LBK Launcher в бібліотеці Steam
               </h4>
-              <p className="text-xs text-text-muted">
-                {isTogglingLbkShortcut ? 'Додавання...' : 'Додати лаунчер як гру в Steam'}
-              </p>
+              <p className="text-xs text-text-muted">Додати лаунчер як гру в Steam</p>
             </div>
           </button>
 
@@ -504,7 +634,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center flex-shrink-0">
-              <BrushCleaning size={20} className="text-text-dark" />
+              <BrushCleaningIcon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Очистити кеш</h4>
@@ -520,7 +650,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center flex-shrink-0">
-              <Trash2 size={20} className="text-text-dark" />
+              <Trash2Icon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Очистити всі дані</h4>
@@ -534,7 +664,7 @@ export const SettingsModal: React.FC = () => {
           {import.meta.env.DEV && (
             <div className="p-4 rounded-xl bg-glass border border-border">
               <div className="flex items-center gap-2 mb-3">
-                <Settings2 size={18} className="text-color-accent" />
+                <Settings2Icon size={18} className="text-color-accent" />
                 <h4 className="text-sm font-semibold text-text-main">Dev налаштування</h4>
               </div>
               <div className="space-y-3">
@@ -578,7 +708,7 @@ export const SettingsModal: React.FC = () => {
                         onClick={() => playNotificationSound(type)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
                       >
-                        <Play size={12} />
+                        <PlayIcon size={12} />
                         {label}
                       </button>
                     ))}
@@ -591,21 +721,21 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => playNavigateSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
+                      <PlayIcon size={12} />
                       Навігація
                     </button>
                     <button
                       onClick={() => playConfirmSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
+                      <PlayIcon size={12} />
                       Підтвердити
                     </button>
                     <button
                       onClick={() => playBackSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
+                      <PlayIcon size={12} />
                       Назад
                     </button>
                   </div>
@@ -632,10 +762,17 @@ export const SettingsModal: React.FC = () => {
           {/* Logging */}
           <button
             onClick={handleOpenLogsFolder}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+            aria-busy={isOpeningLogsFolder}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-              <FolderOpen size={20} className="text-white" />
+              <AppActionIcon
+                phase={logsFolderPhase}
+                icon={FolderOpen}
+                size={20}
+                className="text-white"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
@@ -660,30 +797,21 @@ export const SettingsModal: React.FC = () => {
               <input
                 type="text"
                 placeholder="Код перекладу"
-                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent transition-colors duration-300 ${
-                  isTranslationUnlocked ? '!border-color-main' : ''
+                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent transition-colors duration-200 ${
+                  unlockPhase === 'done'
+                    ? '!border-color-main'
+                    : unlockPhase === 'error'
+                      ? '!border-red-400'
+                      : ''
                 }`}
                 ref={unhideTranslationInputRef}
-                onChange={() => setIsTranslationUnlocked(false)}
               />
               <Button
-                onClick={async () => {
-                  const translationId = unhideTranslationInputRef.current?.value;
-                  if (translationId) {
-                    const success = await window.electronAPI.setGameVisibility(
-                      translationId,
-                      false
-                    );
-                    if (success) {
-                      if (unhideTranslationInputRef.current) {
-                        unhideTranslationInputRef.current.value = '';
-                      }
-                      setIsTranslationUnlocked(true);
-                    }
-                  }
-                }}
+                onClick={handleUnlockTranslation}
+                aria-busy={isUnlockingTranslation}
                 variant="secondary"
-                className="flex-shrink-0"
+                className="flex-shrink-0 aria-busy:opacity-60 aria-busy:cursor-wait"
+                icon={<AppActionIcon phase={unlockPhase} icon={LockOpen} size={16} />}
               >
                 Розблокувати
               </Button>
@@ -692,10 +820,10 @@ export const SettingsModal: React.FC = () => {
 
           <button
             onClick={handleOpenChangelogModal}
-            className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
-              <Sparkles size={20} className="text-white" />
+              <SparklesIcon size={20} className="text-white" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Що нового</h4>
@@ -710,7 +838,7 @@ export const SettingsModal: React.FC = () => {
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-                <FileText size={20} className="text-white" />
+                <FileTextIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">
@@ -724,7 +852,7 @@ export const SettingsModal: React.FC = () => {
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <Shield size={20} className="text-white" />
+                <ShieldIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">
@@ -744,7 +872,7 @@ export const SettingsModal: React.FC = () => {
             }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Heart size={18} className="text-pink-500" />
+              <HeartIcon size={18} className="text-pink-500" />
               <h4 className="text-sm font-semibold text-pink-500">Подяки</h4>
             </div>
             <p className="text-xs text-text-muted mb-3">

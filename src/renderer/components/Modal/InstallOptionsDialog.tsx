@@ -1,16 +1,16 @@
 import {
-  Archive,
-  Check,
-  FileText,
-  Info,
-  Monitor,
-  Shield,
-  Terminal,
-  Trash2,
-  Trophy,
-  Volume2,
+  ArchiveIcon,
+  CheckIcon,
+  FileTextIcon,
+  InfoIcon,
+  MonitorIcon,
+  ShieldIcon,
+  TerminalIcon,
+  Trash2Icon,
+  TrophyIcon,
+  Volume2Icon,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   Game,
   GamePath,
@@ -46,7 +46,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   isCustomPath,
   availablePlatforms = [],
 }) => {
-  // Check what's available and what's already installed
+  // CheckIcon what's available and what's already installed
   const isSteamGame = game.platforms?.includes('steam');
   // Achievements only available for Steam games installed in Steam folder (not custom path)
   const hasAchievementsArchive = !!(
@@ -91,27 +91,41 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     defaultPlatform
   );
 
-  // Reset state when dialog opens
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
+  const defaultsRef = useRef({
+    defaultCreateBackup,
+    isVoiceInstalled,
+    isAchievementsInstalled,
+    isReinstall,
+    defaultPlatform,
+  });
+
   useEffect(() => {
-    if (isOpen) {
-      setCreateBackup(defaultCreateBackup);
-      // For reinstall, text is checked by default (to reinstall/update)
-      setInstallText(true);
-      // Set defaults based on what's already installed
-      setInstallVoice(isVoiceInstalled || !isReinstall);
-      setInstallAchievements(isAchievementsInstalled || !isReinstall);
-      setSelectedPlatform(defaultPlatform);
-    }
+    defaultsRef.current = {
+      defaultCreateBackup,
+      isVoiceInstalled,
+      isAchievementsInstalled,
+      isReinstall,
+      defaultPlatform,
+    };
   }, [
-    isOpen,
     defaultCreateBackup,
     isVoiceInstalled,
     isAchievementsInstalled,
     isReinstall,
     defaultPlatform,
   ]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    const defaults = defaultsRef.current;
+    setCreateBackup(defaults.defaultCreateBackup);
+    setInstallText(true);
+    setInstallVoice(defaults.isVoiceInstalled || !defaults.isReinstall);
+    setInstallAchievements(defaults.isAchievementsInstalled || !defaults.isReinstall);
+    setSelectedPlatform(defaults.defaultPlatform);
+  }, [isOpen]);
 
   // Calculate what will be downloaded/removed
   const willDownloadVoice = hasVoiceArchive && installVoice && !isVoiceInstalled;
@@ -155,8 +169,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const totalDownloadSize = useMemo(() => {
     const sizes: (string | null)[] = [];
 
-    // Always downloading text if not a reinstall, or if installText is checked
-    if (!isReinstall || installText) {
+    if (installText) {
       sizes.push(game.archive_size);
     }
 
@@ -171,7 +184,6 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     return calculateTotalSize(sizes.filter(Boolean) as string[]);
   }, [
     game,
-    isReinstall,
     installText,
     willDownloadVoice,
     willDownloadAchievements,
@@ -184,7 +196,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       return null;
     }
 
-    const sizes: (string | null)[] = [game.archive_size];
+    const sizes: (string | null)[] = installText ? [game.archive_size] : [];
 
     if (installVoice && hasVoiceArchive) {
       sizes.push(game.voice_archive_size ?? null);
@@ -199,6 +211,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   }, [
     game,
     isReinstall,
+    installText,
     installVoice,
     installAchievements,
     hasVoiceArchive,
@@ -268,7 +281,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         {supportedPlatforms.length > 0 && (
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2">
-              <Monitor size={18} className="text-color-accent" />
+              <MonitorIcon size={18} className="text-color-accent" />
               <span className="font-medium text-text-main">Платформа гри</span>
             </label>
             <SelectDropdown
@@ -308,7 +321,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Shield size={18} className="text-color-accent" />
+                <ShieldIcon size={18} className="text-color-accent" />
                 <span className="font-medium text-text-main group-hover:text-color-accent transition-colors">
                   Створити резервну копію
                 </span>
@@ -318,7 +331,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               </p>
               {createBackup && backupSize && (
                 <p className="flex items-center gap-1 mt-1 text-color-accent text-sm">
-                  <Archive size={14} />
+                  <ArchiveIcon size={14} />
                   <span>Орієнтовний розмір: {backupSize}</span>
                 </p>
               )}
@@ -350,13 +363,13 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <FileText size={18} className="text-color-accent" />
+              <FileTextIcon size={18} className="text-color-accent" />
               <span className="font-medium text-text-main group-hover:text-color-accent transition-colors">
                 Текстова локалізація
               </span>
               {isReinstall && (
                 <span className="flex items-center gap-1 text-xs text-green-400">
-                  <Check size={12} />
+                  <CheckIcon size={12} />
                   встановлено
                 </span>
               )}
@@ -365,19 +378,19 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <p>Переклад текстів гри українською.</p>
               {game.archive_size && (
                 <p className="flex items-center gap-1 mt-1 text-color-accent">
-                  <Archive size={14} />
+                  <ArchiveIcon size={14} />
                   <span>Розмір: {game.archive_size}</span>
                 </p>
               )}
               {isReinstall && installText && (
                 <p className="flex items-center gap-1 mt-1 text-green-400">
-                  <Archive size={14} />
+                  <ArchiveIcon size={14} />
                   <span>Буде перевстановлено</span>
                 </p>
               )}
               {!isReinstall && installText && (
                 <p className="flex items-center gap-1 mt-1 text-green-400">
-                  <Archive size={14} />
+                  <ArchiveIcon size={14} />
                   <span>Буде встановлено</span>
                 </p>
               )}
@@ -422,7 +435,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <Volume2
+              <Volume2Icon
                 size={18}
                 className={
                   hasVoiceArchive || isVoiceIntegrated
@@ -444,7 +457,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               {isVoiceInstalled ||
                 (isVoiceIntegrated && isReinstall && (
                   <span className="flex items-center gap-1 text-xs text-green-400">
-                    <Check size={12} />
+                    <CheckIcon size={12} />
                     встановлено
                   </span>
                 ))}
@@ -453,19 +466,19 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <p>Українське озвучення.</p>
               {game.voice_archive_size && (
                 <p className="flex items-center gap-1 mt-1 text-purple-400">
-                  <Archive size={14} />
+                  <ArchiveIcon size={14} />
                   <span>Розмір: {game.voice_archive_size}</span>
                 </p>
               )}
               {willRemoveVoice && (
                 <p className="flex items-center gap-1 mt-1 text-red-400">
-                  <Trash2 size={14} />
+                  <Trash2Icon size={14} />
                   <span>Буде видалено</span>
                 </p>
               )}
               {willDownloadVoice && (
                 <p className="flex items-center gap-1 mt-1 text-green-400">
-                  <Archive size={14} />
+                  <ArchiveIcon size={14} />
                   <span>Буде завантажено</span>
                 </p>
               )}
@@ -503,7 +516,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Trophy
+                <TrophyIcon
                   size={18}
                   className={
                     hasAchievementsArchive ? 'text-green-400' : 'text-text-muted'
@@ -519,7 +532,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 )}
                 {isAchievementsInstalled && (
                   <span className="flex items-center gap-1 text-xs text-green-400">
-                    <Check size={12} />
+                    <CheckIcon size={12} />
                     встановлено
                   </span>
                 )}
@@ -528,25 +541,25 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 <p>Переклад досягнень Steam.</p>
                 {game.achievements_archive_size && (
                   <p className="flex items-center gap-1 mt-1 text-green-400">
-                    <Archive size={14} />
+                    <ArchiveIcon size={14} />
                     <span>Розмір: {game.achievements_archive_size}</span>
                   </p>
                 )}
                 {willRemoveAchievements && (
                   <p className="flex items-center gap-1 mt-1 text-red-400">
-                    <Trash2 size={14} />
+                    <Trash2Icon size={14} />
                     <span>Буде видалено</span>
                   </p>
                 )}
                 {willDownloadAchievements && (
                   <p className="flex items-center gap-1 mt-1 text-green-400">
-                    <Archive size={14} />
+                    <ArchiveIcon size={14} />
                     <span>Буде завантажено</span>
                   </p>
                 )}
                 {willReinstallAchievements && (
                   <p className="flex items-center gap-1 mt-1 text-green-400">
-                    <Archive size={14} />
+                    <ArchiveIcon size={14} />
                     <span>Буде перевстановлено</span>
                   </p>
                 )}
@@ -560,7 +573,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           installAchievements &&
           game.achievements_third_party && (
             <div className="bg-glass rounded-xl p-3 border border-border flex items-center gap-2 text-sm">
-              <Info size={16} className="text-color-main shrink-0" />
+              <InfoIcon size={16} className="text-color-main shrink-0" />
               <span className="text-text-muted">
                 Автор перекладу досягнень:{' '}
                 <span className="text-text-main">{game.achievements_third_party}</span>
@@ -571,7 +584,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         {/* Steam launch options info */}
         {willApplyLaunchOptions && (
           <div className="bg-glass rounded-xl p-3 border border-border flex items-start gap-2 text-sm">
-            <Terminal size={16} className="text-color-main shrink-0 mt-0.5" />
+            <TerminalIcon size={16} className="text-color-main shrink-0 mt-0.5" />
             <div className="text-text-muted">
               <p>
                 Цей переклад встановить власні{' '}
@@ -593,19 +606,19 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
         )}
 
-        {/* Info about what will happen */}
+        {/* InfoIcon about what will happen */}
         {(totalDownloadSize !== 'N/A' || willRemoveVoice || willRemoveAchievements) && (
           <div className="bg-glass rounded-xl p-4 border border-border space-y-2">
             {totalDownloadSize !== 'N/A' && (
               <div className="flex items-center gap-2 text-sm">
-                <Archive size={16} className="text-text-muted" />
+                <ArchiveIcon size={16} className="text-text-muted" />
                 <span className="text-text-muted">Буде завантажено:</span>
                 <span className="text-text-main font-medium">{totalDownloadSize}</span>
               </div>
             )}
             {(willRemoveVoice || willRemoveAchievements) && (
               <div className="flex items-center gap-2 text-sm">
-                <Trash2 size={16} className="text-red-400" />
+                <Trash2Icon size={16} className="text-red-400" />
                 <span className="text-red-400">
                   Буде видалено:{' '}
                   {[

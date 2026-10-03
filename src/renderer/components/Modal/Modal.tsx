@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useGamepadModalScroll } from '../../hooks/useGamepadModalScroll';
@@ -99,7 +99,7 @@ export const Modal: React.FC<ModalProps> = ({
                         data-gamepad-cancel
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-glass-hover transition-colors flex-shrink-0 ml-2"
                       >
-                        <X size={18} className="text-text-muted" />
+                        <XIcon size={18} className="text-text-muted" />
                       </button>
                     )}
                   </div>
@@ -126,7 +126,7 @@ export const Modal: React.FC<ModalProps> = ({
                     data-gamepad-cancel
                     className="absolute top-8 right-8 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-glass-hover transition-colors"
                   >
-                    <X size={18} className="text-text-muted" />
+                    <XIcon size={18} className="text-text-muted" />
                   </button>
                 )}
                 {/* Content */}

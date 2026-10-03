@@ -1,6 +1,6 @@
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
-import { X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
@@ -318,7 +318,7 @@ export default function Gallery({
               className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
               type="button"
             >
-              <X size={22} className="text-white" />
+              <XIcon size={22} className="text-white" />
             </button>
             <img
               src={slidesUrls[fullscreenIndex]}

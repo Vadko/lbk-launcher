@@ -43,7 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button {...props} className={`${baseStyles} ${variants[variant]}  ${className}`}>
-      {icon && <span>{icon}</span>}
+      {icon && <span className="inline-flex shrink-0 items-center">{icon}</span>}
       {children}
     </button>
   );
