@@ -1,4 +1,4 @@
-import { Play } from 'lucide-react';
+import { PlayIcon } from 'lucide-react';
 import React from 'react';
 import LiteYouTubeEmbed from 'react-lite-youtube-embed';
 import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css';
@@ -42,7 +42,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
           data-gamepad-action="true"
           className="flex items-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-r from-color-accent/20 to-color-main/20 border border-color-accent/30 hover:border-color-accent/60 transition-all duration-300 text-white hover:shadow-[0_0_20px_rgba(255,164,122,0.3)]"
         >
-          <Play size={20} className="text-color-accent" />
+          <PlayIcon size={20} className="text-color-accent" />
           <span className="font-medium">Переглянути відео</span>
         </a>
       </div>

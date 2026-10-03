@@ -1,21 +1,21 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowDownAZ,
-  ArrowUpDown,
-  Check,
-  Sparkles,
-  TrendingUp,
-  Users,
+  ArrowDownAZIcon,
+  ArrowUpDownIcon,
+  CheckIcon,
+  SparklesIcon,
+  TrendingUpIcon,
+  UsersIcon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { SORT_OPTIONS, type SortOrderType } from './types';
 
 const SORT_ICONS: Record<string, React.ReactNode> = {
-  name: <ArrowDownAZ size={14} />,
-  downloads: <TrendingUp size={14} />,
-  subscribers: <Users size={14} />,
-  newest: <Sparkles size={14} />,
+  name: <ArrowDownAZIcon size={14} />,
+  downloads: <TrendingUpIcon size={14} />,
+  subscribers: <UsersIcon size={14} />,
+  newest: <SparklesIcon size={14} />,
 };
 
 interface SortDropdownProps {
@@ -63,7 +63,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
         onClick={() => setIsOpen((open) => !open)}
         {...headerItemProps}
       >
-        <ArrowUpDown size={14} />
+        <ArrowUpDownIcon size={14} />
       </Button>
 
       <AnimatePresence>
@@ -90,7 +90,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
                         : 'text-text-muted hover:bg-glass hover:text-text-main'
                     }`}
                   >
-                    {selected ? <Check size={14} /> : SORT_ICONS[option.value]}
+                    {selected ? <CheckIcon size={14} /> : SORT_ICONS[option.value]}
                     <span className="flex-1">{option.label}</span>
                   </button>
                 );

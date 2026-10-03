@@ -1,4 +1,4 @@
-import { Check, Search } from 'lucide-react';
+import { CheckIcon, SearchIcon } from 'lucide-react';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 interface SearchableFilterItem {
@@ -68,7 +68,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
   return (
     <div className="searchable-filter-list border border-border rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border focus-within:bg-glass-hover">
-        <Search size={14} className="text-text-muted flex-shrink-0" />
+        <SearchIcon size={14} className="text-text-muted flex-shrink-0" />
         <input
           ref={searchInputRef}
           type="search"
@@ -140,7 +140,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
                     selected ? 'bg-color-accent border-color-accent' : 'border-text-muted'
                   }`}
                 >
-                  {selected && <Check size={12} className="text-text-dark" />}
+                  {selected && <CheckIcon size={12} className="text-text-dark" />}
                 </span>
                 <span className="truncate flex-1 text-left">{item.label}</span>
                 {item.count !== undefined && (

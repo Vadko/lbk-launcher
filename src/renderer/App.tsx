@@ -343,7 +343,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Перевірка нових версій встановлених українізаторів при realtime оновленні гри
+  // Check installed translations for new versions on a realtime game update
   useEffect(() => {
     if (!window.electronAPI?.onGameUpdated) {
       return;

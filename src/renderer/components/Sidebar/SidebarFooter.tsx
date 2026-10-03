@@ -1,5 +1,11 @@
 import { Bell, BellRing, Volume2, VolumeX } from 'lucide';
-import { BookOpenText, Home, Medal, Newspaper, Settings } from 'lucide-react';
+import {
+  BookOpenTextIcon,
+  HomeIcon,
+  MedalIcon,
+  NewspaperIcon,
+  SettingsIcon,
+} from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -29,7 +35,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити посібники та інструменти"
             >
-              <BookOpenText size={20} className="mx-auto text-text-muted" />
+              <BookOpenTextIcon size={20} className="mx-auto text-text-muted" />
             </button>
             <button
               onClick={() => navigate('/site/donaters')}
@@ -38,7 +44,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити сторінку донаторів"
             >
-              <Medal size={20} className="mx-auto text-text-muted" />
+              <MedalIcon size={20} className="mx-auto text-text-muted" />
             </button>
             <button
               onClick={() => navigate('/news')}
@@ -47,7 +53,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити новини"
             >
-              <Newspaper size={20} className="mx-auto text-text-muted" />
+              <NewspaperIcon size={20} className="mx-auto text-text-muted" />
             </button>
             <button
               onClick={() => navigate('/')}
@@ -56,7 +62,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title="Відкрити головну сторінку"
             >
-              <Home size={20} className="mx-auto text-text-muted" />
+              <HomeIcon size={20} className="mx-auto text-text-muted" />
             </button>
             <button
               onClick={toggleGamepadSounds}
@@ -107,7 +113,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
           title="Налаштування"
         >
-          <Settings size={20} className="mx-auto text-text-muted" />
+          <SettingsIcon size={20} className="mx-auto text-text-muted" />
         </button>
       </div>
     );

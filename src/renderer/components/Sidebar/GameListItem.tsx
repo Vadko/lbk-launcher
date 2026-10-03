@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkCheck, EyeOff } from 'lucide-react';
+import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
@@ -150,7 +150,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Adult content indicator */}
             {isAdultBlurred && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOff size={20} className="text-white/80" />
+                <EyeOffIcon size={20} className="text-white/80" />
               </div>
             )}
 
@@ -181,9 +181,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                 className="!rounded-lg !px-1"
                 icon={
                   isFavorite ? (
-                    <BookmarkCheck size={20} className="text-color-accent" />
+                    <BookmarkCheckIcon size={20} className="text-color-accent" />
                   ) : (
-                    <Bookmark
+                    <BookmarkIcon
                       size={20}
                       className="text-text-muted group-hover/button:text-text-main"
                     />
@@ -292,7 +292,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Adult content indicator on image */}
             {isAdultBlurred && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOff size={14} className="text-white/80" />
+                <EyeOffIcon size={14} className="text-white/80" />
               </div>
             )}
           </div>

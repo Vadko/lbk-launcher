@@ -1,6 +1,13 @@
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { Download, Play, RefreshCw, ReplaceAll } from 'lucide';
-import { EyeOff, FileEdit, Heart, Settings, Trash2, Users } from 'lucide-react';
+import {
+  EyeOffIcon,
+  FileEditIcon,
+  HeartIcon,
+  SettingsIcon,
+  Trash2Icon,
+  UsersIcon,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
@@ -460,7 +467,7 @@ export const GamePage: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
         <div className="glass-card-no-motion max-w-md p-8">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
-            <EyeOff size={40} className="text-red-400" />
+            <EyeOffIcon size={40} className="text-red-400" />
           </div>
           <h2 className="text-xl font-head font-semibold text-text-main mb-3">
             Контент для дорослих
@@ -473,7 +480,7 @@ export const GamePage: React.FC = () => {
             onClick={openSettingsModal}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
-            <Settings size={20} />
+            <SettingsIcon size={20} />
             Відкрити налаштування
           </button>
         </div>
@@ -623,7 +630,7 @@ export const GamePage: React.FC = () => {
               {!isWorkshop && installationInfo && !isInstalling && (
                 <Button
                   variant="secondary"
-                  icon={<Trash2 size={20} />}
+                  icon={<Trash2Icon size={20} />}
                   onClick={handleUninstall}
                   disabled={isUninstalling}
                   title="Видалити українізатор"
@@ -650,7 +657,7 @@ export const GamePage: React.FC = () => {
                 ) && (
                   <Button
                     variant="accent"
-                    icon={<Heart size={20} />}
+                    icon={<HeartIcon size={20} />}
                     onClick={handleSupport}
                     data-gamepad-action
                     className="support-button"
@@ -661,7 +668,7 @@ export const GamePage: React.FC = () => {
               {isTranslationInstalled && (
                 <Button
                   variant="secondary"
-                  icon={<FileEdit size={20} />}
+                  icon={<FileEditIcon size={20} />}
                   onClick={() => setShowFeedbackModal(true)}
                   data-gamepad-action
                   className="support-button"
@@ -745,7 +752,7 @@ export const GamePage: React.FC = () => {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-color-main/20'}`}
                   >
-                    <Users
+                    <UsersIcon
                       size={20}
                       className={
                         isSpecialTranslator(selectedGame.team)

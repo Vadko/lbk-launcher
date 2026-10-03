@@ -43,10 +43,10 @@ async function executableBitsFor(destPath: string): Promise<number> {
   try {
     bits |= (await fs.promises.stat(destPath)).mode & 0o111;
   } catch (error) {
-    // ENOENT — звичайний шлях: такого файлу в грі ще немає, успадковувати нема від чого
+    // ENOENT is the normal path: the file isn't in the game yet, so there are no bits to inherit
     const code = error instanceof Error && 'code' in error ? error.code : undefined;
     if (code !== 'ENOENT') {
-      console.warn(`[Installer] Не вдалося прочитати права ${destPath}:`, error);
+      console.warn(`[Installer] Could not read permissions for ${destPath}:`, error);
     }
   }
   return bits;

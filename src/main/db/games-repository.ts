@@ -598,7 +598,7 @@ export class GamesRepository {
     stmt.run(gameId);
   }
 
-  /** Лічильник підписників із відповіді трекінгу — до наступного синку каталогу */
+  /** Subscriber count from the tracking response — holds until the next catalog sync */
   setSubscriptions(gameId: string, subscriptions: number): void {
     this.db
       .prepare('UPDATE games SET subscriptions = ? WHERE id = ?')

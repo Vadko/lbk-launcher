@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangleIcon } from 'lucide-react';
 import React from 'react';
 import type { InstallationStatusTone } from '../../../shared/types';
 
@@ -10,7 +10,7 @@ interface InstallationStatusMessageProps {
   isInstalling: boolean;
 }
 
-// класи пишемо повністю: складені рядки Tailwind не бачить при скануванні
+// Full class names: Tailwind doesn't see strings assembled at runtime
 const TONE_STYLES: Record<
   InstallationStatusTone,
   { ring: string; dot: string; text: string }
@@ -51,7 +51,7 @@ export const InstallationStatusMessage: React.FC<InstallationStatusMessageProps>
       {!isOnline && isInstalling && (
         <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
           <p className="text-xs text-red-400 flex items-center gap-1.5">
-            <AlertTriangle size={14} className="shrink-0" />
+            <AlertTriangleIcon size={14} className="shrink-0" />
             Відсутнє підключення до Інтернету. Завантаження призупинено.
           </p>
         </div>

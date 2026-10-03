@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRightIcon } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -46,7 +46,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
         {onViewAll && (
           <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
             Переглянути всі
-            <ArrowRight size={24} />
+            <ArrowRightIcon size={24} />
           </Button>
         )}
       </div>

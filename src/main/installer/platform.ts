@@ -10,25 +10,8 @@ import { getPlatform, isLinux, isWindows } from '../utils/platform';
 import { isCmdSafePath } from '../utils/shell-safety';
 import { getCleanEnv } from './archive';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
+import { isExecutableInstaller } from './executable';
 import { runProton } from './proton';
-
-/**
- * Check if file is an executable installer
- */
-function isExecutableInstaller(fileName: string): boolean {
-  const executableExtensions = [
-    '.exe',
-    '.msi',
-    '.bat',
-    '.cmd',
-    '.sh',
-    '.run',
-    '.bin',
-    '.appimage',
-  ];
-  const lowerName = fileName.toLowerCase();
-  return executableExtensions.some((ext) => lowerName.endsWith(ext));
-}
 
 const toPosix = (p: string): string => p.replace(/\\/g, '/');
 

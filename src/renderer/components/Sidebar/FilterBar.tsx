@@ -1,4 +1,4 @@
-import { Bookmark, Download, SlidersHorizontal, X } from 'lucide-react';
+import { BookmarkIcon, DownloadIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import React from 'react';
 import { Button } from '../ui/Button';
 import { SortDropdown } from './SortDropdown';
@@ -47,7 +47,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           ${hasModalFilters ? '!bg-glass-hover !text-text-main !border-border-hover rounded-r-none' : ''}
         `}
         >
-          <SlidersHorizontal size={14} className="shrink-0" />
+          <SlidersHorizontalIcon size={14} className="shrink-0" />
           <span
             className={`truncate ${hasModalFilters ? '[@container(max-width:296px)]:hidden' : ''}`}
           >
@@ -68,7 +68,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             className="rounded-l-none shrink-0"
             title="Очистити всі фільтри"
           >
-            <X size={14} />
+            <XIcon size={14} />
           </Button>
         )}
       </div>
@@ -93,7 +93,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               : ''
           }
         >
-          <Download size={14} />
+          <DownloadIcon size={14} />
         </Button>
         <Button
           variant="filter"
@@ -106,7 +106,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               : ''
           }
         >
-          <Bookmark size={14} />
+          <BookmarkIcon size={14} />
         </Button>
       </div>
     </div>

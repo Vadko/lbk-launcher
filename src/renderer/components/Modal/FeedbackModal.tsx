@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion';
 import { Send } from 'lucide';
-import { AlertTriangle, CheckCircle, FileEdit, ImageIcon, X } from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  FileEditIcon,
+  ImageIcon,
+  XIcon,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import type { FeedbackType } from '@/shared/types';
@@ -21,12 +27,12 @@ const FEEDBACK_TYPES: {
   {
     value: 'feedback',
     label: 'Відгук',
-    icon: <FileEdit size={18} />,
+    icon: <FileEditIcon size={18} />,
   },
   {
     value: 'error',
     label: 'Помилка',
-    icon: <AlertTriangle size={18} />,
+    icon: <AlertTriangleIcon size={18} />,
   },
 ];
 
@@ -157,7 +163,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   const handleSubmit = useCallback(async () => {
     const trimmedMessage = message.trim();
-    // aria-busy замість disabled: нативний disabled вибиває кнопку з кільця фокуса геймпада
+    // aria-busy instead of disabled: a natively disabled button drops out of the gamepad focus ring
     if (!trimmedMessage || isSubmitting) {
       return;
     }
@@ -238,7 +244,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
-            <CheckCircle size={56} className="text-green-400" />
+            <CheckCircleIcon size={56} className="text-green-400" />
           </motion.div>
           <p className="text-lg font-semibold text-text-main">Дякуємо за звіт!</p>
           <p className="text-sm text-text-muted">
@@ -327,7 +333,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                     onClick={() => removeScreenshot(i)}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <X size={12} className="text-white" />
+                    <XIcon size={12} className="text-white" />
                   </button>
                 </div>
               ))}

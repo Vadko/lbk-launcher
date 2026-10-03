@@ -1,5 +1,5 @@
 import { Pause, Play } from 'lucide';
-import { X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { formatBytes, formatTime } from '../../../shared/formatters';
@@ -97,7 +97,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
               className="inline-flex items-center justify-center p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors aria-busy:opacity-60 aria-busy:cursor-wait"
               title="Скасувати"
             >
-              <X size={16} />
+              <XIcon size={16} />
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, EyeOff } from 'lucide-react';
+import { ChevronDownIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
@@ -92,7 +92,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
           {/* Adult content blur overlay */}
           {isAdultBlurred && (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm">
-              <EyeOff size={16} className="text-white/70" />
+              <EyeOffIcon size={16} className="text-white/70" />
             </div>
           )}
 
@@ -165,7 +165,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                 {group.translations.length}
               </span>
             )}
-            <ChevronDown
+            <ChevronDownIcon
               size={16}
               className={`text-text-muted transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : ''

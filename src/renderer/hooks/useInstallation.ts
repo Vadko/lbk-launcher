@@ -957,7 +957,7 @@ export function useInstallation({
     clearInstallationProgress(selectedGame.id);
   }, [selectedGame, isPaused, isInstalling, clearInstallationProgress]);
 
-  // лейбл не залежить від фази: хід встановлення показують іконка й картка прогресу
+  // The label is phase-independent: the icon and the progress card show how the install is going
   const getInstallButtonText = useCallback((): string => {
     if (!isOnline) {
       return 'Немає інтернету';

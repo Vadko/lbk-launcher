@@ -1,4 +1,4 @@
-import { Settings, TerminalSquare } from 'lucide-react';
+import { SettingsIcon, TerminalSquareIcon } from 'lucide-react';
 import React from 'react';
 import type { Game } from '@/shared/types';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
@@ -24,9 +24,9 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
       {hasInstaller && (
         <span className="text-text-muted flex items-center gap-1">
           {isExe ? (
-            <Settings size={16} className="flex-shrink-0" />
+            <SettingsIcon size={16} className="flex-shrink-0" />
           ) : (
-            <TerminalSquare size={16} className="flex-shrink-0" />
+            <TerminalSquareIcon size={16} className="flex-shrink-0" />
           )}
           {isExe ? 'Інсталятор' : 'Скрипт'}
         </span>

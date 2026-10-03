@@ -1,14 +1,14 @@
 import { FolderOpen, Gamepad, Library, LockOpen, RefreshCw } from 'lucide';
 import {
-  BrushCleaning,
-  FileText,
-  Heart,
-  MessageCircle,
-  Play,
-  Settings2,
-  Shield,
-  Sparkles,
-  Trash2,
+  BrushCleaningIcon,
+  FileTextIcon,
+  HeartIcon,
+  MessageCircleIcon,
+  PlayIcon,
+  Settings2Icon,
+  ShieldIcon,
+  SparklesIcon,
+  Trash2Icon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
@@ -455,7 +455,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
-              <MessageCircle size={20} color="#ffffff" />
+              <MessageCircleIcon size={20} color="#ffffff" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Зворотний зв'язок</h4>
@@ -634,7 +634,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center flex-shrink-0">
-              <BrushCleaning size={20} className="text-text-dark" />
+              <BrushCleaningIcon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Очистити кеш</h4>
@@ -650,7 +650,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center flex-shrink-0">
-              <Trash2 size={20} className="text-text-dark" />
+              <Trash2Icon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Очистити всі дані</h4>
@@ -664,7 +664,7 @@ export const SettingsModal: React.FC = () => {
           {import.meta.env.DEV && (
             <div className="p-4 rounded-xl bg-glass border border-border">
               <div className="flex items-center gap-2 mb-3">
-                <Settings2 size={18} className="text-color-accent" />
+                <Settings2Icon size={18} className="text-color-accent" />
                 <h4 className="text-sm font-semibold text-text-main">Dev налаштування</h4>
               </div>
               <div className="space-y-3">
@@ -708,7 +708,7 @@ export const SettingsModal: React.FC = () => {
                         onClick={() => playNotificationSound(type)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
                       >
-                        <Play size={12} />
+                        <PlayIcon size={12} />
                         {label}
                       </button>
                     ))}
@@ -721,21 +721,21 @@ export const SettingsModal: React.FC = () => {
                       onClick={() => playNavigateSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
+                      <PlayIcon size={12} />
                       Навігація
                     </button>
                     <button
                       onClick={() => playConfirmSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
+                      <PlayIcon size={12} />
                       Підтвердити
                     </button>
                     <button
                       onClick={() => playBackSound({ ignoreSettings: true })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
+                      <PlayIcon size={12} />
                       Назад
                     </button>
                   </div>
@@ -823,7 +823,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
-              <Sparkles size={20} className="text-white" />
+              <SparklesIcon size={20} className="text-white" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">Що нового</h4>
@@ -838,7 +838,7 @@ export const SettingsModal: React.FC = () => {
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-                <FileText size={20} className="text-white" />
+                <FileTextIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">
@@ -852,7 +852,7 @@ export const SettingsModal: React.FC = () => {
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <Shield size={20} className="text-white" />
+                <ShieldIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">
@@ -872,7 +872,7 @@ export const SettingsModal: React.FC = () => {
             }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Heart size={18} className="text-pink-500" />
+              <HeartIcon size={18} className="text-pink-500" />
               <h4 className="text-sm font-semibold text-pink-500">Подяки</h4>
             </div>
             <p className="text-xs text-text-muted mb-3">

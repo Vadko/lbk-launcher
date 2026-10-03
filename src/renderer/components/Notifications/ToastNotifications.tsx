@@ -1,12 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  BookmarkCheck,
-  Download,
-  Languages,
-  MessageSquare,
-  RefreshCw,
-  TrendingUp,
-  X,
+  BookmarkCheckIcon,
+  DownloadIcon,
+  LanguagesIcon,
+  MessageSquareIcon,
+  RefreshCwIcon,
+  TrendingUpIcon,
+  XIcon,
 } from 'lucide-react';
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -20,19 +20,19 @@ import {
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {
     case 'status-change':
-      return <Languages size={20} className="text-white" />;
+      return <LanguagesIcon size={20} className="text-white" />;
     case 'version-update':
-      return <RefreshCw size={20} className="text-white" />;
+      return <RefreshCwIcon size={20} className="text-white" />;
     case 'app-update':
-      return <Download size={20} className="text-white" />;
+      return <DownloadIcon size={20} className="text-white" />;
     case 'progress-change':
-      return <TrendingUp size={20} className="text-white" />;
+      return <TrendingUpIcon size={20} className="text-white" />;
     case 'first-favorite':
-      return <BookmarkCheck size={20} className="text-text-dark" />;
+      return <BookmarkCheckIcon size={20} className="text-text-dark" />;
     case 'feedback-reply':
-      return <MessageSquare size={20} className="text-white" />;
+      return <MessageSquareIcon size={20} className="text-white" />;
     default:
-      return <RefreshCw size={20} className="text-white" />;
+      return <RefreshCwIcon size={20} className="text-white" />;
   }
 };
 
@@ -159,7 +159,7 @@ export const ToastNotifications: React.FC = () => {
                 }}
                 className="flex-shrink-0 w-6 h-6 rounded-lg hover:bg-glass-hover transition-colors flex items-center justify-center"
               >
-                <X size={14} className="text-text-muted" />
+                <XIcon size={14} className="text-text-muted" />
               </button>
             </div>
           </motion.div>

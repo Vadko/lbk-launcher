@@ -1,11 +1,13 @@
-import { Book, Globe, Send } from 'lucide-react';
+import { BookIcon, GlobeIcon, SendIcon } from 'lucide-react';
 import React from 'react';
 import type { Game } from '../../types/game';
 import {
   DiscordIcon,
   EAIcon,
   EpicIcon,
+  GitHubIcon,
   GOGIcon,
+  PatreonIcon,
   SteamIcon,
   UbisoftIcon,
   XboxIcon,
@@ -134,22 +136,42 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
   );
 };
 
+const WEBSITE_KINDS = [
+  {
+    match: 'steamcommunity.com/sharedfiles/filedetails',
+    label: 'Steam посібник',
+    color: 'text-color-accent',
+    icon: <BookIcon size={18} />,
+  },
+  {
+    match: 'github.com',
+    label: 'GitHub',
+    color: 'text-text-main',
+    icon: <GitHubIcon size={18} />,
+  },
+  {
+    match: 'patreon.com',
+    label: 'Patreon',
+    color: 'text-[#FF424D]',
+    icon: <PatreonIcon size={18} />,
+  },
+];
+
+function describeWebsite(url: string): Omit<SocialLinkProps, 'url'> {
+  const lowerUrl = url.toLowerCase();
+  const kind = WEBSITE_KINDS.find((candidate) => lowerUrl.includes(candidate.match));
+  return {
+    icon: kind?.icon ?? <GlobeIcon size={18} />,
+    label: kind?.label ?? 'Вебсайт',
+    color: kind?.color ?? 'text-color-accent',
+  };
+}
+
 export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   const links = [
-    game.website && {
-      icon: game.website.includes('steamcommunity.com/sharedfiles/filedetails') ? (
-        <Book size={18} />
-      ) : (
-        <Globe size={18} />
-      ),
-      label: game.website.includes('steamcommunity.com/sharedfiles/filedetails')
-        ? 'Steam посібник'
-        : 'Вебсайт',
-      url: game.website,
-      color: 'text-color-accent',
-    },
+    game.website && { ...describeWebsite(game.website), url: game.website },
     game.telegram && {
-      icon: <Send size={18} />,
+      icon: <SendIcon size={18} />,
       label: 'Telegram',
       url: game.telegram,
       color: 'text-[#0088cc]',

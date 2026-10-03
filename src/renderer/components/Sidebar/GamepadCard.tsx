@@ -2,7 +2,7 @@ import { useDeferredImage } from '@renderer/hooks/useDeferredImage';
 import type { Game } from '@renderer/types/game';
 import { getGameImageUrl } from '@renderer/utils/imageUrl';
 import { useSettingsStore } from '@store/useSettingsStore';
-import { EyeOff } from 'lucide-react';
+import { EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
@@ -84,7 +84,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       {/* Adult blur overlay */}
       {isAdultBlurred && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-md">
-          <EyeOff size={24} className="text-white/50" />
+          <EyeOffIcon size={24} className="text-white/50" />
         </div>
       )}
 

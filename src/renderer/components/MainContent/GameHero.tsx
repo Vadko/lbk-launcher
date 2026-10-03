@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Bookmark, BookmarkCheck } from 'lucide';
-import { Share2 } from 'lucide-react';
+import { Share2Icon } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
@@ -203,7 +203,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               />
               <Button
                 variant="secondary"
-                icon={<Share2 size={20} />}
+                icon={<Share2Icon size={20} />}
                 onClick={() => setIsModalOpen(true)}
                 data-nav-group="main-links"
                 data-gamepad-action

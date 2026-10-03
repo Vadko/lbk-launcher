@@ -1,4 +1,4 @@
-import { CheckCircle, Info, XCircle } from 'lucide-react';
+import { CheckCircleIcon, InfoIcon, XCircleIcon } from 'lucide-react';
 import React from 'react';
 import { useModalStore } from '../../store/useModalStore';
 import { SelectDropdown } from '../ui/SelectDropdown';
@@ -14,12 +14,12 @@ export const GlobalModal: React.FC = () => {
   const getIcon = () => {
     switch (config.type) {
       case 'success':
-        return <CheckCircle size={48} className="text-color-main" />;
+        return <CheckCircleIcon size={48} className="text-color-main" />;
       case 'error':
-        return <XCircle size={48} className="text-red-400" />;
+        return <XCircleIcon size={48} className="text-red-400" />;
       case 'info':
       default:
-        return <Info size={48} className="text-color-accent" />;
+        return <InfoIcon size={48} className="text-color-accent" />;
     }
   };
 

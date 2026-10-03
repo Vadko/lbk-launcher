@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { CheckIcon } from 'lucide-react';
 import * as React from 'react';
 
 interface CheckboxProps {
@@ -29,7 +29,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
           ${className || ''}
         `}
       >
-        {checked && <Check size={14} className="text-current" />}
+        {checked && <CheckIcon size={14} className="text-current" />}
       </button>
     );
   }

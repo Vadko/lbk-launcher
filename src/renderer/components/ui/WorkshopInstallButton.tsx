@@ -1,5 +1,5 @@
 import { Download, Trash2 } from 'lucide';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLinkIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useWorkshopInstallsStore } from '../../store/useWorkshopInstallsStore';
@@ -107,7 +107,7 @@ export function WorkshopInstallButton({
       )}
       <Button
         variant="secondary"
-        icon={<ExternalLink size={20} />}
+        icon={<ExternalLinkIcon size={20} />}
         onClick={() => void openWorkshopPage(workshopId)}
         title="Відкрити сторінку в Майстерні"
         data-gamepad-action

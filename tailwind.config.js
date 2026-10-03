@@ -30,8 +30,8 @@ export default {
         'color-mixed': 'rgb(var(--color-mixed) / <alpha-value>)',
       },
       fontFamily: {
-        head: ['Space Grotesk', 'Segoe UI', 'sans-serif'],
-        body: ['Inter', 'system-ui', 'sans-serif'],
+        head: ['var(--font-head)'],
+        body: ['var(--font-body)'],
       },
       animation: {
         'float': 'float 20s infinite alternate',

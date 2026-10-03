@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { FileTextIcon } from 'lucide-react';
 import React from 'react';
 import { Modal } from './Modal';
 
@@ -28,7 +28,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
     <div className="space-y-4 text-text-main">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-          <FileText size={24} className="text-white" />
+          <FileTextIcon size={24} className="text-white" />
         </div>
         <div>
           <h3 className="text-lg font-semibold">LBK Launcher</h3>
