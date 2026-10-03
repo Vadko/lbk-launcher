@@ -6,28 +6,28 @@ import { useStore } from '../store/useStore';
 const SITE_ORIGIN = 'https://lbklauncher.com';
 
 /**
- * Cторінка для сторінок з сайту
+ * Page for pages from the site
  */
 export const SitePage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const { page } = useParams<{ page: string }>();
   const [iframeHeight, setIframeHeight] = useState<number | null>(null);
 
-  // Очищаємо вибрану гру при переході на цю сторінку
-  // Це запобігає анімації від попередньої гри до нової
+  // Clear the selected game when navigating to this page
+  // This prevents the animation from the previous game to the new one
   useEffect(() => {
     setSelectedGame(null);
   }, [setSelectedGame]);
 
-  // Скидаємо висоту при переході на іншу сторінку сайту, щоб не показати
-  // на мить висоту попередньої сторінки до приходу нового postMessage
+  // Reset the height when navigating to another site page, to avoid briefly
+  // showing the previous page's height before the new postMessage arrives
   useEffect(() => {
     setIframeHeight(null);
   }, [page]);
 
-  // Сайт репортить свою реальну висоту через postMessage (крос-доменний
-  // iframe не дає прочитати scrollHeight напряму), щоб скрол відбувався
-  // на рівні сторінки лаунчера, а не всередині iframe
+  // The site reports its actual height via postMessage (a cross-origin
+  // iframe doesn't allow reading scrollHeight directly), so scrolling happens
+  // at the launcher page level rather than inside the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== SITE_ORIGIN) {

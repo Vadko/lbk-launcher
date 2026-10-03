@@ -3,14 +3,14 @@ import type { Game } from '../../shared/types';
 import { getSupabaseClient } from './supabase-client';
 
 /**
- * API для синхронізації з Supabase через типізований supabase-js клієнт.
- * Цей модуль викликається ТІЛЬКИ в main process.
+ * API for syncing with Supabase via the typed supabase-js client.
+ * This module is called ONLY in the main process.
  */
 
 export type TagNameRow = Database['public']['Tables']['steam_tag_names']['Row'];
 
 /**
- * Поля, які НЕ потрібно завантажувати (великі file_list та FTS поля)
+ * Fields that should NOT be loaded (large file_list and FTS fields)
  */
 type ExcludedFields =
   | 'archive_file_list'
@@ -25,13 +25,13 @@ type ExcludedFields =
   | 'steam_mac_archive_file_list'
   | 'name_fts'
   | 'name_search'
-  // Лічильники-віхи живуть лише локально: сервер їх не віддає, а замок нижче
-  // інакше вважав би їх забутими.
+  // Milestone counters live locally only: the server doesn't send them back, and the
+  // guard below would otherwise treat them as forgotten.
   | 'last_download_milestone'
   | 'last_subscriber_milestone';
 
 /**
- * Колонки для вибірки (type-safe)
+ * Columns for selection (type-safe)
  */
 const GAME_SELECT_COLUMNS = [
   'id',
@@ -140,7 +140,7 @@ const GAMES_PAGE_SIZE = 100;
 const TAG_NAMES_PAGE_SIZE = 500;
 
 /**
- * Завантажити всі затверджені ігри з Supabase
+ * Fetch all approved games from Supabase
  */
 export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
   const supabase = getSupabaseClient();
@@ -174,7 +174,7 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
 }
 
 /**
- * Завантажити ігри оновлені після певної дати
+ * Fetch games updated after a certain date
  */
 export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game[]> {
   const supabase = getSupabaseClient();
@@ -209,8 +209,8 @@ export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game
 }
 
 /**
- * Завантажити ID ігор видалених після певної дати
- * Якщо since не вказано - повертає всі видалені ігри
+ * Fetch IDs of games deleted after a certain date
+ * If since is not provided - returns all deleted games
  */
 export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<string[]> {
   const supabase = getSupabaseClient();
@@ -233,15 +233,15 @@ export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<s
   return deletedIds;
 }
 
-/** Рядок результату RPC get_trending_games */
+/** Result row of the get_trending_games RPC */
 type TrendingGame =
   Database['public']['Functions']['get_trending_games']['Returns'][number];
 
 /**
- * Завантажити найпопулярніші ігри за останні N днів
- * @param days - кількість днів для аналізу
- * @param limit - максимальна кількість ігор
- * @returns масив {game_id, downloads}
+ * Fetch the most popular games over the last N days
+ * @param days - number of days to analyze
+ * @param limit - maximum number of games
+ * @returns array of {game_id, downloads}
  */
 export async function fetchTrendingGames(days = 30, limit = 10): Promise<TrendingGame[]> {
   const supabase = getSupabaseClient();

@@ -43,7 +43,7 @@ function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
       alphaAt(last, last) < ALPHA_THRESHOLD
     );
   } catch {
-    return true; // при помилці — без скруглення
+    return true; // on error — no rounding
   }
 }
 
@@ -73,7 +73,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   }, [game.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Перевірити прозорість при завантаженні лого
+  // Check transparency when the logo loads
   const handleLogoLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const hasTransparency = checkImageHasTransparentCorners(e.currentTarget);
     setShouldRoundLogo(!hasTransparency);

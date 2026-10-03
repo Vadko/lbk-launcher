@@ -10,11 +10,11 @@ export interface TrendingGameData {
 }
 
 export interface TrendingGameWithDetails extends Game {
-  trendingDownloads: number; // Downloads за останні 30 днів
+  trendingDownloads: number; // Downloads over the last 30 days
 }
 
 /**
- * Query keys для trending games
+ * Query keys for trending games
  */
 export const trendingKeys = {
   all: ['trending'] as const,
@@ -23,8 +23,8 @@ export const trendingKeys = {
 };
 
 /**
- * Отримати trending ігри (ID + кількість завантажень)
- * Завжди завантажує максимум 30 ігор для кешування
+ * Get trending games (ID + download count)
+ * Always fetches a maximum of 30 games for caching
  */
 export function useTrendingGamesList(days = 30) {
   return useQuery({
@@ -36,8 +36,8 @@ export function useTrendingGamesList(days = 30) {
 }
 
 /**
- * Отримати trending ігри з повними даними
- * Завжди завантажує максимум 30 ігор, slice робиться на UI рівні
+ * Get trending games with full details
+ * Always fetches a maximum of 30 games; slicing happens at the UI level
  */
 export function useTrendingGames(days = 30) {
   return useSyncAwareQuery({

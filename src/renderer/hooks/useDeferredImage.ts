@@ -4,9 +4,9 @@ export function useDeferredImage(imageDeferred: boolean, resetKey: string): bool
   const [settled, setSettled] = useState(!imageDeferred);
 
   const prevKeyRef = useRef(resetKey);
-  /* eslint-disable react-hooks/set-state-in-effect -- навмисний reset на зміну гри */
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on game change */
   useEffect(() => {
-    // Guard по ключу: ефект не скидає латч на самі лише зміни imageDeferred
+    // Key guard: the effect doesn't reset the latch on imageDeferred changes alone
     if (prevKeyRef.current !== resetKey) {
       prevKeyRef.current = resetKey;
       setSettled(!imageDeferred);

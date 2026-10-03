@@ -30,8 +30,8 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();
 
-  // Запам'ятовує розмір/позицію/maximized-стан вікна між запусками
-  // (у т.ч. на якому моніторі воно було закрите)
+  // Remembers window size/position/maximized state between launches
+  // (including which monitor it was closed on)
   const windowState = windowStateKeeper({
     defaultWidth: 1400,
     defaultHeight: 900,
@@ -136,7 +136,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     mainWindow = null;
   });
 
-  // Відправляти стан maximize в renderer
+  // Send maximize state to the renderer
   mainWindow.on('maximize', () => {
     mainWindow?.webContents.send('window:maximized', true);
   });

@@ -47,8 +47,8 @@ export const NewsFeedSection: React.FC = () => {
   });
 
   const openInTelegram = async (url: string) => {
-    // Витягуємо назву каналу та ID поста за допомогою регулярного виразу
-    // Приклад URL: https://t.me/LBK_news/1234
+    // Extract the channel name and post ID using a regular expression
+    // Example URL: https://t.me/LBK_news/1234
     const match = url.match(/t\.me\/([\w_]+)\/(\d+)/);
 
     if (match) {

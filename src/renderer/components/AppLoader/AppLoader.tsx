@@ -29,7 +29,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
       {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-color-main/10" />
 
-      {/* Прогрів шейдерних пайплайнів, поки лоадер прикриває екран */}
+      {/* Warm up shader pipelines while the loader covers the screen */}
       <ShaderWarmup />
 
       {/* Animated glow behind logo */}

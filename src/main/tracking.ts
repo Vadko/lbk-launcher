@@ -1,13 +1,13 @@
 /**
- * Централізований модуль для трекінгу подій
- * - Завантаження
- * - Підписки
- * - Кліки на "Підтримати"
- * - Сесії лаунчера
- * - Видалення українізаторів
+ * Centralized module for event tracking
+ * - Downloads
+ * - Subscriptions
+ * - Clicks on "Support"
+ * - Launcher sessions
+ * - Translation uninstalls
  *
- * Використовує Supabase Edge Functions через supabase.functions.invoke().
- * Machine ID використовується для ідентифікації користувача
+ * Uses Supabase Edge Functions via supabase.functions.invoke().
+ * Machine ID is used to identify the user
  */
 
 import { app } from 'electron';
@@ -61,7 +61,7 @@ type GetSignedUrlResponse = SignedUrlResult | SignedUrlRateLimitError | SignedUr
 let cachedMachineId: string | null = null;
 
 /**
- * Отримати machine ID (з кешуванням)
+ * Get the machine ID (cached)
  */
 export function getMachineId(): string | null {
   if (cachedMachineId) {
@@ -81,7 +81,7 @@ type TrackPayload = Record<string, unknown>;
 type TrackResult = TrackingResponse & { sessionId?: string; isFirstLaunch?: boolean };
 
 /**
- * Викликати edge function `track` з заданим payload.
+ * Call the `track` edge function with the given payload.
  */
 async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
   const supabase = getSupabaseClient();
@@ -96,8 +96,8 @@ async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
 }
 
 /**
- * Отримати signed URL для завантаження архіву
- * Edge Function перевіряє rate-limit і генерує тимчасовий URL
+ * Get a signed URL for downloading the archive
+ * The edge function checks the rate limit and generates a temporary URL
  */
 export async function getSignedDownloadUrl(
   params: GetSignedDownloadUrlParams
@@ -169,7 +169,7 @@ export async function getSignedDownloadUrl(
 }
 
 /**
- * Трекінг підписки на гру
+ * Track a game subscription
  */
 export async function trackSubscription(
   gameId: string,
@@ -221,8 +221,8 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
 }
 
 /**
- * Перехід у Майстерню замінює завантаження архіву, тож рахується тим самим
- * лічильником. Сервер зараховує лише перший перехід з цієї машини.
+ * Navigating to the Workshop replaces the archive download, so it's counted by
+ * the same counter. The server counts only the first navigation from this machine.
  */
 export async function trackWorkshopOpen(
   gameId: string,
@@ -474,7 +474,7 @@ export async function submitLogs(
       });
 
       if (urlResult?.success && urlResult.signedUrl) {
-        // Upload the file (PUT напряму на signed URL Storage — не edge function)
+        // Upload the file (PUT directly to the signed Storage URL — not an edge function)
         const fileBuffer = readFileSync(logFilePath);
         const uploadResponse = await fetch(urlResult.signedUrl, {
           method: 'PUT',

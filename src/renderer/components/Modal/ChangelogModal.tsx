@@ -30,7 +30,7 @@ export const ChangelogModal: React.FC = () => {
   const entries = useChangelogStore((state) => state.entries);
   const [showOlder, setShowOlder] = useState(false);
 
-  // Список відсортований новішим догори, тож ріжемо по межі встановленої версії
+  // The list is sorted newest-first, so we cut at the installed version boundary
   const upcomingCount = entries.filter(
     (entry) => compareVersions(entry.version, APP_VERSION) > 0
   ).length;

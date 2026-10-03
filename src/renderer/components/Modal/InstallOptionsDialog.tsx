@@ -238,8 +238,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     return options;
   }, [supportedPlatforms]);
 
-  // При новому встановленні - хоча б один компонент має бути вибраний
-  // При перевстановленні - будь-яка зміна
+  // On a new install - at least one component must be selected
+  // On a reinstall - any change counts
   const hasChanges = isReinstall
     ? installText ||
       willDownloadVoice ||

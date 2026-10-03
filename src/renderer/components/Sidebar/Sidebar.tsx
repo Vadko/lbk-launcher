@@ -35,8 +35,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const navigate = useNavigate();
 
     // Use shallow selectors to prevent unnecessary re-renders
-    // Статуси, автори, спеціальний (бібліотечний) фільтр і типи контенту - незалежні
-    // групи, що комбінуються через AND, тож вибір в одній групі не скидає інші.
+    // Statuses, authors, the special (library) filter and content types are
+    // independent groups combined via AND, so a selection in one group doesn't reset others.
     const {
       selectedGame,
       selectedStatuses,
@@ -197,8 +197,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       loadAuthors();
       loadTags();
 
-      // Пачка бродкастів при масовому апдейті каталогу інакше дала б N
-      // синхронних сканів games у main-процесі поспіль
+      // A batch of broadcasts during a bulk catalog update would otherwise cause N
+      // synchronous games scans in the main process back-to-back
       const unsub = window.electronAPI?.onGameUpdated?.(() => {
         if (reloadFiltersTimerRef.current) {
           clearTimeout(reloadFiltersTimerRef.current);
@@ -282,7 +282,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
         // Derive a clean shared title and per-translation variant suffix
-        // (e.g. "Stray (без озвучення)" → name="Stray", variant="(без озвучення)").
+        // (e.g. "Stray (no voice acting)" → name="Stray", variant="(no voice acting)").
         const naming = deriveGroupNaming(group.translations);
         group.name = naming.name;
         group.variantById = naming.variantById;

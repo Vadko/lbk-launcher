@@ -5,14 +5,14 @@ import { useStore } from '../store/useStore';
 import { trackEvent } from '../utils/analytics';
 
 /**
- * Cторінка новин лаунчера
- * Показує NewsFeedSection
+ * Launcher news page
+ * Shows NewsFeedSection
  */
 export const NewsPage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
 
-  // Очищаємо вибрану гру при переході на сторінку новин
-  // Це запобігає анімації від попередньої гри до нової
+  // Clear the selected game when navigating to the news page
+  // This prevents the animation from the previous game to the new one
   useEffect(() => {
     setSelectedGame(null);
   }, [setSelectedGame]);
