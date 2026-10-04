@@ -2,12 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { formatBytes } from '../shared/formatters';
+import { isExeInstaller } from '../shared/installer-kind';
 import type {
   DownloadProgress,
   Game,
   InstallationInfo,
   InstallationStatus,
   InstallOptions,
+  RunInstallerDecision,
+  RunInstallerRequest,
 } from '../shared/types';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
@@ -16,6 +19,7 @@ import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
+import { isExecutableInstaller } from './installer/executable';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
 import { resignMacBundles } from './installer/mac-codesign';
@@ -23,12 +27,14 @@ import {
   checkPlatformCompatibility,
   getInstallerFileName,
   getSteamAchievementsPath,
-  hasExecutableInstaller,
+  isWindowsInstallerFile,
   runInstaller,
 } from './installer/platform';
+import { findProtons } from './installer/proton';
 import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
+import { isLinux } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 
@@ -41,7 +47,7 @@ export async function installTranslation(
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void,
-  onConfirmRunInstaller?: (installerPath: string, isExe: boolean) => Promise<boolean>
+  onConfirmRunInstaller?: (request: RunInstallerRequest) => Promise<RunInstallerDecision>
 ): Promise<{
   launchOptionsPending: boolean;
   launchOptionsError?: string;
@@ -110,8 +116,22 @@ export async function installTranslation(
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
 
     // Not the host OS: Linux Steam titles are mostly the Windows build under Proton.
-    const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id);
+    const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id, [
+      game.installation_file_windows_path,
+      game.installation_file_linux_path,
+    ]);
     console.log(`[Installer] Installed game build: ${buildOs}`);
+
+    // Checked before the download: a Windows installer on Linux is dead without Proton.
+    const installerFileName = getInstallerFileName(game, buildOs);
+    const needsProton =
+      !!installerFileName && isLinux() && isWindowsInstallerFile(installerFileName);
+    const protons = needsProton ? findProtons() : [];
+    if (needsProton && protons.length === 0) {
+      throw new Error(
+        'Цей українізатор має Windows-інсталятор, для якого потрібен Proton, але жодної версії не знайдено.\n\nВстановіть Proton у Steam і спробуйте ще раз.'
+      );
+    }
 
     // 3. Create temp directory on the same disk as the game (for correct disk space check and faster file operations)
     const downloadDir = path.join(gamePath.path, '.lbk-temp');
@@ -359,10 +379,7 @@ export async function installTranslation(
     }
 
     // 6. Check for executable installer
-    const installerFileName = getInstallerFileName(game, buildOs);
-    const isExeInstaller = hasExecutableInstaller(game);
-
-    if (installerFileName && isExeInstaller) {
+    if (installerFileName && isExecutableInstaller(installerFileName)) {
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
 
@@ -373,10 +390,25 @@ export async function installTranslation(
       await cleanupDownloadDir(downloadDir);
 
       const installerPath = path.join(fullTargetPath, installerFileName);
-      // "Installer" (.exe) vs "script" (.bat/.sh/etc.) label, matching the
-      // distinction the renderer already draws (ImportantNotice, install confirm).
-      const isExeFile = !!game.installation_file_windows_path?.endsWith('.exe');
+      const isExeFile = isExeInstaller(installerFileName);
       const installerLabel = isExeFile ? 'інсталятор' : 'скрипт';
+
+      if (onConfirmRunInstaller) {
+        onStatus?.({
+          message: `Очікування підтвердження запуску ${installerLabel}а...`,
+          phase: 'install',
+          tone: 'waiting',
+        });
+      }
+      const decision: RunInstallerDecision = onConfirmRunInstaller
+        ? await onConfirmRunInstaller({
+            gameId: game.id,
+            installerPath,
+            isExe: isExeFile,
+            protons: needsProton ? protons : undefined,
+          })
+        : { run: true };
+
       const installationInfo: InstallationInfo = {
         gameId: game.id,
         version: game.version || '1.0.0',
@@ -384,24 +416,14 @@ export async function installTranslation(
         gamePath: gamePath.path,
         hasBackup: false,
         isCustomPath: !!customGamePath,
-        protonPath: options.protonPath,
+        protonPath: decision.protonPath,
         installerPath,
         installedFiles: [],
         installedPlatform: gamePath.platform,
         components: { text: { installed: true, files: [] } },
       };
 
-      if (onConfirmRunInstaller) {
-        onStatus?.({
-          message: `Очікування підтвердження запуску ${installerLabel}а...`,
-          phase: 'install',
-        });
-      }
-      const shouldRunInstaller = onConfirmRunInstaller
-        ? await onConfirmRunInstaller(installerPath, isExeFile)
-        : true;
-
-      if (!shouldRunInstaller) {
+      if (!decision.run) {
         console.log('[Installer] User declined to run installer:', installerPath);
         await saveInstallationInfo(gamePath.path, {
           ...installationInfo,
@@ -417,7 +439,7 @@ export async function installTranslation(
           fullTargetPath,
           installerFileName,
           onStatus,
-          options.protonPath
+          decision.protonPath
         );
 
         await saveInstallationInfo(gamePath.path, installationInfo);

@@ -86,6 +86,18 @@ export interface DownloadProgress {
 
 export type InstallationStatusTone = 'error' | 'waiting' | 'retry';
 
+export interface RunInstallerRequest {
+  gameId: string;
+  installerPath: string;
+  isExe: boolean;
+  protons?: Array<{ name: string; path: string }>;
+}
+
+export interface RunInstallerDecision {
+  run: boolean;
+  protonPath?: string;
+}
+
 export interface InstallationStatus {
   message: string;
   progress?: number;
@@ -130,7 +142,6 @@ export interface InstallOptions {
   installVoice: boolean;
   installAchievements: boolean;
   platform: Platform | 'auto';
-  protonPath?: string;
 }
 
 export interface PausedDownloadState {
@@ -273,18 +284,11 @@ export interface ElectronAPI {
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
   showItemInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
-  /**
-   * Fires after the installer/script has been downloaded and extracted, before it
-   * runs, so the renderer can ask the user whether to launch it now. The renderer
-   * must eventually call `respondRunInstaller` with the same gameId or the install
-   * promise on the main process stays pending forever. `needsProton` is set when
-   * main picked a Windows installer on Linux; the response then carries the chosen
-   * Proton path.
-   */
+  /** Main blocks until `respondRunInstaller` answers with the same gameId. */
   onRequestRunInstallerConfirm: (
-    callback: (gameId: string, installerPath: string, isExe: boolean) => void
+    callback: (request: RunInstallerRequest) => void
   ) => () => void;
-  respondRunInstaller: (gameId: string, shouldRun: boolean) => void;
+  respondRunInstaller: (gameId: string, decision: RunInstallerDecision) => void;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
   pauseDownload: (
     gameId: string

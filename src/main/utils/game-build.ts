@@ -57,10 +57,17 @@ async function readMagic(filePath: string): Promise<string | null> {
   }
 }
 
-async function scanDirectory(dir: string, markers: BuildMarkers): Promise<void> {
+async function scanDirectory(
+  dir: string,
+  markers: BuildMarkers,
+  ignoredNames: Set<string>
+): Promise<void> {
   for (const entry of await readDirectory(dir)) {
     const fullPath = path.join(dir, entry.name);
     const lowerName = entry.name.toLowerCase();
+    if (ignoredNames.has(lowerName)) {
+      continue;
+    }
 
     let isDirectory = entry.isDirectory();
     let isFile = entry.isFile();
@@ -127,10 +134,13 @@ function decide(markers: BuildMarkers): GameBuildOs | null {
   return found.length === 1 ? found[0] : null;
 }
 
-async function detectFromFiles(gamePath: string): Promise<GameBuildOs | null> {
+async function detectFromFiles(
+  gamePath: string,
+  ignoredNames: Set<string>
+): Promise<GameBuildOs | null> {
   const markers: BuildMarkers = { windows: false, linux: false, macos: false };
 
-  await scanDirectory(gamePath, markers);
+  await scanDirectory(gamePath, markers, ignoredNames);
   const topLevelVerdict = decide(markers);
   if (topLevelVerdict) {
     return topLevelVerdict;
@@ -146,7 +156,7 @@ async function detectFromFiles(gamePath: string): Promise<GameBuildOs | null> {
       break;
     }
     scanned += 1;
-    await scanDirectory(path.join(gamePath, entry.name), markers);
+    await scanDirectory(path.join(gamePath, entry.name), markers, ignoredNames);
   }
 
   return decide(markers);
@@ -194,13 +204,20 @@ async function buildOsFromCompatTool(
 /**
  * Strongest evidence first: files, Steam's compat tool, host OS. The Wine prefix
  * is skipped — it appears only on first launch, too late to be useful here.
+ * `ignoredFiles`: the translation's own installers a previous install left in the folder.
  */
 export async function resolveGameBuildOs(
   gamePath: string,
-  steamAppId?: number | null
+  steamAppId?: number | null,
+  ignoredFiles: Array<string | null | undefined> = []
 ): Promise<GameBuildOs> {
   if (gamePath) {
-    const fromFiles = await detectFromFiles(gamePath);
+    const ignoredNames = new Set(
+      ignoredFiles
+        .filter((file): file is string => !!file)
+        .map((file) => path.win32.basename(file).toLowerCase())
+    );
+    const fromFiles = await detectFromFiles(gamePath, ignoredNames);
     if (fromFiles) {
       return fromFiles;
     }
