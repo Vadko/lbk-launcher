@@ -1,7 +1,10 @@
-import type { GameReviewsPage } from '../../shared/types';
+import type { GameReview, GameReviewReply, GameReviewsPage } from '../../shared/types';
 import { getSupabaseClient } from './supabase-client';
 
-interface GetGameReviewsResponse extends Partial<GameReviewsPage> {
+interface GetGameReviewsResponse {
+  items?: (Omit<GameReview, 'replies'> & { replies?: GameReviewReply[] })[];
+  total?: number;
+  pageSize?: number;
   success: boolean;
   error?: string;
 }
@@ -24,7 +27,7 @@ export async function fetchGameReviews(
     }
 
     return {
-      items: data.items,
+      items: data.items.map((item) => ({ ...item, replies: item.replies ?? [] })),
       total: data.total ?? data.items.length,
       pageSize: data.pageSize ?? pageSize,
     };

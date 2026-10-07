@@ -24,10 +24,17 @@ export interface NewsFeedItem {
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
+export interface GameReviewReply {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface GameReview {
   id: string;
   text: string;
   createdAt: string;
+  replies: GameReviewReply[];
 }
 
 export interface GameReviewsPage {

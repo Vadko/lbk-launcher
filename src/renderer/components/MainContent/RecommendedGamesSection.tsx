@@ -58,7 +58,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     <motion.section
       layout="position"
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="glass-card-no-motion"
+      className="glass-card-no-motion min-h-[60vh] h-max"
     >
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">{title}</h3>
       <div className="grid grid-cols-3 gap-8 max-w-[1564px] mx-auto">

@@ -14,6 +14,18 @@ const MOCK_TEXTS = [
   'Нарешті можна пройти гру рідною мовою. Дякую за роботу!',
 ];
 
+const MOCK_REPLIES = [
+  'Дякуємо за відгук! Раді, що переклад вам сподобався.',
+  'Дякуємо, що вказали на неточності. Виправимо в наступному оновленні.',
+];
+
+function mockReplyCount(index: number): number {
+  if (index % 7 === 0) {
+    return 2;
+  }
+  return index % 3 === 0 ? 1 : 0;
+}
+
 async function fetchGameReviews(gameId: string, page: number): Promise<GameReviewsPage> {
   const result = await window.electronAPI.fetchGameReviews(gameId, page, PAGE_SIZE);
   if (!result) {
@@ -36,6 +48,13 @@ async function fetchGameReviewsMock(
       id: `${gameId}-${index}`,
       text: MOCK_TEXTS[index % MOCK_TEXTS.length],
       createdAt: new Date(Date.now() - index * 7 * 60 * 60 * 1000).toISOString(),
+      replies: Array.from({ length: mockReplyCount(index) }, (_, r) => ({
+        id: `${gameId}-${index}-reply-${r}`,
+        text: MOCK_REPLIES[(index + r) % MOCK_REPLIES.length],
+        createdAt: new Date(
+          Date.now() - index * 7 * 60 * 60 * 1000 + (r + 1) * 60 * 60 * 1000
+        ).toISOString(),
+      })),
     };
   });
 
