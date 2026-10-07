@@ -814,20 +814,27 @@ export const GamePage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Recommended */}
-          <RecommendedGamesSection
-            gameId={selectedGame.id}
-            gameName={selectedGame.name}
-            showLimit={3}
-          />
-
           <GameTabs
             activeTab={activeTab}
             onChange={(tab) => setTabState({ gameId: selectedGame.id, tab })}
           />
 
           {activeTab === 'reviews' ? (
-            <GameReviewsTab key={selectedGame.id} gameId={selectedGame.id} />
+            <GameReviewsTab
+              key={selectedGame.id}
+              gameId={selectedGame.id}
+              canLeaveFeedback={canLeaveFeedback}
+              onLeaveFeedback={() => setShowFeedbackModal(true)}
+            />
+          ) : activeTab === 'recommended' ? (
+            <>
+              {/* Recommended */}
+              <RecommendedGamesSection
+                gameId={selectedGame.id}
+                gameName={selectedGame.name}
+                showLimit={9}
+              />
+            </>
           ) : (
             <>
               {/* Donate */}

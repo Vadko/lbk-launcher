@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type GameTab = 'info' | 'reviews';
+export type GameTab = 'info' | 'recommended' | 'reviews';
 
 interface GameTabsProps {
   activeTab: GameTab;
@@ -9,6 +9,7 @@ interface GameTabsProps {
 
 const tabs: { id: GameTab; label: string }[] = [
   { id: 'info', label: 'Інфо' },
+  { id: 'recommended', label: 'Рекомендовані' },
   { id: 'reviews', label: 'Відгуки' },
 ];
 
