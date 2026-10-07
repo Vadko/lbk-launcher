@@ -161,8 +161,9 @@ export function setupGamesHandlers(): void {
       gameId: string,
       type: string,
       message: string,
-      screenshotPaths?: string[]
-    ) => submitFeedback(gameId, type, message, screenshotPaths)
+      screenshotPaths?: string[],
+      allowPublish?: boolean
+    ) => submitFeedback(gameId, type, message, screenshotPaths, allowPublish)
   );
 
   // Send logs handler

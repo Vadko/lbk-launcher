@@ -423,7 +423,8 @@ export interface ElectronAPI {
     gameId: string,
     type: FeedbackType,
     message: string,
-    screenshotPaths?: string[]
+    screenshotPaths?: string[],
+    allowPublish?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   submitLogs: (
     message: string,

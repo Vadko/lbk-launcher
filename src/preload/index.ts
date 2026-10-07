@@ -294,8 +294,17 @@ const electronAPI: ElectronAPI = {
     gameId: string,
     type: FeedbackType,
     message: string,
-    screenshotPaths?: string[]
-  ) => ipcRenderer.invoke('submit-feedback', gameId, type, message, screenshotPaths),
+    screenshotPaths?: string[],
+    allowPublish?: boolean
+  ) =>
+    ipcRenderer.invoke(
+      'submit-feedback',
+      gameId,
+      type,
+      message,
+      screenshotPaths,
+      allowPublish
+    ),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
   getFeedbackUploadUrls: (fileNames: string[]) =>
