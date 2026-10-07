@@ -331,6 +331,8 @@ const electronAPI: ElectronAPI = {
   fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
   fetchBannersForGame: (gameId: string, gameSlug: string) =>
     ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
+  fetchGameReviews: (gameId: string, page: number, pageSize: number) =>
+    ipcRenderer.invoke('fetch-game-reviews', gameId, page, pageSize),
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;
