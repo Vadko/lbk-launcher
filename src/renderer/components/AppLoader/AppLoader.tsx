@@ -24,17 +24,17 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="app-loader fixed inset-0 bg-[#0a0a0f] flex flex-col items-center justify-center z-[9999] overflow-hidden"
+      className="app-loader fixed inset-0 bg-[#0a0a0f] flex flex-col items-center justify-center z-9999 overflow-hidden"
     >
       {/* Subtle gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-color-main/10" />
+      <div className="absolute inset-0 bg-linear-to-b/srgb from-transparent via-transparent to-color-main/10" />
 
       {/* Warm up shader pipelines while the loader covers the screen */}
       <ShaderWarmup />
 
       {/* Animated glow behind logo */}
       <motion.div
-        className="absolute w-64 h-64 rounded-full bg-gradient-to-r from-color-accent/20 to-color-main/20 blur-3xl"
+        className="absolute w-64 h-64 rounded-full bg-linear-to-r/srgb from-color-accent/20 to-color-main/20 blur-3xl"
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.3, 0.5, 0.3],
@@ -63,7 +63,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="text-3xl font-bold bg-gradient-to-r from-color-accent to-color-main bg-clip-text text-transparent mb-2"
+          className="text-3xl font-bold bg-linear-to-r/srgb from-color-accent to-color-main bg-clip-text text-transparent mb-2"
         >
           LBK Launcher
         </motion.h1>
@@ -92,7 +92,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
                 {[0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-2 h-2 rounded-full bg-gradient-to-r from-color-accent to-color-main"
+                    className="w-2 h-2 rounded-full bg-linear-to-r/srgb from-color-accent to-color-main"
                     animate={{
                       scale: [1, 1.3, 1],
                       opacity: [0.5, 1, 0.5],
@@ -107,9 +107,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
                 ))}
               </div>
               {/* Status text */}
-              <span className="text-text-muted/70 text-xs tracking-wider uppercase">
-                {getStatusText()}
-              </span>
+              <span className="text-xs tracking-wider uppercase">{getStatusText()}</span>
             </>
           ) : (
             <>
@@ -132,9 +130,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
               <span className="text-red-400 text-xs tracking-wider uppercase">
                 {getStatusText()}
               </span>
-              <span className="text-text-muted/50 text-xs mt-1">
-                Перезапустіть застосунок
-              </span>
+              <span className="text-xs mt-1">Перезапустіть застосунок</span>
             </>
           )}
         </motion.div>
@@ -142,7 +138,7 @@ export const AppLoader = ({ status }: AppLoaderProps) => {
 
       {/* Bottom decoration line */}
       <motion.div
-        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
+        className="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r/srgb from-transparent via-accent/30 to-transparent"
         animate={{
           opacity: [0.3, 0.6, 0.3],
         }}

@@ -15,6 +15,7 @@ module.exports = {
   files: [
     'out/**/*',
     '!node_modules/7zip-bin-full/**',
+    '!node_modules/better-sqlite3/{deps,src,build}/**',
   ],
 
   extraResources: [
@@ -39,6 +40,8 @@ module.exports = {
 
   asarUnpack: ['**/*.node'],
 
+  npmRebuild: false,
+
   electronLanguages: ['en-US', 'uk'],
 
   artifactName: "LBK-Launcher-${os}.${ext}",
@@ -62,6 +65,7 @@ module.exports = {
   ],
 
   win: {
+    files: ['!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node'],
     target: [
       {
         target: 'nsis',
@@ -111,6 +115,7 @@ module.exports = {
   },
 
   linux: {
+    files: ['!node_modules/better-sqlite3/prebuilds/{darwin,win32,linuxmusl}-*.node'],
     target: ['AppImage', 'rpm'],
     artifactName: 'LBK-Launcher-${os}.${ext}',
     category: 'Utility',
@@ -162,6 +167,7 @@ module.exports = {
   },
 
   mac: {
+    files: ['!node_modules/better-sqlite3/prebuilds/{win32,linux,linuxmusl}-*.node'],
     target: [
       {
         target: 'dmg',
@@ -177,7 +183,7 @@ module.exports = {
     hardenedRuntime: true,
     gatekeeperAssess: false,
     darkModeSupport: true,
-    minimumSystemVersion: '10.13.0',
+    minimumSystemVersion: '13.0',
     artifactName: 'LBK-Launcher-${arch}.${ext}',
     entitlements: 'resources/entitlements.mac.plist',
     entitlementsInherit: 'resources/entitlements.mac.plist',

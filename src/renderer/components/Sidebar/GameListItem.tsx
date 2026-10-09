@@ -109,9 +109,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           onKeyDown={handleKeyDown}
           data-game-card
           data-gamepad-card={true}
-          className={`group glass-card !p-0 flex flex-col items-center scroll-m-20`}
+          className={`group glass-card p-0! flex flex-col items-center scroll-m-20`}
         >
-          <div className="relative aspect-[616/353] w-full bg-glass rounded-t-xl overflow-hidden">
+          <div className="relative aspect-616/353 w-full bg-glass rounded-t-xl overflow-hidden">
             {thumbnailUrl && !imageError ? (
               <>
                 {imageLoading && (
@@ -138,7 +138,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
+                className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
                   isAdultBlurred ? 'blur-lg' : ''
                 }`}
                 title={game.name}
@@ -167,7 +167,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               />
             )}
           </div>
-          <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
+          <div className="grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
             <div className="flex items-center gap-2">
               <h3
                 className="text-lg font-head font-bold truncate flex-1"
@@ -178,7 +178,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               <Button
                 variant="ghost"
                 onClick={handleToggleFavorite}
-                className="!rounded-lg !px-1"
+                className="rounded-lg! px-1!"
                 icon={
                   isFavorite ? (
                     <BookmarkCheckIcon size={20} className="text-color-accent" />
@@ -218,14 +218,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   <StatusBadge
                     status={game.status}
                     style="capsule"
-                    className="flex-shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
+                    className="shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
                   />
                 )}
                 {isTranslationInstallable(game.status) && (
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden grow">
                       <div
-                        className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                        className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
                         style={{ width: `${averageProgress}%` }}
                       />
                     </div>
@@ -254,7 +254,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
         }`}
       >
-        <div className="relative w-12 h-12 flex-shrink-0 select-none">
+        <div className="relative w-12 h-12 shrink-0 select-none">
           <div className="w-full h-full rounded-lg overflow-hidden bg-glass">
             {thumbnailUrl && !imageError ? (
               <>
@@ -282,7 +282,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
+                className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
                   isAdultBlurred ? 'blur-md' : ''
                 }`}
               >
@@ -325,7 +325,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
                 title={`${averageProgress}%`}
                 style={{ width: `${averageProgress}%` }}
               />

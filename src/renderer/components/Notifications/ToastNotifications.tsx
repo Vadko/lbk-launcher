@@ -135,12 +135,12 @@ export const ToastNotifications: React.FC = () => {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.9 }}
             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-            className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto cursor-pointer hover:scale-[1.02] transition-transform`}
+            className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto cursor-pointer transition-transform`}
             onClick={() => handleToastClick(toast)}
           >
             <div className="flex items-start gap-3">
               <div
-                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getToastGradient(toast.type)} flex items-center justify-center flex-shrink-0`}
+                className={`w-10 h-10 rounded-lg bg-linear-to-br/srgb ${getToastGradient(toast.type)} flex items-center justify-center shrink-0`}
               >
                 {getToastIcon(toast.type)}
               </div>
@@ -157,7 +157,7 @@ export const ToastNotifications: React.FC = () => {
                   e.stopPropagation();
                   dismissToast(toast.id);
                 }}
-                className="flex-shrink-0 w-6 h-6 rounded-lg hover:bg-glass-hover transition-colors flex items-center justify-center"
+                className="shrink-0 w-6 h-6 rounded-lg hover:bg-glass-hover transition-colors flex items-center justify-center"
               >
                 <XIcon size={14} className="text-text-muted" />
               </button>

@@ -32,11 +32,11 @@ export const ShaderWarmup = () => (
     {/* Glass panel: backdrop-blur over raster + border + shadows (glass-card/panel) */}
     <div className="absolute inset-0 backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.3),0_0_20px_rgba(255,255,255,0.2)]" />
     {/* Two-stop gradient + blur-glow (loader, buttons, hovers) */}
-    <div className="absolute inset-2 rounded-full bg-gradient-to-r from-color-accent/20 to-color-main/20 blur-md" />
+    <div className="absolute inset-2 rounded-full bg-linear-to-r/srgb from-color-accent/20 to-color-main/20 blur-md" />
     {/* Multi-stop gradient (a different shader specialization than the 2-stop one) */}
-    <div className="absolute inset-6 rounded bg-[linear-gradient(90deg,#511_0%,#151_25%,#115_50%,#551_75%,#155_100%)]" />
+    <div className="absolute inset-6 rounded-sm bg-[linear-gradient(90deg,#511_0%,#151_25%,#115_50%,#551_75%,#155_100%)]" />
     {/* Gradient text via bg-clip-text (headings) */}
-    <span className="absolute bottom-0 left-0 text-[8px] font-bold bg-gradient-to-r from-color-accent to-color-main bg-clip-text text-transparent">
+    <span className="absolute bottom-0 left-0 text-[8px] font-bold bg-linear-to-r/srgb from-color-accent to-color-main bg-clip-text text-transparent">
       warmup
     </span>
     {/* Chained blur+drop-shadow filters on a raster (GameHero, Gallery) */}
@@ -47,7 +47,7 @@ export const ShaderWarmup = () => (
     />
     {/* Semi-transparent group with a blurred child: offscreen-layer pipeline (modals) */}
     <div className="absolute top-8 left-8 opacity-50">
-      <div className="w-4 h-4 rounded-full blur-sm bg-white/20" />
+      <div className="w-4 h-4 rounded-full blur-xs bg-white/20" />
     </div>
     {/* Text with a shadow (headings over banners) */}
     <span

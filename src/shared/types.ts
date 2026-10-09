@@ -200,7 +200,7 @@ export interface DetectedGame {
   path: string;
 }
 
-export interface LaunchGameResult {
+interface LaunchGameResult {
   success: boolean;
   error?: string;
 }

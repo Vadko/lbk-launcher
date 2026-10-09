@@ -333,14 +333,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       >
                         <div className="flex items-start gap-3">
                           <div
-                            className={`p-2 rounded-lg flex-shrink-0 ${getNotificationIconBg(notification.type)}`}
+                            className={`p-2 rounded-lg shrink-0 ${getNotificationIconBg(notification.type)}`}
                           >
                             {getNotificationIcon(notification.type)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               {!notification.read && (
-                                <span className="w-2 h-2 bg-color-accent rounded-full animate-pulse flex-shrink-0" />
+                                <span className="w-2 h-2 bg-color-accent rounded-full animate-pulse shrink-0" />
                               )}
                               <h3
                                 className="font-semibold text-text-main truncate"
@@ -361,7 +361,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                               e.stopPropagation();
                               clearNotification(notification.id);
                             }}
-                            className="p-1 hover:bg-glass rounded transition-colors flex-shrink-0"
+                            className="p-1 hover:bg-glass rounded-sm transition-colors shrink-0"
                           >
                             <XIcon className="w-4 h-4 text-text-muted" />
                           </button>
@@ -383,7 +383,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10"
+              className="absolute inset-0 bg-black/50 backdrop-blur-xs rounded-2xl flex items-center justify-center z-10"
             >
               <motion.div
                 role="dialog"
@@ -422,7 +422,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     }}
                     data-gamepad-confirm
                     data-gamepad-modal-item
-                    className="flex-1 !bg-red-500 hover:!bg-red-600"
+                    className="flex-1 bg-red-500! hover:bg-red-600!"
                   >
                     Видалити
                   </Button>
