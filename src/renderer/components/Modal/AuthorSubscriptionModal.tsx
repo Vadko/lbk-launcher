@@ -136,7 +136,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     disabled={isAlreadySubscribed}
                     onChange={() => !isAlreadySubscribed && toggleAuthor(author)}
                     data-gamepad-modal-item
-                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${
+                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-hidden ${
                       isAlreadySubscribed ? 'cursor-default' : 'cursor-pointer'
                     }`}
                   />
@@ -165,12 +165,12 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                       <Tooltip content={specialInfo.description}>
                         <StarIcon
                           size={14}
-                          className="text-yellow-400 fill-yellow-400 cursor-help flex-shrink-0"
+                          className="text-yellow-400 fill-yellow-400 cursor-help shrink-0"
                         />
                       </Tooltip>
                     )}
                     {isAlreadySubscribed && (
-                      <span className="flex items-center gap-1 text-xs text-green-400 flex-shrink-0">
+                      <span className="flex items-center gap-1 text-xs text-green-400 shrink-0">
                         <BellIcon size={12} />
                         підписано
                       </span>
@@ -200,7 +200,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity flex items-center justify-center gap-2 ${
               selectedAuthors.size === 0
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
+                : 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
             <BellIcon size={18} />

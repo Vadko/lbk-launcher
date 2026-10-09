@@ -68,7 +68,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
   return (
     <div className="searchable-filter-list border border-border rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border focus-within:bg-glass-hover">
-        <SearchIcon size={14} className="text-text-muted flex-shrink-0" />
+        <SearchIcon size={14} className="text-text-muted shrink-0" />
         <input
           ref={searchInputRef}
           type="search"
@@ -87,7 +87,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
             setSearch(e.currentTarget.value);
           }}
           placeholder={searchPlaceholder}
-          className="flex-1 bg-transparent text-sm text-text-main placeholder-text-muted outline-none"
+          className="flex-1 bg-transparent text-sm text-text-main placeholder-text-muted outline-hidden"
         />
       </div>
 
@@ -97,7 +97,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
         data-gamepad-modal-item
         data-gamepad-skip={isDrilledIn || undefined}
         onClick={() => !isDrilledIn && enterList()}
-        className="max-h-[220px] overflow-y-auto custom-scrollbar py-1 outline-none"
+        className="max-h-[220px] overflow-y-auto custom-scrollbar py-1 outline-hidden"
       >
         {isDrilledIn && (
           <button
@@ -136,7 +136,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
                 title={item.label}
               >
                 <span
-                  className={`w-4 h-4 flex-shrink-0 flex items-center justify-center rounded border ${
+                  className={`w-4 h-4 shrink-0 flex items-center justify-center rounded-sm border ${
                     selected ? 'bg-color-accent border-color-accent' : 'border-text-muted'
                   }`}
                 >
@@ -144,9 +144,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = ({
                 </span>
                 <span className="truncate flex-1 text-left">{item.label}</span>
                 {item.count !== undefined && (
-                  <span className="text-xs text-text-muted flex-shrink-0">
-                    {item.count}
-                  </span>
+                  <span className="text-xs text-text-muted shrink-0">{item.count}</span>
                 )}
               </button>
             );

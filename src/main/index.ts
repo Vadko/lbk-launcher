@@ -26,6 +26,9 @@ Sentry.init({
   integrations: [
     Sentry.captureConsoleIntegration({ levels: ['error'] }),
     Sentry.startupTracingIntegration(),
+    Sentry.electronBreadcrumbsIntegration({ logs: true }),
+    Sentry.electronNetIntegration({ logs: true }),
+    Sentry.childProcessIntegration({ logs: true }),
   ],
   enableLogs: true,
 });

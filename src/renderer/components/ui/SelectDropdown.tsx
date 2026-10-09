@@ -127,7 +127,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           </span>
           <ChevronDownIcon
             size={16}
-            className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+            className={`text-text-muted transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
@@ -140,7 +140,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
               transition={{ duration: 0.15 }}
               className={`absolute left-0 right-0 ${
                 dropdownPosition === 'below' ? 'top-full mt-1' : 'bottom-full mb-1'
-              } bg-bg-dark border border-border rounded-lg shadow-xl z-[60] overflow-hidden`}
+              } bg-bg-dark border border-border rounded-lg shadow-xl z-60 overflow-hidden`}
               data-gamepad-dropdown
             >
               <div
@@ -154,7 +154,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
               >
                 {!isReady ? (
                   <div className="py-4 px-3">
-                    <div className="w-full h-4 bg-glass animate-pulse rounded"></div>
+                    <div className="w-full h-4 bg-glass animate-pulse rounded-sm"></div>
                   </div>
                 ) : options.length === 0 ? (
                   <div className="text-center text-text-muted py-4 text-sm">

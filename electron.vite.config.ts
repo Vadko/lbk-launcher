@@ -43,7 +43,7 @@ export default defineConfig({
     build: {
       sourcemap: true,
       externalizeDeps: {
-        exclude: ['got'],
+        exclude: ['got', 'electron-store'],
       },
       rollupOptions: {
         input: {
