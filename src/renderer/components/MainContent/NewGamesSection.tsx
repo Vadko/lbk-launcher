@@ -79,7 +79,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
       {/* Header with tabs */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        <div className="glass-card-no-motion p-2! flex gap-2">
+        <div className="glass-card-no-motion !p-2 flex gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.sortOrder}
@@ -87,7 +87,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
               data-gamepad-action
               className={`px-6 py-2 rounded-xl font-medium transition-all ${
                 activeTabSortOrder === tab.sortOrder
-                  ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
+                  ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
                   : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
               }`}
             >

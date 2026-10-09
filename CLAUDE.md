@@ -1,6 +1,6 @@
 # LBK Launcher
 
-Electron 44 + React 19 desktop app (Windows, macOS, Linux incl. Steam Deck) that installs Ukrainian game localizations. Catalog lives in a local better-sqlite3 DB synced from Supabase; the installer downloads and extracts archives into detected game folders and wires up Steam integration. UI copy is Ukrainian, code identifiers are English. `package.json` version is currently 2.22.0.
+Electron 39 + React 19 desktop app (Windows, macOS, Linux incl. Steam Deck) that installs Ukrainian game localizations. Catalog lives in a local better-sqlite3 DB synced from Supabase; the installer downloads and extracts archives into detected game folders and wires up Steam integration. UI copy is Ukrainian, code identifiers are English. `package.json` version is currently 2.22.0.
 
 ## Commands
 
@@ -19,11 +19,11 @@ pnpm dist:mac:local            # env-cmd + CSC_IDENTITY_AUTO_DISCOVERY=false
 pnpm test:e2e         # playwright over CDP :19222 against the packaged app
 ```
 
-`.github/workflows/ci.yml` runs gates 1–5 in that order on Node 24.21.0 / pnpm 11.4.0. `--publish never` is not in the scripts — `release.yml` appends it to `pnpm dist:*`. `.husky/pre-commit` runs `npx lint-staged`, which runs only `biome check --write --no-errors-on-unmatched` on staged `*.{js,ts,tsx,json,css,scss}`; type-check, eslint and knip do not run locally.
+`.github/workflows/ci.yml` runs gates 1–5 in that order on Node 22.20.0 / pnpm 11.4.0. `--publish never` is not in the scripts — `release.yml` appends it to `pnpm dist:*`. `.husky/pre-commit` runs `npx lint-staged`, which runs only `biome check --write --no-errors-on-unmatched` on staged `*.{js,ts,tsx,json,css,scss}`; type-check, eslint and knip do not run locally.
 
 ## Architecture
 
-Three processes plus a DB worker thread. `electron.vite.config.ts` builds **two** main-process rollup entries: `index` (`src/main/index.ts`) and `db-worker` (`src/main/db/db-worker.ts`). `better-sqlite3` and `electron-liquid-glass` are rollup externals; the ESM-only `got` and `electron-store` are deliberately bundled (`externalizeDeps.exclude`) — the main build is CJS, and externalized they hit rollup's default-export interop (`got.stream is not a function`, `ElectronStore is not a constructor`) on first use, which no gate catches.
+Three processes plus a DB worker thread. `electron.vite.config.ts` builds **two** main-process rollup entries: `index` (`src/main/index.ts`) and `db-worker` (`src/main/db/db-worker.ts`). `better-sqlite3` and `electron-liquid-glass` are rollup externals; `got` is deliberately bundled (`externalizeDeps.exclude`).
 
 **Only `@` is aliased in the main and preload builds.** `@renderer`, `@components`, `@store` and `@resources` exist solely in the renderer build even though `tsconfig.json` declares all five, and vite does not read tsconfig paths — a value import through one of them from main/preload passes `pnpm type-check` and then fails at build. Use `@/...` outside the renderer.
 
@@ -114,7 +114,7 @@ State is split three ways and the split is intentional.
 - **Gamepad navigation is a DOM-attribute contract**, driven by `document.querySelector` in `useGamepadModeNavigation.ts`. New interactive UI is unreachable on Steam Deck unless it opts in with `data-gamepad-card`, `data-gamepad-action`, `data-gamepad-primary-action`, `data-gamepad-index`, `data-gamepad-dropdown[-item]`, `data-gamepad-confirm` / `-cancel` / `-skip`, `data-gamepad-header-item`, `data-gamepad-modal-item`, or `role="dialog"`. There is no central registry.
 - Virtualizer sizing constants live once in `src/renderer/components/Sidebar/constants.ts` (`GAMEPAD_CARD_STRIDE = 156`, `GAME_LIST_ROW_ESTIMATE = 84`) and are shared by the game lists and gamepad scroll math. Changing a card's Tailwind size without updating the constant desyncs focus.
 - There is **no i18n layer** — every Ukrainian string is an inline literal in JSX, store actions, hooks and helper maps. Changing copy can break e2e.
-- Colours come from CSS variables via `bg-glass` / `bg-bg-dark` / `text-color-main` / `text-color-accent`, not `gray-*` or `cyan-*`. Tailwind 4 has no `tailwind.config.js`: tokens live in the `@theme inline` block at the top of `src/renderer/styles/globals.css` — plain `var()` forms under `--background-color-*` / `--text-color-*` / `--border-color-*` (`bg-`, `from-`/`via-`/`to-` resolve against `--background-color-*` first), RGB-triplet forms under `--color-*` (`rgb(var(--x-rgb))`) for every other utility. `/NN` works on all of them via `color-mix`. Keep `--x` and `--x-rgb` in sync by hand. The same file pins the used v3 palette shades as hex in `@theme` and keeps gradients on `bg-linear-to-*/srgb` so v4's oklch/oklab defaults don't shift colours; a newly used palette shade needs its v3 hex added there. Element resets and the `.no-animations` killer sit in `@layer base` — unlayered CSS beats every utility in v4.
+- Colours come from CSS variables via `bg-glass` / `bg-bg-dark` / `text-color-main` / `text-color-accent`, not `gray-*` or `cyan-*`. In `tailwind.config.js` the plain `var()` forms live under `backgroundColor`/`textColor`/`borderColor` and the `rgb(var(--x-rgb) / <alpha-value>)` forms under `colors`; only a token that has the RGB-triplet form supports `/NN` alpha and `from-`/`to-` gradients (`bg-dark` is declared in both blocks for exactly that reason). Keep `--x` and `--x-rgb` in sync by hand.
 - `src/renderer/utils/global-error-handler.ts` is raw DOM + inline styles on purpose — it renders when React is dead. Do not convert it to a component.
 - Notification and gamepad sounds are synthesised with WebAudio oscillators (`src/renderer/utils/gamepadSounds.ts`); `resources/` holds no audio files.
 - `src/renderer/components/ui/MarkdownText.tsx` allows exactly 8 tags (`p`, `strong`, `em`, `ul`, `ol`, `li`, `br`, `code`) and rewrites headings to `<p>`. Widening the allowlist changes the trust boundary for Supabase-sourced text.

@@ -134,290 +134,281 @@ export function useInstallation({
   } | null>(null);
 
   const performInstallation = useCallback(
-    (customGamePath?: string, options?: InstallOptions) => {
-      async function run(
-        customGamePath?: string,
-        options?: InstallOptions
-      ): Promise<void> {
-        if (!selectedGame) {
-          return;
-        }
+    async (customGamePath?: string, options?: InstallOptions) => {
+      if (!selectedGame) {
+        return;
+      }
 
-        const platform =
-          options?.platform || (selectedGame.platforms[0] as Platform) || 'steam';
-        const effectiveOptions: InstallOptions = options ??
-          pendingInstallOptions ?? {
-            createBackup: createBackupBeforeInstall,
-            installText: true,
-            installVoice: false,
-            installAchievements: false,
-            platform,
-          };
+      const platform =
+        options?.platform || (selectedGame.platforms[0] as Platform) || 'steam';
+      const effectiveOptions: InstallOptions = options ??
+        pendingInstallOptions ?? {
+          createBackup: createBackupBeforeInstall,
+          installText: true,
+          installVoice: false,
+          installAchievements: false,
+          platform,
+        };
 
-        if (options) {
-          setPendingInstallOptions(options);
-        }
+      if (options) {
+        setPendingInstallOptions(options);
+      }
 
-        // For emulator, always require manual folder selection
-        if (platform === 'emulator' && !customGamePath) {
-          showConfirm({
-            title: 'Виберіть папку з грою',
-            message:
-              'Для емуляторів потрібно вручну вказати папку з грою.\n\nВиберіть папку з грою?',
-            confirmText: 'Вибрати папку',
-            cancelText: 'Скасувати',
-            onConfirm: async () => {
-              const selectedFolder = await window.electronAPI.selectGameFolder();
-              if (selectedFolder) {
-                void run(selectedFolder, effectiveOptions);
-              }
-            },
-          });
-          return;
-        }
-
-        try {
-          setInstallationProgress(selectedGame.id, {
-            isInstalling: true,
-            progress: 0,
-            downloadProgress: null,
-            statusMessage: null,
-          });
-
-          // Track download start event
-          trackEvent('Actions', {
-            'Game Id': selectedGame.id,
-            'Game Name': selectedGame.name,
-            'Install Text': effectiveOptions.installText,
-            'Install Voice': effectiveOptions.installVoice,
-            'Install Achievements': effectiveOptions.installAchievements,
-            Team: selectedGame.team || 'Unknown',
-            Type: 'install',
-          });
-
-          const result: InstallResult = await window.electronAPI.installTranslation(
-            selectedGame,
-            effectiveOptions,
-            customGamePath
-          );
-
-          // Handle pause - not an error, just stop without clearing progress
-          if (result.paused) {
-            // Don't clear progress - keep the paused state visible
-            return;
-          }
-
-          if (!result.success && result.error) {
-            if (result.error.needsManualSelection) {
-              showConfirm({
-                title: 'Гру не знайдено',
-                message: `${result.error.message}\n\nСпробуйте вибрати папку гри самостійно`,
-                confirmText: 'Вибрати папку',
-                cancelText: 'Скасувати',
-                onConfirm: async () => {
-                  const selectedFolder = await window.electronAPI.selectGameFolder();
-                  if (selectedFolder) {
-                    void run(selectedFolder, effectiveOptions);
-                  }
-                },
-              });
-            } else if (result.error.isRateLimit) {
-              showModal({
-                title: 'Ліміт завантажень',
-                message: result.error.message,
-                type: 'info',
-              });
-            } else if (result.error.isNetworkError) {
-              // Check if this was already an auto-retry — show modal for manual retry
-              if (networkRetryRef.current?.autoRetried) {
-                networkRetryRef.current = null;
-                showModal({
-                  title: "З'єднання перервано",
-                  message:
-                    'Не вдалося відновити завантаження автоматично.\n\n' +
-                    'Перевірте підключення до Інтернету та спробуйте знову.\n' +
-                    'Прогрес завантаження збережено.',
-                  type: 'error',
-                  actions: [
-                    {
-                      label: 'Спробувати знову',
-                      onClick: () => {
-                        void run(customGamePath, effectiveOptions);
-                      },
-                      variant: 'primary',
-                    },
-                  ],
-                });
-                clearInstallationProgress(selectedGame.id);
-              } else {
-                // First network failure — wait for reconnection and auto-retry
-                networkRetryRef.current = {
-                  customGamePath,
-                  options: effectiveOptions,
-                  autoRetried: false,
-                };
-                setInstallationProgress(selectedGame.id, {
-                  isInstalling: true,
-                  isWaitingForNetwork: true,
-                  downloadProgress: null,
-                  statusMessage:
-                    "З'єднання втрачено. Завантаження продовжиться автоматично після відновлення з'єднання...",
-                  statusTone: 'waiting',
-                });
-              }
-              return;
-            } else {
-              showModal({
-                title: 'Помилка встановлення',
-                message: result.error.message,
-                type: 'error',
-              });
+      // For emulator, always require manual folder selection
+      if (platform === 'emulator' && !customGamePath) {
+        showConfirm({
+          title: 'Виберіть папку з грою',
+          message:
+            'Для емуляторів потрібно вручну вказати папку з грою.\n\nВиберіть папку з грою?',
+          confirmText: 'Вибрати папку',
+          cancelText: 'Скасувати',
+          onConfirm: async () => {
+            const selectedFolder = await window.electronAPI.selectGameFolder();
+            if (selectedFolder) {
+              void performInstallation(selectedFolder, effectiveOptions);
             }
-            clearInstallationProgress(selectedGame.id);
-            return;
-          }
+          },
+        });
+        return;
+      }
 
-          // Clear network retry context on success
-          networkRetryRef.current = null;
+      try {
+        setInstallationProgress(selectedGame.id, {
+          isInstalling: true,
+          progress: 0,
+          downloadProgress: null,
+          statusMessage: null,
+        });
 
-          setPendingInstallOptions(undefined);
-          useStore.getState().clearGameUpdate(selectedGame.id);
-          // Now that this version is installed, re-arm notifications for future updates
-          useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
+        // Track download start event
+        trackEvent('Actions', {
+          'Game Id': selectedGame.id,
+          'Game Name': selectedGame.name,
+          'Install Text': effectiveOptions.installText,
+          'Install Voice': effectiveOptions.installVoice,
+          'Install Achievements': effectiveOptions.installAchievements,
+          Team: selectedGame.team || 'Unknown',
+          Type: 'install',
+        });
 
-          // Track installation event
-          if (isUpdateAvailable) {
-            trackEvent('Actions', {
-              'Game Id': selectedGame.id,
-              'Game Name': selectedGame.name,
-              Team: selectedGame.team || 'Unknown',
-              'Install Text': effectiveOptions.installText,
-              'Install Voice': effectiveOptions.installVoice,
-              'Install Achievements': effectiveOptions.installAchievements,
-              Type: 'updated',
+        const result: InstallResult = await window.electronAPI.installTranslation(
+          selectedGame,
+          effectiveOptions,
+          customGamePath
+        );
+
+        // Handle pause - not an error, just stop without clearing progress
+        if (result.paused) {
+          // Don't clear progress - keep the paused state visible
+          return;
+        }
+
+        if (!result.success && result.error) {
+          if (result.error.needsManualSelection) {
+            showConfirm({
+              title: 'Гру не знайдено',
+              message: `${result.error.message}\n\nСпробуйте вибрати папку гри самостійно`,
+              confirmText: 'Вибрати папку',
+              cancelText: 'Скасувати',
+              onConfirm: async () => {
+                const selectedFolder = await window.electronAPI.selectGameFolder();
+                if (selectedFolder) {
+                  void performInstallation(selectedFolder, effectiveOptions);
+                }
+              },
             });
-          } else {
-            trackEvent('Actions', {
-              'Game Id': selectedGame.id,
-              'Game Name': selectedGame.name,
-              Team: selectedGame.team || 'Unknown',
-              'Install Text': effectiveOptions.installText,
-              'Install Voice': effectiveOptions.installVoice,
-              'Install Achievements': effectiveOptions.installAchievements,
-              Type: 'installed',
+          } else if (result.error.isRateLimit) {
+            showModal({
+              title: 'Ліміт завантажень',
+              message: result.error.message,
+              type: 'info',
             });
-          }
-
-          let message = isUpdateAvailable
-            ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
-            : `Українізатор ${selectedGame.name} успішно встановлено!`;
-
-          // Restart Steam to make new achievement strings visible AND/OR to let
-          // Steam re-read localconfig.vdf with the launch options we couldn't
-          // apply live (CEF unreachable, e.g. Millennium). The installer only
-          // rewrites achievements for a Steam install, so achievementsChanged
-          // already implies a Steam path.
-          const needsRestartForAchievements =
-            effectiveOptions.installAchievements && result.achievementsChanged;
-          const needsRestartForLaunchOptions = result.launchOptionsPending === true;
-          const shouldOfferRestart =
-            needsRestartForAchievements || needsRestartForLaunchOptions;
-
-          if (needsRestartForLaunchOptions) {
-            message +=
-              '\n\nДля застосування параметрів запуску гри Steam потрібно перезапустити.';
-          } else if (needsRestartForAchievements) {
-            message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
-          }
-
-          // Files are in place, but without its launch options the translation
-          // runs unmodded — say so instead of reporting a clean success.
-          if (result.launchOptionsError) {
-            message += `\n\nНе вдалося налаштувати параметри запуску Steam: ${result.launchOptionsError}`;
-          }
-
-          showModal({
-            title: isUpdateAvailable
-              ? 'Українізатор оновлено'
-              : 'Українізатор встановлено',
-            message,
-            type: 'success',
-            actions: shouldOfferRestart
-              ? [
+          } else if (result.error.isNetworkError) {
+            // Check if this was already an auto-retry — show modal for manual retry
+            if (networkRetryRef.current?.autoRetried) {
+              networkRetryRef.current = null;
+              showModal({
+                title: "З'єднання перервано",
+                message:
+                  'Не вдалося відновити завантаження автоматично.\n\n' +
+                  'Перевірте підключення до Інтернету та спробуйте знову.\n' +
+                  'Прогрес завантаження збережено.',
+                type: 'error',
+                actions: [
                   {
-                    label: 'Перезапустити Steam',
+                    label: 'Спробувати знову',
                     onClick: () => {
-                      if (!needsRestartForLaunchOptions) {
-                        window.electronAPI.restartSteam();
-                        return;
-                      }
-                      // Steam is force-killed and relaunched, which takes a
-                      // while, so the modal stays open as a progress indicator.
-                      // Without reading the result the write can fail in silence.
-                      window.electronAPI
-                        .applyPendingLaunchOptions(selectedGame)
-                        .then((applied) => {
-                          if (applied?.success) {
-                            closeModal();
-                            return;
-                          }
-                          showModal({
-                            title: 'Параметри запуску не застосовано',
-                            message:
-                              applied?.error ??
-                              'Не вдалося записати параметри запуску Steam.',
-                            type: 'error',
-                          });
-                        })
-                        .catch((error: unknown) => {
-                          showModal({
-                            title: 'Параметри запуску не застосовано',
-                            message:
-                              error instanceof Error ? error.message : 'Невідома помилка',
-                            type: 'error',
-                          });
-                        });
+                      void performInstallation(customGamePath, effectiveOptions);
                     },
-                    keepOpen: true,
-                    variant: 'primary',
-                  },
-                  {
-                    label: 'Пізніше',
-                    onClick: () => undefined,
-                    variant: 'secondary',
-                  },
-                ]
-              : [
-                  {
-                    label: 'Зрозуміло',
-                    onClick: () => undefined,
                     variant: 'primary',
                   },
                 ],
-          });
-
-          // Trigger callback for first install (not update)
-          if (!isUpdateAvailable && onFirstInstallComplete) {
-            onFirstInstallComplete();
+              });
+              clearInstallationProgress(selectedGame.id);
+            } else {
+              // First network failure — wait for reconnection and auto-retry
+              networkRetryRef.current = {
+                customGamePath,
+                options: effectiveOptions,
+                autoRetried: false,
+              };
+              setInstallationProgress(selectedGame.id, {
+                isInstalling: true,
+                isWaitingForNetwork: true,
+                downloadProgress: null,
+                statusMessage:
+                  "З'єднання втрачено. Завантаження продовжиться автоматично після відновлення з'єднання...",
+                statusTone: 'waiting',
+              });
+            }
+            return;
+          } else {
+            showModal({
+              title: 'Помилка встановлення',
+              message: result.error.message,
+              type: 'error',
+            });
           }
-
           clearInstallationProgress(selectedGame.id);
-          // Re-reconcile version state now the in-progress guard is cleared: catches a
-          // newer version that was published mid-install (and thus skipped by the guard),
-          // independent of installed-games-changed watcher timing.
-          void useStore.getState().loadInstalledGamesFromSystem();
-        } catch (error) {
-          console.error('Installation error:', error);
-          showModal({
-            title: 'Помилка встановлення',
-            message: error instanceof Error ? error.message : 'Невідома помилка',
-            type: 'error',
-          });
-          clearInstallationProgress(selectedGame.id);
+          return;
         }
-      }
 
-      return run(customGamePath, options);
+        // Clear network retry context on success
+        networkRetryRef.current = null;
+
+        setPendingInstallOptions(undefined);
+        useStore.getState().clearGameUpdate(selectedGame.id);
+        // Now that this version is installed, re-arm notifications for future updates
+        useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
+
+        // Track installation event
+        if (isUpdateAvailable) {
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            'Install Text': effectiveOptions.installText,
+            'Install Voice': effectiveOptions.installVoice,
+            'Install Achievements': effectiveOptions.installAchievements,
+            Type: 'updated',
+          });
+        } else {
+          trackEvent('Actions', {
+            'Game Id': selectedGame.id,
+            'Game Name': selectedGame.name,
+            Team: selectedGame.team || 'Unknown',
+            'Install Text': effectiveOptions.installText,
+            'Install Voice': effectiveOptions.installVoice,
+            'Install Achievements': effectiveOptions.installAchievements,
+            Type: 'installed',
+          });
+        }
+
+        let message = isUpdateAvailable
+          ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
+          : `Українізатор ${selectedGame.name} успішно встановлено!`;
+
+        // Restart Steam to make new achievement strings visible AND/OR to let
+        // Steam re-read localconfig.vdf with the launch options we couldn't
+        // apply live (CEF unreachable, e.g. Millennium). The installer only
+        // rewrites achievements for a Steam install, so achievementsChanged
+        // already implies a Steam path.
+        const needsRestartForAchievements =
+          effectiveOptions.installAchievements && result.achievementsChanged;
+        const needsRestartForLaunchOptions = result.launchOptionsPending === true;
+        const shouldOfferRestart =
+          needsRestartForAchievements || needsRestartForLaunchOptions;
+
+        if (needsRestartForLaunchOptions) {
+          message +=
+            '\n\nДля застосування параметрів запуску гри Steam потрібно перезапустити.';
+        } else if (needsRestartForAchievements) {
+          message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
+        }
+
+        // Files are in place, but without its launch options the translation
+        // runs unmodded — say so instead of reporting a clean success.
+        if (result.launchOptionsError) {
+          message += `\n\nНе вдалося налаштувати параметри запуску Steam: ${result.launchOptionsError}`;
+        }
+
+        showModal({
+          title: isUpdateAvailable ? 'Українізатор оновлено' : 'Українізатор встановлено',
+          message,
+          type: 'success',
+          actions: shouldOfferRestart
+            ? [
+                {
+                  label: 'Перезапустити Steam',
+                  onClick: () => {
+                    if (!needsRestartForLaunchOptions) {
+                      window.electronAPI.restartSteam();
+                      return;
+                    }
+                    // Steam is force-killed and relaunched, which takes a
+                    // while, so the modal stays open as a progress indicator.
+                    // Without reading the result the write can fail in silence.
+                    window.electronAPI
+                      .applyPendingLaunchOptions(selectedGame)
+                      .then((applied) => {
+                        if (applied?.success) {
+                          closeModal();
+                          return;
+                        }
+                        showModal({
+                          title: 'Параметри запуску не застосовано',
+                          message:
+                            applied?.error ??
+                            'Не вдалося записати параметри запуску Steam.',
+                          type: 'error',
+                        });
+                      })
+                      .catch((error: unknown) => {
+                        showModal({
+                          title: 'Параметри запуску не застосовано',
+                          message:
+                            error instanceof Error ? error.message : 'Невідома помилка',
+                          type: 'error',
+                        });
+                      });
+                  },
+                  keepOpen: true,
+                  variant: 'primary',
+                },
+                {
+                  label: 'Пізніше',
+                  onClick: () => undefined,
+                  variant: 'secondary',
+                },
+              ]
+            : [
+                {
+                  label: 'Зрозуміло',
+                  onClick: () => undefined,
+                  variant: 'primary',
+                },
+              ],
+        });
+
+        // Trigger callback for first install (not update)
+        if (!isUpdateAvailable && onFirstInstallComplete) {
+          onFirstInstallComplete();
+        }
+
+        clearInstallationProgress(selectedGame.id);
+        // Re-reconcile version state now the in-progress guard is cleared: catches a
+        // newer version that was published mid-install (and thus skipped by the guard),
+        // independent of installed-games-changed watcher timing.
+        void useStore.getState().loadInstalledGamesFromSystem();
+      } catch (error) {
+        console.error('Installation error:', error);
+        showModal({
+          title: 'Помилка встановлення',
+          message: error instanceof Error ? error.message : 'Невідома помилка',
+          type: 'error',
+        });
+        clearInstallationProgress(selectedGame.id);
+      }
     },
     [
       selectedGame,

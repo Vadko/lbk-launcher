@@ -32,7 +32,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
 
   return (
     <div
-      className={`drag-region fixed top-0 left-0 right-0 h-8 flex items-center justify-between pl-4 z-9999 ${
+      className={`drag-region fixed top-0 left-0 right-0 h-8 flex items-center justify-between pl-4 z-[9999] ${
         online ? '' : 'bg-red-500/20'
       } transition-colors`}
     >
@@ -40,7 +40,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
       {!isMacOS26Plus && <div className="text-xs text-text-muted font-medium">LBK</div>}
       {isMacOS26Plus && <div />}
 
-      <div className="text-[10px] absolute left-1/2 -translate-x-1/2">
+      <div className="text-[10px] text-text-muted/70 absolute left-1/2 -translate-x-1/2">
         {`v${version}${online ? '' : ' · ви оффлайн'}`}
       </div>
 

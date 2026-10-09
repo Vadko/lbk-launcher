@@ -69,7 +69,7 @@ export const NewsFeedSection: React.FC = () => {
     <section>
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">Новини</h2>
-        <div className="glass-card-no-motion p-2! flex gap-2">
+        <div className="glass-card-no-motion !p-2 flex gap-2">
           {feedTabs.map((tab) => (
             <button
               key={tab.filter}
@@ -78,7 +78,7 @@ export const NewsFeedSection: React.FC = () => {
               data-gamepad-action
               className={`px-6 py-2 rounded-xl font-medium transition-all ${
                 activeFilter === tab.filter
-                  ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
+                  ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
                   : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
               }`}
             >
@@ -127,7 +127,7 @@ export const NewsFeedSection: React.FC = () => {
                       delay: Math.min(index * 0.05, 0.2),
                       ease: [0.25, 0.46, 0.45, 0.94],
                     }}
-                    className="glass-card-no-motion p-5! min-h-[172px] flex flex-col gap-4"
+                    className="glass-card-no-motion !p-5 min-h-[172px] flex flex-col gap-4"
                   >
                     <div>
                       {publishedAt && (
@@ -151,7 +151,7 @@ export const NewsFeedSection: React.FC = () => {
                       title="Відкрити новину"
                       variant="secondary"
                       onClick={() => openInTelegram(item.url)}
-                      className="w-fit px-3! py-2! text-sm"
+                      className="w-fit !px-3 !py-2 text-sm"
                     >
                       Обговорити в Telegram
                     </Button>

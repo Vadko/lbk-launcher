@@ -1,7 +1,7 @@
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import { XIcon } from 'lucide-react';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { playNavigateSound } from '@/renderer/utils/gamepadSounds';
@@ -38,6 +38,7 @@ export default function Gallery({
   autoplay = false,
   updated_at,
 }: Props) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [isVertical, setIsVertical] = useState(false);
 
   const [mainEmblaRef, mainEmblaApi] = useEmblaCarousel(
@@ -90,39 +91,28 @@ export default function Gallery({
     [mainEmblaApi, thumbEmblaApi]
   );
 
-  const subscribeToSelection = useCallback(
-    (onChange: () => void) => {
-      mainEmblaApi?.on('select', onChange);
-      mainEmblaApi?.on('reInit', onChange);
-      return () => {
-        mainEmblaApi?.off('select', onChange);
-        mainEmblaApi?.off('reInit', onChange);
-      };
-    },
-    [mainEmblaApi]
-  );
-
-  const selectedIndex = useSyncExternalStore(
-    subscribeToSelection,
-    () => mainEmblaApi?.selectedScrollSnap() ?? 0
-  );
-
-  useEffect(() => {
+  const onSelect = useCallback(() => {
     if (!mainEmblaApi || !thumbEmblaApi) {
       return;
     }
-    const syncThumbs = () => {
-      thumbEmblaApi.scrollTo(mainEmblaApi.selectedScrollSnap());
-    };
-    syncThumbs();
-    mainEmblaApi.on('select', syncThumbs);
-    mainEmblaApi.on('reInit', syncThumbs);
+    const index = mainEmblaApi.selectedScrollSnap();
+    setSelectedIndex(index);
+    thumbEmblaApi.scrollTo(index);
+  }, [mainEmblaApi, thumbEmblaApi]);
+
+  useEffect(() => {
+    if (!mainEmblaApi) {
+      return;
+    }
+    onSelect();
+    mainEmblaApi.on('select', onSelect);
+    mainEmblaApi.on('reInit', onSelect);
 
     return () => {
-      mainEmblaApi.off('select', syncThumbs);
-      mainEmblaApi.off('reInit', syncThumbs);
+      mainEmblaApi.off('select', onSelect);
+      mainEmblaApi.off('reInit', onSelect);
     };
-  }, [mainEmblaApi, thumbEmblaApi]);
+  }, [mainEmblaApi, onSelect]);
 
   const openFullscreen = (index: number) => setFullscreenIndex(index);
   const closeFullscreen = () => setFullscreenIndex(null);
@@ -229,7 +219,7 @@ export default function Gallery({
                 >
                   <img
                     src={slide}
-                    className="absolute inset-0 object-cover! w-full h-full blur-xl opacity-40 -z-10 pointer-events-none"
+                    className="absolute inset-0 !object-cover w-full h-full blur-xl opacity-40 -z-10 pointer-events-none"
                     alt=""
                   />
                   <div
@@ -302,7 +292,7 @@ export default function Gallery({
                       <img
                         src={thumbSrc}
                         alt={`thumb-${index}`}
-                        className="embla-thumbs__slide__img object-cover! rounded-lg w-full h-full"
+                        className="embla-thumbs__slide__img !object-cover rounded-lg w-full h-full"
                       />
                     </button>
                   </div>
@@ -319,7 +309,7 @@ export default function Gallery({
           <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 z-9999 flex items-center justify-center bg-black/90 backdrop-blur-xl cursor-zoom-out"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-xl cursor-zoom-out"
             onClick={closeFullscreen}
           >
             <button

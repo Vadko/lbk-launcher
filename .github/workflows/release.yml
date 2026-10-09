@@ -94,7 +94,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.21.0'
+          node-version: '22.20.0'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -193,15 +193,6 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: pnpm dist:mac --publish never
-
-      # Electron 44 dropped macOS 12; electron-updater compares os.release() (Darwin 22 = macOS 13)
-      - name: Mark macOS minimum version in update feed
-        if: matrix.os == 'macos-26'
-        shell: bash
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "minimumSystemVersion: 22.0.0" >> "release/${VERSION}/latest-mac.yml"
-          cat "release/${VERSION}/latest-mac.yml"
 
       # --- E2E tests on built app ---
 

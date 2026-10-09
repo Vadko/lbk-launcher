@@ -371,8 +371,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       // Horizontal gamepad mode
       // Disable backdrop-blur when animations are off for performance
       const headerClass = animationsEnabled
-        ? 'w-full flex flex-col backdrop-blur-md'
-        : 'w-full flex flex-col';
+        ? 'w-full flex flex-col bg-glass/30 backdrop-blur-md'
+        : 'w-full flex flex-col bg-bg-dark/90';
 
       return (
         <div className={headerClass}>

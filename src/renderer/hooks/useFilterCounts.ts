@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FilterCountsResult } from '../../shared/types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
@@ -34,97 +34,84 @@ const INITIAL_COUNTS: FilterCounts = {
 
 const DEBOUNCE_DELAY = 300;
 
-async function loadFilterCounts(
-  isStale: () => boolean
-): Promise<Omit<FilterCounts, 'favorite-translations'> | null> {
-  const [
-    sqlCounts,
-    installedIds,
-    installedPaths,
-    steamLibraryAppIds,
-    gogTitles,
-    epicTitles,
-    xboxFolderNames,
-  ] = await Promise.all([
-    window.electronAPI.fetchFilterCounts(),
-    allInstalledTranslationIds(),
-    window.electronAPI.getAllInstalledGamePaths(),
-    window.electronAPI.getSteamLibraryAppIds(),
-    window.electronAPI.getGogLibrary(),
-    window.electronAPI.getEpicLibrary(),
-    window.electronAPI.getXboxInstalledPaths(),
-  ]);
-
-  if (isStale()) {
-    return null;
-  }
-
-  const [
-    installedGamesResult,
-    steamLibraryCount,
-    gogLibraryResult,
-    epicLibraryResult,
-    xboxLibraryResult,
-  ] = await Promise.all([
-    installedPaths.length > 0
-      ? window.electronAPI.findGamesByInstallPaths(installedPaths)
-      : Promise.resolve({ games: [], total: 0, uniqueCount: 0 }),
-    steamLibraryAppIds.length > 0
-      ? window.electronAPI.countGamesBySteamAppIds(steamLibraryAppIds)
-      : Promise.resolve(0),
-    gogTitles.length > 0
-      ? window.electronAPI.findGamesByTitles(gogTitles)
-      : Promise.resolve({ games: [], total: 0 }),
-    epicTitles.length > 0
-      ? window.electronAPI.findGamesByTitles(epicTitles)
-      : Promise.resolve({ games: [], total: 0 }),
-    xboxFolderNames.length > 0
-      ? window.electronAPI.findGamesByXboxPaths(xboxFolderNames)
-      : Promise.resolve({ games: [], total: 0 }),
-  ]);
-
-  if (isStale()) {
-    return null;
-  }
-
-  return {
-    ...sqlCounts,
-    'installed-translations': installedIds.length,
-    'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
-    'available-in-steam': steamLibraryCount,
-    'owned-gog-games': gogLibraryResult.total,
-    'owned-epic-games': epicLibraryResult.total,
-    'installed-xbox-games': xboxLibraryResult.total,
-  };
-}
-
 export function useFilterCounts() {
   const syncStatus = useStore((state) => state.syncStatus);
   const favoriteGameIds = useSettingsStore((state) => state.favoriteGameIds);
-  const [counts, setCounts] =
-    useState<Omit<FilterCounts, 'favorite-translations'>>(INITIAL_COUNTS);
+  const [counts, setCounts] = useState<FilterCounts>(INITIAL_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef = useRef(true);
 
-  const fetchCounts = useCallback(
-    () =>
-      loadFilterCounts(() => !isMountedRef.current)
-        .then((nextCounts) => {
-          if (nextCounts && isMountedRef.current) {
-            setCounts(nextCounts);
-          }
-        })
-        .catch((err) => {
-          console.error('[useFilterCounts] Error:', err);
-        })
-        .finally(() => {
-          if (isMountedRef.current) {
-            setIsLoading(false);
-          }
-        }),
-    []
-  );
+  const fetchCounts = useCallback(async () => {
+    try {
+      const [
+        sqlCounts,
+        installedIds,
+        installedPaths,
+        steamLibraryAppIds,
+        gogTitles,
+        epicTitles,
+        xboxFolderNames,
+      ] = await Promise.all([
+        window.electronAPI.fetchFilterCounts(),
+        allInstalledTranslationIds(),
+        window.electronAPI.getAllInstalledGamePaths(),
+        window.electronAPI.getSteamLibraryAppIds(),
+        window.electronAPI.getGogLibrary(),
+        window.electronAPI.getEpicLibrary(),
+        window.electronAPI.getXboxInstalledPaths(),
+      ]);
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      const [
+        installedGamesResult,
+        steamLibraryCount,
+        gogLibraryResult,
+        epicLibraryResult,
+        xboxLibraryResult,
+      ] = await Promise.all([
+        installedPaths.length > 0
+          ? window.electronAPI.findGamesByInstallPaths(installedPaths)
+          : Promise.resolve({ games: [], total: 0, uniqueCount: 0 }),
+        steamLibraryAppIds.length > 0
+          ? window.electronAPI.countGamesBySteamAppIds(steamLibraryAppIds)
+          : Promise.resolve(0),
+        gogTitles.length > 0
+          ? window.electronAPI.findGamesByTitles(gogTitles)
+          : Promise.resolve({ games: [], total: 0 }),
+        epicTitles.length > 0
+          ? window.electronAPI.findGamesByTitles(epicTitles)
+          : Promise.resolve({ games: [], total: 0 }),
+        xboxFolderNames.length > 0
+          ? window.electronAPI.findGamesByXboxPaths(xboxFolderNames)
+          : Promise.resolve({ games: [], total: 0 }),
+      ]);
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setCounts((prevCounts) => ({
+        ...sqlCounts,
+        'favorite-translations': prevCounts['favorite-translations'], // Will be updated separately
+        'installed-translations': installedIds.length,
+        'installed-games': installedGamesResult.uniqueCount ?? installedGamesResult.total,
+        'available-in-steam': steamLibraryCount,
+        'owned-gog-games': gogLibraryResult.total,
+        'owned-epic-games': epicLibraryResult.total,
+        'installed-xbox-games': xboxLibraryResult.total,
+      }));
+    } catch (err) {
+      console.error('[useFilterCounts] Error:', err);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
 
   const debouncedFetchCounts = useCallback(() => {
     if (debounceTimerRef.current) {
@@ -133,10 +120,13 @@ export function useFilterCounts() {
     debounceTimerRef.current = setTimeout(fetchCounts, DEBOUNCE_DELAY);
   }, [fetchCounts]);
 
-  const countsWithFavorites = useMemo<FilterCounts>(
-    () => ({ ...counts, 'favorite-translations': favoriteGameIds.length }),
-    [counts, favoriteGameIds.length]
-  );
+  // Update favorite translations count separately when favoriteGameIds changes
+  useEffect(() => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      'favorite-translations': favoriteGameIds.length,
+    }));
+  }, [favoriteGameIds]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -173,5 +163,5 @@ export function useFilterCounts() {
     };
   }, [fetchCounts, debouncedFetchCounts, syncStatus]);
 
-  return { counts: countsWithFavorites, isLoading, refetch: fetchCounts };
+  return { counts, isLoading, refetch: fetchCounts };
 }

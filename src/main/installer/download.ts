@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import fs from 'fs';
-import got, { HTTPError } from 'got';
+import got from 'got';
 import path from 'path';
 import { promisify } from 'util';
 import type {
@@ -39,10 +39,7 @@ async function getFileSizeViaHead(url: string): Promise<number> {
 
     return 0;
   } catch (error) {
-    console.warn(
-      '[Downloader] HEAD request failed:',
-      error instanceof HTTPError ? `HTTP ${error.response.statusCode}` : error
-    );
+    console.warn('[Downloader] HEAD request failed:', error);
     return 0;
   }
 }
@@ -544,10 +541,7 @@ async function downloadFileAttempt(
 
     console.log(`[Downloader] Download completed: ${outputPath}`);
   } catch (error) {
-    console.error(
-      `[Downloader] Download error:`,
-      error instanceof HTTPError ? `HTTP ${error.response.statusCode}` : error
-    );
+    console.error(`[Downloader] Download error:`, error);
 
     // Provide more specific error messages and notify UI
     if (error instanceof Error) {
@@ -556,23 +550,6 @@ async function downloadFileAttempt(
       // Check for pause - don't show error message
       if (message === 'paused') {
         throw error;
-      }
-
-      if (error instanceof HTTPError) {
-        const { statusCode, statusMessage = '' } = error.response;
-        if ([408, 504, 524].includes(statusCode) || /timeout/i.test(statusMessage)) {
-          onStatus?.({
-            message: 'Час очікування вичерпано. Перевірте підключення до Інтернету.',
-            tone: 'error',
-          });
-          throw new NetworkError(
-            'Час очікування вичерпано. Перевірте підключення до Інтернету.'
-          );
-        }
-        onStatus?.({ message: 'Помилка завантаження', tone: 'error' });
-        throw new Error(
-          `Помилка завантаження: HTTP ${statusCode} ${statusMessage}`.trim()
-        );
       }
 
       // Check for cancellation
@@ -598,11 +575,7 @@ async function downloadFileAttempt(
         );
       }
 
-      if (
-        message.includes('econnreset') ||
-        message.includes('socket hang up') ||
-        (error as { code?: string }).code === 'ERR_HTTP_CONTENT_LENGTH_MISMATCH'
-      ) {
+      if (message.includes('econnreset') || message.includes('socket hang up')) {
         onStatus?.({
           message: "З'єднання розірвано. Перевірте підключення до Інтернету.",
           tone: 'error',

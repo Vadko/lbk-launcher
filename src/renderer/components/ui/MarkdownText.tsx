@@ -23,7 +23,7 @@ const COMPONENTS: Components = {
   ),
   code: ({ node: _node, ...props }) => (
     <code
-      className="bg-black/30 rounded-sm px-1! font-mono whitespace-pre-wrap"
+      className="bg-black/30 rounded !px-1 font-mono whitespace-pre-wrap"
       {...props}
     />
   ),

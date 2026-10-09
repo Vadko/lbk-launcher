@@ -103,164 +103,6 @@ function applyGroupFilters(
   );
 }
 
-type GameSqlArgs = [
-  searchQuery: string | undefined,
-  hideAiTranslations: boolean | undefined,
-  sortOrder: SortOrderType | undefined,
-];
-
-const SUPERSEDED = Symbol('superseded');
-
-async function fetchLibraryGames<K>(
-  loadKeys: () => Promise<K[]>,
-  findGames: (keys: K[], ...sql: GameSqlArgs) => Promise<Game[]>,
-  sql: GameSqlArgs,
-  signal: AbortSignal
-): Promise<Game[] | typeof SUPERSEDED> {
-  const keys = await loadKeys();
-  if (signal.aborted) {
-    return SUPERSEDED;
-  }
-  if (keys.length === 0) {
-    return [];
-  }
-
-  const games = await findGames(keys, ...sql);
-  if (signal.aborted) {
-    return SUPERSEDED;
-  }
-  return games;
-}
-
-// Each library filter gets its own set of games via a separate IPC call (by id/paths/names);
-// the SQL side applies search, AI filtering and sort order.
-const LIBRARY_SOURCES: Record<
-  SpecialFilterType,
-  (sql: GameSqlArgs, signal: AbortSignal) => Promise<Game[] | typeof SUPERSEDED>
-> = {
-  'favorite-translations': (sql, signal) =>
-    fetchLibraryGames(
-      async () => {
-        const { useSettingsStore } = await import('../store/useSettingsStore');
-        return useSettingsStore.getState().favoriteGameIds;
-      },
-      (ids, ...q) => window.electronAPI.fetchGamesByIds(ids, ...q),
-      sql,
-      signal
-    ),
-  'installed-translations': (sql, signal) =>
-    fetchLibraryGames(
-      allInstalledTranslationIds,
-      (ids, ...q) => window.electronAPI.fetchGamesByIds(ids, ...q),
-      sql,
-      signal
-    ),
-  'installed-games': (sql, signal) =>
-    fetchLibraryGames(
-      () => window.electronAPI.getAllInstalledGamePaths(),
-      (paths, ...q) =>
-        window.electronAPI.findGamesByInstallPaths(paths, ...q).then((r) => r.games),
-      sql,
-      signal
-    ),
-  'available-in-steam': (sql, signal) =>
-    fetchLibraryGames(
-      () => window.electronAPI.getSteamLibraryAppIds(),
-      (appIds, ...q) =>
-        window.electronAPI.findGamesBySteamAppIds(appIds, ...q).then((r) => r.games),
-      sql,
-      signal
-    ),
-  'owned-gog-games': (sql, signal) =>
-    fetchLibraryGames(
-      () => window.electronAPI.getGogLibrary(),
-      (titles, ...q) =>
-        window.electronAPI.findGamesByTitles(titles, ...q).then((r) => r.games),
-      sql,
-      signal
-    ),
-  'owned-epic-games': (sql, signal) =>
-    fetchLibraryGames(
-      () => window.electronAPI.getEpicLibrary(),
-      (titles, ...q) =>
-        window.electronAPI.findGamesByTitles(titles, ...q).then((r) => r.games),
-      sql,
-      signal
-    ),
-  // Folder names parsed from .GamingRoot
-  'installed-xbox-games': (sql, signal) =>
-    fetchLibraryGames(
-      () => window.electronAPI.getXboxInstalledPaths(),
-      (folderNames, ...q) =>
-        window.electronAPI.findGamesByXboxPaths(folderNames, ...q).then((r) => r.games),
-      sql,
-      signal
-    ),
-};
-
-/**
- * Fetches the list for the current filters; resolves to SUPERSEDED when a newer request took over.
- */
-async function fetchFilteredGames(
-  {
-    selectedStatuses,
-    selectedAuthors,
-    selectedTagIds,
-    specialFilter,
-    selectedContentTypes,
-    selectedTranslationTypes,
-    searchQuery,
-    sortOrder,
-    hideAiTranslations,
-  }: UseGamesParams,
-  signal: AbortSignal
-): Promise<Game[] | typeof SUPERSEDED> {
-  // Library filters fetch their own set, then statuses, authors, tags and content types
-  // are AND'ed on the client, so all filter groups combine with each other via AND.
-  // A persisted filter from an older build may no longer exist; it falls back to the full catalog
-  if (specialFilter && Object.hasOwn(LIBRARY_SOURCES, specialFilter)) {
-    const games = await LIBRARY_SOURCES[specialFilter](
-      [searchQuery || undefined, hideAiTranslations, sortOrder],
-      signal
-    );
-    if (games === SUPERSEDED) {
-      return SUPERSEDED;
-    }
-    return applyGroupFilters(
-      games,
-      selectedStatuses,
-      selectedAuthors,
-      selectedContentTypes,
-      selectedTagIds,
-      selectedTranslationTypes
-    );
-  }
-
-  // Without a library filter - statuses, authors and tags are filtered in SQL,
-  // content types (achievements/voice) - on the client (AND'ed together).
-  const params: GetGamesParams = {
-    searchQuery,
-    statuses: selectedStatuses,
-    authors: selectedAuthors,
-    tagIds: selectedTagIds,
-    sortOrder,
-    hideAiTranslations,
-  };
-
-  const result = await window.electronAPI.fetchGames(params);
-
-  // Check if the request is still relevant
-  if (signal.aborted) {
-    return SUPERSEDED;
-  }
-
-  return result.games.filter(
-    (game) =>
-      matchesContentTypes(game, selectedContentTypes) &&
-      matchesTranslationTypes(game, selectedTranslationTypes)
-  );
-}
-
 interface UseGamesResult {
   games: Game[];
   total: number;
@@ -302,7 +144,7 @@ export function useGames({
   /**
    * Load games
    */
-  const loadGames = useCallback(() => {
+  const loadGames = useCallback(async () => {
     // Cancel the previous request if it's still running
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -310,48 +152,334 @@ export function useGames({
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    return fetchFilteredGames(
-      {
-        selectedStatuses,
-        selectedAuthors,
-        selectedTagIds,
-        specialFilter,
-        selectedContentTypes,
-        selectedTranslationTypes,
-        searchQuery,
-        sortOrder,
-        hideAiTranslations,
-      },
-      signal
-    )
-      .then((filtered) => {
+    setError(null);
+
+    try {
+      // Each "library" branch (favorite/installed/steam/gog/epic/xbox) gets its
+      // own set of games via a separate IPC call (by id/paths/names), while statuses,
+      // authors and content types (achievements/voice) are applied afterward - as
+      // AND filters on the client, so all filter groups combine with each other via AND.
+      if (specialFilter === 'favorite-translations') {
+        const { useSettingsStore } = await import('../store/useSettingsStore');
+        const favoriteGameIds = useSettingsStore.getState().favoriteGameIds;
+
         // Check if the request is still relevant
-        if (filtered === SUPERSEDED || signal.aborted) {
-          return;
-        }
-        setError(null);
-        setGames(filtered);
-        setTotal(filtered.length);
-      })
-      .catch((error) => {
-        // Ignore errors from cancelled requests
         if (signal.aborted) {
           return;
         }
 
-        console.error('[useGames] Error loading games:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Помилка завантаження ігор';
-        setError(errorMessage);
-        setGames([]);
-        setTotal(0);
-      })
-      .finally(() => {
-        // Only update isLoading if the request wasn't cancelled
-        if (!signal.aborted) {
-          setIsLoading(false);
+        if (favoriteGameIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
         }
-      });
+
+        // Get favorite games (with SQL search and AI filtering)
+        const favoriteGames = await window.electronAPI.fetchGamesByIds(
+          favoriteGameIds,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          favoriteGames,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      if (specialFilter === 'installed-translations') {
+        const installedGameIds = await allInstalledTranslationIds();
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        if (installedGameIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Get games with installed translations (with SQL search and AI filtering)
+        const installedGames = await window.electronAPI.fetchGamesByIds(
+          installedGameIds,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          installedGames,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      // Special handling for installed games (on the computer)
+      if (specialFilter === 'installed-games') {
+        const installPaths = await window.electronAPI.getAllInstalledGamePaths();
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        if (installPaths.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Find games by install paths (with SQL search and AI filtering)
+        const result = await window.electronAPI.findGamesByInstallPaths(
+          installPaths,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      // Special handling for games available from the Steam library
+      if (specialFilter === 'available-in-steam') {
+        const steamLibraryAppIds = await window.electronAPI.getSteamLibraryAppIds();
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        if (steamLibraryAppIds.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        // Get games by Steam App IDs (with SQL search and AI filtering)
+        const result = await window.electronAPI.findGamesBySteamAppIds(
+          steamLibraryAppIds,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        // Check if the request is still relevant
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      // Special handling for GOG Owned Games
+      if (specialFilter === 'owned-gog-games') {
+        const titles = await window.electronAPI.getGogLibrary();
+
+        if (signal.aborted) {
+          return;
+        }
+
+        if (titles.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByTitles(
+          titles,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      // Special handling for Epic Owned Games
+      if (specialFilter === 'owned-epic-games') {
+        const titles = await window.electronAPI.getEpicLibrary();
+
+        if (signal.aborted) {
+          return;
+        }
+
+        if (titles.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByTitles(
+          titles,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      // Special handling for Xbox-installed games (parsed from .GamingRoot)
+      if (specialFilter === 'installed-xbox-games') {
+        const folderNames = await window.electronAPI.getXboxInstalledPaths();
+
+        if (signal.aborted) {
+          return;
+        }
+
+        if (folderNames.length === 0) {
+          setGames([]);
+          setTotal(0);
+          return;
+        }
+
+        const result = await window.electronAPI.findGamesByXboxPaths(
+          folderNames,
+          searchQuery || undefined,
+          hideAiTranslations,
+          sortOrder
+        );
+
+        if (signal.aborted) {
+          return;
+        }
+
+        const filtered = applyGroupFilters(
+          result.games,
+          selectedStatuses,
+          selectedAuthors,
+          selectedContentTypes,
+          selectedTagIds,
+          selectedTranslationTypes
+        );
+        setGames(filtered);
+        setTotal(filtered.length);
+        return;
+      }
+
+      // Without a library filter - statuses, authors and tags are filtered in SQL,
+      // content types (achievements/voice) - on the client (AND'ed together).
+      const params: GetGamesParams = {
+        searchQuery,
+        statuses: selectedStatuses,
+        authors: selectedAuthors,
+        tagIds: selectedTagIds,
+        sortOrder,
+        hideAiTranslations,
+      };
+
+      const result = await window.electronAPI.fetchGames(params);
+
+      // Check if the request is still relevant
+      if (signal.aborted) {
+        return;
+      }
+
+      const filtered = result.games.filter(
+        (game) =>
+          matchesContentTypes(game, selectedContentTypes) &&
+          matchesTranslationTypes(game, selectedTranslationTypes)
+      );
+
+      setGames(filtered);
+      setTotal(filtered.length);
+    } catch (error) {
+      // Ignore errors from cancelled requests
+      if (signal.aborted) {
+        return;
+      }
+
+      console.error('[useGames] Error loading games:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Помилка завантаження ігор';
+      setError(errorMessage);
+      setGames([]);
+      setTotal(0);
+    } finally {
+      // Only update isLoading if the request wasn't cancelled
+      if (!signal.aborted) {
+        setIsLoading(false);
+      }
+    }
   }, [
     specialFilter,
     searchQuery,

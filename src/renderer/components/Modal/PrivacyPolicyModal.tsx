@@ -19,7 +19,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
       <button
         onClick={onClose}
         data-gamepad-confirm
-        className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+        className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
       >
         Зрозуміло
       </button>
@@ -27,7 +27,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
   >
     <div className="space-y-4 text-text-main">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-linear-to-br/srgb from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
           <ShieldIcon size={24} className="text-white" />
         </div>
         <div>
@@ -44,7 +44,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-base font-semibold">Які дані ми збираємо?</h4>
+        <h4 className="text-base font-semibold mb-2">Які дані ми збираємо?</h4>
         <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
           <li>
             <strong className="text-text-main">На сайті:</strong> Використовується{' '}
@@ -62,7 +62,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-base font-semibold">Безпека та анонімність</h4>
+        <h4 className="text-base font-semibold mb-2">Безпека та анонімність</h4>
         <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
           <li>
             <strong className="text-text-main">Деанонімізація:</strong> Усі зібрані дані є
@@ -83,8 +83,8 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-base font-semibold">Контакти</h4>
-        <p className="text-sm text-text-muted leading-relaxed">
+        <h4 className="text-base font-semibold mb-2">Контакти</h4>
+        <p className="text-sm text-text-muted leading-relaxed mb-2">
           Якщо у вас є будь-які питання, звертайтесь:
         </p>
         <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
@@ -113,7 +113,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
         </ul>
       </section>
 
-      <div className="p-4 rounded-lg bg-glass border border-border">
+      <div className="mt-6 p-4 rounded-lg bg-glass border border-border">
         <p className="text-xs text-text-muted text-center">
           Останнє оновлення: {new Date().toLocaleDateString('uk-UA')}
         </p>

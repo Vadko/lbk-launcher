@@ -75,7 +75,7 @@ export const Placement: React.FC<PlacementProps> = ({
               </p>
             </div>
 
-            <Button variant="primary" className="shrink-0">
+            <Button variant="primary" className="flex-shrink-0">
               Перейти на KULI →
             </Button>
           </>
@@ -109,7 +109,7 @@ export const Placement: React.FC<PlacementProps> = ({
   return (
     <div
       ref={elementRef}
-      className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between overflow-hidden gap-3 ${isNarrowType ? 'max-h-[90px]' : ''} ${banner ? 'p-0!' : ''} ${className}`}
+      className={`glass-card glass-card-gold cursor-pointer flex items-center justify-between overflow-hidden gap-3 ${isNarrowType ? 'max-h-[90px]' : ''} ${banner ? '!p-0' : ''} ${className}`}
       onClick={handleClick}
       role="button"
       data-gamepad-action="true"

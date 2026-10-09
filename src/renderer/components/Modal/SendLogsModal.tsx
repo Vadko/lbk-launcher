@@ -74,7 +74,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={crashReason ? 'Звіт про помилку' : 'Відправити логи'}
-      classNames="max-w-[520px]!"
+      classNames="!max-w-[520px]"
       footer={
         <div className="grid gap-4">
           <button
@@ -119,7 +119,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
             maxLength={500}
             disabled={isPending}
             data-gamepad-modal-item
-            className="w-full p-4 rounded-xl bg-glass border border-border text-text-main placeholder-text-muted resize-none focus:outline-hidden focus:border-color-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full p-4 rounded-xl bg-glass border border-border text-text-main placeholder-text-muted resize-none focus:outline-none focus:border-color-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <p className="text-xs text-right text-text-muted mt-2">
             <AppNumberFlow value={message.length} suffix="/500" />

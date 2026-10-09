@@ -151,7 +151,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Поділитися"
-      classNames="max-w-[514px]!"
+      classNames="!max-w-[514px]"
       usePortal
     >
       <div className="space-y-14">
@@ -179,7 +179,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               type="text"
               value={shareUrl}
               readOnly
-              className={`flex-1 px-4 py-3 bg-glass border rounded-xl text-sm text-text-main focus:outline-hidden cursor-text transition-colors duration-200 ${
+              className={`flex-1 px-4 py-3 bg-glass border rounded-xl text-sm text-text-main focus:outline-none cursor-text transition-colors duration-200 ${
                 urlCopied
                   ? 'border-color-main focus:border-color-main'
                   : 'border-border focus:border-border-hover'
@@ -197,7 +197,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   inheritColor
                 />
               }
-              className="px-4! py-3! text-sm!"
+              className="!px-4 !py-3 !text-sm"
             >
               <span style={{ display: 'grid', textAlign: 'center' }}>
                 <span style={GHOST_LABEL_STYLE} aria-hidden="true">

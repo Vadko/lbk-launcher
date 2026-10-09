@@ -22,8 +22,6 @@ const MODE_SWITCH_DEADZONE = 0.8;
 
 const isE2E = window.electronAPI?.isE2E?.() ?? false;
 
-let isMixpanelInitialized = false;
-
 if (!isE2E) {
   try {
     const mpToken = import.meta.env.DEV
@@ -37,7 +35,6 @@ if (!isE2E) {
         debug: import.meta.env.DEV,
         api_host: import.meta.env.DEV ? 'https://api-eu.mixpanel.com' : undefined,
       });
-      isMixpanelInitialized = true;
     }
   } catch (err) {
     console.error('[Analytics] mixpanel.init failed', err);
@@ -45,11 +42,7 @@ if (!isE2E) {
 }
 
 // Register launcher version and id as super properties so they get attached to all events automatically
-// register() throws on an uninitialized mixpanel instance (E2E, missing token)
 (async () => {
-  if (!isMixpanelInitialized) {
-    return;
-  }
   try {
     const version = await window.electronAPI?.getVersion?.();
     const machineId = await window.electronAPI?.getMachineId?.();

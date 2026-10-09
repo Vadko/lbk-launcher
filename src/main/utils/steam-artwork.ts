@@ -273,11 +273,11 @@ async function prepareAsset(
 
   let bytes: Buffer;
   try {
-    const data = await got(url, {
+    bytes = await got(url, {
+      responseType: 'buffer',
       timeout: { request: DOWNLOAD_TIMEOUT_MS },
       retry: { limit: DOWNLOAD_RETRY_LIMIT },
     }).buffer();
-    bytes = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
   } catch (error) {
     console.warn(`[SteamArtwork] Failed to download ${slot.key} from ${url}:`, error);
     return null;

@@ -99,23 +99,22 @@ export const PromoModal: React.FC = () => {
   }, []);
 
   // Record banner impression
-  const bannerId = banner?.id;
   const recordImpression = useCallback(
     async (impressionType: 'view' | 'click') => {
-      if (!bannerId || !window.electronAPI?.recordPromoBannerImpression) {
+      if (!banner?.id || !window.electronAPI?.recordPromoBannerImpression) {
         return;
       }
 
       try {
         await window.electronAPI.recordPromoBannerImpression({
-          campaignId: bannerId,
+          campaignId: banner.id,
           impressionType,
         });
       } catch (error) {
         console.error('[PromoModal] Error recording impression:', error);
       }
     },
-    [bannerId]
+    [banner?.id]
   );
 
   // Promo modal initialization - runs only once on mount

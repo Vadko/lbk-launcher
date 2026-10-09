@@ -69,17 +69,6 @@ export function writeSteamAccountValue(
   store.set(key, { ...all, [accountId]: value });
 }
 
-const LAST_GAME_FOLDER_KEY = 'last-game-folder';
-
-export function readLastGameFolder(): string | undefined {
-  const value = store.get(LAST_GAME_FOLDER_KEY);
-  return typeof value === 'string' ? value : undefined;
-}
-
-export function writeLastGameFolder(folder: string): void {
-  store.set(LAST_GAME_FOLDER_KEY, folder);
-}
-
 /**
  * Clear all data from the store.
  */

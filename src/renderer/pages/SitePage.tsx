@@ -12,7 +12,6 @@ export const SitePage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const { page } = useParams<{ page: string }>();
   const [iframeHeight, setIframeHeight] = useState<number | null>(null);
-  const [measuredPage, setMeasuredPage] = useState(page);
 
   // Clear the selected game when navigating to this page
   // This prevents the animation from the previous game to the new one
@@ -22,10 +21,9 @@ export const SitePage: React.FC = () => {
 
   // Reset the height when navigating to another site page, to avoid briefly
   // showing the previous page's height before the new postMessage arrives
-  if (measuredPage !== page) {
-    setMeasuredPage(page);
+  useEffect(() => {
     setIframeHeight(null);
-  }
+  }, [page]);
 
   // The site reports its actual height via postMessage (a cross-origin
   // iframe doesn't allow reading scrollHeight directly), so scrolling happens

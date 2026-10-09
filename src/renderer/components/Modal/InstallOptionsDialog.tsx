@@ -305,7 +305,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 checked={createBackup}
                 onChange={(e) => setCreateBackup(e.target.checked)}
                 data-gamepad-modal-item
-                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors cursor-pointer focus:ring-2 focus:ring-color-main/50 focus:outline-hidden"
+                className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors cursor-pointer focus:ring-2 focus:ring-color-main/50 focus:outline-none"
               />
               <svg
                 className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
@@ -347,7 +347,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               checked={installText}
               onChange={(e) => setInstallText(e.target.checked)}
               data-gamepad-modal-item
-              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors cursor-pointer focus:ring-2 focus:ring-color-main/50 focus:outline-hidden"
+              className="appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors cursor-pointer focus:ring-2 focus:ring-color-main/50 focus:outline-none"
             />
             <svg
               className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
@@ -417,7 +417,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               }}
               disabled={!hasVoiceArchive && !isVoiceIntegrated}
               data-gamepad-modal-item
-              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-hidden ${hasVoiceArchive || isVoiceIntegrated ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+              className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${hasVoiceArchive || isVoiceIntegrated ? 'cursor-pointer' : 'cursor-not-allowed'}`}
             />
             <svg
               className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
@@ -498,7 +498,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 onChange={(e) => setInstallAchievements(e.target.checked)}
                 disabled={!hasAchievementsArchive}
                 data-gamepad-modal-item
-                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-hidden ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${hasAchievementsArchive ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               />
               <svg
                 className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
@@ -651,7 +651,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity ${
               !hasChanges
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark hover:opacity-90'
+                : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
             Встановити

@@ -298,7 +298,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             // maxLength={MAX_MESSAGE_LENGTH}
             rows={5}
             data-gamepad-modal-item
-            className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-hidden transition-all duration-300 backdrop-blur-lg resize-none glass-input"
+            className="w-full px-4 py-3 bg-glass border border-border rounded-lg text-text-main placeholder:text-text-muted outline-none transition-all duration-300 backdrop-blur-lg resize-none glass-input"
           />
           <div className="flex justify-end mt-1">
             <span

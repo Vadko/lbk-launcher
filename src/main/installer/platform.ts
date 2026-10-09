@@ -197,9 +197,7 @@ function spawnWindowsInstaller(
       `шлях містить символи, небезпечні для командного рядка: ${installerPath}`
     );
   }
-
-  const command = [`"${installerPath}"`, ...args].join(' ');
-  return spawn(command, { ...options, shell: true });
+  return spawn(`"${installerPath}"`, args, { ...options, shell: true });
 }
 
 function formatInstallerExitError(code: number, stderrLines: string[]): string {
@@ -282,11 +280,7 @@ export async function runInstaller(
 
       // Copy installer path in Wine format to clipboard for user convenience
       const installPath = `Z:${path.dirname(installerPath).replace(/\//g, '\\')}`;
-      await clipboard
-        .writeText(installPath)
-        .catch((error) =>
-          console.warn('[Installer] Failed to copy install path:', error)
-        );
+      clipboard.writeText(installPath);
 
       onStatus?.({ message: 'Налаштування та запуск Proton', phase: 'install' });
 

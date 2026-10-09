@@ -14,7 +14,7 @@ export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) 
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
     transition={{ duration: 0.2 }}
-    className="pt-px"
+    className="pt-[1px]"
   >
     {/* Back button */}
     <div className="mb-4">

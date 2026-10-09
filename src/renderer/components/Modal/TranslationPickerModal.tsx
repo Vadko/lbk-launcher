@@ -119,7 +119,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                     `}
                   >
                     {/* Team logo */}
-                    <div className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-glass">
+                    <div className="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-glass">
                       {logoUrl ? (
                         <img
                           src={logoUrl}
@@ -172,7 +172,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
 
                     {/* Selected indicator */}
                     {isSelected && (
-                      <div className="shrink-0 w-6 h-6 rounded-full bg-color-accent flex items-center justify-center">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-color-accent flex items-center justify-center">
                         <CheckIcon size={14} className="text-white" />
                       </div>
                     )}
@@ -184,10 +184,10 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
             {/* Footer hint */}
             <div className="p-3 border-t border-border text-center text-xs text-text-muted">
               <span className="inline-flex items-center gap-2">
-                <kbd className="px-1.5 py-0.5 bg-glass rounded-sm text-[10px]">A</kbd>
+                <kbd className="px-1.5 py-0.5 bg-glass rounded text-[10px]">A</kbd>
                 Обрати
                 <span className="mx-1">•</span>
-                <kbd className="px-1.5 py-0.5 bg-glass rounded-sm text-[10px]">B</kbd>
+                <kbd className="px-1.5 py-0.5 bg-glass rounded text-[10px]">B</kbd>
                 Закрити
               </span>
             </div>

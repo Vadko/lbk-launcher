@@ -33,7 +33,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const headerItemProps = isHorizontal ? { 'data-gamepad-header-item': true } : {};
 
   return (
-    <div className={`flex items-center gap-2 ${isHorizontal ? '' : '@container'}`}>
+    <div
+      className={`flex items-center gap-2 ${isHorizontal ? '' : '[container-type:inline-size]'}`}
+    >
       <div className="flex min-w-0">
         <Button
           variant="filter"
@@ -41,8 +43,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           title="Фільтри"
           {...headerItemProps}
           className={`
-            min-w-0 transition-[color,background-color,border-color]!
-          ${hasModalFilters ? 'bg-glass-hover! text-text-main! border-border-hover! rounded-r-none' : ''}
+            min-w-0 !transition-[color,background-color,border-color]
+          ${hasModalFilters ? '!bg-glass-hover !text-text-main !border-border-hover rounded-r-none' : ''}
         `}
         >
           <SlidersHorizontalIcon size={14} className="shrink-0" />
@@ -87,7 +89,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {...headerItemProps}
           className={
             isInstalledQuickActive
-              ? 'bg-glass-hover! text-text-main! border-border-hover!'
+              ? '!bg-glass-hover !text-text-main !border-border-hover'
               : ''
           }
         >
@@ -100,7 +102,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           {...headerItemProps}
           className={
             isFavoriteQuickActive
-              ? 'bg-glass-hover! text-text-main! border-border-hover!'
+              ? '!bg-glass-hover !text-text-main !border-border-hover'
               : ''
           }
         >

@@ -72,12 +72,12 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       onKeyDown={handleKeyDown}
       data-gamepad-card
       className={`
-        relative shrink-0 w-36 rounded-xl overflow-hidden cursor-pointer
-        transition-all duration-200 outline-hidden
+        relative flex-shrink-0 w-36 rounded-xl overflow-hidden cursor-pointer
+        transition-all duration-200 outline-none
         ${
           isSelected
             ? 'ring-2 ring-color-accent shadow-[0_0_20px_rgba(255,164,122,0.5)] scale-105 z-10'
-            : 'ring-1 ring-white/10 hover:ring-white/30'
+            : 'ring-1 ring-white/10 hover:ring-white/30 hover:scale-102'
         }
       `}
     >
@@ -89,7 +89,9 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
       )}
 
       {/* Image */}
-      <div className={`relative aspect-3/4 bg-glass ${isAdultBlurred ? 'blur-lg' : ''}`}>
+      <div
+        className={`relative aspect-[3/4] bg-glass ${isAdultBlurred ? 'blur-lg' : ''}`}
+      >
         {imageUrl && !imageError ? (
           <>
             {imageLoading && (
@@ -112,7 +114,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
             )}
           </>
         ) : (
-          <div className="w-full h-full bg-linear-to-br/srgb from-color-main/50 to-color-accent/50 flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-color-main/50 to-color-accent/50 flex items-center justify-center">
             <span className="text-white/70 font-bold text-2xl">
               {game.name.charAt(0)}
             </span>
@@ -141,15 +143,15 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
           />
         )}
         {/* Game name and team */}
-        <div className="absolute inset-x-0 bottom-0 p-2 h-16 bg-linear-to-t/srgb from-black/80 to-transparent grid content-end">
+        <div className="absolute inset-x-0 bottom-0 p-2 h-16 bg-gradient-to-t from-black/80 to-transparent grid content-end">
           <p
-            className={`text-xs font-medium text-white line-clamp-1 ${isAdultBlurred ? 'blur-xs' : ''}`}
+            className={`text-xs font-medium text-white line-clamp-1 ${isAdultBlurred ? 'blur-sm' : ''}`}
           >
             {game.name}
           </p>
           {!hasMultipleTranslations && (
             <p
-              className={`text-[10px] text-color-accent truncate ${isAdultBlurred ? 'blur-xs' : ''}`}
+              className={`text-[10px] text-color-accent truncate ${isAdultBlurred ? 'blur-sm' : ''}`}
             >
               {game.team}
             </p>

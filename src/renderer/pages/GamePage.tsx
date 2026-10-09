@@ -8,7 +8,7 @@ import {
   Trash2Icon,
   UsersIcon,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
 import type { BannerType } from '@/shared/types.ts';
@@ -49,20 +49,6 @@ import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
 
-interface BannerInfo {
-  data: BannerData | null;
-  isKuli: boolean;
-  support_url: string | null;
-  placementType: BannerType | null;
-}
-
-const EMPTY_BANNER_INFO: BannerInfo = {
-  data: null,
-  isKuli: false,
-  support_url: null,
-  placementType: null,
-};
-
 /**
  * Detailed game information page
  * Displays all info, banners, install buttons, etc.
@@ -93,11 +79,9 @@ export const GamePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [bannerCache, setBannerCache] = useState<ReadonlyMap<string, GameBannersResult>>(
-    () => new Map()
-  );
-  const [failedBannerGameId, setFailedBannerGameId] = useState<string | null>(null);
-  const [lastBannerInfo, setLastBannerInfo] = useState<BannerInfo>(EMPTY_BANNER_INFO);
+  const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
+  const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
+  const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
   const isTombstoned = useGameTombstone(gameId);
 
   useEffect(() => {
@@ -184,68 +168,118 @@ export const GamePage: React.FC = () => {
     };
   }, [gameId, selectedGame, setSelectedGame, navigate]);
 
-  const selectedGameId = selectedGame?.id;
-  const selectedGameSlug = selectedGame?.slug;
-
+  // Load banner data for selected game with delay to prevent flickering
   useEffect(() => {
-    if (
-      !selectedGameId ||
-      selectedGameSlug === undefined ||
-      bannerCache.has(selectedGameId)
-    ) {
-      return;
-    }
-
     let isMounted = true;
-    window.electronAPI
-      .fetchBannersForGame(selectedGameId, selectedGameSlug)
-      .then((result) => {
-        if (isMounted) {
-          setBannerCache((prev) => new Map(prev).set(selectedGameId, result));
+
+    const loadBannerData = async () => {
+      if (!selectedGame?.id) {
+        setBannerData(null);
+        setLoadedBannerGameId(null);
+        return;
+      }
+
+      // Check cache first - show immediately from cache
+      const cachedData = bannerCacheRef.current.get(selectedGame.id);
+      if (cachedData) {
+        setBannerData(cachedData);
+        setLoadedBannerGameId(selectedGame.id);
+        return;
+      }
+
+      try {
+        const result = await window.electronAPI.fetchBannersForGame(
+          selectedGame.id,
+          selectedGame.slug
+        );
+        if (!isMounted) {
+          return;
         }
-      })
-      .catch((error) => {
+
+        // Cache the result
+        bannerCacheRef.current.set(selectedGame.id, result);
+
+        if (isMounted) {
+          setBannerData(result);
+          setLoadedBannerGameId(selectedGame.id);
+        }
+      } catch (error) {
         if (!isMounted) {
           return;
         }
         console.error('Error loading banner data:', error);
-        setFailedBannerGameId(selectedGameId);
-      });
+        setBannerData(null);
+        setLoadedBannerGameId(selectedGame.id);
+      }
+    };
+
+    loadBannerData();
 
     return () => {
       isMounted = false;
     };
-  }, [selectedGameId, selectedGameSlug, bannerCache]);
+  }, [selectedGame?.id, selectedGame?.slug]);
 
-  // null while a not-yet-cached game is loading, so the previous banner stays and doesn't flicker
-  const resolvedBannerInfo = useMemo((): BannerInfo | null => {
+  const prevBannerInfoRef = useRef<{
+    data: BannerData | null;
+    isKuli: boolean;
+    support_url: string | null;
+    placementType: BannerType | null;
+  }>({ data: null, isKuli: false, support_url: null, placementType: null });
+
+  const bannerInfo = useMemo(() => {
     if (!selectedGame) {
-      return EMPTY_BANNER_INFO;
+      prevBannerInfoRef.current = {
+        data: null,
+        isKuli: false,
+        support_url: null,
+        placementType: null,
+      };
+      return prevBannerInfoRef.current;
     }
 
-    const result = bannerCache.get(selectedGame.id);
-    if (!result && failedBannerGameId !== selectedGame.id) {
-      return null;
+    // Check cache directly to avoid flickering when switching between cached games
+    const cachedData = bannerCacheRef.current.get(selectedGame.id);
+
+    // If we have cached data for this game, use it immediately
+    if (cachedData) {
+      const type =
+        cachedData.banner?.type ??
+        (cachedData.isKuli ? 'narrow' : null) ??
+        (selectedGame.support_url ? 'small_square' : null) ??
+        null;
+
+      const info = {
+        data: cachedData.banner || null,
+        isKuli: cachedData.isKuli || false,
+        support_url: selectedGame?.support_url || null,
+        placementType: type,
+      };
+      prevBannerInfoRef.current = info;
+      return info;
+    }
+
+    // If not in cache and not loaded for this game yet,
+    // keep previous banner to avoid flicker
+    if (loadedBannerGameId !== selectedGame.id) {
+      return prevBannerInfoRef.current;
     }
 
     const type =
-      result?.banner?.type ??
-      (result?.isKuli ? 'narrow' : null) ??
+      bannerData?.banner?.type ??
+      (bannerData?.isKuli ? 'narrow' : null) ??
       (selectedGame.support_url ? 'small_square' : null) ??
       null;
 
-    return {
-      data: result?.banner || null,
-      isKuli: result?.isKuli || false,
-      support_url: selectedGame.support_url || null,
+    const info = {
+      data: bannerData?.banner || null,
+      isKuli: bannerData?.isKuli || false,
+      support_url: selectedGame?.support_url || null,
       placementType: type,
     };
-  }, [selectedGame, bannerCache, failedBannerGameId]);
-
-  if (resolvedBannerInfo && resolvedBannerInfo !== lastBannerInfo) {
-    setLastBannerInfo(resolvedBannerInfo);
-  }
-  const bannerInfo = resolvedBannerInfo ?? lastBannerInfo;
+    prevBannerInfoRef.current = info;
+    return info;
+  }, [selectedGame, bannerData, loadedBannerGameId]);
 
   // Record banner impression: Mixpanel + Supabase together
   const trackBannerImpression = useCallback(
@@ -278,19 +312,18 @@ export const GamePage: React.FC = () => {
   }, [trackBannerImpression]);
 
   // Callback for first install - show subscription modal
-  const selectedGameTeam = selectedGame?.team;
   const handleFirstInstallComplete = useCallback(() => {
-    if (selectedGameTeam && selectedGameId && !isGamePrompted(selectedGameId)) {
+    if (selectedGame?.team && selectedGame?.id && !isGamePrompted(selectedGame.id)) {
       setShowAuthorSubscriptionModal(true);
     }
-  }, [selectedGameTeam, selectedGameId, isGamePrompted]);
+  }, [selectedGame?.team, selectedGame?.id, isGamePrompted]);
 
   const handleCloseAuthorSubscriptionModal = useCallback(() => {
     setShowAuthorSubscriptionModal(false);
-    if (selectedGameId) {
-      markGameAsPrompted(selectedGameId);
+    if (selectedGame?.id) {
+      markGameAsPrompted(selectedGame.id);
     }
-  }, [selectedGameId, markGameAsPrompted]);
+  }, [selectedGame?.id, markGameAsPrompted]);
 
   // Use installation hook
   const {
@@ -433,7 +466,7 @@ export const GamePage: React.FC = () => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
         <div className="glass-card-no-motion max-w-md p-8">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-linear-to-br/srgb from-red-500/20 to-pink-500/20 flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
             <EyeOffIcon size={40} className="text-red-400" />
           </div>
           <h2 className="text-xl font-head font-semibold text-text-main mb-3">
@@ -445,7 +478,7 @@ export const GamePage: React.FC = () => {
           </p>
           <button
             onClick={openSettingsModal}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             <SettingsIcon size={20} />
             Відкрити налаштування
@@ -780,7 +813,7 @@ export const GamePage: React.FC = () => {
               }}
               initial={false}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-x-clip shrink-0 mb-auto"
+              className="overflow-x-clip flex-shrink-0 mb-auto"
             >
               <div className="w-[320px] h-full">
                 <Placement
@@ -828,7 +861,7 @@ export const GamePage: React.FC = () => {
               </h3>
               <MarkdownText
                 text={selectedGame.description}
-                className="text-text-muted leading-relaxed wrap-break-word"
+                className="text-text-muted leading-relaxed break-words"
               />
             </motion.section>
           )}
@@ -872,7 +905,7 @@ export const GamePage: React.FC = () => {
               </h3>
               <MarkdownText
                 text={selectedGame.game_description}
-                className="text-text-muted leading-relaxed wrap-break-word"
+                className="text-text-muted leading-relaxed break-words"
               />
             </motion.section>
           )}

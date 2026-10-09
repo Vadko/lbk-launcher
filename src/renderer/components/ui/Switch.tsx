@@ -36,7 +36,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       >
         {/* Gradient background (checked state) */}
         <motion.div
-          className="absolute inset-0 bg-linear-to-r/srgb from-color-accent to-color-main"
+          className="absolute inset-0 bg-gradient-to-r from-color-accent to-color-main"
           initial={false}
           animate={{
             opacity: checked ? 1 : 0,

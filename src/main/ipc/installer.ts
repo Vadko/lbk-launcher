@@ -1,6 +1,5 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
-import path from 'path';
 import type { Game, InstallOptions, RunInstallerDecision } from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
 import { getFirstAvailableGamePath } from '../game-detector';
@@ -36,7 +35,6 @@ import {
   writeSteamLaunchOptions,
 } from '../utils/steam-launch-options';
 import { launchSteam, shutdownSteam } from '../utils/steam-launcher';
-import { readLastGameFolder, writeLastGameFolder } from '../utils/store-storage';
 import { getMainWindow } from '../window';
 
 // Resolvers for run-installer confirmations awaiting a decision from the renderer,
@@ -271,19 +269,16 @@ export function setupInstallerHandlers(): void {
   });
 
   ipcMain.handle('select-game-folder', async () => {
-    const lastFolder = readLastGameFolder();
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
       title: 'Виберіть папку з грою',
       buttonLabel: 'Вибрати',
-      defaultPath: lastFolder && path.dirname(lastFolder),
     });
 
     if (result.canceled || result.filePaths.length === 0) {
       return null;
     }
 
-    writeLastGameFolder(result.filePaths[0]);
     return result.filePaths[0];
   });
 

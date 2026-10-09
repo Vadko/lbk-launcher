@@ -9,7 +9,7 @@ import {
   removeLiquidGlass,
 } from './liquid-glass';
 import { openExternalUrl } from './utils/open-external';
-import { isLinux, isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
+import { isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
 import { readRendererSetting } from './utils/store-storage';
 import { getIcon } from './utils/theme';
 
@@ -46,7 +46,6 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     minHeight: 700,
     resizable: true,
     frame: false,
-    roundedCorners: !isLinux(),
     show: false, // Don't show until liquid glass is applied
     transparent: isSupported, // Enable transparency for liquid glass on macOS 26+
     backgroundColor: isSupported ? undefined : '#050b14', // No background color when transparent
