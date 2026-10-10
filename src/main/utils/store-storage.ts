@@ -39,6 +39,22 @@ export function isCefDebuggingEnabledInSettings(): boolean {
   return readRendererSetting('steamCefDebuggingEnabled', true);
 }
 
+export function isProductAnalyticsEnabled(): boolean {
+  return readRendererSetting('productAnalyticsEnabled', true);
+}
+
+export function isLocalizationAnalyticsEnabled(): boolean {
+  return readRendererSetting('localizationAnalyticsEnabled', true);
+}
+
+export function isCrashDiagnosticsEnabled(): boolean {
+  return readRendererSetting('crashDiagnosticsEnabled', true);
+}
+
+export function onRendererSettingsChanged(callback: () => void): () => void {
+  return store.onDidChange('lbk-settings', callback);
+}
+
 const WORKSHOP_INSTALLS_KEY = 'workshop-installs-storage';
 
 export function getWorkshopInstalledGameIds(): string[] {

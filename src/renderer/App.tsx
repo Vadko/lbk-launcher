@@ -62,6 +62,29 @@ if (!isE2E) {
   }
 })();
 
+// Mirror the Settings toggle into the SDK: opting out also stops Mixpanel's own
+// persistence and queued events, not just our trackEvent() guard.
+if (isMixpanelInitialized) {
+  const applyOptState = (enabled: boolean) => {
+    try {
+      if (enabled) {
+        mixpanel.opt_in_tracking();
+      } else {
+        mixpanel.opt_out_tracking();
+      }
+    } catch (err) {
+      console.error('[Analytics] mixpanel opt state failed', err);
+    }
+  };
+
+  applyOptState(useSettingsStore.getState().productAnalyticsEnabled);
+  useSettingsStore.subscribe((state, prev) => {
+    if (state.productAnalyticsEnabled !== prev.productAnalyticsEnabled) {
+      applyOptState(state.productAnalyticsEnabled);
+    }
+  });
+}
+
 export const App: React.FC = () => {
   const { detectInstalledGames, setSyncStatus, syncStatus } = useStore();
   const { liquidGlassEnabled } = useSettingsStore();
@@ -271,12 +294,12 @@ export const App: React.FC = () => {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  // Load installed translations on startup
+  // Gated on sync: pre-sync catalog rows have stale versions and may be missing entirely
   useIdleEffect(() => {
-    if (window.electronAPI) {
+    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
       useStore.getState().loadInstalledGamesFromSystem();
     }
-  }, []);
+  }, [syncStatus]);
 
   useIdleEffect(() => {
     if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {

@@ -4,6 +4,8 @@ import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-insta
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import {
+  isCrashDiagnosticsEnabled,
+  onRendererSettingsChanged,
   onWorkshopInstallsChanged,
   setupStoreStorageHandlers,
 } from './utils/store-storage';
@@ -18,9 +20,13 @@ if (isE2E) {
   app.commandLine.appendSwitch('remote-debugging-port', '19222');
 }
 
+// Integrations are only installed when init runs enabled, so this also decides
+// whether the toggle can turn reporting back on without a restart
+const sentryStartedEnabled = app.isPackaged && !isE2E && isCrashDiagnosticsEnabled();
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  enabled: app.isPackaged && !isE2E,
+  enabled: sentryStartedEnabled,
   release: __SENTRY_RELEASE__,
   tracesSampleRate: 1.0,
   integrations: [
@@ -222,6 +228,14 @@ if (!gotTheLock) {
 
   // Setup all IPC handlers
   setupStoreStorageHandlers();
+
+  // `_isEnabled()` reads this option on every send, so the toggle takes effect mid-session
+  onRendererSettingsChanged(() => {
+    const client = Sentry.getClient();
+    if (client) {
+      client.getOptions().enabled = sentryStartedEnabled && isCrashDiagnosticsEnabled();
+    }
+  });
   setupWindowControls();
   setupGamesHandlers();
   setupInstallerHandlers();

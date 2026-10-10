@@ -121,6 +121,24 @@ export const SettingsModal: React.FC = () => {
   const toggleSteamCustomArtwork = useSettingsStore(
     (state) => state.toggleSteamCustomArtwork
   );
+  const productAnalyticsEnabled = useSettingsStore(
+    (state) => state.productAnalyticsEnabled
+  );
+  const toggleProductAnalytics = useSettingsStore(
+    (state) => state.toggleProductAnalytics
+  );
+  const localizationAnalyticsEnabled = useSettingsStore(
+    (state) => state.localizationAnalyticsEnabled
+  );
+  const toggleLocalizationAnalytics = useSettingsStore(
+    (state) => state.toggleLocalizationAnalytics
+  );
+  const crashDiagnosticsEnabled = useSettingsStore(
+    (state) => state.crashDiagnosticsEnabled
+  );
+  const toggleCrashDiagnostics = useSettingsStore(
+    (state) => state.toggleCrashDiagnostics
+  );
 
   // Promo modal dev settings
   const { devMode, setDevMode } = usePromoModalStore();
@@ -553,6 +571,30 @@ export const SettingsModal: React.FC = () => {
             description="Відтворювати звуки при навігації геймпадом"
             enabled={gamepadSoundsEnabled}
             onChange={toggleGamepadSounds}
+          />
+
+          <SettingItem
+            id="product-analytics"
+            title="Продуктова аналітика"
+            description="Сесії застосунку та взаємодії з інтерфейсом — допомагають зрозуміти, що в лаунчері незручно"
+            enabled={productAnalyticsEnabled}
+            onChange={toggleProductAnalytics}
+          />
+
+          <SettingItem
+            id="localization-analytics"
+            title="Аналітика розвитку локалізацій"
+            description="Підтримка авторів, пошук без результатів, видалення та час у грі — показують, яких перекладів бракує"
+            enabled={localizationAnalyticsEnabled}
+            onChange={toggleLocalizationAnalytics}
+          />
+
+          <SettingItem
+            id="crash-diagnostics"
+            title="Звіти про збої"
+            description="Автоматичні звіти про помилки застосунку. Вимкнення діє одразу, увімкнення — після перезапуску"
+            enabled={crashDiagnosticsEnabled}
+            onChange={toggleCrashDiagnostics}
           />
 
           {/* Steam collection sync */}
