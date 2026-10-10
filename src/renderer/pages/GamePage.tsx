@@ -20,6 +20,8 @@ import { DownloadProgressCard } from '../components/MainContent/DownloadProgress
 import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
 import Gallery from '../components/MainContent/Gallery';
 import { GameHero } from '../components/MainContent/GameHero';
+import { GameReviewsTab } from '../components/MainContent/GameReviewsTab';
+import { type GameTab, GameTabs } from '../components/MainContent/GameTabs';
 import { ImportantNotice } from '../components/MainContent/ImportantNotice';
 import { InfoCard } from '../components/MainContent/InfoCard';
 import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
@@ -81,6 +83,11 @@ export const GamePage: React.FC = () => {
   const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
   const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
   const isTombstoned = useGameTombstone(gameId);
+  const [tabState, setTabState] = useState<{ gameId: string; tab: GameTab }>({
+    gameId: gameId ?? '',
+    tab: 'info',
+  });
+  const activeTab: GameTab = tabState.gameId === gameId ? tabState.tab : 'info';
 
   const installationInfo = selectedGame
     ? installedTranslations.get(selectedGame.id)
@@ -807,95 +814,119 @@ export const GamePage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Recommended */}
-          <RecommendedGamesSection
-            gameId={selectedGame.id}
-            gameName={selectedGame.name}
-            showLimit={3}
+          <GameTabs
+            activeTab={activeTab}
+            onChange={(tab) => setTabState({ gameId: selectedGame.id, tab })}
           />
 
-          {/* Donate */}
-          {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
-              <FundraisingProgressCard
-                current={selectedGame.fundraising_current || 0}
-                goal={selectedGame.fundraising_goal}
-                supportUrl={selectedGame.support_url}
+          {activeTab === 'reviews' ? (
+            <GameReviewsTab
+              key={selectedGame.id}
+              gameId={selectedGame.id}
+              canLeaveFeedback={canLeaveFeedback}
+              onLeaveFeedback={() => setShowFeedbackModal(true)}
+            />
+          ) : activeTab === 'recommended' ? (
+            <>
+              {/* Recommended */}
+              <RecommendedGamesSection
+                gameId={selectedGame.id}
+                gameName={selectedGame.name}
+                showLimit={9}
               />
-            </motion.div>
-          )}
+            </>
+          ) : (
+            <>
+              {/* Donate */}
+              {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
+                <motion.div
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <FundraisingProgressCard
+                    current={selectedGame.fundraising_current || 0}
+                    goal={selectedGame.fundraising_goal}
+                    supportUrl={selectedGame.support_url}
+                  />
+                </motion.div>
+              )}
 
-          {/* Translate description */}
-          {selectedGame.description && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion min-w-0"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про українізатор
-              </h3>
-              <MarkdownText
-                text={selectedGame.description}
-                className="text-text-muted leading-relaxed break-words"
-              />
-            </motion.section>
-          )}
+              {/* Translate description */}
+              {selectedGame.description && (
+                <motion.section
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="glass-card-no-motion min-w-0"
+                >
+                  <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                    Про українізатор
+                  </h3>
+                  <MarkdownText
+                    text={selectedGame.description}
+                    className="text-text-muted leading-relaxed break-words"
+                  />
+                </motion.section>
+              )}
 
-          {/* Video */}
-          {selectedGame.video_url && (
-            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
-              <VideoCard videoUrl={selectedGame.video_url} />
-            </motion.div>
-          )}
+              {/* Video */}
+              {selectedGame.video_url && (
+                <motion.div
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <VideoCard videoUrl={selectedGame.video_url} />
+                </motion.div>
+              )}
 
-          {/* Gallery */}
-          {selectedGame.screenshots && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-            >
-              <div className="glass-card-no-motion">
-                <Gallery
-                  slides={selectedGame.screenshots}
-                  spaceBetween={30}
-                  slidesPerView={3}
-                  pagination={false}
-                  thumbs={true}
-                  loop={true}
-                  updated_at={selectedGame.updated_at}
-                />
-              </div>
-            </motion.section>
-          )}
+              {/* Gallery */}
+              {selectedGame.screenshots && (
+                <motion.section
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <div className="glass-card-no-motion">
+                    <Gallery
+                      slides={selectedGame.screenshots}
+                      spaceBetween={30}
+                      slidesPerView={3}
+                      pagination={false}
+                      thumbs={true}
+                      loop={true}
+                      updated_at={selectedGame.updated_at}
+                    />
+                  </div>
+                </motion.section>
+              )}
 
-          {/* Game description */}
-          {selectedGame.game_description && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion min-w-0"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про гру
-              </h3>
-              <MarkdownText
-                text={selectedGame.game_description}
-                className="text-text-muted leading-relaxed break-words"
-              />
-            </motion.section>
-          )}
+              {/* Game description */}
+              {selectedGame.game_description && (
+                <motion.section
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="glass-card-no-motion min-w-0"
+                >
+                  <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                    Про гру
+                  </h3>
+                  <MarkdownText
+                    text={selectedGame.game_description}
+                    className="text-text-muted leading-relaxed break-words"
+                  />
+                </motion.section>
+              )}
 
-          {/* Links */}
-          <motion.div
-            layout="position"
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="flex gap-4"
-          >
-            <div className="flex-1 min-w-0">
-              <SocialLinksCard game={selectedGame} />
-            </div>
-          </motion.div>
+              {/* Links */}
+              <motion.div
+                layout="position"
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="flex gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <SocialLinksCard game={selectedGame} />
+                </div>
+              </motion.div>
+            </>
+          )}
         </LayoutGroup>
       </div>
     </>
