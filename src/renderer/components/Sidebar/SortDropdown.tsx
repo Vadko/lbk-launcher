@@ -84,6 +84,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
                     key={option.value}
                     onClick={() => handleSelect(option.value)}
                     data-gamepad-dropdown-item
+                    data-gamepad-dropdown-selected={selected || undefined}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                       selected
                         ? 'bg-glass-hover text-text-main'

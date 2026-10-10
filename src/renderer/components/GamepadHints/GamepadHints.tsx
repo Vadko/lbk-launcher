@@ -1,162 +1,107 @@
-import React, { useEffect, useState } from 'react';
-import { useGamepadModeStore } from '../../store/useGamepadModeStore';
-import { useStore } from '../../store/useStore';
+import React from 'react';
+import { useLocation } from 'react-router-dom';
+import { useGamepadType } from '../../hooks/useGamepadType';
+import {
+  type GamepadHintContext,
+  useGamepadModeStore,
+} from '../../store/useGamepadModeStore';
+import { ButtonGlyph } from './ButtonGlyph';
+import { GAMEPAD_GLYPHS, type Glyph } from './gamepadGlyphs';
 
-type GamepadType = 'xbox' | 'playstation';
-
-type ButtonVariant = 'green' | 'red' | 'blue' | 'yellow' | 'default';
-
-interface HintItem {
-  button: string;
+interface Hint {
+  glyphs: Glyph[];
   label: string;
-  variant?: ButtonVariant;
 }
 
-// Button mappings for different controller types
-const BUTTON_CONFIG: Record<
-  GamepadType,
-  {
-    confirm: { label: string; variant: ButtonVariant };
-    back: { label: string; variant: ButtonVariant };
-    home: { label: string; variant: ButtonVariant };
+type Glyphs = (typeof GAMEPAD_GLYPHS)['xbox'];
+
+const buildHints = (
+  context: GamepadHintContext,
+  g: Glyphs,
+  page: { isHome: boolean; isGame: boolean }
+): Hint[] => {
+  const help: Hint = { glyphs: [g.view], label: 'Усі кнопки' };
+  switch (context) {
+    case 'text-input':
+      return [{ glyphs: [g.b], label: 'Завершити введення' }];
+    case 'search-input':
+      return [
+        { glyphs: [g.y], label: 'Очистити' },
+        { glyphs: [g.b], label: 'Завершити введення' },
+      ];
+    case 'dropdown':
+      return [
+        { glyphs: [g.a], label: 'Вибрати' },
+        { glyphs: [g.upDown], label: 'Пункти' },
+        { glyphs: [g.b], label: 'Закрити' },
+      ];
+    case 'modal':
+      return [
+        { glyphs: [g.a], label: 'Вибрати' },
+        { glyphs: [g.dpad], label: 'Навігація' },
+        { glyphs: [g.rs], label: 'Прокрутка' },
+        { glyphs: [g.b], label: 'Закрити' },
+      ];
+    case 'header':
+      return [
+        { glyphs: [g.a], label: 'Відкрити' },
+        { glyphs: [g.leftRight], label: 'Меню' },
+        { glyphs: [g.down, g.b], label: 'До ігор' },
+        help,
+      ];
+    case 'games':
+      return [
+        { glyphs: [g.a], label: 'Відкрити' },
+        { glyphs: [g.leftRight], label: 'Ігри' },
+        { glyphs: [g.up], label: 'Меню' },
+        { glyphs: [g.down], label: 'Сторінка' },
+        { glyphs: [g.x], label: 'Пошук' },
+        { glyphs: page.isHome ? [g.y] : [g.y, g.b], label: 'Головна' },
+        help,
+      ];
+    case 'main-content':
+      return [
+        { glyphs: [g.a], label: 'Вибрати' },
+        { glyphs: [g.dpad], label: 'Навігація' },
+        { glyphs: [g.rs], label: 'Прокрутка' },
+        ...(page.isGame ? [{ glyphs: [g.lb, g.rb], label: 'Сусідній переклад' }] : []),
+        { glyphs: [g.b], label: 'До ігор' },
+        ...(page.isHome ? [] : [{ glyphs: [g.y], label: 'Головна' }]),
+        help,
+      ];
   }
-> = {
-  xbox: {
-    confirm: { label: 'A', variant: 'green' },
-    back: { label: 'B', variant: 'red' },
-    home: { label: 'Y', variant: 'yellow' },
-  },
-  playstation: {
-    confirm: { label: '✕', variant: 'blue' }, // PlayStation Cross - blue
-    back: { label: '○', variant: 'red' }, // PlayStation Circle - red
-    home: { label: '△', variant: 'green' }, // PlayStation Triangle - yellow
-  },
-};
-
-/**
- * Detect the type of connected gamepad based on its ID
- */
-function detectGamepadType(): GamepadType {
-  const gamepads = navigator.getGamepads();
-  for (const gp of gamepads) {
-    if (!gp) {
-      continue;
-    }
-    const id = gp.id.toLowerCase();
-    if (
-      id.includes('playstation') ||
-      id.includes('dualshock') ||
-      id.includes('dualsense') ||
-      id.includes('sony')
-    ) {
-      return 'playstation';
-    }
-  }
-  return 'xbox';
-}
-
-const ButtonHint: React.FC<HintItem> = ({ button, label, variant = 'default' }) => {
-  const colors: Record<ButtonVariant, string> = {
-    green: 'bg-green-500/20 border-green-500/50 text-green-400',
-    red: 'bg-red-500/20 border-red-500/50 text-red-400',
-    blue: 'bg-blue-500/20 border-blue-500/50 text-blue-400', // PlayStation Cross
-    yellow: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400', // Xbox/Y
-    default: 'bg-white/10 border-white/20 text-white',
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <div
-        className={`min-w-[32px] h-8 px-2 flex items-center justify-center rounded-lg border font-bold text-sm ${colors[variant]}`}
-      >
-        {button}
-      </div>
-      <span className="text-sm text-white/80">{label}</span>
-    </div>
-  );
 };
 
 export const GamepadHints: React.FC = () => {
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
-  const navigationArea = useGamepadModeStore((s) => s.navigationArea);
-  const { selectedGame } = useStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [gamepadType, setGamepadType] = useState<GamepadType>(detectGamepadType);
-
-  // Re-detect controller type when one is plugged in or out so the hint
-  // glyphs (A/B vs Cross/Circle) stay accurate if the user switches pads.
-  useEffect(() => {
-    const update = () => setGamepadType(detectGamepadType());
-    window.addEventListener('gamepadconnected', update);
-    window.addEventListener('gamepaddisconnected', update);
-    return () => {
-      window.removeEventListener('gamepadconnected', update);
-      window.removeEventListener('gamepaddisconnected', update);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isGamepadMode) {
-      return;
-    }
-
-    const checkModal = () => {
-      setIsModalOpen(!!document.querySelector('[role="dialog"]'));
-    };
-
-    checkModal();
-
-    const observer = new MutationObserver(checkModal);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => observer.disconnect();
-  }, [isGamepadMode]);
+  const context = useGamepadModeStore((s) => s.hintContext);
+  const { pathname } = useLocation();
+  const gamepadType = useGamepadType();
 
   if (!isGamepadMode) {
     return null;
   }
 
-  const { confirm, back, home } = BUTTON_CONFIG[gamepadType];
-  let hints: HintItem[] = [];
-
-  if (isModalOpen) {
-    hints = [
-      { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
-      { button: back.label, label: 'Закрити', variant: back.variant },
-      { button: '↑↓', label: 'Навігація' },
-    ];
-  } else if (navigationArea === 'header') {
-    hints = [
-      { button: confirm.label, label: 'Відкрити', variant: confirm.variant },
-      { button: home.label, label: 'Головна', variant: home.variant },
-      { button: '←→', label: 'Елементи' },
-      { button: '↓', label: 'До ігор' },
-    ];
-  } else if (navigationArea === 'games') {
-    hints = [
-      { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
-      { button: home.label, label: 'Головна', variant: home.variant },
-      { button: '←→', label: 'Ігри' },
-      { button: '↑', label: 'Пошук' },
-      { button: '↓', label: 'Контент' },
-    ];
-  } else if (navigationArea === 'main-content') {
-    hints = [
-      { button: confirm.label, label: 'Вибрати', variant: confirm.variant },
-      { button: back.label, label: 'Назад', variant: back.variant },
-      ...(selectedGame
-        ? [{ button: home.label, label: 'Головна', variant: home.variant }]
-        : []),
-      { button: '←→', label: selectedGame ? 'Кнопки' : 'Навігація' },
-      { button: '↑↓', label: 'Прокрутка' },
-    ];
-  }
+  const hints = buildHints(context, GAMEPAD_GLYPHS[gamepadType], {
+    isHome: pathname === '/',
+    isGame: pathname.startsWith('/game/'),
+  });
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-      <div className="flex items-center gap-5 px-5 py-2.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10">
-        {hints.map((hint, index) => (
-          <ButtonHint key={index} {...hint} />
+    <div
+      data-gamepad-hints={context}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10001 pointer-events-none"
+    >
+      <div className="flex items-center gap-4 px-4 py-2.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 whitespace-nowrap">
+        {hints.map((hint) => (
+          <div key={hint.label} className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              {hint.glyphs.map((glyph) => (
+                <ButtonGlyph key={glyph.label} glyph={glyph} />
+              ))}
+            </span>
+            <span className="text-sm text-white/80">{hint.label}</span>
+          </div>
         ))}
       </div>
     </div>

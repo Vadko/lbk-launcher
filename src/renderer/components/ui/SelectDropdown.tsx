@@ -172,6 +172,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
                             : () => handleOptionSelect(option.value)
                         }
                         data-gamepad-dropdown-item
+                        data-gamepad-dropdown-selected={isSelected || undefined}
                         disabled={option.isDisabled}
                         className={`w-full flex items-center px-3 py-2 text-sm gap-1 text-left transition-colors ${
                           isSelected

@@ -384,7 +384,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             <SidebarHeader isCompact />
 
             {/* Search */}
-            <div className="flex-1 min-w-0" data-gamepad-header-item>
+            <div className="flex-1 min-w-0" data-gamepad-header-item data-gamepad-search>
               <SearchBar value={searchQuery} onChange={setSearchQuery} />
             </div>
 

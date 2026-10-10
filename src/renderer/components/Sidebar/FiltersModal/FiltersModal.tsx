@@ -273,7 +273,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
         </button>
       }
     >
-      <div className="flex flex-col gap-6" data-gamepad-keep-open-on-blur>
+      <div className="flex flex-col gap-6">
         {chips.length > 0 && (
           <div>
             <p className={SECTION_TITLE_CLASS}>Активні фільтри</p>

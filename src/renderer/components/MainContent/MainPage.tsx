@@ -17,8 +17,8 @@ export const MainPage: React.FC = () => {
       ContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
 
-    const isGamepadMode = useGamepadModeStore.getState().isGamepadMode;
-    if (!isGamepadMode) {
+    const { isGamepadMode, navigationArea } = useGamepadModeStore.getState();
+    if (!isGamepadMode || navigationArea !== 'main-content') {
       return;
     }
     document
