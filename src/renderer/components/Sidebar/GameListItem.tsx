@@ -28,6 +28,7 @@ interface GameListItemProps {
   isTranslationAvailable?: boolean;
   variant?: string;
   imageDeferred?: boolean;
+  gamepadAction?: boolean;
 }
 
 export const GameListItem: React.FC<GameListItemProps> = React.memo(
@@ -44,6 +45,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     isTranslationAvailable = true,
     variant,
     imageDeferred = false,
+    gamepadAction = false,
   }) => {
     const [imageLoading, setImageLoading] = useState(true);
     const [erroredUrl, setErroredUrl] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           onKeyDown={handleKeyDown}
           data-game-card
           data-gamepad-card={true}
+          {...(gamepadAction ? { 'data-gamepad-action': 'true' } : {})}
           className={`group glass-card !p-0 flex flex-col items-center scroll-m-20`}
         >
           <div className="relative aspect-[616/353] w-full bg-glass rounded-t-xl overflow-hidden">

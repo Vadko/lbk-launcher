@@ -34,6 +34,7 @@ export interface GameReview {
   id: string;
   text: string;
   createdAt: string;
+  images: string[];
   replies: GameReviewReply[];
 }
 

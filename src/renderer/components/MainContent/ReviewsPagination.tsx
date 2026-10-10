@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface ReviewsPaginationProps {
   page: number;
@@ -41,75 +41,96 @@ export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
   page,
   totalPages,
   onChange,
-}) => (
-  <nav
-    aria-label="Сторінки відгуків"
-    className="flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5"
-  >
-    <button
-      type="button"
-      className={controlClass}
-      disabled={page === 1}
-      onClick={() => onChange(1)}
-      aria-label="Перша сторінка"
-      data-gamepad-action
+}) => {
+  const navRef = useRef<HTMLElement>(null);
+  const isFirstRender = useRef(true);
+
+  // A pressed button can turn disabled (first/last page), which drops focus and makes gamepad nav jump to the hero
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const active = document.activeElement;
+    if (active && active !== document.body && !navRef.current?.contains(active)) {
+      return;
+    }
+    navRef.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.focus({ preventScroll: true });
+  }, [page]);
+
+  return (
+    <nav
+      ref={navRef}
+      aria-label="Сторінки відгуків"
+      className="flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5"
     >
-      <ChevronsLeft size={16} />
-    </button>
-    <button
-      type="button"
-      className={controlClass}
-      disabled={page === 1}
-      onClick={() => onChange(page - 1)}
-      aria-label="Попередня сторінка"
-      data-gamepad-action
-    >
-      <ChevronLeft size={16} />
-    </button>
-    {getPageItems(page, totalPages).map((item, i, items) =>
-      item === 'ellipsis' ? (
-        <span
-          key={`ellipsis-after-${items[i - 1]}`}
-          className="size-8 flex items-center justify-center"
-        >
-          ...
-        </span>
-      ) : (
-        <button
-          key={item}
-          type="button"
-          onClick={() => onChange(item)}
-          aria-current={item === page ? 'page' : undefined}
-          data-gamepad-action
-          className={`size-8 flex items-center justify-center rounded-lg transition-colors ${
-            item === page
-              ? 'bg-color-main text-text-dark'
-              : 'bg-white/[0.03] text-white hover:bg-white/10'
-          }`}
-        >
-          {item}
-        </button>
-      )
-    )}
-    <button
-      type="button"
-      className={controlClass}
-      disabled={page === totalPages}
-      onClick={() => onChange(page + 1)}
-      aria-label="Наступна сторінка"
-      data-gamepad-action
-    >
-      <ChevronRight size={16} />
-    </button>
-    <button
-      type="button"
-      className={controlClass}
-      disabled={page === totalPages}
-      onClick={() => onChange(totalPages)}
-      aria-label="Остання сторінка"
-      data-gamepad-action
-    >
-      <ChevronsRight size={16} />
-    </button>
-  </nav>
-);
+      <button
+        type="button"
+        className={controlClass}
+        disabled={page === 1}
+        onClick={() => onChange(1)}
+        aria-label="Перша сторінка"
+        data-gamepad-action
+      >
+        <ChevronsLeft size={16} />
+      </button>
+      <button
+        type="button"
+        className={controlClass}
+        disabled={page === 1}
+        onClick={() => onChange(page - 1)}
+        aria-label="Попередня сторінка"
+        data-gamepad-action
+      >
+        <ChevronLeft size={16} />
+      </button>
+      {getPageItems(page, totalPages).map((item, i, items) =>
+        item === 'ellipsis' ? (
+          <span
+            key={`ellipsis-after-${items[i - 1]}`}
+            className="size-8 flex items-center justify-center"
+          >
+            ...
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onChange(item)}
+            aria-current={item === page ? 'page' : undefined}
+            data-gamepad-action
+            className={`size-8 flex items-center justify-center rounded-lg transition-colors ${
+              item === page
+                ? 'bg-color-main text-text-dark'
+                : 'bg-white/[0.03] text-white hover:bg-white/10'
+            }`}
+          >
+            {item}
+          </button>
+        )
+      )}
+      <button
+        type="button"
+        className={controlClass}
+        disabled={page === totalPages}
+        onClick={() => onChange(page + 1)}
+        aria-label="Наступна сторінка"
+        data-gamepad-action
+      >
+        <ChevronRight size={16} />
+      </button>
+      <button
+        type="button"
+        className={controlClass}
+        disabled={page === totalPages}
+        onClick={() => onChange(totalPages)}
+        aria-label="Остання сторінка"
+        data-gamepad-action
+      >
+        <ChevronsRight size={16} />
+      </button>
+    </nav>
+  );
+};

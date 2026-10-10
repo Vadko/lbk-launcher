@@ -3,8 +3,7 @@ import type { GameReviewsPage } from '@/shared/types';
 
 const PAGE_SIZE = 10;
 const THIRTY_MINUTES = 30 * 60 * 1000;
-// TODO: Вимкнути, коли на бекенді з'явиться edge function get-game-reviews
-const USE_MOCK_REVIEWS = true;
+const USE_MOCK_REVIEWS = import.meta.env.VITE_USE_MOCK_REVIEWS === 'true';
 const MOCK_TOTAL = 262;
 const MOCK_TEXTS = [
   'Переклад дуже якісний. Діалоги читаються природно, а описи предметів зрозумілі. Рекомендую.',
@@ -48,6 +47,10 @@ async function fetchGameReviewsMock(
       id: `${gameId}-${index}`,
       text: MOCK_TEXTS[index % MOCK_TEXTS.length],
       createdAt: new Date(Date.now() - index * 7 * 60 * 60 * 1000).toISOString(),
+      images: Array.from(
+        { length: index % 4 },
+        (_, n) => `https://picsum.photos/seed/${gameId}-${index}-${n}/1280/720`
+      ),
       replies: Array.from({ length: mockReplyCount(index) }, (_, r) => ({
         id: `${gameId}-${index}-reply-${r}`,
         text: MOCK_REPLIES[(index + r) % MOCK_REPLIES.length],

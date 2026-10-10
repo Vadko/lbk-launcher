@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -62,56 +62,54 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     >
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">{title}</h3>
       <div className="grid grid-cols-3 gap-8 max-w-[1564px] mx-auto">
-        <AnimatePresence mode="wait">
-          {isLoading ? (
+        {isLoading ? (
+          <motion.div
+            key="loader"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="flex items-center justify-center py-12"
+          >
+            <Loader size="md" />
+          </motion.div>
+        ) : (
+          visibleGames.map((game, index) => (
             <motion.div
-              key="loader"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="flex items-center justify-center py-12"
+              key={game.id}
+              id={`recommended-game-${game.slug}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+                ease: 'easeInOut',
+              }}
             >
-              <Loader size="md" />
-            </motion.div>
-          ) : (
-            visibleGames.map((game, index) => (
-              <motion.div
-                key={game.id}
-                id={`recommended-game-${game.slug}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.05,
-                  ease: 'easeInOut',
+              <GameListItem
+                game={game}
+                isSelected={false}
+                isCardStyle={true}
+                gamepadAction
+                hasUpdate={gamesWithUpdates.has(game.id)}
+                isGameDetected={isGameDetected(game.id)}
+                isInstalled={isInstalled(game.id)}
+                isTranslationAvailable={
+                  game.status !== 'planned' && game.status !== 'tech-improvement'
+                }
+                onClick={() => {
+                  trackEvent('Select game', {
+                    'Is recommendation': true,
+                    'Source Game Id': gameId,
+                    'Source Game Name': gameName,
+                    'Game Id': game.id,
+                    'Game Name': game.name,
+                  });
+                  navigate(`/game/${game.id}`);
                 }}
-              >
-                <GameListItem
-                  game={game}
-                  isSelected={false}
-                  isCardStyle={true}
-                  hasUpdate={gamesWithUpdates.has(game.id)}
-                  isGameDetected={isGameDetected(game.id)}
-                  isInstalled={isInstalled(game.id)}
-                  isTranslationAvailable={
-                    game.status !== 'planned' && game.status !== 'tech-improvement'
-                  }
-                  onClick={() => {
-                    trackEvent('Select game', {
-                      'Is recommendation': true,
-                      'Source Game Id': gameId,
-                      'Source Game Name': gameName,
-                      'Game Id': game.id,
-                      'Game Name': game.name,
-                    });
-                    navigate(`/game/${game.id}`);
-                  }}
-                />
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+              />
+            </motion.div>
+          ))
+        )}
       </div>
     </motion.section>
   );

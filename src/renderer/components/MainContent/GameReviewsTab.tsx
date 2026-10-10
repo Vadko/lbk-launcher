@@ -4,6 +4,7 @@ import type { GameReview, GameReviewReply } from '@/shared/types';
 import { useGameReviews } from '../../queries/useGameReviews';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { ReviewImages } from './ReviewImages';
 import { ReviewsPagination } from './ReviewsPagination';
 
 interface GameReviewsTabProps {
@@ -71,6 +72,7 @@ const ReviewItem: React.FC<{ review: GameReview }> = ({ review }) => (
   <div className="flex flex-col gap-2.5 pb-3 border-b border-white/[0.03]">
     <p className="text-sm text-text-muted">{formatReviewDate(review.createdAt)}</p>
     <p className="text-sm text-text-main break-words">{review.text}</p>
+    <ReviewImages images={review.images} />
     {review.replies.length > 0 && (
       <div className="flex flex-col -mt-2.5 ml-3">
         {review.replies.map((reply, i) => (

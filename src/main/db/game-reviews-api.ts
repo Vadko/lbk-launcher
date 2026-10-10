@@ -2,7 +2,10 @@ import type { GameReview, GameReviewReply, GameReviewsPage } from '../../shared/
 import { getSupabaseClient } from './supabase-client';
 
 interface GetGameReviewsResponse {
-  items?: (Omit<GameReview, 'replies'> & { replies?: GameReviewReply[] })[];
+  items?: (Omit<GameReview, 'replies' | 'images'> & {
+    replies?: GameReviewReply[];
+    images?: string[];
+  })[];
   total?: number;
   pageSize?: number;
   success: boolean;
@@ -27,7 +30,11 @@ export async function fetchGameReviews(
     }
 
     return {
-      items: data.items.map((item) => ({ ...item, replies: item.replies ?? [] })),
+      items: data.items.map((item) => ({
+        ...item,
+        images: item.images ?? [],
+        replies: item.replies ?? [],
+      })),
       total: data.total ?? data.items.length,
       pageSize: data.pageSize ?? pageSize,
     };
