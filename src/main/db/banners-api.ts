@@ -1,4 +1,5 @@
 import type { Database } from '../../lib/database.types';
+import { isProductAnalyticsEnabled } from '../utils/store-storage';
 import { getSupabaseClient } from './supabase-client';
 
 type BannerCampaignRow = Database['public']['Tables']['banner_campaigns']['Row'];
@@ -192,6 +193,10 @@ export async function recordBannerImpression(params: {
   /** Slug of the game on whose page the banner was shown */
   gameSlug?: string | null;
 }): Promise<boolean> {
+  if (!isProductAnalyticsEnabled()) {
+    return false;
+  }
+
   try {
     const supabase = getSupabaseClient();
 

@@ -18,6 +18,10 @@ import type { TrackingResponse } from '../shared/api-config';
 import { readFunctionsErrorBody } from './db/functions-error';
 import { getSupabaseClient } from './db/supabase-client';
 import { getLogFileDirectory } from './utils/logger';
+import {
+  isLocalizationAnalyticsEnabled,
+  isProductAnalyticsEnabled,
+} from './utils/store-storage';
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
 
@@ -80,10 +84,35 @@ export function getMachineId(): string | null {
 type TrackPayload = Record<string, unknown>;
 type TrackResult = TrackingResponse & { sessionId?: string; isFirstLaunch?: boolean };
 
+const PRODUCT_ANALYTICS_EVENTS = new Set(['session_start', 'session_end']);
+const LOCALIZATION_ANALYTICS_EVENTS = new Set([
+  'support_click',
+  'failed_search',
+  'uninstall',
+  'playtime',
+]);
+
+function isEventEnabled(type: unknown): boolean {
+  if (typeof type !== 'string') {
+    return true;
+  }
+  if (PRODUCT_ANALYTICS_EVENTS.has(type)) {
+    return isProductAnalyticsEnabled();
+  }
+  if (LOCALIZATION_ANALYTICS_EVENTS.has(type)) {
+    return isLocalizationAnalyticsEnabled();
+  }
+  return true;
+}
+
 /**
  * Call the `track` edge function with the given payload.
  */
 async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
+  if (!isEventEnabled(body['type'])) {
+    return { success: false, error: 'analytics_disabled' };
+  }
+
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.functions.invoke<TrackResult>('track', { body });
 
@@ -106,6 +135,7 @@ export async function getSignedDownloadUrl(
     return { success: false, error: 'E2E mode' };
   }
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
+  const reportFirstSession = isFirstSession && isProductAnalyticsEnabled();
 
   // Get machine ID for unique downloads tracking (not for rate limiting)
   const machineId = getMachineId();
@@ -127,7 +157,7 @@ export async function getSignedDownloadUrl(
         archivePath,
         archiveType,
         machineId, // For unique downloads statistics
-        isFirstSession, // For first session conversion tracking
+        isFirstSession: reportFirstSession, // For first session conversion tracking
       },
     });
 
