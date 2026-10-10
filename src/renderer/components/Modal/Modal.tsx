@@ -64,9 +64,9 @@ export const Modal: React.FC<ModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
-            className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
+            className={`relative max-w-200 w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
             ${classNames}
-            ${styleModal === 'promo' ? 'glass-card glass-card-gold p-0! overflow-hidden min-h-[400px]' : 'bg-[rgb(15,15,16)] rounded-[16px] modal-gradient-border'}`}
+            ${styleModal === 'promo' ? 'glass-card glass-card-gold p-0! overflow-hidden min-h-100' : 'bg-[rgb(15,15,16)] rounded-2xl modal-gradient-border'}`}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
