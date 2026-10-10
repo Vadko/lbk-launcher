@@ -2549,6 +2549,7 @@ export type Database = {
       }
       users: {
         Row: {
+          analytics_enabled: boolean
           approved: boolean
           approved_at: string | null
           approved_by: string | null
@@ -2572,6 +2573,7 @@ export type Database = {
           verified_user: boolean
         }
         Insert: {
+          analytics_enabled?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -2595,6 +2597,7 @@ export type Database = {
           verified_user?: boolean
         }
         Update: {
+          analytics_enabled?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null

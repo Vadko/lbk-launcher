@@ -6,6 +6,7 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initFeedbackReplies } from './store/feedbackReplyBridge';
+import { useSettingsStore } from './store/useSettingsStore';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/space-grotesk';
@@ -17,7 +18,9 @@ sentryInit(
   {
     release: __SENTRY_RELEASE__,
     sendDefaultPii: true,
-    enabled: !window.electronAPI?.isE2E?.(),
+    enabled:
+      !window.electronAPI?.isE2E?.() &&
+      useSettingsStore.getState().crashDiagnosticsEnabled,
     integrations: [browserTracingIntegration()],
     tracesSampleRate: 1.0,
     enableLogs: true,

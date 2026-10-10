@@ -96,7 +96,7 @@
     "@types/react-lazy-load-image-component": "1.6.5",
     "@vitejs/plugin-react-swc": "4.3.3",
     "electron": "44.5.1",
-    "electron-builder": "26.15.3",
+    "electron-builder": "26.17.0",
     "electron-devtools-installer": "4.0.0",
     "electron-updater": "6.8.9",
     "electron-vite": "5.0.0",

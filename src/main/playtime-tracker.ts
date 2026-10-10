@@ -16,6 +16,7 @@ import * as path from 'path';
 import { getDatabase } from './db/database';
 import { getSteamPlaytimesForApps } from './game-detector/steam';
 import { getLocallyInstalledGameIds } from './installer/cache';
+import { isLocalizationAnalyticsEnabled } from './utils/store-storage';
 
 // ============================================================================
 // Types
@@ -165,6 +166,12 @@ async function getInstalledGamesWithSteamIds(): Promise<InstalledGameWithSteamId
  * Returns deltas from orphaned session (if any) for immediate sending
  */
 export async function recordPlaytimeAtSessionStart(): Promise<PlaytimeDelta[]> {
+  if (!isLocalizationAnalyticsEnabled()) {
+    sessionCache = null;
+    deleteCacheFromDisk();
+    return [];
+  }
+
   console.log('[PlaytimeTracker] Recording playtime at session start...');
 
   // Step 1: Check for orphaned cache from previous crashed/force-quit session
@@ -293,6 +300,13 @@ async function recoverOrphanedSession(): Promise<PlaytimeDelta[]> {
  * Compares current playtime with recorded values and returns deltas
  */
 export async function calculatePlaytimeDeltas(): Promise<PlaytimeDelta[]> {
+  // Toggled off mid-session: drop whatever was cached at startup instead of reading Steam again.
+  if (!isLocalizationAnalyticsEnabled()) {
+    sessionCache = null;
+    deleteCacheFromDisk();
+    return [];
+  }
+
   console.log('[PlaytimeTracker] Calculating playtime deltas...');
 
   const deltas: PlaytimeDelta[] = [];
