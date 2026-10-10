@@ -439,7 +439,7 @@ export const SettingsModal: React.FC = () => {
           <button
             onClick={closeSettingsModal}
             data-gamepad-cancel
-            className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+            className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             Закрити
           </button>
@@ -454,7 +454,7 @@ export const SettingsModal: React.FC = () => {
             data-gamepad-modal-item
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-[#0088cc] to-[#00aaff] flex items-center justify-center shrink-0">
               <MessageCircleIcon size={20} color="#ffffff" />
             </div>
             <div className="flex-1 text-left">
@@ -561,7 +561,7 @@ export const SettingsModal: React.FC = () => {
             aria-busy={isSyncingSteamCollection}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-main to-color-mixed flex items-center justify-center shrink-0">
               <AppActionIcon
                 phase={steamCollectionPhase}
                 icon={Library}
@@ -586,7 +586,7 @@ export const SettingsModal: React.FC = () => {
             aria-busy={isSyncingKurin}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center shrink-0">
               <AppActionIcon
                 phase={kurinSyncPhase}
                 icon={RefreshCw}
@@ -611,7 +611,7 @@ export const SettingsModal: React.FC = () => {
             aria-busy={isTogglingLbkShortcut}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
               <AppActionIcon
                 phase={lbkShortcutPhase}
                 icon={Gamepad}
@@ -633,7 +633,7 @@ export const SettingsModal: React.FC = () => {
             onClick={handleClearCacheOnly}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center shrink-0">
               <BrushCleaningIcon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
@@ -649,7 +649,7 @@ export const SettingsModal: React.FC = () => {
             onClick={handleClearAllData}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center shrink-0">
               <Trash2Icon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
@@ -706,7 +706,7 @@ export const SettingsModal: React.FC = () => {
                       <button
                         key={type}
                         onClick={() => playNotificationSound(type)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
                       >
                         <PlayIcon size={12} />
                         {label}
@@ -719,21 +719,21 @@ export const SettingsModal: React.FC = () => {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => playNavigateSound({ ignoreSettings: true })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       <PlayIcon size={12} />
                       Навігація
                     </button>
                     <button
                       onClick={() => playConfirmSound({ ignoreSettings: true })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       <PlayIcon size={12} />
                       Підтвердити
                     </button>
                     <button
                       onClick={() => playBackSound({ ignoreSettings: true })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
                       <PlayIcon size={12} />
                       Назад
@@ -765,7 +765,7 @@ export const SettingsModal: React.FC = () => {
             aria-busy={isOpeningLogsFolder}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-yellow-500 to-orange-500 flex items-center justify-center shrink-0">
               <AppActionIcon
                 phase={logsFolderPhase}
                 icon={FolderOpen}
@@ -783,7 +783,7 @@ export const SettingsModal: React.FC = () => {
             <Button
               onClick={handleOpenSendLogsModal}
               variant="secondary"
-              className="flex-shrink-0 !border-color-accent !text-color-accent"
+              className="shrink-0 border-color-accent! text-color-accent!"
             >
               Відправити файл
             </Button>
@@ -797,11 +797,11 @@ export const SettingsModal: React.FC = () => {
               <input
                 type="text"
                 placeholder="Код перекладу"
-                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent transition-colors duration-200 ${
+                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-hidden focus:border-color-accent transition-colors duration-200 ${
                   unlockPhase === 'done'
-                    ? '!border-color-main'
+                    ? 'border-color-main!'
                     : unlockPhase === 'error'
-                      ? '!border-red-400'
+                      ? 'border-red-400!'
                       : ''
                 }`}
                 ref={unhideTranslationInputRef}
@@ -810,7 +810,7 @@ export const SettingsModal: React.FC = () => {
                 onClick={handleUnlockTranslation}
                 aria-busy={isUnlockingTranslation}
                 variant="secondary"
-                className="flex-shrink-0 aria-busy:opacity-60 aria-busy:cursor-wait"
+                className="shrink-0 aria-busy:opacity-60 aria-busy:cursor-wait"
                 icon={<AppActionIcon phase={unlockPhase} icon={LockOpen} size={16} />}
               >
                 Розблокувати
@@ -822,7 +822,7 @@ export const SettingsModal: React.FC = () => {
             onClick={handleOpenChangelogModal}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center shrink-0">
               <SparklesIcon size={20} className="text-white" />
             </div>
             <div className="flex-1 text-left">
@@ -837,7 +837,7 @@ export const SettingsModal: React.FC = () => {
               onClick={handleOpenTermsModal}
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
                 <FileTextIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
@@ -851,7 +851,7 @@ export const SettingsModal: React.FC = () => {
               onClick={handleOpenPrivacyModal}
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
                 <ShieldIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">

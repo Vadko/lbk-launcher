@@ -1,6 +1,5 @@
 import * as Sentry from '@sentry/electron/main';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
-import windowStateKeeper from 'electron-window-state';
 import { join } from 'path';
 import { registerRoute } from '../lib/electron-router-dom';
 import {
@@ -9,7 +8,7 @@ import {
   removeLiquidGlass,
 } from './liquid-glass';
 import { openExternalUrl } from './utils/open-external';
-import { isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
+import { isLinux, isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
 import { readRendererSetting } from './utils/store-storage';
 import { getIcon } from './utils/theme';
 
@@ -30,22 +29,16 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();
 
-  // Remembers window size/position/maximized state between launches
-  // (including which monitor it was closed on)
-  const windowState = windowStateKeeper({
-    defaultWidth: 1400,
-    defaultHeight: 900,
-  });
-
   mainWindow = new BrowserWindow({
-    x: windowState.x,
-    y: windowState.y,
-    width: windowState.width,
-    height: windowState.height,
+    name: 'main',
+    windowStatePersistence: true,
+    width: 1400,
+    height: 900,
     minWidth: 1200,
     minHeight: 700,
     resizable: true,
     frame: false,
+    roundedCorners: !isLinux(),
     show: false, // Don't show until liquid glass is applied
     transparent: isSupported, // Enable transparency for liquid glass on macOS 26+
     backgroundColor: isSupported ? undefined : '#050b14', // No background color when transparent
@@ -65,8 +58,6 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   if (isSupported) {
     mainWindow.setWindowButtonVisibility(true);
   }
-
-  windowState.manage(mainWindow);
 
   // Register electron-router-dom route
   // This automatically handles loadURL/loadFile for both dev and production

@@ -28,7 +28,7 @@ export const FilterPillGroup: React.FC<FilterPillGroupProps> = ({
           key={option.value}
           onClick={() => onToggle(option.value)}
           data-gamepad-modal-item
-          className={selected ? '!bg-glass-hover !text-text-main !border-color-main' : ''}
+          className={selected ? 'bg-glass-hover! text-text-main! border-color-main!' : ''}
         >
           {option.icon}
           <span>{option.label}</span>

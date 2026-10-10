@@ -172,8 +172,13 @@ export function getGOGGalaxyClientPath(): string | null {
   try {
     if (isWindows()) {
       try {
+        const regPath = path.join(
+          process.env.SystemRoot || 'C:\\Windows',
+          'System32',
+          'reg.exe'
+        );
         const output = execSync(
-          'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths" /v client',
+          `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths" /v client`,
           { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
         );
         const match = output.match(/client\s+REG_SZ\s+(.+)/);

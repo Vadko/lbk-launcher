@@ -101,7 +101,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
           >
-            <div className="glass-card-no-motion !p-4 flex gap-6 items-center">
+            <div className="glass-card-no-motion p-4! flex gap-6 items-center">
               <WarningFillIcon size={32} />
               <div className="flex-1">
                 {hasInstalledGames ? (

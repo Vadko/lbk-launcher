@@ -1,13 +1,6 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "src/main/index.ts",
-    "src/main/db/db-worker.ts",
-    "src/preload/index.ts",
-    "src/renderer/main.tsx",
-    "electron.vite.config.ts"
-  ],
-  "project": ["src/**/*.{ts,tsx}"],
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "project": ["src/**/*.{ts,tsx,css}"],
   "ignore": [
     "src/lib/database.types.ts",
     "src/renderer/queries/index.ts",
@@ -16,5 +9,13 @@
   "ignoreDependencies": [
     "7zip-bin-full",
     "playwright-core"
+  ],
+  "ignoreBinaries": [
+    "flatpak",
+    "flatpak-spawn",
+    "heroic",
+    "lutris",
+    "xdg-open",
+    "xdg-settings"
   ]
 }

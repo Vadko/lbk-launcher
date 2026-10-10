@@ -106,8 +106,8 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         <div
           className={`h-full rounded-full transition-all duration-300 ease-out ${
             isPaused
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-              : 'bg-gradient-to-r from-color-accent to-color-main'
+              ? 'bg-linear-to-r/srgb from-amber-500 to-amber-600'
+              : 'bg-linear-to-r/srgb from-color-accent to-color-main'
           }`}
           style={{
             width: `${progress}%`,

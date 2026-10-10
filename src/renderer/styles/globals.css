@@ -1,77 +1,156 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss" source("../..");
 
-/* ==========================================================================
-   1. BASE STYLES & RESET
-   ========================================================================== */
+/* v4 gates hover behind (hover: hover), which drops hover styles on Steam Deck touch/gamepad input */
+@custom-variant hover (&:hover);
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  -webkit-user-drag: none;
-}
-
-img {
-  pointer-events: none;
-  user-select: none;
-}
-
-/* ==========================================================================
-   2. CSS VARIABLES - THEMES
-   ========================================================================== */
-
-:root {
+@theme {
   --font-head: "Space Grotesk Variable", "Space Grotesk", "Segoe UI", sans-serif;
   --font-body: "Inter Variable", "Inter", system-ui, sans-serif;
+
+  --animate-float: float 20s infinite alternate;
+  --animate-progress-glow: progressGlow 2s ease-in-out infinite;
+
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* v3 sRGB palette; v4 defaults are oklch and render more saturated on P3 displays */
+  --color-amber-100: #fef3c7;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-cyan-600: #0891b2;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-900: #111827;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-orange-500: #f97316;
+  --color-pink-500: #ec4899;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #a855f7;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #eab308;
+  --color-yellow-600: #ca8a04;
 }
 
-/* Dark theme (dark theme only) */
-:root {
-  --bg-dark: #0f0f10;
-  --glass: rgba(255, 255, 255, 0.03);
-  --glass-hover: rgba(255, 255, 255, 0.1);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-hover: rgba(255, 255, 255, 0.3);
-  --neon-green: #10b981;
-  --gamepad-focus: #fbbf24;
-  --text-main: #ffffff;
-  --text-dark: #121213;
-  --text-muted: #94a3b8;
+/* bg-/from-/via-/to- read --background-color-* first, text- and border- their own namespaces; --color-* serves the rest */
+@theme inline {
+  --background-color-bg-dark: var(--bg-dark);
+  --background-color-glass: var(--glass);
+  --background-color-glass-hover: var(--glass-hover);
 
-  --color-main: 168 207 150;
-  --color-accent: 255 164 122;
-  --color-mixed: 239 238 173;
+  --text-color-text-main: var(--text-main);
+  --text-color-text-dark: var(--text-dark);
+  --text-color-text-muted: var(--text-muted);
 
-  /* RGB triplets for tailwind <alpha-value> (from-bg-dark, /NN modifiers
-     are not generated from hex-var colors) */
-  --bg-dark-rgb: 15 15 16;
-  --neon-green-rgb: 16 185 129;
+  --border-color-border: var(--border);
+  --border-color-border-hover: var(--border-hover);
+
+  --color-bg-dark: rgb(var(--bg-dark-rgb));
+  --color-neon-green: rgb(var(--neon-green-rgb));
+  --color-color-main: rgb(var(--color-main));
+  --color-color-accent: rgb(var(--color-accent));
+  --color-color-mixed: rgb(var(--color-mixed));
 }
 
-/* ==========================================================================
-   3. BODY & ROOT STYLES
-   ========================================================================== */
+/* Unlayered rules beat every utility in v4, so element-level resets must live in a layer */
+@layer base {
+  /* ==========================================================================
+     1. BASE STYLES & RESET
+     ========================================================================== */
 
-body {
-  font-family: var(--font-body);
-  background: var(--bg-dark);
-  color: var(--text-main);
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-user-drag: none;
+  }
 
-#root {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  border-radius: 12px;
-}
+  img {
+    pointer-events: none;
+    user-select: none;
+  }
 
-html.maximized #root {
-  border-radius: 0;
+  /* ==========================================================================
+     2. CSS VARIABLES - THEMES
+     ========================================================================== */
+
+  /* Dark theme (dark theme only) */
+  :root {
+    --bg-dark: #0f0f10;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-hover: rgba(255, 255, 255, 0.1);
+    --border: rgba(255, 255, 255, 0.1);
+    --border-hover: rgba(255, 255, 255, 0.3);
+    --neon-green: #10b981;
+    --gamepad-focus: #fbbf24;
+    --text-main: #ffffff;
+    --text-dark: #121213;
+    --text-muted: #94a3b8;
+
+    --color-main: 168 207 150;
+    --color-accent: 255 164 122;
+    --color-mixed: 239 238 173;
+
+    /* RGB triplets behind the --color-* tokens in @theme inline */
+    --bg-dark-rgb: 15 15 16;
+    --neon-green-rgb: 16 185 129;
+  }
+
+  /* ==========================================================================
+     3. BODY & ROOT STYLES
+     ========================================================================== */
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-dark);
+    color: var(--text-main);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    border-radius: 12px;
+  }
+
+  html.maximized #root {
+    border-radius: 0;
+  }
+
+  /* v3 preflight defaults that v4 changed */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* ==========================================================================
@@ -137,6 +216,11 @@ html.maximized #root {
   user-select: none;
 }
 
+/* Unlayered, so it would otherwise beat the layered disabled:cursor-not-allowed utility */
+.glass-button:disabled {
+  cursor: not-allowed;
+}
+
 .glass-button:hover {
   background: rgba(255, 255, 255, 0.2);
   border-color: white;
@@ -168,10 +252,11 @@ body.liquid-glass-enabled #root > .app-loader {
   background: #0a0a0f !important;
 }
 
-body.liquid-glass-enabled .glass-panel,
-body.liquid-glass-enabled .glass-card,
-body.liquid-glass-enabled .glass-button,
-body.liquid-glass-enabled [class*="backdrop-blur"] {
+/* Native glass replaces the custom glass blurs; elements with a backdrop-blur-* utility deliberately keep it */
+body.liquid-glass-enabled
+:is(.glass-panel, .glass-card, .glass-card-no-motion, .glass-button):not(
+  [class*="backdrop-blur"]
+) {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
@@ -221,15 +306,11 @@ body.liquid-glass-enabled .glass-card {
 
 body.liquid-glass-enabled .modal-backdrop {
   background: rgba(0, 0, 0, 0.6) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 
 body.liquid-glass-enabled .modal-content {
   background: rgba(10, 15, 25, 0.97) !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 
 body.liquid-glass-enabled .modal-content .bg-glass {
@@ -258,8 +339,6 @@ body.liquid-glass-enabled .filter-dropdown {
 
 body.liquid-glass-enabled .glass-input {
   background: rgba(255, 255, 255, 0.05) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 
 body.liquid-glass-enabled .glass-input:focus {
@@ -397,16 +476,19 @@ input[type="search"]::-webkit-search-cancel-button {
    Critical for Steam Deck and low-power devices
    ========================================================================== */
 
-.no-animations,
-.no-animations *,
-.no-animations *::before,
-.no-animations *::after {
-  animation: none !important;
-  animation-duration: 0s !important;
-  animation-delay: 0s !important;
-  transition: none !important;
-  transition-duration: 0s !important;
-  transition-delay: 0s !important;
+/* Layered !important beats important utilities like transition-[...]!, unlayered would not */
+@layer base {
+  .no-animations,
+  .no-animations *,
+  .no-animations *::before,
+  .no-animations *::after {
+    animation: none !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition: none !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
 }
 
 /* Disable backdrop blur in no-animations mode for better performance */
@@ -428,6 +510,7 @@ input[type="search"]::-webkit-search-cancel-button {
 
 .no-animations [class*="group-hover:scale-"] {
   transform: none !important;
+  scale: none !important;
 }
 
 /* Disable expensive `filter: drop-shadow(...)` (regular filter, not backdrop). */
@@ -447,6 +530,8 @@ input[type="search"]::-webkit-search-cancel-button {
 .no-animations .group\/button:hover,
 .no-animations .hover-lift:hover {
   transform: none !important;
+  translate: none !important;
+  scale: none !important;
 }
 
 /* Disable progress bar glow animation */

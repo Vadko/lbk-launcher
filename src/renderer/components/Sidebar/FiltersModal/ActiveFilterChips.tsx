@@ -28,7 +28,7 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips }) =
             onClick={chip.onRemove}
             data-gamepad-modal-item
             title="Зняти фільтр"
-            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-glass text-text-muted hover:text-text-main flex-shrink-0"
+            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-glass text-text-muted hover:text-text-main shrink-0"
           >
             <XIcon size={12} />
           </button>

@@ -84,6 +84,10 @@ export function initTray(): void {
 }
 
 export function setupWindowControls(): void {
+  if (isMacOS()) {
+    Notification.isSupported();
+  }
+
   ipcMain.on('window:minimize', () => {
     const window = getMainWindow();
     window?.hide();
@@ -128,6 +132,10 @@ export function setupWindowControls(): void {
         body: options.body,
         icon: iconPath,
         silent: false,
+      });
+
+      notification.on('failed', (_event, error) => {
+        console.warn('[Notification] Failed to show notification:', error);
       });
 
       // Click on notification opens the app and navigates to game
@@ -213,7 +221,6 @@ export function setupWindowControls(): void {
           'filesystem',
           'indexdb',
           'localstorage',
-          'websql',
           'serviceworkers',
           'cachestorage',
         ],

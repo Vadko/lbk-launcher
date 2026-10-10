@@ -82,7 +82,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
               onToggle();
             }
           }}
-          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-none 
+          className={`game-list-item relative flex gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300 outline-hidden 
           } ${
             isAnySelected
               ? 'border border-[rgba(255,164,122,0.5)] shadow-[0_0_20px_rgba(255,164,122,0.2)]'
@@ -91,14 +91,14 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
         >
           {/* Adult content blur overlay */}
           {isAdultBlurred && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm">
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-xs">
               <EyeOffIcon size={16} className="text-white/70" />
             </div>
           )}
 
           {/* Thumbnail */}
           <div
-            className={`relative w-12 h-12 flex-shrink-0 select-none ${isAdultBlurred ? 'blur-md' : ''}`}
+            className={`relative w-12 h-12 shrink-0 select-none ${isAdultBlurred ? 'blur-md' : ''}`}
           >
             <div className="w-full h-full rounded-lg overflow-hidden bg-glass">
               {thumbnailUrl && !imageError ? (
@@ -126,7 +126,7 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
                   )}
                 </>
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-sm">
+                <div className="w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-sm">
                   {group.name.charAt(0)}
                 </div>
               )}
@@ -152,14 +152,14 @@ export const GameGroupItem: React.FC<GameGroupItemProps> = React.memo(
             </div>
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
                 style={{ width: `${avgProgress}%` }}
               />
             </div>
           </div>
 
           {/* Translations count + Chevron */}
-          <div className="flex-shrink-0 flex items-center gap-1 self-center">
+          <div className="shrink-0 flex items-center gap-1 self-center">
             {group.translations.length > 1 && (
               <span className="text-[10px] font-medium text-text-muted">
                 {group.translations.length}
