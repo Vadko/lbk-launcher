@@ -1,6 +1,5 @@
 import * as Sentry from '@sentry/electron/main';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
-import windowStateKeeper from 'electron-window-state';
 import { join } from 'path';
 import { registerRoute } from '../lib/electron-router-dom';
 import {
@@ -30,18 +29,11 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();
 
-  // Remembers window size/position/maximized state between launches
-  // (including which monitor it was closed on)
-  const windowState = windowStateKeeper({
-    defaultWidth: 1400,
-    defaultHeight: 900,
-  });
-
   mainWindow = new BrowserWindow({
-    x: windowState.x,
-    y: windowState.y,
-    width: windowState.width,
-    height: windowState.height,
+    name: 'main',
+    windowStatePersistence: true,
+    width: 1400,
+    height: 900,
     minWidth: 1200,
     minHeight: 700,
     resizable: true,
@@ -66,8 +58,6 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   if (isSupported) {
     mainWindow.setWindowButtonVisibility(true);
   }
-
-  windowState.manage(mainWindow);
 
   // Register electron-router-dom route
   // This automatically handles loadURL/loadFile for both dev and production
