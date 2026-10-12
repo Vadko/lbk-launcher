@@ -47,6 +47,7 @@ export default defineConfig({
       },
       rollupOptions: {
         input: {
+          boot: path.resolve(__dirname, 'src/main/boot.ts'),
           index: path.resolve(__dirname, 'src/main/index.ts'),
           'db-worker': path.resolve(__dirname, 'src/main/db/db-worker.ts'),
         },

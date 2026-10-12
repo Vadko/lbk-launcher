@@ -7,7 +7,7 @@
     "email": "info@lbklauncher.com"
   },
   "license": "GPL-3.0-or-later",
-  "main": "out/main/index.js",
+  "main": "out/main/boot.js",
   "packageManager": "pnpm@11.4.0",
   "engines": {
     "node": ">=24.21.0"

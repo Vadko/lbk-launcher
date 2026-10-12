@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/electron/main';
 import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import { bootLog } from './boot-log';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import {
@@ -165,13 +166,16 @@ let realtimeManager: SupabaseRealtimeManager | null = null;
 let currentSyncStatus: 'syncing' | 'ready' | 'error' = 'syncing';
 
 // Single instance lock - prevent multiple instances of the app
+bootLog('main imports evaluated');
 const gotTheLock = app.requestSingleInstanceLock();
+bootLog('single instance lock acquired:', gotTheLock);
 
 if (!gotTheLock) {
   app.quit();
 } else {
   // Initialize logger early to capture all logs
   initLogger();
+  bootLog('logger initialised');
 
   // Catch unhandled errors in main process to prevent crashes
   process.on('uncaughtException', (error) => {
@@ -243,6 +247,7 @@ if (!gotTheLock) {
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
+  bootLog('IPC handlers registered');
 
   // IPC handler for getting current sync status
   ipcMain.handle('get-sync-status', () => currentSyncStatus);
@@ -276,7 +281,9 @@ if (!gotTheLock) {
 
     // Initialize the local database
     console.log('[Main] Initializing local database...');
+    bootLog('initDatabase start');
     initDatabase();
+    bootLog('initDatabase done');
 
     // Fix YouTube error 153 by setting Referer header for YouTube requests
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -290,8 +297,11 @@ if (!gotTheLock) {
     });
 
     // Create the window BEFORE syncing, so the loader shows
+    bootLog('createMainWindow start');
     await createMainWindow();
+    bootLog('createMainWindow done');
     initTray();
+    bootLog('tray initialised, sync start');
 
     // Send sync status to the renderer
     const sendSyncStatus = (status: 'syncing' | 'ready' | 'error') => {
@@ -321,6 +331,7 @@ if (!gotTheLock) {
       }
       console.log('[Main] Initial sync completed');
       sendSyncStatus('ready');
+      bootLog('sync ready');
     } catch (error) {
       const code = (error as { code?: string }).code;
       const hint: Record<string, string> = {
@@ -334,6 +345,7 @@ if (!gotTheLock) {
         (code && hint[code]) || error
       );
       sendSyncStatus('error');
+      bootLog('sync error', error);
     }
 
     console.log('[Main] Setting up realtime subscription...');
