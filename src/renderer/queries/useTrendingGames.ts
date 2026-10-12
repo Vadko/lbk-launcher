@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Game } from '../types/game';
+import type { Game } from '../../shared/types';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const ONE_DAY = 24 * 60 * 60 * 1000;

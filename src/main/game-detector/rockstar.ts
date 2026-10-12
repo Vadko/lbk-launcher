@@ -2,11 +2,13 @@
  * Rockstar Games Launcher Detection
  */
 
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { HKEY } from 'registry-js';
 import { isMacOS, isWindows } from '../utils/platform';
+import { getRegistryString } from '../utils/registry';
+import { logIfChanged } from './log-if-changed';
 
 /**
  * Detect Rockstar Games Launcher installation path
@@ -63,6 +65,15 @@ function getRockstarPath(): string | null {
   return null;
 }
 
+const ROCKSTAR_GAMES = [
+  { key: 'Grand Theft Auto V', registry: 'Grand Theft Auto V' },
+  { key: 'Red Dead Redemption 2', registry: 'Red Dead Redemption 2' },
+  { key: 'Grand Theft Auto IV', registry: 'Grand Theft Auto IV' },
+  { key: 'Max Payne 3', registry: 'Max Payne 3' },
+  { key: 'L.A. Noire', registry: 'L.A. Noire' },
+  { key: 'GTA San Andreas', registry: 'Grand Theft Auto San Andreas' },
+];
+
 /**
  * Get Rockstar Games installation directories from registry
  */
@@ -74,56 +85,21 @@ function getRockstarGamePaths(): Map<string, string> {
   }
 
   try {
-    const regPath = path.join(
-      process.env.SystemRoot || 'C:\\Windows',
-      'System32',
-      'reg.exe'
-    );
-
-    const rockstarGames = [
-      { key: 'Grand Theft Auto V', registry: 'Grand Theft Auto V' },
-      { key: 'Red Dead Redemption 2', registry: 'Red Dead Redemption 2' },
-      { key: 'Grand Theft Auto IV', registry: 'Grand Theft Auto IV' },
-      { key: 'Max Payne 3', registry: 'Max Payne 3' },
-      { key: 'L.A. Noire', registry: 'L.A. Noire' },
-      { key: 'GTA San Andreas', registry: 'Grand Theft Auto San Andreas' },
-    ];
-
-    for (const game of rockstarGames) {
-      try {
-        const output = execSync(
-          `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Rockstar Games\\${game.registry}" /v InstallFolder`,
-          { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'ignore'] }
-        );
-        const match = output.match(/InstallFolder\s+REG_SZ\s+(.+)/);
-        if (match?.[1]) {
-          const installPath = match[1].trim();
-          if (fs.existsSync(installPath)) {
-            const folderName = path.basename(installPath);
-            games.set(folderName.toLowerCase(), installPath);
-            console.log(`[Rockstar] Game found: ${game.key} at ${installPath}`);
-          }
-        }
-      } catch {
-        try {
-          const output = execSync(
-            `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Rockstar Games\\${game.registry}" /v InstallFolder`,
-            { encoding: 'utf8', timeout: 5000, stdio: ['pipe', 'pipe', 'ignore'] }
-          );
-          const match = output.match(/InstallFolder\s+REG_SZ\s+(.+)/);
-          if (match?.[1]) {
-            const installPath = match[1].trim();
-            if (fs.existsSync(installPath)) {
-              const folderName = path.basename(installPath);
-              games.set(folderName.toLowerCase(), installPath);
-              console.log(
-                `[Rockstar] Game found (32-bit): ${game.key} at ${installPath}`
-              );
-            }
-          }
-        } catch {
-          // Game not found
-        }
+    for (const game of ROCKSTAR_GAMES) {
+      const installPath = [
+        'SOFTWARE\\WOW6432Node\\Rockstar Games',
+        'SOFTWARE\\Rockstar Games',
+      ]
+        .map((root) =>
+          getRegistryString(
+            HKEY.HKEY_LOCAL_MACHINE,
+            `${root}\\${game.registry}`,
+            'InstallFolder'
+          )?.trim()
+        )
+        .find((folder) => folder && fs.existsSync(folder));
+      if (installPath) {
+        games.set(path.basename(installPath).toLowerCase(), installPath);
       }
     }
 
@@ -151,9 +127,6 @@ function getRockstarGamePaths(): Map<string, string> {
               const gamePath = path.join(basePath, entry.name);
               if (!games.has(entry.name.toLowerCase())) {
                 games.set(entry.name.toLowerCase(), gamePath);
-                console.log(
-                  `[Rockstar] Game found in folder: ${entry.name} at ${gamePath}`
-                );
               }
             }
           }
@@ -166,6 +139,10 @@ function getRockstarGamePaths(): Map<string, string> {
     console.error('[Rockstar] Error getting game paths:', error);
   }
 
+  logIfChanged(
+    'rockstar-installed',
+    `[Rockstar] Found ${games.size} games: ${[...games.values()].join(', ')}`
+  );
   return games;
 }
 

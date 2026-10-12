@@ -8,8 +8,9 @@ import {
   UsersIcon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
-import { SORT_OPTIONS, type SortOrderType } from './types';
+import { SORT_OPTIONS } from './types';
 
 const SORT_ICONS: Record<string, React.ReactNode> = {
   name: <ArrowDownAZIcon size={14} />,

@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import type {
   DetectedGameInfo,
   DownloadProgress,
+  Game,
   InstallationInfo,
   InstallationStatusTone,
 } from '../../shared/types';
-import type { Game } from '../types/game';
 import { trackEvent } from '../utils/analytics';
 import { useSettingsStore } from './useSettingsStore';
 import { useSubscriptionsStore } from './useSubscriptionsStore';

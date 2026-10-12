@@ -2,8 +2,6 @@ import os from 'node:os';
 import { app, ipcMain } from 'electron';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
-  countGamesBySteamAppIds,
-  fetchFilterCounts,
   fetchGames,
   fetchGamesByIds,
   fetchRecommendedGames,
@@ -29,22 +27,25 @@ import {
   detectGamePaths,
   getAllInstalledGamePaths,
   getDetectedGames,
-  getEpicAppName,
-  getEpicLibrary,
   getFirstAvailableGamePath,
-  getGOGGalaxyClientPath,
-  getGOGGameId,
-  getGogLibrary,
   getHeroicGame,
-  getInstalledSteamAppIds,
-  getInstalledXboxGamePaths,
-  getLutrisSlug,
-  getSteamLibraryAppIds,
-  getUplayGameId,
 } from '../game-detector';
+import { getEpicAppName } from '../game-detector/epic';
+import { getGOGGalaxyClientPath, getGOGGameId } from '../game-detector/gog';
 import { syncKurinGames } from '../game-detector/kurin';
+import { getLutrisSlug } from '../game-detector/lutris';
+import { getInstalledSteamAppIds, getSteamLibraryAppIds } from '../game-detector/steam';
+import {
+  getEpicLibrary,
+  getGogLibrary,
+  getInstalledXboxGamePaths,
+} from '../game-detector/store-cache';
+import { getUplayGameId } from '../game-detector/uplay';
+import { refreshXboxRootsForGame, whenXboxRootsScanned } from '../game-detector/xbox';
 import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
+import { getLibraryMemberships } from '../library-memberships';
+import { checkStoreLibraries } from '../store-library-watcher';
 import {
   getFeedbackUploadUrls,
   getMachineId,
@@ -266,19 +267,38 @@ export function setupGamesHandlers(): void {
     }
   });
 
-  // Fetch filter counts - SYNC (efficient SQL aggregation)
-  ipcMain.handle('fetch-filter-counts', () => {
+  // Slim catalog projection for renderer-side faceted filter counts - SYNC
+  ipcMain.handle('fetch-facet-rows', () => {
     try {
-      return fetchFilterCounts();
+      return GamesRepository.getInstance().getFacetRows();
     } catch (error) {
-      console.error('Error fetching filter counts:', error);
-      return {
-        planned: 0,
-        'in-progress': 0,
-        completed: 0,
-        'with-achievements': 0,
-        'with-voice': 0,
-      };
+      console.error('Error fetching facet rows:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('fetch-search-match-ids', (_, searchQuery: string) => {
+    try {
+      return GamesRepository.getInstance().getSearchMatchIds(searchQuery);
+    } catch (error) {
+      console.error('Error fetching search match ids:', error);
+      return null;
+    }
+  });
+
+  // Re-probes every store off the fingerprints; a change also emits store-library-changed
+  ipcMain.handle('check-store-libraries', () => checkStoreLibraries());
+
+  // Store probes hit the disk, so the renderer calls this on library events, never per filter click
+  ipcMain.handle('get-library-memberships', async () => {
+    const timer = createTimer('IPC: get-library-memberships');
+    try {
+      return await getLibraryMemberships();
+    } catch (error) {
+      console.error('Error getting library memberships:', error);
+      return null;
+    } finally {
+      timer.end();
     }
   });
 
@@ -306,6 +326,7 @@ export function setupGamesHandlers(): void {
   ipcMain.handle('get-all-installed-game-paths', async () => {
     const timer = createTimer('IPC: get-all-installed-game-paths');
     try {
+      await whenXboxRootsScanned();
       const result = getAllInstalledGamePaths();
       timer.end();
       return result;
@@ -321,6 +342,7 @@ export function setupGamesHandlers(): void {
   ipcMain.handle('get-detected-games', async () => {
     const timer = createTimer('IPC: get-detected-games');
     try {
+      await whenXboxRootsScanned();
       return getDetectedGames();
     } catch (error) {
       // Rethrow so the renderer's catch preserves prior detection instead of
@@ -345,6 +367,7 @@ export function setupGamesHandlers(): void {
   // Detect available platforms for a game
   ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
     try {
+      await refreshXboxRootsForGame(game.install_paths);
       return detectGamePaths(game.install_paths || [], game.steam_app_id);
     } catch (error) {
       console.error('Error detecting game platforms:', error);
@@ -417,16 +440,6 @@ export function setupGamesHandlers(): void {
     }
   );
 
-  // Count games by Steam App IDs
-  ipcMain.handle('count-games-by-steam-app-ids', (_, steamAppIds: number[]) => {
-    try {
-      return countGamesBySteamAppIds(steamAppIds);
-    } catch (error) {
-      console.error('Error counting games by Steam App IDs:', error);
-      return 0;
-    }
-  });
-
   // Get GOG library
   ipcMain.handle('get-gog-library', () => {
     try {
@@ -468,8 +481,9 @@ export function setupGamesHandlers(): void {
   });
 
   // Get Xbox installed game folder names (parsed from .GamingRoot)
-  ipcMain.handle('get-xbox-installed-paths', () => {
+  ipcMain.handle('get-xbox-installed-paths', async () => {
     try {
+      await whenXboxRootsScanned();
       return getInstalledXboxGamePaths();
     } catch (error) {
       console.error('Error getting Xbox installed paths:', error);
@@ -510,6 +524,8 @@ export function setupGamesHandlers(): void {
         '[LaunchGame] Game install paths:',
         JSON.stringify(game.install_paths, null, 2)
       );
+
+      await refreshXboxRootsForGame(game.install_paths);
 
       // Check if localization is installed and get platform info
       const installInfo = await checkInstallation(game);

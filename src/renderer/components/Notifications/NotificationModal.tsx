@@ -16,12 +16,10 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { Notification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import {
-  type Notification,
-  useSubscriptionsStore,
-} from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';

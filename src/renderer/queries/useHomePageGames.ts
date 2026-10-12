@@ -1,5 +1,4 @@
-import type { SortOrderType } from '../../shared/types';
-import type { Game } from '../types/game';
+import type { Game, SortOrderType } from '../../shared/types';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -62,12 +61,8 @@ export function useInstalledGamesForHome(
   return useSyncAwareQuery({
     queryKey: homeGamesKeys.installedGames(hideAiTranslations, sortOrder),
     queryFn: async (): Promise<Game[]> => {
+      // No early return on zero paths: main also matches installed Steam app ids
       const installPaths = await window.electronAPI.getAllInstalledGamePaths();
-
-      if (installPaths.length === 0) {
-        return [];
-      }
-
       const result = await window.electronAPI.findGamesByInstallPaths(
         installPaths,
         undefined,

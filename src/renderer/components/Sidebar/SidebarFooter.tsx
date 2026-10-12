@@ -1,3 +1,4 @@
+import { useAnimate } from 'framer-motion';
 import { Bell, BellRing, Volume2, VolumeX } from 'lucide';
 import {
   BookOpenTextIcon,
@@ -6,7 +7,7 @@ import {
   NewspaperIcon,
   SettingsIcon,
 } from 'lucide-react';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { AppActionIcon } from '../ui/AppActionIcon';
@@ -23,6 +24,24 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
   ({ onOpenHistory, onOpenSettings, unreadCount, isCompact = false }) => {
     const navigate = useNavigate();
     const { gamepadSoundsEnabled, toggleGamepadSounds } = useSettingsStore();
+    const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
+    const [badgeRef, animateBadge] = useAnimate<HTMLSpanElement>();
+    const prevUnreadCount = useRef(0);
+
+    useEffect(() => {
+      if (
+        animationsEnabled &&
+        unreadCount > prevUnreadCount.current &&
+        badgeRef.current
+      ) {
+        animateBadge(
+          badgeRef.current,
+          { opacity: [1, 0.5, 1] },
+          { duration: 2, repeat: 2, ease: [0.4, 0, 0.6, 1] }
+        );
+      }
+      prevUnreadCount.current = unreadCount;
+    }, [unreadCount, animationsEnabled, animateBadge, badgeRef]);
 
     return (
       <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
@@ -98,7 +117,10 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
             className="text-text-muted"
           />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+            <span
+              ref={badgeRef}
+              className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center"
+            >
               <AppNumberFlow
                 value={Math.min(unreadCount, 9)}
                 suffix={unreadCount > 9 ? '+' : undefined}

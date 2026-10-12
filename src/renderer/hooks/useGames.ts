@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SortOrderType } from '../../shared/types';
+import {
+  matchesAuthors,
+  matchesContentTypes,
+  matchesStatuses,
+  matchesTags,
+  matchesTranslationTypes,
+} from '../../shared/game-filters';
 import type {
   ContentTypeFilterType,
+  Game,
+  GetGamesParams,
+  SortOrderType,
   SpecialFilterType,
   TranslationTypeFilterType,
-} from '../components/Sidebar/types';
+} from '../../shared/types';
 import { useStore } from '../store/useStore';
 import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
-import type { Game, GetGamesParams } from '../types/game';
 import { allInstalledTranslationIds } from './useInstalledTranslations';
 
 interface UseGamesParams {
@@ -20,68 +28,6 @@ interface UseGamesParams {
   searchQuery?: string;
   sortOrder?: SortOrderType;
   hideAiTranslations?: boolean;
-}
-
-/** Status group is OR'ed internally, then AND'ed against the other groups. */
-function matchesStatuses(game: Game, statuses?: string[]): boolean {
-  return !statuses || statuses.length === 0 || statuses.includes(game.status);
-}
-
-/** Authors group is OR'ed internally, then AND'ed against the other groups. */
-function matchesAuthors(game: Game, authors?: string[]): boolean {
-  if (!authors || authors.length === 0) {
-    return true;
-  }
-  if (!game.team) {
-    return false;
-  }
-  return authors.some((author) => game.team?.includes(author));
-}
-
-/** Tag group is OR'ed internally, then AND'ed against the other groups. */
-function matchesTags(game: Game, tagIds?: number[]): boolean {
-  if (!tagIds || tagIds.length === 0) {
-    return true;
-  }
-  return tagIds.some((tagId) => game.steam_tag_ids?.includes(tagId));
-}
-
-/** Content-type group (achievements/voice) is AND'ed internally - selecting both requires both. */
-function matchesContentTypes(
-  game: Game,
-  contentTypes?: ContentTypeFilterType[]
-): boolean {
-  if (!contentTypes || contentTypes.length === 0) {
-    return true;
-  }
-  return contentTypes.every((type) => {
-    if (type === 'with-achievements') {
-      return !!game.achievements_archive_path;
-    }
-    if (type === 'from-workshop') {
-      return game.kind === 'workshop';
-    }
-    return !!game.voice_archive_path || game.voice_progress !== null;
-  });
-}
-
-/** Translation-type group is OR'ed internally, then AND'ed against the other groups. */
-function matchesTranslationTypes(
-  game: Game,
-  translationTypes?: TranslationTypeFilterType[]
-): boolean {
-  if (!translationTypes || translationTypes.length === 0) {
-    return true;
-  }
-  return translationTypes.some((type) => {
-    if (type === 'manual') {
-      return game.ai === null;
-    }
-    if (type === 'ai-edited') {
-      return game.ai === 'edited';
-    }
-    return game.ai === 'non-edited';
-  });
 }
 
 /** AND-combine every active filter group across a games list. */
@@ -155,14 +101,14 @@ const LIBRARY_SOURCES: Record<
       sql,
       signal
     ),
-  'installed-games': (sql, signal) =>
-    fetchLibraryGames(
-      () => window.electronAPI.getAllInstalledGamePaths(),
-      (paths, ...q) =>
-        window.electronAPI.findGamesByInstallPaths(paths, ...q).then((r) => r.games),
-      sql,
-      signal
-    ),
+  'installed-games': async (sql, signal) => {
+    const paths = await window.electronAPI.getAllInstalledGamePaths();
+    if (signal.aborted) {
+      return SUPERSEDED;
+    }
+    const { games } = await window.electronAPI.findGamesByInstallPaths(paths, ...sql);
+    return signal.aborted ? SUPERSEDED : games;
+  },
   'available-in-steam': (sql, signal) =>
     fetchLibraryGames(
       () => window.electronAPI.getSteamLibraryAppIds(),
@@ -196,6 +142,34 @@ const LIBRARY_SOURCES: Record<
       sql,
       signal
     ),
+};
+
+type LibraryChangeEvent = (onChange: () => void) => () => void;
+
+const onInstalledTranslationsChanged: LibraryChangeEvent = (onChange) => {
+  const unsubscribeFiles = window.electronAPI.onInstalledGamesChanged?.(onChange);
+  const unsubscribeWorkshop = subscribeToWorkshopInstalledChanges(onChange);
+  return () => {
+    unsubscribeFiles?.();
+    unsubscribeWorkshop();
+  };
+};
+
+const onSteamLibraryChanged: LibraryChangeEvent = (onChange) =>
+  window.electronAPI.onSteamLibraryChanged?.(onChange) ?? (() => undefined);
+
+const onStoreLibraryChanged: LibraryChangeEvent = (onChange) =>
+  window.electronAPI.onStoreLibraryChanged(onChange);
+
+// Each library has its own source, so each reloads on its own events; Steam and store watchers both feed installed-games
+const LIBRARY_CHANGE_EVENTS: Record<SpecialFilterType, LibraryChangeEvent[]> = {
+  'favorite-translations': [],
+  'installed-translations': [onInstalledTranslationsChanged],
+  'installed-games': [onSteamLibraryChanged, onStoreLibraryChanged],
+  'available-in-steam': [onSteamLibraryChanged],
+  'owned-gog-games': [onStoreLibraryChanged],
+  'owned-epic-games': [onStoreLibraryChanged],
+  'installed-xbox-games': [onStoreLibraryChanged],
 };
 
 /**
@@ -534,55 +508,22 @@ export function useGames({
     return unsubscribe;
   }, []);
 
-  // Listen for changes in installed translations (install/uninstall)
-  // Re-register the listener when specialFilter changes so the closure stays correct
+  // Re-fetch the active library filter when its source changes; the closure follows specialFilter
   useEffect(() => {
-    if (!window.electronAPI?.onInstalledGamesChanged) {
+    if (!specialFilter || !Object.hasOwn(LIBRARY_CHANGE_EVENTS, specialFilter)) {
       return;
     }
-    // Only subscribe if the corresponding filter is active
-    if (specialFilter !== 'installed-translations') {
-      return;
-    }
-
-    const handleInstalledGamesChanged = () => {
-      console.log('[useGames] Installed translations changed, reloading list');
-      loadGames();
-    };
-
-    const unsubscribe = window.electronAPI.onInstalledGamesChanged(
-      handleInstalledGamesChanged
-    );
-
-    const unsubscribeWorkshop = subscribeToWorkshopInstalledChanges(
-      handleInstalledGamesChanged
+    const unsubscribes = LIBRARY_CHANGE_EVENTS[specialFilter].map((subscribe) =>
+      subscribe(() => {
+        console.log(`[useGames] ${specialFilter} source changed, reloading list`);
+        loadGames();
+      })
     );
     return () => {
-      unsubscribe();
-      unsubscribeWorkshop();
+      for (const unsubscribe of unsubscribes) {
+        unsubscribe();
+      }
     };
-  }, [specialFilter, loadGames]);
-
-  // Listen for Steam library changes (for the installed games and available-in-Steam tabs)
-  // Re-register the listener when specialFilter changes so the closure stays correct
-  useEffect(() => {
-    if (!window.electronAPI?.onSteamLibraryChanged) {
-      return;
-    }
-    // Only subscribe if the corresponding filter is active
-    if (specialFilter !== 'installed-games' && specialFilter !== 'available-in-steam') {
-      return;
-    }
-
-    const handleSteamLibraryChanged = () => {
-      console.log('[useGames] Steam library changed, reloading list');
-      loadGames();
-    };
-
-    const unsubscribe = window.electronAPI.onSteamLibraryChanged(
-      handleSteamLibraryChanged
-    );
-    return unsubscribe;
   }, [specialFilter, loadGames]);
 
   // Cleanup abort controller on unmount

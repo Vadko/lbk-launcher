@@ -9,21 +9,24 @@ import * as path from 'path';
 import { isLinux } from '../utils/platform';
 import { getCleanTitle } from './game-titles';
 
+/** Lutris database locations (native + Flatpak), whether or not Lutris is installed */
+export function getLutrisDBCandidatePaths(): string[] {
+  if (!isLinux()) {
+    return [];
+  }
+
+  const home = os.homedir();
+  return [
+    path.join(home, '.local/share/lutris/pga.db'),
+    path.join(home, '.var/app/net.lutris.Lutris/data/lutris/pga.db'),
+  ];
+}
+
 /**
  * Get Lutris database paths (native + Flatpak)
  */
 function getLutrisDBPath(): string | null {
-  if (!isLinux()) {
-    return null;
-  }
-
-  const home = os.homedir();
-  const possiblePaths = [
-    path.join(home, '.local/share/lutris/pga.db'),
-    path.join(home, '.var/app/net.lutris.Lutris/data/lutris/pga.db'),
-  ];
-
-  for (const dbPath of possiblePaths) {
+  for (const dbPath of getLutrisDBCandidatePaths()) {
     if (fs.existsSync(dbPath)) {
       return dbPath;
     }

@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
+import type { Game } from '../../../shared/types';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
-import type { Game } from '../../types/game';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Tooltip } from '../ui/Tooltip';
 

@@ -25,9 +25,6 @@ import type {
   ToastNotification,
 } from './subscriptions/types';
 
-// Re-export types for external use
-export type { Notification, ToastNotification } from './subscriptions/types';
-
 export const APP_UPDATE_GAME_ID = 'app';
 
 interface SubscriptionsStore extends PersistedSubscriptionsState {

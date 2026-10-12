@@ -21,7 +21,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import type { InstallPath } from '../../shared/types';
 import { isWindows } from '../utils/platform';
+import { logIfChanged } from './log-if-changed';
 
 const GAMING_ROOT_FILE = '.GamingRoot';
 const GAMING_ROOT_MAGIC = 'RGBX';
@@ -31,29 +33,6 @@ const MAX_FOLDER_COUNT = 255;
 interface XboxRoot {
   drive: string; // e.g. "D:\"
   gamingRootPath: string; // absolute path, e.g. "D:\XboxGames"
-}
-
-/**
- * List drive letters available on Windows (e.g. ["C:\\", "D:\\"]).
- */
-function getWindowsDrives(): string[] {
-  if (!isWindows()) {
-    return [];
-  }
-
-  const drives: string[] = [];
-  // Iterate A..Z; existsSync on a drive root is fast and avoids spawning wmic.
-  for (let charCode = 'A'.charCodeAt(0); charCode <= 'Z'.charCodeAt(0); charCode++) {
-    const drive = `${String.fromCharCode(charCode)}:\\`;
-    try {
-      if (fs.existsSync(drive)) {
-        drives.push(drive);
-      }
-    } catch {
-      // Inaccessible drive (e.g. unmounted CD-ROM) — skip.
-    }
-  }
-  return drives;
 }
 
 /**
@@ -81,9 +60,8 @@ function readNullTerminatedUtf16LE(
  * Parse a .GamingRoot file and return all relative folder paths it points to.
  * Returns an empty array if the file is not a valid GamingRoot blob.
  */
-function parseGamingRoot(filePath: string): string[] {
+function parseGamingRoot(filePath: string, buffer: Buffer): string[] {
   try {
-    const buffer = fs.readFileSync(filePath);
     if (buffer.length < 8) {
       return [];
     }
@@ -123,29 +101,157 @@ function parseGamingRoot(filePath: string): string[] {
   }
 }
 
-/**
- * Scan all available Windows drives for `.GamingRoot` markers and return
- * the resolved Xbox install roots.
- */
-function getXboxRoots(): XboxRoot[] {
-  if (!isWindows()) {
+// A dead network drive can hang access for seconds: scan async, one drive at a time; sync readers get the last result
+const DRIVE_TIMEOUT_MS = 2000;
+// Each hung access pins one of libuv's 4 threads until the OS gives up, so a scan stops probing at this many
+const MAX_STUCK_DRIVES = 2;
+const DRIVE_LETTERS = Array.from(
+  { length: 26 },
+  (_, i) => `${String.fromCharCode(65 + i)}:\\`
+);
+const TIMED_OUT = Symbol('timed-out');
+
+let roots: XboxRoot[] = [];
+let hasScanned = false;
+let inFlightScan: Promise<boolean> | null = null;
+// Drives whose marker read outlived the timeout and is still running
+const stuckDrives = new Set<string>();
+// Slow and then failed: treated as dead until resume
+const deadDrives = new Set<string>();
+const rootsListeners = new Set<() => void>();
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function readDriveRoots(drive: string): Promise<XboxRoot[] | typeof TIMED_OUT> {
+  const markerPath = path.join(drive, GAMING_ROOT_FILE);
+  const read = fs.promises.readFile(markerPath).catch(() => null);
+  const marker = await withTimeout(read, DRIVE_TIMEOUT_MS);
+
+  if (marker === TIMED_OUT) {
+    // A timeout alone proves nothing (HDD spin-up, a busy main thread); the read's own outcome decides
+    stuckDrives.add(drive);
+    void read.then((late) => {
+      stuckDrives.delete(drive);
+      if (late) {
+        void refreshXboxRoots();
+      } else {
+        deadDrives.add(drive);
+      }
+    });
+    return TIMED_OUT;
+  }
+  if (!marker) {
     return [];
   }
 
-  const roots: XboxRoot[] = [];
-  for (const drive of getWindowsDrives()) {
-    const markerPath = path.join(drive, GAMING_ROOT_FILE);
-    if (!fs.existsSync(markerPath)) {
+  const driveRoots: XboxRoot[] = [];
+  for (const relative of parseGamingRoot(markerPath, marker)) {
+    const gamingRootPath = path.join(drive, relative);
+    const exists = await fs.promises.access(gamingRootPath).then(
+      () => true,
+      () => false
+    );
+    if (exists) {
+      driveRoots.push({ drive, gamingRootPath });
+    }
+  }
+  return driveRoots;
+}
+
+const rootsKey = (list: XboxRoot[]) => list.map((root) => root.gamingRootPath).join('|');
+
+async function scanXboxRoots(): Promise<boolean> {
+  const next: XboxRoot[] = [];
+  // A drive we can't read right now keeps the roots it had, so its games don't flicker out
+  const keepKnownRoots = (drive: string) =>
+    next.push(...roots.filter((root) => root.drive === drive));
+
+  for (const drive of DRIVE_LETTERS) {
+    if (
+      deadDrives.has(drive) ||
+      stuckDrives.has(drive) ||
+      stuckDrives.size >= MAX_STUCK_DRIVES
+    ) {
+      keepKnownRoots(drive);
       continue;
     }
+    const found = await readDriveRoots(drive);
+    if (found === TIMED_OUT) {
+      console.warn(`[Xbox] Drive ${drive} is slow to respond, keeping its known roots`);
+      keepKnownRoots(drive);
+    } else {
+      next.push(...found);
+    }
+  }
 
-    for (const relative of parseGamingRoot(markerPath)) {
-      const gamingRootPath = path.join(drive, relative);
-      if (fs.existsSync(gamingRootPath)) {
-        roots.push({ drive, gamingRootPath });
-        console.log(`[Xbox] Found Xbox root at ${gamingRootPath}`);
+  const changed = rootsKey(next) !== rootsKey(roots);
+  roots = next;
+  hasScanned = true;
+  if (changed) {
+    console.log(`[Xbox] Xbox roots: ${rootsKey(roots) || 'none'}`);
+    for (const listener of rootsListeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error('[Xbox] Roots listener failed:', error);
       }
     }
+  }
+  return changed;
+}
+
+/** Resolves to whether the set of Xbox roots changed. */
+export function refreshXboxRoots({ retryDeadDrives = false } = {}): Promise<boolean> {
+  if (!isWindows()) {
+    return Promise.resolve(false);
+  }
+  if (retryDeadDrives) {
+    deadDrives.clear();
+    // A scan already under way skipped those drives, so queue a fresh one behind it
+    if (inFlightScan) {
+      return inFlightScan.then(() => refreshXboxRoots());
+    }
+  }
+  inFlightScan ??= scanXboxRoots().finally(() => {
+    inFlightScan = null;
+  });
+  return inFlightScan;
+}
+
+/** Waits for the first scan, so list-style readers never answer from the empty initial state. */
+export async function whenXboxRootsScanned(): Promise<void> {
+  if (isWindows() && !hasScanned) {
+    await refreshXboxRoots();
+  }
+}
+
+/** Before resolving one game's folder: roots may be stale for a drive attached since the last scan. */
+export async function refreshXboxRootsForGame(
+  installPaths: InstallPath[] | null | undefined
+): Promise<void> {
+  if (installPaths?.some((installPath) => installPath.type === 'xbox')) {
+    await refreshXboxRoots();
+  }
+}
+
+export function onXboxRootsChanged(listener: () => void): () => void {
+  rootsListeners.add(listener);
+  return () => rootsListeners.delete(listener);
+}
+
+export function getXboxRootPaths(): string[] {
+  return getXboxRoots().map((root) => root.gamingRootPath);
+}
+
+function getXboxRoots(): XboxRoot[] {
+  if (!hasScanned) {
+    void refreshXboxRoots();
   }
   return roots;
 }
@@ -166,7 +272,9 @@ function getXboxGamePaths(): Map<string, string> {
       try {
         entries = fs.readdirSync(root.gamingRootPath, { withFileTypes: true });
       } catch (err) {
-        console.error(`[Xbox] Cannot read ${root.gamingRootPath}:`, err);
+        // Usually a removed drive: rescan roots instead of failing on every probe
+        console.warn(`[Xbox] Cannot read ${root.gamingRootPath}:`, err);
+        void refreshXboxRoots();
         continue;
       }
 
@@ -185,7 +293,6 @@ function getXboxGamePaths(): Map<string, string> {
         const key = entry.name.toLowerCase();
         if (!games.has(key)) {
           games.set(key, resolved);
-          console.log(`[Xbox] Game found: ${entry.name} at ${resolved}`);
         }
       }
     }
@@ -193,6 +300,9 @@ function getXboxGamePaths(): Map<string, string> {
     console.error('[Xbox] Error enumerating Xbox games:', error);
   }
 
+  if (games.size > 0) {
+    logIfChanged('xbox-games', `[Xbox] Games found: ${[...games.values()].join(', ')}`);
+  }
   return games;
 }
 
@@ -206,8 +316,19 @@ export function findXboxGame(gameFolderName: string): string | null {
   }
 
   console.log(`[Xbox] Searching for game: "${gameFolderName}"`);
-  const games = getXboxGamePaths();
+  const found = matchXboxGame(getXboxGamePaths(), gameFolderName);
+  if (!found) {
+    // The game may sit on a drive attached after the last scan; the rescan reports back via onXboxRootsChanged
+    void refreshXboxRoots();
+    console.warn(`[Xbox] ✗ Game "${gameFolderName}" not found`);
+  }
+  return found;
+}
 
+function matchXboxGame(
+  games: Map<string, string>,
+  gameFolderName: string
+): string | null {
   const exact = games.get(gameFolderName.toLowerCase());
   if (exact && fs.existsSync(exact)) {
     console.log(`[Xbox] ✓ Game found: ${gameFolderName} at ${exact}`);
@@ -228,7 +349,6 @@ export function findXboxGame(gameFolderName: string): string | null {
     }
   }
 
-  console.warn(`[Xbox] ✗ Game "${gameFolderName}" not found`);
   return null;
 }
 

@@ -4,6 +4,7 @@ import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
 import { buildFtsQuery, stripApostrophes } from '../../shared/search-utils';
 import type {
+  FacetRow,
   Game,
   GetGamesParams,
   GetGamesResult,
@@ -20,6 +21,8 @@ import {
   upsertGamesTransaction,
   VISIBLE_GAMES_SQL,
 } from './db-queries';
+
+const FTS_MATCH_SQL = 'id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)';
 
 /**
  * Repository for working with games in the local database
@@ -246,23 +249,10 @@ export class GamesRepository {
       queryParams.push(...tagIds);
     }
 
-    // Filter by search query using FTS5 (min 2 chars to avoid expensive single-char prefix scans)
-    if (searchQuery && searchQuery.trim().length >= 2) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      } else {
-        // No usable tokens (e.g. only punctuation/single-char) — fall back to LIKE
-        whereConditions.push('name LIKE ?');
-        queryParams.push(`%${searchQuery.trim()}%`);
-      }
-    } else if (searchQuery) {
-      // For 1-char queries use simple LIKE (faster than FTS prefix scan)
-      whereConditions.push('name LIKE ?');
-      queryParams.push(`${searchQuery.trim()}%`);
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const whereClause = whereConditions.join(' AND ');
@@ -278,16 +268,6 @@ export class GamesRepository {
     const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
 
-    // Spellfix1 fuzzy fallback when FTS returns 0 results
-    if (searchQuery && games.length === 0 && isSpellfixAvailable()) {
-      games = this.fuzzySearchFallback(
-        searchQuery,
-        whereConditions,
-        queryParams,
-        orderClause
-      );
-    }
-
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
@@ -301,16 +281,42 @@ export class GamesRepository {
     return { games, total: games.length };
   }
 
-  /**
-   * Spellfix1 fuzzy fallback: correct each query word via spellfix_words,
-   * then re-run FTS5 with corrected words
-   */
-  private fuzzySearchFallback(
-    searchQuery: string,
-    _baseConditions: string[],
-    _baseParams: (string | number)[],
-    orderClause: string
-  ): Game[] {
+  // One search predicate for every list and the facet counts, so a count never disagrees with its list
+  private buildSearchCondition(
+    searchQuery?: string
+  ): { sql: string; params: string[] } | null {
+    const query = searchQuery?.trim();
+    if (!query) {
+      return null;
+    }
+
+    // 1-char queries use a name prefix LIKE (an FTS prefix scan is expensive); no usable tokens fall back to substring LIKE
+    const ftsQuery = query.length >= 2 ? buildFtsQuery(query) : '';
+    const condition = ftsQuery
+      ? { sql: FTS_MATCH_SQL, params: [ftsQuery] }
+      : { sql: 'name LIKE ?', params: [query.length >= 2 ? `%${query}%` : `${query}%`] };
+
+    if (!isSpellfixAvailable() || this.hasVisibleMatch(condition)) {
+      return condition;
+    }
+
+    // Typo fallback is decided on the search alone, so the other filters still apply to its matches
+    const correctedFts = this.correctFtsQuery(query);
+    return correctedFts ? { sql: FTS_MATCH_SQL, params: [correctedFts] } : condition;
+  }
+
+  private hasVisibleMatch(condition: { sql: string; params: string[] }): boolean {
+    return (
+      this.db
+        .prepare(
+          `SELECT 1 FROM games WHERE ${VISIBLE_GAMES_SQL} AND ${condition.sql} LIMIT 1`
+        )
+        .get(...condition.params) !== undefined
+    );
+  }
+
+  /** Spellfix1: replace each query word with its closest dictionary word, as an FTS5 OR query */
+  private correctFtsQuery(searchQuery: string): string | null {
     try {
       // spellfix dictionary has no apostrophes (extractUniqueWords), so strip the query too
       const queryWords = stripApostrophes(searchQuery)
@@ -319,34 +325,21 @@ export class GamesRepository {
         .filter((w) => w.length >= 3);
 
       if (queryWords.length === 0) {
-        return [];
+        return null;
       }
 
-      const correctedWords: string[] = [];
       const spellfixStmt = this.db.prepare(
         'SELECT word FROM spellfix_words WHERE word MATCH ? AND top=5 ORDER BY score LIMIT 1'
       );
-
-      for (const word of queryWords) {
+      const correctedWords = queryWords.map((word) => {
         const result = spellfixStmt.get(word) as { word: string } | undefined;
-        correctedWords.push(result ? result.word : word);
-      }
+        return result ? result.word : word;
+      });
 
-      // Build FTS query from corrected words
-      const correctedFts = correctedWords.map((w) => `"${w}"*`).join(' OR ');
-
-      const fuzzyStmt = this.db.prepare(`
-        SELECT * FROM games
-        WHERE ${VISIBLE_GAMES_SQL}
-          AND id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)
-        ORDER BY ${orderClause}
-      `);
-
-      const fuzzyRows = fuzzyStmt.all(correctedFts) as Record<string, unknown>[];
-      return fuzzyRows.map((row) => this.rowToGame(row));
+      return correctedWords.map((w) => `"${w}"*`).join(' OR ');
     } catch (e) {
       console.warn('[GamesRepository] Spellfix fuzzy fallback error:', e);
-      return [];
+      return null;
     }
   }
 
@@ -406,14 +399,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -455,14 +444,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -498,10 +483,7 @@ export class GamesRepository {
       );
     });
 
-    // Count unique games by slug (not total translations)
-    const uniqueCount = new Set(matchedGames.map((g) => g.slug || g.id)).size;
-
-    return { games: matchedGames, total: matchedGames.length, uniqueCount };
+    return { games: matchedGames, total: matchedGames.length };
   }
 
   /**
@@ -530,14 +512,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -551,27 +529,6 @@ export class GamesRepository {
     const games = rows.map((row) => this.rowToGame(row));
 
     return { games, total: games.length };
-  }
-
-  /**
-   * Count unique games available from the Steam library
-   * (counts unique steam_app_id to avoid duplicating games with multiple translations)
-   */
-  countGamesBySteamAppIds(steamAppIds: number[]): number {
-    if (steamAppIds.length === 0) {
-      return 0;
-    }
-
-    const stmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT steam_app_id) as count
-      FROM games
-      WHERE ${VISIBLE_GAMES_SQL}
-        AND steam_app_id IS NOT NULL
-        AND steam_app_id IN (${steamAppIds.map(() => '?').join(',')})
-    `);
-
-    const result = stmt.get(...steamAppIds) as { count: number };
-    return result.count;
   }
 
   /**
@@ -684,7 +641,10 @@ export class GamesRepository {
   getTagOptions(): TagOption[] {
     return this.db
       .prepare(
-        `SELECT t.tagid AS tagid, t.name AS name, COUNT(DISTINCT COALESCE(g.slug, g.id)) AS count
+        `SELECT t.tagid AS tagid, t.name AS name,
+                COUNT(DISTINCT COALESCE(
+                  'steam:' || g.steam_app_id, 'slug:' || NULLIF(g.slug, ''), 'id:' || g.id
+                )) AS count
          FROM games g
          JOIN json_each(g.steam_tag_ids) je
          JOIN steam_tag_names t ON t.tagid = je.value
@@ -695,52 +655,29 @@ export class GamesRepository {
       .all() as TagOption[];
   }
 
-  /**
-   * Get counts for filters (efficient SQL query with aggregation)
-   * Counts unique games by slug (or id if slug is absent),
-   * to avoid duplicating games with multiple translations
-   */
-  getFilterCounts(): {
-    planned: number;
-    'in-progress': number;
-    completed: number;
-    'tech-improvement': number;
-    'with-achievements': number;
-    'with-voice': number;
-    'from-workshop': number;
-  } {
-    const stmt = this.db.prepare(`
-      SELECT
-        COUNT(DISTINCT CASE WHEN status = 'planned' THEN COALESCE(slug, id) END) as planned,
-        COUNT(DISTINCT CASE WHEN status = 'in-progress' THEN COALESCE(slug, id) END) as in_progress,
-        COUNT(DISTINCT CASE WHEN status = 'completed' THEN COALESCE(slug, id) END) as completed,
-        COUNT(DISTINCT CASE WHEN status = 'tech-improvement' THEN COALESCE(slug, id) END) as tech_improvement,
-        COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
-        COUNT(DISTINCT CASE WHEN (voice_archive_path IS NOT NULL AND voice_archive_path != '') OR voice_progress IS NOT NULL THEN COALESCE(slug, id) END) as with_voice,
-        COUNT(DISTINCT CASE WHEN kind = 'workshop' THEN COALESCE(slug, id) END) as from_workshop
-      FROM games
-      WHERE ${VISIBLE_GAMES_SQL}
-    `);
+  /** Every visible translation with just the columns the filters read, for renderer-side faceted counts */
+  getFacetRows(): FacetRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, slug, steam_app_id, status, team, steam_tag_ids, ai, kind,
+                achievements_archive_path, voice_archive_path, voice_progress
+         FROM games
+         WHERE ${VISIBLE_GAMES_SQL}
+         ORDER BY id`
+      )
+      .all() as Array<Omit<FacetRow, 'steam_tag_ids'> & { steam_tag_ids: unknown }>;
+    return rows.map((row) => ({ ...row, steam_tag_ids: parseTagIds(row.steam_tag_ids) }));
+  }
 
-    const row = stmt.get() as {
-      planned: number;
-      in_progress: number;
-      completed: number;
-      tech_improvement: number;
-      with_achievements: number;
-      with_voice: number;
-      from_workshop: number;
-    };
-
-    return {
-      planned: row.planned || 0,
-      'in-progress': row.in_progress || 0,
-      completed: row.completed || 0,
-      'tech-improvement': row.tech_improvement || 0,
-      'with-achievements': row.with_achievements || 0,
-      'with-voice': row.with_voice || 0,
-      'from-workshop': row.from_workshop || 0,
-    };
+  /** Visible ids matched by the sidebar search, for the facet counts */
+  getSearchMatchIds(searchQuery: string): string[] {
+    const search = this.buildSearchCondition(searchQuery);
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM games WHERE ${VISIBLE_GAMES_SQL}${search ? ` AND ${search.sql}` : ''}`
+      )
+      .all(...(search?.params ?? [])) as { id: string }[];
+    return rows.map((row) => row.id);
   }
 
   /**
@@ -779,14 +716,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -834,14 +767,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
