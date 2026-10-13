@@ -6,7 +6,7 @@ import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { teamToSlug } from '@/shared/search-utils';
-import type { Game } from '../../types/game';
+import type { Game } from '../../../shared/types';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';

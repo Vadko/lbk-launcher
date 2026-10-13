@@ -3,10 +3,10 @@
  * Handles Steam path detection, library scanning, and owned games fetching
  */
 
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { HKEY } from 'registry-js';
 import {
   fetchSteamLibraryFromApi,
   invalidateSteamLibraryCache,
@@ -15,6 +15,7 @@ import {
   writeSteamLibraryCache,
 } from '../steam-library-api';
 import { forCurrentOS, getPlatform } from '../utils/platform';
+import { getRegistryString } from '../utils/registry';
 import {
   evaluateInSharedJsContext,
   isCefUsable,
@@ -109,43 +110,11 @@ export function getSteamPath(): string | null {
 }
 
 function detectSteamPathWindows(): string | null {
-  const regPath = path.join(
-    process.env.SystemRoot || 'C:\\Windows',
-    'System32',
-    'reg.exe'
-  );
-
-  // Try 64-bit registry
-  try {
-    const output = execSync(
-      `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v InstallPath`,
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
-    );
-    const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
-    if (match?.[1]) {
-      const steamPath = match[1].trim();
-      if (isValidSteamPath(steamPath)) {
-        console.log('[Steam] Found at:', steamPath);
-        return steamPath;
-      }
-    }
-  } catch {
-    // Try 32-bit registry
-    try {
-      const output = execSync(
-        `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam" /v InstallPath`,
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
-      );
-      const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
-      if (match?.[1]) {
-        const steamPath = match[1].trim();
-        if (isValidSteamPath(steamPath)) {
-          console.log('[Steam] Found at (32-bit):', steamPath);
-          return steamPath;
-        }
-      }
-    } catch {
-      console.warn('[Steam] Registry query failed, trying default paths...');
+  for (const key of ['SOFTWARE\\WOW6432Node\\Valve\\Steam', 'SOFTWARE\\Valve\\Steam']) {
+    const steamPath = getRegistryString(HKEY.HKEY_LOCAL_MACHINE, key, 'InstallPath');
+    if (steamPath && isValidSteamPath(steamPath)) {
+      console.log('[Steam] Found at:', steamPath);
+      return steamPath;
     }
   }
 
@@ -857,22 +826,12 @@ function getSteamLibraryAppIdsFallback(): number[] {
 // Cache Invalidation
 // ============================================================================
 
-/**
- * Invalidate Steam path cache (and dependent caches)
- */
-export function invalidateSteamPathCache(): void {
-  console.log('[Steam] Invalidating path cache');
-  cache.steamPath = undefined;
+// The owned list is re-read (an install can add a free license or follow an account switch), but its file cache stays
+export function invalidateSteamInstalledCaches(): void {
+  console.log('[Steam] Invalidating installed games cache');
   cache.libraryFolders = null;
-  cache.libraryAppIds = null;
-}
-
-/**
- * Invalidate Steam games cache
- */
-export function invalidateSteamGamesCache(): void {
-  console.log('[Steam] Invalidating games cache');
   cache.installedSteam = null;
+  cache.libraryAppIds = null;
 }
 
 /**

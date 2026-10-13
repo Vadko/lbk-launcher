@@ -11,6 +11,8 @@ import {
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
+import { getGameGroupKey } from '@/shared/game-filters';
+import type { Game } from '@/shared/types';
 import { WarningFillIcon } from '../Icons/WarningFillIcon';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Button } from '../ui/Button';
@@ -48,27 +50,39 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
   const { data: installedPathsCount = 0 } = useInstalledGamePathsCount();
   const isInstalled = useIsTranslationInstalled();
 
-  // Filter and sort games
-  const gamesWithoutInstalls = useMemo(() => {
-    const withoutTranslations = allInstalledGames.filter((game) => !isInstalled(game.id));
+  // One card per game, not per translation - two authors' translations are still one installed game
+  const { gamesWithoutInstalls, installedGameCount } = useMemo(() => {
+    const groups = new Map<string, Game[]>();
+    for (const game of allInstalledGames) {
+      const key = getGameGroupKey(game);
+      const group = groups.get(key);
+      if (group) {
+        group.push(game);
+      } else {
+        groups.set(key, [game]);
+      }
+    }
+
+    const cards = [...groups.values()].map((translations) => {
+      const installed = translations.find((game) => isInstalled(game.id));
+      return { game: installed ?? translations[0], isTranslated: Boolean(installed) };
+    });
 
     // If no games without translations, show all installed games
-    const gamesToShow =
-      withoutTranslations.length > 0 ? withoutTranslations : allInstalledGames;
+    const withoutTranslations = cards.filter((card) => !card.isTranslated);
+    const gamesToShow = (
+      withoutTranslations.length > 0 ? withoutTranslations : cards
+    ).map((card) => card.game);
 
-    // Sort by update availability - games with updates first
-    return gamesToShow.sort((a, b) => {
-      const aInstallInfo = installedTranslations.get(a.id);
-      const bInstallInfo = installedTranslations.get(b.id);
+    const hasUpdate = (game: Game) => {
+      const installInfo = installedTranslations.get(game.id);
+      return installInfo && game.version && installInfo.version !== game.version ? 1 : 0;
+    };
 
-      const aHasUpdate =
-        aInstallInfo && a.version && aInstallInfo.version !== a.version ? 1 : 0;
-      const bHasUpdate =
-        bInstallInfo && b.version && bInstallInfo.version !== b.version ? 1 : 0;
-
-      // Sort: games with updates first (descending)
-      return bHasUpdate - aHasUpdate;
-    });
+    return {
+      gamesWithoutInstalls: gamesToShow.sort((a, b) => hasUpdate(b) - hasUpdate(a)),
+      installedGameCount: groups.size,
+    };
   }, [allInstalledGames, installedTranslations, isInstalled]);
 
   const visibleGames = useMemo(
@@ -146,7 +160,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       {/* Header with button */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        {allInstalledGames.length > showLimit && (
+        {installedGameCount > showLimit && (
           <Button
             variant="ghost"
             data-gamepad-action

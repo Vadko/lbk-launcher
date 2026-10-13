@@ -1,10 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useMemo } from 'react';
+import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useListCompositionKey } from '../../hooks/useListCompositionKey';
-import type { Game } from '../../types/game';
 import { Loader } from '../ui/Loader';
 import { GAME_LIST_ROW_ESTIMATE } from './constants';
 import { GameGroupItem } from './GameGroupItem';

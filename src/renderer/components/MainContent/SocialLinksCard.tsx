@@ -1,6 +1,6 @@
 import { BookIcon, GlobeIcon, SendIcon } from 'lucide-react';
 import React from 'react';
-import type { Game } from '../../types/game';
+import type { Game } from '../../../shared/types';
 import {
   DiscordIcon,
   EAIcon,

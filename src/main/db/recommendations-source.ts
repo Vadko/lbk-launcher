@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import Chance from 'chance';
+import { LRUCache } from 'lru-cache';
 import { getDatabase } from './database';
 import { parseTagIds, VISIBLE_GAMES_SQL } from './db-queries';
 
@@ -37,9 +38,8 @@ interface Candidate {
   score: number;
 }
 
-// Cache only non-empty results for the rotation period.
-// Otherwise a selection obtained before sync would stay empty.
-const memo = new Map<string, { epoch: number; ids: string[] }>();
+// Only non-empty picks are cached, so a lookup made before the first sync is retried; the epoch in the key rotates them
+const memo = new LRUCache<string, string[]>({ max: 500 });
 
 function parseTags(json: string): Set<number> {
   return new Set(parseTagIds(json) ?? []);
@@ -145,10 +145,10 @@ export function getRecommendedGameIds(
   }
 
   const epoch = Math.floor(Date.now() / ROTATION_WINDOW_MS);
-  const memoKey = `${gameId}:${limit}:${hideAiTranslations ? 1 : 0}`;
+  const memoKey = `${gameId}:${limit}:${hideAiTranslations ? 1 : 0}:${epoch}`;
   const cached = memo.get(memoKey);
-  if (cached && cached.epoch === epoch) {
-    return cached.ids;
+  if (cached) {
+    return cached;
   }
 
   const db = getDatabase();
@@ -170,6 +170,6 @@ export function getRecommendedGameIds(
   }
 
   const ids = pickWithRotation(pool, `${gameId}:${epoch}`, limit);
-  memo.set(memoKey, { epoch, ids });
+  memo.set(memoKey, ids);
   return ids;
 }

@@ -1,17 +1,22 @@
+import { NumberFlowGroup } from '@number-flow/react';
 import { EyeIcon } from 'lucide-react';
-import React, { useCallback, useMemo, useState } from 'react';
-import type { TagOption } from '@/shared/types';
-import type { FilterCounts } from '../../../hooks/useFilterCounts';
+import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import type {
+  ContentTypeFilterType,
+  SpecialFilterType,
+  TagOption,
+  TranslationTypeFilterType,
+} from '@/shared/types';
+import { useFacetCounts } from '../../../hooks/useFacetCounts';
+import type { FacetData } from '../../../hooks/useFacetData';
 import { Modal } from '../../Modal/Modal';
+import { AppNumberFlow } from '../../ui/AppNumberFlow';
 import {
   CONTENT_TYPE_OPTIONS,
-  type ContentTypeFilterType,
   LIBRARY_FILTER_OPTIONS,
   SPECIAL_FILTER_OPTIONS,
-  type SpecialFilterType,
   STATUS_OPTIONS,
   TRANSLATION_TYPE_OPTIONS,
-  type TranslationTypeFilterType,
 } from '../types';
 import { ActiveFilterChips } from './ActiveFilterChips';
 import { FilterPillGroup } from './FilterPillGroup';
@@ -43,7 +48,8 @@ interface FiltersModalProps {
   onTagsChange: (tagIds: number[]) => void;
   tags: TagOption[];
   tagsLoading: boolean;
-  counts?: FilterCounts;
+  facetData: FacetData | null;
+  searchQuery: string;
 }
 
 const SECTION_TITLE_CLASS =
@@ -69,7 +75,8 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   onTagsChange,
   tags,
   tagsLoading,
-  counts,
+  facetData,
+  searchQuery,
 }) => {
   // Selections are staged locally while the modal is open and only committed
   // to the real filters (which re-query the game list) when the modal closes
@@ -85,9 +92,11 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const [stagedTagIds, setStagedTagIds] = useState(selectedTagIds);
 
   const [wasOpen, setWasOpen] = useState(isOpen);
+  const [isFreshOpen, setIsFreshOpen] = useState(false);
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
     if (isOpen) {
+      setIsFreshOpen(true);
       setStagedStatuses(selectedStatuses);
       setStagedContentTypes(selectedContentTypes);
       setStagedTranslationTypes(selectedTranslationTypes);
@@ -96,6 +105,41 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       setStagedTagIds(selectedTagIds);
     }
   }
+
+  const stagedSelection = useMemo(
+    () => ({
+      statuses: stagedStatuses,
+      contentTypes: stagedContentTypes,
+      translationTypes: stagedTranslationTypes,
+      specialFilter: stagedSpecialFilter,
+      authors: stagedAuthors,
+      tagIds: stagedTagIds,
+    }),
+    [
+      stagedStatuses,
+      stagedContentTypes,
+      stagedTranslationTypes,
+      stagedSpecialFilter,
+      stagedAuthors,
+      stagedTagIds,
+    ]
+  );
+
+  const facets = useFacetCounts({
+    data: facetData,
+    authors,
+    selection: stagedSelection,
+    searchQuery,
+    hideAiTranslations,
+  });
+  const liveCounts = facets?.counts;
+  const deferredCounts = useDeferredValue(liveCounts);
+  // The deferred value still holds the previous session's numbers on open, which NumberFlow would animate from
+  if (isFreshOpen && deferredCounts === liveCounts) {
+    setIsFreshOpen(false);
+  }
+  const counts = isFreshOpen ? liveCounts : deferredCounts;
+  const globalCounts = facets?.globalCounts;
 
   const handleClose = useCallback(() => {
     if (stagedStatuses !== selectedStatuses) {
@@ -164,19 +208,39 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     setStagedSpecialFilter((prev) => (prev === filter ? null : filter));
   };
 
-  const toggleAuthor = (id: string | number) => {
+  const toggleAuthor = useCallback((id: string | number) => {
     const author = id as string;
     setStagedAuthors((prev) =>
       prev.includes(author) ? prev.filter((a) => a !== author) : [...prev, author]
     );
-  };
+  }, []);
 
-  const toggleTag = (id: string | number) => {
+  const toggleTag = useCallback((id: string | number) => {
     const tagId = id as number;
     setStagedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
     );
-  };
+  }, []);
+
+  const authorItems = useMemo(
+    () =>
+      authors.map((author) => ({
+        id: author,
+        label: author,
+        count: counts && (counts.authors.get(author) ?? 0),
+      })),
+    [authors, counts]
+  );
+
+  const tagItems = useMemo(
+    () =>
+      tags.map((tag) => ({
+        id: tag.tagid,
+        label: tag.name,
+        count: counts ? (counts.tags.get(tag.tagid) ?? 0) : tag.count,
+      })),
+    [tags, counts]
+  );
 
   const chips = useMemo(() => {
     const result: { key: string; label: string; onRemove: () => void }[] = [];
@@ -249,133 +313,143 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   ]);
 
   const visibleContentTypeOptions = CONTENT_TYPE_OPTIONS.filter(
-    (option) => !counts || counts[option.value] !== 0
+    (option) =>
+      !globalCounts ||
+      globalCounts.contentTypes[option.value] !== 0 ||
+      stagedContentTypes.includes(option.value)
   );
   const visibleLibraryOptions = LIBRARY_FILTER_OPTIONS.filter(
-    (option) => !counts || counts[option.value] !== 0
+    (option) =>
+      !globalCounts ||
+      globalCounts.specialFilters[option.value] !== 0 ||
+      stagedSpecialFilter === option.value
   );
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Фільтри та сортування"
-      usePortal
-      footer={
-        <button
-          onClick={handleClose}
-          data-gamepad-modal-item
-          data-gamepad-confirm
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-color-main text-text-dark hover:opacity-90 transition-opacity"
-        >
-          <EyeIcon size={16} />
-          <span>Переглянути</span>
-        </button>
-      }
-    >
-      <div className="flex flex-col gap-6">
-        {chips.length > 0 && (
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Активні фільтри</p>
-            <ActiveFilterChips chips={chips} />
-          </div>
-        )}
+    <NumberFlowGroup>
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Фільтри та сортування"
+        usePortal
+        footer={
+          <button
+            onClick={handleClose}
+            data-gamepad-modal-item
+            data-gamepad-confirm
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-color-main text-text-dark hover:opacity-90 transition-opacity"
+          >
+            <EyeIcon size={16} />
+            <span>Переглянути</span>
+            {counts && (
+              <span className="tabular-nums opacity-70">
+                <AppNumberFlow value={counts.total} />
+              </span>
+            )}
+          </button>
+        }
+      >
+        <div className="flex flex-col gap-6">
+          {chips.length > 0 && (
+            <div>
+              <p className={SECTION_TITLE_CLASS}>Активні фільтри</p>
+              <ActiveFilterChips chips={chips} />
+            </div>
+          )}
 
-        <div>
-          <p className={SECTION_TITLE_CLASS}>Статус</p>
-          <FilterPillGroup
-            options={STATUS_OPTIONS.map((o) => ({
-              label: o.label,
-              value: o.value,
-              count: counts?.[o.value],
-              icon: STATUS_ICONS[o.value],
-            }))}
-            isSelected={(value) => stagedStatuses.includes(value)}
-            onToggle={toggleStatus}
-          />
+          <div>
+            <p className={SECTION_TITLE_CLASS}>Статус</p>
+            <FilterPillGroup
+              options={STATUS_OPTIONS.map((o) => ({
+                label: o.label,
+                value: o.value,
+                count: counts && (counts.statuses[o.value] ?? 0),
+                icon: STATUS_ICONS[o.value],
+              }))}
+              isSelected={(value) => stagedStatuses.includes(value)}
+              onToggle={toggleStatus}
+            />
+          </div>
+
+          {visibleContentTypeOptions.length > 0 && (
+            <div>
+              <p className={SECTION_TITLE_CLASS}>Тип контенту</p>
+              <FilterPillGroup
+                options={visibleContentTypeOptions.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                  count: counts?.contentTypes[o.value],
+                  icon: CONTENT_TYPE_ICONS[o.value],
+                }))}
+                isSelected={(value) =>
+                  stagedContentTypes.includes(value as ContentTypeFilterType)
+                }
+                onToggle={toggleContentType}
+              />
+            </div>
+          )}
+
+          {!hideAiTranslations && (
+            <div>
+              <p className={SECTION_TITLE_CLASS}>Тип перекладу</p>
+              <FilterPillGroup
+                options={TRANSLATION_TYPE_OPTIONS.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                  count: counts?.translationTypes[o.value],
+                  icon: TRANSLATION_TYPE_ICONS[o.value],
+                }))}
+                isSelected={(value) =>
+                  stagedTranslationTypes.includes(value as TranslationTypeFilterType)
+                }
+                onToggle={toggleTranslationType}
+              />
+            </div>
+          )}
+
+          {visibleLibraryOptions.length > 0 && (
+            <div>
+              <p className={SECTION_TITLE_CLASS}>Бібліотека</p>
+              <FilterPillGroup
+                options={visibleLibraryOptions.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                  count: counts?.specialFilters[o.value],
+                  icon: LIBRARY_ICONS[o.value],
+                }))}
+                isSelected={(value) => stagedSpecialFilter === value}
+                onToggle={toggleLibraryFilter}
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className={SECTION_TITLE_CLASS}>Автори</p>
+              <SearchableFilterList
+                items={authorItems}
+                selectedIds={stagedAuthors}
+                onToggle={toggleAuthor}
+                isLoading={authorsLoading}
+                searchPlaceholder="Пошук автора..."
+                emptyLabel="Автора не знайдено"
+              />
+            </div>
+
+            <div>
+              <p className={SECTION_TITLE_CLASS}>Теги</p>
+              <SearchableFilterList
+                items={tagItems}
+                selectedIds={stagedTagIds}
+                onToggle={toggleTag}
+                isLoading={tagsLoading}
+                searchPlaceholder="Пошук категорії..."
+                emptyLabel="Категорію не знайдено"
+              />
+            </div>
+          </div>
         </div>
-
-        {visibleContentTypeOptions.length > 0 && (
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Тип контенту</p>
-            <FilterPillGroup
-              options={visibleContentTypeOptions.map((o) => ({
-                label: o.label,
-                value: o.value,
-                count: counts?.[o.value],
-                icon: CONTENT_TYPE_ICONS[o.value],
-              }))}
-              isSelected={(value) =>
-                stagedContentTypes.includes(value as ContentTypeFilterType)
-              }
-              onToggle={toggleContentType}
-            />
-          </div>
-        )}
-
-        {!hideAiTranslations && (
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Тип перекладу</p>
-            <FilterPillGroup
-              options={TRANSLATION_TYPE_OPTIONS.map((o) => ({
-                label: o.label,
-                value: o.value,
-                icon: TRANSLATION_TYPE_ICONS[o.value],
-              }))}
-              isSelected={(value) =>
-                stagedTranslationTypes.includes(value as TranslationTypeFilterType)
-              }
-              onToggle={toggleTranslationType}
-            />
-          </div>
-        )}
-
-        {visibleLibraryOptions.length > 0 && (
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Бібліотека</p>
-            <FilterPillGroup
-              options={visibleLibraryOptions.map((o) => ({
-                label: o.label,
-                value: o.value,
-                count: counts?.[o.value],
-                icon: LIBRARY_ICONS[o.value],
-              }))}
-              isSelected={(value) => stagedSpecialFilter === value}
-              onToggle={toggleLibraryFilter}
-            />
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Автори</p>
-            <SearchableFilterList
-              items={authors.map((author) => ({ id: author, label: author }))}
-              selectedIds={stagedAuthors}
-              onToggle={toggleAuthor}
-              isLoading={authorsLoading}
-              searchPlaceholder="Пошук автора..."
-              emptyLabel="Автора не знайдено"
-            />
-          </div>
-
-          <div>
-            <p className={SECTION_TITLE_CLASS}>Теги</p>
-            <SearchableFilterList
-              items={tags.map((tag) => ({
-                id: tag.tagid,
-                label: tag.name,
-                count: tag.count,
-              }))}
-              selectedIds={stagedTagIds}
-              onToggle={toggleTag}
-              isLoading={tagsLoading}
-              searchPlaceholder="Пошук категорії..."
-              emptyLabel="Категорію не знайдено"
-            />
-          </div>
-        </div>
-      </div>
-    </Modal>
+      </Modal>
+    </NumberFlowGroup>
   );
 };

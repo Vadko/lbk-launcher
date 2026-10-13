@@ -1,9 +1,9 @@
 import { useDeferredImage } from '@renderer/hooks/useDeferredImage';
-import type { Game } from '@renderer/types/game';
 import { getGameImageUrl } from '@renderer/utils/imageUrl';
 import { useSettingsStore } from '@store/useSettingsStore';
 import { EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import type { Game } from '@/shared/types';
 import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';
 

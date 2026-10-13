@@ -4,8 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { getAllInstalledSteamGames } from '../game-detector';
-import { getSteamPath } from '../game-detector/steam';
+import { getAllInstalledSteamGames, getSteamPath } from '../game-detector/steam';
 import { findSteamAppId } from '../game-launcher';
 import { renameFileToTranslit } from '../utils/files';
 import { isLinux } from '../utils/platform';

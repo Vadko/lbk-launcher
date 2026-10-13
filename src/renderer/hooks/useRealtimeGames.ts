@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
+import type { Game } from '../../shared/types';
 import { useStore } from '../store/useStore';
-import type { Game } from '../types/game';
 
 /**
  * Hook for subscribing to real-time game updates

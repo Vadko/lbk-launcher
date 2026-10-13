@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getSteamPath } from '../game-detector';
+import { getSteamPath } from '../game-detector/steam';
 import { getPlatform } from './platform';
 import { parseCompatToolName } from './vdf-parser';
 

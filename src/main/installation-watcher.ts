@@ -1,11 +1,36 @@
+import { F } from '@mobily/ts-belt';
 import { app, type BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { invalidateInstalledGameIdsCache } from './installer/cache';
 
 let watcher: fs.FSWatcher | null = null;
-let debounceTimer: NodeJS.Timeout | null = null;
 const pendingChanges = new Set<string>();
+
+// Batches the rapid writes of one install into a single refresh
+const flushChanges = F.makeControlledDebounce(
+  (mainWindow: BrowserWindow | null, onChange?: () => void) => {
+    if (pendingChanges.size === 0) {
+      return;
+    }
+    console.log(
+      '[InstallationWatcher] Installation cache changed:',
+      [...pendingChanges].join(', ')
+    );
+    pendingChanges.clear();
+
+    // Invalidate the installed game IDs cache
+    invalidateInstalledGameIdsCache();
+
+    // Notify renderer to refresh installed games list
+    mainWindow?.webContents.send('installed-games-changed');
+
+    // Optional callback (e.g. process server-side tombstoned games
+    // that became uninstalled and can now be removed locally)
+    onChange?.();
+  },
+  { delay: 100, leading: false }
+);
 
 /**
  * Start watching installation-cache directory for changes
@@ -34,34 +59,8 @@ export function startInstallationWatcher(
   // Watch for directory changes (file additions/deletions)
   watcher = fs.watch(installInfoDir, (_eventType, filename) => {
     if (filename && filename.endsWith('.json')) {
-      // Collect pending changes and debounce
       pendingChanges.add(filename);
-
-      // Clear existing timer
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      // Debounce: wait 100ms before processing to batch multiple rapid changes
-      debounceTimer = setTimeout(() => {
-        if (pendingChanges.size > 0) {
-          console.log(
-            '[InstallationWatcher] Installation cache changed:',
-            [...pendingChanges].join(', ')
-          );
-          pendingChanges.clear();
-
-          // Invalidate the installed game IDs cache
-          invalidateInstalledGameIdsCache();
-
-          // Notify renderer to refresh installed games list
-          mainWindow?.webContents.send('installed-games-changed');
-
-          // Optional callback (e.g. process server-side tombstoned games
-          // that became uninstalled and can now be removed locally)
-          onChange?.();
-        }
-      }, 100);
+      flushChanges.schedule(mainWindow, onChange);
     }
   });
 }
@@ -70,6 +69,7 @@ export function startInstallationWatcher(
  * Stop watching installation-cache directory
  */
 export function stopInstallationWatcher(): void {
+  flushChanges.cancel();
   if (watcher) {
     console.log('[InstallationWatcher] Stopping directory watcher');
     watcher.close();

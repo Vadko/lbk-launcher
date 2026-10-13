@@ -28,7 +28,7 @@ import { VideoCard } from '../components/MainContent/VideoCard';
 import { AuthorSubscriptionModal } from '../components/Modal/AuthorSubscriptionModal';
 import { FeedbackModal } from '../components/Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../components/Modal/InstallOptionsDialog';
-import { Placement } from '../components/Placements';
+import { Placement } from '../components/Placements/Placement';
 
 import { AppActionIcon } from '../components/ui/AppActionIcon';
 import { Button } from '../components/ui/Button';

@@ -52,6 +52,9 @@ export function findGameInHeroicDirs(gameFolderName: string): string | null {
   return null;
 }
 
+// Heroic keeps its Wine prefixes next to the games, under the default install dir
+const HEROIC_NON_GAME_FOLDERS = new Set(['Prefixes']);
+
 /**
  * Get all game folder names from Heroic directories
  */
@@ -63,6 +66,9 @@ export function getAllHeroicGameFolders(): string[] {
       try {
         const games = fs.readdirSync(heroicPath);
         for (const game of games) {
+          if (HEROIC_NON_GAME_FOLDERS.has(game) || game.startsWith('.')) {
+            continue;
+          }
           const gamePath = path.join(heroicPath, game);
           if (fs.statSync(gamePath).isDirectory()) {
             folders.push(game);
