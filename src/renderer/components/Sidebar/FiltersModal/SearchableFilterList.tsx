@@ -9,6 +9,7 @@ interface SearchableFilterItem {
   id: string | number;
   label: string;
   count?: number;
+  adds?: boolean;
 }
 
 interface SearchableFilterListProps {
@@ -166,6 +167,7 @@ export const SearchableFilterList: React.FC<SearchableFilterListProps> = React.m
                   <span className="truncate flex-1 text-left">{item.label}</span>
                   {item.count !== undefined && (
                     <span className="text-xs text-text-muted shrink-0 tabular-nums">
+                      {item.adds && item.count > 0 && '+'}
                       {item.count}
                     </span>
                   )}
