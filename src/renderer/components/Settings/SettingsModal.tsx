@@ -453,15 +453,6 @@ export const SettingsModal: React.FC = () => {
         isOpen={isSettingsModalOpen}
         onClose={closeSettingsModal}
         title="Налаштування"
-        footer={
-          <button
-            onClick={closeSettingsModal}
-            data-gamepad-cancel
-            className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
-          >
-            Закрити
-          </button>
-        }
       >
         <div className="space-y-4">
           {/* Feedback link */}
@@ -818,7 +809,7 @@ export const SettingsModal: React.FC = () => {
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
-                Відкрити папку з логами
+                Відкрити теку з логами
               </h4>
               <p className="text-xs text-text-muted">Переглянути збережені файли логів</p>
             </div>
@@ -919,7 +910,7 @@ export const SettingsModal: React.FC = () => {
             </div>
             <p className="text-xs text-text-muted mb-3">
               Особлива подяка перекладачам, які долучились до тестування з перших днів і
-              допомогають робити цей лаунчер таким, яким він є:
+              допомагають робити цей лаунчер таким, яким він є:
             </p>
             <div className="flex flex-wrap gap-2">
               {SPECIAL_TRANSLATORS.map((translator) => (

@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
@@ -12,6 +12,7 @@ import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { AppLoader } from '../AppLoader/AppLoader';
+import { GamepadHelpOverlay } from '../GamepadHints/GamepadHelpOverlay';
 import { GamepadHints } from '../GamepadHints/GamepadHints';
 import { ChangelogModal } from '../Modal/ChangelogModal';
 import { ConfirmModal } from '../Modal/ConfirmModal';
@@ -65,6 +66,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   // Gamepad navigation (needs Router context)
   useGamepadModeNavigation(isGamepadMode);
 
+  // On <html> too, so the gamepad focus styles reach modals portaled outside this layout
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-gamepad-mode', isGamepadMode);
+  }, [isGamepadMode]);
+
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
   const bgImageClass =
     'absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none';
@@ -93,7 +99,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               className={`transition-all duration-300 ease-in-out relative z-20 ${
                 navigationArea === 'main-content'
                   ? 'max-h-0 opacity-0 overflow-hidden'
-                  : 'max-h-[300px] opacity-100'
+                  : 'max-h-75 opacity-100'
               }`}
             >
               <Sidebar onOpenHistory={openHistory} isHorizontal={true} />
@@ -131,6 +137,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
         {/* Gamepad hints */}
         <GamepadHints />
+        <GamepadHelpOverlay />
       </div>
     </MotionConfig>
   );

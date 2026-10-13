@@ -180,17 +180,6 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 );
               })}
             </div>
-
-            {/* Footer hint */}
-            <div className="p-3 border-t border-border text-center text-xs text-text-muted">
-              <span className="inline-flex items-center gap-2">
-                <kbd className="px-1.5 py-0.5 bg-glass rounded-sm text-[10px]">A</kbd>
-                Обрати
-                <span className="mx-1">•</span>
-                <kbd className="px-1.5 py-0.5 bg-glass rounded-sm text-[10px]">B</kbd>
-                Закрити
-              </span>
-            </div>
           </motion.div>
         </div>
       )}

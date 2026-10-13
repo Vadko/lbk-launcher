@@ -162,7 +162,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               <button
                 key={platform.key}
                 onClick={() => handleShare(platform)}
-                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 text-[#939296] hover:border-[#939296] hover:bg-white/15 ${platform.color}`}
+                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 text-[#939296] hover:bg-white/15 ${platform.color}`}
                 title={platform.name}
               >
                 {platform.icon}

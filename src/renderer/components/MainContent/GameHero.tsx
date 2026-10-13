@@ -90,7 +90,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="relative h-[300px] rounded-2xl overflow-hidden select-none">
+    <div className="relative h-75 rounded-2xl overflow-hidden select-none">
       {/* Banner placeholder - only visible when banner is unavailable */}
       {!showBanner && (
         <div className="absolute inset-0 rounded-2xl bg-linear-to-br/srgb from-color-main via-color-accent to-color-main opacity-30" />
@@ -175,7 +175,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
         {(game.ai === 'edited' || game.ai === 'non-edited') && (
           <motion.div
             key={game.id}
-            className="absolute top-[90px] right-[90px] w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border"
+            className="absolute top-22.5 right-22.5 w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border"
             initial={{ opacity: 0, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             animate={{ opacity: 1, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             exit={{ opacity: 0, scale: 0.9, rotate: 45, x: '50%', y: '-50%' }}

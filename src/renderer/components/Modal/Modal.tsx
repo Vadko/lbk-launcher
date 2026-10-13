@@ -1,8 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { XIcon } from 'lucide-react';
-import React, { useRef } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
-import { useGamepadModalScroll } from '../../hooks/useGamepadModalScroll';
 
 interface ModalProps {
   isOpen: boolean;
@@ -27,8 +26,6 @@ export const Modal: React.FC<ModalProps> = ({
   usePortal = false,
   classNames = '',
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
   // Close the modal on Escape
   React.useEffect(() => {
     if (!isOpen) {
@@ -45,9 +42,6 @@ export const Modal: React.FC<ModalProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
-
-  // Enable gamepad scrolling with right stick
-  useGamepadModalScroll(isOpen, scrollContainerRef);
 
   const content = (
     <AnimatePresence>
@@ -70,9 +64,9 @@ export const Modal: React.FC<ModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
-            className={`relative max-w-[800px] w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
+            className={`relative max-w-200 w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
             ${classNames}
-            ${styleModal === 'promo' ? 'glass-card glass-card-gold p-0! overflow-hidden min-h-[400px]' : 'bg-[rgb(15,15,16)] rounded-[16px] modal-gradient-border'}`}
+            ${styleModal === 'promo' ? 'glass-card glass-card-gold p-0! overflow-hidden min-h-100' : 'bg-[rgb(15,15,16)] rounded-2xl modal-gradient-border'}`}
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -106,10 +100,7 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Content */}
-                <div
-                  ref={scrollContainerRef}
-                  className="p-6 overflow-y-auto wrap-break-word flex-1"
-                >
+                <div className="p-6 overflow-y-auto wrap-break-word flex-1">
                   {children}
                 </div>
 
@@ -130,12 +121,7 @@ export const Modal: React.FC<ModalProps> = ({
                   </button>
                 )}
                 {/* Content */}
-                <div
-                  ref={scrollContainerRef}
-                  className="overflow-y-auto wrap-break-word flex-1"
-                >
-                  {children}
-                </div>
+                <div className="overflow-y-auto wrap-break-word flex-1">{children}</div>
               </>
             )}
           </motion.div>
