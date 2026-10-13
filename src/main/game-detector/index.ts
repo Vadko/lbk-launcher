@@ -6,43 +6,25 @@
 import type { DetectedGame, InstallPath } from '../../shared/types';
 import { fetchGames } from '../api';
 import { normalizeInstalledFolder } from '../utils/install-path';
-import { findEAGame, getInstalledEAGamePaths } from './ea';
-import { findEpicGame, getHeroicEpicAppName, getInstalledEpicGamePaths } from './epic';
-import { findGOGGame, getHeroicGOGId, getInstalledGOGGamePaths } from './gog';
-import { findRockstarGame, getInstalledRockstarGamePaths } from './rockstar';
+import { findEAGame } from './ea';
+import { findEpicGame, getHeroicEpicAppName } from './epic';
+import { findGOGGame, getHeroicGOGId } from './gog';
+import { logIfChanged } from './log-if-changed';
+import { findRockstarGame } from './rockstar';
 import {
   findSteamGame,
   getInstalledSteamGamePaths,
   getInstalledSteamGames,
 } from './steam';
+import {
+  getInstalledEpicGamePathsCached,
+  getInstalledGOGGamePathsCached,
+  getInstalledRegistryGamePaths,
+  getInstalledXboxGamePaths,
+} from './store-cache';
 import type { GamePath } from './types'; // Used locally
-import { findUplayGame, getInstalledUplayGamePaths } from './uplay';
-import { findXboxGame, getInstalledXboxGamePaths } from './xbox';
-
-// ============================================================================
-// Re-exports
-// ============================================================================
-
-// Epic
-export { getEpicAppName } from './epic';
-// GOG
-export { getGOGGalaxyClientPath, getGOGGameId } from './gog';
-// Steam
-export {
-  getAllInstalledSteamGames,
-  getInstalledSteamAppIds,
-  getLastKnownLicensecacheSize,
-  getLicensecachePath,
-  getLicensecacheSize,
-  getSteamLibraryAppIds,
-  getSteamPath,
-  invalidateSteamGamesCache,
-  invalidateSteamLibraryAppIdsCache,
-  invalidateSteamPathCache,
-  updateLastKnownLicensecacheSize,
-} from './steam';
-// Uplay
-export { getUplayGameId } from './uplay';
+import { findUplayGame } from './uplay';
+import { findXboxGame } from './xbox';
 
 // ============================================================================
 // Main Detection Logic
@@ -174,23 +156,16 @@ export function getAllInstalledGamePaths(): string[] {
 
   // GOG games
   try {
-    installedPaths.push(...getInstalledGOGGamePaths());
+    installedPaths.push(...getInstalledGOGGamePathsCached());
   } catch (error) {
     console.error('[GameDetector] Error getting GOG games:', error);
   }
 
   // Epic games
   try {
-    installedPaths.push(...getInstalledEpicGamePaths());
+    installedPaths.push(...getInstalledEpicGamePathsCached());
   } catch (error) {
     console.error('[GameDetector] Error getting Epic games:', error);
-  }
-
-  // Rockstar games
-  try {
-    installedPaths.push(...getInstalledRockstarGamePaths());
-  } catch (error) {
-    console.error('[GameDetector] Error getting Rockstar games:', error);
   }
 
   // Xbox games
@@ -200,21 +175,11 @@ export function getAllInstalledGamePaths(): string[] {
     console.error('[GameDetector] Error getting Xbox games:', error);
   }
 
-  // Ubisoft Connect games
-  try {
-    installedPaths.push(...getInstalledUplayGamePaths());
-  } catch (error) {
-    console.error('[GameDetector] Error getting Uplay games:', error);
-  }
+  // Rockstar, Ubisoft Connect and EA App games (registry-backed)
+  installedPaths.push(...getInstalledRegistryGamePaths());
 
-  // EA App games
-  try {
-    installedPaths.push(...getInstalledEAGamePaths());
-  } catch (error) {
-    console.error('[GameDetector] Error getting EA games:', error);
-  }
-
-  console.log(
+  logIfChanged(
+    'installed-paths',
     `[GameDetector] Found ${installedPaths.length} installed game paths on system`
   );
   return installedPaths;
@@ -288,13 +253,6 @@ export function getDetectedGames(): DetectedGame[] {
   console.log(`[GameDetector] Detected ${detected.length} installed catalog games`);
   return detected;
 }
-
-// Heroic Libraries
-export { getEpicLibrary } from './epic';
-export { getGogLibrary } from './gog';
-export { getLutrisSlug } from './lutris';
-// Xbox installed-games (no library API; only what's on disk)
-export { getInstalledXboxGamePaths } from './xbox';
 
 interface HeroicGameInfo {
   appName: string;

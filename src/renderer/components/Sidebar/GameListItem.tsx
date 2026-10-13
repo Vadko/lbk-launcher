@@ -1,11 +1,11 @@
 import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
+import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import type { Game } from '../../types/game';
 import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';

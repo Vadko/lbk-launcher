@@ -22,7 +22,11 @@ const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
-  fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
+  fetchFacetRows: () => ipcRenderer.invoke('fetch-facet-rows'),
+  fetchSearchMatchIds: (searchQuery: string) =>
+    ipcRenderer.invoke('fetch-search-match-ids', searchQuery),
+  getLibraryMemberships: () => ipcRenderer.invoke('get-library-memberships'),
+  checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
   fetchGamesByIds: (
@@ -71,8 +75,6 @@ const electronAPI: ElectronAPI = {
       hideAiTranslations,
       sortOrder
     ),
-  countGamesBySteamAppIds: (steamAppIds: number[]) =>
-    ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,
@@ -237,6 +239,11 @@ const electronAPI: ElectronAPI = {
     const handler = () => callback();
     ipcRenderer.on('installed-games-changed', handler);
     return () => ipcRenderer.removeListener('installed-games-changed', handler);
+  },
+  onStoreLibraryChanged: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('store-library-changed', handler);
+    return () => ipcRenderer.removeListener('store-library-changed', handler);
   },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),

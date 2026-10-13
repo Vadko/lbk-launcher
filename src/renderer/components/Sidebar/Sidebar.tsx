@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-import type { TagOption } from '@/shared/types';
+import { getGameGroupKey } from '@/shared/game-filters';
+import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
-import { useFilterCounts } from '../../hooks/useFilterCounts';
+import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
-import type { Game } from '../../types/game';
 import { deriveGroupNaming } from '../../utils/groupName';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
@@ -251,15 +251,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();
 
-      const getGroupKey = (game: Game): string => {
-        if (game.steam_app_id !== null && game.steam_app_id !== undefined) {
-          return `steam:${game.steam_app_id}`;
-        }
-        return game.slug ? `slug:${game.slug}` : `id:${game.id}`;
-      };
-
       for (const game of visibleGames) {
-        const key = getGroupKey(game);
+        const key = getGameGroupKey(game);
         const existing = groupMap.get(key);
 
         if (existing) {
@@ -364,8 +357,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       [navigate]
     );
 
-    // Filter counts from dedicated hook (with debouncing)
-    const { counts: filterCounts } = useFilterCounts();
+    const facetData = useFacetData(isFiltersModalOpen);
 
     if (isHorizontal) {
       // Horizontal gamepad mode
@@ -461,7 +453,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onTagsChange={setSelectedTagIds}
             tags={tags}
             tagsLoading={tagsLoading}
-            counts={filterCounts}
+            facetData={facetData}
+            searchQuery={debouncedSearchQuery}
           />
         </div>
       );
@@ -470,7 +463,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     // Vertical layout (default)
     return (
       <GlassPanel
-        className="h-full flex flex-col relative"
+        className="h-full flex flex-col relative z-10"
         style={{ width: sidebarWidth }}
       >
         <SidebarHeader />
@@ -547,7 +540,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           onTagsChange={setSelectedTagIds}
           tags={tags}
           tagsLoading={tagsLoading}
-          counts={filterCounts}
+          facetData={facetData}
+          searchQuery={debouncedSearchQuery}
         />
       </GlassPanel>
     );

@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { SortOrderType } from '../../shared/types';
 import type {
   ContentTypeFilterType,
+  SortOrderType,
   SpecialFilterType,
   TranslationTypeFilterType,
-} from '../components/Sidebar/types';
+} from '../../shared/types';
 import { electronStorage } from './electronStorage';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 

@@ -1,8 +1,8 @@
 import { BookmarkIcon, DownloadIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import React from 'react';
+import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
 import { SortDropdown } from './SortDropdown';
-import type { SortOrderType } from './types';
 
 interface FilterBarProps {
   isHorizontal?: boolean;

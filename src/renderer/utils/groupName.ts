@@ -1,4 +1,4 @@
-import type { Game } from '../types/game';
+import type { Game } from '../../shared/types';
 
 interface GroupNaming {
   name: string;

@@ -155,6 +155,10 @@ import {
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
+import {
+  startStoreLibraryWatcher,
+  stopStoreLibraryWatcher,
+} from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { bootstrapCefDebugging } from './utils/cef-flag-file';
 import { createMainWindow, getMainWindow } from './window';
@@ -379,6 +383,7 @@ if (!gotTheLock) {
 
     setImmediate(() => {
       startSteamWatcher(getMainWindow());
+      startStoreLibraryWatcher();
       startInstallationWatcher(getMainWindow(), () => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
@@ -456,6 +461,7 @@ if (!gotTheLock) {
     // Cleanup
     stopUpdateCheck();
     stopSteamWatcher();
+    stopStoreLibraryWatcher();
     stopInstallationWatcher();
 
     // Unsubscribe from realtime updates (games + feedback replies)

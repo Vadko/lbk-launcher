@@ -9,3 +9,4 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+  registry-js: true

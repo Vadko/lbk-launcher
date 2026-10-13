@@ -3,7 +3,6 @@
   "project": ["src/**/*.{ts,tsx,css}"],
   "ignore": [
     "src/lib/database.types.ts",
-    "src/renderer/queries/index.ts",
     "src/renderer/queries/useTrendingGames.ts"
   ],
   "ignoreDependencies": [

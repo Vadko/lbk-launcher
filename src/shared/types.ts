@@ -5,14 +5,46 @@ import type {
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
 
-export type { Database };
-
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
 export type FeedbackType = Database['public']['Enums']['feedback_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
+
+export type SpecialFilterType =
+  | 'installed-translations'
+  | 'installed-games'
+  | 'available-in-steam'
+  | 'owned-gog-games'
+  | 'owned-epic-games'
+  | 'installed-xbox-games'
+  | 'favorite-translations';
+
+export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
+
+export type TranslationTypeFilterType = 'manual' | 'ai' | 'ai-edited';
+
+export type FacetRow = Pick<
+  Game,
+  | 'id'
+  | 'slug'
+  | 'steam_app_id'
+  | 'status'
+  | 'team'
+  | 'steam_tag_ids'
+  | 'ai'
+  | 'kind'
+  | 'achievements_archive_path'
+  | 'voice_archive_path'
+  | 'voice_progress'
+>;
+
+export type LibraryFilterType = Exclude<
+  SpecialFilterType,
+  'installed-translations' | 'favorite-translations'
+>;
+export type LibraryMemberships = Record<LibraryFilterType, string[]>;
 
 export interface NewsFeedItem {
   id: string;
@@ -169,23 +201,12 @@ export interface GetGamesParams {
 export interface GetGamesResult {
   games: Game[];
   total: number;
-  uniqueCount?: number; // Count of unique games by slug (for filters)
 }
 
 export interface TagOption {
   tagid: number;
   name: string;
   count: number;
-}
-
-export interface FilterCountsResult {
-  planned: number;
-  'in-progress': number;
-  completed: number;
-  'tech-improvement': number;
-  'with-achievements': number;
-  'with-voice': number;
-  'from-workshop': number;
 }
 
 export interface DetectedGameInfo {
@@ -226,7 +247,11 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
-  fetchFilterCounts: () => Promise<FilterCountsResult>;
+  fetchFacetRows: () => Promise<FacetRow[] | null>;
+  fetchSearchMatchIds: (searchQuery: string) => Promise<string[] | null>;
+  getLibraryMemberships: () => Promise<LibraryMemberships | null>;
+  checkStoreLibraries: () => Promise<boolean>;
+  onStoreLibraryChanged: (callback: () => void) => () => void;
   fetchTrendingGames: (
     days?: number,
     limit?: number
@@ -259,7 +284,6 @@ export interface ElectronAPI {
     hideAiTranslations?: boolean,
     sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
-  countGamesBySteamAppIds: (steamAppIds: number[]) => Promise<number>;
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,

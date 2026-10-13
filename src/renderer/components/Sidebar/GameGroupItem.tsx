@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDownIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusIcons } from '../Elements/StatusIcons';
 import { Loader } from '../ui/Loader';

@@ -1,11 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useEffect, useMemo } from 'react';
+import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useListCompositionKey } from '../../hooks/useListCompositionKey';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
-import type { Game } from '../../types/game';
 import { Loader } from '../ui/Loader';
 import { GAMEPAD_CARD_STRIDE } from './constants';
 import { GamepadCard } from './GamepadCard';

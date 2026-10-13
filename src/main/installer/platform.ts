@@ -2,11 +2,13 @@ import { type ChildProcess, type StdioOptions, spawn } from 'child_process';
 import { clipboard } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import { enumerateKeysSafe, HKEY } from 'registry-js';
 import type { Game, InstallationStatus } from '../../shared/types';
-import { getSteamPath } from '../game-detector';
+import { getSteamPath } from '../game-detector/steam';
 import { getTransliteratedPath } from '../utils/files';
 import type { GameBuildOs } from '../utils/game-build';
 import { forCurrentOS, getPlatform, isLinux, isWindows } from '../utils/platform';
+import { getRegistryString } from '../utils/registry';
 import { isCmdSafePath } from '../utils/shell-safety';
 import { getCleanEnv } from './archive';
 import { readInstallationInfo, saveInstallationInfo } from './cache';
@@ -26,77 +28,45 @@ async function makeExecutable(filePath: string): Promise<void> {
   await fs.promises.chmod(filePath, (mode & 0o7777) | 0o111);
 }
 
+const UNINSTALL_ROOTS = [
+  [
+    HKEY.HKEY_LOCAL_MACHINE,
+    'SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
+  ],
+  [HKEY.HKEY_CURRENT_USER, 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall'],
+] as const;
+
+function listUninstallKeys() {
+  return UNINSTALL_ROOTS.flatMap(([hive, root]) =>
+    enumerateKeysSafe(hive, root).map((name) => {
+      const key = `${root}\\${name}`;
+      return { hive, key, id: `${hive}\\${key}` };
+    })
+  );
+}
+
 /**
  * Check for new Uninstall registry keys in HKLM and HKCU after installer run (Windows only).
  * If new key's DisplayName contains target words, print UninstallString.
  */
-async function checkNewUninstallRegistryKeys(
-  beforeHKLM: Set<string>,
-  beforeHKCU: Set<string>
-): Promise<void> {
-  try {
-    const { execSync } = await import('child_process');
-
-    const checkKey = (key: string, label: string) => {
-      try {
-        const displayName = execSync(`reg query "${key}" /v DisplayName`).toString();
-        const uninstallString = execSync(
-          `reg query "${key}" /v UninstallString`
-        ).toString();
-        const nameMatch = displayName.match(/DisplayName\s+REG_SZ\s+(.+)/);
-        const uninstallMatch = uninstallString.match(/UninstallString\s+REG_SZ\s+(.+)/);
-        const name = nameMatch ? nameMatch[1].toLowerCase() : '';
-        if (
-          name.includes('українізатор') ||
-          name.includes('українською') ||
-          name.includes('localization') ||
-          name.includes('ukrainizator')
-        ) {
-          const uninstallVal = uninstallMatch ? uninstallMatch[1] : '(not found)';
-          console.log(`[Installer] New Uninstall registry key detected (${label}):`, key);
-          console.log(
-            '[Installer]   DisplayName:',
-            nameMatch ? nameMatch[1] : '(not found)'
-          );
-          console.log('[Installer]   UninstallString:', uninstallVal);
-        }
-      } catch (e) {
-        // If DisplayName or UninstallString not found, skip
-      }
-    };
-
-    // HKLM
-    const outputHKLM = execSync(
-      'reg query "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
-    ).toString();
-    const uninstallKeysAfterHKLM = new Set(
-      outputHKLM
-        .split('\r\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0 && line.startsWith('HKEY'))
-    );
-    for (const key of uninstallKeysAfterHKLM) {
-      if (!beforeHKLM.has(key)) {
-        checkKey(key, 'HKLM');
-      }
+function checkNewUninstallRegistryKeys(before: Set<string>): void {
+  for (const entry of listUninstallKeys()) {
+    if (before.has(entry.id)) {
+      continue;
     }
-    // HKCU
-    const outputHKCU = execSync(
-      'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
-    ).toString();
-    const uninstallKeysAfterHKCU = new Set(
-      outputHKCU
-        .split('\r\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0 && line.startsWith('HKEY'))
-    );
-    for (const key of uninstallKeysAfterHKCU) {
-      if (!beforeHKCU.has(key)) {
-        checkKey(key, 'HKCU');
-      }
+    const displayName = getRegistryString(entry.hive, entry.key, 'DisplayName');
+    const uninstallString = getRegistryString(entry.hive, entry.key, 'UninstallString');
+    const name = displayName?.toLowerCase() ?? '';
+    if (
+      name.includes('українізатор') ||
+      name.includes('українською') ||
+      name.includes('localization') ||
+      name.includes('ukrainizator')
+    ) {
+      console.log('[Installer] New Uninstall registry key detected:', entry.id);
+      console.log('[Installer]   DisplayName:', displayName ?? '(not found)');
+      console.log('[Installer]   UninstallString:', uninstallString ?? '(not found)');
     }
-  } catch (e) {
-    console.warn('[Installer] Failed to read registry keys after installer launch:', e);
   }
 }
 
@@ -235,39 +205,10 @@ export async function runInstaller(
     const platform = getPlatform();
 
     // Windows registry tracking (only for Windows platform)
-    let uninstallKeysBeforeHKLM: Set<string> | undefined = undefined;
-    let uninstallKeysBeforeHKCU: Set<string> | undefined = undefined;
-
-    if (platform === 'windows') {
-      try {
-        const { execSync } = await import('child_process');
-        // HKLM
-        const outputHKLM = execSync(
-          'reg query "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
-        ).toString();
-        uninstallKeysBeforeHKLM = new Set(
-          outputHKLM
-            .split('\r\n')
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0 && line.startsWith('HKEY'))
-        );
-        // HKCU
-        const outputHKCU = execSync(
-          'reg query "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"'
-        ).toString();
-        uninstallKeysBeforeHKCU = new Set(
-          outputHKCU
-            .split('\r\n')
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0 && line.startsWith('HKEY'))
-        );
-      } catch (e) {
-        console.warn(
-          '[Installer] Failed to read registry keys before installer launch:',
-          e
-        );
-      }
-    }
+    const uninstallKeysBefore =
+      platform === 'windows'
+        ? new Set(listUninstallKeys().map((entry) => entry.id))
+        : null;
 
     if (platform === 'macos' || platform === 'linux') {
       // macOS or Linux - make executable first
@@ -409,11 +350,13 @@ export async function runInstaller(
     }
 
     // Check for new Windows registry keys after installer launch
-    if (platform === 'windows' && uninstallKeysBeforeHKLM && uninstallKeysBeforeHKCU) {
-      await checkNewUninstallRegistryKeys(
-        uninstallKeysBeforeHKLM,
-        uninstallKeysBeforeHKCU
-      );
+    if (uninstallKeysBefore) {
+      // Diagnostics only: the installer already succeeded
+      try {
+        checkNewUninstallRegistryKeys(uninstallKeysBefore);
+      } catch (error) {
+        console.warn('[Installer] Failed to inspect Uninstall registry keys:', error);
+      }
     }
 
     console.log('[Installer] Installer completed successfully');

@@ -10,12 +10,10 @@ import {
 } from 'lucide-react';
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ToastNotification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import {
-  type ToastNotification,
-  useSubscriptionsStore,
-} from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {

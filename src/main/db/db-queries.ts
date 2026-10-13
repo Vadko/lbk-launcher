@@ -3,9 +3,10 @@
  * Used in games-repository.ts and db-worker.ts
  */
 import type Database from 'better-sqlite3';
+import type { Database as SupabaseDatabase } from '../../lib/database.types';
 import { IS_ADMIN_BUILD } from '../../shared/admin-mode';
 import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
-import type { Game, Database as SupabaseDatabase } from '../../shared/types';
+import type { Game } from '../../shared/types';
 
 /**
  * Visible games: hidden ones are only shown if unlocked by the user.

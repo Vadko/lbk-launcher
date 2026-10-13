@@ -13,6 +13,7 @@ import type {
   RunInstallerRequest,
 } from '../shared/types';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
+import { refreshXboxRootsForGame } from './game-detector/xbox';
 import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
 import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
@@ -81,6 +82,9 @@ export async function installTranslation(
     }
 
     let gamePath: ReturnType<typeof getFirstAvailableGamePath>;
+    if (!customGamePath) {
+      await refreshXboxRootsForGame(game.install_paths);
+    }
     if (customGamePath) {
       const customPlatform = platform === 'auto' ? 'steam' : platform;
       gamePath = { platform: customPlatform, path: customGamePath, exists: true };
