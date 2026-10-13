@@ -463,7 +463,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     // Vertical layout (default)
     return (
       <GlassPanel
-        className="h-full flex flex-col relative"
+        className="h-full flex flex-col relative z-10"
         style={{ width: sidebarWidth }}
       >
         <SidebarHeader />
