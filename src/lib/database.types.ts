@@ -612,24 +612,33 @@ export type Database = {
       game_hide_reasons: {
         Row: {
           game_id: string
-          hidden_at: string
+          hidden_at: string | null
           hidden_by: string | null
           reason: string
+          reason_code: string | null
+          reason_comment: string | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           game_id: string
-          hidden_at?: string
+          hidden_at?: string | null
           hidden_by?: string | null
           reason: string
+          reason_code?: string | null
+          reason_comment?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           game_id?: string
-          hidden_at?: string
+          hidden_at?: string | null
           hidden_by?: string | null
           reason?: string
+          reason_code?: string | null
+          reason_comment?: string | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -647,6 +656,12 @@ export type Database = {
           {
             foreignKeyName: "game_hide_reasons_hidden_by_fkey"
             columns: ["hidden_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_updated_by_fkey"
+            columns: ["updated_by"]
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -2979,6 +2994,32 @@ export type Database = {
           installdir: string
           name: string
         }[]
+      }
+      set_game_hidden: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_hide: boolean
+          p_reason?: string
+          p_reason_code?: string
+          p_reason_comment?: string
+        }
+        Returns: {
+          game_name: string
+          game_slug: string
+          game_team: string
+          was_hidden: boolean
+        }[]
+      }
+      set_game_hide_reason: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_reason: string
+          p_reason_code?: string
+          p_reason_comment?: string
+        }
+        Returns: string
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
