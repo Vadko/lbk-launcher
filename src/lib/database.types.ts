@@ -609,6 +609,49 @@ export type Database = {
           },
         ]
       }
+      game_hide_reasons: {
+        Row: {
+          game_id: string
+          hidden_at: string
+          hidden_by: string | null
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          game_id: string
+          hidden_at?: string
+          hidden_by?: string | null
+          reason: string
+          updated_at?: string
+        }
+        Update: {
+          game_id?: string
+          hidden_at?: string
+          hidden_by?: string | null
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_hide_reasons_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_hidden_by_fkey"
+            columns: ["hidden_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_owners: {
         Row: {
           game_id: string
