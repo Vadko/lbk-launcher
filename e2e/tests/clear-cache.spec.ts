@@ -120,30 +120,7 @@ test.afterAll(async () => {
     /* already closed */
   }
 
-  // Kill only the LISTENING process on the CDP port, not client connections.
-  // Using lsof without -sTCP:LISTEN would also find our own Playwright worker
-  // (which has a client TCP connection to that port) and SIGKILL us.
-  try {
-    const { execSync } = await import('child_process');
-    if (process.platform === 'win32') {
-      killProcessOnPort(CDP_PORT);
-    } else {
-      const output = execSync(`lsof -ti tcp:${CDP_PORT} -sTCP:LISTEN`, {
-        encoding: 'utf-8',
-      });
-      const pids = output.trim().split('\n').filter(Boolean);
-      for (const pid of pids) {
-        try {
-          execSync(`kill -9 ${pid}`, { stdio: 'ignore' });
-          console.log(`[clear-cache] Killed listening process ${pid} on port ${CDP_PORT}`);
-        } catch {
-          /* already dead */
-        }
-      }
-    }
-  } catch {
-    /* no process found — fine */
-  }
+  killProcessOnPort(CDP_PORT);
 });
 
 test('clear cache restarts the app and loads games', async () => {
