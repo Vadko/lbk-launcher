@@ -2725,6 +2725,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_read_game_archive: {
+        Args: { object_name: string; object_owner: string }
+        Returns: boolean
+      }
+      can_upload_game_archive: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
       check_download_rate_limit: {
         Args: {
           p_game_id: string
