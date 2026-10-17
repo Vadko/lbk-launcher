@@ -31,9 +31,12 @@ function deckyDataDir(create: boolean): string | null {
     return null;
   }
   try {
-    // Decky creates data/<dir> as the user when it loads the plugin; before that only a writable data/ helps.
-    fs.accessSync(dataRoot, fs.constants.W_OK);
-    fs.mkdirSync(dir);
+    // A fresh Decky has no data/ until a plugin loads; the user-owned homebrew dir lets LBK create it first.
+    fs.accessSync(
+      fs.existsSync(dataRoot) ? dataRoot : decky.homebrewDir,
+      fs.constants.W_OK
+    );
+    fs.mkdirSync(dir, { recursive: true });
     return dir;
   } catch {
     return null;

@@ -85,10 +85,24 @@ describe('bridge plugin data files', () => {
     ).toBe('s');
   });
 
-  it('leaves Decky alone when its data dir cannot be created', () => {
+  it('creates data/ on a fresh Decky that has not loaded any plugin yet', () => {
     deckyPlugin(true);
     fs.rmSync(path.join(homebrew, 'data'), { recursive: true });
     data.writeBridgePluginData('bridge.json', { v: 1 });
+    expect(JSON.parse(fs.readFileSync(deckyData('bridge.json'), 'utf8'))).toEqual({
+      v: 1,
+    });
+  });
+
+  it('leaves Decky alone when its data dir cannot be created', () => {
+    deckyPlugin(true);
+    fs.rmSync(path.join(homebrew, 'data'), { recursive: true });
+    fs.chmodSync(homebrew, 0o500);
+    try {
+      data.writeBridgePluginData('bridge.json', { v: 1 });
+    } finally {
+      fs.chmodSync(homebrew, 0o700);
+    }
     expect(fs.existsSync(path.join(homebrew, 'data'))).toBe(false);
     expect(fs.existsSync(path.join(fake.millenniumDir as string, 'bridge.json'))).toBe(
       true
