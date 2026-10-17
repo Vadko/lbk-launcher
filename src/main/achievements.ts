@@ -297,6 +297,41 @@ async function pruneOrphanStrings(): Promise<void> {
   removeStringsOwnedBy(orphans);
 }
 
+// Runs after the game files are copied: a strings failure (full or locked userData) only drops the achievements.
+export async function commitAchievementStrings(i: {
+  extracted: readonly ExtractedAchievementStrings[];
+  gameId: string;
+  archiveHash: string | null;
+  component: AchievementsComponent | null;
+  previous: { gameId: string; component: AchievementsComponent } | null;
+}): Promise<AchievementsComponent | null> {
+  let component = i.component;
+  try {
+    if (i.extracted.length > 0) {
+      saveAchievementStrings(i.extracted, i.gameId, i.archiveHash);
+    }
+  } catch (error) {
+    console.error('[Achievements] Saving achievement strings failed:', error);
+    await removeInstalledAchievements(i.gameId, {
+      files: [],
+      appIds: i.extracted.map(({ appId }) => appId),
+    }).catch(() => undefined);
+    component = null;
+  }
+  if (i.previous) {
+    try {
+      await removeInstalledAchievements(
+        i.previous.gameId,
+        i.previous.component,
+        new Set(component?.appIds ?? [])
+      );
+    } catch (error) {
+      console.warn('[Achievements] Removing the previous strings failed:', error);
+    }
+  }
+  return component;
+}
+
 async function computeDelivery(reloaded: boolean): Promise<AchievementsDelivery> {
   try {
     return deliveryFromBadge(await getAchievementsBadge(), reloaded);

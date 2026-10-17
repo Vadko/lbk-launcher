@@ -77,6 +77,7 @@ vi.mock('@/main/utils/store-storage', () => ({
 }));
 
 import {
+  commitAchievementStrings,
   hasAchievementStrings,
   readAchievementStringsFromDir,
   removeInstalledAchievements,
@@ -314,5 +315,51 @@ describe('startup', () => {
 
     state.recordRemoved?.('game-a');
     expect(fs.existsSync(stringsFile(400))).toBe(false);
+  });
+});
+
+describe('commitAchievementStrings', () => {
+  const component = { installed: true, files: [], appIds: [600] };
+
+  it('drops only the achievements when the strings cannot be written', async () => {
+    fs.mkdirSync(path.join(state.root, 'userData'), { recursive: true });
+    fs.writeFileSync(
+      path.join(state.root, 'userData', 'achievement-strings'),
+      'not a dir'
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const result = await commitAchievementStrings({
+      extracted: [{ appId: 600, strings: { ACH: { name: 'Перемога' } } }],
+      gameId: 'game-b',
+      archiveHash: 'h',
+      component,
+      previous: null,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('keeps the component and replaces the previous strings on success', async () => {
+    saveAchievementStrings(
+      [{ appId: 700, strings: { OLD: { name: 'Старе' } } }],
+      'game-b',
+      'old'
+    );
+
+    const result = await commitAchievementStrings({
+      extracted: [{ appId: 600, strings: { ACH: { name: 'Перемога' } } }],
+      gameId: 'game-b',
+      archiveHash: 'h',
+      component,
+      previous: {
+        gameId: 'game-b',
+        component: { installed: true, files: [], appIds: [700] },
+      },
+    });
+
+    expect(result).toEqual(component);
+    expect(fs.existsSync(stringsFile(600))).toBe(true);
+    expect(fs.existsSync(stringsFile(700))).toBe(false);
   });
 });

@@ -15,10 +15,9 @@ import type {
   RunInstallerRequest,
 } from '../shared/types';
 import {
+  commitAchievementStrings,
   hasAchievementStrings,
   readAchievementStringsFromDir,
-  removeInstalledAchievements,
-  saveAchievementStrings,
   syncAchievementsToPlugin,
 } from './achievements';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
@@ -368,17 +367,17 @@ export async function installTranslation(
 
     // Written only once the install is about to be recorded, so a failed install leaves no strings behind.
     const commitAchievements = async (): Promise<void> => {
-      if (extractedAchievements.length > 0) {
-        saveAchievementStrings(extractedAchievements, game.id, achievementsArchiveHash);
-      }
       const previous = existingInfo?.components?.achievements;
-      if (existingInfo && previous) {
-        await removeInstalledAchievements(
-          existingInfo.gameId,
-          previous,
-          new Set(achievementsComponent?.appIds ?? [])
-        );
-      }
+      achievementsComponent = await commitAchievementStrings({
+        extracted: extractedAchievements,
+        gameId: game.id,
+        archiveHash: achievementsArchiveHash,
+        component: achievementsComponent,
+        previous:
+          existingInfo && previous
+            ? { gameId: existingInfo.gameId, component: previous }
+            : null,
+      });
     };
     const deliverAchievements = async (): Promise<AchievementsDelivery | undefined> => {
       if (!achievementsComponent && !existingInfo?.components?.achievements) {
@@ -419,6 +418,7 @@ export async function installTranslation(
           })
         : { run: true };
 
+      await commitAchievements();
       const installationInfo: InstallationInfo = {
         gameId: game.id,
         version: game.version || '1.0.0',
@@ -435,7 +435,6 @@ export async function installTranslation(
           ...(achievementsComponent ? { achievements: achievementsComponent } : {}),
         },
       };
-      await commitAchievements();
       const achievementsDelivery = await deliverAchievements();
 
       if (!decision.run) {
@@ -546,6 +545,7 @@ export async function installTranslation(
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
+    await commitAchievements();
     const installationInfo: InstallationInfo = {
       gameId: game.id,
       version: game.version || '1.0.0',
@@ -566,7 +566,6 @@ export async function installTranslation(
         ...(achievementsComponent ? { achievements: achievementsComponent } : {}),
       },
     };
-    await commitAchievements();
     await saveInstallationInfo(gamePath.path, installationInfo);
     const achievementsDelivery = await deliverAchievements();
 
