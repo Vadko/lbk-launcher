@@ -2,12 +2,21 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { restoreCefFlagFileAfterMillennium } from './cef-flag-file';
+import {
+  restoreCefFlagFileAfterMillennium,
+  syncBridgePluginSetup,
+} from './cef-flag-file';
+import {
+  getMillenniumPluginState,
+  installOrUpdateMillenniumPlugin,
+  setMillenniumPluginEnabledInConfig,
+} from './millennium-plugin';
 
 const env = vi.hoisted(() => ({
   steamPath: '',
   settingOn: true,
   blocksTcpCdp: false,
+  generation: null as 'v3' | null,
 }));
 
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => env.steamPath }));
@@ -18,7 +27,12 @@ vi.mock('./decky', () => ({
   isDeckyInstalledSync: () => false,
 }));
 vi.mock('./millennium', () => ({
-  detectMillennium: () => ({ blocksTcpCdp: env.blocksTcpCdp, generation: null }),
+  detectMillennium: () => ({
+    blocksTcpCdp: env.blocksTcpCdp,
+    generation: env.generation,
+    pluginsDir: '/mill/plugins',
+    configPath: '/mill/config.json',
+  }),
 }));
 vi.mock('./millennium-plugin', () => ({
   getMillenniumPluginState: vi.fn(),
@@ -51,6 +65,7 @@ beforeEach(() => {
   env.steamPath = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-cef-'));
   env.settingOn = true;
   env.blocksTcpCdp = false;
+  env.generation = null;
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
 });
 
@@ -72,5 +87,25 @@ describe('restoreCefFlagFileAfterMillennium', () => {
     env.blocksTcpCdp = true;
     restoreCefFlagFileAfterMillennium();
     expect(fs.existsSync(flag())).toBe(false);
+  });
+});
+
+describe('syncBridgePluginSetup with Millennium v3', () => {
+  it('retries a failed plugin install on the next sync and stops once it worked', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    env.generation = 'v3';
+    const install = vi.mocked(installOrUpdateMillenniumPlugin);
+    install.mockReturnValueOnce({ ok: false, error: 'EBUSY' });
+    install.mockReturnValue({ ok: true, changed: true });
+    vi.mocked(getMillenniumPluginState).mockReturnValue({
+      enabled: false,
+    } as ReturnType<typeof getMillenniumPluginState>);
+    vi.mocked(setMillenniumPluginEnabledInConfig).mockReturnValue('changed');
+
+    syncBridgePluginSetup();
+    syncBridgePluginSetup();
+    syncBridgePluginSetup();
+
+    expect(install).toHaveBeenCalledTimes(2);
   });
 });

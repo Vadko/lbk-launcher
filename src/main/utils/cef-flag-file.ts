@@ -152,7 +152,8 @@ let millenniumSetupKey: string | null = null;
 // undefined until the first pass, so a missing plugin still gets its orphan cleanup once.
 let deckySetupKey: string | null | undefined;
 
-function applyPluginEnabled(enable: boolean): void {
+// False when the config could not be edited, so the caller can retry on the next sync.
+function applyPluginEnabled(enable: boolean): boolean {
   const result = setMillenniumPluginEnabledInConfig(enable);
   if (result === 'steam-running') {
     queueSteamAction({
@@ -163,17 +164,18 @@ function applyPluginEnabled(enable: boolean): void {
     console.log(
       `[Millennium] Plugin ${enable ? 'enable' : 'disable'} queued until Steam exits`
     );
-    return;
+    return true;
   }
   if (result === 'invalid-config' || result === 'no-config') {
     console.warn(
       `[Millennium] Cannot ${enable ? 'enable' : 'disable'} the plugin: ${result}`
     );
-    return;
+    return false;
   }
   if (!enable) {
     removeMillenniumPluginFiles();
   }
+  return true;
 }
 
 // Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; memoized per detected install.
@@ -221,10 +223,10 @@ function setupMillenniumPlugin(force: boolean): void {
   if (millenniumSetupKey === key && !force) {
     return;
   }
-  millenniumSetupKey = key;
 
   const installed = installOrUpdateMillenniumPlugin();
   if (!installed.ok) {
+    // No memo: an antivirus holding the files for a moment must not cost the whole session.
     console.warn('[Millennium] Plugin install failed:', installed.error);
     return;
   }
@@ -233,8 +235,8 @@ function setupMillenniumPlugin(force: boolean): void {
     resyncBridgePluginData();
   }
   startBridgeServer();
-  if (!getMillenniumPluginState().enabled) {
-    applyPluginEnabled(true);
+  if (getMillenniumPluginState().enabled || applyPluginEnabled(true)) {
+    millenniumSetupKey = key;
   }
 }
 
