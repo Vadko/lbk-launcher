@@ -185,7 +185,7 @@ const facts = (overrides: Partial<AchievementsFacts> = {}): AchievementsFacts =>
   settingOn: true,
   host: 'millennium',
   steamRunning: true,
-  pluginConnected: false,
+  connectedHost: null,
   millennium: {
     v3: false,
     pluginInstalled: false,
@@ -206,10 +206,14 @@ describe('computeAchievementsBadge', () => {
   };
 
   it.each([
-    ['setting off', facts({ settingOn: false, pluginConnected: true }), 'setting-off'],
+    [
+      'setting off',
+      facts({ settingOn: false, connectedHost: 'millennium' }),
+      'setting-off',
+    ],
     [
       'Millennium plugin connected',
-      facts({ millennium: v3, pluginConnected: true }),
+      facts({ millennium: v3, connectedHost: 'millennium' }),
       'millennium',
     ],
     [
@@ -238,7 +242,7 @@ describe('computeAchievementsBadge', () => {
       'Decky plugin connected',
       facts({
         host: 'decky',
-        pluginConnected: true,
+        connectedHost: 'decky',
         decky: {
           installed: true,
           running: true,
@@ -275,6 +279,20 @@ describe('computeAchievementsBadge', () => {
       'needs-decky-plugin',
     ],
     ['Deck without Decky', facts({ host: 'decky', decky: null }), 'needs-decky'],
+    [
+      'Linux PC with Decky whose delivery runs through Millennium',
+      facts({
+        host: 'decky',
+        connectedHost: 'millennium',
+        decky: {
+          installed: true,
+          running: false,
+          pluginInstalled: false,
+          pluginDisabled: false,
+        },
+      }),
+      'millennium',
+    ],
     [
       'Decky installed but its loader is down',
       facts({

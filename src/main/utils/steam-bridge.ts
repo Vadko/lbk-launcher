@@ -23,6 +23,7 @@ import {
 import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';
 import type { SteamOpName, SteamOps } from '@/main/utils/steam-bridge-ops';
 import {
+  getConnectedPluginInfo,
   invokeViaPlugin,
   isPluginConnected,
   onPluginConnectionChange,
@@ -381,7 +382,9 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
     gamescope,
     canRestartSteam: steamRunning && !steamElevated && !gamescope,
     pendingLaunchOptions: pendingLaunchOptions(),
-    pluginHost: host.host,
+    // The status copy names the plugin that is actually connected, not the host LBK would pick.
+    pluginHost:
+      transport === 'plugin' ? (getConnectedPluginInfo()?.host ?? host.host) : host.host,
     decky: deckyStateFor(host.decky),
     achievements,
   };

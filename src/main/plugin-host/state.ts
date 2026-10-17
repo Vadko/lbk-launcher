@@ -301,7 +301,7 @@ export async function getAchievementsBadge(
     settingOn: isCefDebuggingEnabledInSettings(),
     host: snapshot.host,
     steamRunning,
-    pluginConnected: connected !== null && connected.host === snapshot.host,
+    connectedHost: connected?.host ?? null,
     millennium: {
       v3: snapshot.facts.millenniumGeneration === 'v3',
       pluginInstalled: plugin.installed,

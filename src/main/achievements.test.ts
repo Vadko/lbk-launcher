@@ -47,7 +47,7 @@ vi.mock('@/main/plugin-host/state', async () => {
           settingOn: state.settingOn,
           host: state.generation === 'v3' ? 'millennium' : 'none',
           steamRunning: true,
-          pluginConnected: state.pluginConnected,
+          connectedHost: state.pluginConnected ? 'millennium' : null,
           millennium: {
             v3: state.generation === 'v3',
             pluginInstalled: false,

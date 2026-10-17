@@ -156,7 +156,8 @@ export interface AchievementsFacts {
   settingOn: boolean;
   host: PluginHostState['host'];
   steamRunning: boolean;
-  pluginConnected: boolean;
+  // The host of the LBK Bridge copy that is connected, whatever host LBK would pick.
+  connectedHost: 'millennium' | 'decky' | null;
   millennium: {
     v3: boolean;
     pluginInstalled: boolean;
@@ -181,10 +182,11 @@ export function computeAchievementsBadge(f: AchievementsFacts): AchievementsBadg
   if (!f.settingOn) {
     return badge('setting-off');
   }
+  // A Linux PC with both Decky and Millennium delivers through Millennium's copy: that is what counts.
+  if (f.connectedHost) {
+    return badge(f.connectedHost);
+  }
   if (f.host === 'decky') {
-    if (f.pluginConnected) {
-      return badge('decky');
-    }
     if (!f.decky?.installed || !f.decky.running) {
       return badge('needs-decky');
     }
@@ -194,9 +196,6 @@ export function computeAchievementsBadge(f: AchievementsFacts): AchievementsBadg
     return badge(f.steamRunning ? 'after-restart' : 'decky');
   }
   if (f.millennium.v3) {
-    if (f.pluginConnected) {
-      return badge('millennium');
-    }
     const ready = f.millennium.pluginInstalled && f.millennium.pluginEnabled;
     return badge(ready && !f.steamRunning ? 'millennium' : 'after-restart');
   }
