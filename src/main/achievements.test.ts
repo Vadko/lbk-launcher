@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   settingOn: true,
   generation: null as 'v2' | 'v3' | null,
   reload: vi.fn(() => Promise.resolve({ apps: 1, coverage: {} })),
+  recordRemoved: null as ((gameId: string) => void) | null,
 }));
 
 vi.mock('electron', () => ({
@@ -25,6 +26,14 @@ vi.mock('@/main/installer/archive', () => ({ extractArchive: vi.fn() }));
 vi.mock('@/main/installer/cache', () => ({
   findInstallationInfoFile: (gamePath: string) =>
     path.join(gamePath, '.lbk-translation.json'),
+  getAllInstalledGameIds: async () => {
+    const dir = path.join(state.root, 'userData', 'installation-cache');
+    return fs.existsSync(dir) ? fs.readdirSync(dir).map((name) => name.slice(0, -5)) : [];
+  },
+  onInstallationRecordRemoved: (listener: (gameId: string) => void) => {
+    state.recordRemoved = listener;
+    return () => undefined;
+  },
 }));
 vi.mock('@/main/installer/download', () => ({ downloadFile: vi.fn() }));
 vi.mock('@/main/tracking', () => ({ getSignedDownloadUrl: vi.fn() }));
@@ -258,8 +267,8 @@ describe('syncAchievementsToPlugin', () => {
   });
 });
 
-describe('legacy migration on startup', () => {
-  it('moves strings out of appcache and rewrites both install records', async () => {
+describe('startup', () => {
+  it('migrates legacy files, drops orphan strings and follows record removals', async () => {
     const file = 'UserGameStatsSchema_400.bin';
     fs.writeFileSync(statsFile(file), OURS());
     fs.writeFileSync(statsFile(`${file}_backup`), OFFICIAL());
@@ -280,6 +289,11 @@ describe('legacy migration on startup', () => {
     fs.mkdirSync(cacheDir, { recursive: true });
     fs.writeFileSync(path.join(cacheDir, 'game-a.json'), JSON.stringify(info));
     fs.writeFileSync(path.join(gamePath, '.lbk-translation.json'), JSON.stringify(info));
+    saveAchievementStrings(
+      [{ appId: 500, strings: { ACH: { name: 'Сирота' } } }],
+      'gone-game',
+      'h2'
+    );
 
     startAchievements();
 
@@ -296,5 +310,9 @@ describe('legacy migration on startup', () => {
     expect(readAch(path.join(gamePath, '.lbk-translation.json')).files).toEqual([]);
     expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
     expect(hasAchievementStrings([400], 'game-a')).toBe(true);
+    await vi.waitFor(() => expect(fs.existsSync(stringsFile(500))).toBe(false));
+
+    state.recordRemoved?.('game-a');
+    expect(fs.existsSync(stringsFile(400))).toBe(false);
   });
 });

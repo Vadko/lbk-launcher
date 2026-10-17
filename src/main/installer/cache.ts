@@ -16,6 +16,23 @@ const INSTALLATION_INFO_FILE = '.lbk-translation.json';
 // Cache for installed game IDs
 let installedGameIdsCache: string[] | null = null;
 
+const recordRemovedListeners = new Set<(gameId: string) => void>();
+
+// Data kept outside the game folder (achievement strings) must go with the record.
+export function onInstallationRecordRemoved(
+  listener: (gameId: string) => void
+): () => void {
+  recordRemovedListeners.add(listener);
+  return () => recordRemovedListeners.delete(listener);
+}
+
+async function removeRecordFile(filePath: string, gameId: string): Promise<void> {
+  await unlink(filePath);
+  for (const listener of recordRemovedListeners) {
+    listener(gameId);
+  }
+}
+
 /**
  * Find the installation info file path, supporting both new and legacy formats.
  * If old format is found, attempts to rename it to the new format.
@@ -205,7 +222,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
               console.log(
                 `[Installer] Different translation now installed (${actualInfo.gameId}), clearing cache for ${game.id}`
               );
-              await unlink(previousInstallInfoPath);
+              await removeRecordFile(previousInstallInfoPath, game.id);
               return null;
             }
           } catch {
@@ -213,7 +230,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
             console.log(
               '[Installer] Cannot read actual installation file, cache is stale'
             );
-            await unlink(previousInstallInfoPath);
+            await removeRecordFile(previousInstallInfoPath, game.id);
             return null;
           }
 
@@ -227,7 +244,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
         // Cache is stale - game folder or translation was removed
         console.log('[Installer] Cache is stale, removing cached installation info');
         try {
-          await unlink(previousInstallInfoPath);
+          await removeRecordFile(previousInstallInfoPath, game.id);
         } catch {
           // Ignore deletion errors
         }
@@ -294,7 +311,7 @@ export async function removeOrphanedInstallationMetadata(
       const metadataPath = path.join(installInfoDir, `${gameId}.json`);
 
       if (fs.existsSync(metadataPath)) {
-        await unlink(metadataPath);
+        await removeRecordFile(metadataPath, gameId);
         console.log(`[Installer] Removed metadata for game: ${gameId}`);
       }
     } catch (error) {

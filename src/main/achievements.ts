@@ -7,7 +7,11 @@ import { GamesRepository } from '@/main/db/games-repository';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { extractArchive } from '@/main/installer/archive';
 import { BACKUP_SUFFIX } from '@/main/installer/backup';
-import { findInstallationInfoFile } from '@/main/installer/cache';
+import {
+  findInstallationInfoFile,
+  getAllInstalledGameIds,
+  onInstallationRecordRemoved,
+} from '@/main/installer/cache';
 import { downloadFile } from '@/main/installer/download';
 import { NetworkError, RateLimitError } from '@/main/installer/errors';
 import { cleanupDownloadDir, getAllFiles } from '@/main/installer/files';
@@ -268,6 +272,29 @@ export async function removeInstalledAchievements(
       removeStoredStrings(appId, gameId);
     }
   }
+}
+
+// Records also vanish outside the uninstall flow (game removed in Steam, stale cache); their strings go too.
+function removeStringsOwnedBy(gameIds: ReadonlySet<string>): boolean {
+  let removed = false;
+  for (const entry of listStoredStrings()) {
+    if (gameIds.has(entry.gameId)) {
+      removeStoredStrings(entry.appid, entry.gameId);
+      removed = true;
+    }
+  }
+  return removed;
+}
+
+// Startup only: no install is in flight yet, so strings without a record are orphans.
+async function pruneOrphanStrings(): Promise<void> {
+  const installed = new Set(await getAllInstalledGameIds());
+  const orphans = new Set(
+    listStoredStrings()
+      .map((entry) => entry.gameId)
+      .filter((gameId) => !installed.has(gameId))
+  );
+  removeStringsOwnedBy(orphans);
 }
 
 async function computeDelivery(reloaded: boolean): Promise<AchievementsDelivery> {
@@ -611,6 +638,15 @@ export function startAchievements(): void {
       void syncAchievementsToPlugin();
     }
   });
-  void syncAchievementsToPlugin();
+  onInstallationRecordRemoved((gameId) => {
+    if (removeStringsOwnedBy(new Set([gameId]))) {
+      void syncAchievementsToPlugin();
+    }
+  });
+  void pruneOrphanStrings()
+    .catch((error: unknown) =>
+      console.warn('[Achievements] Orphan cleanup failed:', error)
+    )
+    .finally(() => void syncAchievementsToPlugin());
   void migrateLegacyAchievements();
 }
