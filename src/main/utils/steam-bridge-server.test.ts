@@ -351,7 +351,30 @@ describe('plugin server', () => {
     expect(await second.closed()).toBe(4003);
   });
 
-  it('replaces the old client when a new one authenticates', async () => {
+  it('keeps a connected client that still answers and refuses the newcomer', async () => {
+    const first = connect();
+    await first.handshake(bridge.secret);
+    await connected();
+    first.ws.on('message', (data) => {
+      const msg = JSON.parse(data.toString()) as Message;
+      if (msg.t === 'ping') {
+        first.send({ t: 'pong', id: msg.id });
+      }
+    });
+
+    const second = connect();
+    await second.opened();
+    second.send({ t: 'hello', v: 1, plugin: 'lbk-bridge', pv: '1.0.0', ops: [], cn: CN });
+    const challenge = await second.next();
+    const sn = challenge.sn as string;
+    second.send({ t: 'auth', cp: await pluginHmac(bridge.secret, `client|${sn}|${CN}`) });
+
+    expect(await second.closed()).toBe(4011);
+    expect(first.closeCode).toBeNull();
+    expect(isPluginConnected()).toBe(true);
+  });
+
+  it('replaces the old client once it stops answering', async () => {
     const first = connect();
     await first.handshake(bridge.secret);
     await connected();

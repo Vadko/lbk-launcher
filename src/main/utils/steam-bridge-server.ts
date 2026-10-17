@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
-import { type RawData, type WebSocket, WebSocketServer } from 'ws';
+import { type RawData, WebSocket, WebSocketServer } from 'ws';
 import { MILLENNIUM_PLUGIN_NAME } from '@/main/utils/millennium-plugin';
 import { deleteBridgePluginData, writeBridgePluginData } from '@/main/utils/plugin-data';
 import type { SteamOpName, SteamOps } from '@/main/utils/steam-bridge-ops';
@@ -24,6 +24,8 @@ const CLOSE_AUTH = 4003;
 const CLOSE_HANDSHAKE_TIMEOUT = 4004;
 const CLOSE_REPLACED = 4009;
 const CLOSE_SHUTDOWN = 4010;
+const CLOSE_BUSY = 4011;
+const LIVENESS_PROBE_MS = 1500;
 
 interface QueuedRequest {
   op: SteamOpName;
@@ -58,6 +60,7 @@ interface PluginSession {
   inFlight: InFlightRequest | null;
   lastPongAt: number;
   pingTimer: NodeJS.Timeout | null;
+  pongWaiters: (() => void)[];
 }
 
 interface ServerState {
@@ -231,6 +234,25 @@ function endSession(s: PluginSession): void {
   }
 }
 
+// bridge.json is readable beyond the plugin, so a newcomer with the secret only displaces a session that went quiet.
+function answersPing(s: PluginSession): Promise<boolean> {
+  if (s.ws.readyState !== WebSocket.OPEN) {
+    return Promise.resolve(false);
+  }
+  return new Promise((resolve) => {
+    const onPong = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      s.pongWaiters = s.pongWaiters.filter((waiter) => waiter !== onPong);
+      resolve(false);
+    }, LIVENESS_PROBE_MS);
+    s.pongWaiters.push(onPong);
+    send(s.ws, { t: 'ping', id: nextMessageId++ });
+  });
+}
+
 function promote(ws: WebSocket, hello: PluginHello): void {
   const previous = session;
   const s: PluginSession = {
@@ -242,6 +264,7 @@ function promote(ws: WebSocket, hello: PluginHello): void {
     inFlight: null,
     lastPongAt: Date.now(),
     pingTimer: null,
+    pongWaiters: [],
   };
   if (previous) {
     // Cleared first so the old socket's close does not report a disconnect.
@@ -267,6 +290,9 @@ function promote(ws: WebSocket, hello: PluginHello): void {
     }
     if (msg.t === 'pong') {
       s.lastPongAt = Date.now();
+      for (const waiter of s.pongWaiters.splice(0)) {
+        waiter();
+      }
       return;
     }
     if (msg.t === 'res') {
@@ -373,10 +399,21 @@ function handleConnection(ws: WebSocket): void {
     }
     clearTimeout(timer);
     ws.off('message', onHandshakeMessage);
-    if (!send(ws, { t: 'ready' })) {
-      return;
-    }
-    promote(ws, hello);
+    const verified = hello;
+    const current = session;
+    void (async () => {
+      if (current && (await answersPing(current))) {
+        console.warn(
+          '[SteamBridge] Refusing a second plugin while the connected one answers'
+        );
+        ws.close(CLOSE_BUSY, 'session active');
+        return;
+      }
+      if (ws.readyState !== WebSocket.OPEN || !send(ws, { t: 'ready' })) {
+        return;
+      }
+      promote(ws, verified);
+    })();
   };
 
   ws.on('message', onHandshakeMessage);

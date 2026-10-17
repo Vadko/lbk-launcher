@@ -296,6 +296,28 @@ const safeEqual = (a, b) => {
   return diff === 0;
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// localStorage outlives a Steam restart: after an LBK crash the stale bridge.json still holds a secret whose session ended.
+const SPENT_KEY = 'lbk-bridge-spent-secrets';
+const SPENT_MAX = 8;
+const spentDigest = (secret) => hmac(secret, 'spent');
+const readSpent = () => {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(SPENT_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((d) => typeof d === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+const rememberSpent = async (secret) => {
+  try {
+    const digest = await spentDigest(secret);
+    const list = readSpent().filter((d) => d !== digest);
+    list.push(digest);
+    window.localStorage.setItem(SPENT_KEY, JSON.stringify(list.slice(-SPENT_MAX)));
+  } catch {
+    // No localStorage: the in-memory guard still covers this Steam session.
+  }
+};
 // SteamClient rejects with plain objects like {result, message}; keep them readable like the CDP transport does.
 const errText = (e) => {
   if (e instanceof Error) {
@@ -826,6 +848,12 @@ const startBridge = () => {
       schedule();
       return;
     }
+    if (readSpent().includes(await spentDigest(cfg.secret))) {
+      if (!disposed) {
+        schedule();
+      }
+      return;
+    }
 
     state.status = 'connecting';
     let ws;
@@ -912,6 +940,7 @@ const startBridge = () => {
       cancel(timer);
       if (authed) {
         spentSecret = cfg.secret;
+        void rememberSpent(cfg.secret);
       }
       if (socket === ws) {
         socket = null;

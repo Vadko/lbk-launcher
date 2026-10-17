@@ -41,6 +41,7 @@ class FakeSocket {
   closed = false;
   onopen: (() => void) | null = null;
   onclose: (() => void) | null = null;
+  onmessage: ((ev: { data: string }) => Promise<void>) | null = null;
   constructor(readonly url: string) {
     FakeSocket.instances.push(this);
   }
@@ -52,7 +53,18 @@ class FakeSocket {
   }
 }
 
-function makeSteam(bridgeJson: unknown = null) {
+function makeStorage() {
+  const items = new Map<string, string>();
+  return {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => void items.set(key, value),
+  };
+}
+
+function makeSteam(
+  bridgeJson: unknown = null,
+  localStorage?: ReturnType<typeof makeStorage>
+) {
   const timers = new Map<number, () => void>();
   let nextTimer = 0;
   let fetches = 0;
@@ -62,6 +74,7 @@ function makeSteam(bridgeJson: unknown = null) {
     TextEncoder,
     crypto: webcrypto,
     WebSocket: FakeSocket,
+    localStorage,
     fetch: () => {
       fetches++;
       return Promise.resolve({
@@ -106,6 +119,8 @@ function makeSteam(bridgeJson: unknown = null) {
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+// connect() awaits WebCrypto before it dials.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 describe('LBK Bridge core double-load guard', () => {
   it('replaces its own earlier copy on a reload', () => {
@@ -180,7 +195,7 @@ describe('LBK Bridge core transport', () => {
     const steam = makeSteam({ v: 1, port: 50000, secret: 'ab'.repeat(32) });
     const copy = steam.load('decky');
     copy.start();
-    await flush();
+    await settle();
     const ws = FakeSocket.instances[0];
     expect(ws.url).toBe('ws://127.0.0.1:50000/lbk-bridge');
 
@@ -195,5 +210,57 @@ describe('LBK Bridge core transport', () => {
 
     copy.dispose();
     expect(ws.closed).toBe(true);
+  });
+});
+
+async function hmacHex(secret: string, msg: string): Promise<string> {
+  const key = await webcrypto.subtle.importKey(
+    'raw',
+    Buffer.from(secret, 'hex'),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  return Buffer.from(await webcrypto.subtle.sign('HMAC', key, Buffer.from(msg))).toString(
+    'hex'
+  );
+}
+
+describe('LBK Bridge core spent secrets', () => {
+  it('never redials a secret whose session ended, even after Steam restarts', async () => {
+    const secret = 'cd'.repeat(32);
+    const bridge = { v: 1, port: 50001, secret };
+    const storage = makeStorage();
+    FakeSocket.instances = [];
+
+    const steam = makeSteam(bridge, storage);
+    steam.load('millennium').start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    ws.onopen?.();
+    const { cn } = ws.sent[0] as { cn: string };
+    const sn = 'ef'.repeat(16);
+    await ws.onmessage?.({
+      data: JSON.stringify({
+        t: 'challenge',
+        sn,
+        sp: await hmacHex(secret, `server|${cn}|${sn}`),
+      }),
+    });
+    await ws.onmessage?.({ data: JSON.stringify({ t: 'ready' }) });
+    ws.onclose?.();
+    await settle();
+
+    FakeSocket.instances = [];
+    const restarted = makeSteam(bridge, storage);
+    restarted.load('millennium').start();
+    await settle();
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    FakeSocket.instances = [];
+    const rotated = makeSteam({ ...bridge, secret: '12'.repeat(32) }, storage);
+    rotated.load('millennium').start();
+    await settle();
+    expect(FakeSocket.instances).toHaveLength(1);
   });
 });

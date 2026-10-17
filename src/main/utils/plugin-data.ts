@@ -1,4 +1,6 @@
+import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { writeFileAtomic } from './atomic-write';
 import { DECKY_PLUGIN_DIR, detectDeckyPluginSync } from './decky';
@@ -14,6 +16,38 @@ const pendingData = new Map<BridgePluginDataFile, string>();
 
 function dataFileMode(): number | undefined {
   return isWindows() ? undefined : 0o600;
+}
+
+// The Steam folder's ACL lets every local user read files under it; only the secret needs locking down.
+export function currentUserOnlyIcaclsArgs(
+  file: string,
+  env: NodeJS.ProcessEnv,
+  username: string
+): string[] {
+  const user = env.USERNAME || username;
+  const account = env.USERDOMAIN ? `${env.USERDOMAIN}\\${user}` : user;
+  return [file, '/inheritance:r', '/grant:r', `${account}:F`];
+}
+
+function restrictToCurrentUser(file: string): void {
+  const icacls = path.win32.join(
+    process.env.SystemRoot || 'C:\\Windows',
+    'System32',
+    'icacls.exe'
+  );
+  try {
+    execFileSync(
+      icacls,
+      currentUserOnlyIcaclsArgs(file, process.env, os.userInfo().username),
+      {
+        timeout: 10_000,
+        windowsHide: true,
+        stdio: 'ignore',
+      }
+    );
+  } catch (error) {
+    console.warn(`[SteamBridge] Failed to restrict ${file} to the current user:`, error);
+  }
 }
 
 // Decky serves <homebrew>/data/<plugin dir>/ without a token, so nothing but these two files may go there.
@@ -51,10 +85,14 @@ function targets(create: boolean): string[] {
 
 function writeTo(dir: string, file: BridgePluginDataFile, content: string): void {
   try {
-    writeFileAtomic(path.join(dir, file), content, {
+    const target = path.join(dir, file);
+    writeFileAtomic(target, content, {
       mode: dataFileMode(),
       allowInPlace: true,
     });
+    if (file === 'bridge.json' && isWindows()) {
+      restrictToCurrentUser(target);
+    }
   } catch (error) {
     console.warn(`[SteamBridge] Failed to write ${file} to ${dir}:`, error);
   }

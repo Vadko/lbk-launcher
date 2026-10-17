@@ -123,3 +123,21 @@ describe('bridge plugin data files', () => {
     expect(fs.existsSync(deckyData('other.txt'))).toBe(true);
   });
 });
+
+describe('currentUserOnlyIcaclsArgs', () => {
+  it('drops inherited access and grants only the signed-in account', () => {
+    expect(
+      data.currentUserOnlyIcaclsArgs(
+        'C:\\Steam\\bridge.json',
+        { USERNAME: 'vadko', USERDOMAIN: 'PC' },
+        'x'
+      )
+    ).toEqual(['C:\\Steam\\bridge.json', '/inheritance:r', '/grant:r', 'PC\\vadko:F']);
+    expect(data.currentUserOnlyIcaclsArgs('f', {}, 'vadko')).toEqual([
+      'f',
+      '/inheritance:r',
+      '/grant:r',
+      'vadko:F',
+    ]);
+  });
+});
