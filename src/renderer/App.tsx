@@ -12,6 +12,7 @@ import { SitePage } from './pages/SitePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
 import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
+import { useSteamBridgeStatusStore } from './store/useSteamBridgeStatusStore';
 import { useStore } from './store/useStore';
 import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
 import { trackEvent } from './utils/analytics';
@@ -427,6 +428,29 @@ export const App: React.FC = () => {
       });
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onSteamBridgeStatusChanged) {
+      return;
+    }
+    const store = useSteamBridgeStatusStore.getState();
+    const unsubscribeStatus = api.onSteamBridgeStatusChanged(store.setStatus);
+    // Main also republishes after a batch; a refetch covers a publish that compared equal.
+    const unsubscribeApplied = api.onSteamPendingActionsApplied(() => {
+      void store.refresh();
+    });
+    return () => {
+      unsubscribeStatus();
+      unsubscribeApplied();
+    };
+  }, []);
+
+  useIdleEffect(() => {
+    if (window.electronAPI) {
+      void useSteamBridgeStatusStore.getState().refresh();
+    }
   }, []);
 
   const handleOnlineEvent = () => {
