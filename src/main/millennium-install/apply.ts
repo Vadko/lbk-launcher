@@ -4,7 +4,10 @@ import { app } from 'electron';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { resetHostFacts } from '@/main/plugin-host/state';
 import { replaceSymlinkAtomic, writeFileAtomic } from '@/main/utils/atomic-write';
-import { syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
+import {
+  restoreCefFlagFileAfterMillennium,
+  syncBridgePluginSetup,
+} from '@/main/utils/cef-flag-file';
 import {
   renderInitialMillenniumConfig,
   resetMillenniumDetectCache,
@@ -380,6 +383,7 @@ export function applyQueuedMillenniumAction(
       phaseListener?.('install-files');
       removeFiles(ctx, ctx.record, action.purge);
       afterChange();
+      restoreCefFlagFileAfterMillennium();
       console.log(`[Millennium] Removed${action.purge ? ' with data' : ''}`);
     }
     phaseListener?.('installed');

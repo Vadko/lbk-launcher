@@ -136,6 +136,13 @@ function removeCefFlagFile(): void {
   }
 }
 
+// Millennium deleted the flag on every Steam start, so after it is gone nothing else would bring CDP back.
+export function restoreCefFlagFileAfterMillennium(): void {
+  if (isCefDebuggingEnabledInSettings() && !detectMillennium().blocksTcpCdp) {
+    ensureCefFlagFile();
+  }
+}
+
 export function isCefFlagFilePresent(): boolean {
   const filePath = getFlagFilePath();
   return filePath !== null && fs.existsSync(filePath);
