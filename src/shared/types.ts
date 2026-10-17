@@ -205,7 +205,12 @@ export interface PluginHostState {
     };
   };
   // Set only where Decky is the host and missing: LBK can launch Decky's own installer.
-  deckyLoader: null | { installing: boolean; blockedBy: 'game-mode' | null };
+  deckyLoader: null | {
+    installing: boolean;
+    blockedBy: 'game-mode' | null;
+    // Installed but its service is not running.
+    repair: boolean;
+  };
   busy: boolean;
   steamRunning: boolean;
   canRestartSteam: boolean;
@@ -283,7 +288,8 @@ export type DeckyLoaderInstallResult =
         | 'game-mode'
         | 'download-failed'
         | 'checksum-mismatch'
-        | 'not-installed';
+        | 'not-installed'
+        | 'not-running';
       error?: string;
     };
 

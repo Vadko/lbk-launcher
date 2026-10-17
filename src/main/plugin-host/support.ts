@@ -133,16 +133,22 @@ export function pickPluginHost(
 }
 
 // Decky ships its installer as a Desktop Mode tool: the sudo password prompt is a zenity dialog.
+// Installed but not running (a failed install leaves the unit without the binary) keeps the offer as a repair.
 export function deckyLoaderOffer(f: {
   host: PluginHostState['host'];
   deckyInstalled: boolean;
+  deckyRunning: boolean;
   gamescope: boolean;
   installing: boolean;
 }): PluginHostState['deckyLoader'] {
-  if (f.host !== 'decky' || (f.deckyInstalled && !f.installing)) {
+  if (f.host !== 'decky' || (f.deckyInstalled && f.deckyRunning && !f.installing)) {
     return null;
   }
-  return { installing: f.installing, blockedBy: f.gamescope ? 'game-mode' : null };
+  return {
+    installing: f.installing,
+    blockedBy: f.gamescope ? 'game-mode' : null,
+    repair: f.deckyInstalled && !f.deckyRunning,
+  };
 }
 
 export interface AchievementsFacts {
@@ -158,7 +164,12 @@ export interface AchievementsFacts {
     activationPending: boolean;
   };
   support: MillenniumSupport;
-  decky: null | { installed: boolean; pluginInstalled: boolean; pluginDisabled: boolean };
+  decky: null | {
+    installed: boolean;
+    running: boolean;
+    pluginInstalled: boolean;
+    pluginDisabled: boolean;
+  };
 }
 
 // The one place that decides whether achievement strings reach Steam; delivery and the install badge derive from it.
@@ -174,7 +185,7 @@ export function computeAchievementsBadge(f: AchievementsFacts): AchievementsBadg
     if (f.pluginConnected) {
       return badge('decky');
     }
-    if (!f.decky?.installed) {
+    if (!f.decky?.installed || !f.decky.running) {
       return badge('needs-decky');
     }
     if (!f.decky.pluginInstalled || f.decky.pluginDisabled) {

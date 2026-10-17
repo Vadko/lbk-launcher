@@ -271,6 +271,7 @@ export function deckyLoaderStateFor(
   return deckyLoaderOffer({
     host: snapshot.host,
     deckyInstalled: snapshot.decky?.installed === true,
+    deckyRunning: snapshot.decky?.running === true,
     gamescope: isGamescopeSession(),
     installing: deckyLoaderInstalling,
   });
@@ -311,6 +312,7 @@ export async function getAchievementsBadge(
     decky: snapshot.decky
       ? {
           installed: snapshot.decky.installed,
+          running: snapshot.decky.running,
           pluginInstalled: snapshot.decky.plugin.installed,
           pluginDisabled: snapshot.decky.plugin.disabled,
         }

@@ -43,6 +43,8 @@ const LOADER_OFFER_PARAGRAPHS = [
   'Лаунчер завантажить офіційний інсталятор Decky Loader з GitHub і запустить його. Пароль адміністратора (sudo) інсталятор питає у власному вікні, лаунчер його не бачить. Якщо пароля ще немає, інсталятор запропонує тимчасовий і прибере його після встановлення.',
   'Зважте: після великих оновлень SteamOS Decky Loader іноді доводиться встановити ще раз.',
 ];
+const LOADER_REPAIR_TEXT =
+  'Decky Loader встановлено, але він не працює — схоже, попереднє встановлення не завершилося. Лаунчер може запустити офіційний інсталятор Decky Loader ще раз.';
 const LOADER_GAME_MODE_TEXT =
   'Інсталятор Decky Loader працює лише в режимі робочого столу. Перейдіть у нього через меню живлення Steam, відкрийте лаунчер і натисніть «Встановити Decky Loader» ще раз.';
 const LOADER_INSTALLING_TEXT =
@@ -74,6 +76,8 @@ function loaderFailureText(reason: LoaderFailure): string {
       return 'Завантажений інсталятор Decky Loader не збігається з перевіреною версією. Встановлення скасовано.';
     case 'unsupported':
       return 'На цій системі лаунчер не може встановити Decky Loader. Встановіть його за інструкцією на сайті Decky Loader.';
+    case 'not-running':
+      return 'Decky Loader встановлено, але він не запустився. Спробуйте ще раз — інсталятор перевстановить його.';
     default:
       return 'Decky Loader не встановлено. Якщо вікно інсталятора закрито або пароль не підійшов, спробуйте ще раз.';
   }
@@ -275,20 +279,19 @@ export const DeckyPluginSetupFlow: React.FC = () => {
         footer = <SetupFooter>{closeButton}</SetupFooter>;
         break;
       }
-      if (!decky?.installed && state.deckyLoader) {
+      if (state.deckyLoader && (!decky?.installed || state.deckyLoader.repair)) {
         const gameMode = state.deckyLoader.blockedBy === 'game-mode';
+        const { repair } = state.deckyLoader;
+        const offer = repair ? [LOADER_REPAIR_TEXT] : LOADER_OFFER_PARAGRAPHS;
         body = (
-          <SetupText
-            paragraphs={
-              gameMode
-                ? [...LOADER_OFFER_PARAGRAPHS, LOADER_GAME_MODE_TEXT]
-                : LOADER_OFFER_PARAGRAPHS
-            }
-          />
+          <SetupText paragraphs={gameMode ? [...offer, LOADER_GAME_MODE_TEXT] : offer} />
         );
         footer = (
           <SetupFooter>
-            {!gameMode && installLoaderButton('Встановити Decky Loader')}
+            {!gameMode &&
+              installLoaderButton(
+                repair ? 'Відновити Decky Loader' : 'Встановити Decky Loader'
+              )}
             {siteButton(gameMode)}
             <SetupButton tone="secondary" onClick={close} gamepad="cancel">
               {source === 'offer' ? 'Не зараз' : 'Скасувати'}
@@ -376,7 +379,10 @@ export const DeckyPluginSetupFlow: React.FC = () => {
       footer = <SetupFooter>{closeButton}</SetupFooter>;
       break;
     case 'loader-failed': {
-      const retry = view.reason === 'not-installed' || view.reason === 'download-failed';
+      const retry =
+        view.reason === 'not-installed' ||
+        view.reason === 'not-running' ||
+        view.reason === 'download-failed';
       body = <SetupText paragraphs={[loaderFailureText(view.reason)]} />;
       footer = (
         <SetupFooter>

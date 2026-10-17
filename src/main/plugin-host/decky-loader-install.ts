@@ -93,7 +93,7 @@ async function waitForDecky(): Promise<DeckyInfo | null> {
 
 async function runInstall(): Promise<DeckyLoaderInstallResult> {
   const snapshot = await getHostSnapshot();
-  if (snapshot.decky?.installed) {
+  if (snapshot.decky?.installed && snapshot.decky.running) {
     return { success: true };
   }
   const offer = deckyLoaderStateFor(snapshot);
@@ -127,14 +127,19 @@ async function runInstall(): Promise<DeckyLoaderInstallResult> {
     console.log(`[Decky] Running Decky installer ${DECKY_INSTALLER.version}`);
     const run = await runOnHost(script);
     const decky = await waitForDecky();
-    if (!decky) {
+    if (!decky?.running) {
       const tail = lastOutputLine(run.output);
+      // The script copies the unit even when the loader download failed (GitHub rate limit), so only a live loader counts.
       console.warn(
-        `[Decky] Installer exited (${run.code}) without Decky Loader${tail ? `: ${tail}` : ''}`
+        `[Decky] Installer exited (${run.code}) without a running Decky Loader${tail ? `: ${tail}` : ''}`
       );
-      return { success: false, reason: 'not-installed', error: tail ?? undefined };
+      return {
+        success: false,
+        reason: decky?.installed ? 'not-running' : 'not-installed',
+        error: tail ?? undefined,
+      };
     }
-    console.log(`[Decky] Decky Loader installed, running: ${decky.running}`);
+    console.log('[Decky] Decky Loader installed and running');
     return { success: true };
   } finally {
     setDeckyLoaderInstalling(false);

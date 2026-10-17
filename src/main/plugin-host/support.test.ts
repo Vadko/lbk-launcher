@@ -140,30 +140,43 @@ describe('deckyLoaderOffer', () => {
     deckyLoaderOffer({
       host: 'decky',
       deckyInstalled: false,
+      deckyRunning: false,
       gamescope: false,
       installing: false,
       ...overrides,
     });
 
   it('offers the installer only where Decky is the host and missing', () => {
-    expect(offer()).toEqual({ installing: false, blockedBy: null });
+    expect(offer()).toEqual({ installing: false, blockedBy: null, repair: false });
     expect(offer({ host: 'millennium' })).toBeNull();
     expect(offer({ host: 'none' })).toBeNull();
-    expect(offer({ deckyInstalled: true })).toBeNull();
+    expect(offer({ deckyInstalled: true, deckyRunning: true })).toBeNull();
+  });
+
+  it('keeps offering a repair when the installed loader does not run', () => {
+    expect(offer({ deckyInstalled: true })).toEqual({
+      installing: false,
+      blockedBy: null,
+      repair: true,
+    });
   });
 
   it('blocks the zenity-driven installer in Game Mode', () => {
     expect(offer({ gamescope: true })).toEqual({
       installing: false,
       blockedBy: 'game-mode',
+      repair: false,
     });
   });
 
   it('keeps reporting a running install after PluginLoader appears mid-run', () => {
-    expect(offer({ deckyInstalled: true, installing: true })).toEqual({
-      installing: true,
-      blockedBy: null,
-    });
+    expect(offer({ deckyInstalled: true, deckyRunning: true, installing: true })).toEqual(
+      {
+        installing: true,
+        blockedBy: null,
+        repair: false,
+      }
+    );
   });
 });
 
@@ -226,7 +239,12 @@ describe('computeAchievementsBadge', () => {
       facts({
         host: 'decky',
         pluginConnected: true,
-        decky: { installed: true, pluginInstalled: true, pluginDisabled: false },
+        decky: {
+          installed: true,
+          running: true,
+          pluginInstalled: true,
+          pluginDisabled: false,
+        },
       }),
       'decky',
     ],
@@ -234,7 +252,12 @@ describe('computeAchievementsBadge', () => {
       'Decky plugin missing',
       facts({
         host: 'decky',
-        decky: { installed: true, pluginInstalled: false, pluginDisabled: false },
+        decky: {
+          installed: true,
+          running: true,
+          pluginInstalled: false,
+          pluginDisabled: false,
+        },
       }),
       'needs-decky-plugin',
     ],
@@ -242,11 +265,29 @@ describe('computeAchievementsBadge', () => {
       'Decky plugin disabled',
       facts({
         host: 'decky',
-        decky: { installed: true, pluginInstalled: true, pluginDisabled: true },
+        decky: {
+          installed: true,
+          running: true,
+          pluginInstalled: true,
+          pluginDisabled: true,
+        },
       }),
       'needs-decky-plugin',
     ],
     ['Deck without Decky', facts({ host: 'decky', decky: null }), 'needs-decky'],
+    [
+      'Decky installed but its loader is down',
+      facts({
+        host: 'decky',
+        decky: {
+          installed: true,
+          running: false,
+          pluginInstalled: true,
+          pluginDisabled: false,
+        },
+      }),
+      'needs-decky',
+    ],
   ] as const)('%s → %s', (_label, input, state) => {
     expect(computeAchievementsBadge(input).state).toBe(state);
   });
