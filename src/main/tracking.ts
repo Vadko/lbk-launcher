@@ -402,7 +402,8 @@ export async function submitFeedback(
   gameId: string,
   type: string,
   message: string,
-  screenshotPaths?: string[]
+  screenshotPaths?: string[],
+  allowPublish?: boolean
 ): Promise<{ success: boolean; error?: string }> {
   if (IS_E2E) {
     return { success: false, error: 'E2E mode' };
@@ -427,6 +428,7 @@ export async function submitFeedback(
         type,
         message,
         ...(screenshotPaths?.length && { screenshotPaths }),
+        ...(allowPublish !== undefined && { allowPublish }),
         version: app.getVersion(),
         platform: process.platform,
         arch: process.arch,

@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle, FileEdit, ImageIcon, X } from 'lucide-react
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { FeedbackType } from '@/shared/types';
 import { trackEvent } from '../../utils/analytics';
+import { Checkbox } from '../ui/Checkbox';
 import { Modal } from './Modal';
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -48,6 +49,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 }) => {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('feedback');
   const [message, setMessage] = useState('');
+  const [allowPublish, setAllowPublish] = useState(true);
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -60,6 +62,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     if (isOpen) {
       setFeedbackType('feedback');
       setMessage('');
+      setAllowPublish(true);
       setScreenshots([]);
       setIsSubmitting(false);
       setIsSubmitted(false);
@@ -178,7 +181,8 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         gameId,
         feedbackType,
         trimmedMessage,
-        uploadedPaths
+        uploadedPaths,
+        feedbackType === 'feedback' ? allowPublish : undefined
       );
 
       if (result.success) {
@@ -187,6 +191,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           'Game Id': gameId,
           'Game Name': gameName,
           'Feedback Type': feedbackType,
+          ...(feedbackType === 'feedback' && { 'Allow Publish': allowPublish }),
           'Message Length': trimmedMessage.length,
           Screenshots: screenshots.length,
         });
@@ -202,7 +207,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [gameId, gameName, feedbackType, message, screenshots, isSubmitting]);
+  }, [gameId, gameName, feedbackType, message, allowPublish, screenshots, isSubmitting]);
 
   // Success state
   if (isSubmitted) {
@@ -343,6 +348,23 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             }}
           />
         </div>
+
+        {feedbackType === 'feedback' && (
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="allow-publish-feedback"
+              checked={allowPublish}
+              onCheckedChange={setAllowPublish}
+              gamepadModalItem
+            />
+            <label
+              htmlFor="allow-publish-feedback"
+              className="text-sm text-text-muted cursor-pointer"
+            >
+              Дозволяю опублікувати мій відгук у відгуках спільноти
+            </label>
+          </div>
+        )}
 
         {/* Error */}
         {error && (

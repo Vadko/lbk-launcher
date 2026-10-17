@@ -21,6 +21,7 @@ import {
   type ImpressionType,
   recordBannerImpression,
 } from '../db/banners-api';
+import { fetchGameReviews } from '../db/game-reviews-api';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
@@ -161,8 +162,15 @@ export function setupGamesHandlers(): void {
       gameId: string,
       type: string,
       message: string,
-      screenshotPaths?: string[]
-    ) => submitFeedback(gameId, type, message, screenshotPaths)
+      screenshotPaths?: string[],
+      allowPublish?: boolean
+    ) => submitFeedback(gameId, type, message, screenshotPaths, allowPublish)
+  );
+
+  ipcMain.handle(
+    'fetch-game-reviews',
+    (_, gameId: string, page: number, pageSize: number) =>
+      fetchGameReviews(gameId, page, pageSize)
   );
 
   // Send logs handler

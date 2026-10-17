@@ -24,6 +24,26 @@ export interface NewsFeedItem {
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
 
+export interface GameReviewReply {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface GameReview {
+  id: string;
+  text: string;
+  createdAt: string;
+  images: string[];
+  replies: GameReviewReply[];
+}
+
+export interface GameReviewsPage {
+  items: GameReview[];
+  total: number;
+  pageSize: number;
+}
+
 export interface ChangelogEntry {
   version: string;
   date: string;
@@ -423,7 +443,8 @@ export interface ElectronAPI {
     gameId: string,
     type: FeedbackType,
     message: string,
-    screenshotPaths?: string[]
+    screenshotPaths?: string[],
+    allowPublish?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   submitLogs: (
     message: string,
@@ -451,6 +472,11 @@ export interface ElectronAPI {
   // Banner API
   fetchPromoBanner: () => Promise<BannerData | null>;
   fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
+  fetchGameReviews: (
+    gameId: string,
+    page: number,
+    pageSize: number
+  ) => Promise<GameReviewsPage | null>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

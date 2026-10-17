@@ -439,12 +439,12 @@ export function useGamepadModeNavigation(enabled = true) {
     [canInput, isButtonJustPressed, isTextInput, setGamepadSelected, getSelectedElement]
   );
 
-  // Get action buttons from MainContent
+  // Get action buttons from MainContent; display:none ones (e.g. the inactive banner slot) can't take focus and stall left/right
   const getActionButtons = useCallback((): HTMLElement[] => {
     const buttons = document.querySelectorAll<HTMLElement>(
       '[data-gamepad-action]:not([disabled])'
     );
-    return Array.from(buttons);
+    return Array.from(buttons).filter((el) => el.getClientRects().length > 0);
   }, []);
 
   // Get home active cards and action buttons
@@ -984,6 +984,8 @@ export function useGamepadModeNavigation(enabled = true) {
     }
 
     let rafId = 0;
+    // B that closed a modal is still held; without this it also backs out of main-content
+    let swallowB = false;
 
     const tick = () => {
       const pads = navigator.getGamepads();
@@ -1029,14 +1031,19 @@ export function useGamepadModeNavigation(enabled = true) {
           }
         }
         previouslyFocusedRef.current = null;
+        swallowB = !!gp.buttons[BUTTON.B]?.pressed;
       }
       wasModalOpenRef.current = modalOpen;
 
       const handlers = handlersRef.current;
 
+      if (swallowB && !gp.buttons[BUTTON.B]?.pressed) {
+        swallowB = false;
+      }
+
       if (modalOpen) {
         handlers.modal(gp);
-      } else {
+      } else if (!swallowB) {
         const area = useGamepadModeStore.getState().navigationArea;
         if (area === 'header') {
           handlers.header(gp);

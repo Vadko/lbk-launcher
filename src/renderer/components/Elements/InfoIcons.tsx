@@ -16,7 +16,7 @@ export const InfoIcons: React.FC<InfoIconsProps> = ({
 
   if (likesCount > 0) {
     icons.push(
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" key="likes">
         <ThumbsUp size={16} />
         <span className="text-sm">{likesCount}</span>
       </div>
@@ -24,7 +24,7 @@ export const InfoIcons: React.FC<InfoIconsProps> = ({
   }
 
   icons.push(
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" key="downloads">
       <Download size={16} />
       <span className="text-sm">
         {downloadsCount && downloadsCount > 20 ? downloadsCount : 'до 20'}
