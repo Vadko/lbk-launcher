@@ -44,7 +44,8 @@ export default defineConfig({
     build: {
       sourcemap: true,
       externalizeDeps: {
-        exclude: ['got', 'electron-store'],
+        // binarykvparser bundles `long`; electron-builder drops it from app.asar.
+        exclude: ['got', 'electron-store', 'binarykvparser'],
       },
       rollupOptions: {
         input: {
