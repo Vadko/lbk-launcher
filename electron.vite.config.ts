@@ -3,6 +3,7 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'electron-vite';
 import path from 'path';
+import { normalizePath } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { version } from './package.json';
 import { settings } from './src/lib/electron-router-dom';
@@ -102,7 +103,8 @@ export default defineConfig({
       outDir: path.resolve(__dirname, 'out/renderer'),
       rollupOptions: {
         input: {
-          index: path.resolve(__dirname, 'src/renderer/index.html'),
+          // knip takes a posix dirname here; backslashes hide the renderer on Windows.
+          index: normalizePath(path.resolve(__dirname, 'src/renderer/index.html')),
         },
       },
     },
