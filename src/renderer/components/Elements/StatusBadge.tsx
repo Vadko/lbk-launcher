@@ -44,7 +44,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   return (
     <span
       className={`${className} ${config.textColor} ${
-        style === 'capsule' ? `py-1 px-2  rounded-xl ${config.capsuleColor}` : ''
+        style === 'capsule'
+          ? `py-1 px-2  rounded-xl shrink-0 text-nowrap ${config.capsuleColor}`
+          : ''
       }`}
     >
       {config.textLabel}

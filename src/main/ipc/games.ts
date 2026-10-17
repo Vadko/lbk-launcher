@@ -23,6 +23,7 @@ import {
 } from '../db/banners-api';
 import { fetchGameReviews } from '../db/game-reviews-api';
 import { GamesRepository } from '../db/games-repository';
+import { getGamesRating, getTeamsRating } from '../db/ratings-queries';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
 import {
@@ -171,6 +172,30 @@ export function setupGamesHandlers(): void {
     'fetch-game-reviews',
     (_, gameId: string, page: number, pageSize: number) =>
       fetchGameReviews(gameId, page, pageSize)
+  );
+
+  ipcMain.handle(
+    'fetch-teams-rating',
+    (_, page: number, pageSize: number, hideAi: boolean) => {
+      try {
+        return getTeamsRating(page, pageSize, hideAi);
+      } catch (error) {
+        console.error('[API] Error fetching teams rating:', error);
+        return null;
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'fetch-games-rating',
+    (_, page: number, pageSize: number, hideAi: boolean) => {
+      try {
+        return getGamesRating(page, pageSize, hideAi);
+      } catch (error) {
+        console.error('[API] Error fetching games rating:', error);
+        return null;
+      }
+    }
   );
 
   // Send logs handler

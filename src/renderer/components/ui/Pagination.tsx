@@ -1,10 +1,11 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 
-interface ReviewsPaginationProps {
+interface PaginationProps {
   page: number;
   totalPages: number;
   onChange: (page: number) => void;
+  ariaLabel?: string;
 }
 
 type PageItem = number | 'ellipsis';
@@ -37,10 +38,11 @@ function getPageItems(page: number, totalPages: number): PageItem[] {
 const controlClass =
   'size-8 flex items-center justify-center rounded-lg text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none';
 
-export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
+export const Pagination: React.FC<PaginationProps> = ({
   page,
   totalPages,
   onChange,
+  ariaLabel = 'Сторінки',
 }) => {
   const navRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
@@ -63,7 +65,7 @@ export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
   return (
     <nav
       ref={navRef}
-      aria-label="Сторінки відгуків"
+      aria-label={ariaLabel}
       className="flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5"
     >
       <button

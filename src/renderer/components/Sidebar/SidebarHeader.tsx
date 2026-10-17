@@ -1,7 +1,7 @@
 import logo from '@resources/logo.svg';
-import { BookOpenText, Home, Medal, Newspaper } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MENU_BUTTONS } from './constants';
 
 interface SidebarHeaderProps {
   isCompact?: boolean;
@@ -24,34 +24,16 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
         />
         {!isCompact && (
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => navigate('/site/guides&tools')}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити посібники та інструменти"
-            >
-              <BookOpenText size={20} />
-            </button>
-            <button
-              onClick={() => navigate('/site/donaters')}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити сторінку донаторів"
-            >
-              <Medal size={20} />
-            </button>
-            <button
-              onClick={() => navigate('/news')}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити новини"
-            >
-              <Newspaper size={20} />
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити головну сторінку"
-            >
-              <Home size={20} />
-            </button>
+            {MENU_BUTTONS.map((button) => (
+              <button
+                key={button.id}
+                onClick={() => navigate(button.path)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
+                title={button.title}
+              >
+                <button.icon size={20} />
+              </button>
+            ))}
           </div>
         )}
       </div>

@@ -333,6 +333,10 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
   fetchGameReviews: (gameId: string, page: number, pageSize: number) =>
     ipcRenderer.invoke('fetch-game-reviews', gameId, page, pageSize),
+  fetchTeamsRating: (page: number, pageSize: number, hideAi: boolean) =>
+    ipcRenderer.invoke('fetch-teams-rating', page, pageSize, hideAi),
+  fetchGamesRating: (page: number, pageSize: number, hideAi: boolean) =>
+    ipcRenderer.invoke('fetch-games-rating', page, pageSize, hideAi),
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

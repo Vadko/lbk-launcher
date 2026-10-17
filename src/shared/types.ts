@@ -44,6 +44,27 @@ export interface GameReviewsPage {
   pageSize: number;
 }
 
+export interface RatingsPage<T> {
+  items: T[];
+  total: number;
+  pageSize: number;
+}
+
+export interface TeamRatingItem {
+  name: string;
+  likes: number;
+  translations: number;
+  downloads: number;
+}
+
+export interface GameRatingItem {
+  id: string;
+  name: string;
+  likes: number;
+  downloads: number;
+  status: Game['status'];
+}
+
 export interface ChangelogEntry {
   version: string;
   date: string;
@@ -477,6 +498,16 @@ export interface ElectronAPI {
     page: number,
     pageSize: number
   ) => Promise<GameReviewsPage | null>;
+  fetchTeamsRating: (
+    page: number,
+    pageSize: number,
+    hideAi: boolean
+  ) => Promise<RatingsPage<TeamRatingItem> | null>;
+  fetchGamesRating: (
+    page: number,
+    pageSize: number,
+    hideAi: boolean
+  ) => Promise<RatingsPage<GameRatingItem> | null>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

@@ -70,7 +70,9 @@ export const GameList: React.FC<GameListProps> = React.memo(
     if (totalGames === 0) {
       return (
         <div className="text-center text-text-muted py-8">
-          <p>Ігор не знайдено</p>
+          <p>
+            Ігор не знайдено <br /> або вони приховані
+          </p>
         </div>
       );
     }

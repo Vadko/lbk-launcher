@@ -4,8 +4,8 @@ import type { GameReview, GameReviewReply } from '@/shared/types';
 import { useGameReviews } from '../../queries/useGameReviews';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { Pagination } from '../ui/Pagination';
 import { ReviewImages } from './ReviewImages';
-import { ReviewsPagination } from './ReviewsPagination';
 
 interface GameReviewsTabProps {
   gameId: string;
@@ -149,7 +149,12 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       </div>
 
       {totalPages > 1 && (
-        <ReviewsPagination page={page} totalPages={totalPages} onChange={setPage} />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onChange={setPage}
+          ariaLabel="Сторінки відгуків"
+        />
       )}
     </section>
   );

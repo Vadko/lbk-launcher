@@ -1,16 +1,8 @@
-import {
-  Bell,
-  BookOpenText,
-  Home,
-  Medal,
-  Newspaper,
-  Settings,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import { Bell, Settings, Volume2, VolumeX } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { MENU_BUTTONS } from './constants';
 
 interface SidebarFooterProps {
   onOpenHistory: () => void;
@@ -28,42 +20,18 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
       <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
         {isCompact && (
           <>
-            <button
-              onClick={() => navigate('/site/guides&tools')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити посібники та інструменти"
-            >
-              <BookOpenText size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/site/donaters')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити сторінку донаторів"
-            >
-              <Medal size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/news')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити новини"
-            >
-              <Newspaper size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити головну сторінку"
-            >
-              <Home size={20} className="mx-auto text-text-muted" />
-            </button>
+            {MENU_BUTTONS.map((button) => (
+              <button
+                key={button.id}
+                onClick={() => navigate(button.path)}
+                data-nav-group="sidebar-actions"
+                data-gamepad-header-item
+                className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+                title={button.title}
+              >
+                <button.icon size={20} className="mx-auto text-text-muted" />
+              </button>
+            ))}
             <button
               onClick={toggleGamepadSounds}
               data-nav-group="sidebar-actions"

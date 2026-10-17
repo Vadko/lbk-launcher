@@ -6,11 +6,12 @@ import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { PillTabs } from '../ui/PillTabs';
 
-const feedTabs: { label: string; filter: NewsFeedFilter }[] = [
-  { label: 'Ігри по знижці', filter: 'sales' },
-  { label: 'Ігри за 80', filter: 'games-80' },
-  { label: 'Новини', filter: 'news' },
+const tabs: { label: string; id: NewsFeedFilter }[] = [
+  { label: 'Ігри по знижці', id: 'sales' },
+  { label: 'Ігри за 80', id: 'games-80' },
+  { label: 'Новини', id: 'news' },
 ];
 
 const formatDate = (date?: string) => {
@@ -69,23 +70,7 @@ export const NewsFeedSection: React.FC = () => {
     <section>
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">Новини</h2>
-        <div className="glass-card-no-motion !p-2 flex gap-2">
-          {feedTabs.map((tab) => (
-            <button
-              key={tab.filter}
-              type="button"
-              onClick={() => setActiveFilter(tab.filter)}
-              data-gamepad-action
-              className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                activeFilter === tab.filter
-                  ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
-                  : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <PillTabs tabs={tabs} activeTab={activeFilter} onChange={setActiveFilter} />
       </div>
 
       <div className="grid grid-cols-2 gap-8 align-start">
