@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import type { Game } from '../../shared/types';
+import { removeInstalledAchievements, syncAchievementsToPlugin } from '../achievements';
 import { removeSteamArtwork } from '../utils/steam-artwork';
 import {
   BACKUP_DIR_NAME,
@@ -20,7 +21,7 @@ import {
 } from './cache';
 import { deleteDirectory } from './files';
 import { resignMacBundles } from './mac-codesign';
-import { getSteamAchievementsPath, runUninstaller } from './platform';
+import { runUninstaller } from './platform';
 
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
@@ -64,15 +65,13 @@ export async function uninstallTranslation(game: Game): Promise<void> {
       if (installInfo.components.voice?.installed) {
         allFilesToDelete.push(...installInfo.components.voice.files);
       }
-      // Achievement files live in Steam's appcache, not the game dir.
+      // Achievements live in userData (legacy installs: Steam's appcache), not the game dir.
       if (installInfo.components.achievements?.installed) {
-        const achievementsPath = await getSteamAchievementsPath();
-        if (achievementsPath) {
-          for (const achievementFile of installInfo.components.achievements.files) {
-            const fullPath = path.join(achievementsPath, achievementFile);
-            await restoreOrDeleteFile(fullPath);
-          }
-        }
+        await removeInstalledAchievements(
+          installInfo.gameId,
+          installInfo.components.achievements
+        );
+        void syncAchievementsToPlugin();
       }
     } else if (installInfo.installedFiles?.length) {
       allFilesToDelete = installInfo.installedFiles;
@@ -162,13 +161,11 @@ export async function removeComponents(
       componentsToRemove.achievements &&
       installInfo.components?.achievements?.installed
     ) {
-      const achievementsPath = await getSteamAchievementsPath();
-      if (achievementsPath) {
-        for (const achievementFile of installInfo.components.achievements.files) {
-          const fullPath = path.join(achievementsPath, achievementFile);
-          await restoreOrDeleteFile(fullPath);
-        }
-      }
+      await removeInstalledAchievements(
+        installInfo.gameId,
+        installInfo.components.achievements
+      );
+      void syncAchievementsToPlugin();
       installInfo.components.achievements = { installed: false, files: [] };
     }
 

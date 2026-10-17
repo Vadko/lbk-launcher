@@ -12,36 +12,28 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
+import { queueSteamAction } from '@/main/steam-pending-actions';
 import { getMainWindow } from '@/main/window';
+import { detectDeckyPluginSync, isDeckyInstalledSync } from './decky';
+import { detectMillennium } from './millennium';
+import {
+  getMillenniumPluginState,
+  installOrUpdateMillenniumPlugin,
+  removeMillenniumPluginFiles,
+  setMillenniumPluginEnabledInConfig,
+} from './millennium-plugin';
 import { isMacOS } from './platform';
-import { isCefAvailable } from './steam-cef';
-import { isSteamRunning } from './steam-launcher';
+import { removeOrphanDeckyPluginData, resyncBridgePluginData } from './plugin-data';
+import {
+  claimSteamRestartPrompt,
+  clearSteamBridgeVerdict,
+  refreshSteamBridgeStatus,
+} from './steam-bridge';
+import { startSteamBridgeServer, stopSteamBridgeServer } from './steam-bridge-server';
+import { resetCefEndpointCache } from './steam-cef';
 import { isCefDebuggingEnabledInSettings } from './store-storage';
 
 const FLAG_FILE_NAME = '.cef-enable-remote-debugging';
-
-/**
- * File paths (relative to Steam install dir) that indicate the Millennium
- * Steam mod is installed. Either layout makes Steam's CEF endpoint unreachable
- * for us: vanilla v2 actively deletes our flag file, and v3 routes CDP
- * exclusively over anonymous pipes inside `steamwebhelper` so there's no TCP
- * port to probe.
- *
- *   v3 (2026+) — DLL-hijack via `wsock32.dll`, main code under `millennium/`
- *   v2 legacy — root-dropped `millennium.dll` + `user32.dll.local` shim
- *
- * Refs:
- *   https://github.com/SteamClientHomebrew/Millennium/releases/tag/v3.0.0
- *   https://github.com/SteamClientHomebrew/Millennium/blob/main/src/instrumentation/internal/steam_hooks.cc
- */
-const MILLENNIUM_MARKERS = [
-  // v3
-  'millennium/lib/millennium.dll',
-  'wsock32.dll',
-  // v2 legacy
-  'millennium.dll',
-  'user32.dll.local',
-];
 
 /**
  * Steam reads the flag file from its working directory. On Windows/Linux that's
@@ -85,14 +77,6 @@ function getFlagFilePath(): string | null {
 /** Every location a flag file could be sitting in, including stale ones. */
 function getAllFlagFilePaths(): string[] {
   return getFlagFileDirs().map((dir) => path.join(dir, FLAG_FILE_NAME));
-}
-
-function isMillenniumInstalled(): boolean {
-  const steamPath = getSteamPath();
-  if (!steamPath) {
-    return false;
-  }
-  return MILLENNIUM_MARKERS.some((marker) => fs.existsSync(path.join(steamPath, marker)));
 }
 
 /** Delete one flag file; a missing file is already the desired end state. */
@@ -152,41 +136,139 @@ function removeCefFlagFile(): void {
   }
 }
 
-/**
- * Ensure the flag file exists and, when asked to, prompt for a Steam restart
- * if the debug port isn't open yet. Startup never prompts — a restart dialog
- * before the user asked for anything is too aggressive, and flows that need
- * CEF right now (launch options during install) surface their own mandatory
- * prompt in useInstallation.
- */
+export function isCefFlagFilePresent(): boolean {
+  const filePath = getFlagFilePath();
+  return filePath !== null && fs.existsSync(filePath);
+}
+
+let millenniumSetupKey: string | null = null;
+// undefined until the first pass, so a missing plugin still gets its orphan cleanup once.
+let deckySetupKey: string | null | undefined;
+
+function applyPluginEnabled(enable: boolean): void {
+  const result = setMillenniumPluginEnabledInConfig(enable);
+  if (result === 'steam-running') {
+    queueSteamAction({
+      kind: 'millennium-plugin',
+      enable,
+      queuedAt: new Date().toISOString(),
+    });
+    console.log(
+      `[Millennium] Plugin ${enable ? 'enable' : 'disable'} queued until Steam exits`
+    );
+    return;
+  }
+  if (result === 'invalid-config' || result === 'no-config') {
+    console.warn(
+      `[Millennium] Cannot ${enable ? 'enable' : 'disable'} the plugin: ${result}`
+    );
+    return;
+  }
+  if (!enable) {
+    removeMillenniumPluginFiles();
+  }
+}
+
+// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; memoized per detected install.
+export function syncBridgePluginSetup(opts: { force?: boolean } = {}): void {
+  if (isCefDebuggingEnabledInSettings()) {
+    setupMillenniumPlugin(opts.force ?? false);
+    setupDeckyPlugin(opts.force ?? false);
+  }
+}
+
+function startBridgeServer(): void {
+  startSteamBridgeServer().catch((error) => {
+    console.warn('[SteamBridge] Plugin server failed to start:', error);
+  });
+}
+
+// Decky installs the plugin itself, through its own prompt; LBK only serves it.
+function setupDeckyPlugin(force: boolean): void {
+  const decky = detectDeckyPluginSync();
+  const key = decky?.plugin.installed
+    ? `${decky.plugin.dir}|${decky.plugin.version}|${decky.plugin.disabled}`
+    : null;
+  if (key === deckySetupKey && !force) {
+    return;
+  }
+  deckySetupKey = key;
+  if (!decky) {
+    return;
+  }
+  if (!decky.plugin.installed) {
+    removeOrphanDeckyPluginData();
+    return;
+  }
+  startBridgeServer();
+  resyncBridgePluginData();
+}
+
+function setupMillenniumPlugin(force: boolean): void {
+  const info = detectMillennium();
+  if (info.generation !== 'v3') {
+    millenniumSetupKey = null;
+    return;
+  }
+  const key = `${info.pluginsDir}|${info.configPath}`;
+  if (millenniumSetupKey === key && !force) {
+    return;
+  }
+  millenniumSetupKey = key;
+
+  const installed = installOrUpdateMillenniumPlugin();
+  if (!installed.ok) {
+    console.warn('[Millennium] Plugin install failed:', installed.error);
+    return;
+  }
+  if (installed.changed) {
+    console.log('[Millennium] Plugin installed or updated');
+    resyncBridgePluginData();
+  }
+  startBridgeServer();
+  if (!getMillenniumPluginState().enabled) {
+    applyPluginEnabled(true);
+  }
+}
+
+// Startup never prompts; the toggle prompts at most once per bridge fingerprint.
 async function enableCefDebugging(prompt: boolean): Promise<void> {
-  if (isMillenniumInstalled()) {
-    // Pointless to drop the flag file or nag the user — Millennium will delete
-    // it again on the next Steam start. Launch-option installs that need CEF
-    // will silently fall back to a noop (logged in writeSteamLaunchOptions).
-    console.log('[CEFFlagFile] Millennium detected, skipping CEF bootstrap');
+  setupMillenniumPlugin(false);
+  setupDeckyPlugin(false);
+
+  const millennium = detectMillennium();
+  if (millennium.blocksTcpCdp) {
+    // Millennium deletes the flag file on Steam start and shows a message box when it cannot.
+    console.log(
+      '[CEFFlagFile] Millennium closes the CDP port, leaving the flag file alone'
+    );
     return;
   }
 
   ensureCefFlagFile();
 
-  if (!prompt) {
-    return;
+  if (prompt && (await claimSteamRestartPrompt())) {
+    getMainWindow()?.webContents.send('steam-restart-required');
   }
-  if (!(await isSteamRunning())) {
-    return;
-  }
-  if (await isCefAvailable()) {
-    return;
-  }
+}
 
-  // User may have toggled off (file deleted) during the awaits — don't prompt.
-  const filePath = getFlagFilePath();
-  if (!filePath || !fs.existsSync(filePath)) {
-    return;
+function disableCefDebugging(): void {
+  millenniumSetupKey = null;
+  deckySetupKey = undefined;
+  const millennium = detectMillennium();
+  // Decky creates the same file only in its installer and never restores it.
+  if (!millennium.blocksTcpCdp && !isDeckyInstalledSync()) {
+    removeCefFlagFile();
   }
-
-  getMainWindow()?.webContents.send('steam-restart-required');
+  stopSteamBridgeServer().catch((error) => {
+    console.warn('[SteamBridge] Plugin server failed to stop:', error);
+  });
+  if (millennium.generation === 'v3') {
+    const plugin = getMillenniumPluginState();
+    if (plugin.installed || plugin.enabled) {
+      applyPluginEnabled(false);
+    }
+  }
 }
 
 /** Startup: sync the flag file with the persisted setting, without prompting. */
@@ -199,9 +281,13 @@ export async function setCefDebuggingEnabled(
   enabled: boolean,
   opts: { prompt?: boolean } = {}
 ): Promise<void> {
+  resetCefEndpointCache();
   if (enabled) {
     await enableCefDebugging(opts.prompt ?? true);
   } else {
-    removeCefFlagFile();
+    disableCefDebugging();
+    // Turning the setting off and on again allows one more restart prompt (BRIDGE §3.4 rule d).
+    clearSteamBridgeVerdict();
   }
+  await refreshSteamBridgeStatus();
 }

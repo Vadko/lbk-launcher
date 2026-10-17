@@ -4,6 +4,8 @@ import { promisify } from 'util';
 import { formatBytes } from '../shared/formatters';
 import { isExeInstaller } from '../shared/installer-kind';
 import type {
+  AchievementsComponent,
+  AchievementsDelivery,
   DownloadProgress,
   Game,
   InstallationInfo,
@@ -12,9 +14,16 @@ import type {
   RunInstallerDecision,
   RunInstallerRequest,
 } from '../shared/types';
+import {
+  hasAchievementStrings,
+  readAchievementStringsFromDir,
+  removeInstalledAchievements,
+  saveAchievementStrings,
+  syncAchievementsToPlugin,
+} from './achievements';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 import { refreshXboxRootsForGame } from './game-detector/xbox';
-import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
+import { backupFiles } from './installer/backup';
 import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
@@ -27,17 +36,21 @@ import { resignMacBundles } from './installer/mac-codesign';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
-  getSteamAchievementsPath,
   isWindowsInstallerFile,
   runInstaller,
 } from './installer/platform';
 import { findProtons } from './installer/proton';
 import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
+import type { ExtractedAchievementStrings } from './utils/achievement-strings';
 import { resolveGameBuildOs } from './utils/game-build';
 import { isLinux } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
+
+type InstallTranslationResult = Awaited<ReturnType<typeof applySteamIntegration>> & {
+  achievementsDelivery?: AchievementsDelivery;
+};
 
 /**
  * Main installation function
@@ -49,11 +62,7 @@ export async function installTranslation(
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void,
   onConfirmRunInstaller?: (request: RunInstallerRequest) => Promise<RunInstallerDecision>
-): Promise<{
-  launchOptionsPending: boolean;
-  launchOptionsError?: string;
-  achievementsChanged: boolean;
-}> {
+): Promise<InstallTranslationResult> {
   const { createBackup, installText, installVoice, installAchievements, platform } =
     options;
 
@@ -291,45 +300,45 @@ export async function installTranslation(
       await copyDirectory(voiceExtractDir, extractDir);
     }
 
-    // 5.3 Download achievements archive if requested (Steam only)
-    let achievementsFiles: string[] = [];
-    let achievementsInstallPath: string | null = null;
-    let achievementsChanged = false;
-    console.log(`[Installer] Achievements check:`, {
-      installAchievements,
-      hasArchivePath: !!game.achievements_archive_path,
-      archivePath: game.achievements_archive_path,
-      platform: gamePath.platform,
-    });
-    // If the on-disk install already has the same achievement archive hash,
-    // re-copying would write byte-identical files and the in-Steam state
-    // wouldn't change — so we skip and suppress the restart prompt.
+    // 5.3 Achievements (Steam only): strings are parsed out of the schemas and delivered by the Millennium plugin.
     const existingInfo = readInstallationInfo(gamePath.path);
-    const existingAchievementHash = existingInfo?.components?.achievements?.archiveHash;
-    const achievementsAlreadyUpToDate =
+    const existingAchievements =
+      existingInfo?.gameId === game.id
+        ? existingInfo.components?.achievements
+        : undefined;
+    const achievementsArchiveHash = game.achievements_archive_hash || null;
+    const wantsAchievements =
       installAchievements &&
-      !!game.achievements_archive_hash &&
-      existingAchievementHash === game.achievements_archive_hash &&
-      existingInfo?.components?.achievements?.installed === true;
+      !!game.achievements_archive_path &&
+      gamePath.platform === 'steam';
+    const existingAppIds = existingAchievements?.appIds ?? [];
+    const achievementsAlreadyUpToDate =
+      wantsAchievements &&
+      !!achievementsArchiveHash &&
+      existingAchievements?.installed === true &&
+      existingAchievements.archiveHash === achievementsArchiveHash &&
+      existingAchievements.files.length === 0 &&
+      existingAppIds.length > 0 &&
+      hasAchievementStrings(existingAppIds, game.id);
+
+    let extractedAchievements: ExtractedAchievementStrings[] = [];
+    let achievementsComponent: AchievementsComponent | null = null;
     if (achievementsAlreadyUpToDate) {
       console.log(
-        `[Installer] Achievements already up-to-date (hash matches), skipping re-install`
+        '[Installer] Achievement strings already up-to-date, skipping download'
       );
-      achievementsFiles = existingInfo?.components?.achievements?.files || [];
-      achievementsInstallPath = await getSteamAchievementsPath();
-    }
-    if (
-      installAchievements &&
-      game.achievements_archive_path &&
-      gamePath.platform === 'steam' &&
-      !achievementsAlreadyUpToDate
-    ) {
-      achievementsChanged = true;
+      achievementsComponent = {
+        installed: true,
+        files: [],
+        archiveHash: achievementsArchiveHash,
+        appIds: existingAppIds,
+      };
+    } else if (wantsAchievements) {
       const achievementsExtractDir = path.join(
         downloadDir,
         `${game.id}_achievements_extract`
       );
-      achievementsFiles = await downloadAndExtractArchive({
+      await downloadAndExtractArchive({
         game,
         type: 'achievements',
         archivePath: game.achievements_archive_path,
@@ -341,46 +350,43 @@ export async function installTranslation(
         onStatus: (status) =>
           onStatus?.({ message: `Досягнення: ${status.message}`, phase: status.phase }),
       });
-
-      achievementsInstallPath = await getSteamAchievementsPath();
-      if (achievementsInstallPath) {
-        console.log(`[Installer] Installing achievements to: ${achievementsInstallPath}`);
-        onStatus?.({ message: 'Копіювання перекладу досягнень...', phase: 'install' });
-        await mkdir(achievementsInstallPath, { recursive: true });
-
-        // Find all achievement files (ignore folder structure from archive)
-        const allExtractedFiles = await getAllFiles(achievementsExtractDir);
-        const achievementFilesToCopy: { src: string; dest: string }[] = [];
-
-        for (const relativePath of allExtractedFiles) {
-          const fileName = path.basename(relativePath);
-          const srcPath = path.join(achievementsExtractDir, relativePath);
-          const destPath = path.join(achievementsInstallPath, fileName);
-          achievementFilesToCopy.push({ src: srcPath, dest: destPath });
-        }
-
-        // Backup original achievement files (using _backup suffix)
-        if (createBackup) {
-          for (const { dest } of achievementFilesToCopy) {
-            const backupPath = dest + BACKUP_SUFFIX;
-            // Only backup if original exists and backup doesn't exist yet
-            if (fs.existsSync(dest) && !fs.existsSync(backupPath)) {
-              await fs.promises.copyFile(dest, backupPath);
-              console.log(`[Installer] Backed up: ${path.basename(dest)}`);
-            }
-          }
-        }
-
-        // Copy files directly to achievements folder (flatten structure)
-        for (const { src, dest } of achievementFilesToCopy) {
-          await fs.promises.copyFile(src, dest);
-          console.log(`[Installer] Copied achievement file: ${path.basename(dest)}`);
-        }
-
-        // Update achievementsFiles to contain only filenames (for installation info)
-        achievementsFiles = achievementFilesToCopy.map(({ dest }) => path.basename(dest));
+      extractedAchievements = await readAchievementStringsFromDir(achievementsExtractDir);
+      if (extractedAchievements.length > 0) {
+        achievementsComponent = {
+          installed: true,
+          files: [],
+          ...(achievementsArchiveHash ? { archiveHash: achievementsArchiveHash } : {}),
+          appIds: extractedAchievements.map(({ appId }) => appId),
+        };
+      } else {
+        // Catalog data bug: the rest of the install goes on without achievements.
+        console.error(
+          `[Installer] Achievements archive of ${game.id} has no Ukrainian strings`
+        );
       }
     }
+
+    // Written only once the install is about to be recorded, so a failed install leaves no strings behind.
+    const commitAchievements = async (): Promise<void> => {
+      if (extractedAchievements.length > 0) {
+        saveAchievementStrings(extractedAchievements, game.id, achievementsArchiveHash);
+      }
+      const previous = existingInfo?.components?.achievements;
+      if (existingInfo && previous) {
+        await removeInstalledAchievements(
+          existingInfo.gameId,
+          previous,
+          new Set(achievementsComponent?.appIds ?? [])
+        );
+      }
+    };
+    const deliverAchievements = async (): Promise<AchievementsDelivery | undefined> => {
+      if (!achievementsComponent && !existingInfo?.components?.achievements) {
+        return undefined;
+      }
+      const delivery = await syncAchievementsToPlugin();
+      return achievementsComponent ? delivery : undefined;
+    };
 
     // 6. Check for executable installer
     if (installerFileName && isExecutableInstaller(installerFileName)) {
@@ -424,8 +430,13 @@ export async function installTranslation(
         installerPath,
         installedFiles: [],
         installedPlatform: gamePath.platform,
-        components: { text: { installed: true, files: [] } },
+        components: {
+          text: { installed: true, files: [] },
+          ...(achievementsComponent ? { achievements: achievementsComponent } : {}),
+        },
       };
+      await commitAchievements();
+      const achievementsDelivery = await deliverAchievements();
 
       if (!decision.run) {
         console.log('[Installer] User declined to run installer:', installerPath);
@@ -456,7 +467,7 @@ export async function installTranslation(
       }
 
       const steam = await applySteamIntegration(game, gamePath, onStatus);
-      return { ...steam, achievementsChanged };
+      return { ...steam, achievementsDelivery };
     }
 
     // 7. Copy files to game directory
@@ -552,24 +563,18 @@ export async function installTranslation(
         ...(installVoice && voiceFiles.length > 0
           ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
           : {}),
-        ...(installAchievements && achievementsFiles.length > 0 && achievementsInstallPath
-          ? {
-              achievements: {
-                installed: true,
-                files: achievementsFiles,
-                archiveHash: game.achievements_archive_hash || undefined,
-              },
-            }
-          : {}),
+        ...(achievementsComponent ? { achievements: achievementsComponent } : {}),
       },
     };
+    await commitAchievements();
     await saveInstallationInfo(gamePath.path, installationInfo);
+    const achievementsDelivery = await deliverAchievements();
 
     // 10. Steam-only tail: launch options + Ukrainian library artwork
     const steam = await applySteamIntegration(game, gamePath, onStatus);
 
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
-    return { ...steam, achievementsChanged };
+    return { ...steam, achievementsDelivery };
   } catch (error) {
     // Handle pause specially - throw PausedSignal for IPC handler
     if (error instanceof Error && error.message === 'PAUSED') {

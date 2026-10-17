@@ -3,13 +3,25 @@
  * Unified logic for launching and restarting Steam across platforms
  */
 
-import { type ChildProcess, exec, execSync, spawn } from 'child_process';
+import { type ChildProcess, execFile, execSync, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
+import path from 'path';
 import { promisify } from 'util';
-import { forCurrentOS, isLinux, isMacOS, isWindows } from './platform';
+import { getSteamExePath } from '@/main/game-detector/steam';
+import { millenniumLaunchEnv } from '@/main/millennium-install/launch-env';
+import { findMacMillenniumWrapper } from '@/main/utils/millennium';
+import { isGamescopeSession, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
+import {
+  execFileOnHost,
+  findSteamPids,
+  isSteamElevated,
+  waitForSteamGone,
+  waitForSteamStart,
+} from '@/main/utils/steam-process';
+import type { RestartFailureReason, RestartSteamResult } from '@/shared/types';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // ============================================================================
 // Flatpak Detection
@@ -22,23 +34,15 @@ function isRunningInFlatpak(): boolean {
   return !!process.env.FLATPAK_ID;
 }
 
-/**
- * Execute a command on the host system when running inside Flatpak
- * Uses flatpak-spawn --host to break out of the sandbox
- */
-function execOnHost(command: string): Promise<{ stdout: string; stderr: string }> {
+// The sandbox environment is not forwarded by flatpak-spawn, so extra variables go through --env.
+function spawnOnHost(
+  command: string,
+  args: string[] = [],
+  env: Record<string, string> = {}
+): ChildProcess {
   if (isRunningInFlatpak()) {
-    return execAsync(`flatpak-spawn --host ${command}`);
-  }
-  return execAsync(command);
-}
-
-/**
- * Spawn a process on the host system when running inside Flatpak
- */
-function spawnOnHost(command: string, args: string[] = []): ChildProcess {
-  if (isRunningInFlatpak()) {
-    const child = spawn('flatpak-spawn', ['--host', command, ...args], {
+    const envArgs = Object.entries(env).map(([key, value]) => `--env=${key}=${value}`);
+    const child = spawn('flatpak-spawn', ['--host', ...envArgs, command, ...args], {
       detached: true,
       stdio: 'ignore',
     });
@@ -52,6 +56,7 @@ function spawnOnHost(command: string, args: string[] = []): ChildProcess {
   const child = spawn(command, args, {
     detached: true,
     stdio: 'ignore',
+    env: { ...process.env, ...env },
   });
   child.on('error', (err) => {
     console.error(`[Steam] Error spawning ${command}:`, err);
@@ -78,7 +83,7 @@ interface LaunchResult {
 /**
  * Detect Steam installation type on Linux
  */
-function detectLinuxSteamType(): SteamInstallationType {
+export function detectLinuxSteamType(): SteamInstallationType {
   const home = homedir();
 
   // When running in Flatpak, we need to check the host filesystem
@@ -119,98 +124,163 @@ function detectLinuxSteamType(): SteamInstallationType {
 // Process Management
 // ============================================================================
 
-/**
- * Check if Steam is running
- */
+type ShutdownResult =
+  | { ok: true }
+  | { ok: false; reason: Exclude<RestartFailureReason, 'launch-failed'> };
+
+const GRACEFUL_EXIT_TIMEOUT_MS = 30000;
+const FORCED_EXIT_TIMEOUT_MS = 5000;
+const EXEC_TIMEOUT_MS = 10000;
+const MILLENNIUM_WRAPPER_START_TIMEOUT_MS = 15000;
+const MILLENNIUM_ASSETS_ROOT_ENV = 'MILLENNIUM_ASSETS_ROOT';
+const MILLENNIUM_WRAPPER_ASSETS = 'Contents/Resources/millennium-assets';
+
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function isSteamRunning(): Promise<boolean> {
-  const probe = forCurrentOS({
-    windows: () => execAsync('tasklist /FI "IMAGENAME eq steam.exe" | findstr steam.exe'),
-    linux: () => execOnHost('pgrep -x steam'),
-    macos: () => execAsync('pgrep -x steam_osx'),
-  });
+  return (await findSteamPids()).length > 0;
+}
 
-  if (!probe) {
-    return false;
-  }
+function getTaskkillPath(): string {
+  return path.win32.join(
+    process.env.SystemRoot || 'C:\\Windows',
+    'System32',
+    'taskkill.exe'
+  );
+}
 
+async function requestGracefulExit(): Promise<void> {
   try {
-    await probe();
-    return true;
-  } catch {
-    // Process not found
-    return false;
+    if (isWindows()) {
+      const steamExe = getSteamExePath();
+      if (steamExe) {
+        await execFileAsync(steamExe, ['-shutdown'], {
+          timeout: EXEC_TIMEOUT_MS,
+          windowsHide: true,
+        });
+      } else {
+        const { shell } = await import('electron');
+        await shell.openExternal('steam://exit');
+      }
+    } else if (isLinux()) {
+      const steamType = detectLinuxSteamType();
+      if (steamType === 'flatpak') {
+        await execFileOnHost('flatpak', ['run', 'com.valvesoftware.Steam', '-shutdown']);
+      } else if (steamType === 'snap') {
+        await execFileOnHost('snap', ['run', 'steam', '-shutdown']);
+      } else {
+        await execFileOnHost('steam', ['-shutdown']);
+      }
+    } else if (isMacOS()) {
+      // No Automation (TCC) prompt, unlike osascript; Steam ignores steam://ExitSteam.
+      await execFileAsync('/usr/bin/open', ['-g', 'steam://exit'], {
+        timeout: EXEC_TIMEOUT_MS,
+      });
+    }
+  } catch (error) {
+    console.warn('[Steam] Graceful shutdown request failed:', describeError(error));
   }
 }
 
-/**
- * Wait for Steam process to exit
- */
-async function waitForSteamExit(timeoutMs = 10000): Promise<boolean> {
-  const start = Date.now();
+async function pkill(signal: 'TERM' | 'KILL', name: string): Promise<void> {
+  const uid = process.getuid?.();
+  const userArgs = uid === undefined ? [] : ['-u', String(uid)];
+  try {
+    await execFileOnHost('pkill', [`-${signal}`, '-x', ...userArgs, name]);
+  } catch {
+    // pkill exits 1 when nothing matched.
+  }
+}
 
-  while (Date.now() - start < timeoutMs) {
-    if (!(await isSteamRunning())) {
-      return true;
+// Returns true when Windows refused to kill a Steam process that is still alive.
+async function forceKillSteam(steamPids: number[]): Promise<boolean> {
+  if (isWindows()) {
+    let denied = false;
+    for (const pid of steamPids) {
+      try {
+        await execFileAsync(getTaskkillPath(), ['/F', '/T', '/PID', String(pid)], {
+          timeout: EXEC_TIMEOUT_MS,
+          windowsHide: true,
+        });
+      } catch (error) {
+        // Exit code 1 is "access denied" or "not found"; the localized text is never parsed.
+        if ((error as { code?: unknown }).code === 1) {
+          denied = true;
+        }
+      }
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await execFileAsync(getTaskkillPath(), ['/F', '/IM', 'steamwebhelper.exe'], {
+      timeout: EXEC_TIMEOUT_MS,
+      windowsHide: true,
+    }).catch(() => void 0);
+    return denied && (await findSteamPids()).length > 0;
   }
 
+  if (isLinux()) {
+    if (detectLinuxSteamType() === 'flatpak') {
+      await execFileOnHost('flatpak', ['kill', 'com.valvesoftware.Steam']).catch(
+        () => void 0
+      );
+    }
+    await pkill('TERM', 'steam');
+    if (!(await waitForSteamGone(FORCED_EXIT_TIMEOUT_MS))) {
+      await pkill('KILL', 'steam');
+      await pkill('KILL', 'steamwebhelper');
+    }
+    return false;
+  }
+
+  if (isMacOS()) {
+    await pkill('TERM', 'steam_osx');
+    if (!(await waitForSteamGone(FORCED_EXIT_TIMEOUT_MS))) {
+      await pkill('KILL', 'steam_osx');
+      await pkill('KILL', 'Steam Helper');
+    }
+  }
   return false;
 }
 
-/**
- * Gracefully shutdown Steam
- */
-export async function shutdownSteam(): Promise<void> {
-  const running = await isSteamRunning();
-  if (!running) {
+async function shutdownSteam(): Promise<ShutdownResult> {
+  // Must come first: `steam -shutdown` and steam://exit start Steam when it is not up.
+  const steamPids = await findSteamPids();
+  if (steamPids.length === 0) {
     console.log('[Steam] Steam is not running, skipping shutdown');
-    return;
+    return { ok: true };
+  }
+
+  if (isGamescopeSession()) {
+    console.warn('[Steam] Refusing to shut down Steam inside a gamescope session');
+    return { ok: false, reason: 'gamescope' };
+  }
+
+  if (await isSteamElevated()) {
+    console.warn('[Steam] Steam runs elevated, cannot shut it down');
+    return { ok: false, reason: 'access-denied' };
   }
 
   console.log('[Steam] Shutting down Steam...');
+  await requestGracefulExit();
 
-  if (isWindows()) {
-    // Windows: taskkill - if graceful fails, force kill
-    await execAsync('taskkill /IM steam.exe').catch(() =>
-      execAsync('taskkill /F /IM steam.exe').catch(() => void 0)
-    );
-  } else if (isLinux()) {
-    // Linux: try steam -shutdown first (graceful), then pkill
-    const steamType = detectLinuxSteamType();
-
-    try {
-      if (steamType === 'flatpak') {
-        await execOnHost('flatpak run com.valvesoftware.Steam -shutdown');
-      } else if (steamType === 'snap') {
-        await execOnHost('snap run steam -shutdown');
-      } else {
-        await execOnHost('steam -shutdown');
-      }
-    } catch {
-      console.log('[Steam] Graceful shutdown failed, using pkill...');
-      await execOnHost('pkill -TERM steam').catch(() => void 0);
-    }
-  } else if (isMacOS()) {
-    // macOS: osascript for graceful quit, then pkill (the process is steam_osx)
-    await execAsync('osascript -e \'quit app "Steam"\'').catch(() =>
-      execAsync('pkill -TERM steam_osx').catch(() => void 0)
-    );
+  if (await waitForSteamGone(GRACEFUL_EXIT_TIMEOUT_MS)) {
+    console.log('[Steam] Steam shutdown complete');
+    return { ok: true };
   }
 
-  // Wait for process to exit
-  const exited = await waitForSteamExit();
-  if (!exited) {
-    console.warn('[Steam] Steam did not exit gracefully, force killing...');
-    if (isWindows()) {
-      await execAsync('taskkill /F /IM steam.exe').catch(() => void 0);
-    } else {
-      await execOnHost('pkill -9 steam').catch(() => void 0);
-    }
-    await waitForSteamExit(3000);
+  console.warn('[Steam] Steam did not exit gracefully, force killing...');
+  if (await forceKillSteam(await findSteamPids())) {
+    console.warn('[Steam] Access denied while force killing Steam');
+    return { ok: false, reason: 'access-denied' };
   }
 
-  console.log('[Steam] Steam shutdown complete');
+  if (await waitForSteamGone(FORCED_EXIT_TIMEOUT_MS)) {
+    console.log('[Steam] Steam shutdown complete (forced)');
+    return { ok: true };
+  }
+
+  console.warn('[Steam] Steam is still running after a forced shutdown');
+  return { ok: false, reason: 'timeout' };
 }
 
 // ============================================================================
@@ -223,6 +293,7 @@ export async function shutdownSteam(): Promise<void> {
 function launchSteamLinux(url?: string): boolean {
   const steamType = detectLinuxSteamType();
   const args = url ? [url] : [];
+  const env = millenniumLaunchEnv();
 
   console.log(
     `[Steam] Launching Steam (${steamType})${url ? ` with URL: ${url}` : ''}${isRunningInFlatpak() ? ' [from Flatpak]' : ''}`
@@ -239,13 +310,13 @@ function launchSteamLinux(url?: string): boolean {
         return true;
 
       case 'native':
-        spawnOnHost('steam', args);
+        spawnOnHost('steam', args, env);
         return true;
 
       default:
         // Try native first, then xdg-open as fallback
         try {
-          spawnOnHost('steam', args);
+          spawnOnHost('steam', args, env);
           return true;
         } catch {
           if (url) {
@@ -261,12 +332,61 @@ function launchSteamLinux(url?: string): boolean {
   }
 }
 
+// false means Steam did not come up, so the caller falls back to steam:// (Steam without Millennium).
+async function launchSteamViaMillenniumWrapper(
+  app: string,
+  url?: string
+): Promise<boolean> {
+  console.log(
+    `[Steam] Launching Steam through ${app}${url ? ` then opening ${url}` : ''}`
+  );
+  // LaunchServices runs the wrapper's symlinked executable by its real path, where v3.5.0 looks for ../Resources and exits.
+  const assetsRoot = `${MILLENNIUM_ASSETS_ROOT_ENV}=${path.join(app, MILLENNIUM_WRAPPER_ASSETS)}`;
+  try {
+    await execFileAsync('/usr/bin/open', ['-a', app, '--env', assetsRoot], {
+      timeout: EXEC_TIMEOUT_MS,
+    });
+  } catch (error) {
+    console.error(
+      '[Steam] Failed to launch the Millennium wrapper:',
+      describeError(error)
+    );
+    return false;
+  }
+  if (!(await waitForSteamStart(MILLENNIUM_WRAPPER_START_TIMEOUT_MS))) {
+    console.warn('[Steam] Millennium wrapper exited without starting Steam');
+    return false;
+  }
+  if (!url) {
+    return true;
+  }
+  const { shell } = await import('electron');
+  try {
+    await shell.openExternal(url);
+    return true;
+  } catch (error) {
+    console.error('[Steam] Failed to open Steam URL:', describeError(error));
+    return false;
+  }
+}
+
 /**
  * Launch Steam (cross-platform) (internal)
  */
-export async function launchSteam(url?: string): Promise<boolean> {
+async function launchSteam(url?: string): Promise<boolean> {
   if (isLinux()) {
     return launchSteamLinux(url);
+  }
+
+  if (isMacOS()) {
+    const wrapper = findMacMillenniumWrapper();
+    if (
+      wrapper &&
+      !(await isSteamRunning()) &&
+      (await launchSteamViaMillenniumWrapper(wrapper, url))
+    ) {
+      return true;
+    }
   }
 
   // Windows/macOS: use shell.openExternal
@@ -296,27 +416,35 @@ export async function launchSteamGame(appId: string | number): Promise<LaunchRes
   };
 }
 
-/**
- * Restart Steam (shutdown and launch)
- */
-export async function restartSteam(): Promise<LaunchResult> {
+export async function restartSteamProcess(
+  opts: { beforeLaunch?: () => Promise<void> | void } = {}
+): Promise<RestartSteamResult> {
   console.log('[Steam] Restarting Steam...');
 
   try {
-    await shutdownSteam();
+    const shutdown = await shutdownSteam();
+    if (!shutdown.ok) {
+      return { success: false, reason: shutdown.reason };
+    }
 
-    const success = await launchSteam();
+    if (opts.beforeLaunch) {
+      try {
+        await opts.beforeLaunch();
+      } catch (error) {
+        console.warn(
+          '[Steam] Work between shutdown and launch failed:',
+          describeError(error)
+        );
+      }
+    }
 
-    if (success) {
+    if (await launchSteam()) {
       console.log('[Steam] Steam restart initiated');
       return { success: true };
     }
-    return { success: false, error: 'Failed to launch Steam' };
+    return { success: false, reason: 'launch-failed', error: 'Failed to launch Steam' };
   } catch (error) {
     console.error('[Steam] Failed to restart Steam:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return { success: false, reason: 'launch-failed', error: describeError(error) };
   }
 }

@@ -27,15 +27,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { app } from 'electron';
 import { getCurrentSteamAccountId, getSteamGridPath } from '@/main/game-detector/steam';
-import { isLinux } from '@/main/utils/platform';
+import { isLinux, isMacOS } from '@/main/utils/platform';
 import { ARTWORK_SLOTS, applyArtworkSlot } from '@/main/utils/steam-artwork';
-import {
-  ensureCefBridge,
-  evaluateInSharedJsContext,
-  isCefUsable,
-  jsLiteral,
-  libraryAppsGuard,
-} from '@/main/utils/steam-cef';
+import { ensureSteamBridge, type SteamBridge } from '@/main/utils/steam-bridge';
 import {
   readSteamAccountValue,
   writeSteamAccountValue,
@@ -43,14 +37,17 @@ import {
 import { getIcon, resolveResource } from '@/main/utils/theme';
 import type { SteamLibraryFailure } from '@/shared/types';
 
+// Pinned in the ops source as well; this copy is only for logs.
 const SHORTCUT_NAME = 'LBK Launcher';
 const LINUX_LAUNCH_OPTIONS = '--no-sandbox --disable-gpu-sandbox';
 const RECORD_KEY = 'steam-self-shortcut';
 
 function getStableExePath(): string {
-  return (
-    process.env.APPIMAGE || process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe')
-  );
+  const exe =
+    process.env.APPIMAGE || process.env.PORTABLE_EXECUTABLE_FILE || app.getPath('exe');
+  // macOS Steam rejects the binary inside a bundle (EResult 2) and takes only the .app.
+  const bundleEnd = isMacOS() ? exe.lastIndexOf('.app/') : -1;
+  return bundleEnd === -1 ? exe : exe.slice(0, bundleEnd + '.app'.length);
 }
 
 function getStableIconPath(): string {
@@ -90,9 +87,8 @@ function quotedPath(value: string): string {
   return `"${value}"`;
 }
 
-async function applyArtwork(appId: number): Promise<void> {
+async function applyArtwork(bridge: SteamBridge, appId: number): Promise<void> {
   const gridDir = getSteamGridPath();
-  const cefUsable = await isCefUsable();
 
   for (const slot of SHORTCUT_ARTWORK_SLOTS) {
     const asset = findArtworkFile(slot.key);
@@ -107,47 +103,10 @@ async function applyArtwork(appId: number): Promise<void> {
       extension: asset.extension,
       bytes: fs.readFileSync(asset.path),
       gridDir,
-      cefUsable,
+      bridge,
       label: `self-shortcut/${slot.key}`,
     });
   }
-}
-
-const NON_STEAM_APPID_MIN = 2147483648;
-
-function findOurShortcut(
-  recordedAppId: number | null
-): Promise<number | null | 'unknown'> {
-  return evaluateInSharedJsContext<number | null | 'unknown'>(
-    `(() => {${libraryAppsGuard("'unknown'")}
-      const recorded = ${recordedAppId ?? 'null'};
-      if (recorded !== null && apps.some((a) => a.appid === recorded)) {
-        return recorded;
-      }
-      const match = apps.find(
-        (a) =>
-          a.appid >= ${NON_STEAM_APPID_MIN} &&
-          a.display_name === ${jsLiteral(SHORTCUT_NAME)}
-      );
-      return match ? match.appid : null;
-    })()`
-  );
-}
-
-async function createShortcut(
-  exePath: string,
-  startDir: string,
-  launchOptions: string
-): Promise<number> {
-  const appId = await evaluateInSharedJsContext<unknown>(
-    `SteamClient.Apps.AddShortcut(${jsLiteral(SHORTCUT_NAME)}, ${jsLiteral(
-      quotedPath(exePath)
-    )}, ${jsLiteral(quotedPath(startDir))}, ${jsLiteral(launchOptions)})`
-  );
-  if (typeof appId !== 'number' || !Number.isInteger(appId)) {
-    throw new Error(`AddShortcut returned ${String(appId)} instead of an app id`);
-  }
-  return appId;
 }
 
 type AddShortcutResult =
@@ -161,9 +120,9 @@ type AddShortcutResult =
  * partial prior failure gets completed on retry.
  */
 export async function addLbkLauncherToSteamLibrary(): Promise<AddShortcutResult> {
-  const blocked = await ensureCefBridge();
-  if (blocked) {
-    return { ok: false, reason: blocked };
+  const bridge = await ensureSteamBridge();
+  if (typeof bridge === 'string') {
+    return { ok: false, reason: bridge };
   }
 
   const accountId = getCurrentSteamAccountId();
@@ -179,25 +138,29 @@ export async function addLbkLauncherToSteamLibrary(): Promise<AddShortcutResult>
   try {
     const stored = readSteamAccountValue(RECORD_KEY, accountId);
     const recorded = typeof stored === 'number' ? stored : null;
-    const found = await findOurShortcut(recorded);
+    const found = await bridge.invoke('findShortcut', { recordedAppId: recorded });
     if (found === 'unknown') {
       return { ok: false, reason: 'library-unavailable' };
     }
 
-    const appId = found ?? (await createShortcut(exePath, startDir, launchOptions));
+    const appId =
+      found ??
+      (await bridge.invoke('addShortcut', {
+        exe: quotedPath(exePath),
+        startDir: quotedPath(startDir),
+        launchOptions,
+      }));
     writeSteamAccountValue(RECORD_KEY, accountId, appId);
 
-    await evaluateInSharedJsContext(
-      `(async () => {
-        await SteamClient.Apps.SetShortcutName(${appId}, ${jsLiteral(SHORTCUT_NAME)});
-        await SteamClient.Apps.SetShortcutExe(${appId}, ${jsLiteral(quotedPath(exePath))});
-        await SteamClient.Apps.SetShortcutStartDir(${appId}, ${jsLiteral(quotedPath(startDir))});
-        await SteamClient.Apps.SetShortcutIcon(${appId}, ${jsLiteral(iconPath)});
-        await SteamClient.Apps.SetShortcutLaunchOptions(${appId}, ${jsLiteral(launchOptions)});
-      })()`
-    );
+    await bridge.invoke('updateShortcut', {
+      appId,
+      exe: quotedPath(exePath),
+      startDir: quotedPath(startDir),
+      icon: iconPath,
+      launchOptions,
+    });
 
-    await applyArtwork(appId);
+    await applyArtwork(bridge, appId);
 
     console.log(
       `[SteamSelfShortcut] ${found === null ? 'Added' : 'Updated'} "${SHORTCUT_NAME}", app id ${appId}`
@@ -208,7 +171,7 @@ export async function addLbkLauncherToSteamLibrary(): Promise<AddShortcutResult>
     return {
       ok: false,
       reason: 'failed',
-      error: error instanceof Error ? error.message : 'CEF shortcut failed',
+      error: error instanceof Error ? error.message : 'Bridge shortcut failed',
     };
   }
 }

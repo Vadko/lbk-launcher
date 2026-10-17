@@ -10,6 +10,7 @@ import { useConfirmStore } from '../../store/useConfirmStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSteamPluginSetupStore } from '../../store/useSteamPluginSetupStore';
 import { useStore } from '../../store/useStore';
 import { AppLoader } from '../AppLoader/AppLoader';
 import { GamepadHints } from '../GamepadHints/GamepadHints';
@@ -17,6 +18,7 @@ import { ChangelogModal } from '../Modal/ChangelogModal';
 import { ConfirmModal } from '../Modal/ConfirmModal';
 import { GlobalModal } from '../Modal/GlobalModal';
 import { PromoModal } from '../Modal/PromoModal';
+import { SteamPluginSetupModal } from '../Modal/SteamPluginSetup/SteamPluginSetupModal';
 import { NotificationModal } from '../Notifications/NotificationModal';
 import { ToastNotifications } from '../Notifications/ToastNotifications';
 import { SettingsModal } from '../Settings/SettingsModal';
@@ -52,6 +54,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const globalModalOpen = useModalStore((s) => s.isOpen);
   const settingsModalOpen = useSettingsStore((s) => s.isSettingsModalOpen);
   const changelogModalOpen = useChangelogStore((s) => s.isOpen);
+  const steamPluginSetupOpen = useSteamPluginSetupStore((s) => s.open);
 
   const openHistory = useCallback(() => setShowNotificationHistory(true), []);
   const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
@@ -123,6 +126,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {confirmOpen && <ConfirmModal />}
         {settingsModalOpen && <SettingsModal />}
         {globalModalOpen && <GlobalModal />}
+        {steamPluginSetupOpen && <SteamPluginSetupModal />}
         {changelogModalOpen && <ChangelogModal />}
         {showNotificationHistory && (
           <NotificationModal isOpen={showNotificationHistory} onClose={closeHistory} />

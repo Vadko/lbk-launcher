@@ -36,6 +36,11 @@ module.exports = {
       to: 'steam-shortcut',
       filter: ['**/*'],
     },
+    {
+      from: 'resources/millennium-plugin',
+      to: 'millennium-plugin',
+      filter: ['**/*'],
+    },
   ],
 
   asarUnpack: ['**/*.node'],
@@ -137,6 +142,12 @@ module.exports = {
       {
         from: 'resources/umu',
         to: 'umu',
+        filter: ['**/*'],
+      },
+      // Zipped at runtime into ~/.cache/lbk-launcher/decky/ for Decky Loader's install prompt.
+      {
+        from: 'resources/decky-plugin',
+        to: 'decky-plugin',
         filter: ['**/*'],
       },
     ],

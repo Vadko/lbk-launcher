@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, hash } from 'crypto';
 import fs from 'fs';
 
 /**
@@ -22,7 +22,7 @@ export async function verifyFileHash(
       console.log(
         `[Hash] Small file (${(fileSize / 1024 / 1024).toFixed(1)}MB), using full SHA-256`
       );
-      const actualHash = await calculateFullHash(filePath);
+      const actualHash = await sha256File(filePath);
       console.log(`[Hash] Expected: ${expectedHash}`);
       console.log(`[Hash] Actual:   ${actualHash}`);
       return actualHash === expectedHash;
@@ -47,7 +47,7 @@ export async function verifyFileHash(
 
     // Fallback to full SHA-256 for backward compatibility with old hashes
     console.log(`[Hash] Fingerprint mismatch, trying full SHA-256 (legacy)...`);
-    const fullHash = await calculateFullHash(filePath);
+    const fullHash = await sha256File(filePath);
     console.log(`[Hash] Full SHA-256: ${fullHash}`);
 
     if (fullHash === expectedHash) {
@@ -63,18 +63,12 @@ export async function verifyFileHash(
   }
 }
 
-/**
- * Calculate full SHA-256 hash using streaming
- */
-async function calculateFullHash(filePath: string): Promise<string> {
-  const hash = createHash('sha256');
-  const stream = fs.createReadStream(filePath);
-
-  return new Promise((resolve, reject) => {
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('end', () => resolve(hash.digest('hex')));
-    stream.on('error', reject);
-  });
+export async function sha256File(filePath: string): Promise<string> {
+  const hasher = createHash('sha256');
+  for await (const chunk of fs.createReadStream(filePath)) {
+    hasher.update(chunk);
+  }
+  return hasher.digest('hex');
 }
 
 /**
@@ -102,10 +96,7 @@ async function calculateFingerprintHash(
     sizeBuffer.writeBigUInt64LE(BigInt(fileSize), 0);
 
     // Combine and hash
-    const combined = Buffer.concat([firstChunk, lastChunk, sizeBuffer]);
-    const hash = createHash('sha256');
-    hash.update(combined);
-    return hash.digest('hex');
+    return hash('sha256', Buffer.concat([firstChunk, lastChunk, sizeBuffer]));
   } finally {
     fs.closeSync(fd);
   }

@@ -2,8 +2,9 @@ import { ChevronDownIcon, ExternalLinkIcon, SparklesIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { REPO_RELEASES_URL } from '../../../shared/repo';
 import type { ChangelogEntry } from '../../../shared/types';
+import { compareVersions } from '../../../shared/version';
 import { APP_VERSION } from '../../constants/appVersion';
-import { compareVersions, useChangelogStore } from '../../store/useChangelogStore';
+import { useChangelogStore } from '../../store/useChangelogStore';
 import { Modal } from './Modal';
 
 const Entry: React.FC<{ entry: ChangelogEntry }> = ({ entry }) => (

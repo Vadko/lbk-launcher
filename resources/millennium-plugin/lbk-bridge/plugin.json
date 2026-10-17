@@ -1,0 +1,7 @@
+{
+  "name": "lbk-bridge",
+  "common_name": "LBK Bridge",
+  "description": "Lets LBK Launcher apply launch options, Workshop subscriptions, the translations collection, library artwork and achievement strings without Steam's remote-debugging port. Installed and managed by LBK Launcher.",
+  "version": "1.1.0",
+  "useBackend": false
+}

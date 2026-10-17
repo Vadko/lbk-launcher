@@ -1,5 +1,11 @@
-import { afterAll, describe, expect, it, vi } from 'vitest';
-import { forCurrentOS, getPlatform } from '@/main/utils/platform';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  forCurrentOS,
+  getPlatform,
+  isGamescopeSession,
+  isSteamDeckDmi,
+  parseDarwinRelease,
+} from '@/main/utils/platform';
 
 // The module reads `process.platform` at call time, so swapping the property is
 // enough — no module mock, which means these tests exercise the real
@@ -129,5 +135,69 @@ describe('forCurrentOS — function branches', () => {
     expect(windows).not.toHaveBeenCalled();
     expect(macos).not.toHaveBeenCalled();
     expect(linux).not.toHaveBeenCalled();
+  });
+});
+
+describe('isGamescopeSession', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  function stubSession(env: Record<string, string | undefined>): void {
+    for (const key of [
+      'GAMESCOPE_WAYLAND_DISPLAY',
+      'XDG_CURRENT_DESKTOP',
+      'XDG_SESSION_DESKTOP',
+    ]) {
+      vi.stubEnv(key, env[key]);
+    }
+  }
+
+  it('is false on a plain desktop session', () => {
+    stubSession({ XDG_CURRENT_DESKTOP: 'KDE', XDG_SESSION_DESKTOP: 'KDE' });
+    expect(isGamescopeSession()).toBe(false);
+  });
+
+  it('is false with nothing set', () => {
+    stubSession({});
+    expect(isGamescopeSession()).toBe(false);
+  });
+
+  it('detects the gamescope Wayland display alone', () => {
+    stubSession({ GAMESCOPE_WAYLAND_DISPLAY: 'gamescope-0' });
+    expect(isGamescopeSession()).toBe(true);
+  });
+
+  it('treats an empty gamescope display as unset', () => {
+    stubSession({ GAMESCOPE_WAYLAND_DISPLAY: '' });
+    expect(isGamescopeSession()).toBe(false);
+  });
+
+  it.each(['XDG_CURRENT_DESKTOP', 'XDG_SESSION_DESKTOP'])(
+    'detects %s=gamescope',
+    (key) => {
+      stubSession({ [key]: 'gamescope' });
+      expect(isGamescopeSession()).toBe(true);
+    }
+  );
+
+  it('does not substring-match the desktop name', () => {
+    stubSession({ XDG_CURRENT_DESKTOP: 'gamescope-like' });
+    expect(isGamescopeSession()).toBe(false);
+  });
+});
+
+describe('parseDarwinRelease', () => {
+  it('returns [major, minor]', () => {
+    expect(parseDarwinRelease('22.4.0')).toEqual([22, 4]);
+    expect(parseDarwinRelease('25')).toEqual([25, 0]);
+    expect(parseDarwinRelease('')).toEqual([0, 0]);
+  });
+});
+
+describe('isSteamDeckDmi', () => {
+  it('recognises both Deck models by their DMI strings', () => {
+    expect(isSteamDeckDmi('Valve\n', 'Jupiter\n')).toBe(true);
+    expect(isSteamDeckDmi('Valve', 'Galileo')).toBe(true);
+    expect(isSteamDeckDmi('Valve', 'Index')).toBe(false);
+    expect(isSteamDeckDmi('LENOVO', 'Jupiter')).toBe(false);
   });
 });

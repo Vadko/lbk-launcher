@@ -10,3 +10,6 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   registry-js: true
+
+patchedDependencies:
+  node-7z@3.0.0: patches/node-7z@3.0.0.patch

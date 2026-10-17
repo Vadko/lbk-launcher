@@ -16,6 +16,7 @@ import { useStore } from './store/useStore';
 import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
 import { trackEvent } from './utils/analytics';
 import { isValidGamepad } from './utils/isValidGamepad';
+import { runSteamRestart } from './utils/steamBridge';
 
 // Higher deadzone for mode switching to prevent accidental triggers from stick drift
 const MODE_SWITCH_DEADZONE = 0.8;
@@ -399,8 +400,7 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // "Restart Steam" prompt from the Settings CEF toggle when the port isn't
-  // open yet. Dismissible — installs that need CEF show their own mandatory one.
+  // Sent only by the Settings toggle, at most once per bridge fingerprint.
   useEffect(() => {
     if (!window.electronAPI?.onSteamRestartRequired) {
       return;
@@ -416,8 +416,11 @@ export const App: React.FC = () => {
           {
             label: 'Перезапустити Steam',
             onClick: () => {
-              window.electronAPI.restartSteam();
+              void runSteamRestart(() => window.electronAPI.restartSteam(), {
+                launchOptions: false,
+              });
             },
+            keepOpen: true,
             variant: 'primary',
           },
         ],

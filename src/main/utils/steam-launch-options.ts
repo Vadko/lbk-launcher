@@ -9,35 +9,29 @@
  *     path is gated on Steam being down.
  *
  *   - **Steam on** → call `SteamClient.Apps.SetAppLaunchOptions(...)` over the
- *     CEF debug channel. Live update, no restart, works while Steam is open.
- *     This needs Steam's `.cef-enable-remote-debugging` flag file to exist
- *     and Steam to have been restarted at least once since the file appeared.
+ *     Steam bridge (CEF debug port or the LBK Bridge Millennium plugin). Live
+ *     update, no restart, works while Steam is open.
  *
- * If Steam is on but CEF isn't reachable yet (typically the first ever install
- * after we just touched the flag file), we surface a mandatory "restart Steam"
- * prompt. The user restarts Steam and re-runs the install — the second run
- * hits the CEF path. Install is idempotent so re-running is cheap.
+ * If Steam is on but no bridge is reachable, the result is `needs-shutdown`
+ * and the caller decides whether to queue the write for Steam's next exit.
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
+import { writeFileAtomic } from '@/main/utils/atomic-write';
 import {
   mergeLaunchOptions,
   resolveGameDirToken,
   usesGameDirToken,
 } from '@/main/utils/launch-options-value';
 import { forCurrentOS } from '@/main/utils/platform';
-import {
-  evaluateInSharedJsContext,
-  isCefUsable,
-  jsLiteral,
-} from '@/main/utils/steam-cef';
+import { getSteamBridge } from '@/main/utils/steam-bridge';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
 import type { Game } from '@/shared/types';
 
-interface WriteLaunchOptionsParams {
+export interface WriteLaunchOptionsParams {
   appId: number;
   /** Value for Windows builds. */
   windowsOptions: string | null;
@@ -58,10 +52,9 @@ interface WriteLaunchOptionsParams {
 
 type WriteLaunchOptionsMode =
   | 'noop' // nothing to write (no options for current OS, or already in place)
-  | 'cef' // applied live through Steam's CEF API
+  | 'cef' // applied live through the Steam bridge (CDP or plugin); name kept for logs
   | 'file' // wrote localconfig.vdf directly (Steam was off)
-  | 'needs-shutdown' // Steam running + CEF unreachable (e.g. Millennium) —
-  //                    caller can prompt user to restart Steam then re-apply.
+  | 'needs-shutdown' // Steam running + no bridge — caller queues or prompts a restart.
   | 'unresolved' // options needed a value we could not supply (unknown game
   //                 folder, or an unquoted token)
   | 'failed'; // tried to write and could not. Both are kept apart from 'noop'
@@ -214,21 +207,13 @@ function writeMergedToLocalConfig(
     app.add(new KeyV('LaunchOptions', plan.merged));
   }
 
-  // Atomic write: serialize to a sibling tmp file then rename. `writeFileSync`
-  // on its own truncates the target before writing, so a crash mid-write would
-  // leave Steam's localconfig.vdf empty/broken — losing the user's entire Steam
-  // config on next launch. `rename` is atomic on POSIX and on NTFS within a
-  // volume, so either the new file or the old file is observable, never a
-  // half-written one.
-  const serialized = plan.root.dump();
-  const tmp = `${localConfigPath}.lbk.tmp`;
-  fs.writeFileSync(tmp, serialized, 'utf8');
-  fs.renameSync(tmp, localConfigPath);
+  // A truncating write that crashes would wipe the user's whole Steam config.
+  writeFileAtomic(localConfigPath, plan.root.dump());
 }
 
 /**
- * Apply the requested LaunchOptions value for `params.appId`, choosing CEF or
- * file based on Steam's current state. See module docstring for details.
+ * Apply the requested LaunchOptions value for `params.appId`, choosing the bridge
+ * or the file based on Steam's current state. See module docstring for details.
  */
 export async function writeSteamLaunchOptions(
   params: WriteLaunchOptionsParams
@@ -273,8 +258,7 @@ export async function writeSteamLaunchOptions(
     return { mode: 'noop', reason: 'LaunchOptions already include our value' };
   }
 
-  // Steam off → file is safe to edit directly. Skip CEF entirely (Steam isn't
-  // there to talk to anyway) and don't touch the flag file (no benefit).
+  // Steam off → file is safe to edit directly; there is no bridge to talk to anyway.
   if (!(await isSteamRunning())) {
     try {
       writeMergedToLocalConfig(localConfigPath, plan, appIdStr);
@@ -290,28 +274,30 @@ export async function writeSteamLaunchOptions(
     }
   }
 
-  // Steam on → only CEF is safe. The settings check matters mid-session: the
-  // port stays open until Steam restarts even after the flag file is deleted.
-  if (await isCefUsable()) {
+  // Steam on → only the bridge is safe. getSteamBridge() honours the setting mid-session:
+  // the CEF port stays open until Steam restarts even after the flag file is deleted.
+  const bridge = await getSteamBridge();
+  if (bridge) {
     try {
-      await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetAppLaunchOptions(${params.appId}, ${jsLiteral(plan.merged)})`
+      await bridge.invoke('setLaunchOptions', {
+        appId: params.appId,
+        value: plan.merged,
+      });
+      console.log(
+        `[SteamLaunchOptions] App ${params.appId} updated live via ${bridge.transport}`
       );
-      console.log(`[SteamLaunchOptions] App ${params.appId} updated live via CEF`);
-      return { mode: 'cef' };
+      return { mode: 'cef', reason: `via ${bridge.transport}` };
     } catch (error) {
       return {
         mode: 'failed',
-        reason: error instanceof Error ? error.message : 'CEF apply failed',
+        reason: error instanceof Error ? error.message : 'Steam bridge apply failed',
       };
     }
   }
 
-  // Steam running but no usable CEF (setting off, Millennium, or first-run
-  // restart pending). Editing localconfig.vdf now is unsafe (Steam overwrites
-  // on exit) → surface `needs-shutdown` so the caller can prompt a restart.
+  // Editing localconfig.vdf now is unsafe (Steam overwrites it on exit).
   return {
     mode: 'needs-shutdown',
-    reason: 'Steam running without CEF — restart required to apply',
+    reason: 'Steam running without a bridge — restart required to apply',
   };
 }

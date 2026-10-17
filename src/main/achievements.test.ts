@@ -1,0 +1,300 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const state = vi.hoisted(() => ({
+  root: '',
+  pluginData: [] as unknown[],
+  pluginConnected: false,
+  settingOn: true,
+  generation: null as 'v2' | 'v3' | null,
+  reload: vi.fn(() => Promise.resolve({ apps: 1, coverage: {} })),
+}));
+
+vi.mock('electron', () => ({
+  app: { getPath: () => path.join(state.root, 'userData') },
+}));
+vi.mock('@/main/game-detector/steam', () => ({
+  getSteamPath: () => path.join(state.root, 'Steam'),
+}));
+vi.mock('@/main/db/games-repository', () => ({
+  GamesRepository: { getInstance: () => ({ getGameById: () => null }) },
+}));
+vi.mock('@/main/installer/archive', () => ({ extractArchive: vi.fn() }));
+vi.mock('@/main/installer/cache', () => ({
+  findInstallationInfoFile: (gamePath: string) =>
+    path.join(gamePath, '.lbk-translation.json'),
+}));
+vi.mock('@/main/installer/download', () => ({ downloadFile: vi.fn() }));
+vi.mock('@/main/tracking', () => ({ getSignedDownloadUrl: vi.fn() }));
+vi.mock('@/main/plugin-host/state', async () => {
+  const { computeAchievementsBadge } = await import('@/main/plugin-host/support');
+  return {
+    getAchievementsBadge: () =>
+      Promise.resolve(
+        computeAchievementsBadge({
+          os: 'windows',
+          settingOn: state.settingOn,
+          host: state.generation === 'v3' ? 'millennium' : 'none',
+          steamRunning: true,
+          pluginConnected: state.pluginConnected,
+          millennium: {
+            v3: state.generation === 'v3',
+            pluginInstalled: false,
+            pluginEnabled: false,
+            activationPending: false,
+          },
+          support: { supported: true, reason: null },
+          decky: null,
+        })
+      ),
+  };
+});
+vi.mock('@/main/utils/plugin-data', () => ({
+  writeBridgePluginData: (_file: string, data: unknown) => {
+    state.pluginData.push(data);
+  },
+}));
+vi.mock('@/main/utils/steam-bridge-server', () => ({
+  invokeViaPlugin: () => state.reload(),
+  isPluginConnected: () => state.pluginConnected,
+  onPluginConnectionChange: () => () => undefined,
+}));
+vi.mock('@/main/utils/store-storage', () => ({
+  isCefDebuggingEnabledInSettings: () => state.settingOn,
+  readStoreValue: () => undefined,
+  writeStoreValue: () => undefined,
+}));
+
+import {
+  hasAchievementStrings,
+  readAchievementStringsFromDir,
+  removeInstalledAchievements,
+  saveAchievementStrings,
+  startAchievements,
+  syncAchievementsToPlugin,
+} from './achievements';
+
+const END = Buffer.from([0x08]);
+const cstr = (s: string) => Buffer.concat([Buffer.from(s, 'utf8'), Buffer.from([0])]);
+const obj = (key: string, ...kids: Buffer[]) =>
+  Buffer.concat([Buffer.from([0x00]), cstr(key), ...kids, END]);
+const str = (key: string, v: string) =>
+  Buffer.concat([Buffer.from([0x01]), cstr(key), cstr(v)]);
+
+const schema = (appId: number, name: string, desc: string) =>
+  Buffer.concat([
+    obj(
+      String(appId),
+      obj(
+        'stats',
+        obj(
+          '1',
+          obj(
+            'bits',
+            obj(
+              '0',
+              str('name', 'ACH_ONE'),
+              obj(
+                'display',
+                obj('name', str('english', name)),
+                obj('desc', str('english', desc))
+              )
+            )
+          )
+        )
+      )
+    ),
+    END,
+  ]);
+
+const OURS = () => schema(400, 'Кекс для героя', 'Отримати кекс');
+const OFFICIAL = () => schema(400, 'The Cake', 'Get the cake');
+
+const statsDir = () => path.join(state.root, 'Steam', 'appcache', 'stats');
+const statsFile = (name: string) => path.join(statsDir(), name);
+const stringsFile = (appId: number) =>
+  path.join(state.root, 'userData', 'achievement-strings', `${appId}.json`);
+
+beforeEach(() => {
+  state.root = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-ach-'));
+  fs.mkdirSync(statsDir(), { recursive: true });
+  state.pluginData = [];
+  state.pluginConnected = false;
+  state.settingOn = true;
+  state.generation = null;
+  state.reload.mockClear();
+  vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  fs.rmSync(state.root, { recursive: true, force: true });
+});
+
+describe('achievement strings store', () => {
+  it('extracts schemas from an archive dir and records the owner', async () => {
+    const dir = path.join(state.root, 'extract', 'nested');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
+    fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_401.bin'), OFFICIAL());
+    fs.writeFileSync(path.join(dir, 'readme.txt'), 'hello');
+
+    const extracted = await readAchievementStringsFromDir(
+      path.join(state.root, 'extract')
+    );
+    expect(extracted.map((e) => e.appId)).toEqual([400]);
+
+    expect(saveAchievementStrings(extracted, 'game-a', 'hash-1')).toEqual([400]);
+    expect(hasAchievementStrings([400], 'game-a')).toBe(true);
+    expect(hasAchievementStrings([400], 'game-b')).toBe(false);
+    expect(hasAchievementStrings([400, 401], 'game-a')).toBe(false);
+  });
+
+  it('leaves strings owned by another translation of the same app', async () => {
+    const dir = path.join(state.root, 'x');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
+    const [entry] = await readAchievementStringsFromDir(dir);
+    saveAchievementStrings([entry], 'game-a', null);
+
+    await removeInstalledAchievements('game-b', { files: [], appIds: [400] });
+    expect(fs.existsSync(stringsFile(400))).toBe(true);
+
+    await removeInstalledAchievements(
+      'game-a',
+      { files: [], appIds: [400] },
+      new Set([400])
+    );
+    expect(fs.existsSync(stringsFile(400))).toBe(true);
+
+    await removeInstalledAchievements('game-a', { files: [], appIds: [400] });
+    expect(fs.existsSync(stringsFile(400))).toBe(false);
+  });
+});
+
+describe('legacy appcache cleanup', () => {
+  const file = 'UserGameStatsSchema_400.bin';
+
+  it('restores the backup over our file', async () => {
+    fs.writeFileSync(statsFile(file), OURS());
+    fs.writeFileSync(statsFile(`${file}_backup`), OFFICIAL());
+    await removeInstalledAchievements('game-a', { files: [file] });
+    expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
+    expect(fs.existsSync(statsFile(`${file}_backup`))).toBe(false);
+  });
+
+  it('deletes our file when there is no backup', async () => {
+    fs.writeFileSync(statsFile(file), OURS());
+    await removeInstalledAchievements('game-a', { files: [file] });
+    expect(fs.existsSync(statsFile(file))).toBe(false);
+  });
+
+  it('never deletes a schema Steam already replaced', async () => {
+    fs.writeFileSync(statsFile(file), OFFICIAL());
+    await removeInstalledAchievements('game-a', { files: [file] });
+    expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
+  });
+
+  it('drops a stale backup when Steam already replaced the schema', async () => {
+    const newer = schema(400, 'The Cake v2', 'Get the cake');
+    fs.writeFileSync(statsFile(file), newer);
+    fs.writeFileSync(statsFile(`${file}_backup`), OFFICIAL());
+    await removeInstalledAchievements('game-a', { files: [file] });
+    expect(fs.readFileSync(statsFile(file))).toEqual(newer);
+    expect(fs.existsSync(statsFile(`${file}_backup`))).toBe(false);
+  });
+
+  it('removes the strings of the app named by a legacy file', async () => {
+    const dir = path.join(state.root, 'x');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, file), OURS());
+    saveAchievementStrings(await readAchievementStringsFromDir(dir), 'game-a', null);
+
+    await removeInstalledAchievements('game-a', { files: [file] });
+    expect(fs.existsSync(stringsFile(400))).toBe(false);
+  });
+});
+
+describe('syncAchievementsToPlugin', () => {
+  const seed = async () => {
+    const dir = path.join(state.root, 'x');
+    fs.mkdirSync(dir);
+    fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
+    saveAchievementStrings(await readAchievementStringsFromDir(dir), 'game-a', null);
+  };
+
+  it('writes the aggregate payload and reports the delivery', async () => {
+    await seed();
+    expect(await syncAchievementsToPlugin()).toBe('needs-millennium');
+    expect(state.pluginData.at(-1)).toMatchObject({
+      v: 1,
+      apps: { 400: { ACH_ONE: { name: 'Кекс для героя', desc: 'Отримати кекс' } } },
+    });
+
+    state.generation = 'v3';
+    expect(await syncAchievementsToPlugin()).toBe('plugin-next-start');
+    expect(state.reload).not.toHaveBeenCalled();
+
+    state.pluginConnected = true;
+    expect(await syncAchievementsToPlugin()).toBe('plugin-live');
+    expect(state.reload).toHaveBeenCalledTimes(1);
+
+    state.reload.mockRejectedValueOnce(new Error('plugin-outdated'));
+    expect(await syncAchievementsToPlugin()).toBe('plugin-next-start');
+
+    state.settingOn = false;
+    expect(await syncAchievementsToPlugin()).toBe('disabled');
+  });
+
+  it('keeps the stamp stable for unchanged data', async () => {
+    await seed();
+    await syncAchievementsToPlugin();
+    await syncAchievementsToPlugin();
+    const [a, b] = state.pluginData as { stamp: string }[];
+    expect(a.stamp).toBe(b.stamp);
+  });
+});
+
+describe('legacy migration on startup', () => {
+  it('moves strings out of appcache and rewrites both install records', async () => {
+    const file = 'UserGameStatsSchema_400.bin';
+    fs.writeFileSync(statsFile(file), OURS());
+    fs.writeFileSync(statsFile(`${file}_backup`), OFFICIAL());
+
+    const gamePath = path.join(state.root, 'Game');
+    fs.mkdirSync(gamePath);
+    const info = {
+      gameId: 'game-a',
+      version: '1.0.0',
+      installedAt: '2026-01-01T00:00:00.000Z',
+      gamePath,
+      components: {
+        text: { installed: true, files: [] },
+        achievements: { installed: true, files: [file], archiveHash: 'h' },
+      },
+    };
+    const cacheDir = path.join(state.root, 'userData', 'installation-cache');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(path.join(cacheDir, 'game-a.json'), JSON.stringify(info));
+    fs.writeFileSync(path.join(gamePath, '.lbk-translation.json'), JSON.stringify(info));
+
+    startAchievements();
+
+    const readAch = (p: string) =>
+      JSON.parse(fs.readFileSync(p, 'utf8')).components.achievements;
+    await vi.waitFor(() => {
+      expect(readAch(path.join(cacheDir, 'game-a.json'))).toEqual({
+        installed: true,
+        files: [],
+        archiveHash: 'h',
+        appIds: [400],
+      });
+    });
+    expect(readAch(path.join(gamePath, '.lbk-translation.json')).files).toEqual([]);
+    expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
+    expect(hasAchievementStrings([400], 'game-a')).toBe(true);
+  });
+});

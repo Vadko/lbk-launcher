@@ -1,9 +1,12 @@
 import {
   ArchiveIcon,
   CheckIcon,
+  DownloadIcon,
+  ExternalLinkIcon,
   FileTextIcon,
   InfoIcon,
   MonitorIcon,
+  Settings2Icon,
   ShieldIcon,
   TerminalIcon,
   Trash2Icon,
@@ -12,6 +15,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  AchievementsBadge,
   Game,
   GamePath,
   InstallationInfo,
@@ -19,8 +23,135 @@ import type {
   Platform,
 } from '../../../shared/types';
 import { getReadablePlatform } from '../../helpers/getReadablePlatform';
+import { useSteamBridgeStatus } from '../../hooks/useSteamBridgeStatus';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSteamPluginSetupStore } from '../../store/useSteamPluginSetupStore';
+import { openMillenniumSite } from '../../utils/steamBridge';
+import { achievementsBadgeDetail, openDeckySite } from '../../utils/steamPluginHost';
+import { AchievementsDeliveryBadge } from '../ui/AchievementsDeliveryBadge';
 import { SelectDropdown, type SelectOption } from '../ui/SelectDropdown';
 import { Modal } from './Modal';
+
+const NOTE_ACTION_CLASS =
+  'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-opacity hover:opacity-90';
+const NOTE_PRIMARY_CLASS = `${NOTE_ACTION_CLASS} bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark`;
+const NOTE_LINK_CLASS = 'inline-flex items-center gap-1 text-color-main hover:underline';
+const FILES_NOTE = 'Steam більше не показує перекладені досягнення зі звичайних файлів.';
+const IN_GAME_NOTE = 'У меню самої гри назви лишаться мовою розробника.';
+
+interface AchievementsDeliveryNoteProps {
+  badge: AchievementsBadge;
+}
+
+const AchievementsDeliveryNote: React.FC<AchievementsDeliveryNoteProps> = ({ badge }) => {
+  const millenniumDeclined = useSettingsStore((s) => s.millenniumOfferDeclined);
+  const deckyDeclined = useSettingsStore((s) => s.deckyPluginOfferDeclined);
+  const openSettingsModal = useSettingsStore((s) => s.openSettingsModal);
+  const openSetup = useSteamPluginSetupStore((s) => s.openSetup);
+
+  let text: string;
+  let actions: React.ReactNode = null;
+  switch (badge.state) {
+    case 'needs-millennium':
+      text = `${FILES_NOTE} Щоб бачити їх у бібліотеці, сповіщеннях та оверлеї Steam, потрібен Millennium. ${IN_GAME_NOTE}`;
+      actions = (
+        <>
+          {!millenniumDeclined && badge.unsupportedReason === null && (
+            <button
+              type="button"
+              onClick={() => openSetup('millennium-install', 'offer')}
+              data-gamepad-modal-item
+              className={NOTE_PRIMARY_CLASS}
+            >
+              <DownloadIcon size={14} />
+              Встановити Millennium
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={openMillenniumSite}
+            data-gamepad-modal-item
+            className={NOTE_LINK_CLASS}
+          >
+            <ExternalLinkIcon size={14} />
+            Що таке Millennium
+          </button>
+        </>
+      );
+      break;
+    case 'needs-decky-plugin':
+      text = `${FILES_NOTE} Щоб бачити їх у бібліотеці, сповіщеннях та оверлеї Steam, потрібен плагін «LBK Bridge» для Decky Loader. ${IN_GAME_NOTE}`;
+      actions = deckyDeclined ? null : (
+        <button
+          type="button"
+          onClick={() => openSetup('decky-install', 'offer')}
+          data-gamepad-modal-item
+          className={NOTE_PRIMARY_CLASS}
+        >
+          <DownloadIcon size={14} />
+          Встановити плагін для Decky
+        </button>
+      );
+      break;
+    case 'needs-decky':
+      text = `${FILES_NOTE} На Steam Deck їх показує плагін «LBK Bridge» для Decky Loader — спершу встановіть Decky Loader. ${IN_GAME_NOTE}`;
+      actions = (
+        <button
+          type="button"
+          onClick={openDeckySite}
+          data-gamepad-modal-item
+          className={NOTE_LINK_CLASS}
+        >
+          <ExternalLinkIcon size={14} />
+          Що таке Decky Loader
+        </button>
+      );
+      break;
+    case 'setting-off':
+      text = `Переклад досягнень збережеться, але Steam його не покаже. ${achievementsBadgeDetail(badge) ?? ''}`;
+      actions = (
+        <button
+          type="button"
+          onClick={openSettingsModal}
+          data-gamepad-modal-item
+          className={NOTE_LINK_CLASS}
+        >
+          <Settings2Icon size={14} />
+          Відкрити налаштування
+        </button>
+      );
+      break;
+    case 'unsupported':
+      text = `Переклад досягнень збережеться, але на цій системі Steam не може його показати: ${achievementsBadgeDetail(badge) ?? ''}`;
+      actions =
+        badge.unsupportedReason === 'millennium-v2' ? (
+          <button
+            type="button"
+            onClick={openMillenniumSite}
+            data-gamepad-modal-item
+            className={NOTE_LINK_CLASS}
+          >
+            <ExternalLinkIcon size={14} />
+            Відкрити сайт Millennium
+          </button>
+        ) : null;
+      break;
+    default:
+      return null;
+  }
+
+  return (
+    <div className="bg-glass rounded-xl p-3 border border-border flex items-start gap-2 text-sm">
+      <InfoIcon size={16} className="text-color-main shrink-0 mt-0.5" />
+      <div className="text-text-muted min-w-0">
+        <p>{text}</p>
+        {actions && (
+          <div className="mt-2 flex flex-wrap items-center gap-3">{actions}</div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface InstallOptionsDialogProps {
   isOpen: boolean;
@@ -137,6 +268,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     isAchievementsInstalled &&
     isReinstall;
   const willRemoveVoice = hasVoiceArchive && !installVoice && isVoiceInstalled;
+  const wantsAchievements = hasAchievementsArchive && installAchievements;
+  const { status: bridgeStatus } = useSteamBridgeStatus(isOpen && hasAchievementsArchive);
+  const achievementsBadge = bridgeStatus?.achievements ?? null;
+  // With the box unchecked the note below is hidden, and a title tooltip is unreachable on a gamepad.
+  const achievementsBadgeHint =
+    hasAchievementsArchive && !wantsAchievements && achievementsBadge
+      ? achievementsBadgeDetail(achievementsBadge)
+      : null;
   const willRemoveAchievements =
     hasAchievementsArchive && !installAchievements && isAchievementsInstalled;
 
@@ -515,7 +654,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               </svg>
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <TrophyIcon
                   size={18}
                   className={
@@ -536,9 +675,15 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                     встановлено
                   </span>
                 )}
+                {hasAchievementsArchive && achievementsBadge && (
+                  <AchievementsDeliveryBadge badge={achievementsBadge} />
+                )}
               </div>
               <div className="text-sm text-text-muted mt-1">
                 <p>Переклад досягнень Steam.</p>
+                {achievementsBadgeHint && (
+                  <p className="mt-1 text-xs">{achievementsBadgeHint}</p>
+                )}
                 {game.achievements_archive_size && (
                   <p className="flex items-center gap-1 mt-1 text-green-400">
                     <ArchiveIcon size={14} />
@@ -580,6 +725,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               </span>
             </div>
           )}
+
+        {wantsAchievements && achievementsBadge && (
+          <AchievementsDeliveryNote badge={achievementsBadge} />
+        )}
 
         {/* Steam launch options info */}
         {willApplyLaunchOptions && (

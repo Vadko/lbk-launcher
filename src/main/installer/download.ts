@@ -2,6 +2,7 @@ import { app } from 'electron';
 import fs from 'fs';
 import got, { HTTPError } from 'got';
 import path from 'path';
+import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
 import type {
   DownloadProgress,
@@ -252,10 +253,7 @@ export async function downloadFile(
           tone: 'retry',
           phase: 'download',
         });
-        // Wait before retry (exponential backoff)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000))
-        );
+        await sleep(Math.min(1000 * 2 ** (attempt - 1), 10000));
       } else if (currentStartByte > 0) {
         onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
       } else {

@@ -13,10 +13,13 @@ import type {
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useSteamPluginSetupStore } from '../store/useSteamPluginSetupStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
+import { openMillenniumSite, runSteamRestart } from '../utils/steamBridge';
+import { millenniumUnsupportedText, openDeckySite } from '../utils/steamPluginHost';
 import { type ActionPhase, useActionPhase } from './useActionPhase';
 import { useIsWorkshopChangePending } from './useInstalledTranslations';
 
@@ -73,7 +76,7 @@ export function useInstallation({
     checkInstallationStatus,
   } = useStore();
 
-  const { showModal, closeModal } = useModalStore();
+  const { showModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
   const { createBackupBeforeInstall } = useSettingsStore();
 
@@ -312,22 +315,10 @@ export function useInstallation({
             ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
             : `Українізатор ${selectedGame.name} успішно встановлено!`;
 
-          // Restart Steam to make new achievement strings visible AND/OR to let
-          // Steam re-read localconfig.vdf with the launch options we couldn't
-          // apply live (CEF unreachable, e.g. Millennium). The installer only
-          // rewrites achievements for a Steam install, so achievementsChanged
-          // already implies a Steam path.
-          const needsRestartForAchievements =
-            effectiveOptions.installAchievements && result.achievementsChanged;
-          const needsRestartForLaunchOptions = result.launchOptionsPending === true;
-          const shouldOfferRestart =
-            needsRestartForAchievements || needsRestartForLaunchOptions;
-
-          if (needsRestartForLaunchOptions) {
+          const launchOptionsQueued = result.launchOptionsQueued === true;
+          if (launchOptionsQueued) {
             message +=
-              '\n\nДля застосування параметрів запуску гри Steam потрібно перезапустити.';
-          } else if (needsRestartForAchievements) {
-            message += '\n\nДля застосування перекладу досягнень перезапустіть Steam.';
+              '\n\nПараметри запуску застосуються автоматично, щойно ви закриєте Steam. Лаунчер має бути відкритим — його можна згорнути в трей.';
           }
 
           // Files are in place, but without its launch options the translation
@@ -336,64 +327,122 @@ export function useInstallation({
             message += `\n\nНе вдалося налаштувати параметри запуску Steam: ${result.launchOptionsError}`;
           }
 
+          const achievementsDelivery = effectiveOptions.installAchievements
+            ? result.achievementsDelivery
+            : undefined;
+          let millenniumInstallable = true;
+          if (achievementsDelivery === 'plugin-next-start') {
+            message += "\n\nПереклад досягнень з'явиться після наступного запуску Steam.";
+          } else if (achievementsDelivery === 'needs-millennium') {
+            const status = await window.electronAPI
+              .getSteamBridgeStatus()
+              .catch(() => null);
+            millenniumInstallable =
+              (status?.achievements.unsupportedReason ?? null) === null;
+            message += millenniumInstallable
+              ? '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium — лаунчер може встановити його сам.'
+              : '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium.';
+          } else if (achievementsDelivery === 'needs-decky-plugin') {
+            message +=
+              '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, встановіть плагін «LBK Bridge» для Decky Loader.';
+          } else if (achievementsDelivery === 'needs-decky') {
+            message +=
+              '\n\nПереклад досягнень збережено. На Steam Deck його показує плагін «LBK Bridge» для Decky Loader — спершу встановіть Decky Loader.';
+          } else if (achievementsDelivery === 'unavailable') {
+            const status = await window.electronAPI
+              .getSteamBridgeStatus()
+              .catch(() => null);
+            message += `\n\nПереклад досягнень збережено, але на цій системі Steam не може його показати: ${millenniumUnsupportedText(status?.achievements.unsupportedReason ?? null)}`;
+          } else if (achievementsDelivery === 'disabled') {
+            message +=
+              '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, увімкніть у налаштуваннях «Швидке застосування параметрів запуску Steam».';
+          }
+
+          const restartHelps =
+            launchOptionsQueued || achievementsDelivery === 'plugin-next-start';
+          const bridgeStatus = restartHelps
+            ? await window.electronAPI.getSteamBridgeStatus().catch(() => null)
+            : null;
+          const offerRestart = bridgeStatus?.canRestartSteam === true;
+
+          const actions: Array<{
+            label: string;
+            onClick: () => void;
+            variant: 'primary' | 'secondary';
+            keepOpen?: boolean;
+          }> = [{ label: 'Зрозуміло', onClick: () => undefined, variant: 'primary' }];
+          if (offerRestart) {
+            actions.push({
+              label: 'Перезапустити Steam зараз',
+              onClick: () => {
+                if (launchOptionsQueued) {
+                  void runSteamRestart(
+                    () => window.electronAPI.applyPendingLaunchOptions(selectedGame),
+                    {
+                      launchOptions: true,
+                      failureTitle: 'Параметри запуску не застосовано',
+                      successTitle: 'Параметри запуску застосовано',
+                      successMessage: 'Параметри запуску записано. Можна запускати гру.',
+                    }
+                  );
+                  return;
+                }
+                void runSteamRestart(() => window.electronAPI.restartSteam(), {
+                  launchOptions: false,
+                });
+              },
+              keepOpen: true,
+              variant: 'secondary',
+            });
+          }
+          const settings = useSettingsStore.getState();
+          const openSetup = useSteamPluginSetupStore.getState().openSetup;
+          if (achievementsDelivery === 'needs-millennium') {
+            if (!settings.millenniumOfferDeclined && millenniumInstallable) {
+              actions.push({
+                label: 'Встановити Millennium',
+                onClick: () => openSetup('millennium-install', 'offer'),
+                variant: 'secondary',
+              });
+            } else {
+              actions.push({
+                label: 'Що таке Millennium',
+                onClick: openMillenniumSite,
+                keepOpen: true,
+                variant: 'secondary',
+              });
+            }
+          } else if (
+            achievementsDelivery === 'needs-decky-plugin' &&
+            !settings.deckyPluginOfferDeclined
+          ) {
+            actions.push({
+              label: 'Встановити плагін для Decky',
+              onClick: () => openSetup('decky-install', 'offer'),
+              variant: 'secondary',
+            });
+          } else if (achievementsDelivery === 'needs-decky') {
+            actions.push({
+              label: 'Що таке Decky Loader',
+              onClick: openDeckySite,
+              keepOpen: true,
+              variant: 'secondary',
+            });
+          } else if (achievementsDelivery === 'disabled') {
+            actions.push({
+              label: 'Відкрити налаштування',
+              onClick: settings.openSettingsModal,
+              variant: 'secondary',
+            });
+          }
+
           showModal({
             title: isUpdateAvailable
               ? 'Українізатор оновлено'
               : 'Українізатор встановлено',
             message,
             type: 'success',
-            actions: shouldOfferRestart
-              ? [
-                  {
-                    label: 'Перезапустити Steam',
-                    onClick: () => {
-                      if (!needsRestartForLaunchOptions) {
-                        window.electronAPI.restartSteam();
-                        return;
-                      }
-                      // Steam is force-killed and relaunched, which takes a
-                      // while, so the modal stays open as a progress indicator.
-                      // Without reading the result the write can fail in silence.
-                      window.electronAPI
-                        .applyPendingLaunchOptions(selectedGame)
-                        .then((applied) => {
-                          if (applied?.success) {
-                            closeModal();
-                            return;
-                          }
-                          showModal({
-                            title: 'Параметри запуску не застосовано',
-                            message:
-                              applied?.error ??
-                              'Не вдалося записати параметри запуску Steam.',
-                            type: 'error',
-                          });
-                        })
-                        .catch((error: unknown) => {
-                          showModal({
-                            title: 'Параметри запуску не застосовано',
-                            message:
-                              error instanceof Error ? error.message : 'Невідома помилка',
-                            type: 'error',
-                          });
-                        });
-                    },
-                    keepOpen: true,
-                    variant: 'primary',
-                  },
-                  {
-                    label: 'Пізніше',
-                    onClick: () => undefined,
-                    variant: 'secondary',
-                  },
-                ]
-              : [
-                  {
-                    label: 'Зрозуміло',
-                    onClick: () => undefined,
-                    variant: 'primary',
-                  },
-                ],
+            actions,
           });
 
           // Trigger callback for first install (not update)
@@ -427,7 +476,6 @@ export function useInstallation({
       setInstallationProgress,
       clearInstallationProgress,
       showModal,
-      closeModal,
       showConfirm,
       onFirstInstallComplete,
     ]

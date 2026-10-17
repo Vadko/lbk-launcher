@@ -4,7 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import { enumerateKeysSafe, HKEY } from 'registry-js';
 import type { Game, InstallationStatus } from '../../shared/types';
-import { getSteamPath } from '../game-detector/steam';
 import { getTransliteratedPath } from '../utils/files';
 import type { GameBuildOs } from '../utils/game-build';
 import { forCurrentOS, getPlatform, isLinux, isWindows } from '../utils/platform';
@@ -365,30 +364,6 @@ export async function runInstaller(
     throw new Error(
       `Не вдалося запустити інсталятор: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
-  }
-}
-
-/**
- * Get Steam achievements path (Steam/appcache/stats)
- * Always uses the main Steam installation path, not the game's library folder
- */
-export async function getSteamAchievementsPath(): Promise<string | null> {
-  try {
-    // Always use main Steam installation path (where Steam.exe is located)
-    // Achievements must be in the main Steam folder, not in additional libraries
-    const steamPath = getSteamPath();
-
-    if (!steamPath) {
-      console.warn('[Installer] Steam path not found');
-      return null;
-    }
-
-    const achievementsPath = path.join(steamPath, 'appcache', 'stats');
-    console.log(`[Installer] Steam achievements path: ${achievementsPath}`);
-    return achievementsPath;
-  } catch (error) {
-    console.error('[Installer] Error getting Steam achievements path:', error);
-    return null;
   }
 }
 

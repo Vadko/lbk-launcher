@@ -19,12 +19,11 @@ import * as path from 'node:path';
 import { app } from 'electron';
 import got from 'got';
 import { getSteamGridPath } from '@/main/game-detector/steam';
-import {
-  evaluateInSharedJsContext,
-  isCefUsable,
-  jsLiteral,
-} from '@/main/utils/steam-cef';
+import { writeFileAtomic } from '@/main/utils/atomic-write';
+import { getSteamBridge, type SteamBridge } from '@/main/utils/steam-bridge';
+import { jsLiteral } from '@/main/utils/steam-cef';
 import { readRendererSetting } from '@/main/utils/store-storage';
+import { withTimeout } from '@/main/utils/with-timeout';
 import { getMainWindow } from '@/main/window';
 
 const DOWNLOAD_TIMEOUT_MS = 15_000;
@@ -58,7 +57,7 @@ interface SteamArtworkParams {
 
 type ApplyMode =
   | 'noop' // disabled, no sources, or nothing could be prepared
-  | 'cef' // pushed live through Steam's CEF API
+  | 'cef' // pushed live through the Steam bridge (CDP or plugin)
   | 'file'; // written to grid/, visible after Steam restarts
 
 interface SteamArtworkResult {
@@ -84,7 +83,7 @@ function isSteamArtworkEnabledInSettings(): boolean {
 }
 
 function sha256(bytes: Buffer): string {
-  return crypto.createHash('sha256').update(bytes).digest('hex');
+  return crypto.hash('sha256', bytes);
 }
 
 function hashFile(filePath: string): string | null {
@@ -93,19 +92,6 @@ function hashFile(filePath: string): string | null {
   } catch {
     return null;
   }
-}
-
-/** Reject after `ms` so a wedged dependency can't hang the install forever. */
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -362,24 +348,25 @@ interface ArtworkSlotWrite {
   extension: string;
   bytes: Buffer;
   gridDir: string | null;
-  cefUsable: boolean;
+  bridge: SteamBridge | null;
   label: string;
 }
 
 export async function applyArtworkSlot(
   write: ArtworkSlotWrite
 ): Promise<'cef' | 'file' | null> {
-  if (write.cefUsable) {
+  if (write.bridge) {
     try {
-      await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetCustomArtworkForApp(${write.appId}, ${jsLiteral(
-          write.bytes.toString('base64')
-        )}, ${jsLiteral(write.extension)}, ${write.assetType})`
-      );
+      await write.bridge.invoke('setArtwork', {
+        appId: write.appId,
+        base64: write.bytes.toString('base64'),
+        ext: write.extension,
+        assetType: write.assetType,
+      });
       return 'cef';
     } catch (error) {
       console.warn(
-        `[SteamArtwork] CEF apply failed for ${write.label}, writing file instead:`,
+        `[SteamArtwork] Bridge apply failed for ${write.label}, writing file instead:`,
         error
       );
     }
@@ -390,14 +377,14 @@ export async function applyArtworkSlot(
   }
   try {
     fs.mkdirSync(write.gridDir, { recursive: true });
-    const target = path.join(
-      write.gridDir,
-      artworkFileName(write.appId, write.suffix, write.extension)
+    // Steam must never read a half-written image.
+    writeFileAtomic(
+      path.join(
+        write.gridDir,
+        artworkFileName(write.appId, write.suffix, write.extension)
+      ),
+      write.bytes
     );
-    // Write beside the target then rename, so Steam can't read a half-written image.
-    const tmp = `${target}.lbk.tmp`;
-    fs.writeFileSync(tmp, write.bytes);
-    fs.renameSync(tmp, target);
     return 'file';
   } catch (error) {
     console.warn(`[SteamArtwork] Failed to apply ${write.label}:`, error);
@@ -466,7 +453,7 @@ export async function applySteamArtwork(
     (entry) => !refreshedTypes.has(entry.assetType) && isStillOurs(gridDir, entry)
   );
 
-  const cefUsable = await isCefUsable();
+  const bridge = await getSteamBridge();
   const installed: ArtworkSlotKey[] = [];
   let anyViaFile = false;
 
@@ -478,7 +465,7 @@ export async function applySteamArtwork(
       extension: asset.extension,
       bytes: asset.bytes,
       gridDir,
-      cefUsable,
+      bridge,
       label: asset.slot.key,
     });
     const applied = mode !== null;
@@ -504,7 +491,7 @@ export async function applySteamArtwork(
     return { mode: 'noop', installed: [], reason: 'Every slot failed to apply' };
   }
 
-  const mode: ApplyMode = anyViaFile || !cefUsable ? 'file' : 'cef';
+  const mode: ApplyMode = anyViaFile || !bridge ? 'file' : 'cef';
   console.log(
     `[SteamArtwork] App ${params.appId} installed ${installed.join(', ')} via ${mode}`
   );
@@ -526,29 +513,27 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
     return false;
   }
 
-  const cefUsable = await isCefUsable();
+  const bridge = await getSteamBridge();
 
   for (const entry of record.written) {
     const fullPath = path.join(gridDir, entry.name);
     if (!fs.existsSync(fullPath)) {
       continue;
     }
-    // Replaced by the user since — leave it, and skip the CEF clear too, which
+    // Replaced by the user since — leave it, and skip the bridge clear too, which
     // would delete their file.
     if (hashFile(fullPath) !== entry.hash) {
       console.log(`[SteamArtwork] ${entry.name} was replaced by the user, keeping it`);
       continue;
     }
 
-    // Clearing via CEF drops the running client's cached image too, so the
+    // Clearing via the bridge drops the running client's cached image too, so the
     // library stops showing our art without a restart.
-    if (cefUsable) {
+    if (bridge) {
       try {
-        await evaluateInSharedJsContext(
-          `SteamClient.Apps.ClearCustomArtworkForApp(${appId}, ${entry.assetType})`
-        );
+        await bridge.invoke('clearArtwork', { appId, assetType: entry.assetType });
       } catch (error) {
-        console.warn(`[SteamArtwork] CEF clear failed for ${entry.name}:`, error);
+        console.warn(`[SteamArtwork] Bridge clear failed for ${entry.name}:`, error);
       }
     }
 

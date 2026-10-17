@@ -1,9 +1,11 @@
-import type { Game, InstallationStatus, Platform } from '../../shared/types';
-import { applySteamArtwork } from '../utils/steam-artwork';
+import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
+import { queueSteamAction } from '@/main/steam-pending-actions';
+import { applySteamArtwork } from '@/main/utils/steam-artwork';
 import {
   launchOptionsParamsFor,
   writeSteamLaunchOptions,
-} from '../utils/steam-launch-options';
+} from '@/main/utils/steam-launch-options';
+import type { Game, InstallationStatus, Platform } from '@/shared/types';
 
 interface SteamIntegrationTarget {
   platform: Platform;
@@ -11,8 +13,7 @@ interface SteamIntegrationTarget {
 }
 
 interface SteamIntegrationResult {
-  /** Steam is up without CEF — a restart lets the write through. */
-  launchOptionsPending: boolean;
+  launchOptionsQueued?: boolean;
   /** The write failed for a reason a restart won't fix; shown to the user. */
   launchOptionsError?: string;
 }
@@ -31,10 +32,10 @@ export async function applySteamIntegration(
   onStatus?: (status: InstallationStatus) => void
 ): Promise<SteamIntegrationResult> {
   if (target.platform !== 'steam' || !game.steam_app_id) {
-    return { launchOptionsPending: false };
+    return {};
   }
 
-  let launchOptionsPending = false;
+  let launchOptionsQueued = false;
   let launchOptionsError: string | undefined;
 
   const launchOptions = launchOptionsParamsFor(game, target.path);
@@ -53,14 +54,24 @@ export async function applySteamIntegration(
       console.log(
         `[Installer] Steam LaunchOptions mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
       );
-      launchOptionsPending = result.mode === 'needs-shutdown';
+      if (result.mode === 'needs-shutdown') {
+        queueSteamAction({
+          kind: 'launch-options',
+          gameId: game.id,
+          gameName: game.name,
+          accountId: getCurrentSteamAccountId(),
+          params: launchOptions,
+          queuedAt: new Date().toISOString(),
+        });
+        launchOptionsQueued = true;
+      }
       if (result.mode === 'failed' || result.mode === 'unresolved') {
         launchOptionsError = result.reason ?? 'Невідома помилка';
       }
     } catch (error) {
       console.warn('[Installer] Steam launch options failed:', error);
-      // Not `pending`: restarting Steam cannot fix a throw that had nothing to
-      // do with Steam being up, and the restart force-kills the user's session.
+      // Not queued: restarting Steam cannot fix a throw that had nothing to do
+      // with Steam being up, and the restart force-kills the user's session.
       launchOptionsError = error instanceof Error ? error.message : 'Невідома помилка';
     }
   }
@@ -87,5 +98,5 @@ export async function applySteamIntegration(
     }
   }
 
-  return { launchOptionsPending, launchOptionsError };
+  return { launchOptionsQueued, launchOptionsError };
 }

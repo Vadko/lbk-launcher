@@ -128,6 +128,7 @@ if (isLinux()) {
   }
 }
 
+import { startAchievements } from './achievements';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
@@ -148,12 +149,15 @@ import {
 import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
+import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { startMillenniumInstall } from './millennium-install';
 import {
   calculatePlaytimeDeltas,
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
+import { startPendingSteamActions } from './steam-pending-actions';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 import {
   startStoreLibraryWatcher,
@@ -161,6 +165,11 @@ import {
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { bootstrapCefDebugging } from './utils/cef-flag-file';
+import { startSteamBridge } from './utils/steam-bridge';
+import {
+  deleteStaleBridgeData,
+  stopSteamBridgeServer,
+} from './utils/steam-bridge-server';
 import { createMainWindow, getMainWindow } from './window';
 
 // Global managers
@@ -247,6 +256,7 @@ if (!gotTheLock) {
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
+  setupPluginHostHandlers();
 
   // IPC handler for getting current sync status
   ipcMain.handle('get-sync-status', () => currentSyncStatus);
@@ -261,6 +271,12 @@ if (!gotTheLock) {
 
   // App lifecycle
   app.whenReady().then(async () => {
+    try {
+      deleteStaleBridgeData();
+    } catch (error) {
+      console.warn('[Main] Stale bridge.json cleanup failed:', error);
+    }
+
     if (isWindows() || isLinux()) {
       const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
       if (deepLinkUrl) {
@@ -394,9 +410,13 @@ if (!gotTheLock) {
           console.error('[Main] Failed to process pending deletions:', err);
         });
       });
+      startSteamBridge(getMainWindow());
+      startPendingSteamActions(getMainWindow());
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });
+      startAchievements();
+      startMillenniumInstall(getMainWindow());
     });
 
     app.on('activate', async () => {
@@ -421,6 +441,13 @@ if (!gotTheLock) {
 
   ipcMain.on('skip-quit-tracking', () => {
     skipQuitTracking = true;
+  });
+
+  // Deletes bridge.json so the Millennium plugin stops dialing a dead port.
+  app.on('before-quit', () => {
+    stopSteamBridgeServer().catch((err) => {
+      console.warn('[Main] Steam bridge server stop failed:', err);
+    });
   });
 
   app.on('will-quit', (event) => {

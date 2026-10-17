@@ -1,9 +1,14 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import type { Game, InstallOptions, RunInstallerDecision } from '../../shared/types';
+import type {
+  ApplyPendingLaunchOptionsResult,
+  Game,
+  InstallOptions,
+  InstallResult,
+  RunInstallerDecision,
+} from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
-import { getFirstAvailableGamePath } from '../game-detector';
 import { installTranslation } from '../installer';
 import {
   checkInstallation,
@@ -27,15 +32,10 @@ import {
 import { checkPlatformCompatibility, rerunInstaller } from '../installer/platform';
 import { resumeDownload } from '../installer/resume';
 import { removeComponents, uninstallTranslation } from '../installer/uninstall';
+import { applyLaunchOptionsNow } from '../steam-restart';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
-import {
-  launchOptionsParamsFor,
-  needsGameDir,
-  writeSteamLaunchOptions,
-} from '../utils/steam-launch-options';
-import { launchSteam, shutdownSteam } from '../utils/steam-launcher';
 import { readLastGameFolder, writeLastGameFolder } from '../utils/store-storage';
 import { getMainWindow } from '../window';
 
@@ -102,12 +102,13 @@ export function setupInstallerHandlers(): void {
           }
         }
 
-        return {
+        const result: InstallResult = {
           success: true,
-          launchOptionsPending: installResult.launchOptionsPending,
+          launchOptionsQueued: installResult.launchOptionsQueued,
           launchOptionsError: installResult.launchOptionsError,
-          achievementsChanged: installResult.achievementsChanged,
+          achievementsDelivery: installResult.achievementsDelivery,
         };
+        return result;
       } catch (error) {
         // Handle pause - not an error, just a state
         if (error instanceof PausedSignal) {
@@ -128,87 +129,20 @@ export function setupInstallerHandlers(): void {
     }
   );
 
-  /**
-   * Restart Steam and apply launch options in the gap. Used when a translation
-   * needs launch options but CEF was unreachable at install time (typically
-   * Millennium-modded Steam). Order matters: Steam must be off before we
-   * touch localconfig.vdf, or it overwrites our changes on graceful exit.
-   */
-  ipcMain.handle('apply-pending-launch-options', async (_, game: Game) => {
-    try {
-      if (!game.steam_app_id) {
-        return { success: false, error: 'Гра не має Steam App ID' };
-      }
-
-      // Only needed to expand {GAME_DIR}, and the lookup walks Steam's library
-      // folders and rewrites the install cache — too much I/O to spend on the
-      // common case. Read before Steam goes down.
-      const needsDir = needsGameDir(game);
-      const installInfo = needsDir ? await checkInstallation(game) : null;
-
-      // The recorded path is where the game was at install time; moving it to
-      // another Steam library leaves it stale. Detect the current location
-      // first and keep the recorded one only as a fallback.
-      const detected = needsDir
-        ? getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id)
-        : null;
-      const recordedPath = installInfo?.gamePath ?? null;
-
-      let gamePath: string | null = null;
-      if (detected?.exists && detected.path) {
-        gamePath = detected.path;
-      } else if (recordedPath && fs.existsSync(recordedPath)) {
-        gamePath = recordedPath;
-      }
-
-      const params = launchOptionsParamsFor(game, gamePath);
-      if (!params) {
-        return {
-          success: false,
-          error: 'Для цього перекладу не задано параметрів запуску',
-        };
-      }
-      // Knowable before Steam goes down — no point tearing down the user's
-      // session (and any running game or download) for a write that cannot land.
-      if (needsDir && !params.gamePath) {
-        return {
-          success: false,
-          error: 'Не вдалося визначити теку гри для параметрів запуску',
-        };
-      }
-
-      await shutdownSteam();
-      let result: Awaited<ReturnType<typeof writeSteamLaunchOptions>>;
+  ipcMain.handle(
+    'apply-pending-launch-options',
+    async (_, game: Game): Promise<ApplyPendingLaunchOptionsResult> => {
       try {
-        result = await writeSteamLaunchOptions(params);
-      } finally {
-        // Steam was force-killed above; bring it back even if the write threw,
-        // or the user is left with no Steam and an error dialog.
-        await launchSteam();
+        return await applyLaunchOptionsNow(game);
+      } catch (error) {
+        console.error('[Installer] Applying pending launch options failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Невідома помилка',
+        };
       }
-      console.log(
-        `[Installer] Apply pending launch options mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
-      );
-
-      // 'cef' counts: shutdownSteam gives up silently when Steam refuses to
-      // exit, and the value is then applied live instead of through the file.
-      // 'needs-shutdown' is the opposite — Steam stayed up and nothing was
-      // written, so it must not read as success.
-      if (result.mode === 'file' || result.mode === 'cef' || result.mode === 'noop') {
-        return { success: true };
-      }
-      return {
-        success: false,
-        error: result.reason ?? 'Не вдалося записати параметри запуску',
-      };
-    } catch (error) {
-      console.error('Error applying pending launch options:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
-      };
     }
-  });
+  );
 
   ipcMain.handle('check-installation', async (_, game: Game) => {
     const timer = createTimer(`IPC: check-installation (${game.name})`);

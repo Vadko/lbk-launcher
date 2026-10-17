@@ -1,22 +1,16 @@
 /**
- * Subscribe/unsubscribe a translation in the Workshop via Steam's CEF bridge.
+ * Subscribe/unsubscribe a translation in the Workshop via the Steam bridge.
  *
- * The same path we already use to fix launch options and artwork:
  * `SteamClient.Apps.SubscribeWorkshopItem(appId, publishedFileId, subscribe)`
- * in the SharedJSContext context. The signature was checked against the
- * client's own bundle (`Subscribe(e,t){…(e,t,!0)}` / `Unsubscribe(e,t){…(e,t,!1)}`).
+ * in SharedJSContext (CDP) or via the LBK Bridge Millennium plugin. The signature
+ * was checked against the client's own bundle
+ * (`Subscribe(e,t){…(e,t,!0)}` / `Unsubscribe(e,t){…(e,t,!1)}`).
  *
- * The bridge is not always available: it needs the `.cef-enable-remote-debugging`
- * flag, a Steam restart, and no Millennium. So this is an optimization, not a
+ * The bridge is not always available, so this is an optimization, not a
  * replacement — the renderer falls back to a plain steam:// deep link on failure.
  */
 
-import {
-  ensureCefBridge,
-  evaluateInSharedJsContext,
-  isCefUsable,
-  jsLiteral,
-} from '@/main/utils/steam-cef';
+import { ensureSteamBridge, getSteamBridge } from '@/main/utils/steam-bridge';
 import type { SteamBridgeFailure } from '@/shared/types';
 
 /** Mirrors the games row as-is — no point renaming these three fields along the way */
@@ -39,43 +33,19 @@ export async function installedWorkshopGameIds(
   if (valid.length === 0) {
     return null;
   }
-  if (!(await isCefUsable())) {
+  const bridge = await getSteamBridge();
+  if (!bridge) {
     return null;
   }
 
-  const payload = jsLiteral(
-    valid.map((t) => ({ id: t.id, appId: t.steam_app_id, itemId: t.workshop_id }))
-  );
-
   try {
-    const answer = await evaluateInSharedJsContext<string[] | 'unknown'>(
-      `(async () => {
-        if (typeof SteamClient?.Apps?.GetDownloadedWorkshopItems !== 'function') {
-          return 'unknown';
-        }
-        const targets = ${payload};
-        const byApp = new Map();
-        const found = [];
-        for (const t of targets) {
-          if (!byApp.has(t.appId)) {
-            try {
-              const items = await SteamClient.Apps.GetDownloadedWorkshopItems(t.appId);
-              if (!Array.isArray(items)) {
-                return 'unknown';
-              }
-              byApp.set(t.appId, items);
-            } catch {
-              return 'unknown';
-            }
-          }
-          const items = byApp.get(t.appId);
-          if (items.some((i) => String(i.publishedfileid) === t.itemId)) {
-            found.push(t.id);
-          }
-        }
-        return found;
-      })()`
-    );
+    const answer = await bridge.invoke('workshopDownloaded', {
+      targets: valid.map((t) => ({
+        id: t.id,
+        appId: t.steam_app_id,
+        itemId: t.workshop_id,
+      })),
+    });
     return answer === 'unknown' ? null : answer;
   } catch (error) {
     console.error('[SteamWorkshop] bulk download check failed:', error);
@@ -83,16 +53,19 @@ export async function installedWorkshopGameIds(
   }
 }
 
+const MAX_APP_ID = 4294967295;
+
 /**
  * Both values flow into JS that runs in Steam's privileged context, and a
  * number annotation across the IPC boundary guarantees nothing at runtime.
+ * The bounds match the in-page validators, so one bad row can't fail a whole batch.
  */
 function isValidTarget(appId: number, workshopId: string): boolean {
-  if (!Number.isInteger(appId) || appId <= 0) {
+  if (!Number.isInteger(appId) || appId <= 0 || appId > MAX_APP_ID) {
     console.error('[SteamWorkshop] Rejected non-integer appId:', appId);
     return false;
   }
-  if (!/^\d+$/.test(workshopId)) {
+  if (typeof workshopId !== 'string' || !/^\d{1,20}$/.test(workshopId)) {
     console.error('[SteamWorkshop] Rejected non-numeric workshopId:', workshopId);
     return false;
   }
@@ -107,26 +80,16 @@ export async function isWorkshopItemDownloaded(
   if (!isValidTarget(appId, workshopId)) {
     return null;
   }
-  if (!(await isCefUsable())) {
+  const bridge = await getSteamBridge();
+  if (!bridge) {
     return null;
   }
 
   try {
-    const answer = await evaluateInSharedJsContext<boolean | 'unknown'>(
-      `(async () => {
-        if (typeof SteamClient?.Apps?.GetDownloadedWorkshopItems !== 'function') {
-          return 'unknown';
-        }
-        try {
-          const items = await SteamClient.Apps.GetDownloadedWorkshopItems(${appId});
-          return Array.isArray(items)
-            && items.some((i) => String(i.publishedfileid) === ${jsLiteral(workshopId)});
-        } catch {
-          return false;
-        }
-      })()`
-    );
-    return answer === 'unknown' ? null : answer;
+    const answer = await bridge.invoke('workshopDownloaded', {
+      targets: [{ id: workshopId, appId, itemId: workshopId }],
+    });
+    return answer === 'unknown' ? null : answer.length === 1;
   } catch (error) {
     console.error('[SteamWorkshop] download check failed:', error);
     return null;
@@ -146,26 +109,24 @@ export async function setWorkshopSubscription(
     return { ok: false, reason: 'failed', error: 'Invalid appId or workshopId' };
   }
 
-  const blocked = await ensureCefBridge();
-  if (blocked) {
-    return { ok: false, reason: blocked };
+  const bridge = await ensureSteamBridge();
+  if (typeof bridge === 'string') {
+    return { ok: false, reason: bridge };
   }
 
   try {
     // The method returns nothing — success here just means "Steam accepted the command"
-    await evaluateInSharedJsContext(
-      `SteamClient.Apps.SubscribeWorkshopItem(${appId}, ${jsLiteral(workshopId)}, ${subscribe})`
-    );
+    await bridge.invoke('workshopSubscribe', { appId, itemId: workshopId, subscribe });
     console.log(
-      `[SteamWorkshop] ${subscribe ? 'Subscribed to' : 'Unsubscribed from'} ${workshopId} (app ${appId}) via CEF`
+      `[SteamWorkshop] ${subscribe ? 'Subscribed to' : 'Unsubscribed from'} ${workshopId} (app ${appId}) via ${bridge.transport}`
     );
     return { ok: true };
   } catch (error) {
-    console.error('[SteamWorkshop] CEF subscription change failed:', error);
+    console.error('[SteamWorkshop] Bridge subscription change failed:', error);
     return {
       ok: false,
       reason: 'failed',
-      error: error instanceof Error ? error.message : 'CEF subscribe failed',
+      error: error instanceof Error ? error.message : 'Bridge subscribe failed',
     };
   }
 }

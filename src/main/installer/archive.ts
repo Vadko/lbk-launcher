@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import { app } from 'electron';
 import fs from 'fs';
-import { extractFull } from 'node-7z';
+import { add, extractFull } from 'node-7z';
 import path from 'path';
 import { promisify } from 'util';
 import type { InstallationStatus } from '../../shared/types';
@@ -192,5 +192,22 @@ export async function extractArchive(
       });
       reject(new Error(`Помилка розпакування архіву: ${errorMessage}`));
     });
+  });
+}
+
+// Zips `srcDir` as one top-level folder named after it (relative source + cwd keep the folder in the paths).
+export function createZip(srcDir: string, outFile: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const stream = add(outFile, path.basename(srcDir), {
+      $bin: get7zPath(),
+      $spawnOptions: {
+        cwd: path.dirname(srcDir),
+        env: isLinux() ? getCleanEnv() : process.env,
+      },
+      archiveType: 'zip',
+      yes: true,
+    });
+    stream.on('end', () => resolve());
+    stream.on('error', (err: Error) => reject(new Error(`7z failed: ${err.message}`)));
   });
 }

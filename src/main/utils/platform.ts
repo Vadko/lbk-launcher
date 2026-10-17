@@ -1,4 +1,6 @@
+import { readFileSync } from 'fs';
 import { release } from 'os';
+import { parseEnv } from 'util';
 
 export function isMacOS(): boolean {
   return process.platform === 'darwin';
@@ -14,6 +16,15 @@ export function isLinux(): boolean {
 
 export function isPortable(): boolean {
   return isWindows() && !!process.env.PORTABLE_EXECUTABLE_FILE;
+}
+
+export function isGamescopeSession(): boolean {
+  const env = process.env;
+  return (
+    Boolean(env.GAMESCOPE_WAYLAND_DISPLAY) ||
+    env.XDG_CURRENT_DESKTOP === 'gamescope' ||
+    env.XDG_SESSION_DESKTOP === 'gamescope'
+  );
 }
 
 export function getPlatform(): 'macos' | 'windows' | 'linux' | 'unknown' {
@@ -48,6 +59,56 @@ export function forCurrentOS<T>(
   }
 
   return 'other' in branches ? (branches.other as T) : null;
+}
+
+// Inside our Flatpak /etc/os-release describes the runtime, the host's copy is under /run/host.
+function readOsRelease(): NodeJS.Dict<string> {
+  const candidates = process.env.FLATPAK_ID
+    ? ['/run/host/os-release', '/run/host/etc/os-release']
+    : ['/etc/os-release', '/usr/lib/os-release'];
+  for (const file of candidates) {
+    try {
+      return parseEnv(readFileSync(file, 'utf8'));
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return {};
+}
+
+export function isSteamOS(): boolean {
+  return isLinux() && readOsRelease().ID === 'steamos';
+}
+
+// Jupiter is the LCD Steam Deck, Galileo the OLED one.
+export function isSteamDeckDmi(vendor: string, product: string): boolean {
+  return vendor.trim() === 'Valve' && ['Jupiter', 'Galileo'].includes(product.trim());
+}
+
+// Bazzite, ChimeraOS and other Deck images do not say "steamos" in os-release.
+export function isSteamDeckHardware(): boolean {
+  if (!isLinux()) {
+    return false;
+  }
+  try {
+    const dmi = '/sys/devices/virtual/dmi/id';
+    return isSteamDeckDmi(
+      readFileSync(`${dmi}/board_vendor`, 'utf8'),
+      readFileSync(`${dmi}/product_name`, 'utf8')
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function parseDarwinRelease(value: string): [number, number] {
+  const [major, minor] = value.split('.').map((part) => Number.parseInt(part, 10));
+  return [Number.isFinite(major) ? major : 0, Number.isFinite(minor) ? minor : 0];
+}
+
+// Darwin kernel [major, minor]; [0, 0] off macOS.
+export function getDarwinVersion(): [number, number] {
+  return isMacOS() ? parseDarwinRelease(release()) : [0, 0];
 }
 
 function getMacOSVersion(): number {
