@@ -295,16 +295,17 @@ describe('detectMillennium', () => {
   ])('reports macOS marker %s as v3 without blocking TCP CDP', (marker) => {
     fakePlatform.value = 'macos';
     existing.add(marker);
-    existing.add(path.join(home, 'Library/Application Support/Millennium'));
+    // resolveMillenniumPaths() joins macOS paths with path.posix, also on a Windows host.
+    existing.add(path.posix.join(home, 'Library/Application Support/Millennium'));
 
     const info = detectMillennium();
     expect(info.generation).toBe('v3');
     expect(info.blocksTcpCdp).toBe(false);
     expect(info.pluginsDir).toBe(
-      path.join(home, 'Library/Application Support/Millennium/plugins')
+      path.posix.join(home, 'Library/Application Support/Millennium/plugins')
     );
     expect(info.configPath).toBe(
-      path.join(home, 'Library/Application Support/Millennium/config.json')
+      path.posix.join(home, 'Library/Application Support/Millennium/config.json')
     );
   });
 

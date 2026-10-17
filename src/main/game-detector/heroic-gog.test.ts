@@ -12,7 +12,6 @@ vi.mock('../utils/platform', () => ({
 }));
 
 let home: string;
-let originalHome: string | undefined;
 
 const gamesDir = () => path.join(home, 'Games/Heroic');
 const heroicConfig = () => path.join(home, '.config/heroic');
@@ -30,9 +29,10 @@ function makeGameDirs(...names: string[]): void {
 }
 
 beforeEach(() => {
-  originalHome = process.env.HOME;
   home = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-heroic-'));
-  process.env.HOME = home;
+  vi.stubEnv('HOME', home);
+  // os.homedir() reads USERPROFILE on Windows.
+  vi.stubEnv('USERPROFILE', home);
   makeGameDirs('witcher3', 'Hades', 'Prefixes');
   writeJson('store_cache/gog_library.json', {
     games: [{ app_name: '1207664643', title: 'The Witcher 3: Wild Hunt' }],
@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env.HOME = originalHome;
+  vi.unstubAllEnvs();
   fs.rmSync(home, { recursive: true, force: true });
 });
 

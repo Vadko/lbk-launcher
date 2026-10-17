@@ -1,4 +1,5 @@
 import type * as FsModule from 'fs';
+import * as path from 'path';
 import type * as RegistryJs from 'registry-js';
 import { HKEY } from 'registry-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,7 +44,7 @@ vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof FsModule>();
   return {
     ...actual,
-    existsSync: (file: string) => file.startsWith('/games/'),
+    existsSync: (file: string) => file.replace(/\\/g, '/').startsWith('/games/'),
     readdirSync: () => [],
   };
 });
@@ -97,7 +98,8 @@ describe('Ubisoft Connect', () => {
     const uplay = await import('./uplay');
     expect(uplay.getInstalledUplayGamePaths()).toEqual(['Far Cry 3']);
     expect(uplay.getUplayGameId('/games/Far Cry 3')).toBe('635');
-    expect(uplay.findUplayGame('far cry 3')).toBe('/games/Far Cry 3');
+    // uplay.ts rewrites the registry's forward slashes to path.sep.
+    expect(uplay.findUplayGame('far cry 3')).toBe(path.normalize('/games/Far Cry 3'));
   });
 });
 
