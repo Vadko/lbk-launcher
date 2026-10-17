@@ -30,6 +30,7 @@ import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { isExecutableInstaller } from './installer/executable';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
+import { withAchievementsComponent } from './installer/installation-info';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
 import { resignMacBundles } from './installer/mac-codesign';
 import {
@@ -388,6 +389,33 @@ export async function installTranslation(
     };
 
     // 6. Check for executable installer
+    if (installerFileName && isExecutableInstaller(installerFileName) && !installText) {
+      // Achievements only: the shipped installer already ran and nothing was extracted to copy.
+      await cleanupDownloadDir(downloadDir);
+      await commitAchievements();
+      const base: InstallationInfo =
+        existingInfo?.gameId === game.id
+          ? existingInfo
+          : {
+              gameId: game.id,
+              version: game.version || '1.0.0',
+              installedAt: new Date().toISOString(),
+              gamePath: gamePath.path,
+              hasBackup: false,
+              isCustomPath: !!customGamePath,
+              installedFiles: [],
+              installedPlatform: gamePath.platform,
+              components: { text: { installed: false, files: [] } },
+            };
+      await saveInstallationInfo(
+        gamePath.path,
+        withAchievementsComponent(base, achievementsComponent)
+      );
+      const achievementsDelivery = await deliverAchievements();
+      const steam = await applySteamIntegration(game, gamePath, onStatus);
+      return { ...steam, achievementsDelivery };
+    }
+
     if (installerFileName && isExecutableInstaller(installerFileName)) {
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
