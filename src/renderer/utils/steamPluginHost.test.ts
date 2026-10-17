@@ -5,6 +5,7 @@ import {
   activationOutcome,
   millenniumPhaseText,
   millenniumUnsupportedText,
+  steamRunningBeforeChange,
 } from './steamPluginHost';
 
 const REASONS: MillenniumUnsupportedReason[] = [
@@ -79,5 +80,17 @@ describe('activationOutcome', () => {
     expect(
       activationOutcome({ success: true, bridge: 'ready', steamRunning: true })
     ).toBe('wait-plugin');
+  });
+});
+
+describe('steamRunningBeforeChange', () => {
+  it('prefers a fresh answer over the state the modal opened with', () => {
+    expect(steamRunningBeforeChange(true, false)).toBe(true);
+    expect(steamRunningBeforeChange(false, true)).toBe(false);
+  });
+
+  it('asks before restarting when nothing is known', () => {
+    expect(steamRunningBeforeChange(undefined, undefined)).toBe(true);
+    expect(steamRunningBeforeChange(undefined, false)).toBe(false);
   });
 });

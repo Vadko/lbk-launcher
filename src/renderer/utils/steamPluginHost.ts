@@ -140,3 +140,11 @@ export function activationOutcome(
   }
   return result.steamRunning === false ? 'done-offline' : 'wait-plugin';
 }
+
+// Steam may have started since the modal opened; when nothing is known, ask rather than restart it unasked.
+export function steamRunningBeforeChange(
+  fresh: boolean | undefined,
+  cached: boolean | undefined
+): boolean {
+  return fresh ?? cached ?? true;
+}

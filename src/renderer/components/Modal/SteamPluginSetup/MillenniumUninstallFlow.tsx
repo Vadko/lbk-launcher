@@ -4,7 +4,10 @@ import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import type { MillenniumInstallResult } from '@/shared/types';
 import { useSteamPluginSetupStore } from '../../../store/useSteamPluginSetupStore';
 import { restartFailureMessage } from '../../../utils/steamBridge';
-import { millenniumPhaseText } from '../../../utils/steamPluginHost';
+import {
+  millenniumPhaseText,
+  steamRunningBeforeChange,
+} from '../../../utils/steamPluginHost';
 import {
   SetupButton,
   SetupFooter,
@@ -90,8 +93,12 @@ export const MillenniumUninstallFlow: React.FC = () => {
     [purge]
   );
 
-  const handleConfirm = useCallback(() => {
-    if (state?.steamRunning) {
+  const handleConfirm = useCallback(async () => {
+    const fresh = await window.electronAPI.getPluginHostState().catch(() => null);
+    if (!aliveRef.current) {
+      return;
+    }
+    if (steamRunningBeforeChange(fresh?.steamRunning, state?.steamRunning)) {
       setStep({ kind: 'confirm-restart' });
       return;
     }
@@ -139,7 +146,7 @@ export const MillenniumUninstallFlow: React.FC = () => {
         <SetupFooter>
           <SetupButton
             tone="danger"
-            onClick={handleConfirm}
+            onClick={() => void handleConfirm()}
             disabled={busy}
             gamepad="confirm"
             icon={<Trash2Icon size={16} />}
