@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
 import { describe, expect, it, vi } from 'vitest';
 import {
   applyWindowsActivation,
@@ -8,6 +9,7 @@ import {
   isSameFile,
   planWindowsActivation,
   planWindowsRemoval,
+  readMillenniumDllVersion,
   WINDOWS_EXPECTED_FILES,
 } from './windows';
 
@@ -101,5 +103,41 @@ describe('applyWindowsActivation', () => {
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+function writeDll(file: string, fileVersion: string): void {
+  const exe = NtExecutable.createEmpty(false, true);
+  const res = NtExecutableResource.from(exe);
+  const info = Resource.VersionInfo.createEmpty();
+  info.setStringValues({ lang: 1033, codepage: 1200 }, { FileVersion: fileVersion });
+  info.outputToResourceEntries(res.entries);
+  res.outputResource(exe);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, Buffer.from(exe.generate()));
+}
+
+describe('readMillenniumDllVersion', () => {
+  const dll = (root: string) => path.join(root, 'millennium/lib/millennium.dll');
+
+  it('reads the version Millennium updated itself to', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-mdll-'));
+    writeDll(dll(root), 'v3.5.0');
+    expect(readMillenniumDllVersion(root)).toBe('3.5.0');
+    writeDll(dll(root), 'v3.6.1-extra');
+    const later = new Date(Date.now() + 5000);
+    fs.utimesSync(dll(root), later, later);
+    expect(readMillenniumDllVersion(root)).toBe('3.6.1');
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('returns null for a missing or unreadable DLL', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-mdll-'));
+    expect(readMillenniumDllVersion(root)).toBeNull();
+    fs.mkdirSync(path.dirname(dll(root)), { recursive: true });
+    fs.writeFileSync(dll(root), 'not a PE file');
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(readMillenniumDllVersion(root)).toBeNull();
+    fs.rmSync(root, { recursive: true, force: true });
   });
 });

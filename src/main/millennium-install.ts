@@ -41,6 +41,7 @@ import { MILLENNIUM_PIN, pinnedTagFor } from '@/main/millennium-install/release'
 import {
   missingWindowsFiles,
   probeSteamRootWritable,
+  readMillenniumDllVersion,
   WINDOWS_EXPECTED_FILES,
   windowsLoaderState,
 } from '@/main/millennium-install/windows';
@@ -127,7 +128,10 @@ export async function getPluginHostState(): Promise<PluginHostState> {
   if (record) {
     installed = {
       managedBy: 'lbk',
-      version: record.version,
+      version:
+        record.os === 'windows' && facts.steamPath
+          ? (readMillenniumDllVersion(facts.steamPath) ?? record.version)
+          : record.version,
       mode: record.mode,
       needsRepair: needsRepair(snapshot),
     };

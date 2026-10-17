@@ -1,5 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
+import { coerce } from 'semver';
 
 const WINDOWS_LOADER = 'wsock32.dll';
 export const WINDOWS_EXPECTED_FILES = [
@@ -159,4 +161,37 @@ export function missingWindowsFiles(steamPath: string): string[] {
   return WINDOWS_EXPECTED_FILES.filter(
     (rel) => !fs.existsSync(path.join(steamPath, rel))
   );
+}
+
+let dllVersionCache: { key: string; version: string | null } | null = null;
+
+// Millennium on Windows updates itself in place, so the version LBK recorded at install goes stale.
+export function readMillenniumDllVersion(steamPath: string): string | null {
+  const file = path.join(steamPath, MILLENNIUM_LIB);
+  let stat: fs.Stats;
+  try {
+    stat = fs.statSync(file);
+  } catch {
+    return null;
+  }
+  const key = `${file}:${stat.size}:${stat.mtimeMs}`;
+  if (dllVersionCache?.key === key) {
+    return dllVersionCache.version;
+  }
+  let version: string | null = null;
+  try {
+    const exe = NtExecutable.from(fs.readFileSync(file), { ignoreCert: true });
+    const [info] = Resource.VersionInfo.fromEntries(
+      NtExecutableResource.from(exe).entries
+    );
+    const raw = info
+      ?.getAllLanguagesForStringValues()
+      .map((lang) => info.getStringValues(lang).FileVersion)
+      .find(Boolean);
+    version = coerce(raw ?? null)?.version ?? null;
+  } catch (error) {
+    console.warn('[Millennium] Cannot read the millennium.dll version:', error);
+  }
+  dllVersionCache = { key, version };
+  return version;
 }
