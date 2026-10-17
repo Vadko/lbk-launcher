@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { getCleanEnv } from '@/main/installer/archive';
 import { publishPluginHostState } from '@/main/millennium-install';
 import { downloadVerified, MillenniumFetchError } from '@/main/millennium-install/fetch';
+import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
 import {
   deckyLoaderStateFor,
   getHostSnapshot,
@@ -138,6 +139,7 @@ async function runInstall(): Promise<DeckyLoaderInstallResult> {
   } finally {
     setDeckyLoaderInstalling(false);
     resetHostFacts();
+    watchDeckyPlugins();
     syncBridgePluginSetup({ force: true });
     await publishPluginHostState();
   }

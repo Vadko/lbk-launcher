@@ -157,6 +157,7 @@ import {
   calculatePlaytimeDeltas,
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
+import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
 import { startPendingSteamActions } from './steam-pending-actions';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 import {
@@ -417,6 +418,9 @@ if (!gotTheLock) {
       });
       startAchievements();
       startMillenniumInstall(getMainWindow());
+      if (isLinux()) {
+        watchDeckyPlugins();
+      }
     });
 
     app.on('activate', async () => {
@@ -489,6 +493,7 @@ if (!gotTheLock) {
     // Cleanup
     stopUpdateCheck();
     stopSteamWatcher();
+    stopDeckyWatcher();
     stopStoreLibraryWatcher();
     stopInstallationWatcher();
 
