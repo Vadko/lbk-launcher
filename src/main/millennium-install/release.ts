@@ -71,22 +71,11 @@ export const MILLENNIUM_PIN: MillenniumPin = {
   },
 };
 
-// Release switch per OS: flip to true only after that platform's live install test has passed.
-export const MILLENNIUM_INSTALL_ENABLED: Record<MillenniumOs, boolean> = {
-  windows: false,
-  linux: false,
-  macos: true,
-};
-
 export function selectMillenniumAsset(
   pin: MillenniumPin,
   os: MillenniumOs,
-  hwArch: MacHardwareArch | null,
-  enabled: Record<MillenniumOs, boolean> = MILLENNIUM_INSTALL_ENABLED
+  hwArch: MacHardwareArch | null
 ): SelectedMillenniumRelease | null {
-  if (!enabled[os]) {
-    return null;
-  }
   if (os === 'macos') {
     const mac = pin.macos;
     if (!mac || !hwArch) {

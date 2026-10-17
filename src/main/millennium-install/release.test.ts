@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MILLENNIUM_INSTALL_ENABLED,
   MILLENNIUM_PIN,
   type MillenniumAsset,
   pinnedTagFor,
   selectMillenniumAsset,
 } from './release';
-
-const ALL_ON = { windows: true, linux: true, macos: true };
 
 function assets(): MillenniumAsset[] {
   const out: MillenniumAsset[] = [];
@@ -40,7 +37,7 @@ describe('MILLENNIUM_PIN', () => {
   it('puts the tag into each asset URL', () => {
     for (const os of ['windows', 'linux', 'macos'] as const) {
       const tag = pinnedTagFor(MILLENNIUM_PIN, os);
-      const selected = selectMillenniumAsset(MILLENNIUM_PIN, os, 'arm64', ALL_ON);
+      const selected = selectMillenniumAsset(MILLENNIUM_PIN, os, 'arm64');
       expect(tag).not.toBeNull();
       expect(selected?.asset.url).toContain(`/download/${tag}/`);
     }
@@ -54,32 +51,18 @@ describe('MILLENNIUM_PIN', () => {
 
 describe('selectMillenniumAsset', () => {
   it('picks the macOS asset by hardware arch, not process arch', () => {
-    expect(
-      selectMillenniumAsset(MILLENNIUM_PIN, 'macos', 'arm64', ALL_ON)?.asset.url
-    ).toMatch(/darwin-arm64\.tar\.gz$/);
-    expect(
-      selectMillenniumAsset(MILLENNIUM_PIN, 'macos', 'x86_64', ALL_ON)?.asset.url
-    ).toMatch(/darwin-x86_64\.tar\.gz$/);
-    expect(selectMillenniumAsset(MILLENNIUM_PIN, 'macos', null, ALL_ON)).toBeNull();
-  });
-
-  it('returns nothing for a platform whose release switch is off', () => {
-    const off = { windows: false, linux: true, macos: true };
-    expect(selectMillenniumAsset(MILLENNIUM_PIN, 'windows', null, off)).toBeNull();
-    expect(selectMillenniumAsset(MILLENNIUM_PIN, 'linux', null, off)?.tag).toBe('v3.5.0');
+    expect(selectMillenniumAsset(MILLENNIUM_PIN, 'macos', 'arm64')?.asset.url).toMatch(
+      /darwin-arm64\.tar\.gz$/
+    );
+    expect(selectMillenniumAsset(MILLENNIUM_PIN, 'macos', 'x86_64')?.asset.url).toMatch(
+      /darwin-x86_64\.tar\.gz$/
+    );
+    expect(selectMillenniumAsset(MILLENNIUM_PIN, 'macos', null)).toBeNull();
   });
 
   it('returns nothing for a platform without a pin', () => {
     const pin = { ...MILLENNIUM_PIN, linux: null };
-    expect(selectMillenniumAsset(pin, 'linux', null, ALL_ON)).toBeNull();
+    expect(selectMillenniumAsset(pin, 'linux', null)).toBeNull();
     expect(pinnedTagFor(pin, 'linux')).toBeNull();
-  });
-
-  it('ships only the platforms whose live test passed', () => {
-    expect(MILLENNIUM_INSTALL_ENABLED).toEqual({
-      windows: false,
-      linux: false,
-      macos: true,
-    });
   });
 });

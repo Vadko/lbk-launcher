@@ -19,7 +19,6 @@ import {
 } from '@/main/millennium-install/record';
 import {
   type MacHardwareArch,
-  MILLENNIUM_INSTALL_ENABLED,
   MILLENNIUM_PIN,
   type MillenniumOs,
   type SelectedMillenniumRelease,
@@ -74,14 +73,6 @@ export interface HostSnapshot {
   release: SelectedMillenniumRelease | null;
   hwArch: MacHardwareArch | null;
   decky: DeckyInfo | null;
-}
-
-// A dev build can exercise the flow before a platform's release switch is flipped.
-function installGate(): Record<MillenniumOs, boolean> {
-  if (!app.isPackaged && process.env.LBK_MILLENNIUM_INSTALL === '1') {
-    return { windows: true, linux: true, macos: true };
-  }
-  return MILLENNIUM_INSTALL_ENABLED;
 }
 
 async function macHardwareArch(): Promise<MacHardwareArch> {
@@ -181,7 +172,7 @@ async function gatherHostFacts(): Promise<GatheredFacts> {
   const release =
     platform === 'unknown'
       ? null
-      : selectMillenniumAsset(MILLENNIUM_PIN, platform, hwArch, installGate());
+      : selectMillenniumAsset(MILLENNIUM_PIN, platform, hwArch);
   const facts: HostFacts = {
     os: platform,
     arch: process.arch,
