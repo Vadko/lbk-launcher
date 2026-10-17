@@ -453,7 +453,8 @@ if (!gotTheLock) {
       }
 
       console.log('[Main] Tracking complete, quitting app');
-      app.quit();
+      // Without real awaits this runs inside the will-quit emit, where Electron ignores a second quit.
+      setImmediate(() => app.quit());
     })();
   });
 
