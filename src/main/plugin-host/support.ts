@@ -121,6 +121,19 @@ export function pickPluginHost(
   return 'none';
 }
 
+// Decky ships its installer as a Desktop Mode tool: the sudo password prompt is a zenity dialog.
+export function deckyLoaderOffer(f: {
+  host: PluginHostState['host'];
+  deckyInstalled: boolean;
+  gamescope: boolean;
+  installing: boolean;
+}): PluginHostState['deckyLoader'] {
+  if (f.host !== 'decky' || (f.deckyInstalled && !f.installing)) {
+    return null;
+  }
+  return { installing: f.installing, blockedBy: f.gamescope ? 'game-mode' : null };
+}
+
 export interface AchievementsFacts {
   os: HostFacts['os'];
   settingOn: boolean;

@@ -272,6 +272,7 @@ const electronAPI: ElectronAPI = {
   uninstallMillennium: (opts) => ipcRenderer.invoke('millennium:uninstall', opts),
   cancelMillennium: () => ipcRenderer.invoke('millennium:cancel'),
   requestDeckyPluginInstall: () => ipcRenderer.invoke('decky:request-plugin-install'),
+  installDeckyLoader: () => ipcRenderer.invoke('decky:install-loader'),
   saveDeckyPluginZip: () => ipcRenderer.invoke('decky:save-plugin-zip'),
   onMillenniumProgress: (callback) => {
     const handler = (_: unknown, progress: MillenniumProgress) => callback(progress);

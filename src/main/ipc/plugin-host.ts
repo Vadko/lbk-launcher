@@ -1,5 +1,9 @@
 import { ipcMain } from 'electron';
-import type { DeckyInstallResult, MillenniumInstallResult } from '../../shared/types';
+import type {
+  DeckyInstallResult,
+  DeckyLoaderInstallResult,
+  MillenniumInstallResult,
+} from '../../shared/types';
 import {
   activateMillennium,
   cancelMillennium,
@@ -11,6 +15,7 @@ import {
   requestDeckyPluginInstall,
   saveDeckyPluginZip,
 } from '../plugin-host/decky-install';
+import { installDeckyLoader } from '../plugin-host/decky-loader-install';
 
 function isRestartMode(value: unknown): value is 'now' | 'on-exit' {
   return value === 'now' || value === 'on-exit';
@@ -87,6 +92,19 @@ export function setupPluginHostHandlers(): void {
         return {
           success: false,
           reason: 'failed',
+          error: error instanceof Error ? error.message : String(error),
+        };
+      })
+  );
+
+  ipcMain.handle(
+    'decky:install-loader',
+    (): Promise<DeckyLoaderInstallResult> =>
+      installDeckyLoader().catch((error: unknown) => {
+        console.error('[Decky] Loader install crashed:', error);
+        return {
+          success: false,
+          reason: 'not-installed',
           error: error instanceof Error ? error.message : String(error),
         };
       })

@@ -8,6 +8,8 @@ import got from 'got';
 import { sha256File } from '@/main/installer/hash';
 import type { MillenniumAsset } from './release';
 
+type PinnedFile = Pick<MillenniumAsset, 'url' | 'sha256' | 'size'>;
+
 export class MillenniumFetchError extends Error {
   constructor(
     readonly kind: 'download-failed' | 'checksum-mismatch' | 'cancelled',
@@ -20,7 +22,7 @@ export class MillenniumFetchError extends Error {
 const RETRIES = 2;
 const PROGRESS_THROTTLE_MS = 250;
 
-async function isAlreadyVerified(dest: string, asset: MillenniumAsset): Promise<boolean> {
+async function isAlreadyVerified(dest: string, asset: PinnedFile): Promise<boolean> {
   try {
     if (fs.statSync(dest).size !== asset.size) {
       return false;
@@ -32,7 +34,7 @@ async function isAlreadyVerified(dest: string, asset: MillenniumAsset): Promise<
 }
 
 async function downloadOnce(
-  asset: MillenniumAsset,
+  asset: PinnedFile,
   part: string,
   signal: AbortSignal | undefined,
   onProgress: ((fraction: number) => void) | undefined
@@ -74,7 +76,7 @@ async function downloadOnce(
 
 // Streams into `<dest>.part`, hashing on the way, and renames only after size and sha256 match the pin.
 export async function downloadVerified(
-  asset: MillenniumAsset,
+  asset: PinnedFile,
   dest: string,
   opts: { signal?: AbortSignal; onProgress?: (fraction: number) => void } = {}
 ): Promise<void> {

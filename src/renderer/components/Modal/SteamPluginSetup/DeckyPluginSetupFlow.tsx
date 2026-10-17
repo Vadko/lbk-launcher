@@ -1,9 +1,13 @@
 import { Download, Save } from 'lucide';
-import { CircleArrowUpIcon, ExternalLinkIcon } from 'lucide-react';
+import { CircleArrowUpIcon, DownloadIcon, ExternalLinkIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
-import type { DeckyInstallResult, PluginHostState } from '@/shared/types';
+import type {
+  DeckyInstallResult,
+  DeckyLoaderInstallResult,
+  PluginHostState,
+} from '@/shared/types';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useSteamPluginSetupStore } from '../../../store/useSteamPluginSetupStore';
 import { openDeckySite } from '../../../utils/steamPluginHost';
@@ -32,16 +36,58 @@ const NO_DECKY_TEXT =
   'Decky Loader не знайдено. Спершу встановіть Decky Loader — після цього лаунчер зможе додати до нього плагін «LBK Bridge».';
 const DISABLED_TEXT =
   'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.';
+const LOADER_OFFER_PARAGRAPHS = [
+  'Decky Loader — безкоштовний сторонній завантажувач плагінів для Steam Deck (не від Valve). Лаунчер може встановити його разом із плагіном «LBK Bridge».',
+  'Що це дасть:\n• перекладені досягнення в бібліотеці, сповіщеннях і оверлеї Steam.',
+  'Що працює й без Decky Loader: параметри запуску, підписки в Майстерні, колекція «З українізаторами», ярлик лаунчера та обкладинки в Steam.',
+  'Лаунчер завантажить офіційний інсталятор Decky Loader з GitHub і запустить його. Пароль адміністратора (sudo) інсталятор питає у власному вікні, лаунчер його не бачить. Якщо пароля ще немає, інсталятор запропонує тимчасовий і прибере його після встановлення.',
+  'Зважте: після великих оновлень SteamOS Decky Loader іноді доводиться встановити ще раз.',
+];
+const LOADER_GAME_MODE_TEXT =
+  'Інсталятор Decky Loader працює лише в режимі робочого столу. Перейдіть у нього через меню живлення Steam, відкрийте лаунчер і натисніть «Встановити Decky Loader» ще раз.';
+const LOADER_INSTALLING_TEXT =
+  'Відкрито інсталятор Decky Loader. Введіть пароль адміністратора у вікні «Decky Installer» і оберіть «release». Якщо вікна не видно, знайдіть його на панелі завдань.';
+const LOADER_DONE_TEXT = 'Decky Loader встановлено.';
 
 type Step =
   | { kind: 'intro' }
+  | { kind: 'loader-installing' }
+  | { kind: 'loader-failed'; reason: LoaderFailure }
   | { kind: 'waiting'; startedAt: number }
   | { kind: 'fallback' }
   | { kind: 'done' };
 
+type LoaderFailure = Extract<DeckyLoaderInstallResult, { success: false }>['reason'];
+
 function pluginReady(state: PluginHostState | null): boolean {
   const plugin = state?.decky?.plugin;
   return plugin?.installed === true && !plugin.outdated;
+}
+
+function loaderFailureText(reason: LoaderFailure): string {
+  switch (reason) {
+    case 'game-mode':
+      return LOADER_GAME_MODE_TEXT;
+    case 'download-failed':
+      return "Не вдалося завантажити інсталятор Decky Loader. Перевірте з'єднання з інтернетом і спробуйте ще раз.";
+    case 'checksum-mismatch':
+      return 'Завантажений інсталятор Decky Loader не збігається з перевіреною версією. Встановлення скасовано.';
+    case 'unsupported':
+      return 'На цій системі лаунчер не може встановити Decky Loader. Встановіть його за інструкцією на сайті Decky Loader.';
+    default:
+      return 'Decky Loader не встановлено. Якщо вікно інсталятора закрито або пароль не підійшов, спробуйте ще раз.';
+  }
+}
+
+function currentView(step: Step, state: PluginHostState | null): Step {
+  if (step.kind === 'waiting' && pluginReady(state)) {
+    return { kind: 'done' };
+  }
+  // The modal may be reopened while an installer it started earlier is still running.
+  if (step.kind === 'intro' && state?.deckyLoader?.installing) {
+    return { kind: 'loader-installing' };
+  }
+  return step;
 }
 
 export const DeckyPluginSetupFlow: React.FC = () => {
@@ -52,7 +98,9 @@ export const DeckyPluginSetupFlow: React.FC = () => {
   const [step, setStep] = useState<Step>({ kind: 'intro' });
   const [showSaveZip, setShowSaveZip] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [loaderInstalled, setLoaderInstalled] = useState(false);
   const aliveRef = useRef(true);
+  const loaderRunningRef = useRef(false);
   const {
     phase: requestPhase,
     isPending: isRequesting,
@@ -68,8 +116,7 @@ export const DeckyPluginSetupFlow: React.FC = () => {
   }, []);
 
   // The plugin dir appearing is the only success signal: Decky's install call returns before the user confirms.
-  const view: Step =
-    step.kind === 'waiting' && pluginReady(state) ? { kind: 'done' } : step;
+  const view = currentView(step, state);
   const startedAt = view.kind === 'waiting' ? view.startedAt : null;
   useEffect(() => {
     if (startedAt === null) {
@@ -124,6 +171,33 @@ export const DeckyPluginSetupFlow: React.FC = () => {
     setStep({ kind: 'fallback' });
   }, [isRequesting, refresh, runRequest]);
 
+  const handleInstallLoader = useCallback(async () => {
+    if (loaderRunningRef.current) {
+      return;
+    }
+    loaderRunningRef.current = true;
+    setStep({ kind: 'loader-installing' });
+    let result: DeckyLoaderInstallResult;
+    try {
+      result = await window.electronAPI.installDeckyLoader();
+    } catch (error) {
+      console.warn('[DeckySetup] Decky Loader install failed:', error);
+      result = { success: false, reason: 'not-installed' };
+    } finally {
+      loaderRunningRef.current = false;
+    }
+    if (!aliveRef.current) {
+      return;
+    }
+    await refresh();
+    if (result.success) {
+      setLoaderInstalled(true);
+      setStep({ kind: 'intro' });
+      return;
+    }
+    setStep({ kind: 'loader-failed', reason: result.reason });
+  }, [refresh]);
+
   const handleSaveZip = useCallback(async () => {
     if (isSaving) {
       return;
@@ -170,6 +244,26 @@ export const DeckyPluginSetupFlow: React.FC = () => {
   const savedNote = savedMessage ? (
     <p className="mt-3 text-sm text-text-main wrap-break-word">{savedMessage}</p>
   ) : null;
+  const siteButton = (primary: boolean) => (
+    <SetupButton
+      tone={primary ? 'primary' : 'secondary'}
+      onClick={openDeckySite}
+      gamepad={primary ? 'confirm' : undefined}
+      icon={<ExternalLinkIcon size={16} />}
+    >
+      Що таке Decky Loader
+    </SetupButton>
+  );
+  const installLoaderButton = (label: string) => (
+    <SetupButton
+      tone="primary"
+      onClick={() => void handleInstallLoader()}
+      gamepad="confirm"
+      icon={<DownloadIcon size={16} />}
+    >
+      {label}
+    </SetupButton>
+  );
 
   let body: React.ReactNode;
   let footer: React.ReactNode;
@@ -181,18 +275,38 @@ export const DeckyPluginSetupFlow: React.FC = () => {
         footer = <SetupFooter>{closeButton}</SetupFooter>;
         break;
       }
+      if (!decky?.installed && state.deckyLoader) {
+        const gameMode = state.deckyLoader.blockedBy === 'game-mode';
+        body = (
+          <SetupText
+            paragraphs={
+              gameMode
+                ? [...LOADER_OFFER_PARAGRAPHS, LOADER_GAME_MODE_TEXT]
+                : LOADER_OFFER_PARAGRAPHS
+            }
+          />
+        );
+        footer = (
+          <SetupFooter>
+            {!gameMode && installLoaderButton('Встановити Decky Loader')}
+            {siteButton(gameMode)}
+            <SetupButton tone="secondary" onClick={close} gamepad="cancel">
+              {source === 'offer' ? 'Не зараз' : 'Скасувати'}
+            </SetupButton>
+            {source === 'offer' && (
+              <SetupButton tone="secondary" onClick={handleDecline}>
+                Більше не пропонувати
+              </SetupButton>
+            )}
+          </SetupFooter>
+        );
+        break;
+      }
       if (!decky?.installed) {
         body = <SetupText paragraphs={[NO_DECKY_TEXT]} />;
         footer = (
           <SetupFooter>
-            <SetupButton
-              tone="primary"
-              onClick={openDeckySite}
-              gamepad="confirm"
-              icon={<ExternalLinkIcon size={16} />}
-            >
-              Що таке Decky Loader
-            </SetupButton>
+            {siteButton(true)}
             {closeButton}
           </SetupFooter>
         );
@@ -212,12 +326,13 @@ export const DeckyPluginSetupFlow: React.FC = () => {
         footer = <SetupFooter>{closeButton}</SetupFooter>;
         break;
       }
+      const introParagraphs = outdated
+        ? ['Доступне оновлення плагіна «LBK Bridge» для Decky.', INTRO_TEXT]
+        : [INTRO_TEXT];
       body = (
         <SetupText
           paragraphs={
-            outdated
-              ? ['Доступне оновлення плагіна «LBK Bridge» для Decky.', INTRO_TEXT]
-              : [INTRO_TEXT]
+            loaderInstalled ? [LOADER_DONE_TEXT, ...introParagraphs] : introParagraphs
           }
         />
       );
@@ -252,6 +367,22 @@ export const DeckyPluginSetupFlow: React.FC = () => {
               Більше не пропонувати
             </SetupButton>
           )}
+        </SetupFooter>
+      );
+      break;
+    }
+    case 'loader-installing':
+      body = <SetupProgress text={LOADER_INSTALLING_TEXT} percent={null} />;
+      footer = <SetupFooter>{closeButton}</SetupFooter>;
+      break;
+    case 'loader-failed': {
+      const retry = view.reason === 'not-installed' || view.reason === 'download-failed';
+      body = <SetupText paragraphs={[loaderFailureText(view.reason)]} />;
+      footer = (
+        <SetupFooter>
+          {retry && installLoaderButton('Спробувати ще раз')}
+          {siteButton(!retry)}
+          {closeButton}
         </SetupFooter>
       );
       break;

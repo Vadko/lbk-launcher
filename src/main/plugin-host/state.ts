@@ -37,6 +37,7 @@ import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
 import {
   getDarwinVersion,
   getPlatform,
+  isGamescopeSession,
   isSteamDeckHardware,
   isSteamOS,
 } from '@/main/utils/platform';
@@ -49,6 +50,7 @@ import type { AchievementsBadge, PluginHostState } from '@/shared/types';
 import { compareVersions } from '@/shared/version';
 import {
   computeAchievementsBadge,
+  deckyLoaderOffer,
   evaluateMillenniumSupport,
   type HostFacts,
   type MillenniumSupport,
@@ -260,6 +262,23 @@ export function deckyStateFor(decky: DeckyInfo | null): PluginHostState['decky']
         decky.plugin.installed && (older(version) || (live !== null && older(live))),
     },
   };
+}
+
+let deckyLoaderInstalling = false;
+
+export function setDeckyLoaderInstalling(value: boolean): void {
+  deckyLoaderInstalling = value;
+}
+
+export function deckyLoaderStateFor(
+  snapshot: HostSnapshot
+): PluginHostState['deckyLoader'] {
+  return deckyLoaderOffer({
+    host: snapshot.host,
+    deckyInstalled: snapshot.decky?.installed === true,
+    gamescope: isGamescopeSession(),
+    installing: deckyLoaderInstalling,
+  });
 }
 
 export function pendingMillenniumAction(): 'activate' | 'deactivate' | null {

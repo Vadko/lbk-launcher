@@ -204,6 +204,8 @@ export interface PluginHostState {
       outdated: boolean;
     };
   };
+  // Set only where Decky is the host and missing: LBK can launch Decky's own installer.
+  deckyLoader: null | { installing: boolean; blockedBy: 'game-mode' | null };
   busy: boolean;
   steamRunning: boolean;
   canRestartSteam: boolean;
@@ -268,6 +270,19 @@ export type DeckyInstallResult =
         | 'bridge-unavailable'
         | 'timeout'
         | 'failed';
+      error?: string;
+    };
+
+export type DeckyLoaderInstallResult =
+  | { success: true }
+  | {
+      success: false;
+      reason:
+        | 'unsupported'
+        | 'game-mode'
+        | 'download-failed'
+        | 'checksum-mismatch'
+        | 'not-installed';
       error?: string;
     };
 
@@ -589,6 +604,8 @@ export interface ElectronAPI {
   }) => Promise<MillenniumInstallResult>;
   cancelMillennium: () => Promise<{ success: boolean }>;
   requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
+  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
+  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
   saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
   onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
   onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;

@@ -347,7 +347,7 @@ export function useInstallation({
               '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, встановіть плагін «LBK Bridge» для Decky Loader.';
           } else if (achievementsDelivery === 'needs-decky') {
             message +=
-              '\n\nПереклад досягнень збережено. На Steam Deck його показує плагін «LBK Bridge» для Decky Loader — спершу встановіть Decky Loader.';
+              '\n\nПереклад досягнень збережено. На Steam Deck його показує плагін «LBK Bridge» для Decky Loader — лаунчер може встановити Decky Loader сам.';
           } else if (achievementsDelivery === 'unavailable') {
             const status = await window.electronAPI
               .getSteamBridgeStatus()
@@ -422,12 +422,20 @@ export function useInstallation({
               variant: 'secondary',
             });
           } else if (achievementsDelivery === 'needs-decky') {
-            actions.push({
-              label: 'Що таке Decky Loader',
-              onClick: openDeckySite,
-              keepOpen: true,
-              variant: 'secondary',
-            });
+            actions.push(
+              settings.deckyPluginOfferDeclined
+                ? {
+                    label: 'Що таке Decky Loader',
+                    onClick: openDeckySite,
+                    keepOpen: true,
+                    variant: 'secondary',
+                  }
+                : {
+                    label: 'Встановити Decky Loader',
+                    onClick: () => openSetup('decky-install', 'offer'),
+                    variant: 'secondary',
+                  }
+            );
           } else if (achievementsDelivery === 'disabled') {
             actions.push({
               label: 'Відкрити налаштування',

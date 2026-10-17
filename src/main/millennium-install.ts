@@ -45,6 +45,7 @@ import {
   windowsLoaderState,
 } from '@/main/millennium-install/windows';
 import {
+  deckyLoaderStateFor,
   deckyStateFor,
   getHostSnapshot,
   type HostSnapshot,
@@ -151,6 +152,7 @@ export async function getPluginHostState(): Promise<PluginHostState> {
       downloadSize: release?.asset.size ?? null,
     },
     decky: deckyStateFor(snapshot.decky),
+    deckyLoader: deckyLoaderStateFor(snapshot),
     busy,
     steamRunning,
     canRestartSteam: steamRunning && !elevated && !isGamescopeSession(),

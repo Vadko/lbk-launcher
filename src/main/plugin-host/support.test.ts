@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type AchievementsFacts,
   computeAchievementsBadge,
+  deckyLoaderOffer,
   deliveryFromBadge,
   evaluateMillenniumSupport,
   type HostFacts,
@@ -105,6 +106,38 @@ describe('pickPluginHost', () => {
     ).toBe('millennium');
     expect(host(linuxDesktop({ steamType: 'flatpak' }))).toBe('none');
     expect(host(mac([21, 0]))).toBe('none');
+  });
+});
+
+describe('deckyLoaderOffer', () => {
+  const offer = (overrides: Partial<Parameters<typeof deckyLoaderOffer>[0]> = {}) =>
+    deckyLoaderOffer({
+      host: 'decky',
+      deckyInstalled: false,
+      gamescope: false,
+      installing: false,
+      ...overrides,
+    });
+
+  it('offers the installer only where Decky is the host and missing', () => {
+    expect(offer()).toEqual({ installing: false, blockedBy: null });
+    expect(offer({ host: 'millennium' })).toBeNull();
+    expect(offer({ host: 'none' })).toBeNull();
+    expect(offer({ deckyInstalled: true })).toBeNull();
+  });
+
+  it('blocks the zenity-driven installer in Game Mode', () => {
+    expect(offer({ gamescope: true })).toEqual({
+      installing: false,
+      blockedBy: 'game-mode',
+    });
+  });
+
+  it('keeps reporting a running install after PluginLoader appears mid-run', () => {
+    expect(offer({ deckyInstalled: true, installing: true })).toEqual({
+      installing: true,
+      blockedBy: null,
+    });
   });
 });
 

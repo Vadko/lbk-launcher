@@ -111,8 +111,18 @@ function pluginHostEntries(
     if (!decky?.installed) {
       lines.push({
         key: 'no-decky',
-        text: 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Спершу встановіть Decky Loader.',
+        text: host.deckyLoader
+          ? 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Лаунчер може встановити Decky Loader разом із плагіном.'
+          : 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Спершу встановіть Decky Loader.',
       });
+      if (host.deckyLoader) {
+        actions.push({
+          key: 'decky-loader-install',
+          label: 'Встановити Decky Loader',
+          icon: <DownloadIcon size={16} />,
+          onClick: () => openSetup('decky-install', 'settings'),
+        });
+      }
       actions.push({
         key: 'decky-site',
         label: 'Що таке Decky Loader',

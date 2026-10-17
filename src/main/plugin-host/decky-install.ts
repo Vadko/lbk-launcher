@@ -2,6 +2,7 @@ import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { app } from 'electron';
 import { createZip } from '@/main/installer/archive';
 import { publishPluginHostState } from '@/main/millennium-install';
@@ -26,6 +27,7 @@ import type { DeckyInstallResult } from '@/shared/types';
 
 const POLL_MS = 2000;
 const WATCH_MS = 5 * 60 * 1000;
+const FRONTEND_WAIT_MS = 20_000;
 const BUNDLED_FILES: readonly { from: string; to: string }[] = [
   { from: 'plugin.json', to: 'plugin.json' },
   { from: 'package.json', to: 'package.json' },
@@ -222,14 +224,21 @@ export async function requestDeckyPluginInstall(): Promise<DeckyInstallResult> {
   });
 
   const before = pluginFingerprint(decky.plugin);
+  const request = {
+    artifact: deckyArtifactUrl(path.dirname(zip.file), MILLENNIUM_PLUGIN_VERSION),
+    version: MILLENNIUM_PLUGIN_VERSION,
+    hash: zip.hash,
+    installType: deckyInstallType(decky.plugin, MILLENNIUM_PLUGIN_VERSION),
+  };
+  // Decky injects its frontend ~10 s after its service starts, e.g. right after LBK installed it.
+  const deadline = Date.now() + FRONTEND_WAIT_MS;
   let answer: 'no-decky' | 'prompted';
   try {
-    answer = await bridge.invoke('deckyRequestInstall', {
-      artifact: deckyArtifactUrl(path.dirname(zip.file), MILLENNIUM_PLUGIN_VERSION),
-      version: MILLENNIUM_PLUGIN_VERSION,
-      hash: zip.hash,
-      installType: deckyInstallType(decky.plugin, MILLENNIUM_PLUGIN_VERSION),
-    });
+    answer = await bridge.invoke('deckyRequestInstall', request);
+    while (answer === 'no-decky' && Date.now() < deadline) {
+      await sleep(POLL_MS);
+      answer = await bridge.invoke('deckyRequestInstall', request);
+    }
   } catch (error) {
     console.warn('[Decky] Install request failed:', error);
     return { success: false, reason: 'failed', error: errorText(error) };
