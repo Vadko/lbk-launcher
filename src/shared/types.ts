@@ -247,6 +247,7 @@ export interface MillenniumInstallResult {
   queued?: boolean;
   // prepare: files are staged and activation may be requested.
   ready?: boolean;
+  // prepare: Steam was up; activate: Steam is up after the change (false: applied while it was closed).
   steamRunning?: boolean;
   canRestartSteam?: boolean;
   reason?: MillenniumFailure;

@@ -384,7 +384,13 @@ async function runQueuedChange(
   try {
     if ((await findSteamPids()).length === 0) {
       await runPendingSteamActions('manual');
-      return outcomeFailure(kind, since) ?? { success: true, bridge: 'unknown' };
+      return (
+        outcomeFailure(kind, since) ?? {
+          success: true,
+          bridge: 'unknown',
+          steamRunning: false,
+        }
+      );
     }
     if (restart === 'on-exit') {
       return { success: true, queued: true };
@@ -409,7 +415,10 @@ async function runQueuedChange(
     if (kind === 'deactivate') {
       return { success: true };
     }
-    return verifyActivation(result.bridge ?? 'unknown');
+    return {
+      ...(await verifyActivation(result.bridge ?? 'unknown')),
+      steamRunning: true,
+    };
   } finally {
     setMillenniumPhaseListener(null);
   }

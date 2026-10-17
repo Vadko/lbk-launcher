@@ -21,6 +21,7 @@ import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useSteamPluginSetupStore } from '../../../store/useSteamPluginSetupStore';
 import { openMillenniumSite, restartFailureMessage } from '../../../utils/steamBridge';
 import {
+  activationOutcome,
   hostOs,
   millenniumFailureText,
   millenniumPhaseText,
@@ -151,6 +152,7 @@ function isPluginConnected(status: SteamBridgeStatus | null): boolean {
 export const MillenniumInstallFlow: React.FC = () => {
   const close = useSteamPluginSetupStore((s) => s.close);
   const source = useSteamPluginSetupStore((s) => s.source);
+  const openSetup = useSteamPluginSetupStore((s) => s.openSetup);
   const declineOffer = useSettingsStore((s) => s.declineMillenniumOffer);
   const { state } = useSteamPluginHost(true);
   const [step, setStep] = useState<Step>({ kind: 'intro' });
@@ -269,11 +271,12 @@ export const MillenniumInstallFlow: React.FC = () => {
         safeSetStep(failureStep(result));
         return;
       }
-      if (result.queued) {
+      const outcome = activationOutcome(result);
+      if (outcome === 'queued') {
         safeSetStep({ kind: 'done', paragraphs: queuedParagraphs() });
         return;
       }
-      if (!steamWasRunningRef.current) {
+      if (outcome === 'done-offline') {
         safeSetStep({
           kind: 'done',
           paragraphs: [
@@ -351,37 +354,6 @@ export const MillenniumInstallFlow: React.FC = () => {
       kind: 'waiting-plugin',
       deadline: startedAt + PLUGIN_WAIT_MS,
       envMissing: false,
-    });
-  }, [safeSetStep]);
-
-  const uninstallAfterFailure = useCallback(async () => {
-    operationRef.current = 'uninstall';
-    safeSetStep({
-      kind: 'working',
-      text: 'Видалення Millennium…',
-      percent: null,
-      cancellable: false,
-    });
-    const result = await window.electronAPI
-      .uninstallMillennium({ purge: false, restart: 'now' })
-      .catch(() => null);
-    if (result?.success) {
-      safeSetStep({
-        kind: 'done',
-        paragraphs: [
-          result.queued
-            ? 'Millennium буде видалено, щойно ви закриєте Steam.'
-            : 'Millennium видалено.',
-        ],
-      });
-      return;
-    }
-    safeSetStep({
-      kind: 'error',
-      message: result?.error
-        ? `Не вдалося видалити Millennium: ${result.error}`
-        : 'Не вдалося видалити Millennium.',
-      actions: 'none',
     });
   }, [safeSetStep]);
 
@@ -677,19 +649,19 @@ export const MillenniumInstallFlow: React.FC = () => {
           {step.actions === 'steam-not-back' && (
             <>
               <SetupButton
-                tone="danger"
-                onClick={() => void uninstallAfterFailure()}
-                gamepad="confirm"
-                icon={<Trash2Icon size={16} />}
-              >
-                Видалити Millennium
-              </SetupButton>
-              <SetupButton
-                tone="secondary"
+                tone="primary"
                 onClick={() => void restartSteamAndWait()}
+                gamepad="confirm"
                 icon={<PlayIcon size={16} />}
               >
                 Запустити Steam
+              </SetupButton>
+              <SetupButton
+                tone="danger"
+                onClick={() => openSetup('millennium-uninstall', source)}
+                icon={<Trash2Icon size={16} />}
+              >
+                Видалити Millennium
               </SetupButton>
             </>
           )}

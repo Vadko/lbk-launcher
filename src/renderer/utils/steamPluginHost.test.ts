@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AchievementsBadge, MillenniumUnsupportedReason } from '@/shared/types';
 import {
   achievementsBadgeDetail,
+  activationOutcome,
   millenniumPhaseText,
   millenniumUnsupportedText,
 } from './steamPluginHost';
@@ -66,5 +67,17 @@ describe('millenniumPhaseText', () => {
     expect(millenniumPhaseText('install-files', 'install')).toBe('Встановлення файлів…');
     expect(millenniumPhaseText('install-files', 'uninstall')).toContain('Видалення');
     expect(millenniumPhaseText('stop-steam', 'uninstall')).toBe('Закриття Steam…');
+  });
+});
+
+describe('activationOutcome', () => {
+  it('trusts the activation result, not what prepare saw', () => {
+    expect(activationOutcome({ success: true, queued: true })).toBe('queued');
+    expect(
+      activationOutcome({ success: true, bridge: 'unknown', steamRunning: false })
+    ).toBe('done-offline');
+    expect(
+      activationOutcome({ success: true, bridge: 'ready', steamRunning: true })
+    ).toBe('wait-plugin');
   });
 });

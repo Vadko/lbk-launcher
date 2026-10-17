@@ -1,6 +1,7 @@
 import type {
   AchievementsBadge,
   MillenniumFailure,
+  MillenniumInstallResult,
   MillenniumProgress,
   MillenniumUnsupportedReason,
 } from '@/shared/types';
@@ -128,4 +129,14 @@ export function achievementsBadgeDetail(badge: AchievementsBadge): string | null
     return millenniumUnsupportedText(badge.unsupportedReason);
   }
   return null;
+}
+
+// Decided from the activation result: Steam may have been closed between prepare and activate.
+export function activationOutcome(
+  result: MillenniumInstallResult
+): 'queued' | 'done-offline' | 'wait-plugin' {
+  if (result.queued) {
+    return 'queued';
+  }
+  return result.steamRunning === false ? 'done-offline' : 'wait-plugin';
 }
