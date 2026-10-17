@@ -30,6 +30,8 @@ vi.mock('@/main/millennium-install', () => ({
 
 // Longer than the watcher's 500 ms debounce
 const settle = () => new Promise((resolve) => setTimeout(resolve, 1000));
+// macOS FSEvents starts delivering a moment after fs.watch() returns
+const watchReady = () => new Promise((resolve) => setTimeout(resolve, 200));
 
 let root: string;
 const pluginDir = () => path.join(root, 'plugins', 'lbk-bridge');
@@ -50,6 +52,7 @@ afterEach(() => {
 describe('watchDeckyPlugins', () => {
   it('refreshes the host state as soon as Decky deletes a plugin folder', async () => {
     watchDeckyPlugins();
+    await watchReady();
     fs.rmSync(pluginDir(), { recursive: true });
     await settle();
     expect(mocks.resetDeckyDetectCache).toHaveBeenCalled();
@@ -59,6 +62,7 @@ describe('watchDeckyPlugins', () => {
 
   it('follows the disabled-plugins list Decky keeps in settings', async () => {
     watchDeckyPlugins();
+    await watchReady();
     fs.writeFileSync(
       path.join(root, 'settings', 'loader.json'),
       '{"disabled_plugins":["LBK Bridge"]}'
@@ -70,12 +74,14 @@ describe('watchDeckyPlugins', () => {
   it('watches nothing without Decky and starts once a later call finds it', async () => {
     decky.homebrewDir = null;
     watchDeckyPlugins();
+    await watchReady();
     fs.rmSync(pluginDir(), { recursive: true });
     await settle();
     expect(mocks.publishPluginHostState).not.toHaveBeenCalled();
 
     decky.homebrewDir = root;
     watchDeckyPlugins();
+    await watchReady();
     fs.mkdirSync(pluginDir());
     await settle();
     expect(mocks.publishPluginHostState).toHaveBeenCalledTimes(1);
