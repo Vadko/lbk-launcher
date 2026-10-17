@@ -100,6 +100,13 @@ interface RunSteamRestartOptions {
   successMessage?: string;
 }
 
+type ModalConfig = NonNullable<ReturnType<typeof useModalStore.getState>['config']>;
+
+// The global modal has one slot: another modal opened meanwhile (an installer's mandatory run prompt) must survive.
+export function mayReplaceModal(current: ModalConfig | null, own: ModalConfig): boolean {
+  return current === null || current === own;
+}
+
 // Shows progress while Steam restarts, then the outcome; the progress modal is replaced, never stacked.
 export async function runSteamRestart(
   action: () => Promise<SteamRestartOutcome>,
@@ -112,6 +119,15 @@ export async function runSteamRestart(
     type: 'info' as const,
   };
   modal.showModal(progress);
+  const showOutcome = (config: ModalConfig): void => {
+    if (mayReplaceModal(useModalStore.getState().config, progress)) {
+      modal.showModal(config);
+      return;
+    }
+    window.windowControls
+      ?.showSystemNotification({ title: config.title, body: config.message })
+      .catch(() => undefined);
+  };
 
   let outcome: SteamRestartOutcome;
   try {
@@ -124,7 +140,7 @@ export async function runSteamRestart(
   }
 
   if (!outcome.success) {
-    modal.showModal({
+    showOutcome({
       title: outcome.reason
         ? 'Steam не перезапущено'
         : (options.failureTitle ?? 'Steam не перезапущено'),
@@ -144,7 +160,7 @@ export async function runSteamRestart(
       status && status.code !== 'ok' && status.code !== 'restart-pending'
         ? steamBridgeStatusText(status)
         : null;
-    modal.showModal({
+    showOutcome({
       title: 'Steam перезапущено',
       message: text ?? CEF_BLOCKED_TEXT,
       type: 'info',
@@ -153,7 +169,7 @@ export async function runSteamRestart(
   }
 
   if (options.successTitle && options.successMessage) {
-    modal.showModal({
+    showOutcome({
       title: options.successTitle,
       message: options.successMessage,
       type: 'success',
