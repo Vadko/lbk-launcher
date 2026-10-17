@@ -7,7 +7,7 @@ import { HKEY } from 'registry-js';
 import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
 import { getSteamPath } from '@/main/game-detector/steam';
-import { forCurrentOS, isLinux, isWindows } from '@/main/utils/platform';
+import { forCurrentOS, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { getRegistryDword } from '@/main/utils/registry';
 import {
   isCrashpadHandler,
@@ -657,6 +657,33 @@ async function linuxReaperArgs(): Promise<string[]> {
   );
 }
 
+// macOS Steam does not write RunningAppID either; every game process inherits SteamGameId from steam_osx.
+export function parseEnvSteamGameId(psOutput: string): number | null {
+  for (const match of psOutput.matchAll(/(?:^|\s)SteamGameId=(\d+)(?=\s|$)/gm)) {
+    const id = steamGameId(Number(match[1]));
+    if (id !== null) {
+      return id;
+    }
+  }
+  return null;
+}
+
+async function macSteamGameIdFromEnv(): Promise<number | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      '/bin/ps',
+      ['-E', '-x', '-ww', '-o', 'command='],
+      {
+        timeout: 5000,
+        maxBuffer: 32 * 1024 * 1024,
+      }
+    );
+    return parseEnvSteamGameId(stdout);
+  } catch {
+    return null;
+  }
+}
+
 function registryVdfCandidates(): string[] {
   const home = homedir();
   return (
@@ -680,6 +707,12 @@ export async function getRunningSteamGameId(): Promise<number | null> {
     return steamGameId(
       getRegistryDword(HKEY.HKEY_CURRENT_USER, 'Software\\Valve\\Steam', 'RunningAppID')
     );
+  }
+  if (isMacOS()) {
+    const id = await macSteamGameIdFromEnv();
+    if (id !== null) {
+      return id;
+    }
   }
   if (isLinux()) {
     const id = (await linuxReaperArgs())

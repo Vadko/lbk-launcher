@@ -3,6 +3,7 @@ import {
   classifyLinuxProcess,
   classifyMacProcess,
   parseDevtoolsPortArg,
+  parseEnvSteamGameId,
   parsePsOutput,
   parseReaperAppId,
   parseRunningAppId,
@@ -393,5 +394,24 @@ describe('parseReaperAppId', () => {
       parseReaperAppId(`${steam}/ubuntu12_32/reaper -- /bin/game SteamLaunch AppId=10`)
     ).toBeNull();
     expect(parseReaperAppId('')).toBeNull();
+  });
+});
+
+describe('parseEnvSteamGameId', () => {
+  const game =
+    '/bin/bash /Users/u/Library/Application Support/Steam/steamapps/common/Stardew Valley/Contents/MacOS/StardewValley SteamClientLaunch=1 SteamGameId=413150 SteamAppId=413150 HOME=/Users/u';
+
+  it('reads the game id macOS Steam hands down to a game process', () => {
+    const helper =
+      '/Users/u/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/Frameworks/Steam Helper.app/Contents/MacOS/Steam Helper -steampid=10493 HOME=/Users/u';
+    expect(parseEnvSteamGameId(`${helper}\n${game}\n`)).toBe(413150);
+  });
+
+  it('ignores shortcuts, lookalike keys and an idle Steam', () => {
+    expect(parseEnvSteamGameId('/bin/game SteamGameId=3221225472')).toBeNull();
+    expect(parseEnvSteamGameId('/bin/game NotSteamGameId=10 SteamGameId=x')).toBeNull();
+    expect(
+      parseEnvSteamGameId('/Applications/Steam.app/Contents/MacOS/steam_osx\n')
+    ).toBeNull();
   });
 });
