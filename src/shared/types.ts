@@ -418,6 +418,7 @@ export interface SteamBridgeStatus {
 export type RestartFailureReason =
   | 'access-denied'
   | 'gamescope'
+  | 'game-running'
   | 'timeout'
   | 'launch-failed';
 

@@ -1,10 +1,14 @@
 import { execFile } from 'child_process';
+import { parse as vdfParse } from 'fast-vdf';
 import { promises as fsp } from 'fs';
+import { homedir } from 'os';
 import path from 'path';
+import { HKEY } from 'registry-js';
 import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { forCurrentOS, isWindows } from '@/main/utils/platform';
+import { getRegistryDword } from '@/main/utils/registry';
 import {
   isCrashpadHandler,
   MAC_MILLENNIUM_LAUNCHER_RE,
@@ -591,4 +595,60 @@ export async function steamMapsContain(lib: string): Promise<boolean | null> {
 
 export function readSteamEnvirons(): Promise<Buffer[] | null> {
   return readLinuxSteamProcFile('environ');
+}
+
+// Non-Steam shortcuts get ids with the high bit set; only a real Steam app blocks a restart.
+const SHORTCUT_APP_ID_MIN = 0x80000000;
+
+function steamGameId(value: number | null): number | null {
+  return value !== null && value > 0 && value < SHORTCUT_APP_ID_MIN ? value : null;
+}
+
+export function parseRunningAppId(registryVdf: string): number | null {
+  try {
+    const raw = vdfParse(registryVdf)
+      .dir('Registry', null)
+      ?.dir('HKCU', null)
+      ?.dir('Software', null)
+      ?.dir('Valve', null)
+      ?.dir('Steam', null)
+      ?.value('RunningAppID', null);
+    return steamGameId(raw === null || raw === undefined ? null : Number(raw));
+  } catch {
+    return null;
+  }
+}
+
+function registryVdfCandidates(): string[] {
+  const home = homedir();
+  return (
+    forCurrentOS({
+      linux: () => [
+        path.join(home, '.steam', 'registry.vdf'),
+        path.join(home, '.var/app/com.valvesoftware.Steam/.steam/registry.vdf'),
+      ],
+      macos: () => {
+        const steamPath = getSteamPath();
+        return steamPath ? [path.join(steamPath, 'registry.vdf')] : [];
+      },
+      windows: () => [],
+    })?.() ?? []
+  );
+}
+
+// Steam holds -shutdown while a game runs, and a forced kill would take the game's unsaved progress with it.
+export async function getRunningSteamGameId(): Promise<number | null> {
+  if (isWindows()) {
+    return steamGameId(
+      getRegistryDword(HKEY.HKEY_CURRENT_USER, 'Software\\Valve\\Steam', 'RunningAppID')
+    );
+  }
+  for (const file of registryVdfCandidates()) {
+    const content = await fsp.readFile(file, 'utf8').catch(() => null);
+    const id = content === null ? null : parseRunningAppId(content);
+    if (id !== null) {
+      return id;
+    }
+  }
+  return null;
 }

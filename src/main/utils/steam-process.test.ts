@@ -4,6 +4,7 @@ import {
   classifyMacProcess,
   parseDevtoolsPortArg,
   parsePsOutput,
+  parseRunningAppId,
   parseTasklistCsv,
   parseWebhelperDebugArgs,
   parseWebhelperLog,
@@ -344,5 +345,21 @@ describe('classifyLinuxProcess', () => {
       classifyLinuxProcess('/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper.sh')
     ).toBe('other');
     expect(classifyLinuxProcess('')).toBe('other');
+  });
+});
+
+describe('parseRunningAppId', () => {
+  const registry = (id: string) =>
+    `"Registry"\n{\n\t"HKCU"\n\t{\n\t\t"Software"\n\t\t{\n\t\t\t"Valve"\n\t\t\t{\n\t\t\t\t"Steam"\n\t\t\t\t{\n\t\t\t\t\t"RunningAppID"\t\t"${id}"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n`;
+
+  it('returns the running Steam game', () => {
+    expect(parseRunningAppId(registry('1552350'))).toBe(1552350);
+  });
+
+  it('ignores no game, non-Steam shortcuts and broken files', () => {
+    expect(parseRunningAppId(registry('0'))).toBeNull();
+    expect(parseRunningAppId(registry('3221225472'))).toBeNull();
+    expect(parseRunningAppId('"Registry" { "HKCU" { } }')).toBeNull();
+    expect(parseRunningAppId('not vdf {')).toBeNull();
   });
 });

@@ -15,6 +15,7 @@ import { isGamescopeSession, isLinux, isMacOS, isWindows } from '@/main/utils/pl
 import {
   execFileOnHost,
   findSteamPids,
+  getRunningSteamGameId,
   isSteamElevated,
   waitForSteamGone,
   waitForSteamStart,
@@ -200,7 +201,7 @@ async function forceKillSteam(steamPids: number[]): Promise<boolean> {
     let denied = false;
     for (const pid of steamPids) {
       try {
-        await execFileAsync(getTaskkillPath(), ['/F', '/T', '/PID', String(pid)], {
+        await execFileAsync(getTaskkillPath(), ['/F', '/PID', String(pid)], {
           timeout: EXEC_TIMEOUT_MS,
           windowsHide: true,
         });
@@ -260,6 +261,12 @@ async function shutdownSteam(): Promise<ShutdownResult> {
     return { ok: false, reason: 'access-denied' };
   }
 
+  const runningGame = await getRunningSteamGameId();
+  if (runningGame !== null) {
+    console.warn(`[Steam] Game ${runningGame} is running, not shutting Steam down`);
+    return { ok: false, reason: 'game-running' };
+  }
+
   console.log('[Steam] Shutting down Steam...');
   await requestGracefulExit();
 
@@ -268,6 +275,10 @@ async function shutdownSteam(): Promise<ShutdownResult> {
     return { ok: true };
   }
 
+  if ((await getRunningSteamGameId()) !== null) {
+    console.warn('[Steam] A game started during shutdown, not force killing Steam');
+    return { ok: false, reason: 'game-running' };
+  }
   console.warn('[Steam] Steam did not exit gracefully, force killing...');
   if (await forceKillSteam(await findSteamPids())) {
     console.warn('[Steam] Access denied while force killing Steam');
