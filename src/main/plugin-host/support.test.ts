@@ -8,6 +8,7 @@ import {
   type HostFacts,
   pickPluginHost,
   steamTypeFromPath,
+  withPluginHostOverride,
 } from './support';
 
 const linuxDesktop = (
@@ -106,6 +107,31 @@ describe('pickPluginHost', () => {
     ).toBe('millennium');
     expect(host(linuxDesktop({ steamType: 'flatpak' }))).toBe('none');
     expect(host(mac([21, 0]))).toBe('none');
+  });
+});
+
+describe('withPluginHostOverride', () => {
+  const deck = linuxDesktop({ steamOS: true });
+  const host = (f: HostFacts) => pickPluginHost(f, evaluateMillenniumSupport(f));
+
+  it('lets a dev build pick Millennium on a Deck and keeps every other check', () => {
+    expect(host(deck)).toBe('decky');
+    expect(evaluateMillenniumSupport(deck).reason).toBe('steamos');
+
+    const overridden = withPluginHostOverride(deck, 'millennium');
+    expect(host(overridden)).toBe('millennium');
+    expect(evaluateMillenniumSupport(overridden).reason).toBeNull();
+    const rt64Deck = linuxDesktop({ steamOS: true, rt64: true });
+    expect(
+      evaluateMillenniumSupport(withPluginHostOverride(rt64Deck, 'millennium')).reason
+    ).toBe('steam-rt64');
+  });
+
+  it('still yields to an installed Decky and ignores other values', () => {
+    const withDecky = linuxDesktop({ steamOS: true, deckyInstalled: true });
+    expect(host(withPluginHostOverride(withDecky, 'millennium'))).toBe('decky');
+    expect(withPluginHostOverride(deck, undefined)).toBe(deck);
+    expect(withPluginHostOverride(deck, 'decky')).toBe(deck);
   });
 });
 

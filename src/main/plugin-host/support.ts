@@ -107,6 +107,17 @@ export function evaluateMillenniumSupport(f: HostFacts): MillenniumSupport {
   return { supported: true, reason: null };
 }
 
+// Dev-only LBK_PLUGIN_HOST=millennium tests the Linux Millennium path on a Deck: it drops just the SteamOS rule.
+export function withPluginHostOverride(
+  f: HostFacts,
+  override: string | undefined
+): HostFacts {
+  if (override !== 'millennium' || !f.linux) {
+    return f;
+  }
+  return { ...f, linux: { ...f.linux, steamOS: false } };
+}
+
 // Decky wins on any Linux where it is present: Millennium deletes the flag file Decky depends on.
 export function pickPluginHost(
   f: HostFacts,

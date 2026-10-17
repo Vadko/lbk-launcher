@@ -56,6 +56,7 @@ import {
   type MillenniumSupport,
   pickPluginHost,
   steamTypeFromPath,
+  withPluginHostOverride,
 } from './support';
 
 const execFileAsync = promisify(execFile);
@@ -181,18 +182,22 @@ async function gatherHostFacts(): Promise<GatheredFacts> {
     platform === 'unknown'
       ? null
       : selectMillenniumAsset(MILLENNIUM_PIN, platform, hwArch, installGate());
+  const facts: HostFacts = {
+    os: platform,
+    arch: process.arch,
+    steamPath,
+    millenniumGeneration: detectMillennium().generation,
+    releaseAvailable: release !== null,
+    macos: platform === 'macos' ? { darwin: getDarwinVersion() } : null,
+    linux: platform === 'linux' ? await gatherLinuxFacts(steamPath) : null,
+  };
   return {
     release,
     hwArch,
-    facts: {
-      os: platform,
-      arch: process.arch,
-      steamPath,
-      millenniumGeneration: detectMillennium().generation,
-      releaseAvailable: release !== null,
-      macos: platform === 'macos' ? { darwin: getDarwinVersion() } : null,
-      linux: platform === 'linux' ? await gatherLinuxFacts(steamPath) : null,
-    },
+    facts: withPluginHostOverride(
+      facts,
+      app.isPackaged ? undefined : process.env.LBK_PLUGIN_HOST
+    ),
   };
 }
 
