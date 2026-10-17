@@ -11,14 +11,17 @@ vi.mock('@/main/game-detector/steam', () => ({
 describe('currentLinuxSteamType', () => {
   it('takes the flavour from the found Steam path, not from leftover Flatpak data', () => {
     const home = os.homedir();
-    expect(currentLinuxSteamType(path.join(home, '.local/share/Steam'))).toBe('native');
+    // steamTypeFromPath() compares with path.posix, also on a Windows host.
+    expect(currentLinuxSteamType(path.posix.join(home, '.local/share/Steam'))).toBe(
+      'native'
+    );
     expect(
       currentLinuxSteamType(
-        path.join(home, '.var/app/com.valvesoftware.Steam/data/Steam')
+        path.posix.join(home, '.var/app/com.valvesoftware.Steam/data/Steam')
       )
     ).toBe('flatpak');
-    expect(currentLinuxSteamType(path.join(home, 'snap/steam/common/.steam/steam'))).toBe(
-      'snap'
-    );
+    expect(
+      currentLinuxSteamType(path.posix.join(home, 'snap/steam/common/.steam/steam'))
+    ).toBe('snap');
   });
 });

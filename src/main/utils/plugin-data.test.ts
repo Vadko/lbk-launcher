@@ -94,20 +94,24 @@ describe('bridge plugin data files', () => {
     });
   });
 
-  it('leaves Decky alone when its data dir cannot be created', () => {
-    deckyPlugin(true);
-    fs.rmSync(path.join(homebrew, 'data'), { recursive: true });
-    fs.chmodSync(homebrew, 0o500);
-    try {
-      data.writeBridgePluginData('bridge.json', { v: 1 });
-    } finally {
-      fs.chmodSync(homebrew, 0o700);
+  // chmod on Windows only toggles the read-only attribute, which does not stop mkdir.
+  it.skipIf(process.platform === 'win32')(
+    'leaves Decky alone when its data dir cannot be created',
+    () => {
+      deckyPlugin(true);
+      fs.rmSync(path.join(homebrew, 'data'), { recursive: true });
+      fs.chmodSync(homebrew, 0o500);
+      try {
+        data.writeBridgePluginData('bridge.json', { v: 1 });
+      } finally {
+        fs.chmodSync(homebrew, 0o700);
+      }
+      expect(fs.existsSync(path.join(homebrew, 'data'))).toBe(false);
+      expect(fs.existsSync(path.join(fake.millenniumDir as string, 'bridge.json'))).toBe(
+        true
+      );
     }
-    expect(fs.existsSync(path.join(homebrew, 'data'))).toBe(false);
-    expect(fs.existsSync(path.join(fake.millenniumDir as string, 'bridge.json'))).toBe(
-      true
-    );
-  });
+  );
 
   it('removes data files left after the plugin was uninstalled in Decky', () => {
     deckyPlugin(true);
