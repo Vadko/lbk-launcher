@@ -577,10 +577,11 @@ function pruneLinuxRuntime(snapshot: HostSnapshot): void {
   if (snapshot.os !== 'linux' || !linux) {
     return;
   }
-  const keep = new Set<string>();
-  if (snapshot.record) {
-    keep.add(snapshot.record.version);
+  // Without a record nothing says which runtime is ours to drop.
+  if (!snapshot.record) {
+    return;
   }
+  const keep = new Set<string>([snapshot.record.version]);
   if (isQueued('activate') && MILLENNIUM_PIN.linux) {
     keep.add(MILLENNIUM_PIN.linux.version);
   }

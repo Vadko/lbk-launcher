@@ -10,6 +10,7 @@ import {
   type LinkEntry,
   parseLdconfig,
   planLinuxLinks,
+  pruneRuntimeVersions,
   removeLinuxLinks,
   renderEnvironmentFile,
 } from './linux';
@@ -198,5 +199,20 @@ describe.skipIf(process.platform === 'win32')('removeLinuxLinks', () => {
       '/usr/lib/millennium/libmillennium_bootstrap_hhx64.so'
     );
     expect(fs.readFileSync(`${foreign}.lbk-backup`, 'utf8')).toBe('valve-64');
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('pruneRuntimeVersions', () => {
+  it('keeps the version current points to even when it is not in the keep set', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-rt-'));
+    for (const v of ['3.4.0', '3.5.0', '3.6.0']) {
+      fs.mkdirSync(path.join(root, v));
+    }
+    fs.symlinkSync(path.join(root, '3.5.0'), path.join(root, 'current'));
+
+    pruneRuntimeVersions(root, new Set(['3.6.0']));
+
+    expect(fs.readdirSync(root).sort()).toEqual(['3.5.0', '3.6.0', 'current']);
+    fs.rmSync(root, { recursive: true, force: true });
   });
 });

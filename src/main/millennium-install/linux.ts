@@ -220,8 +220,15 @@ export function pruneRuntimeVersions(
   } catch {
     return;
   }
+  // Steam loads whatever `current` points to, recorded or not.
+  let live: string | null = null;
+  try {
+    live = path.posix.basename(fs.readlinkSync(path.posix.join(runtimeRoot, 'current')));
+  } catch {
+    // No current link.
+  }
   for (const entry of entries) {
-    if (entry === 'current' || keep.has(entry)) {
+    if (entry === 'current' || entry === live || keep.has(entry)) {
       continue;
     }
     fs.rmSync(path.posix.join(runtimeRoot, entry), { recursive: true, force: true });
