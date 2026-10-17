@@ -8,8 +8,9 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
 import { promisify } from 'util';
-import { getSteamExePath } from '@/main/game-detector/steam';
+import { getSteamExePath, getSteamPath } from '@/main/game-detector/steam';
 import { millenniumLaunchEnv } from '@/main/millennium-install/launch-env';
+import { steamTypeFromPath } from '@/main/plugin-host/support';
 import { findMacMillenniumWrapper } from '@/main/utils/millennium';
 import { isGamescopeSession, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import {
@@ -84,7 +85,7 @@ interface LaunchResult {
 /**
  * Detect Steam installation type on Linux
  */
-export function detectLinuxSteamType(): SteamInstallationType {
+function detectLinuxSteamType(): SteamInstallationType {
   const home = homedir();
 
   // When running in Flatpak, we need to check the host filesystem
@@ -119,6 +120,13 @@ export function detectLinuxSteamType(): SteamInstallationType {
     }
     return 'unknown';
   }
+}
+
+// A leftover ~/.var/app/com.valvesoftware.Steam fools detectLinuxSteamType(); the found Steam path does not.
+export function currentLinuxSteamType(
+  steamPath: string | null = getSteamPath()
+): SteamInstallationType {
+  return steamPath ? steamTypeFromPath(steamPath, homedir()) : detectLinuxSteamType();
 }
 
 // ============================================================================
@@ -166,7 +174,7 @@ async function requestGracefulExit(): Promise<void> {
         await shell.openExternal('steam://exit');
       }
     } else if (isLinux()) {
-      const steamType = detectLinuxSteamType();
+      const steamType = currentLinuxSteamType();
       if (steamType === 'flatpak') {
         await execFileOnHost('flatpak', ['run', 'com.valvesoftware.Steam', '-shutdown']);
       } else if (steamType === 'snap') {
@@ -220,7 +228,7 @@ async function forceKillSteam(steamPids: number[]): Promise<boolean> {
   }
 
   if (isLinux()) {
-    if (detectLinuxSteamType() === 'flatpak') {
+    if (currentLinuxSteamType() === 'flatpak') {
       await execFileOnHost('flatpak', ['kill', 'com.valvesoftware.Steam']).catch(
         () => void 0
       );
@@ -302,7 +310,7 @@ async function shutdownSteam(): Promise<ShutdownResult> {
  * Launch Steam with optional URL (e.g., steam://rungameid/123)
  */
 function launchSteamLinux(url?: string): boolean {
-  const steamType = detectLinuxSteamType();
+  const steamType = currentLinuxSteamType();
   const args = url ? [url] : [];
   const env = millenniumLaunchEnv();
 

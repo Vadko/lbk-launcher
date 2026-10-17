@@ -42,7 +42,7 @@ import {
 } from '@/main/utils/platform';
 import { MILLENNIUM_PLUGIN_VERSION } from '@/main/utils/steam-bridge-ops';
 import { getConnectedPluginInfo } from '@/main/utils/steam-bridge-server';
-import { detectLinuxSteamType } from '@/main/utils/steam-launcher';
+import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
 import { execFileOnHost, findSteamPids } from '@/main/utils/steam-process';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type { AchievementsBadge, PluginHostState } from '@/shared/types';
@@ -54,7 +54,6 @@ import {
   type HostFacts,
   type MillenniumSupport,
   pickPluginHost,
-  steamTypeFromPath,
   withPluginHostOverride,
 } from './support';
 
@@ -145,7 +144,7 @@ async function gatherLinuxFacts(steamPath: string | null): Promise<HostFacts['li
   const home = os.homedir();
   const homeLink = realpathOrNull(path.join(home, '.steam/steam'));
   return {
-    steamType: steamPath ? steamTypeFromPath(steamPath, home) : detectLinuxSteamType(),
+    steamType: currentLinuxSteamType(steamPath),
     steamOS: isSteamOS() || isSteamDeckHardware(),
     systemMillennium: SYSTEM_MILLENNIUM_LIBS.some((lib) => fs.existsSync(lib)),
     deckyInstalled: isDeckyInstalledSync(),
