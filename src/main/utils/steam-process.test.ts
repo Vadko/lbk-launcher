@@ -4,6 +4,7 @@ import {
   classifyMacProcess,
   parseDevtoolsPortArg,
   parsePsOutput,
+  parseReaperAppId,
   parseRunningAppId,
   parseTasklistCsv,
   parseWebhelperDebugArgs,
@@ -361,5 +362,36 @@ describe('parseRunningAppId', () => {
     expect(parseRunningAppId(registry('3221225472'))).toBeNull();
     expect(parseRunningAppId('"Registry" { "HKCU" { } }')).toBeNull();
     expect(parseRunningAppId('not vdf {')).toBeNull();
+  });
+});
+
+describe('parseReaperAppId', () => {
+  const steam = '/home/deck/.local/share/Steam';
+
+  it('reads the game a Linux Steam reaper runs', () => {
+    const args = [
+      `${steam}/ubuntu12_32/reaper`,
+      'SteamLaunch',
+      'AppId=1552350',
+      '--',
+      `${steam}/steamapps/common/SteamLinuxRuntime_soldier/_v2-entry-point`,
+      '--verb=waitforexitandrun',
+      '--',
+      `${steam}/steamapps/common/The Jackbox Party Pack 8/Launcher.sh`,
+    ].join(' ');
+    expect(parseReaperAppId(args)).toBe(1552350);
+    expect(
+      parseReaperAppId('/home/u/My Games/Steam/ubuntu12_32/reaper SteamLaunch AppId=620')
+    ).toBe(620);
+  });
+
+  it('ignores non-Steam shortcuts and AppId in the game arguments', () => {
+    expect(
+      parseReaperAppId(`${steam}/ubuntu12_32/reaper SteamLaunch AppId=3221225472 -- x`)
+    ).toBeNull();
+    expect(
+      parseReaperAppId(`${steam}/ubuntu12_32/reaper -- /bin/game SteamLaunch AppId=10`)
+    ).toBeNull();
+    expect(parseReaperAppId('')).toBeNull();
   });
 });

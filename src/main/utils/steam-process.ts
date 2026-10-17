@@ -7,7 +7,7 @@ import { HKEY } from 'registry-js';
 import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
 import { getSteamPath } from '@/main/game-detector/steam';
-import { forCurrentOS, isWindows } from '@/main/utils/platform';
+import { forCurrentOS, isLinux, isWindows } from '@/main/utils/platform';
 import { getRegistryDword } from '@/main/utils/registry';
 import {
   isCrashpadHandler,
@@ -619,6 +619,44 @@ export function parseRunningAppId(registryVdf: string): number | null {
   }
 }
 
+// Linux Steam does not write RunningAppID to registry.vdf; it starts every game as `reaper SteamLaunch AppId=<id> -- …`.
+export function parseReaperAppId(args: string): number | null {
+  const match = / SteamLaunch AppId=(\d+)(?: |$)/.exec(args.split(' -- ')[0]);
+  return steamGameId(match ? Number(match[1]) : null);
+}
+
+async function linuxReaperArgs(): Promise<string[]> {
+  if (isRunningInFlatpak()) {
+    const pids = await pgrepPids('reaper');
+    if (pids.length === 0) {
+      return [];
+    }
+    try {
+      const { stdout } = await execFileOnHost(
+        'ps',
+        ['-ww', '-o', 'args=', '-p', pids.join(',')],
+        5000
+      );
+      return stdout.split('\n');
+    } catch {
+      return [];
+    }
+  }
+  const entries = await fsp.readdir('/proc').catch((): string[] => []);
+  const args = await Promise.all(
+    entries
+      .filter((entry) => /^\d+$/.test(entry))
+      .map(async (pid) =>
+        (await readProcText(pid, 'comm'))?.trim() === 'reaper'
+          ? readProcText(pid, 'cmdline')
+          : null
+      )
+  );
+  return args.flatMap((cmdline) =>
+    cmdline === null ? [] : [cmdline.replace(/\0/g, ' ')]
+  );
+}
+
 function registryVdfCandidates(): string[] {
   const home = homedir();
   return (
@@ -642,6 +680,14 @@ export async function getRunningSteamGameId(): Promise<number | null> {
     return steamGameId(
       getRegistryDword(HKEY.HKEY_CURRENT_USER, 'Software\\Valve\\Steam', 'RunningAppID')
     );
+  }
+  if (isLinux()) {
+    const id = (await linuxReaperArgs())
+      .map(parseReaperAppId)
+      .find((v): v is number => v !== null);
+    if (id !== undefined) {
+      return id;
+    }
   }
   for (const file of registryVdfCandidates()) {
     const content = await fsp.readFile(file, 'utf8').catch(() => null);
