@@ -175,6 +175,12 @@ function pluginHostEntries(
 
   const installed = millennium.installed;
   if (installed?.managedBy === 'lbk') {
+    if (installed.version && !installed.needsRepair) {
+      lines.push({
+        key: 'installed-version',
+        text: `Встановлено Millennium ${installed.version}.`,
+      });
+    }
     if (installed.needsRepair) {
       lines.push({
         key: 'repair',
