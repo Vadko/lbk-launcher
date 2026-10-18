@@ -54,8 +54,8 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     },
   });
 
-  // Show window buttons on macOS for liquid glass
-  if (isSupported) {
+  // The frameless window hides the traffic lights; macOS keeps its own window controls on every version.
+  if (isMacOS()) {
     mainWindow.setWindowButtonVisibility(true);
   }
 
