@@ -13,7 +13,7 @@ vi.mock('@/main/plugin-host/state', () => ({
 }));
 vi.mock('@/main/utils/cef-flag-file', () => ({
   isCefFlagFilePresent: () => false,
-  syncBridgePluginSetup: vi.fn(),
+  syncBridgePluginSetup: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('@/main/utils/millennium', () => ({
   detectMillennium: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('@/main/utils/steam-cef', () => ({
   resetCefEndpointCache: () => undefined,
   resolveCefEndpoint: vi.fn(),
 }));
-vi.mock('@/main/utils/steam-process', () => ({
+vi.mock('@/main/steam-process/lifecycle', () => ({
   findSteamPids: () => Promise.resolve([]),
   isSteamElevated: () => Promise.resolve(false),
 }));

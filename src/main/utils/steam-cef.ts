@@ -8,12 +8,12 @@ import {
 import CDP from 'chrome-remote-interface';
 import { LRUCache } from 'lru-cache';
 import pTimeout from 'p-timeout';
+import { findSteamPids } from '@/main/steam-process/lifecycle';
 import { STEAM_OPS_SOURCE } from '@/main/utils/steam-bridge-ops';
 import {
   type CefEndpointDiscovery,
   discoverCefEndpoint,
-  findSteamPids,
-} from '@/main/utils/steam-process';
+} from '@/main/utils/steam-cef-discovery';
 
 const DEFAULT_CEF_PORT = 8080;
 // Chromium 126 binds ::1 when 127.0.0.1 is taken.

@@ -6,7 +6,7 @@ vi.mock('@/main/game-detector/steam', () => ({ getLocalConfigPath: () => null })
 vi.mock('@/main/utils/steam-bridge', () => ({
   getSteamBridge: () => Promise.resolve(null),
 }));
-vi.mock('@/main/utils/steam-launcher', () => ({ isSteamRunning: () => false }));
+vi.mock('@/main/steam-process/lifecycle', () => ({ isSteamRunning: () => false }));
 
 const { needsGameDir, writeSteamLaunchOptions } = await import(
   '@/main/utils/steam-launch-options'

@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { findSteamPids } from '@/main/steam-process/lifecycle';
 import {
   replaceDirAtomic,
   replaceSymlinkAtomic,
@@ -11,6 +12,7 @@ import {
   pruneDir,
   readlinkOrNull,
 } from '@/main/utils/fs-safe';
+import { isFlatpak } from '@/main/utils/host-exec';
 
 export const RUNTIME_PATH_ENV = 'MILLENNIUM_RUNTIME_PATH';
 export const LINUX_RUNTIME_LIB = 'libmillennium_x86.so';
@@ -225,4 +227,39 @@ export function pruneRuntimeVersions(
     runtimeRoot,
     (entry) => entry === 'current' || entry === live || keep.has(entry)
   );
+}
+
+async function readSteamProcFiles(file: 'maps' | 'environ'): Promise<Buffer[] | null> {
+  // Our Flatpak sandbox has its own /proc and cannot see host Steam.
+  if (isFlatpak()) {
+    return null;
+  }
+  const out: Buffer[] = [];
+  for (const pid of await findSteamPids()) {
+    try {
+      out.push(await fs.promises.readFile(`/proc/${pid}/${file}`));
+    } catch {
+      // Exited, or another user's process.
+    }
+  }
+  return out.length > 0 ? out : null;
+}
+
+// A field is left out when it cannot be told (Flatpak, Steam not running, unreadable /proc).
+export async function linuxSteamDiagnostics(): Promise<{
+  steamEnvMissing?: boolean;
+  mappedInSteam?: boolean;
+}> {
+  const environs = await readSteamProcFiles('environ');
+  const maps = await readSteamProcFiles('maps');
+  return {
+    ...(environs ? { steamEnvMissing: !environs.some(environHasRuntimePath) } : {}),
+    ...(maps
+      ? {
+          mappedInSteam: maps.some((buf) =>
+            buf.toString('latin1').includes(LINUX_RUNTIME_LIB)
+          ),
+        }
+      : {}),
+  };
 }

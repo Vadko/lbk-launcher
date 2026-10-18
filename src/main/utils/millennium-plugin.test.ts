@@ -1,4 +1,3 @@
-import type * as ChildProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -12,7 +11,6 @@ const PLUGIN_INDEX = path.join(PACKAGE_DIR, '.millennium/Dist/index.js');
 const fake = {
   info: null as MillenniumModule.MillenniumInfo | null,
   steamRunning: false,
-  psOutput: '',
 };
 
 vi.mock('@/main/plugin-host/bundled-bridge', () => ({
@@ -26,20 +24,14 @@ vi.mock('@/main/utils/platform', () => ({
   isLinux: () => false,
   isMacOS: () => true,
 }));
+vi.mock('@/main/steam-process/lifecycle', () => ({
+  isSteamStopped: () => Promise.resolve(!fake.steamRunning),
+}));
 vi.mock('@/main/utils/millennium', async (importOriginal) => {
   const actual = await importOriginal<typeof MillenniumModule>();
   return { ...actual, detectMillennium: () => fake.info };
 });
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
-vi.mock('node:child_process', async (importOriginal) => ({
-  ...(await importOriginal<typeof ChildProcess>()),
-  execFileSync: vi.fn((command: string) => {
-    if (fake.steamRunning) {
-      return command === 'ps' ? fake.psOutput : '1234\n';
-    }
-    throw Object.assign(new Error('no match'), { status: 1 });
-  }),
-}));
 
 const plugin = await import('@/main/utils/millennium-plugin');
 const pluginData = await import('@/main/utils/plugin-data');
@@ -138,47 +130,33 @@ describe('plugin install and data files', () => {
     expect(fs.existsSync(bridge)).toBe(false);
   });
 
-  it('edits enabledPlugins only while Steam is off', () => {
+  it('edits enabledPlugins only while Steam is off', async () => {
     fs.writeFileSync(
       configPath,
       JSON.stringify({ plugins: { enabledPlugins: ['core'] } })
     );
 
     fake.steamRunning = true;
-    expect(plugin.setMillenniumPluginEnabledInConfig(true)).toBe('steam-running');
+    expect(await plugin.setMillenniumPluginEnabledInConfig(true)).toBe('steam-running');
     expect(
       JSON.parse(fs.readFileSync(configPath, 'utf8')).plugins.enabledPlugins
     ).toEqual(['core']);
     expect(fs.existsSync(`${configPath}.lbk.tmp`)).toBe(false);
 
     fake.steamRunning = false;
-    expect(plugin.setMillenniumPluginEnabledInConfig(true)).toBe('changed');
-    expect(plugin.setMillenniumPluginEnabledInConfig(true)).toBe('unchanged');
+    expect(await plugin.setMillenniumPluginEnabledInConfig(true)).toBe('changed');
+    expect(await plugin.setMillenniumPluginEnabledInConfig(true)).toBe('unchanged');
     expect(plugin.getMillenniumPluginState().enabled).toBe(true);
-    expect(plugin.setMillenniumPluginEnabledInConfig(false)).toBe('changed');
+    expect(await plugin.setMillenniumPluginEnabledInConfig(false)).toBe('changed');
     expect(
       JSON.parse(fs.readFileSync(configPath, 'utf8')).plugins.enabledPlugins
     ).toEqual(['core']);
   });
 
-  it("does not count Millennium's own steam_osx launcher as a running Steam", () => {
-    fs.writeFileSync(configPath, JSON.stringify({ plugins: { enabledPlugins: [] } }));
-    fake.steamRunning = true;
-    fake.psOutput =
-      '1234 /Users/u/Applications/Steam Millennium.app/Contents/MacOS/steam_osx\n';
-    expect(plugin.setMillenniumPluginEnabledInConfig(true)).toBe('changed');
-
-    fake.psOutput =
-      '1234 /Users/u/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/steam_osx\n';
-    expect(plugin.setMillenniumPluginEnabledInConfig(false)).toBe('steam-running');
-    fake.steamRunning = false;
-    fake.psOutput = '';
-  });
-
-  it('reports invalid and missing configs', () => {
-    expect(plugin.setMillenniumPluginEnabledInConfig(true)).toBe('no-config');
+  it('reports invalid and missing configs', async () => {
+    expect(await plugin.setMillenniumPluginEnabledInConfig(true)).toBe('no-config');
     fs.writeFileSync(configPath, '{ broken');
-    expect(plugin.setMillenniumPluginEnabledInConfig(true)).toBe('invalid-config');
+    expect(await plugin.setMillenniumPluginEnabledInConfig(true)).toBe('invalid-config');
     expect(fs.readFileSync(configPath, 'utf8')).toBe('{ broken');
   });
 

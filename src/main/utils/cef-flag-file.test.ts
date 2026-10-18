@@ -109,28 +109,28 @@ describe('syncBridgePluginSetup with Millennium v3', () => {
     });
   });
 
-  it('enables the plugin only after an install that went through', () => {
+  it('enables the plugin only after an install that went through', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const install = vi.mocked(installOrUpdateMillenniumPlugin);
     install.mockReturnValueOnce({ ok: false, error: 'EBUSY' });
     install.mockReturnValue({ ok: true, changed: true });
-    vi.mocked(setMillenniumPluginEnabledInConfig).mockReturnValue('changed');
+    vi.mocked(setMillenniumPluginEnabledInConfig).mockResolvedValue('changed');
 
-    syncBridgePluginSetup();
+    await syncBridgePluginSetup();
     expect(setMillenniumPluginEnabledInConfig).not.toHaveBeenCalled();
-    syncBridgePluginSetup();
+    await syncBridgePluginSetup();
     expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledWith(true);
   });
 
-  it('queues the enable once while Steam runs instead of on every sync', () => {
+  it('queues the enable once while Steam runs instead of on every sync', async () => {
     vi.mocked(installOrUpdateMillenniumPlugin).mockReturnValue({
       ok: true,
       changed: false,
     });
-    vi.mocked(setMillenniumPluginEnabledInConfig).mockReturnValue('steam-running');
+    vi.mocked(setMillenniumPluginEnabledInConfig).mockResolvedValue('steam-running');
 
-    syncBridgePluginSetup();
-    syncBridgePluginSetup();
+    await syncBridgePluginSetup();
+    await syncBridgePluginSetup();
 
     expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledTimes(1);
     expect(env.queue).toMatchObject([{ kind: 'millennium-plugin', enable: true }]);

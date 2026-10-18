@@ -11,16 +11,17 @@ import { promisify } from 'util';
 import { getSteamExePath, getSteamPath } from '@/main/game-detector/steam';
 import { millenniumLaunchEnv } from '@/main/millennium-install/launch-env';
 import { steamTypeFromPath } from '@/main/plugin-host/support';
+import {
+  findSteamPids,
+  isSteamElevated,
+  isSteamRunning,
+  waitForSteamGone,
+  waitForSteamStart,
+} from '@/main/steam-process/lifecycle';
+import { getRunningSteamGameId } from '@/main/steam-process/running-game';
 import { execFileOnHost, isFlatpak, spawnOnHost, system32 } from '@/main/utils/host-exec';
 import { findMacMillenniumWrapper } from '@/main/utils/millennium';
 import { isGamescopeSession, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
-import {
-  findSteamPids,
-  getRunningSteamGameId,
-  isSteamElevated,
-  waitForSteamGone,
-  waitForSteamStart,
-} from '@/main/utils/steam-process';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type {
   RestartFailureReason,
@@ -105,10 +106,6 @@ const EXEC_TIMEOUT_MS = 10000;
 const MILLENNIUM_WRAPPER_START_TIMEOUT_MS = 15000;
 const MILLENNIUM_ASSETS_ROOT_ENV = 'MILLENNIUM_ASSETS_ROOT';
 const MILLENNIUM_WRAPPER_ASSETS = 'Contents/Resources/millennium-assets';
-
-export async function isSteamRunning(): Promise<boolean> {
-  return (await findSteamPids()).length > 0;
-}
 
 async function requestGracefulExit(): Promise<void> {
   try {

@@ -29,7 +29,7 @@ vi.mock('@/main/utils/steam-launch-options', () => ({
 vi.mock('@/main/utils/steam-launcher', () => ({
   restartSteamProcess: mocks.restartSteamProcess,
 }));
-vi.mock('@/main/utils/steam-process', () => ({
+vi.mock('@/main/steam-process/lifecycle', () => ({
   waitForSteamStart: () => Promise.resolve(true),
 }));
 vi.mock('@/main/utils/store-storage', () => ({

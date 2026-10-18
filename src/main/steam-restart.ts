@@ -10,11 +10,11 @@ import {
   queueSteamAction,
   runPendingSteamActions,
 } from '@/main/steam-pending-actions';
+import { waitForSteamStart } from '@/main/steam-process/lifecycle';
 import { setCefDebuggingEnabled } from '@/main/utils/cef-flag-file';
 import { verifyBridgeAfterLaunch } from '@/main/utils/steam-bridge';
 import { launchOptionsParamsFor, needsGameDir } from '@/main/utils/steam-launch-options';
 import { restartSteamProcess } from '@/main/utils/steam-launcher';
-import { waitForSteamStart } from '@/main/utils/steam-process';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type {
   ApplyPendingLaunchOptionsResult,

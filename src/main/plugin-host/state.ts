@@ -27,6 +27,7 @@ import {
   selectMillenniumAsset,
 } from '@/main/millennium-install/release';
 import { getPendingSteamActions } from '@/main/steam-pending-actions';
+import { findSteamPids } from '@/main/steam-process/lifecycle';
 import {
   type DeckyInfo,
   detectDecky,
@@ -46,7 +47,6 @@ import {
 } from '@/main/utils/platform';
 import { getConnectedPluginInfo } from '@/main/utils/steam-bridge-server';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
-import { findSteamPids } from '@/main/utils/steam-process';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type { AchievementsBadge, PluginHostState } from '@/shared/plugin-host-types';
 import { compareVersions } from '@/shared/version';

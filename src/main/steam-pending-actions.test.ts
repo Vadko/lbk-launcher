@@ -16,7 +16,6 @@ vi.mock('@/main/millennium-install/apply', () => ({
 vi.mock('@/main/utils/cef-flag-file', () => ({ isCefFlagFilePresent: () => false }));
 vi.mock('@/main/utils/millennium', () => ({ detectMillennium: vi.fn() }));
 vi.mock('@/main/utils/millennium-plugin', () => ({
-  isSteamRunningSync: () => false,
   removeMillenniumPluginFiles: vi.fn(),
   setMillenniumPluginEnabledInConfig: vi.fn(),
 }));
@@ -24,10 +23,9 @@ vi.mock('@/main/utils/steam-bridge', () => ({ getSteamBridgeStatus: vi.fn() }));
 vi.mock('@/main/utils/steam-launch-options', () => ({
   writeSteamLaunchOptions: vi.fn(),
 }));
-vi.mock('@/main/utils/steam-launcher', () => ({
+vi.mock('@/main/steam-process/lifecycle', () => ({
   isSteamRunning: () => Promise.resolve(false),
-}));
-vi.mock('@/main/utils/steam-process', () => ({
+  isSteamStopped: () => Promise.resolve(true),
   waitForSteamGone: () => Promise.resolve(true),
 }));
 vi.mock('@/main/utils/store-storage', () => ({
@@ -268,7 +266,7 @@ describe('runPendingSteamActions', () => {
       activate({ queuedAt: new Date().toISOString() }),
     ]);
     vi.mocked(millenniumQueueContext).mockReturnValue(ctx.millennium);
-    vi.mocked(applyQueuedMillenniumAction).mockReturnValue({
+    vi.mocked(applyQueuedMillenniumAction).mockResolvedValue({
       kind: 'activate',
       outcome: 'applied',
     });

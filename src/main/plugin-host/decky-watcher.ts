@@ -10,7 +10,7 @@ let current: { root: string; controller: AbortController } | null = null;
 // Decky installs, removes and toggles plugins without telling LBK; the badge must not wait out detectDecky()'s cache.
 const pluginsChanged = F.debounce(() => {
   resetDeckyDetectCache();
-  syncBridgePluginSetup();
+  void syncBridgePluginSetup();
   void publishPluginHostState();
 }, 500);
 

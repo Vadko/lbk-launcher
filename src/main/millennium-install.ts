@@ -13,12 +13,11 @@ import {
 } from '@/main/millennium-install/apply';
 import { extractMillenniumArchive } from '@/main/millennium-install/extract';
 import {
-  environHasRuntimePath,
   isTakenOver,
   LINUX_RUNTIME_FILES,
-  LINUX_RUNTIME_LIB,
   LINUX_STAGED_SUBDIR,
   linksIntact,
+  linuxSteamDiagnostics,
   materializeLinuxRuntime,
   planLinuxLinks,
   pruneRuntimeVersions,
@@ -52,18 +51,13 @@ import {
   queueSteamAction,
   runPendingSteamActions,
 } from '@/main/steam-pending-actions';
+import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
 import { missingFiles, pruneDir, realpathOrNull } from '@/main/utils/fs-safe';
 import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
 import { isGamescopeSession } from '@/main/utils/platform';
 import { refreshSteamBridgeStatus } from '@/main/utils/steam-bridge';
-import {
-  findSteamPids,
-  isSteamElevated,
-  readSteamEnvirons,
-  steamMapsContain,
-} from '@/main/utils/steam-process';
 import { sendToRenderer } from '@/main/window';
 import { errorMessage } from '@/shared/errors';
 import type {
@@ -327,15 +321,6 @@ function isQueued(kind: 'activate' | 'deactivate'): boolean {
   return pendingMillenniumAction() === kind;
 }
 
-async function linuxDiagnostics(): Promise<MillenniumInstallResult['diagnostics']> {
-  const environs = await readSteamEnvirons();
-  const mapped = await steamMapsContain(LINUX_RUNTIME_LIB);
-  return {
-    ...(environs ? { steamEnvMissing: !environs.some(environHasRuntimePath) } : {}),
-    ...(mapped === null ? {} : { mappedInSteam: mapped }),
-  };
-}
-
 function outcomeFailure(
   kind: 'activate' | 'deactivate',
   applied: MillenniumApplyReport | undefined
@@ -434,7 +419,7 @@ async function verifyActivation(
     }
   }
   if (bridge !== 'ready' && snapshot.os === 'linux') {
-    return { success: true, bridge, diagnostics: await linuxDiagnostics() };
+    return { success: true, bridge, diagnostics: await linuxSteamDiagnostics() };
   }
   return { success: true, bridge };
 }

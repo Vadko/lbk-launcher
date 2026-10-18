@@ -1,20 +1,17 @@
-import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { BRIDGE_PLUGIN_NAME } from '@lbk/bridge-core/contract';
-import { G } from '@mobily/ts-belt';
 import { bundledBridgeFiles } from '@/main/plugin-host/bundled-bridge';
 import { readPluginManifest } from '@/main/plugin-host/plugin-manifest';
+import { isSteamStopped } from '@/main/steam-process/lifecycle';
 import { dirSwapPath, replaceDirAtomic } from './atomic-write';
-import { readFileOrNull, readTextOrNull } from './fs-safe';
-import { isFlatpak, system32 } from './host-exec';
+import { readFileOrNull } from './fs-safe';
 import {
   detectMillennium,
   planEnabledPluginsEdit,
   readEnabledPlugins,
 } from './millennium';
-import { isLinux, isMacOS, isWindows } from './platform';
-import { isCrashpadHandler, MAC_MILLENNIUM_LAUNCHER_RE } from './steam-process-match';
+import { isWindows } from './platform';
 
 type PluginDataFile = 'bridge.json' | 'achievements.json';
 
@@ -167,111 +164,9 @@ export function installOrUpdateMillenniumPlugin():
   return { ok: true, changed: true };
 }
 
-function steamRunningOutput(command: string, args: string[]): string | null {
-  try {
-    return execFileSync(command, args, {
-      encoding: 'utf8',
-      timeout: 5000,
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-  } catch (error) {
-    // pgrep exits 1 when nothing matches.
-    if (G.isObject(error) && error.status === 1) {
-      return '';
-    }
-    return null;
-  }
-}
-
-// Null when the process exited mid-scan.
-function readProcFile(pid: string, file: string): string | null {
-  return readTextOrNull(path.join('/proc', pid, file));
-}
-
-// Same rule as waitForSteamGone: a lingering crashpad handler is not a running Steam.
-function scanProcForSteam(): boolean | null {
-  let entries: string[];
-  try {
-    entries = fs.readdirSync('/proc');
-  } catch {
-    return null;
-  }
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry)) {
-      continue;
-    }
-    const comm = readProcFile(entry, 'comm')?.trim();
-    if (comm === 'steam') {
-      return true;
-    }
-    if (comm === 'steamwebhelper' && !isCrashpadHandler(readProcFile(entry, 'cmdline'))) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function anyLiveSteamLine(pgrepFullOutput: string): boolean {
-  return pgrepFullOutput
-    .split('\n')
-    .map((line) => line.trim())
-    .some((line) => line.length > 0 && !isCrashpadHandler(line));
-}
-
-function macSteamRunningSync(): boolean | null {
-  const out = steamRunningOutput('pgrep', ['-x', 'steam_osx']);
-  if (out === null) {
-    return null;
-  }
-  const pids = out.split(/\s+/).filter((s) => /^\d+$/.test(s));
-  if (pids.length === 0) {
-    return false;
-  }
-  const ps = steamRunningOutput('ps', ['-o', 'pid=,comm=', '-p', pids.join(',')]);
-  if (!ps) {
-    return true;
-  }
-  const comms = ps.split('\n').flatMap((line) => /^\s*\d+\s+(.+)$/.exec(line)?.[1] ?? []);
-  return (
-    comms.length === 0 || comms.some((comm) => !MAC_MILLENNIUM_LAUNCHER_RE.test(comm))
-  );
-}
-
-// Synchronous so the config check and rename stay back to back; null means unknown.
-export function isSteamRunningSync(): boolean | null {
-  if (isWindows()) {
-    const out = steamRunningOutput(system32('tasklist.exe'), [
-      '/FI',
-      'IMAGENAME eq steam*',
-      '/NH',
-      '/FO',
-      'CSV',
-    ]);
-    return out === null ? null : /"steam(webhelper)?\.exe"/i.test(out);
-  }
-  if (isLinux()) {
-    if (isFlatpak()) {
-      const out = steamRunningOutput('flatpak-spawn', [
-        '--host',
-        'pgrep',
-        '-a',
-        '-x',
-        'steam|steamwebhelper',
-      ]);
-      return out === null ? null : anyLiveSteamLine(out);
-    }
-    return scanProcForSteam();
-  }
-  if (isMacOS()) {
-    return macSteamRunningSync();
-  }
-  return null;
-}
-
-export function setMillenniumPluginEnabledInConfig(
+export async function setMillenniumPluginEnabledInConfig(
   enable: boolean
-): 'changed' | 'unchanged' | 'steam-running' | 'invalid-config' | 'no-config' {
+): Promise<'changed' | 'unchanged' | 'steam-running' | 'invalid-config' | 'no-config'> {
   const { configPath } = detectMillennium();
   if (!configPath) {
     return 'no-config';
@@ -296,7 +191,8 @@ export function setMillenniumPluginEnabledInConfig(
   const tmp = `${configPath}.lbk.tmp`;
   try {
     fs.writeFileSync(tmp, plan.next);
-    if (isSteamRunningSync() !== false) {
+    // Awaited right before the rename, with nothing in between.
+    if (!(await isSteamStopped())) {
       fs.rmSync(tmp, { force: true });
       return 'steam-running';
     }

@@ -12,10 +12,14 @@ import {
   millenniumQueueContext,
 } from '@/main/millennium-install/apply';
 import { type BridgeFacts, steamMonitorMachine } from '@/main/steam-monitor-machine';
+import {
+  isSteamRunning,
+  isSteamStopped,
+  waitForSteamGone,
+} from '@/main/steam-process/lifecycle';
 import { isCefFlagFilePresent } from '@/main/utils/cef-flag-file';
 import { detectMillennium } from '@/main/utils/millennium';
 import {
-  isSteamRunningSync,
   removeMillenniumPluginFiles,
   setMillenniumPluginEnabledInConfig,
 } from '@/main/utils/millennium-plugin';
@@ -25,8 +29,6 @@ import {
   type WriteLaunchOptionsParams,
   writeSteamLaunchOptions,
 } from '@/main/utils/steam-launch-options';
-import { isSteamRunning } from '@/main/utils/steam-launcher';
-import { waitForSteamGone } from '@/main/utils/steam-process';
 import {
   deleteStoreValue,
   isCefDebuggingEnabledInSettings,
@@ -312,11 +314,10 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
       }
 
       if (isMillenniumInstallAction(action)) {
-        // Unknown counts as running: Steam's files must not change under it.
-        if (isSteamRunningSync() !== false) {
+        if (!(await isSteamStopped())) {
           continue;
         }
-        const report = applyQueuedMillenniumAction(action);
+        const report = await applyQueuedMillenniumAction(action);
         // Whichever batch takes the item, the click that queued it waits for this report.
         appEvents.emit('millennium-applied', report);
         if (report.outcome === 'retry') {
@@ -328,7 +329,7 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
       }
 
       if (action.kind === 'millennium-plugin') {
-        const outcome = setMillenniumPluginEnabledInConfig(action.enable);
+        const outcome = await setMillenniumPluginEnabledInConfig(action.enable);
         if (outcome === 'steam-running') {
           continue;
         }

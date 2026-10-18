@@ -152,7 +152,7 @@ async function runInstall(): Promise<DeckyLoaderInstallResult> {
     setDeckyLoaderInstalling(false);
     resetHostFacts();
     watchDeckyPlugins();
-    syncBridgePluginSetup();
+    await syncBridgePluginSetup();
     await publishPluginHostState();
   }
 }

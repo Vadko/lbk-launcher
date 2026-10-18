@@ -20,6 +20,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { KeyV, KeyVRoot, KeyVSet, parse as vdfParse } from 'fast-vdf';
 import { getLocalConfigPath } from '@/main/game-detector/steam';
+import { isSteamRunning } from '@/main/steam-process/lifecycle';
 import { writeFileAtomic } from '@/main/utils/atomic-write';
 import {
   mergeLaunchOptions,
@@ -28,7 +29,6 @@ import {
 } from '@/main/utils/launch-options-value';
 import { forCurrentOS } from '@/main/utils/platform';
 import { getSteamBridge } from '@/main/utils/steam-bridge';
-import { isSteamRunning } from '@/main/utils/steam-launcher';
 import { errorMessage } from '@/shared/errors';
 import type { Game } from '@/shared/types';
 

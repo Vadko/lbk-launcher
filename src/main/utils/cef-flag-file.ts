@@ -149,8 +149,8 @@ export function isCefFlagFilePresent(): boolean {
   return filePath !== null && fs.existsSync(filePath);
 }
 
-function applyPluginEnabled(enable: boolean): void {
-  const result = setMillenniumPluginEnabledInConfig(enable);
+async function applyPluginEnabled(enable: boolean): Promise<void> {
+  const result = await setMillenniumPluginEnabledInConfig(enable);
   if (result === 'steam-running') {
     queueSteamAction({
       kind: 'millennium-plugin',
@@ -173,11 +173,16 @@ function applyPluginEnabled(enable: boolean): void {
   }
 }
 
-// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; every trigger reruns it.
-export function syncBridgePluginSetup(): void {
-  if (isCefDebuggingEnabledInSettings()) {
-    setupMillenniumPlugin();
+// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; every trigger reruns it. Never rejects.
+export async function syncBridgePluginSetup(): Promise<void> {
+  if (!isCefDebuggingEnabledInSettings()) {
+    return;
+  }
+  try {
+    await setupMillenniumPlugin();
     setupDeckyPlugin();
+  } catch (error) {
+    console.warn('[SteamBridge] Plugin setup failed:', error);
   }
 }
 
@@ -206,7 +211,7 @@ function isEnableQueued(): boolean {
   return getPendingSteamActions().some((a) => a.kind === 'millennium-plugin' && a.enable);
 }
 
-function setupMillenniumPlugin(): void {
+async function setupMillenniumPlugin(): Promise<void> {
   if (detectMillennium().generation !== 'v3') {
     return;
   }
@@ -221,13 +226,13 @@ function setupMillenniumPlugin(): void {
   }
   startBridgeServer();
   if (!getMillenniumPluginState().enabled && !isEnableQueued()) {
-    applyPluginEnabled(true);
+    await applyPluginEnabled(true);
   }
 }
 
 // Startup never prompts; the toggle prompts at most once per bridge fingerprint.
 async function enableCefDebugging(prompt: boolean): Promise<void> {
-  setupMillenniumPlugin();
+  await setupMillenniumPlugin();
   setupDeckyPlugin();
 
   const millennium = detectMillennium();
@@ -246,7 +251,7 @@ async function enableCefDebugging(prompt: boolean): Promise<void> {
   }
 }
 
-function disableCefDebugging(): void {
+async function disableCefDebugging(): Promise<void> {
   const millennium = detectMillennium();
   // Decky creates the same file only in its installer and never restores it.
   if (!millennium.blocksTcpCdp && !isDeckyInstalledSync()) {
@@ -258,7 +263,7 @@ function disableCefDebugging(): void {
   if (millennium.generation === 'v3') {
     const plugin = getMillenniumPluginState();
     if (plugin.installed || plugin.enabled) {
-      applyPluginEnabled(false);
+      await applyPluginEnabled(false);
     }
   }
 }
@@ -277,7 +282,7 @@ export async function setCefDebuggingEnabled(
   if (enabled) {
     await enableCefDebugging(opts.prompt ?? true);
   } else {
-    disableCefDebugging();
+    await disableCefDebugging();
     // Turning the setting off and on again allows one more restart prompt (BRIDGE §3.4 rule d).
     clearSteamBridgeVerdict();
   }

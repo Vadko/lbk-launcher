@@ -18,6 +18,7 @@ import {
   getHostSnapshot,
 } from '@/main/plugin-host/state';
 import { getPendingSteamActions } from '@/main/steam-pending-actions';
+import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { isCefFlagFilePresent, syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
 import { detectMillennium, planEnabledPluginsEdit } from '@/main/utils/millennium';
 import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
@@ -32,7 +33,6 @@ import {
   resetCefEndpointCache,
   resolveCefEndpoint,
 } from '@/main/utils/steam-cef';
-import { findSteamPids, isSteamElevated } from '@/main/utils/steam-process';
 import {
   deleteStoreValue,
   isCefDebuggingEnabledInSettings,
@@ -378,10 +378,10 @@ export async function refreshSteamBridgeStatus(): Promise<void> {
   }
 }
 
-export function recheckSteamBridge(): Promise<SteamBridgeStatus> {
+export async function recheckSteamBridge(): Promise<SteamBridgeStatus> {
   clearSteamBridgeVerdict();
   resetCefEndpointCache();
-  syncBridgePluginSetup();
+  await syncBridgePluginSetup();
   return getSteamBridgeStatus();
 }
 
@@ -534,8 +534,6 @@ export const verifyBridgeAfterLaunch = pMemoize(verifyAndRefresh, {
 
 // Plugin setup runs here and on the toggle, a recheck and a host change, never per status computation.
 export const startSteamBridge = F.once((): void => {
-  syncBridgePluginSetup();
-
   appEvents.on('plugin-connection', async (connected) => {
     if (connected) {
       noteBridgeAvailable('plugin');
@@ -548,7 +546,7 @@ export const startSteamBridge = F.once((): void => {
   // Millennium appears, and a failed plugin install or enable gets its retry, around a Steam restart.
   appEvents.on('steam-started', async () => {
     resetCefEndpointCache();
-    syncBridgePluginSetup();
+    await syncBridgePluginSetup();
     const status = await getSteamBridgeStatus();
     if (status.code === 'restart-pending') {
       await verifyBridgeAfterLaunch('observed-start');
@@ -558,9 +556,9 @@ export const startSteamBridge = F.once((): void => {
   appEvents.on('steam-exited', async () => {
     resetCefEndpointCache();
     noteBridgeUnavailable();
-    syncBridgePluginSetup();
+    await syncBridgePluginSetup();
     await refreshSteamBridgeStatus();
   });
 
-  void refreshSteamBridgeStatus();
+  void syncBridgePluginSetup().then(refreshSteamBridgeStatus);
 });

@@ -329,9 +329,9 @@ function failureFor(error: unknown): {
 }
 
 // Runs only from the pending-actions queue with Steam confirmed off.
-export function applyQueuedMillenniumAction(
+export async function applyQueuedMillenniumAction(
   action: QueuedMillenniumAction
-): MillenniumApplyReport {
+): Promise<MillenniumApplyReport> {
   const kind = action.kind === 'millennium-activate' ? 'activate' : 'deactivate';
   const ctx = currentRecord();
   if (!ctx) {
@@ -346,7 +346,7 @@ export function applyQueuedMillenniumAction(
       );
       writeInstallRecord(recordPath, record);
       afterChange();
-      syncBridgePluginSetup();
+      await syncBridgePluginSetup();
       fs.rmSync(stagingDirFor(action.tag), { recursive: true, force: true });
       fs.rmSync(downloadsDir(), { recursive: true, force: true });
       console.log(`[Millennium] Activated ${record.version} (${record.mode})`);
