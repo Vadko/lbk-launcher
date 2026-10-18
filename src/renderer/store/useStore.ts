@@ -236,7 +236,7 @@ export const useStore = create<Store>((set, get) => ({
         }
 
         const newChecking = new Map(state.isCheckingInstallation);
-        newChecking.set(gameId, false);
+        newChecking.delete(gameId);
 
         return {
           installedTranslations: newInstalledTranslations,
@@ -247,7 +247,7 @@ export const useStore = create<Store>((set, get) => ({
       console.error('Error checking installation:', error);
       set((state) => {
         const newChecking = new Map(state.isCheckingInstallation);
-        newChecking.set(gameId, false);
+        newChecking.delete(gameId);
         return { isCheckingInstallation: newChecking };
       });
     }
