@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { extractAchievementStrings, hasOurStrings } from './achievement-strings';
+import { extractAchievementStrings } from './achievement-strings';
 
 const END = Buffer.from([0x08]);
 const cstr = (s: string) => Buffer.concat([Buffer.from(s, 'utf8'), Buffer.from([0])]);
@@ -171,58 +171,5 @@ describe('extractAchievementStrings', () => {
   it('propagates parse errors', () => {
     const buf = schema('1623730', [{ api: 'A', name: { english: 'Кров' } }]);
     expect(() => extractAchievementStrings(buf.subarray(0, 40), FILE)).toThrow();
-  });
-});
-
-describe('hasOurStrings', () => {
-  const english = (n: number): Ach[] =>
-    Array.from({ length: n }, (_, i) => ({
-      api: `E${i}`,
-      name: { english: `Name ${i}` },
-      desc: { english: `Desc ${i}` },
-    }));
-
-  it('is true for an LBK file with Ukrainian in english', () => {
-    const buf = schema('1623730', [
-      {
-        api: 'A',
-        name: { english: 'Авторитет Косогору' },
-        desc: { english: 'Здолайте' },
-      },
-      ...english(2),
-    ]);
-    expect(hasOurStrings(buf)).toBe(true);
-  });
-
-  it('is false for an official file translated under ukrainian/russian keys', () => {
-    const buf = schema('400', [
-      {
-        api: 'A',
-        name: {
-          english: 'Lab Rat',
-          russian: 'Лабораторная крыса',
-          ukrainian: 'Піддослідна',
-        },
-      },
-    ]);
-    expect(hasOurStrings(buf)).toBe(false);
-  });
-
-  it('is false for a stray Cyrillic string among official English ones', () => {
-    const buf = schema('674940', [
-      { api: 'A', name: { english: 'мигающий кинжал' } },
-      ...english(10),
-    ]);
-    expect(hasOurStrings(buf)).toBe(false);
-  });
-
-  it('is false for homoglyph-only Cyrillic', () => {
-    const buf = schema('43160', [{ api: 'A', name: { english: 'Сomplete' } }]);
-    expect(hasOurStrings(buf)).toBe(false);
-  });
-
-  it('is false for unparseable data', () => {
-    expect(hasOurStrings(Buffer.from([0x00, 0x41]))).toBe(false);
-    expect(hasOurStrings(Buffer.from('not a schema'))).toBe(false);
   });
 });

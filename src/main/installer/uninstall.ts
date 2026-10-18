@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import type { Game } from '../../shared/types';
-import { removeInstalledAchievements, syncAchievementsToPlugin } from '../achievements';
+import { syncAchievementsToPlugin } from '../achievements';
+import { removeInstalledAchievements } from '../achievements/install';
 import { removeSteamArtwork } from '../utils/steam-artwork';
 import {
   BACKUP_DIR_NAME,

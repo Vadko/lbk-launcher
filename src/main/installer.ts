@@ -8,18 +8,19 @@ import type {
   AchievementsComponent,
   DownloadProgress,
   Game,
+  GamePath,
   InstallationInfo,
   InstallationStatus,
   InstallOptions,
   RunInstallerDecision,
   RunInstallerRequest,
 } from '../shared/types';
+import { syncAchievementsToPlugin } from './achievements';
 import {
   commitAchievementStrings,
-  hasAchievementStrings,
-  readAchievementStringsFromDir,
-  syncAchievementsToPlugin,
-} from './achievements';
+  type PreparedAchievements,
+  prepareAchievements,
+} from './achievements/install';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 import { refreshXboxRootsForGame } from './game-detector/xbox';
 import { backupFiles } from './installer/backup';
@@ -42,7 +43,6 @@ import {
 import { findProtons } from './installer/proton';
 import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
-import type { ExtractedAchievementStrings } from './utils/achievement-strings';
 import { resolveGameBuildOs } from './utils/game-build';
 import { isLinux } from './utils/platform';
 
@@ -51,6 +51,36 @@ const mkdir = promisify(fs.mkdir);
 type InstallTranslationResult = Awaited<ReturnType<typeof applySteamIntegration>> & {
   achievementsDelivery?: AchievementsDelivery;
 };
+
+// The shared tail: strings are written only once the install is about to be recorded, so a failed install leaves none behind.
+async function finishInstall(i: {
+  game: Game;
+  gamePath: GamePath;
+  onStatus?: (status: InstallationStatus) => void;
+  existingInfo: InstallationInfo | null;
+  achievements: PreparedAchievements;
+  record: (achievements: AchievementsComponent | null) => InstallationInfo;
+  // Runs between building the record and saving it; throwing there skips the save.
+  beforeSave?: (info: InstallationInfo) => Promise<void>;
+}): Promise<InstallTranslationResult> {
+  const previous = i.existingInfo?.components?.achievements;
+  const component = await commitAchievementStrings({
+    extracted: i.achievements.extracted,
+    gameId: i.game.id,
+    archiveHash: i.achievements.archiveHash,
+    component: i.achievements.component,
+    previous:
+      i.existingInfo && previous
+        ? { gameId: i.existingInfo.gameId, component: previous }
+        : null,
+  });
+  const info = i.record(component);
+  const delivery = component || previous ? await syncAchievementsToPlugin() : undefined;
+  await i.beforeSave?.(info);
+  await saveInstallationInfo(i.gamePath.path, info);
+  const steam = await applySteamIntegration(i.game, i.gamePath, i.onStatus);
+  return { ...steam, achievementsDelivery: component ? delivery : undefined };
+}
 
 /**
  * Main installation function
@@ -300,120 +330,57 @@ export async function installTranslation(
       await copyDirectory(voiceExtractDir, extractDir);
     }
 
-    // 5.3 Achievements (Steam only): strings are parsed out of the schemas and delivered by the Millennium plugin.
+    // 5.3 Achievements (Steam only)
     const existingInfo = readInstallationInfo(gamePath.path);
-    const existingAchievements =
-      existingInfo?.gameId === game.id
-        ? existingInfo.components?.achievements
-        : undefined;
-    const achievementsArchiveHash = game.achievements_archive_hash || null;
-    const wantsAchievements =
-      installAchievements &&
-      !!game.achievements_archive_path &&
-      gamePath.platform === 'steam';
-    const existingAppIds = existingAchievements?.appIds ?? [];
-    const achievementsAlreadyUpToDate =
-      wantsAchievements &&
-      !!achievementsArchiveHash &&
-      existingAchievements?.installed === true &&
-      existingAchievements.archiveHash === achievementsArchiveHash &&
-      existingAchievements.files.length === 0 &&
-      existingAppIds.length > 0 &&
-      hasAchievementStrings(existingAppIds, game.id);
-
-    let extractedAchievements: ExtractedAchievementStrings[] = [];
-    let achievementsComponent: AchievementsComponent | null = null;
-    if (achievementsAlreadyUpToDate) {
-      console.log(
-        '[Installer] Achievement strings already up-to-date, skipping download'
-      );
-      achievementsComponent = {
-        installed: true,
-        files: [],
-        archiveHash: achievementsArchiveHash,
-        appIds: existingAppIds,
-      };
-    } else if (wantsAchievements) {
-      const achievementsExtractDir = path.join(
-        downloadDir,
-        `${game.id}_achievements_extract`
-      );
-      await downloadAndExtractArchive({
+    const achievements = await prepareAchievements({
+      game,
+      platform: gamePath.platform,
+      wanted: installAchievements,
+      existing:
+        existingInfo?.gameId === game.id
+          ? existingInfo.components?.achievements
+          : undefined,
+      downloadDir,
+      isFirstSession,
+      onDownloadProgress,
+      onStatus,
+    });
+    const finish = (
+      record: (achievements: AchievementsComponent | null) => InstallationInfo,
+      beforeSave?: (info: InstallationInfo) => Promise<void>
+    ) =>
+      finishInstall({
         game,
-        type: 'achievements',
-        archivePath: game.achievements_archive_path,
-        archiveHash: game.achievements_archive_hash,
-        downloadDir,
-        extractDir: achievementsExtractDir,
-        isFirstSession,
-        onDownloadProgress,
-        onStatus: (status) =>
-          onStatus?.({ message: `Досягнення: ${status.message}`, phase: status.phase }),
+        gamePath,
+        onStatus,
+        existingInfo,
+        achievements,
+        record,
+        beforeSave,
       });
-      extractedAchievements = await readAchievementStringsFromDir(achievementsExtractDir);
-      if (extractedAchievements.length > 0) {
-        achievementsComponent = {
-          installed: true,
-          files: [],
-          ...(achievementsArchiveHash ? { archiveHash: achievementsArchiveHash } : {}),
-          appIds: extractedAchievements.map(({ appId }) => appId),
-        };
-      } else {
-        // Catalog data bug: the rest of the install goes on without achievements.
-        console.error(
-          `[Installer] Achievements archive of ${game.id} has no Ukrainian strings`
-        );
-      }
-    }
-
-    // Written only once the install is about to be recorded, so a failed install leaves no strings behind.
-    const commitAchievements = async (): Promise<void> => {
-      const previous = existingInfo?.components?.achievements;
-      achievementsComponent = await commitAchievementStrings({
-        extracted: extractedAchievements,
-        gameId: game.id,
-        archiveHash: achievementsArchiveHash,
-        component: achievementsComponent,
-        previous:
-          existingInfo && previous
-            ? { gameId: existingInfo.gameId, component: previous }
-            : null,
-      });
-    };
-    const deliverAchievements = async (): Promise<AchievementsDelivery | undefined> => {
-      if (!achievementsComponent && !existingInfo?.components?.achievements) {
-        return undefined;
-      }
-      const delivery = await syncAchievementsToPlugin();
-      return achievementsComponent ? delivery : undefined;
-    };
 
     // 6. Check for executable installer
     if (installerFileName && isExecutableInstaller(installerFileName) && !installText) {
       // Achievements only: the shipped installer already ran and nothing was extracted to copy.
       await cleanupDownloadDir(downloadDir);
-      await commitAchievements();
-      const base: InstallationInfo =
-        existingInfo?.gameId === game.id
-          ? existingInfo
-          : {
-              gameId: game.id,
-              version: game.version || '1.0.0',
-              installedAt: new Date().toISOString(),
-              gamePath: gamePath.path,
-              hasBackup: false,
-              isCustomPath: !!customGamePath,
-              installedFiles: [],
-              installedPlatform: gamePath.platform,
-              components: { text: { installed: false, files: [] } },
-            };
-      await saveInstallationInfo(
-        gamePath.path,
-        withAchievementsComponent(base, achievementsComponent)
+      return await finish((component) =>
+        withAchievementsComponent(
+          existingInfo?.gameId === game.id
+            ? existingInfo
+            : {
+                gameId: game.id,
+                version: game.version || '1.0.0',
+                installedAt: new Date().toISOString(),
+                gamePath: gamePath.path,
+                hasBackup: false,
+                isCustomPath: !!customGamePath,
+                installedFiles: [],
+                installedPlatform: gamePath.platform,
+                components: { text: { installed: false, files: [] } },
+              },
+          component
+        )
       );
-      const achievementsDelivery = await deliverAchievements();
-      const steam = await applySteamIntegration(game, gamePath, onStatus);
-      return { ...steam, achievementsDelivery };
     }
 
     if (installerFileName && isExecutableInstaller(installerFileName)) {
@@ -446,55 +413,50 @@ export async function installTranslation(
           })
         : { run: true };
 
-      await commitAchievements();
-      const installationInfo: InstallationInfo = {
-        gameId: game.id,
-        version: game.version || '1.0.0',
-        installedAt: new Date().toISOString(),
-        gamePath: gamePath.path,
-        hasBackup: false,
-        isCustomPath: !!customGamePath,
-        protonPath: decision.protonPath,
-        installerPath,
-        installedFiles: [],
-        installedPlatform: gamePath.platform,
-        components: {
-          text: { installed: true, files: [] },
-          ...(achievementsComponent ? { achievements: achievementsComponent } : {}),
-        },
-      };
-      const achievementsDelivery = await deliverAchievements();
-
-      if (!decision.run) {
-        console.log('[Installer] User declined to run installer:', installerPath);
-        await saveInstallationInfo(gamePath.path, {
-          ...installationInfo,
-          hasInstallError: true,
-        });
-        throw new Error(
-          `Встановлення скасовано: запуск ${installerLabel}а було відхилено.\n\nФайли розпаковано в папку гри — ви можете запустити ${installerLabel} пізніше кнопкою «Перевстановити».`
-        );
-      }
-
-      try {
-        await runInstaller(
-          fullTargetPath,
-          installerFileName,
-          onStatus,
-          decision.protonPath
-        );
-
-        await saveInstallationInfo(gamePath.path, installationInfo);
-      } catch (error) {
-        await saveInstallationInfo(gamePath.path, {
-          ...installationInfo,
-          hasInstallError: true,
-        });
-        throw error;
-      }
-
-      const steam = await applySteamIntegration(game, gamePath, onStatus);
-      return { ...steam, achievementsDelivery };
+      return await finish(
+        (component) => ({
+          gameId: game.id,
+          version: game.version || '1.0.0',
+          installedAt: new Date().toISOString(),
+          gamePath: gamePath.path,
+          hasBackup: false,
+          isCustomPath: !!customGamePath,
+          protonPath: decision.protonPath,
+          installerPath,
+          installedFiles: [],
+          installedPlatform: gamePath.platform,
+          components: {
+            text: { installed: true, files: [] },
+            ...(component ? { achievements: component } : {}),
+          },
+        }),
+        async (installationInfo) => {
+          if (!decision.run) {
+            console.log('[Installer] User declined to run installer:', installerPath);
+            await saveInstallationInfo(gamePath.path, {
+              ...installationInfo,
+              hasInstallError: true,
+            });
+            throw new Error(
+              `Встановлення скасовано: запуск ${installerLabel}а було відхилено.\n\nФайли розпаковано в папку гри — ви можете запустити ${installerLabel} пізніше кнопкою «Перевстановити».`
+            );
+          }
+          try {
+            await runInstaller(
+              fullTargetPath,
+              installerFileName,
+              onStatus,
+              decision.protonPath
+            );
+          } catch (error) {
+            await saveInstallationInfo(gamePath.path, {
+              ...installationInfo,
+              hasInstallError: true,
+            });
+            throw error;
+          }
+        }
+      );
     }
 
     // 7. Copy files to game directory
@@ -573,8 +535,7 @@ export async function installTranslation(
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
-    await commitAchievements();
-    const installationInfo: InstallationInfo = {
+    const result = await finish((component) => ({
       gameId: game.id,
       version: game.version || '1.0.0',
       installedAt: new Date().toISOString(),
@@ -591,17 +552,11 @@ export async function installTranslation(
         ...(installVoice && voiceFiles.length > 0
           ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
           : {}),
-        ...(achievementsComponent ? { achievements: achievementsComponent } : {}),
+        ...(component ? { achievements: component } : {}),
       },
-    };
-    await saveInstallationInfo(gamePath.path, installationInfo);
-    const achievementsDelivery = await deliverAchievements();
-
-    // 10. Steam-only tail: launch options + Ukrainian library artwork
-    const steam = await applySteamIntegration(game, gamePath, onStatus);
-
+    }));
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
-    return { ...steam, achievementsDelivery };
+    return result;
   } catch (error) {
     // Handle pause specially - throw PausedSignal for IPC handler
     if (error instanceof Error && error.message === 'PAUSED') {

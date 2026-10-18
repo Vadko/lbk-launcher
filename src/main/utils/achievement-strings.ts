@@ -16,7 +16,6 @@ export interface ExtractedAchievementStrings {
 const CYRILLIC_WORD = /[\u0400-\u04FF]{2,}/;
 const SCHEMA_FILE_NAME = /UserGameStatsSchema_(\d+)\.bin$/i;
 const MAX_STRING_BYTES = 1024;
-const OUR_STRINGS_MIN_SHARE = 0.25;
 
 const kvString = z.string().optional().catch(undefined);
 
@@ -138,33 +137,4 @@ export function extractAchievementStrings(
   }
 
   return { appId, strings };
-}
-
-// LBK puts Ukrainian into `english` for most achievements; a stray Cyrillic string in an official file must not count.
-export function hasOurStrings(buf: Buffer): boolean {
-  let root: KvObject;
-  try {
-    root = parseBinaryKv(buf);
-  } catch {
-    return false;
-  }
-  const found = findAppRoot(root);
-  if (!found) {
-    return false;
-  }
-  let english = 0;
-  let cyrillic = 0;
-  for (const { display } of schemaAchievements(found.app)) {
-    for (const field of [display.name, display.desc]) {
-      const value = field?.english?.trim();
-      if (!value) {
-        continue;
-      }
-      english++;
-      if (CYRILLIC_WORD.test(value)) {
-        cyrillic++;
-      }
-    }
-  }
-  return cyrillic > 0 && cyrillic >= english * OUR_STRINGS_MIN_SHARE;
 }

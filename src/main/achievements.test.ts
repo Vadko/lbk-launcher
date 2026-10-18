@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AchievementsComponent } from '@/shared/types';
 
 const state = vi.hoisted(() => ({
   root: '',
@@ -18,20 +19,11 @@ vi.mock('electron', () => ({
 vi.mock('@/main/game-detector/steam', () => ({
   getSteamPath: () => path.join(state.root, 'Steam'),
 }));
-vi.mock('@/main/db/games-repository', () => ({
-  GamesRepository: { getInstance: () => ({ getGameById: () => null }) },
+vi.mock('@/main/installer/download-and-extract', () => ({
+  downloadAndExtractArchive: vi.fn(),
 }));
-vi.mock('@/main/installer/archive', () => ({ extractArchive: vi.fn() }));
-vi.mock('@/main/installer/cache', () => ({
-  findInstallationInfoFile: (gamePath: string) =>
-    path.join(gamePath, '.lbk-translation.json'),
-  getAllInstalledGameIds: async () => {
-    const dir = path.join(state.root, 'userData', 'installation-cache');
-    return fs.existsSync(dir) ? fs.readdirSync(dir).map((name) => name.slice(0, -5)) : [];
-  },
-}));
-vi.mock('@/main/installer/download', () => ({ downloadFile: vi.fn() }));
-vi.mock('@/main/tracking', () => ({ getSignedDownloadUrl: vi.fn() }));
+vi.mock('@/main/game-detector', () => ({ getFirstAvailableGamePath: vi.fn() }));
+vi.mock('@/main/db/games-repository', () => ({ GamesRepository: {} }));
 vi.mock('@/main/plugin-host/state', async () => {
   const { computeAchievementsBadge } = await import('@/main/plugin-host/support');
   return {
@@ -65,20 +57,21 @@ vi.mock('@/main/steam-bridge-server/bridge-server', () => ({
   isPluginConnected: () => state.pluginConnected,
 }));
 vi.mock('@/main/utils/store-storage', () => ({
+  getWorkshopInstalledGameIds: () => [],
   isCefDebuggingEnabledInSettings: () => state.settingOn,
-  readStoreValue: () => undefined,
-  writeStoreValue: () => undefined,
 }));
 
+import { startAchievements, syncAchievementsToPlugin } from './achievements';
 import {
   commitAchievementStrings,
-  hasAchievementStrings,
+  isAchievementsComponentCurrent,
   readAchievementStringsFromDir,
   removeInstalledAchievements,
+} from './achievements/install';
+import {
+  hasAchievementStrings,
   saveAchievementStrings,
-  startAchievements,
-  syncAchievementsToPlugin,
-} from './achievements';
+} from './achievements/strings-store';
 import { appEvents } from './app-events';
 
 const END = Buffer.from([0x08]);
@@ -156,6 +149,28 @@ describe('achievement strings store', () => {
     expect(hasAchievementStrings([400], 'game-a')).toBe(true);
     expect(hasAchievementStrings([400], 'game-b')).toBe(false);
     expect(hasAchievementStrings([400, 401], 'game-a')).toBe(false);
+    expect(hasAchievementStrings([], 'game-a')).toBe(false);
+  });
+
+  it('skips a re-install only for the same archive whose strings the game owns', () => {
+    saveAchievementStrings(
+      [{ appId: 400, strings: { A: { name: 'Кекс' } } }],
+      'game-a',
+      'h'
+    );
+    const current = { installed: true, files: [], archiveHash: 'h', appIds: [400] };
+    expect(isAchievementsComponentCurrent(current, 'game-a', 'h')).toBe(true);
+    const stale: [AchievementsComponent | undefined, string, string | null][] = [
+      [current, 'game-a', 'h2'],
+      [current, 'game-a', null],
+      [current, 'game-b', 'h'],
+      [{ ...current, appIds: [] }, 'game-a', 'h'],
+      [{ ...current, files: ['UserGameStatsSchema_400.bin'] }, 'game-a', 'h'],
+      [undefined, 'game-a', 'h'],
+    ];
+    for (const [component, gameId, hash] of stale) {
+      expect(isAchievementsComponentCurrent(component, gameId, hash)).toBe(false);
+    }
   });
 
   it('leaves strings owned by another translation of the same app', async () => {
@@ -195,21 +210,6 @@ describe('legacy appcache cleanup', () => {
     fs.writeFileSync(statsFile(file), OURS());
     await removeInstalledAchievements('game-a', { files: [file] });
     expect(fs.existsSync(statsFile(file))).toBe(false);
-  });
-
-  it('never deletes a schema Steam already replaced', async () => {
-    fs.writeFileSync(statsFile(file), OFFICIAL());
-    await removeInstalledAchievements('game-a', { files: [file] });
-    expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
-  });
-
-  it('drops a stale backup when Steam already replaced the schema', async () => {
-    const newer = schema(400, 'The Cake v2', 'Get the cake');
-    fs.writeFileSync(statsFile(file), newer);
-    fs.writeFileSync(statsFile(`${file}_backup`), OFFICIAL());
-    await removeInstalledAchievements('game-a', { files: [file] });
-    expect(fs.readFileSync(statsFile(file))).toEqual(newer);
-    expect(fs.existsSync(statsFile(`${file}_backup`))).toBe(false);
   });
 
   it('removes the strings of the app named by a legacy file', async () => {
@@ -264,7 +264,7 @@ describe('syncAchievementsToPlugin', () => {
 });
 
 describe('startup', () => {
-  it('migrates legacy files, drops orphan strings and follows record removals', async () => {
+  it('drops legacy files, marks them not installed and prunes orphan strings', async () => {
     const file = 'UserGameStatsSchema_400.bin';
     fs.writeFileSync(statsFile(file), OURS());
     fs.writeFileSync(statsFile(`${file}_backup`), OFFICIAL());
@@ -291,36 +291,37 @@ describe('startup', () => {
       'gone-game',
       'h2'
     );
+    saveAchievementStrings(
+      [{ appId: 700, strings: { ACH: { name: 'Своє' } } }],
+      'game-a',
+      'h3'
+    );
 
     startAchievements();
 
-    const readAch = (p: string) =>
-      JSON.parse(fs.readFileSync(p, 'utf8')).components.achievements;
-    await vi.waitFor(() => {
-      expect(readAch(path.join(cacheDir, 'game-a.json'))).toEqual({
-        installed: true,
-        files: [],
-        archiveHash: 'h',
-        appIds: [400],
-      });
-    });
-    expect(readAch(path.join(gamePath, '.lbk-translation.json')).files).toEqual([]);
-    for (const copy of [
+    const copies = [
       path.join(cacheDir, 'game-a.json'),
       path.join(gamePath, '.lbk-translation.json'),
-    ]) {
-      expect(JSON.parse(fs.readFileSync(copy, 'utf8'))).toMatchObject({
-        version: '1.0.0',
-        installedPlatform: 'steam',
-        components: { text: { installed: true, files: ['a.txt'] } },
-      });
-    }
+    ];
+    await vi.waitFor(() => {
+      for (const copy of copies) {
+        expect(JSON.parse(fs.readFileSync(copy, 'utf8'))).toMatchObject({
+          version: '1.0.0',
+          installedPlatform: 'steam',
+          components: {
+            text: { installed: true, files: ['a.txt'] },
+            achievements: { installed: false, files: [] },
+          },
+        });
+      }
+    });
     expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
-    expect(hasAchievementStrings([400], 'game-a')).toBe(true);
+    expect(fs.existsSync(statsFile(`${file}_backup`))).toBe(false);
     await vi.waitFor(() => expect(fs.existsSync(stringsFile(500))).toBe(false));
+    expect(fs.existsSync(stringsFile(700))).toBe(true);
 
     appEvents.emit('install-record-removed', 'game-a');
-    expect(fs.existsSync(stringsFile(400))).toBe(false);
+    expect(fs.existsSync(stringsFile(700))).toBe(false);
   });
 });
 
