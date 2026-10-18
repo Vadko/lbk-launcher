@@ -221,6 +221,16 @@ async function cleanupPartialFile(partialPath: string): Promise<void> {
  * Download file from URL with progress tracking and retry logic
  * Uses .part files for partial downloads to support pause/resume
  */
+// Signed download URLs carry an access token in the query, and logs can be sent with feedback.
+function withoutQuery(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return '[invalid url]';
+  }
+}
+
 export async function downloadFile(
   url: string,
   outputPath: string,
@@ -371,7 +381,7 @@ async function downloadFileAttempt(
   expectedTotalBytes = 0
 ): Promise<void> {
   console.log(
-    `[Downloader] Starting download: ${url}${startByte > 0 ? ` (resuming from byte ${startByte})` : ''}`
+    `[Downloader] Starting download: ${withoutQuery(url)}${startByte > 0 ? ` (resuming from byte ${startByte})` : ''}`
   );
 
   // Open file in append mode if resuming, otherwise overwrite
