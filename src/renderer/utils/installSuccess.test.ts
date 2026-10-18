@@ -95,5 +95,11 @@ describe('installSuccessActions', () => {
     expect(site.keepOpen).toBe(true);
     site.onClick();
     expect(open).toHaveBeenCalledWith('millennium-site');
+
+    const [, install] = installSuccessActions(input({ delivery: 'needs-millennium' }), {
+      restart: vi.fn(),
+      open,
+    });
+    expect(install.keepOpen).toBe(false);
   });
 });

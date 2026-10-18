@@ -240,6 +240,20 @@ describe('detectMillennium', () => {
     );
   });
 
+  it('detects the macOS tier0 install inside the Steam bundle', () => {
+    fakePlatform.value = 'macos';
+    fakeSteamPath.value = '/Users/a/Library/Application Support/Steam';
+    existing.add(
+      path.join(
+        fakeSteamPath.value,
+        'Steam.AppBundle/Steam/Contents/MacOS/libtier0_s.real.dylib'
+      )
+    );
+    const info = detectMillennium();
+    expect(info.generation).toBe('v3');
+    expect(info.pluginsDir).toBeNull();
+  });
+
   it('reports Linux v3 as blocking TCP CDP', () => {
     fakePlatform.value = 'linux';
     fakeSteamPath.value = '/home/deck/.local/share/Steam';

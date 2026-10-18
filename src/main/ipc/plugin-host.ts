@@ -28,15 +28,17 @@ function isRestartMode(value: unknown): value is 'now' | 'on-exit' {
 
 function handleOr<T, A = undefined>(
   channel: string,
-  run: (arg: A) => Promise<T>,
+  run: (arg: A) => T | Promise<T>,
   fallback: (error: unknown) => T
 ): void {
-  ipcMain.handle(channel, (_event, arg: A) =>
-    run(arg).catch((error: unknown) => {
+  ipcMain.handle(channel, async (_event, arg: A) => {
+    try {
+      return await run(arg);
+    } catch (error) {
       console.error(`[PluginHost] ${channel} failed:`, error);
       return fallback(error);
-    })
-  );
+    }
+  });
 }
 
 const crashed = (error: unknown): MillenniumInstallResult => ({
@@ -45,14 +47,18 @@ const crashed = (error: unknown): MillenniumInstallResult => ({
   error: errorMessage(error),
 });
 
-export function setupPluginHostHandlers(): void {
-  handleOr('plugin-host:get-state', getPluginHostState, () => null);
+const orNull = () => null;
 
-  handleOr('millennium:prepare', prepareMillennium, crashed);
+export function setupPluginHostHandlers(): void {
+  handleOr('plugin-host:get-state', () => getPluginHostState(), orNull);
+
+  handleOr('millennium:prepare', () => prepareMillennium(), crashed);
 
   handleOr(
     'millennium:activate',
-    async (opts: { restart?: unknown } | undefined): Promise<MillenniumInstallResult> => {
+    (
+      opts: { restart?: unknown } | undefined
+    ): MillenniumInstallResult | Promise<MillenniumInstallResult> => {
       const restart = opts?.restart;
       if (!isRestartMode(restart)) {
         return { success: false, reason: 'not-prepared', error: 'bad args' };
@@ -64,9 +70,9 @@ export function setupPluginHostHandlers(): void {
 
   handleOr(
     'millennium:uninstall',
-    async (
+    (
       opts: { purge?: unknown; restart?: unknown } | undefined
-    ): Promise<MillenniumInstallResult> => {
+    ): MillenniumInstallResult | Promise<MillenniumInstallResult> => {
       const restart = opts?.restart;
       if (typeof opts?.purge !== 'boolean' || !isRestartMode(restart)) {
         return { success: false, reason: 'unsupported', error: 'bad args' };
@@ -80,7 +86,7 @@ export function setupPluginHostHandlers(): void {
 
   handleOr(
     'decky:request-plugin-install',
-    requestDeckyPluginInstall,
+    () => requestDeckyPluginInstall(),
     (error): DeckyInstallResult => ({
       success: false,
       reason: 'failed',
@@ -90,7 +96,7 @@ export function setupPluginHostHandlers(): void {
 
   handleOr(
     'decky:install-loader',
-    installDeckyLoader,
+    () => installDeckyLoader(),
     (error): DeckyLoaderInstallResult => ({
       success: false,
       reason: 'not-installed',
@@ -109,9 +115,9 @@ export function setupPluginHostHandlers(): void {
     })
   );
 
-  handleOr('get-steam-bridge-status', getSteamBridgeStatus, () => null);
+  handleOr('get-steam-bridge-status', () => getSteamBridgeStatus(), orNull);
 
-  handleOr('recheck-steam-bridge', recheckSteamBridge, () => null);
+  handleOr('recheck-steam-bridge', () => recheckSteamBridge(), orNull);
 
   ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
     setCefDebuggingEnabled(enabled)

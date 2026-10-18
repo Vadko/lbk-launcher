@@ -102,6 +102,9 @@ describe('millenniumInstallMachine', () => {
     await flush();
     expect(state(h).context.restartChoice.canRestart).toBe(false);
     expect(state(h).context.restartChoice.note).toContain('від імені адміністратора');
+
+    h.actor.send({ type: 'ACTIVATE', restart: 'now' });
+    expect(state(h).context.work.text).toBe('Закриття Steam…');
   });
 
   it('gives up after Steam is gone on two polls in a row', async () => {
@@ -178,6 +181,15 @@ describe('millenniumInstallMachine', () => {
     h.actor.send({ type: 'RESTART_STEAM' });
     await flush();
     expect(state(h).context.result).toMatchObject({ actions: 'steam-not-back' });
+
+    h.restartSteam.mockResolvedValueOnce({ success: false, reason: 'game-running' });
+    h.actor.send({ type: 'RESTART_STEAM' });
+    await flush();
+    expect(state(h).context.result).toEqual({
+      kind: 'error',
+      message: 'Закрийте гру, щоб перезапустити Steam.',
+      actions: 'none',
+    });
 
     h.statuses.push(steamBridgeStatus({ code: 'ok', connected: true }));
     h.actor.send({ type: 'RESTART_STEAM' });

@@ -115,7 +115,9 @@ describe('validators', () => {
   it.each([
     ['setLaunchOptions', 'invalid appId', { appId: 10.5, value: '' }],
     ['clearArtwork', 'invalid appId', { appId: 0, assetType: 1 }],
+    ['clearArtwork', 'invalid appId', { appId: 2 ** 32, assetType: 1 }],
     ['workshopSubscribe', 'invalid id', { appId: 10, itemId: '12a', subscribe: true }],
+    ['workshopSubscribe', 'invalid id', { appId: 10, itemId: 12, subscribe: true }],
     [
       'workshopDownloaded',
       'invalid id',
@@ -129,10 +131,13 @@ describe('validators', () => {
     ],
     ['setLaunchOptions', 'invalid text', { appId: 10, value: 'x'.repeat(32769) }],
     ['setArtwork', 'invalid base64', { ...artwork, base64: 'abc"def' }],
+    ['setArtwork', 'invalid base64', { ...artwork, base64: '' }],
     ['setArtwork', 'invalid ext', { ...artwork, ext: 'gif' }],
     ['setArtwork', 'invalid int', { ...artwork, assetType: 5 }],
+    ['clearArtwork', 'invalid int', { appId: 10, assetType: 5 }],
     ['updateShortcut', 'invalid shortcut appId', shortcut],
     ['setLaunchOptions', 'invalid args', null],
+    ['syncCollection', 'invalid appId', { appIds: [1.5], recordedId: null }],
     ['syncCollection', 'invalid appIds', { appIds: 'x', recordedId: null }],
   ])('%s fails with "%s" without touching Steam (#%#)', async (op, error, args) => {
     await expect(ops[op](args)).rejects.toThrow(`lbk-ops: ${error}`);
