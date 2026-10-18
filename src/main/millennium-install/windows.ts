@@ -4,7 +4,15 @@ import { LRUCache } from 'lru-cache';
 import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
 import { coerce } from 'semver';
 import { copyFileAtomic } from '@/main/utils/atomic-write';
-import { isSameFile } from '@/main/utils/fs-safe';
+import { isSameFile, missingFiles } from '@/main/utils/fs-safe';
+import {
+  ApplyRefusal,
+  ensureInitialConfig,
+  type MillenniumOsDriver,
+  STAGING_READY_MARKER,
+} from './driver';
+import type { MillenniumInstallRecord } from './record';
+import { MILLENNIUM_PIN } from './release';
 
 const WINDOWS_LOADER = 'wsock32.dll';
 export const WINDOWS_EXPECTED_FILES = [
@@ -67,14 +75,14 @@ export function planWindowsRemoval(i: {
   return steps;
 }
 
-export function windowsLoaderState(steamPath: string): 'ok' | 'conflict' {
+function windowsLoaderState(steamPath: string): 'ok' | 'conflict' {
   return classifyWindowsLoader({
     loader: fs.existsSync(path.join(steamPath, WINDOWS_LOADER)),
     millenniumLib: fs.existsSync(path.join(steamPath, MILLENNIUM_LIB)),
   });
 }
 
-export function probeSteamRootWritable(steamPath: string): boolean {
+function probeSteamRootWritable(steamPath: string): boolean {
   const probe = path.join(steamPath, '.lbk-write-probe');
   try {
     fs.writeFileSync(probe, '');
@@ -170,3 +178,64 @@ export function readMillenniumDllVersion(steamPath: string): string | null {
   const key = `${file}:${stat.size}:${stat.mtimeMs}`;
   return dllVersions.memo(key, { context: file }).version;
 }
+
+function missingInstallFiles(root: string): string | null {
+  const missing = missingFiles(root, WINDOWS_EXPECTED_FILES);
+  return missing.length > 0 ? missing.join(', ') : null;
+}
+
+export const windowsDriver: MillenniumOsDriver = {
+  offersUpdates: false,
+  retriesLockedFiles: true,
+  installedVersion: ({ steamPath, record }) =>
+    readMillenniumDllVersion(steamPath) ?? record.version,
+  needsRepair: ({ steamPath }) => missingInstallFiles(steamPath) !== null,
+  // Our own record means a loader without its library is a damaged install, not another mod.
+  conflict: ({ steamPath, record }) =>
+    !record && windowsLoaderState(steamPath) === 'conflict' ? WINDOWS_LOADER : null,
+  preflight: ({ steamPath }) =>
+    probeSteamRootWritable(steamPath) ? null : 'not-writable',
+  checkStaged: (_target, staged) => {
+    const missing = missingInstallFiles(staged.dir);
+    return Promise.resolve(missing ? { reason: 'av-blocked', error: missing } : null);
+  },
+  activate: (target, { staging, base, commit }) => {
+    const release = MILLENNIUM_PIN.windows;
+    if (!release) {
+      throw new ApplyRefusal('unsupported', 'no Windows pin');
+    }
+    if (windowsDriver.conflict(target)) {
+      throw new ApplyRefusal('conflict', `foreign ${WINDOWS_LOADER}`);
+    }
+    const record: MillenniumInstallRecord = {
+      ...base,
+      os: 'windows',
+      mode: 'windows',
+      version: release.version,
+    };
+    applyWindowsActivation(staging, target.steamPath, {
+      skip: new Set([STAGING_READY_MARKER]),
+      beforeLoader: () => commit(record),
+    });
+    ensureInitialConfig(target.paths.configPath, false);
+    return record;
+  },
+  remove: ({ steamPath }, purge) =>
+    applyWindowsRemoval(steamPath, purge, 'millennium/plugins/lbk-bridge'),
+  // Defender may quarantine the DLLs on their first load.
+  verifyActivated: ({ steamPath }, bridge) => {
+    const missing = missingInstallFiles(steamPath);
+    return Promise.resolve(
+      missing
+        ? {
+            success: false,
+            reason: 'av-blocked',
+            bridge,
+            diagnostics: { filesPresent: false },
+            error: missing,
+          }
+        : { success: true, bridge }
+    );
+  },
+  startupMaintenance: () => false,
+};

@@ -13,6 +13,8 @@ import {
   WINDOWS_EXPECTED_FILES,
 } from './windows';
 
+vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
+
 describe('planWindowsActivation', () => {
   it('copies the wsock32.dll loader last', () => {
     const order = planWindowsActivation([...WINDOWS_EXPECTED_FILES]);

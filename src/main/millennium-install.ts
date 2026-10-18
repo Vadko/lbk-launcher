@@ -1,7 +1,4 @@
-import { execFile } from 'node:child_process';
-import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { promisify } from 'node:util';
 import { appEvents } from '@/main/app-events';
 import {
   downloadsDir,
@@ -12,36 +9,14 @@ import {
   stagingRoot,
 } from '@/main/millennium-install/apply';
 import { extractMillenniumArchive } from '@/main/millennium-install/extract';
-import {
-  isTakenOver,
-  LINUX_RUNTIME_FILES,
-  LINUX_STAGED_SUBDIR,
-  linksIntact,
-  linuxSteamDiagnostics,
-  materializeLinuxRuntime,
-  planLinuxLinks,
-  pruneRuntimeVersions,
-  readLinkEntry,
-  versionDirComplete,
-} from '@/main/millennium-install/linux';
-import {
-  findMacBundleRoot,
-  macWrapperIntact,
-  verifyMacBundle,
-} from '@/main/millennium-install/macos';
 import { deleteInstallRecord, recordPathIn } from '@/main/millennium-install/record';
 import { MILLENNIUM_PIN, pinnedTagFor } from '@/main/millennium-install/release';
-import {
-  probeSteamRootWritable,
-  readMillenniumDllVersion,
-  WINDOWS_EXPECTED_FILES,
-  windowsLoaderState,
-} from '@/main/millennium-install/windows';
 import {
   deckyLoaderStateFor,
   deckyStateFor,
   getHostSnapshot,
   type HostSnapshot,
+  hostTarget,
   pendingMillenniumAction,
   resetHostFacts,
 } from '@/main/plugin-host/state';
@@ -52,7 +27,7 @@ import {
 } from '@/main/steam-pending-actions/queue';
 import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
-import { missingFiles, pruneDir, realpathOrNull } from '@/main/utils/fs-safe';
+import { pruneDir } from '@/main/utils/fs-safe';
 import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
 import { isGamescopeSession } from '@/main/utils/platform';
@@ -65,8 +40,6 @@ import type {
   PluginHostState,
 } from '@/shared/plugin-host-types';
 
-const execFileAsync = promisify(execFile);
-
 let busy = false;
 let prepared: { tag: string } | null = null;
 let abort: AbortController | null = null;
@@ -75,53 +48,28 @@ function progress(p: MillenniumProgress): void {
   sendToRenderer('millennium:progress', p);
 }
 
-function needsRepair(snapshot: HostSnapshot): boolean {
-  const { record, paths, facts } = snapshot;
-  if (!record || !paths || !facts.steamPath) {
-    return false;
-  }
-  if (record.os === 'windows') {
-    return missingFiles(facts.steamPath, WINDOWS_EXPECTED_FILES).length > 0;
-  }
-  if (record.os === 'linux' && paths.linux) {
-    return (
-      !linksIntact(paths.linux.steamHome, paths.linux.current) ||
-      !versionDirComplete(paths.linux.current)
-    );
-  }
-  if (record.os === 'macos' && paths.macos) {
-    return !macWrapperIntact(
-      record.appBundle ?? paths.macos.appBundle,
-      paths.macos.current
-    );
-  }
-  return false;
-}
-
 export async function getPluginHostState(): Promise<PluginHostState> {
   const snapshot = await getHostSnapshot();
   const steamRunning = (await findSteamPids()).length > 0;
   const elevated = steamRunning ? await isSteamElevated() : false;
   const { record, release, facts } = snapshot;
+  const host = hostTarget(snapshot);
 
   let installed: PluginHostState['millennium']['installed'] = null;
-  if (record) {
+  if (host && record) {
+    const target = { ...host.target, record };
     installed = {
       managedBy: 'lbk',
-      version:
-        record.os === 'windows' && facts.steamPath
-          ? (readMillenniumDllVersion(facts.steamPath) ?? record.version)
-          : record.version,
+      version: host.driver.installedVersion(target),
       mode: record.mode,
-      needsRepair: needsRepair(snapshot),
+      needsRepair: host.driver.needsRepair(target),
     };
   } else if (facts.millenniumGeneration !== null || facts.linux?.systemMillennium) {
     installed = { managedBy: 'external', version: null, mode: null, needsRepair: false };
   }
 
-  // Windows Millennium updates itself; elsewhere LBK offers the newer pin.
   const update =
-    record && record.os !== 'windows' && release && record.tag !== release.tag
+    record && host?.driver.offersUpdates && release && record.tag !== release.tag
       ? { version: release.version }
       : null;
 
@@ -165,32 +113,9 @@ function fail(
   return { success: false, reason, error };
 }
 
-async function stripQuarantine(dir: string): Promise<void> {
-  try {
-    await execFileAsync('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', dir], {
-      timeout: 30000,
-    });
-  } catch {
-    // xattr exits non-zero when nothing carried the attribute.
-  }
-}
-
 function checkConflict(snapshot: HostSnapshot): string | null {
-  const { facts, paths } = snapshot;
-  // Our own record means a loader without its library is a damaged install, not another mod.
-  if (snapshot.os === 'windows' && facts.steamPath) {
-    return !snapshot.record && windowsLoaderState(facts.steamPath) === 'conflict'
-      ? 'wsock32.dll'
-      : null;
-  }
-  if (snapshot.os === 'linux' && paths?.linux) {
-    const linux = paths.linux;
-    const plan = planLinuxLinks(linux.steamHome, linux.current, (rel) =>
-      readLinkEntry(path.posix.join(linux.steamHome, rel))
-    );
-    return plan.ok ? null : plan.conflict;
-  }
-  return null;
+  const host = hostTarget(snapshot);
+  return host ? host.driver.conflict(host.target) : null;
 }
 
 async function stageRelease(
@@ -219,30 +144,16 @@ async function stageRelease(
     return fail('extract-failed', errorMessage(error));
   }
 
-  if (snapshot.os === 'windows') {
-    const missing = missingFiles(staging, WINDOWS_EXPECTED_FILES);
-    if (missing.length > 0) {
-      return fail('av-blocked', missing.join(', '));
-    }
-  } else if (snapshot.os === 'linux' && snapshot.paths?.linux) {
-    const missing = missingFiles(
-      staging,
-      LINUX_RUNTIME_FILES.map((file) => `${LINUX_STAGED_SUBDIR}/${file}`)
-    );
-    if (missing.length > 0) {
-      return fail('av-blocked', missing.join(', '));
-    }
-    materializeLinuxRuntime(staging, snapshot.paths.linux.runtimeRoot, release.version);
-  } else if (snapshot.os === 'macos') {
-    const bundleRoot = findMacBundleRoot(staging);
-    if (!bundleRoot || !snapshot.hwArch) {
-      return fail('extract-failed', 'release bundle not found');
-    }
-    const verified = verifyMacBundle(bundleRoot, snapshot.hwArch);
-    if (!verified.ok) {
-      return fail('checksum-mismatch', verified.error);
-    }
-    await stripQuarantine(staging);
+  const host = hostTarget(snapshot);
+  const staged = host
+    ? await host.driver.checkStaged(host.target, {
+        dir: staging,
+        version: release.version,
+        hwArch: snapshot.hwArch,
+      })
+    : null;
+  if (staged) {
+    return fail(staged.reason, staged.error);
   }
   markStagingReady(release.tag);
   return null;
@@ -275,12 +186,10 @@ export async function prepareMillennium(): Promise<MillenniumInstallResult> {
       console.warn(`[Millennium] Refusing to install over ${conflict}`);
       return fail('conflict', conflict);
     }
-    if (
-      snapshot.os === 'windows' &&
-      snapshot.facts.steamPath &&
-      !probeSteamRootWritable(snapshot.facts.steamPath)
-    ) {
-      return fail('not-writable');
+    const host = hostTarget(snapshot);
+    const blocked = host ? host.driver.preflight(host.target) : null;
+    if (blocked) {
+      return fail(blocked);
     }
 
     const failure = await stageRelease(snapshot, controller.signal);
@@ -403,24 +312,10 @@ async function verifyActivation(
   bridge: NonNullable<MillenniumInstallResult['bridge']>
 ): Promise<MillenniumInstallResult> {
   progress({ phase: 'wait-plugin' });
-  const snapshot = await getHostSnapshot();
-  // Defender may quarantine the DLLs on their first load.
-  if (snapshot.os === 'windows' && snapshot.facts.steamPath) {
-    const missing = missingFiles(snapshot.facts.steamPath, WINDOWS_EXPECTED_FILES);
-    if (missing.length > 0) {
-      return {
-        success: false,
-        reason: 'av-blocked',
-        bridge,
-        diagnostics: { filesPresent: false },
-        error: missing.join(', '),
-      };
-    }
-  }
-  if (bridge !== 'ready' && snapshot.os === 'linux') {
-    return { success: true, bridge, diagnostics: await linuxSteamDiagnostics() };
-  }
-  return { success: true, bridge };
+  const host = hostTarget(await getHostSnapshot());
+  return host
+    ? host.driver.verifyActivated(host.target, bridge)
+    : { success: true, bridge };
 }
 
 export async function activateMillennium(opts: {
@@ -510,43 +405,18 @@ function cleanupOrphans(snapshot: HostSnapshot): void {
   }
 }
 
-// The official installer replaced our links; our env var would keep loading the stale runtime.
-function applyLinuxTakeover(snapshot: HostSnapshot): boolean {
-  const linux = snapshot.paths?.linux;
-  if (snapshot.os !== 'linux' || !snapshot.record || !linux || !snapshot.paths) {
-    return false;
-  }
-  const target = realpathOrNull(
-    path.posix.join(linux.steamHome, 'ubuntu12_32/libXtst.so.6')
-  );
-  // Our own link resolves through any symlinked part of $HOME, so compare against both spellings.
-  const roots = [linux.runtimeRoot, realpathOrNull(linux.runtimeRoot)].filter(
-    (root): root is string => root !== null
-  );
-  if (!isTakenOver(target, roots)) {
-    return false;
-  }
-  console.warn(`[Millennium] ${target} is managed elsewhere now, dropping LBK's runtime`);
-  fs.rmSync(snapshot.record.envFile ?? linux.envFile, { force: true });
-  fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
-  deleteInstallRecord(recordPathIn(snapshot.paths.root));
-  return true;
-}
-
-function pruneLinuxRuntime(snapshot: HostSnapshot): void {
-  const linux = snapshot.paths?.linux;
-  if (snapshot.os !== 'linux' || !linux) {
+function maintainInstall(snapshot: HostSnapshot): void {
+  const host = hostTarget(snapshot);
+  const record = host?.target.record;
+  if (!host || !record) {
     return;
   }
-  // Without a record nothing says which runtime is ours to drop.
-  if (!snapshot.record) {
-    return;
+  const target = { ...host.target, record };
+  if (host.driver.startupMaintenance(target, isQueued('activate'))) {
+    deleteInstallRecord(recordPathIn(target.paths.root));
+    resetHostFacts();
+    resetMillenniumDetectCache();
   }
-  const keep = new Set<string>([snapshot.record.version]);
-  if (isQueued('activate') && MILLENNIUM_PIN.linux) {
-    keep.add(MILLENNIUM_PIN.linux.version);
-  }
-  pruneRuntimeVersions(linux.runtimeRoot, keep);
 }
 
 export function startMillenniumInstall(): void {
@@ -556,12 +426,7 @@ export function startMillenniumInstall(): void {
     try {
       const snapshot = await getHostSnapshot();
       cleanupOrphans(snapshot);
-      if (applyLinuxTakeover(snapshot)) {
-        resetHostFacts();
-        resetMillenniumDetectCache();
-      } else {
-        pruneLinuxRuntime(snapshot);
-      }
+      maintainInstall(snapshot);
     } catch (error) {
       console.warn('[Millennium] Startup maintenance failed:', error);
     }

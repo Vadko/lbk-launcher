@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import { match, P } from 'ts-pattern';
 import type {
   AchievementsBadge,
   AchievementsDelivery,
@@ -214,22 +215,18 @@ export function deliveryFromBadge(
   badge: AchievementsBadge,
   reloaded: boolean
 ): AchievementsDelivery {
-  if (badge.state === 'setting-off') {
-    return 'disabled';
-  }
-  if (reloaded) {
-    return 'plugin-live';
-  }
-  switch (badge.state) {
-    case 'millennium':
-    case 'decky':
-    case 'after-restart':
-      return 'plugin-next-start';
-    case 'needs-millennium':
-    case 'needs-decky-plugin':
-    case 'needs-decky':
-      return badge.state;
-    default:
-      return 'unavailable';
-  }
+  return match({ state: badge.state, reloaded })
+    .returnType<AchievementsDelivery>()
+    .with({ state: 'setting-off' }, () => 'disabled')
+    .with({ reloaded: true }, () => 'plugin-live')
+    .with(
+      { state: P.union('millennium', 'decky', 'after-restart') },
+      () => 'plugin-next-start'
+    )
+    .with(
+      { state: P.union('needs-millennium', 'needs-decky-plugin', 'needs-decky') },
+      ({ state }) => state
+    )
+    .with({ state: 'unsupported' }, () => 'unavailable')
+    .exhaustive();
 }

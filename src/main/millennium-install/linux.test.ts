@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   environHasRuntimePath,
   isI386Elf,
@@ -14,6 +14,8 @@ import {
   removeLinuxLinks,
   renderEnvironmentFile,
 } from './linux';
+
+vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
 
 const DEBIAN = `
 \tlibssl.so.3 (libc6,x86-64) => /lib/x86_64-linux-gnu/libssl.so.3

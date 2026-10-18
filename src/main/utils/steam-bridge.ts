@@ -243,17 +243,18 @@ export async function getSteamBridge(): Promise<SteamBridge | null> {
   return null;
 }
 
-function failureFor(code: SteamBridgeStatusCode): Exclude<SteamBridgeFailure, 'failed'> {
-  switch (code) {
-    case 'steam-not-running':
-    case 'cef-blocked':
-    case 'millennium-plugin-pending':
-    case 'millennium-outdated':
-      return code;
-    default:
-      return 'cef-unavailable';
-  }
-}
+const FAILURE_FOR_STATUS: Record<
+  SteamBridgeStatusCode,
+  Exclude<SteamBridgeFailure, 'failed'>
+> = {
+  ok: 'cef-unavailable',
+  'setting-off': 'cef-unavailable',
+  'restart-pending': 'cef-unavailable',
+  'steam-not-running': 'steam-not-running',
+  'cef-blocked': 'cef-blocked',
+  'millennium-plugin-pending': 'millennium-plugin-pending',
+  'millennium-outdated': 'millennium-outdated',
+};
 
 export async function ensureSteamBridge(): Promise<
   SteamBridge | Exclude<SteamBridgeFailure, 'failed'>
@@ -262,7 +263,7 @@ export async function ensureSteamBridge(): Promise<
   if (bridge) {
     return bridge;
   }
-  return failureFor((await getSteamBridgeStatus()).code);
+  return FAILURE_FOR_STATUS[(await getSteamBridgeStatus()).code];
 }
 
 function isPluginConfigUsable(configPath: string | null): boolean {

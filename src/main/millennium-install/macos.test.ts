@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   MAC_RUNTIME_ITEMS,
   parseHwArm64,
   planMacWrapperLayout,
   verifyMacManifest,
 } from './macos';
+
+vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
 
 const HASH = 'a'.repeat(64);
 

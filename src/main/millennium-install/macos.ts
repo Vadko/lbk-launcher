@@ -1,10 +1,17 @@
+import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { promisify } from 'node:util';
 import { z } from 'zod';
 import { replaceDirAtomic, replaceSymlinkAtomic } from '@/main/utils/atomic-write';
 import { isPathInside, pruneDir } from '@/main/utils/fs-safe';
 import { sha256FileSync } from '@/main/utils/hash';
-import type { MacHardwareArch } from './release';
+import { ApplyRefusal, ensureInitialConfig, type MillenniumOsDriver } from './driver';
+import { MAC_WRAPPER_APP } from './paths';
+import type { MillenniumInstallRecord } from './record';
+import { type MacHardwareArch, MILLENNIUM_PIN } from './release';
+
+const execFileAsync = promisify(execFile);
 
 export const MAC_RUNTIME_ITEMS = [
   'steam_osx',
@@ -97,7 +104,7 @@ export function planMacWrapperLayout(i: {
   };
 }
 
-export function findMacBundleRoot(stagingDir: string): string | null {
+function findMacBundleRoot(stagingDir: string): string | null {
   if (fs.existsSync(path.posix.join(stagingDir, MANIFEST))) {
     return stagingDir;
   }
@@ -110,7 +117,7 @@ export function findMacBundleRoot(stagingDir: string): string | null {
   return null;
 }
 
-export function verifyMacBundle(
+function verifyMacBundle(
   bundleRoot: string,
   arch: MacHardwareArch
 ): ReturnType<typeof verifyMacManifest> {
@@ -124,7 +131,7 @@ export function verifyMacBundle(
 }
 
 // Steam must be off: replacing the runtime under a running wrapper crashes it.
-export function applyMacActivation(i: {
+function applyMacActivation(i: {
   bundleRoot: string;
   version: string;
   runtimeRoot: string;
@@ -160,9 +167,87 @@ export function applyMacActivation(i: {
   return runtimeDir;
 }
 
-export function macWrapperIntact(appBundle: string, runtimeCurrent: string): boolean {
+function macWrapperIntact(appBundle: string, runtimeCurrent: string): boolean {
   return (
     fs.existsSync(path.posix.join(appBundle, 'Contents/MacOS/steam_osx')) &&
     fs.existsSync(path.posix.join(runtimeCurrent, 'steam_osx'))
   );
 }
+
+async function stripQuarantine(dir: string): Promise<void> {
+  try {
+    await execFileAsync('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', dir], {
+      timeout: 30000,
+    });
+  } catch {
+    // xattr exits non-zero when nothing carried the attribute.
+  }
+}
+
+export const macDriver: MillenniumOsDriver = {
+  offersUpdates: true,
+  retriesLockedFiles: false,
+  installedVersion: ({ record }) => record.version,
+  needsRepair: ({ paths, record }) =>
+    paths.macos !== null &&
+    !macWrapperIntact(record.appBundle ?? paths.macos.appBundle, paths.macos.current),
+  conflict: () => null,
+  preflight: () => null,
+  checkStaged: async (_target, staged) => {
+    const bundleRoot = findMacBundleRoot(staged.dir);
+    if (!bundleRoot || !staged.hwArch) {
+      return { reason: 'extract-failed', error: 'release bundle not found' };
+    }
+    const verified = verifyMacBundle(bundleRoot, staged.hwArch);
+    if (!verified.ok) {
+      return { reason: 'checksum-mismatch', error: verified.error };
+    }
+    await stripQuarantine(staged.dir);
+    return null;
+  },
+  activate: ({ paths, record: existing }, { staging, base, commit }) => {
+    const release = MILLENNIUM_PIN.macos;
+    const mac = paths.macos;
+    const bundleRoot = fs.existsSync(staging) ? findMacBundleRoot(staging) : null;
+    if (!release || !mac || !bundleRoot) {
+      throw new ApplyRefusal('not-prepared', 'staged macOS bundle missing');
+    }
+    const appBundle = existing?.appBundle ?? mac.appBundle;
+    if (path.posix.basename(appBundle) !== MAC_WRAPPER_APP) {
+      throw new ApplyRefusal('conflict', `unexpected wrapper path ${appBundle}`);
+    }
+    const record: MillenniumInstallRecord = {
+      ...base,
+      os: 'macos',
+      mode: 'macos-wrapper',
+      version: release.version,
+      runtimeDir: path.posix.join(mac.runtimeRoot, release.version),
+      appBundle,
+    };
+    commit(record);
+    applyMacActivation({
+      bundleRoot,
+      version: release.version,
+      runtimeRoot: mac.runtimeRoot,
+      runtimeCurrent: mac.current,
+      appBundle,
+    });
+    fs.mkdirSync(paths.pluginsDir, { recursive: true });
+    ensureInitialConfig(paths.configPath, true);
+    return record;
+  },
+  remove: ({ paths, record }) => {
+    const mac = paths.macos;
+    if (!mac) {
+      return;
+    }
+    const appBundle = record.appBundle ?? mac.appBundle;
+    if (path.posix.basename(appBundle) === MAC_WRAPPER_APP) {
+      fs.rmSync(appBundle, { recursive: true, force: true });
+    }
+    fs.rmSync(mac.runtimeRoot, { recursive: true, force: true });
+    fs.rmSync(mac.steamuiMillennium, { recursive: true, force: true });
+  },
+  verifyActivated: (_target, bridge) => Promise.resolve({ success: true, bridge }),
+  startupMaintenance: () => false,
+};

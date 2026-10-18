@@ -7,6 +7,8 @@ import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
 import { LRUCache } from 'lru-cache';
 import { getSteamPath } from '@/main/game-detector/steam';
+import type { InstallTarget, MillenniumOsDriver } from '@/main/millennium-install/driver';
+import { MILLENNIUM_DRIVERS } from '@/main/millennium-install/drivers';
 import { isI386Elf, parseLdconfig } from '@/main/millennium-install/linux';
 import { parseHwArm64 } from '@/main/millennium-install/macos';
 import {
@@ -222,6 +224,20 @@ export async function getHostSnapshot(): Promise<HostSnapshot> {
     release,
     hwArch,
     decky: await detectDecky(),
+  };
+}
+
+// The OS driver and its install target, once Steam and Millennium's paths are known.
+export function hostTarget(
+  snapshot: HostSnapshot
+): { driver: MillenniumOsDriver; target: InstallTarget } | null {
+  const { os, paths, record, facts } = snapshot;
+  if (!os || !paths || !facts.steamPath) {
+    return null;
+  }
+  return {
+    driver: MILLENNIUM_DRIVERS[os],
+    target: { steamPath: facts.steamPath, paths, record },
   };
 }
 

@@ -5,44 +5,31 @@ import { app } from 'electron';
 import { appEvents } from '@/main/app-events';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { resetHostFacts } from '@/main/plugin-host/state';
-import { replaceSymlinkAtomic, writeFileAtomic } from '@/main/utils/atomic-write';
 import {
   restoreCefFlagFileAfterMillennium,
   syncBridgePluginSetup,
 } from '@/main/utils/cef-flag-file';
-import {
-  renderInitialMillenniumConfig,
-  resetMillenniumDetectCache,
-} from '@/main/utils/millennium';
+import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { getPlatform } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type { MillenniumFailure } from '@/shared/plugin-host-types';
 import {
-  applyLinuxLinks,
-  LINUX_RUNTIME_LIB,
-  materializeLinuxRuntime,
-  planLinuxLinks,
-  pruneRuntimeVersions,
-  readLinkEntry,
-  removeLinuxLinks,
-  writeEnvironmentFile,
-} from './linux';
-import { applyMacActivation, findMacBundleRoot } from './macos';
-import { installPathsFor, MAC_WRAPPER_APP, type MillenniumInstallPaths } from './paths';
+  ApplyRefusal,
+  type InstalledTarget,
+  type InstallTarget,
+  type MillenniumOsDriver,
+  STAGING_READY_MARKER,
+} from './driver';
+import { MILLENNIUM_DRIVERS } from './drivers';
+import { installPathsFor } from './paths';
 import {
   deleteInstallRecord,
-  type MillenniumInstallRecord,
   managedByFor,
   readInstallRecord,
   recordPathIn,
   writeInstallRecord,
 } from './record';
 import { MILLENNIUM_PIN, type MillenniumOs, pinnedTagFor } from './release';
-import {
-  applyWindowsActivation,
-  applyWindowsRemoval,
-  windowsLoaderState,
-} from './windows';
 
 export type QueuedMillenniumAction =
   | { kind: 'millennium-activate'; tag: string }
@@ -58,7 +45,6 @@ export interface MillenniumApplyReport {
   error?: string;
 }
 
-const READY_MARKER = '.lbk-ready';
 const LOCKED_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
 
 const millenniumWorkDir = (): string => path.join(app.getPath('userData'), 'millennium');
@@ -77,11 +63,14 @@ export function stagingDirFor(tag: string): string {
 }
 
 export function markStagingReady(tag: string): void {
-  fs.writeFileSync(path.join(stagingDirFor(tag), READY_MARKER), new Date().toISOString());
+  fs.writeFileSync(
+    path.join(stagingDirFor(tag), STAGING_READY_MARKER),
+    new Date().toISOString()
+  );
 }
 
 export function isStagingReady(tag: string): boolean {
-  return fs.existsSync(path.join(stagingDirFor(tag), READY_MARKER));
+  return fs.existsSync(path.join(stagingDirFor(tag), STAGING_READY_MARKER));
 }
 
 function currentOs(): MillenniumOs | null {
@@ -89,12 +78,7 @@ function currentOs(): MillenniumOs | null {
   return platform === 'unknown' ? null : platform;
 }
 
-function currentRecord(): {
-  os: MillenniumOs;
-  steamPath: string;
-  paths: MillenniumInstallPaths;
-  record: MillenniumInstallRecord | null;
-} | null {
+function currentTarget(): { driver: MillenniumOsDriver; target: InstallTarget } | null {
   const platform = currentOs();
   const steamPath = getSteamPath();
   if (!platform || !steamPath) {
@@ -103,10 +87,12 @@ function currentRecord(): {
   const paths = installPathsFor(platform, steamPath);
   const record = readInstallRecord(recordPathIn(paths.root));
   return {
-    os: platform,
-    steamPath,
-    paths,
-    record: managedByFor(record, platform, steamPath) === 'lbk' ? record : null,
+    driver: MILLENNIUM_DRIVERS[platform],
+    target: {
+      steamPath,
+      paths,
+      record: managedByFor(record, platform, steamPath) === 'lbk' ? record : null,
+    },
   };
 }
 
@@ -119,182 +105,26 @@ export function millenniumQueueContext(): {
   return {
     pinTag: platform ? pinnedTagFor(MILLENNIUM_PIN, platform) : null,
     stagingReady: isStagingReady,
-    recordPresent: currentRecord()?.record != null,
+    recordPresent: currentTarget()?.target.record != null,
   };
-}
-
-function ensureInitialConfig(configPath: string, lbkManagesUpdates: boolean): void {
-  if (fs.existsSync(configPath)) {
-    return;
-  }
-  fs.mkdirSync(path.dirname(configPath), { recursive: true });
-  writeFileAtomic(
-    configPath,
-    renderInitialMillenniumConfig(BRIDGE_PLUGIN_NAME, lbkManagesUpdates)
-  );
-}
-
-class ApplyRefusal extends Error {
-  constructor(
-    readonly reason: MillenniumFailure,
-    message: string
-  ) {
-    super(message);
-  }
-}
-
-function mergeBackups(
-  previous: readonly { link: string; backup: string }[],
-  next: readonly { link: string; backup: string }[]
-): { link: string; backup: string }[] {
-  return [...previous.filter((b) => !next.some((n) => n.link === b.link)), ...next];
-}
-
-// `commit` writes the record before the first change that would make the install look foreign without it.
-function activateFiles(
-  ctx: NonNullable<ReturnType<typeof currentRecord>>,
-  tag: string,
-  commit: (record: MillenniumInstallRecord) => void
-): MillenniumInstallRecord {
-  const staging = stagingDirFor(tag);
-  const base = {
-    format: 1 as const,
-    tag,
-    activatedAt: new Date().toISOString(),
-    steamPath: ctx.steamPath,
-    xtstBackups: ctx.record?.xtstBackups ?? [],
-  };
-
-  if (ctx.os === 'windows') {
-    const release = MILLENNIUM_PIN.windows;
-    if (!release) {
-      throw new ApplyRefusal('unsupported', 'no Windows pin');
-    }
-    if (!ctx.record && windowsLoaderState(ctx.steamPath) === 'conflict') {
-      throw new ApplyRefusal('conflict', 'foreign wsock32.dll');
-    }
-    const record: MillenniumInstallRecord = {
-      ...base,
-      os: 'windows',
-      mode: 'windows',
-      version: release.version,
-    };
-    applyWindowsActivation(staging, ctx.steamPath, {
-      skip: new Set([READY_MARKER]),
-      beforeLoader: () => commit(record),
-    });
-    ensureInitialConfig(ctx.paths.configPath, false);
-    return record;
-  }
-
-  if (ctx.os === 'linux') {
-    const release = MILLENNIUM_PIN.linux;
-    const linux = ctx.paths.linux;
-    if (!release || !linux) {
-      throw new ApplyRefusal('unsupported', 'no Linux pin');
-    }
-    const plan = planLinuxLinks(linux.steamHome, linux.current, (rel) =>
-      readLinkEntry(path.posix.join(linux.steamHome, rel))
-    );
-    if (!plan.ok) {
-      throw new ApplyRefusal('conflict', `foreign ${plan.conflict}`);
-    }
-    const versionDir = materializeLinuxRuntime(
-      staging,
-      linux.runtimeRoot,
-      release.version
-    );
-    // Flipping `current` is what an update amounts to; the links below already point through it.
-    replaceSymlinkAtomic(versionDir, linux.current);
-    const planned = plan.steps.flatMap((step) =>
-      step.backup ? [{ link: step.link, backup: step.backup }] : []
-    );
-    const record: MillenniumInstallRecord = {
-      ...base,
-      os: 'linux',
-      mode: 'linux-user',
-      version: release.version,
-      // Listed before the rename: uninstall restores a backup only where the link is gone and the backup exists.
-      xtstBackups: mergeBackups(base.xtstBackups, planned),
-      runtimeDir: versionDir,
-      envFile: linux.envFile,
-    };
-    commit(record);
-    writeEnvironmentFile(
-      linux.envFile,
-      path.posix.join(linux.current, LINUX_RUNTIME_LIB)
-    );
-    fs.mkdirSync(ctx.paths.root, { recursive: true });
-    ensureInitialConfig(ctx.paths.configPath, true);
-    applyLinuxLinks(plan.steps);
-    try {
-      pruneRuntimeVersions(linux.runtimeRoot, new Set([release.version]));
-    } catch (error) {
-      console.warn('[Millennium] Old runtime cleanup failed:', error);
-    }
-    return record;
-  }
-
-  const release = MILLENNIUM_PIN.macos;
-  const mac = ctx.paths.macos;
-  const bundleRoot = fs.existsSync(staging) ? findMacBundleRoot(staging) : null;
-  if (!release || !mac || !bundleRoot) {
-    throw new ApplyRefusal('not-prepared', 'staged macOS bundle missing');
-  }
-  const appBundle = ctx.record?.appBundle ?? mac.appBundle;
-  if (path.posix.basename(appBundle) !== MAC_WRAPPER_APP) {
-    throw new ApplyRefusal('conflict', `unexpected wrapper path ${appBundle}`);
-  }
-  const record: MillenniumInstallRecord = {
-    ...base,
-    os: 'macos',
-    mode: 'macos-wrapper',
-    version: release.version,
-    runtimeDir: path.posix.join(mac.runtimeRoot, release.version),
-    appBundle,
-  };
-  commit(record);
-  applyMacActivation({
-    bundleRoot,
-    version: release.version,
-    runtimeRoot: mac.runtimeRoot,
-    runtimeCurrent: mac.current,
-    appBundle,
-  });
-  fs.mkdirSync(ctx.paths.pluginsDir, { recursive: true });
-  ensureInitialConfig(ctx.paths.configPath, true);
-  return record;
 }
 
 function removeFiles(
-  ctx: NonNullable<ReturnType<typeof currentRecord>>,
-  record: MillenniumInstallRecord,
+  driver: MillenniumOsDriver,
+  target: InstalledTarget,
   purge: boolean
 ): void {
-  const pluginDir = path.join(ctx.paths.pluginsDir, BRIDGE_PLUGIN_NAME);
-  if (ctx.os === 'windows') {
-    applyWindowsRemoval(ctx.steamPath, purge, 'millennium/plugins/lbk-bridge');
-  } else if (ctx.os === 'linux' && ctx.paths.linux) {
-    const linux = ctx.paths.linux;
-    removeLinuxLinks(linux.steamHome, linux.runtimeRoot, record.xtstBackups);
-    fs.rmSync(record.envFile ?? linux.envFile, { force: true });
-    fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
-  } else if (ctx.os === 'macos' && ctx.paths.macos) {
-    const mac = ctx.paths.macos;
-    const appBundle = record.appBundle ?? mac.appBundle;
-    if (path.posix.basename(appBundle) === MAC_WRAPPER_APP) {
-      fs.rmSync(appBundle, { recursive: true, force: true });
-    }
-    fs.rmSync(mac.runtimeRoot, { recursive: true, force: true });
-    fs.rmSync(mac.steamuiMillennium, { recursive: true, force: true });
-  }
-  fs.rmSync(pluginDir, { recursive: true, force: true });
+  driver.remove(target, purge);
+  fs.rmSync(path.join(target.paths.pluginsDir, BRIDGE_PLUGIN_NAME), {
+    recursive: true,
+    force: true,
+  });
   if (purge) {
-    for (const dir of [ctx.paths.root, ...ctx.paths.purgeDirs]) {
+    for (const dir of [target.paths.root, ...target.paths.purgeDirs]) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   }
-  deleteInstallRecord(recordPathIn(ctx.paths.root));
+  deleteInstallRecord(recordPathIn(target.paths.root));
 }
 
 function afterChange(): void {
@@ -311,7 +141,10 @@ function report(
   return { kind, outcome, reason, error };
 }
 
-function failureFor(error: unknown): {
+function failureFor(
+  driver: MillenniumOsDriver,
+  error: unknown
+): {
   outcome: ApplyOutcome;
   reason: MillenniumFailure;
 } {
@@ -320,8 +153,7 @@ function failureFor(error: unknown): {
   }
   const code = errnoCode(error);
   if (typeof code === 'string' && LOCKED_CODES.has(code)) {
-    // Windows helpers can hold DLLs for a moment after Steam's main process is gone.
-    return getPlatform() === 'windows'
+    return driver.retriesLockedFiles
       ? { outcome: 'retry', reason: 'files-locked' }
       : { outcome: 'drop', reason: 'not-writable' };
   }
@@ -333,17 +165,26 @@ export async function applyQueuedMillenniumAction(
   action: QueuedMillenniumAction
 ): Promise<MillenniumApplyReport> {
   const kind = action.kind === 'millennium-activate' ? 'activate' : 'deactivate';
-  const ctx = currentRecord();
-  if (!ctx) {
+  const current = currentTarget();
+  if (!current) {
     return report(kind, 'drop', 'unsupported', 'Steam not found');
   }
+  const { driver, target } = current;
   try {
     if (action.kind === 'millennium-activate') {
       appEvents.emit('millennium-phase', 'install-files');
-      const recordPath = recordPathIn(ctx.paths.root);
-      const record = activateFiles(ctx, action.tag, (r) =>
-        writeInstallRecord(recordPath, r)
-      );
+      const recordPath = recordPathIn(target.paths.root);
+      const record = driver.activate(target, {
+        staging: stagingDirFor(action.tag),
+        base: {
+          format: 1,
+          tag: action.tag,
+          activatedAt: new Date().toISOString(),
+          steamPath: target.steamPath,
+          xtstBackups: target.record?.xtstBackups ?? [],
+        },
+        commit: (r) => writeInstallRecord(recordPath, r),
+      });
       writeInstallRecord(recordPath, record);
       afterChange();
       await syncBridgePluginSetup();
@@ -351,11 +192,12 @@ export async function applyQueuedMillenniumAction(
       fs.rmSync(downloadsDir(), { recursive: true, force: true });
       console.log(`[Millennium] Activated ${record.version} (${record.mode})`);
     } else {
-      if (!ctx.record) {
+      const { record } = target;
+      if (!record) {
         return report(kind, 'drop', 'unsupported', 'not installed by LBK');
       }
       appEvents.emit('millennium-phase', 'install-files');
-      removeFiles(ctx, ctx.record, action.purge);
+      removeFiles(driver, { ...target, record }, action.purge);
       afterChange();
       restoreCefFlagFileAfterMillennium();
       console.log(`[Millennium] Removed${action.purge ? ' with data' : ''}`);
@@ -363,7 +205,7 @@ export async function applyQueuedMillenniumAction(
     appEvents.emit('millennium-phase', 'installed');
     return report(kind, 'applied');
   } catch (error) {
-    const failure = failureFor(error);
+    const failure = failureFor(driver, error);
     const message = errorMessage(error);
     if (failure.outcome === 'retry' || error instanceof ApplyRefusal) {
       console.warn(`[Millennium] ${kind} ${failure.reason}: ${message}`);

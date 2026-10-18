@@ -11,13 +11,22 @@ import {
   missingFiles,
   pruneDir,
   readlinkOrNull,
+  realpathOrNull,
 } from '@/main/utils/fs-safe';
 import { isFlatpak } from '@/main/utils/host-exec';
+import {
+  ApplyRefusal,
+  ensureInitialConfig,
+  type InstalledTarget,
+  type MillenniumOsDriver,
+} from './driver';
+import type { MillenniumInstallRecord } from './record';
+import { MILLENNIUM_PIN } from './release';
 
 export const RUNTIME_PATH_ENV = 'MILLENNIUM_RUNTIME_PATH';
 export const LINUX_RUNTIME_LIB = 'libmillennium_x86.so';
-export const LINUX_STAGED_SUBDIR = 'usr/lib/millennium';
-export const LINUX_RUNTIME_FILES = [
+const LINUX_STAGED_SUBDIR = 'usr/lib/millennium';
+const LINUX_RUNTIME_FILES = [
   LINUX_RUNTIME_LIB,
   'libmillennium_bootstrap_x86.so',
   'libmillennium_bootstrap_hhx64.so',
@@ -130,7 +139,7 @@ export function isTakenOver(
   return !lbkRuntimeRoots.some((root) => isPathInside(root, xtstRealTarget));
 }
 
-export function readLinkEntry(p: string): LinkEntry {
+function readLinkEntry(p: string): LinkEntry {
   try {
     const st = fs.lstatSync(p);
     if (st.isSymbolicLink()) {
@@ -142,19 +151,19 @@ export function readLinkEntry(p: string): LinkEntry {
   }
 }
 
-export function linksIntact(steamHome: string, libDir: string): boolean {
+function linksIntact(steamHome: string, libDir: string): boolean {
   return LINUX_LINKS.every(({ rel, target }) => {
     const entry = readLinkEntry(path.posix.join(steamHome, rel));
     return entry.kind === 'symlink' && entry.target === path.posix.join(libDir, target);
   });
 }
 
-export function versionDirComplete(dir: string): boolean {
+function versionDirComplete(dir: string): boolean {
   return missingFiles(dir, LINUX_RUNTIME_FILES).length === 0;
 }
 
 // Copies the staged libraries into `<runtimeRoot>/<version>`; inert until links and env point at it.
-export function materializeLinuxRuntime(
+function materializeLinuxRuntime(
   stagingDir: string,
   runtimeRoot: string,
   version: string
@@ -174,9 +183,7 @@ export function materializeLinuxRuntime(
   return finalDir;
 }
 
-export function applyLinuxLinks(
-  steps: readonly LinkStep[]
-): { link: string; backup: string }[] {
+function applyLinuxLinks(steps: readonly LinkStep[]): { link: string; backup: string }[] {
   const backups: { link: string; backup: string }[] = [];
   for (const step of steps) {
     fs.mkdirSync(path.posix.dirname(step.link), { recursive: true });
@@ -190,7 +197,7 @@ export function applyLinuxLinks(
   return backups;
 }
 
-export function writeEnvironmentFile(envFile: string, runtimeLib: string): void {
+function writeEnvironmentFile(envFile: string, runtimeLib: string): void {
   fs.mkdirSync(path.posix.dirname(envFile), { recursive: true });
   writeFileAtomic(envFile, renderEnvironmentFile(runtimeLib));
 }
@@ -246,7 +253,7 @@ async function readSteamProcFiles(file: 'maps' | 'environ'): Promise<Buffer[] | 
 }
 
 // A field is left out when it cannot be told (Flatpak, Steam not running, unreadable /proc).
-export async function linuxSteamDiagnostics(): Promise<{
+async function linuxSteamDiagnostics(): Promise<{
   steamEnvMissing?: boolean;
   mappedInSteam?: boolean;
 }> {
@@ -263,3 +270,141 @@ export async function linuxSteamDiagnostics(): Promise<{
       : {}),
   };
 }
+
+function mergeBackups(
+  previous: readonly { link: string; backup: string }[],
+  next: readonly { link: string; backup: string }[]
+): { link: string; backup: string }[] {
+  return [...previous.filter((b) => !next.some((n) => n.link === b.link)), ...next];
+}
+
+// The official installer replaced our links; our env var would keep loading the stale runtime.
+function dropTakenOverRuntime({ paths, record }: InstalledTarget): boolean {
+  const linux = paths.linux;
+  if (!linux) {
+    return false;
+  }
+  const target = realpathOrNull(
+    path.posix.join(linux.steamHome, 'ubuntu12_32/libXtst.so.6')
+  );
+  // Our own link resolves through any symlinked part of $HOME, so compare against both spellings.
+  const roots = [linux.runtimeRoot, realpathOrNull(linux.runtimeRoot)].filter(
+    (root): root is string => root !== null
+  );
+  if (!isTakenOver(target, roots)) {
+    return false;
+  }
+  console.warn(`[Millennium] ${target} is managed elsewhere now, dropping LBK's runtime`);
+  fs.rmSync(record.envFile ?? linux.envFile, { force: true });
+  fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
+  return true;
+}
+
+export const linuxDriver: MillenniumOsDriver = {
+  offersUpdates: true,
+  retriesLockedFiles: false,
+  installedVersion: ({ record }) => record.version,
+  needsRepair: ({ paths }) =>
+    paths.linux !== null &&
+    (!linksIntact(paths.linux.steamHome, paths.linux.current) ||
+      !versionDirComplete(paths.linux.current)),
+  conflict: ({ paths }) => {
+    const linux = paths.linux;
+    if (!linux) {
+      return null;
+    }
+    const plan = planLinuxLinks(linux.steamHome, linux.current, (rel) =>
+      readLinkEntry(path.posix.join(linux.steamHome, rel))
+    );
+    return plan.ok ? null : plan.conflict;
+  },
+  preflight: () => null,
+  checkStaged: ({ paths }, staged) => {
+    if (!paths.linux) {
+      return Promise.resolve(null);
+    }
+    const missing = missingFiles(
+      staged.dir,
+      LINUX_RUNTIME_FILES.map((file) => `${LINUX_STAGED_SUBDIR}/${file}`)
+    );
+    if (missing.length > 0) {
+      return Promise.resolve({ reason: 'av-blocked', error: missing.join(', ') });
+    }
+    materializeLinuxRuntime(staged.dir, paths.linux.runtimeRoot, staged.version);
+    return Promise.resolve(null);
+  },
+  activate: ({ paths }, { staging, base, commit }) => {
+    const release = MILLENNIUM_PIN.linux;
+    const linux = paths.linux;
+    if (!release || !linux) {
+      throw new ApplyRefusal('unsupported', 'no Linux pin');
+    }
+    const plan = planLinuxLinks(linux.steamHome, linux.current, (rel) =>
+      readLinkEntry(path.posix.join(linux.steamHome, rel))
+    );
+    if (!plan.ok) {
+      throw new ApplyRefusal('conflict', `foreign ${plan.conflict}`);
+    }
+    const versionDir = materializeLinuxRuntime(
+      staging,
+      linux.runtimeRoot,
+      release.version
+    );
+    // Flipping `current` is what an update amounts to; the links below already point through it.
+    replaceSymlinkAtomic(versionDir, linux.current);
+    const planned = plan.steps.flatMap((step) =>
+      step.backup ? [{ link: step.link, backup: step.backup }] : []
+    );
+    const record: MillenniumInstallRecord = {
+      ...base,
+      os: 'linux',
+      mode: 'linux-user',
+      version: release.version,
+      // Listed before the rename: uninstall restores a backup only where the link is gone and the backup exists.
+      xtstBackups: mergeBackups(base.xtstBackups, planned),
+      runtimeDir: versionDir,
+      envFile: linux.envFile,
+    };
+    commit(record);
+    writeEnvironmentFile(
+      linux.envFile,
+      path.posix.join(linux.current, LINUX_RUNTIME_LIB)
+    );
+    fs.mkdirSync(paths.root, { recursive: true });
+    ensureInitialConfig(paths.configPath, true);
+    applyLinuxLinks(plan.steps);
+    try {
+      pruneRuntimeVersions(linux.runtimeRoot, new Set([release.version]));
+    } catch (error) {
+      console.warn('[Millennium] Old runtime cleanup failed:', error);
+    }
+    return record;
+  },
+  remove: ({ paths, record }) => {
+    const linux = paths.linux;
+    if (!linux) {
+      return;
+    }
+    removeLinuxLinks(linux.steamHome, linux.runtimeRoot, record.xtstBackups);
+    fs.rmSync(record.envFile ?? linux.envFile, { force: true });
+    fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
+  },
+  verifyActivated: async (_target, bridge) =>
+    bridge === 'ready'
+      ? { success: true, bridge }
+      : { success: true, bridge, diagnostics: await linuxSteamDiagnostics() },
+  startupMaintenance: (target, activationQueued) => {
+    if (dropTakenOverRuntime(target)) {
+      return true;
+    }
+    const linux = target.paths.linux;
+    if (linux) {
+      const keep = new Set<string>([target.record.version]);
+      if (activationQueued && MILLENNIUM_PIN.linux) {
+        keep.add(MILLENNIUM_PIN.linux.version);
+      }
+      pruneRuntimeVersions(linux.runtimeRoot, keep);
+    }
+    return false;
+  },
+};
