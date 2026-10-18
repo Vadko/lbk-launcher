@@ -177,13 +177,18 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 export function showMainWindow(): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore();
-    }
-    mainWindow.focus();
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    // macOS outlives its last window; the tray and notifications reopen it like the Dock.
+    createMainWindow().catch((error) => {
+      console.error('[Window] Failed to recreate main window:', error);
+    });
+    return;
   }
+  mainWindow.show();
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.focus();
 }
 
 export function sendToRenderer(channel: string, payload?: unknown): void {

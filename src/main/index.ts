@@ -171,7 +171,7 @@ import {
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { startSteamBridge } from './utils/steam-bridge-lifecycle';
-import { createMainWindow, getMainWindow } from './window';
+import { createMainWindow, getMainWindow, showMainWindow } from './window';
 
 // Global managers
 let syncManager: SyncManager | null = null;
@@ -399,9 +399,9 @@ if (!gotTheLock) {
       });
 
     setImmediate(() => {
-      startSteamWatcher(getMainWindow());
+      startSteamWatcher();
       startStoreLibraryWatcher();
-      startInstallationWatcher(getMainWindow(), () => {
+      startInstallationWatcher(() => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
         });
@@ -423,18 +423,7 @@ if (!gotTheLock) {
       }
     });
 
-    app.on('activate', async () => {
-      // macOS: show the window if hidden, or create a new one if there isn't one
-      const mainWindow = getMainWindow();
-      if (mainWindow) {
-        if (!mainWindow.isVisible()) {
-          mainWindow.show();
-        }
-        mainWindow.focus();
-      } else {
-        await createMainWindow();
-      }
-    });
+    app.on('activate', showMainWindow);
   });
 
   // Track session end and playtime before quit
