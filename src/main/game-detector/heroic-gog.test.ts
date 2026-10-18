@@ -11,6 +11,21 @@ vi.mock('../utils/platform', () => ({
   isWindows: () => false,
 }));
 
+const libraryReads = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof fs>();
+  return {
+    ...actual,
+    readFileSync: (...args: Parameters<typeof actual.readFileSync>) => {
+      if (String(args[0]).endsWith('gog_library.json')) {
+        libraryReads.count++;
+      }
+      return actual.readFileSync(...args);
+    },
+  };
+});
+
 let home: string;
 
 const gamesDir = () => path.join(home, 'Games/Heroic');
@@ -81,6 +96,12 @@ describe.each([
     expect(findGOGGame('The Witcher 3 Wild Hunt')).toBe(
       path.join(gamesDir(), 'witcher3')
     );
+  });
+
+  it('parses gog_library.json once for a lookup that misses', () => {
+    libraryReads.count = 0;
+    expect(findGOGGame('Hades')).toBeNull();
+    expect(libraryReads.count).toBe(1);
   });
 
   it('attributes a Heroic folder to the store that installed it', () => {
