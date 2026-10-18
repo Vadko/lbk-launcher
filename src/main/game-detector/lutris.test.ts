@@ -40,6 +40,8 @@ function touch(file: string): void {
 beforeEach(() => {
   home = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-lutris-'));
   vi.stubEnv('HOME', home);
+  // os.homedir() reads USERPROFILE on Windows.
+  vi.stubEnv('USERPROFILE', home);
 });
 
 afterEach(() => {
