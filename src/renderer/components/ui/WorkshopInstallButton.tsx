@@ -1,7 +1,7 @@
 import { Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useWorkshopInstallsStore } from '../../store/useWorkshopInstallsStore';
-import { openWorkshopPage } from '../../utils/workshopPage';
+import { openWorkshopPage } from '../../utils/openWithFallback';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
 

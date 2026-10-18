@@ -4,6 +4,7 @@ import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
 import type { NewsFeedFilter } from '@/shared/types';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { trackEvent } from '../../utils/analytics';
+import { openWithFallback } from '../../utils/openWithFallback';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
@@ -47,20 +48,13 @@ export const NewsFeedSection: React.FC = () => {
   });
 
   const openInTelegram = async (url: string) => {
-    // Витягуємо назву каналу та ID поста за допомогою регулярного виразу
-    // Приклад URL: https://t.me/LBK_news/1234
     const match = url.match(/t\.me\/([\w_]+)\/(\d+)/);
 
     if (match) {
-      const [_, domain, postId] = match;
-      const tgLink = `tg://resolve?domain=${domain}&post=${postId}`;
-      const result = await window.electronAPI.openExternal(tgLink);
-
-      if (!result.success) {
-        window.electronAPI.openExternal(url);
-      }
+      const [, domain, postId] = match;
+      await openWithFallback(`tg://resolve?domain=${domain}&post=${postId}`, url);
     } else {
-      window.electronAPI.openExternal(url);
+      await window.electronAPI.openExternal(url);
     }
     trackEvent('Open news', { url });
   };
