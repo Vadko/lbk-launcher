@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+import { errorMessage } from '@/shared/errors';
 import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
@@ -26,7 +27,7 @@ function crashed(scope: string, error: unknown): MillenniumInstallResult {
   return {
     success: false,
     reason: 'script-failed',
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage(error),
   };
 }
 
@@ -92,7 +93,7 @@ export function setupPluginHostHandlers(): void {
         return {
           success: false,
           reason: 'failed',
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       })
   );
@@ -105,7 +106,7 @@ export function setupPluginHostHandlers(): void {
         return {
           success: false,
           reason: 'not-installed',
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         };
       })
   );

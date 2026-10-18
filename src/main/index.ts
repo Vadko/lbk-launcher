@@ -411,13 +411,13 @@ if (!gotTheLock) {
           console.error('[Main] Failed to process pending deletions:', err);
         });
       });
-      startSteamBridge(getMainWindow());
-      startPendingSteamActions(getMainWindow());
+      startSteamBridge();
+      startPendingSteamActions();
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });
       startAchievements();
-      startMillenniumInstall(getMainWindow());
+      startMillenniumInstall();
       if (isLinux()) {
         watchDeckyPlugins();
       }

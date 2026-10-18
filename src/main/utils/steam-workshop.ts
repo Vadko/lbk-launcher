@@ -11,6 +11,7 @@
  */
 
 import { ensureSteamBridge, getSteamBridge } from '@/main/utils/steam-bridge';
+import { errorMessage } from '@/shared/errors';
 import type { SteamBridgeFailure } from '@/shared/types';
 
 /** Mirrors the games row as-is — no point renaming these three fields along the way */
@@ -126,7 +127,7 @@ export async function setWorkshopSubscription(
     return {
       ok: false,
       reason: 'failed',
-      error: error instanceof Error ? error.message : 'Bridge subscribe failed',
+      error: errorMessage(error, 'Bridge subscribe failed'),
     };
   }
 }

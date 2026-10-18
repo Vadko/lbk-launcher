@@ -69,6 +69,7 @@
     "mixpanel-browser": "2.83.0",
     "node-7z": "3.0.0",
     "node-machine-id": "1.1.12",
+    "p-timeout": "7.0.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-lazy-load-image-component": "^1.6.3",

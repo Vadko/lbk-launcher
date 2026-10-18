@@ -2,7 +2,6 @@ import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
-import type { BrowserWindow } from 'electron';
 import { getSteamPath } from '@/main/game-detector/steam';
 import {
   deckyStateFor,
@@ -40,7 +39,8 @@ import {
   readStoreValue,
   writeStoreValue,
 } from '@/main/utils/store-storage';
-import { getMainWindow } from '@/main/window';
+import { sendToRenderer } from '@/main/window';
+import { errorMessage } from '@/shared/errors';
 import type {
   SteamBridgeFailure,
   SteamBridgeStatus,
@@ -78,7 +78,6 @@ const VERIFY_MIN_HELPER_AGE_MS = 20000;
 
 let lastTransport: SteamBridgeTransport | null = null;
 let lastPublished: string | null = null;
-let statusWindow: BrowserWindow | null = null;
 let verifying: Promise<VerifyOutcome> | null = null;
 let started = false;
 const readyListeners = new Set<(bridge: SteamBridge) => void>();
@@ -99,7 +98,7 @@ const pluginBridge: SteamBridge = {
       return await invokeViaPlugin(op, args, opTimeout(op));
     } catch (error) {
       // Only errors raised before the request reached Steam are safe to retry over CDP.
-      const message = error instanceof Error ? error.message : '';
+      const message = errorMessage(error, '');
       if (message === 'plugin-not-connected' || message === 'plugin-outdated') {
         const { endpoint } = await resolveCefEndpoint();
         if (endpoint) {
@@ -396,11 +395,7 @@ function publish(status: SteamBridgeStatus): void {
     return;
   }
   lastPublished = serialized;
-  const win =
-    statusWindow && !statusWindow.isDestroyed() ? statusWindow : getMainWindow();
-  if (win && !win.isDestroyed()) {
-    win.webContents.send('steam-bridge-status-changed', status);
-  }
+  sendToRenderer('steam-bridge-status-changed', status);
 }
 
 export async function getSteamBridgeStatus(): Promise<SteamBridgeStatus> {
@@ -563,8 +558,7 @@ export function verifyBridgeAfterLaunch(
   return verifying;
 }
 
-export function startSteamBridge(win: BrowserWindow | null): void {
-  statusWindow = win;
+export function startSteamBridge(): void {
   if (started) {
     return;
   }

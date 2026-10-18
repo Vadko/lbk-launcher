@@ -1,5 +1,6 @@
 import os from 'node:os';
 import { app, ipcMain } from 'electron';
+import { errorMessage } from '@/shared/errors';
 import type {
   Game,
   GetGamesParams,
@@ -693,7 +694,7 @@ export function setupGamesHandlers(): void {
       console.error('[Steam] Restart failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Не вдалося перезапустити Steam',
+        error: errorMessage(error, 'Не вдалося перезапустити Steam'),
       };
     }
   });

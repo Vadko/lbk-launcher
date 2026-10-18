@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { F } from '@mobily/ts-belt';
-import { type BrowserWindow, Notification } from 'electron';
+import { Notification } from 'electron';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { getAllInstalledGameIds } from '@/main/installer/cache';
 import {
@@ -30,7 +30,8 @@ import {
   writeStoreValue,
 } from '@/main/utils/store-storage';
 import { getIcon } from '@/main/utils/theme';
-import { getMainWindow } from '@/main/window';
+import { getMainWindow, sendToRenderer } from '@/main/window';
+import { errorMessage } from '@/shared/errors';
 import { plural } from '@/shared/plural';
 import type { SteamBridgeStatusCode } from '@/shared/types';
 
@@ -282,13 +283,6 @@ function fireStarted(): void {
   }
 }
 
-let pushWindow: BrowserWindow | null = null;
-
-function targetWindow(): BrowserWindow | null {
-  const win = pushWindow && !pushWindow.isDestroyed() ? pushWindow : getMainWindow();
-  return win && !win.isDestroyed() ? win : null;
-}
-
 function notifyApplied(names: string[], trigger: PendingTrigger): void {
   if (names.length === 0 || !Notification.isSupported()) {
     return;
@@ -306,8 +300,8 @@ function notifyApplied(names: string[], trigger: PendingTrigger): void {
       icon: isMacOS() ? undefined : getIcon('notification'),
     });
     notification.on('click', () => {
-      const win = targetWindow();
-      if (win) {
+      const win = getMainWindow();
+      if (win && !win.isDestroyed()) {
         win.show();
         if (win.isMinimized()) {
           win.restore();
@@ -401,7 +395,7 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
         reason = write.reason;
       } catch (error) {
         mode = 'failed';
-        reason = error instanceof Error ? error.message : String(error);
+        reason = errorMessage(error);
       }
       console.log(
         `[PendingActions] Launch options for ${action.gameName} (${trigger}) mode=${mode}${reason ? ` — ${reason}` : ''}`
@@ -446,7 +440,7 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
       notifyMillenniumStateChanged();
     }
     if (result.appliedGameIds.length > 0) {
-      targetWindow()?.webContents.send('steam-pending-actions-applied', {
+      sendToRenderer('steam-pending-actions-applied', {
         gameIds: result.appliedGameIds,
       });
       if (
@@ -611,8 +605,7 @@ export function pauseSteamMonitor(): () => void {
   };
 }
 
-export function startPendingSteamActions(win: BrowserWindow | null): void {
-  pushWindow = win;
+export function startPendingSteamActions(): void {
   if (started) {
     return;
   }

@@ -4,7 +4,6 @@ import * as path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { getCleanEnv } from '@/main/installer/archive';
 import { publishPluginHostState } from '@/main/millennium-install';
-import { downloadVerified, MillenniumFetchError } from '@/main/millennium-install/fetch';
 import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
 import {
   deckyLoaderStateFor,
@@ -19,6 +18,9 @@ import {
   detectDecky,
   resetDeckyDetectCache,
 } from '@/main/utils/decky';
+import { isFlatpak } from '@/main/utils/host-exec';
+import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
+import { errorMessage } from '@/shared/errors';
 import type { DeckyLoaderInstallResult } from '@/shared/types';
 
 // Decky's own installer, pinned like Millennium; it downloads the latest PluginLoader release itself.
@@ -35,10 +37,6 @@ const SETTLE_MS = 15_000;
 const POLL_MS = 1000;
 const OUTPUT_TAIL = 4096;
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function lastOutputLine(output: string): string | null {
   const lines = output
     .split('\n')
@@ -49,7 +47,7 @@ function lastOutputLine(output: string): string | null {
 
 function runOnHost(script: string): Promise<{ code: number | null; output: string }> {
   return new Promise((resolve) => {
-    const child = process.env.FLATPAK_ID
+    const child = isFlatpak()
       ? spawn('flatpak-spawn', ['--host', 'bash', script], {
           stdio: ['ignore', 'pipe', 'pipe'],
         })
@@ -112,15 +110,15 @@ async function runInstall(): Promise<DeckyLoaderInstallResult> {
       `decky-installer-${DECKY_INSTALLER.version}.sh`
     );
     try {
-      await downloadVerified(DECKY_INSTALLER, script);
+      await downloadPinned(DECKY_INSTALLER, script);
     } catch (error) {
       console.warn('[Decky] Installer download failed:', error);
       const mismatch =
-        error instanceof MillenniumFetchError && error.kind === 'checksum-mismatch';
+        error instanceof PinnedDownloadError && error.kind === 'checksum-mismatch';
       return {
         success: false,
         reason: mismatch ? 'checksum-mismatch' : 'download-failed',
-        error: errorText(error),
+        error: errorMessage(error),
       };
     }
 

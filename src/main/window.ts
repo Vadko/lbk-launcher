@@ -176,6 +176,12 @@ export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
 }
 
+export function sendToRenderer(channel: string, payload?: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
+}
+
 // IPC handler for toggling liquid glass
 ipcMain.handle('liquid-glass:toggle', async (_event, enabled: boolean) => {
   if (!mainWindow) {

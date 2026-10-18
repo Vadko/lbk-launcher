@@ -2,7 +2,6 @@ import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
-import type { BrowserWindow } from 'electron';
 import {
   downloadsDir,
   getLastMillenniumApplyReport,
@@ -13,11 +12,7 @@ import {
   stagingDirFor,
   stagingRoot,
 } from '@/main/millennium-install/apply';
-import {
-  extractMillenniumArchive,
-  missingFiles,
-} from '@/main/millennium-install/extract';
-import { downloadVerified, MillenniumFetchError } from '@/main/millennium-install/fetch';
+import { extractMillenniumArchive } from '@/main/millennium-install/extract';
 import {
   environHasRuntimePath,
   isTakenOver,
@@ -39,7 +34,6 @@ import {
 import { deleteInstallRecord, recordPathIn } from '@/main/millennium-install/record';
 import { MILLENNIUM_PIN, pinnedTagFor } from '@/main/millennium-install/release';
 import {
-  missingWindowsFiles,
   probeSteamRootWritable,
   readMillenniumDllVersion,
   WINDOWS_EXPECTED_FILES,
@@ -59,7 +53,9 @@ import {
   runPendingSteamActions,
 } from '@/main/steam-pending-actions';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
+import { missingFiles, pruneDir, realpathOrNull } from '@/main/utils/fs-safe';
 import { resetMillenniumDetectCache } from '@/main/utils/millennium';
+import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
 import { isGamescopeSession } from '@/main/utils/platform';
 import { refreshSteamBridgeStatus } from '@/main/utils/steam-bridge';
 import {
@@ -68,7 +64,8 @@ import {
   readSteamEnvirons,
   steamMapsContain,
 } from '@/main/utils/steam-process';
-import { getMainWindow } from '@/main/window';
+import { sendToRenderer } from '@/main/window';
+import { errorMessage } from '@/shared/errors';
 import type {
   MillenniumInstallResult,
   MillenniumProgress,
@@ -80,19 +77,9 @@ const execFileAsync = promisify(execFile);
 let busy = false;
 let prepared: { tag: string } | null = null;
 let abort: AbortController | null = null;
-let pushWindow: BrowserWindow | null = null;
-
-function targetWindow(): BrowserWindow | null {
-  const win = pushWindow && !pushWindow.isDestroyed() ? pushWindow : getMainWindow();
-  return win && !win.isDestroyed() ? win : null;
-}
 
 function progress(p: MillenniumProgress): void {
-  targetWindow()?.webContents.send('millennium:progress', p);
-}
-
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  sendToRenderer('millennium:progress', p);
 }
 
 function needsRepair(snapshot: HostSnapshot): boolean {
@@ -101,7 +88,7 @@ function needsRepair(snapshot: HostSnapshot): boolean {
     return false;
   }
   if (record.os === 'windows') {
-    return missingWindowsFiles(facts.steamPath).length > 0;
+    return missingFiles(facts.steamPath, WINDOWS_EXPECTED_FILES).length > 0;
   }
   if (record.os === 'linux' && paths.linux) {
     return (
@@ -166,7 +153,7 @@ export async function getPluginHostState(): Promise<PluginHostState> {
 export async function publishPluginHostState(): Promise<void> {
   try {
     const state = await getPluginHostState();
-    targetWindow()?.webContents.send('plugin-host:state-changed', state);
+    sendToRenderer('plugin-host:state-changed', state);
   } catch (error) {
     console.warn('[Millennium] State refresh failed:', error);
   }
@@ -223,7 +210,7 @@ async function stageRelease(
   }
   const archive = path.join(downloadsDir(), path.posix.basename(release.asset.url));
   progress({ phase: 'download', percent: 0 });
-  await downloadVerified(release.asset, archive, {
+  await downloadPinned(release.asset, archive, {
     signal,
     onProgress: (fraction) =>
       progress({ phase: 'download', percent: Math.round(fraction * 100) }),
@@ -236,7 +223,7 @@ async function stageRelease(
     await extractMillenniumArchive(archive, release.asset.kind, staging);
   } catch (error) {
     console.warn('[Millennium] Extraction failed:', error);
-    return fail('extract-failed', describe(error));
+    return fail('extract-failed', errorMessage(error));
   }
 
   if (snapshot.os === 'windows') {
@@ -316,12 +303,12 @@ export async function prepareMillennium(): Promise<MillenniumInstallResult> {
       canRestartSteam: state.canRestartSteam,
     };
   } catch (error) {
-    if (error instanceof MillenniumFetchError) {
+    if (error instanceof PinnedDownloadError) {
       console.warn(`[Millennium] Download ${error.kind}: ${error.message}`);
       return fail(error.kind, error.message);
     }
     console.error('[Millennium] Prepare failed:', error);
-    return fail('extract-failed', describe(error));
+    return fail('extract-failed', errorMessage(error));
   } finally {
     abort = null;
     setBusy(false);
@@ -431,7 +418,7 @@ async function verifyActivation(
   const snapshot = await getHostSnapshot();
   // Defender may quarantine the DLLs on their first load.
   if (snapshot.os === 'windows' && snapshot.facts.steamPath) {
-    const missing = missingWindowsFiles(snapshot.facts.steamPath);
+    const missing = missingFiles(snapshot.facts.steamPath, WINDOWS_EXPECTED_FILES);
     if (missing.length > 0) {
       return {
         success: false,
@@ -477,7 +464,7 @@ export async function activateMillennium(opts: {
     return result;
   } catch (error) {
     console.error('[Millennium] Activation failed:', error);
-    return fail('script-failed', describe(error));
+    return fail('script-failed', errorMessage(error));
   } finally {
     setBusy(false);
   }
@@ -505,7 +492,7 @@ export async function uninstallMillennium(opts: {
     return await runQueuedChange('deactivate', opts.restart);
   } catch (error) {
     console.error('[Millennium] Uninstall failed:', error);
-    return fail('script-failed', describe(error));
+    return fail('script-failed', errorMessage(error));
   } finally {
     setBusy(false);
   }
@@ -518,34 +505,15 @@ function cleanupOrphans(snapshot: HostSnapshot): void {
       a.kind === 'millennium-activate' ? [a.tag] : []
     )
   );
-  try {
-    for (const entry of fs.readdirSync(stagingRoot())) {
-      if (entry !== pinTag && !queuedTags.has(entry)) {
-        fs.rmSync(path.join(stagingRoot(), entry), { recursive: true, force: true });
-      }
-    }
-  } catch {
-    // No staging dir yet.
-  }
   const pinAsset = snapshot.release
     ? path.posix.basename(snapshot.release.asset.url)
     : null;
   try {
-    for (const entry of fs.readdirSync(downloadsDir())) {
-      if (entry !== pinAsset) {
-        fs.rmSync(path.join(downloadsDir(), entry), { recursive: true, force: true });
-      }
-    }
-  } catch {
-    // No downloads yet.
-  }
-}
-
-function realpathOrNull(p: string): string | null {
-  try {
-    return fs.realpathSync(p);
-  } catch {
-    return null;
+    pruneDir(stagingRoot(), (entry) => entry === pinTag || queuedTags.has(entry));
+    pruneDir(downloadsDir(), (entry) => entry === pinAsset);
+  } catch (error) {
+    // A file still locked (e.g. by an AV scan) goes on the next start.
+    console.warn('[Millennium] Orphan cleanup failed:', error);
   }
 }
 
@@ -588,8 +556,7 @@ function pruneLinuxRuntime(snapshot: HostSnapshot): void {
   pruneRuntimeVersions(linux.runtimeRoot, keep);
 }
 
-export function startMillenniumInstall(win: BrowserWindow | null): void {
-  pushWindow = win;
+export function startMillenniumInstall(): void {
   setMillenniumStateListener(() => void publishPluginHostState());
   void (async () => {
     try {

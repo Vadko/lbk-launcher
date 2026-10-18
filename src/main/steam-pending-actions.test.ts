@@ -39,7 +39,10 @@ vi.mock('@/main/utils/store-storage', () => ({
   writeStoreValue: vi.fn(),
 }));
 vi.mock('@/main/utils/theme', () => ({ getIcon: () => '' }));
-vi.mock('@/main/window', () => ({ getMainWindow: () => null }));
+vi.mock('@/main/window', () => ({
+  getMainWindow: () => null,
+  sendToRenderer: () => undefined,
+}));
 
 const {
   classifyPendingAction,

@@ -14,6 +14,7 @@ import {
 } from '@/main/utils/millennium';
 import { MILLENNIUM_PLUGIN_NAME } from '@/main/utils/millennium-plugin';
 import { getPlatform } from '@/main/utils/platform';
+import { errnoCode, errorMessage } from '@/shared/errors';
 import type { MillenniumFailure } from '@/shared/types';
 import {
   applyLinuxLinks,
@@ -339,8 +340,8 @@ function failureFor(error: unknown): {
   if (error instanceof ApplyRefusal) {
     return { outcome: 'drop', reason: error.reason };
   }
-  const code = (error as NodeJS.ErrnoException).code ?? '';
-  if (LOCKED_CODES.has(code)) {
+  const code = errnoCode(error);
+  if (typeof code === 'string' && LOCKED_CODES.has(code)) {
     // Windows helpers can hold DLLs for a moment after Steam's main process is gone.
     return getPlatform() === 'windows'
       ? { outcome: 'retry', reason: 'files-locked' }
@@ -390,7 +391,7 @@ export function applyQueuedMillenniumAction(
     return report(kind, 'applied');
   } catch (error) {
     const failure = failureFor(error);
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     if (failure.outcome === 'retry' || error instanceof ApplyRefusal) {
       console.warn(`[Millennium] ${kind} ${failure.reason}: ${message}`);
     } else {

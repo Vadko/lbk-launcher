@@ -1,6 +1,7 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import { errorMessage } from '@/shared/errors';
 import type {
   ApplyPendingLaunchOptionsResult,
   Game,
@@ -138,7 +139,7 @@ export function setupInstallerHandlers(): void {
         console.error('[Installer] Applying pending launch options failed:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Невідома помилка',
+          error: errorMessage(error, 'Невідома помилка'),
         };
       }
     }

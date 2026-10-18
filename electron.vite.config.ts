@@ -44,8 +44,8 @@ export default defineConfig({
     build: {
       sourcemap: true,
       externalizeDeps: {
-        // binarykvparser bundles `long`; electron-builder drops it from app.asar. resedit is ESM-only.
-        exclude: ['got', 'electron-store', 'binarykvparser', 'resedit'],
+        // binarykvparser bundles `long`; electron-builder drops it from app.asar. resedit and p-timeout are ESM-only.
+        exclude: ['got', 'electron-store', 'binarykvparser', 'resedit', 'p-timeout'],
       },
       rollupOptions: {
         input: {

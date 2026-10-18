@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { release } from 'os';
 import { parseEnv } from 'util';
+import { isFlatpak } from './host-exec';
 
 export function isMacOS(): boolean {
   return process.platform === 'darwin';
@@ -63,7 +64,7 @@ export function forCurrentOS<T>(
 
 // Inside our Flatpak /etc/os-release describes the runtime, the host's copy is under /run/host.
 function readOsRelease(): NodeJS.Dict<string> {
-  const candidates = process.env.FLATPAK_ID
+  const candidates = isFlatpak()
     ? ['/run/host/os-release', '/run/host/etc/os-release']
     : ['/etc/os-release', '/usr/lib/os-release'];
   for (const file of candidates) {

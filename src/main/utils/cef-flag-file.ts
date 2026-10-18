@@ -13,7 +13,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { queueSteamAction } from '@/main/steam-pending-actions';
-import { getMainWindow } from '@/main/window';
+import { sendToRenderer } from '@/main/window';
+import { errnoCode } from '@/shared/errors';
 import { detectDeckyPluginSync, isDeckyInstalledSync } from './decky';
 import { detectMillennium } from './millennium';
 import {
@@ -85,7 +86,7 @@ function unlinkFlagFile(filePath: string): void {
     fs.unlinkSync(filePath);
     console.log(`[CEFFlagFile] Removed ${filePath}`);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (errnoCode(error) === 'ENOENT') {
       return;
     }
     console.error('[CEFFlagFile] Failed to remove flag file:', error);
@@ -122,7 +123,7 @@ function ensureCefFlagFile(): void {
       `[CEFFlagFile] Created ${filePath} — Steam restart needed for it to take effect`
     );
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+    if (errnoCode(error) === 'EEXIST') {
       return;
     }
     console.error('[CEFFlagFile] Failed to create flag file:', error);
@@ -257,7 +258,7 @@ async function enableCefDebugging(prompt: boolean): Promise<void> {
   ensureCefFlagFile();
 
   if (prompt && (await claimSteamRestartPrompt())) {
-    getMainWindow()?.webContents.send('steam-restart-required');
+    sendToRenderer('steam-restart-required');
   }
 }
 

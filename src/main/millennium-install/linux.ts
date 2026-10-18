@@ -1,6 +1,16 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { replaceSymlinkAtomic, writeFileAtomic } from '@/main/utils/atomic-write';
+import {
+  replaceDirAtomic,
+  replaceSymlinkAtomic,
+  writeFileAtomic,
+} from '@/main/utils/atomic-write';
+import {
+  isPathInside,
+  missingFiles,
+  pruneDir,
+  readlinkOrNull,
+} from '@/main/utils/fs-safe';
 
 export const RUNTIME_PATH_ENV = 'MILLENNIUM_RUNTIME_PATH';
 export const LINUX_RUNTIME_LIB = 'libmillennium_x86.so';
@@ -71,17 +81,17 @@ export function renderEnvironmentFile(runtimeLib: string): string {
 }
 
 const FOREIGN_ABI = /x86-64|x32|aarch64|arm|riscv|ppc|64bit/i;
+const LDCONFIG_LINE = /^\s*(\S+) \(([^)]*)\)/;
 
 function hasI386Entry(stdout: string, lib: string): boolean {
-  const escaped = lib.replace(/\./g, '\\.');
-  const re = new RegExp(`^\\s*${escaped} \\(([^)]*)\\)`, 'gm');
-  for (const match of stdout.matchAll(re)) {
-    const tags = match[1].split(',').map((tag) => tag.trim());
-    if (tags.includes('libc6') && !tags.some((tag) => FOREIGN_ABI.test(tag))) {
-      return true;
+  return stdout.split('\n').some((line) => {
+    const match = LDCONFIG_LINE.exec(line);
+    if (!match || match[1] !== lib) {
+      return false;
     }
-  }
-  return false;
+    const tags = match[2].split(',').map((tag) => tag.trim());
+    return tags.includes('libc6') && !tags.some((tag) => FOREIGN_ABI.test(tag));
+  });
 }
 
 // `ldconfig -p` tags 32-bit x86 libraries with a bare "(libc6)".
@@ -107,10 +117,6 @@ export function environHasRuntimePath(environ: Buffer | string): boolean {
     .some((entry) => entry.startsWith(prefix) && entry.length > prefix.length);
 }
 
-function isUnder(target: string, root: string): boolean {
-  return target.startsWith(root.endsWith('/') ? root : `${root}/`);
-}
-
 // The official installer took over: its links resolve outside every spelling of our runtime root.
 export function isTakenOver(
   xtstRealTarget: string | null,
@@ -119,7 +125,7 @@ export function isTakenOver(
   if (xtstRealTarget === null || !isMillenniumLinkTarget(xtstRealTarget)) {
     return false;
   }
-  return !lbkRuntimeRoots.some((root) => isUnder(xtstRealTarget, root));
+  return !lbkRuntimeRoots.some((root) => isPathInside(root, xtstRealTarget));
 }
 
 export function readLinkEntry(p: string): LinkEntry {
@@ -142,7 +148,7 @@ export function linksIntact(steamHome: string, libDir: string): boolean {
 }
 
 export function versionDirComplete(dir: string): boolean {
-  return LINUX_RUNTIME_FILES.every((file) => fs.existsSync(path.posix.join(dir, file)));
+  return missingFiles(dir, LINUX_RUNTIME_FILES).length === 0;
 }
 
 // Copies the staged libraries into `<runtimeRoot>/<version>`; inert until links and env point at it.
@@ -155,16 +161,14 @@ export function materializeLinuxRuntime(
   if (versionDirComplete(finalDir)) {
     return finalDir;
   }
-  const tmp = `${finalDir}.lbk-new`;
-  fs.rmSync(tmp, { recursive: true, force: true });
-  fs.mkdirSync(tmp, { recursive: true });
-  for (const file of LINUX_RUNTIME_FILES) {
-    const dest = path.posix.join(tmp, file);
-    fs.copyFileSync(path.posix.join(stagingDir, LINUX_STAGED_SUBDIR, file), dest);
-    fs.chmodSync(dest, LINUX_EXECUTABLES.has(file) ? 0o755 : 0o644);
-  }
-  fs.rmSync(finalDir, { recursive: true, force: true });
-  fs.renameSync(tmp, finalDir);
+  replaceDirAtomic(finalDir, (tmp) => {
+    fs.mkdirSync(tmp, { recursive: true });
+    for (const file of LINUX_RUNTIME_FILES) {
+      const dest = path.posix.join(tmp, file);
+      fs.copyFileSync(path.posix.join(stagingDir, LINUX_STAGED_SUBDIR, file), dest);
+      fs.chmodSync(dest, LINUX_EXECUTABLES.has(file) ? 0o755 : 0o644);
+    }
+  });
   return finalDir;
 }
 
@@ -198,7 +202,7 @@ export function removeLinuxLinks(
   for (const { rel } of LINUX_LINKS) {
     const link = path.posix.join(steamHome, rel);
     const entry = readLinkEntry(link);
-    if (entry.kind === 'symlink' && isUnder(entry.target, runtimeRoot)) {
+    if (entry.kind === 'symlink' && isPathInside(runtimeRoot, entry.target)) {
       fs.rmSync(link, { force: true });
     }
   }
@@ -214,23 +218,11 @@ export function pruneRuntimeVersions(
   runtimeRoot: string,
   keep: ReadonlySet<string>
 ): void {
-  let entries: string[];
-  try {
-    entries = fs.readdirSync(runtimeRoot);
-  } catch {
-    return;
-  }
   // Steam loads whatever `current` points to, recorded or not.
-  let live: string | null = null;
-  try {
-    live = path.posix.basename(fs.readlinkSync(path.posix.join(runtimeRoot, 'current')));
-  } catch {
-    // No current link.
-  }
-  for (const entry of entries) {
-    if (entry === 'current' || entry === live || keep.has(entry)) {
-      continue;
-    }
-    fs.rmSync(path.posix.join(runtimeRoot, entry), { recursive: true, force: true });
-  }
+  const current = readlinkOrNull(path.posix.join(runtimeRoot, 'current'));
+  const live = current === null ? null : path.posix.basename(current);
+  pruneDir(
+    runtimeRoot,
+    (entry) => entry === 'current' || entry === live || keep.has(entry)
+  );
 }

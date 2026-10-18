@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { G } from '@mobily/ts-belt';
 import { compareVersions } from '@/shared/version';
+import { readTextOrNull } from './fs-safe';
 import { isLinux } from './platform';
 
 // plugin.json "name"; Decky addresses the plugin by it and its install prompt must pass the same value.
@@ -81,16 +82,8 @@ function readJson(file: string): unknown {
   }
 }
 
-function readText(file: string): string | null {
-  try {
-    return fs.readFileSync(file, 'utf8');
-  } catch {
-    return null;
-  }
-}
-
 function homebrewDirFor(home: string): string {
-  const unit = readText(SYSTEM_UNIT);
+  const unit = readTextOrNull(SYSTEM_UNIT);
   return (unit && parseUnprivilegedPath(unit)) || path.join(home, 'homebrew');
 }
 

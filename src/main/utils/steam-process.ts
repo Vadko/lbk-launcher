@@ -7,12 +7,14 @@ import { HKEY } from 'registry-js';
 import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
 import { getSteamPath } from '@/main/game-detector/steam';
+import { execFileOnHost, isFlatpak, system32 } from '@/main/utils/host-exec';
 import { forCurrentOS, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import { getRegistryDword } from '@/main/utils/registry';
 import {
   isCrashpadHandler,
   MAC_MILLENNIUM_LAUNCHER_RE,
 } from '@/main/utils/steam-process-match';
+import { errnoCode, errorMessage } from '@/shared/errors';
 
 const execFileAsync = promisify(execFile);
 
@@ -51,24 +53,6 @@ interface ProcessRow {
 interface SteamProcessSnapshot {
   steam: SteamProcessInfo[];
   webhelpers: SteamProcessInfo[];
-}
-
-function isRunningInFlatpak(): boolean {
-  return !!process.env.FLATPAK_ID;
-}
-
-export function execFileOnHost(
-  command: string,
-  args: string[],
-  timeout = 10000
-): Promise<{ stdout: string; stderr: string }> {
-  if (isRunningInFlatpak()) {
-    return execFileAsync('flatpak-spawn', ['--host', command, ...args], {
-      timeout,
-      maxBuffer: 16 * 1024 * 1024,
-    });
-  }
-  return execFileAsync(command, args, { timeout, maxBuffer: 16 * 1024 * 1024 });
 }
 
 function parsePort(raw: string | undefined): number | null {
@@ -237,12 +221,8 @@ function splitRows(
   return snapshot;
 }
 
-async function readProcText(pid: string, file: string): Promise<string | null> {
-  try {
-    return await fsp.readFile(`/proc/${pid}/${file}`, 'utf8');
-  } catch {
-    return null;
-  }
+function readProcText(pid: string, file: string): Promise<string | null> {
+  return fsp.readFile(`/proc/${pid}/${file}`, 'utf8').catch(() => null);
 }
 
 async function readProcStatusPpid(pid: string): Promise<number> {
@@ -294,23 +274,15 @@ async function listViaPs(
     const { stdout } = await execFileOnHost('ps', psArgs, 5000);
     return splitRows(parsePsOutput(stdout), classify);
   } catch (error) {
-    console.warn('[Steam] ps failed:', error instanceof Error ? error.message : error);
+    console.warn('[Steam] ps failed:', errorMessage(error));
     return { steam: [], webhelpers: [] };
   }
-}
-
-function getSystem32Path(...segments: string[]): string {
-  return path.win32.join(
-    process.env.SystemRoot || 'C:\\Windows',
-    'System32',
-    ...segments
-  );
 }
 
 async function tasklistPids(image: string): Promise<number[]> {
   try {
     const { stdout } = await execFileAsync(
-      getSystem32Path('tasklist.exe'),
+      system32('tasklist.exe'),
       ['/FI', `IMAGENAME eq ${image}`, '/FO', 'CSV', '/NH'],
       { timeout: 10000, windowsHide: true }
     );
@@ -329,7 +301,7 @@ const WIN32_PROCESS_SCRIPT = [
 async function listWindowsProcesses(): Promise<SteamProcessSnapshot> {
   try {
     const { stdout } = await execFileAsync(
-      getSystem32Path('WindowsPowerShell', 'v1.0', 'powershell.exe'),
+      system32('WindowsPowerShell', 'v1.0', 'powershell.exe'),
       [
         '-NoProfile',
         '-NonInteractive',
@@ -351,10 +323,7 @@ async function listWindowsProcesses(): Promise<SteamProcessSnapshot> {
     }
     return snapshot;
   } catch (error) {
-    console.warn(
-      '[Steam] Process query failed:',
-      error instanceof Error ? error.message : error
-    );
+    console.warn('[Steam] Process query failed:', errorMessage(error));
     return { steam: [], webhelpers: [] };
   }
 }
@@ -365,7 +334,7 @@ function collectSteamProcesses(): Promise<SteamProcessSnapshot> {
   const collect = forCurrentOS({
     windows: listWindowsProcesses,
     linux: () =>
-      isRunningInFlatpak()
+      isFlatpak()
         ? listViaPs(['-ww', '-eo', 'pid=,ppid=,args='], classifyLinuxProcess)
         : scanLinuxProc(),
     macos: () => listViaPs(['-axww', '-o', 'pid=,ppid=,args='], classifyMacProcess),
@@ -425,9 +394,7 @@ export function findSteamPids(): Promise<number[]> {
   const find = forCurrentOS({
     windows: () => tasklistPids('steam.exe'),
     linux: async () =>
-      isRunningInFlatpak()
-        ? pgrepPids('steam')
-        : (await scanLinuxProc()).steam.map((p) => p.pid),
+      isFlatpak() ? pgrepPids('steam') : (await scanLinuxProc()).steam.map((p) => p.pid),
     macos: macSteamPids,
     other: (): Promise<number[]> => Promise.resolve([]),
   });
@@ -478,7 +445,7 @@ function probePid(pid: number): 'alive' | 'denied' | 'gone' {
     process.kill(pid, 0);
     return 'alive';
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'EPERM' ? 'denied' : 'gone';
+    return errnoCode(error) === 'EPERM' ? 'denied' : 'gone';
   }
 }
 
@@ -572,7 +539,7 @@ async function readLinuxSteamProcFile(
   file: 'maps' | 'environ'
 ): Promise<Buffer[] | null> {
   // Our Flatpak sandbox has its own /proc and cannot see host Steam.
-  if (isRunningInFlatpak()) {
+  if (isFlatpak()) {
     return null;
   }
   const { steam } = await scanLinuxProc();
@@ -626,7 +593,7 @@ export function parseReaperAppId(args: string): number | null {
 }
 
 async function linuxReaperArgs(): Promise<string[]> {
-  if (isRunningInFlatpak()) {
+  if (isFlatpak()) {
     const pids = await pgrepPids('reaper');
     if (pids.length === 0) {
       return [];

@@ -1,5 +1,6 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { isFlatpak } from '@/main/utils/host-exec';
 import { resolveMillenniumPaths } from '@/main/utils/millennium';
 import type { MillenniumOs } from './release';
 
@@ -107,6 +108,6 @@ export function installPathsFor(
     home: os.homedir(),
     steamPath,
     env: process.env,
-    insideFlatpak: Boolean(process.env.FLATPAK_ID),
+    insideFlatpak: isFlatpak(),
   });
 }

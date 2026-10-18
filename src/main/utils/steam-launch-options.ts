@@ -29,6 +29,7 @@ import {
 import { forCurrentOS } from '@/main/utils/platform';
 import { getSteamBridge } from '@/main/utils/steam-bridge';
 import { isSteamRunning } from '@/main/utils/steam-launcher';
+import { errorMessage } from '@/shared/errors';
 import type { Game } from '@/shared/types';
 
 export interface WriteLaunchOptionsParams {
@@ -290,7 +291,7 @@ export async function writeSteamLaunchOptions(
     } catch (error) {
       return {
         mode: 'failed',
-        reason: error instanceof Error ? error.message : 'Steam bridge apply failed',
+        reason: errorMessage(error, 'Steam bridge apply failed'),
       };
     }
   }

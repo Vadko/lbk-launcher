@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { system32 } from '@/main/utils/host-exec';
 
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
@@ -49,11 +50,7 @@ async function setHiddenAttribute(dirPath: string): Promise<void> {
   }
 
   try {
-    const attribPath = path.join(
-      process.env.SystemRoot || 'C:\\Windows',
-      'System32',
-      'attrib.exe'
-    );
+    const attribPath = system32('attrib.exe');
     await execPromise(`"${attribPath}" +h "${dirPath}"`);
     console.log(`[Backup] Set hidden attribute on: ${dirPath}`);
   } catch (error) {

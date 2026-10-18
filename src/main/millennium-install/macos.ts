@@ -1,9 +1,9 @@
-import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { G } from '@mobily/ts-belt';
-import { replaceSymlinkAtomic } from '@/main/utils/atomic-write';
-import { isSafeArchiveEntry } from './extract';
+import { replaceDirAtomic, replaceSymlinkAtomic } from '@/main/utils/atomic-write';
+import { isPathInside, pruneDir } from '@/main/utils/fs-safe';
+import { sha256FileSync } from '@/main/utils/hash';
 import type { MacHardwareArch } from './release';
 
 export const MAC_RUNTIME_ITEMS = [
@@ -24,7 +24,8 @@ export function parseHwArm64(sysctlOutput: string): boolean {
 export function verifyMacManifest(
   manifest: unknown,
   arch: MacHardwareArch,
-  hashOf: (rel: string) => string | null
+  bundleRoot: string,
+  hashOf: (file: string) => string | null
 ): { ok: true; version: string } | { ok: false; error: string } {
   if (!G.isObject(manifest) || !G.isObject(manifest.files)) {
     return { ok: false, error: 'manifest has no files' };
@@ -42,10 +43,11 @@ export function verifyMacManifest(
     }
   }
   for (const [rel, expected] of Object.entries(files)) {
-    if (!isSafeArchiveEntry(rel) || typeof expected !== 'string') {
+    const file = path.posix.join(bundleRoot, rel);
+    if (!isPathInside(bundleRoot, file) || typeof expected !== 'string') {
       return { ok: false, error: `bad manifest entry ${rel}` };
     }
-    const actual = hashOf(rel);
+    const actual = hashOf(file);
     if (actual !== expected.toLowerCase()) {
       return { ok: false, error: `${rel}: ${actual ?? 'missing'}` };
     }
@@ -102,14 +104,6 @@ export function findMacBundleRoot(stagingDir: string): string | null {
   return null;
 }
 
-function hashFileSync(file: string): string | null {
-  try {
-    return hash('sha256', fs.readFileSync(file));
-  } catch {
-    return null;
-  }
-}
-
 export function verifyMacBundle(
   bundleRoot: string,
   arch: MacHardwareArch
@@ -120,9 +114,7 @@ export function verifyMacBundle(
   } catch (error) {
     return { ok: false, error: `manifest unreadable: ${String(error)}` };
   }
-  return verifyMacManifest(manifest, arch, (rel) =>
-    hashFileSync(path.posix.join(bundleRoot, rel))
-  );
+  return verifyMacManifest(manifest, arch, bundleRoot, sha256FileSync);
 }
 
 // Steam must be off: replacing the runtime under a running wrapper crashes it.
@@ -134,40 +126,31 @@ export function applyMacActivation(i: {
   appBundle: string;
 }): string {
   const runtimeDir = path.posix.join(i.runtimeRoot, i.version);
-  const tmpRuntime = `${runtimeDir}.lbk-new`;
-  fs.rmSync(tmpRuntime, { recursive: true, force: true });
-  fs.mkdirSync(i.runtimeRoot, { recursive: true });
-  fs.cpSync(path.posix.join(i.bundleRoot, 'runtime'), tmpRuntime, {
-    recursive: true,
-    verbatimSymlinks: true,
-  });
-  fs.rmSync(runtimeDir, { recursive: true, force: true });
-  fs.renameSync(tmpRuntime, runtimeDir);
+  replaceDirAtomic(runtimeDir, (tmp) =>
+    fs.cpSync(path.posix.join(i.bundleRoot, 'runtime'), tmp, {
+      recursive: true,
+      verbatimSymlinks: true,
+    })
+  );
   replaceSymlinkAtomic(runtimeDir, i.runtimeCurrent);
 
-  const tmpApp = `${i.appBundle}.lbk-new`;
-  fs.rmSync(tmpApp, { recursive: true, force: true });
-  const layout = planMacWrapperLayout({
-    bundleRoot: i.bundleRoot,
-    runtimeCurrent: i.runtimeCurrent,
-    appBundle: tmpApp,
-  });
-  for (const copy of layout.copies) {
-    fs.mkdirSync(path.posix.dirname(copy.to), { recursive: true });
-    fs.copyFileSync(copy.from, copy.to);
-  }
-  for (const link of layout.links) {
-    fs.mkdirSync(path.posix.dirname(link.link), { recursive: true });
-    fs.symlinkSync(link.target, link.link);
-  }
-  fs.rmSync(i.appBundle, { recursive: true, force: true });
-  fs.renameSync(tmpApp, i.appBundle);
-
-  for (const entry of fs.readdirSync(i.runtimeRoot)) {
-    if (entry !== 'current' && entry !== i.version) {
-      fs.rmSync(path.posix.join(i.runtimeRoot, entry), { recursive: true, force: true });
+  replaceDirAtomic(i.appBundle, (tmp) => {
+    const layout = planMacWrapperLayout({
+      bundleRoot: i.bundleRoot,
+      runtimeCurrent: i.runtimeCurrent,
+      appBundle: tmp,
+    });
+    for (const copy of layout.copies) {
+      fs.mkdirSync(path.posix.dirname(copy.to), { recursive: true });
+      fs.copyFileSync(copy.from, copy.to);
     }
-  }
+    for (const link of layout.links) {
+      fs.mkdirSync(path.posix.dirname(link.link), { recursive: true });
+      fs.symlinkSync(link.target, link.link);
+    }
+  });
+
+  pruneDir(i.runtimeRoot, (entry) => entry === 'current' || entry === i.version);
   return runtimeDir;
 }
 

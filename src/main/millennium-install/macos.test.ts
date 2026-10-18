@@ -1,12 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('@/main/installer/archive', () => ({
-  extractArchive: vi.fn(),
-  getCleanEnv: () => ({}),
-}));
-
-const { MAC_RUNTIME_ITEMS, parseHwArm64, planMacWrapperLayout, verifyMacManifest } =
-  await import('./macos');
+import { describe, expect, it } from 'vitest';
+import {
+  MAC_RUNTIME_ITEMS,
+  parseHwArm64,
+  planMacWrapperLayout,
+  verifyMacManifest,
+} from './macos';
 
 const HASH = 'a'.repeat(64);
 
@@ -28,24 +26,26 @@ describe('parseHwArm64', () => {
 
 describe('verifyMacManifest', () => {
   it('accepts a bundle whose files all match', () => {
-    expect(verifyMacManifest(manifest(), 'arm64', () => HASH)).toEqual({
+    expect(verifyMacManifest(manifest(), 'arm64', '/s', () => HASH)).toEqual({
       ok: true,
       version: '3.5.0-beta.3-lbk.4',
     });
   });
 
   it('rejects another arch, a hash mismatch, a missing file or an unsafe path', () => {
-    expect(verifyMacManifest(manifest(), 'x86_64', () => HASH).ok).toBe(false);
+    expect(verifyMacManifest(manifest(), 'x86_64', '/s', () => HASH).ok).toBe(false);
     expect(
-      verifyMacManifest(manifest(), 'arm64', (rel) =>
-        rel === 'runtime/steam_osx' ? 'b'.repeat(64) : HASH
+      verifyMacManifest(manifest(), 'arm64', '/s', (file) =>
+        file === '/s/runtime/steam_osx' ? 'b'.repeat(64) : HASH
       ).ok
     ).toBe(false);
-    expect(verifyMacManifest(manifest(), 'arm64', () => null).ok).toBe(false);
+    expect(verifyMacManifest(manifest(), 'arm64', '/s', () => null).ok).toBe(false);
     const evil = manifest();
     evil.files['../../etc/x'] = HASH;
-    expect(verifyMacManifest(evil, 'arm64', () => HASH).ok).toBe(false);
-    expect(verifyMacManifest({ arch: 'arm64' }, 'arm64', () => HASH).ok).toBe(false);
+    expect(verifyMacManifest(evil, 'arm64', '/s', () => HASH).ok).toBe(false);
+    expect(verifyMacManifest({ arch: 'arm64' }, 'arm64', '/s', () => HASH).ok).toBe(
+      false
+    );
   });
 });
 

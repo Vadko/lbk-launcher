@@ -5,8 +5,8 @@ import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
 import { describe, expect, it, vi } from 'vitest';
 import {
   applyWindowsActivation,
+  applyWindowsRemoval,
   classifyWindowsLoader,
-  isSameFile,
   planWindowsActivation,
   planWindowsRemoval,
   readMillenniumDllVersion,
@@ -38,14 +38,11 @@ describe('classifyWindowsLoader', () => {
 });
 
 describe('planWindowsRemoval', () => {
-  const hhx64 = { ino: 2n ** 60n + 7n, dev: 3n };
-
   it('removes the loader first and only version.dll files hardlinked to the hook', () => {
     const steps = planWindowsRemoval({
-      hhx64,
       versionDlls: [
-        { rel: 'bin/cef/cef.win64/version.dll', id: { ino: 2n ** 60n + 7n, dev: 3n } },
-        { rel: 'bin/cef/cef.win7x64/version.dll', id: { ino: 2n ** 60n + 8n, dev: 3n } },
+        { rel: 'bin/cef/cef.win64/version.dll', linkedToHook: true },
+        { rel: 'bin/cef/cef.win7x64/version.dll', linkedToHook: false },
       ],
       purge: false,
       pluginDirRel: 'millennium/plugins/lbk-bridge',
@@ -60,17 +57,38 @@ describe('planWindowsRemoval', () => {
     expect(steps).not.toContainEqual({ kind: 'dir', rel: 'millennium' });
   });
 
-  it('keeps version.dll when the hook is gone or the dll is missing', () => {
+  it('purges the whole millennium folder last', () => {
     const steps = planWindowsRemoval({
-      hhx64: null,
-      versionDlls: [{ rel: 'bin/cef/cef.win64/version.dll', id: hhx64 }],
+      versionDlls: [],
       purge: true,
       pluginDirRel: 'millennium/plugins/lbk-bridge',
     });
-    expect(steps.filter((s) => s.rel.endsWith('version.dll'))).toHaveLength(0);
     expect(steps.at(-1)).toEqual({ kind: 'dir', rel: 'millennium' });
-    expect(isSameFile(hhx64, null)).toBe(false);
-    expect(isSameFile(hhx64, { ino: hhx64.ino, dev: 4n })).toBe(false);
+  });
+});
+
+describe('applyWindowsRemoval', () => {
+  it('deletes only the version.dll that is a hardlink of the hook', () => {
+    const steam = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-winrm-'));
+    try {
+      const hook = path.join(steam, 'millennium/lib/millennium.hhx64.dll');
+      const linked = path.join(steam, 'bin/cef/cef.win64/version.dll');
+      const own = path.join(steam, 'bin/cef/cef.win7x64/version.dll');
+      for (const file of [hook, linked, own]) {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+      }
+      fs.writeFileSync(hook, 'hook');
+      fs.linkSync(hook, linked);
+      fs.copyFileSync(hook, own);
+
+      applyWindowsRemoval(steam, false, 'millennium/plugins/lbk-bridge');
+
+      expect(fs.existsSync(linked)).toBe(false);
+      expect(fs.existsSync(own)).toBe(true);
+      expect(fs.existsSync(hook)).toBe(false);
+    } finally {
+      fs.rmSync(steam, { recursive: true, force: true });
+    }
   });
 });
 

@@ -1,3 +1,4 @@
+import { errorMessage } from '@/shared/errors';
 import { plural } from '@/shared/plural';
 import type { RestartFailureReason, SteamBridgeStatus } from '@/shared/types';
 import { useModalStore } from '../store/useModalStore';
@@ -135,7 +136,7 @@ export async function runSteamRestart(
   } catch (error) {
     outcome = {
       success: false,
-      error: error instanceof Error ? error.message : 'Невідома помилка',
+      error: errorMessage(error, 'Невідома помилка'),
     };
   }
 

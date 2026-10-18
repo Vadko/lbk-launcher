@@ -2,6 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
 import { coerce } from 'semver';
+import { copyFileAtomic } from '@/main/utils/atomic-write';
+import { isSameFile } from '@/main/utils/fs-safe';
 
 const WINDOWS_LOADER = 'wsock32.dll';
 export const WINDOWS_EXPECTED_FILES = [
@@ -26,8 +28,6 @@ const REMOVED_DIRS = [
   'millennium-migration-temp',
 ];
 
-export type FileId = { ino: bigint; dev: bigint } | null;
-
 export type RemovalStep = { kind: 'file' | 'dir'; rel: string };
 
 // The loader goes last: until it exists every other Millennium file is inert.
@@ -47,20 +47,15 @@ export function classifyWindowsLoader(present: {
   return present.loader && !present.millenniumLib ? 'conflict' : 'ok';
 }
 
-export function isSameFile(a: FileId, b: FileId): boolean {
-  return a !== null && b !== null && a.ino === b.ino && a.dev === b.dev;
-}
-
 // Loader first, so a crash mid-removal leaves Millennium inert rather than half-loaded.
 export function planWindowsRemoval(i: {
-  hhx64: FileId;
-  versionDlls: { rel: string; id: FileId }[];
+  versionDlls: { rel: string; linkedToHook: boolean }[];
   purge: boolean;
   pluginDirRel: string;
 }): RemovalStep[] {
   const steps: RemovalStep[] = [{ kind: 'file', rel: WINDOWS_LOADER }];
   for (const dll of i.versionDlls) {
-    if (isSameFile(dll.id, i.hhx64)) {
+    if (dll.linkedToHook) {
       steps.push({ kind: 'file', rel: dll.rel });
     }
   }
@@ -69,15 +64,6 @@ export function planWindowsRemoval(i: {
   }
   steps.push({ kind: 'dir', rel: i.purge ? 'millennium' : i.pluginDirRel });
   return steps;
-}
-
-function fileId(p: string): FileId {
-  try {
-    const st = fs.statSync(p, { bigint: true });
-    return { ino: st.ino, dev: st.dev };
-  } catch {
-    return null;
-  }
 }
 
 export function windowsLoaderState(steamPath: string): 'ok' | 'conflict' {
@@ -122,16 +108,7 @@ export function applyWindowsActivation(
     if (rel === WINDOWS_LOADER) {
       opts.beforeLoader();
     }
-    const target = path.join(steamPath, rel);
-    const tmp = `${target}.lbk.tmp`;
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.copyFileSync(path.join(stagingDir, rel), tmp);
-    try {
-      fs.renameSync(tmp, target);
-    } catch (error) {
-      fs.rmSync(tmp, { force: true });
-      throw error;
-    }
+    copyFileAtomic(path.join(stagingDir, rel), path.join(steamPath, rel));
   }
 }
 
@@ -140,11 +117,11 @@ export function applyWindowsRemoval(
   purge: boolean,
   pluginDirRel: string
 ): void {
+  const hook = path.join(steamPath, HHX64);
   const steps = planWindowsRemoval({
-    hhx64: fileId(path.join(steamPath, HHX64)),
     versionDlls: CEF_VERSION_DLLS.map((rel) => ({
       rel,
-      id: fileId(path.join(steamPath, rel)),
+      linkedToHook: isSameFile(path.join(steamPath, rel), hook),
     })),
     purge,
     pluginDirRel,
@@ -155,12 +132,6 @@ export function applyWindowsRemoval(
       force: true,
     });
   }
-}
-
-export function missingWindowsFiles(steamPath: string): string[] {
-  return WINDOWS_EXPECTED_FILES.filter(
-    (rel) => !fs.existsSync(path.join(steamPath, rel))
-  );
 }
 
 let dllVersionCache: { key: string; version: string | null } | null = null;

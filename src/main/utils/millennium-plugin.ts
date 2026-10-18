@@ -1,7 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { G } from '@mobily/ts-belt';
+import { replaceDirAtomic } from './atomic-write';
+import { readFileOrNull, readTextOrNull } from './fs-safe';
+import { isFlatpak, system32 } from './host-exec';
 import {
   detectMillennium,
   planEnabledPluginsEdit,
@@ -19,7 +22,6 @@ const DATA_FILES: readonly PluginDataFile[] = ['bridge.json', 'achievements.json
 const PLUGIN_JSON = 'plugin.json';
 const FRONTEND_SUBDIR = path.join('.millennium', 'Dist');
 const FRONTEND_ENTRY = 'index.js';
-const TMP_PREFIX = `.${MILLENNIUM_PLUGIN_NAME}.tmp-`;
 
 export interface MillenniumPluginState {
   supported: boolean;
@@ -69,14 +71,6 @@ function isOurPluginDir(dir: string): boolean {
   }
 }
 
-function readFileOrNull(filePath: string): Buffer | null {
-  try {
-    return fs.readFileSync(filePath);
-  } catch {
-    return null;
-  }
-}
-
 function dataFileMode(): number | undefined {
   return isWindows() ? undefined : 0o600;
 }
@@ -104,20 +98,6 @@ export function getMillenniumPluginState(): MillenniumPluginState {
     enabled: Boolean(enabledList?.includes(MILLENNIUM_PLUGIN_NAME)),
     dir,
   };
-}
-
-function cleanupStaleTmpDirs(pluginsDir: string): void {
-  let entries: string[] = [];
-  try {
-    entries = fs.readdirSync(pluginsDir);
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    if (entry.startsWith(TMP_PREFIX)) {
-      fs.rmSync(path.join(pluginsDir, entry), { recursive: true, force: true });
-    }
-  }
 }
 
 // Carried over an update; plugin-data.ts then rewrites whatever this session produced.
@@ -184,21 +164,16 @@ export function installOrUpdateMillenniumPlugin():
   }
 
   try {
-    // Millennium creates `plugins` lazily on its own first scan; the parent existing proves it ran.
-    fs.mkdirSync(pluginsDir, { recursive: true });
-    cleanupStaleTmpDirs(pluginsDir);
     const data = collectDataFiles(dir);
-    const tmp = path.join(pluginsDir, `${TMP_PREFIX}${randomBytes(6).toString('hex')}`);
-    writePluginTree(tmp, bundledPluginJson, bundledIndex, data);
-
+    const write = (target: string) =>
+      writePluginTree(target, bundledPluginJson, bundledIndex, data);
     try {
-      fs.rmSync(dir, { recursive: true, force: true });
-      fs.renameSync(tmp, dir);
+      // Also creates `plugins`, which Millennium makes lazily; the parent existing proves it ran.
+      replaceDirAtomic(dir, write);
     } catch (error) {
       // Windows: a file Steam holds open blocks the swap, so overwrite in place instead.
       console.warn('[Millennium] Plugin swap failed, overwriting in place:', error);
-      writePluginTree(dir, bundledPluginJson, bundledIndex, data);
-      fs.rmSync(tmp, { recursive: true, force: true });
+      write(dir);
     }
   } catch (error) {
     console.warn('[Millennium] Plugin install failed:', error);
@@ -219,20 +194,16 @@ function steamRunningOutput(command: string, args: string[]): string | null {
     });
   } catch (error) {
     // pgrep exits 1 when nothing matches.
-    if ((error as { status?: number }).status === 1) {
+    if (G.isObject(error) && error.status === 1) {
       return '';
     }
     return null;
   }
 }
 
+// Null when the process exited mid-scan.
 function readProcFile(pid: string, file: string): string | null {
-  try {
-    return fs.readFileSync(path.join('/proc', pid, file), 'utf8');
-  } catch {
-    // Process exited mid-scan.
-    return null;
-  }
+  return readTextOrNull(path.join('/proc', pid, file));
 }
 
 // Same rule as waitForSteamGone: a lingering crashpad handler is not a running Steam.
@@ -287,12 +258,7 @@ function macSteamRunningSync(): boolean | null {
 // Synchronous so the config check and rename stay back to back; null means unknown.
 export function isSteamRunningSync(): boolean | null {
   if (isWindows()) {
-    const tasklist = path.join(
-      process.env.SystemRoot || 'C:\\Windows',
-      'System32',
-      'tasklist.exe'
-    );
-    const out = steamRunningOutput(tasklist, [
+    const out = steamRunningOutput(system32('tasklist.exe'), [
       '/FI',
       'IMAGENAME eq steam*',
       '/NH',
@@ -302,7 +268,7 @@ export function isSteamRunningSync(): boolean | null {
     return out === null ? null : /"steam(webhelper)?\.exe"/i.test(out);
   }
   if (isLinux()) {
-    if (process.env.FLATPAK_ID) {
+    if (isFlatpak()) {
       const out = steamRunningOutput('flatpak-spawn', [
         '--host',
         'pgrep',

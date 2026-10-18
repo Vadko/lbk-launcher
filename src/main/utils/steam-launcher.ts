@@ -3,7 +3,7 @@
  * Unified logic for launching and restarting Steam across platforms
  */
 
-import { type ChildProcess, execFile, execSync, spawn } from 'child_process';
+import { execFile, execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
@@ -11,61 +11,20 @@ import { promisify } from 'util';
 import { getSteamExePath, getSteamPath } from '@/main/game-detector/steam';
 import { millenniumLaunchEnv } from '@/main/millennium-install/launch-env';
 import { steamTypeFromPath } from '@/main/plugin-host/support';
+import { execFileOnHost, isFlatpak, spawnOnHost, system32 } from '@/main/utils/host-exec';
 import { findMacMillenniumWrapper } from '@/main/utils/millennium';
 import { isGamescopeSession, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
 import {
-  execFileOnHost,
   findSteamPids,
   getRunningSteamGameId,
   isSteamElevated,
   waitForSteamGone,
   waitForSteamStart,
 } from '@/main/utils/steam-process';
+import { errnoCode, errorMessage } from '@/shared/errors';
 import type { RestartFailureReason, RestartSteamResult } from '@/shared/types';
 
 const execFileAsync = promisify(execFile);
-
-// ============================================================================
-// Flatpak Detection
-// ============================================================================
-
-/**
- * Check if we are running inside a Flatpak sandbox
- */
-function isRunningInFlatpak(): boolean {
-  return !!process.env.FLATPAK_ID;
-}
-
-// The sandbox environment is not forwarded by flatpak-spawn, so extra variables go through --env.
-function spawnOnHost(
-  command: string,
-  args: string[] = [],
-  env: Record<string, string> = {}
-): ChildProcess {
-  if (isRunningInFlatpak()) {
-    const envArgs = Object.entries(env).map(([key, value]) => `--env=${key}=${value}`);
-    const child = spawn('flatpak-spawn', ['--host', ...envArgs, command, ...args], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.on('error', (err) => {
-      console.error(`[Steam] Error spawning flatpak-spawn for ${command}:`, err);
-    });
-    child.unref();
-    return child;
-  }
-
-  const child = spawn(command, args, {
-    detached: true,
-    stdio: 'ignore',
-    env: { ...process.env, ...env },
-  });
-  child.on('error', (err) => {
-    console.error(`[Steam] Error spawning ${command}:`, err);
-  });
-  child.unref();
-  return child;
-}
 
 // ============================================================================
 // Types
@@ -100,7 +59,7 @@ function detectLinuxSteamType(): SteamInstallationType {
 
   // Check if native steam command exists on host
   try {
-    if (isRunningInFlatpak()) {
+    if (isFlatpak()) {
       execSync('flatpak-spawn --host which steam', { stdio: 'ignore' });
     } else {
       execSync('which steam', { stdio: 'ignore' });
@@ -108,7 +67,7 @@ function detectLinuxSteamType(): SteamInstallationType {
     return 'native';
   } catch {
     // If we're in Flatpak and can't find native steam, check if Flatpak Steam is installed
-    if (isRunningInFlatpak()) {
+    if (isFlatpak()) {
       try {
         execSync('flatpak-spawn --host flatpak info com.valvesoftware.Steam', {
           stdio: 'ignore',
@@ -144,20 +103,8 @@ const MILLENNIUM_WRAPPER_START_TIMEOUT_MS = 15000;
 const MILLENNIUM_ASSETS_ROOT_ENV = 'MILLENNIUM_ASSETS_ROOT';
 const MILLENNIUM_WRAPPER_ASSETS = 'Contents/Resources/millennium-assets';
 
-function describeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export async function isSteamRunning(): Promise<boolean> {
   return (await findSteamPids()).length > 0;
-}
-
-function getTaskkillPath(): string {
-  return path.win32.join(
-    process.env.SystemRoot || 'C:\\Windows',
-    'System32',
-    'taskkill.exe'
-  );
 }
 
 async function requestGracefulExit(): Promise<void> {
@@ -189,7 +136,7 @@ async function requestGracefulExit(): Promise<void> {
       });
     }
   } catch (error) {
-    console.warn('[Steam] Graceful shutdown request failed:', describeError(error));
+    console.warn('[Steam] Graceful shutdown request failed:', errorMessage(error));
   }
 }
 
@@ -209,18 +156,18 @@ async function forceKillSteam(steamPids: number[]): Promise<boolean> {
     let denied = false;
     for (const pid of steamPids) {
       try {
-        await execFileAsync(getTaskkillPath(), ['/F', '/PID', String(pid)], {
+        await execFileAsync(system32('taskkill.exe'), ['/F', '/PID', String(pid)], {
           timeout: EXEC_TIMEOUT_MS,
           windowsHide: true,
         });
       } catch (error) {
         // Exit code 1 is "access denied" or "not found"; the localized text is never parsed.
-        if ((error as { code?: unknown }).code === 1) {
+        if (errnoCode(error) === 1) {
           denied = true;
         }
       }
     }
-    await execFileAsync(getTaskkillPath(), ['/F', '/IM', 'steamwebhelper.exe'], {
+    await execFileAsync(system32('taskkill.exe'), ['/F', '/IM', 'steamwebhelper.exe'], {
       timeout: EXEC_TIMEOUT_MS,
       windowsHide: true,
     }).catch(() => void 0);
@@ -315,7 +262,7 @@ function launchSteamLinux(url?: string): boolean {
   const env = millenniumLaunchEnv();
 
   console.log(
-    `[Steam] Launching Steam (${steamType})${url ? ` with URL: ${url}` : ''}${isRunningInFlatpak() ? ' [from Flatpak]' : ''}`
+    `[Steam] Launching Steam (${steamType})${url ? ` with URL: ${url}` : ''}${isFlatpak() ? ' [from Flatpak]' : ''}`
   );
 
   try {
@@ -368,7 +315,7 @@ async function launchSteamViaMillenniumWrapper(
   } catch (error) {
     console.error(
       '[Steam] Failed to launch the Millennium wrapper:',
-      describeError(error)
+      errorMessage(error)
     );
     return false;
   }
@@ -384,7 +331,7 @@ async function launchSteamViaMillenniumWrapper(
     await shell.openExternal(url);
     return true;
   } catch (error) {
-    console.error('[Steam] Failed to open Steam URL:', describeError(error));
+    console.error('[Steam] Failed to open Steam URL:', errorMessage(error));
     return false;
   }
 }
@@ -452,7 +399,7 @@ export async function restartSteamProcess(
       } catch (error) {
         console.warn(
           '[Steam] Work between shutdown and launch failed:',
-          describeError(error)
+          errorMessage(error)
         );
       }
     }
@@ -464,6 +411,6 @@ export async function restartSteamProcess(
     return { success: false, reason: 'launch-failed', error: 'Failed to launch Steam' };
   } catch (error) {
     console.error('[Steam] Failed to restart Steam:', error);
-    return { success: false, reason: 'launch-failed', error: describeError(error) };
+    return { success: false, reason: 'launch-failed', error: errorMessage(error) };
   }
 }

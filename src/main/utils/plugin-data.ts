@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { writeFileAtomic } from './atomic-write';
 import { DECKY_PLUGIN_DIR, detectDeckyPluginSync } from './decky';
+import { system32 } from './host-exec';
 import { millenniumPluginDataDir } from './millennium-plugin';
 import { isWindows } from './platform';
 
@@ -30,11 +31,7 @@ export function currentUserOnlyIcaclsArgs(
 }
 
 function restrictToCurrentUser(file: string): void {
-  const icacls = path.win32.join(
-    process.env.SystemRoot || 'C:\\Windows',
-    'System32',
-    'icacls.exe'
-  );
+  const icacls = system32('icacls.exe');
   try {
     execFileSync(
       icacls,

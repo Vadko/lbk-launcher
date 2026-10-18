@@ -10,6 +10,7 @@ import {
   Tray,
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
+import pTimeout from 'p-timeout';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { invalidateSteamLibraryCache } from '../steam-library-api';
 import { getLogFileDirectory } from '../utils/logger';
@@ -256,10 +257,10 @@ export function setupWindowControls(): void {
       if (!existsSync(logsDir)) {
         mkdirSync(logsDir, { recursive: true });
       }
-      const result = await Promise.race([
-        shell.openPath(logsDir),
-        new Promise<string>((resolve) => setTimeout(() => resolve(''), 3000)),
-      ]);
+      const result = await pTimeout(shell.openPath(logsDir), {
+        milliseconds: 3000,
+        fallback: () => '',
+      });
       // shell.openPath returns an empty string on success, or an error message
       if (result) {
         console.error('[Logger] Failed to open logs folder:', result);

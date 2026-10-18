@@ -25,6 +25,7 @@ import {
   hasOurStrings,
 } from '@/main/utils/achievement-strings';
 import { writeFileAtomic } from '@/main/utils/atomic-write';
+import { readFileOrNull } from '@/main/utils/fs-safe';
 import { writeBridgePluginData } from '@/main/utils/plugin-data';
 import {
   invokeViaPlugin,
@@ -76,14 +77,6 @@ function schemaFileAppId(file: string): number | null {
   const match = SCHEMA_FILE.exec(path.basename(file));
   const appId = match ? Number(match[1]) : NaN;
   return Number.isSafeInteger(appId) && appId > 0 ? appId : null;
-}
-
-function readFileOrNull(filePath: string): Buffer | null {
-  try {
-    return fs.readFileSync(filePath);
-  } catch {
-    return null;
-  }
 }
 
 function sanitizeStrings(raw: unknown): AchievementStrings | null {

@@ -21,7 +21,7 @@ const env = vi.hoisted(() => ({
 
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => env.steamPath }));
 vi.mock('@/main/steam-pending-actions', () => ({ queueSteamAction: vi.fn() }));
-vi.mock('@/main/window', () => ({ getMainWindow: () => null }));
+vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));
 vi.mock('./decky', () => ({
   detectDeckyPluginSync: () => null,
   isDeckyInstalledSync: () => false,

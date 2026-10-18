@@ -1,4 +1,3 @@
-import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -15,6 +14,8 @@ import {
   detectDecky,
   resetDeckyDetectCache,
 } from '@/main/utils/decky';
+import { pruneDir } from '@/main/utils/fs-safe';
+import { sha256 } from '@/main/utils/hash';
 import { isLinux } from '@/main/utils/platform';
 import { getSteamBridge } from '@/main/utils/steam-bridge';
 import { MILLENNIUM_PLUGIN_VERSION } from '@/main/utils/steam-bridge-ops';
@@ -23,6 +24,7 @@ import {
   startSteamBridgeServer,
 } from '@/main/utils/steam-bridge-server';
 import { resolveResource } from '@/main/utils/theme';
+import { errorMessage } from '@/shared/errors';
 import type { DeckyInstallResult } from '@/shared/types';
 
 const POLL_MS = 2000;
@@ -40,14 +42,6 @@ interface DeckyZip {
 }
 
 type SaveZipResult = { success: boolean; path?: string; error?: string };
-
-function sha256(data: Buffer | string): string {
-  return hash('sha256', data);
-}
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 function readBundled(): { to: string; data: Buffer }[] {
   const dir = path.join(resolveResource('decky-plugin'), DECKY_PLUGIN_DIR);
@@ -68,14 +62,6 @@ function readBundled(): { to: string; data: Buffer }[] {
     );
   }
   return files;
-}
-
-function removeOtherZips(cacheDir: string, keep: string): void {
-  for (const entry of fs.readdirSync(cacheDir)) {
-    if (/^lbk-bridge-.*\.zip(\.source)?$/.test(entry) && entry !== keep) {
-      fs.rmSync(path.join(cacheDir, entry), { force: true });
-    }
-  }
 }
 
 // Only a zip this process built is reused: the cache dir is user-writable, and Decky installs whatever matches the hash LBK hands it.
@@ -114,7 +100,10 @@ async function buildZip(): Promise<DeckyZip> {
     fs.rmSync(stageRoot, { recursive: true, force: true });
     fs.rmSync(partial, { force: true });
   }
-  removeOtherZips(cacheDir, name);
+  pruneDir(
+    cacheDir,
+    (entry) => entry === name || !/^lbk-bridge-.*\.zip(\.source)?$/.test(entry)
+  );
   console.log(`[Decky] Built ${file}`);
   const zip = { file, hash: sha256(fs.readFileSync(file)) };
   lastBuilt = { digest, zip };
@@ -212,7 +201,7 @@ export async function requestDeckyPluginInstall(): Promise<DeckyInstallResult> {
     zip = await getDeckyZip();
   } catch (error) {
     console.warn('[Decky] Could not build the plugin zip:', error);
-    return { success: false, reason: 'failed', error: errorText(error) };
+    return { success: false, reason: 'failed', error: errorMessage(error) };
   }
   const bridge = await getSteamBridge();
   if (!bridge) {
@@ -241,7 +230,7 @@ export async function requestDeckyPluginInstall(): Promise<DeckyInstallResult> {
     }
   } catch (error) {
     console.warn('[Decky] Install request failed:', error);
-    return { success: false, reason: 'failed', error: errorText(error) };
+    return { success: false, reason: 'failed', error: errorMessage(error) };
   }
   if (answer !== 'prompted') {
     // Decky's frontend is not injected into Steam right now.
@@ -264,6 +253,6 @@ export async function saveDeckyPluginZip(): Promise<SaveZipResult> {
     return { success: true, path: dest };
   } catch (error) {
     console.warn('[Decky] Saving the plugin zip failed:', error);
-    return { success: false, error: errorText(error) };
+    return { success: false, error: errorMessage(error) };
   }
 }

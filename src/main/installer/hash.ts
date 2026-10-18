@@ -1,5 +1,5 @@
-import { createHash, hash } from 'crypto';
 import fs from 'fs';
+import { sha256, sha256File } from '@/main/utils/hash';
 
 /**
  * Verify file hash - supports both new fingerprint hash and legacy full SHA-256
@@ -63,14 +63,6 @@ export async function verifyFileHash(
   }
 }
 
-export async function sha256File(filePath: string): Promise<string> {
-  const hasher = createHash('sha256');
-  for await (const chunk of fs.createReadStream(filePath)) {
-    hasher.update(chunk);
-  }
-  return hasher.digest('hex');
-}
-
 /**
  * Calculate fingerprint hash for large files
  * Hash of: first 10MB + last 10MB + file size (as 8-byte little-endian)
@@ -96,7 +88,7 @@ async function calculateFingerprintHash(
     sizeBuffer.writeBigUInt64LE(BigInt(fileSize), 0);
 
     // Combine and hash
-    return hash('sha256', Buffer.concat([firstChunk, lastChunk, sizeBuffer]));
+    return sha256(Buffer.concat([firstChunk, lastChunk, sizeBuffer]));
   } finally {
     fs.closeSync(fd);
   }

@@ -12,7 +12,6 @@
   "ignoreBinaries": [
     "flatpak",
     "flatpak-spawn",
-    "heroic",
     "lutris",
     "xdg-open",
     "xdg-settings"

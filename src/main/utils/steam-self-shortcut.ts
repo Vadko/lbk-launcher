@@ -35,6 +35,7 @@ import {
   writeSteamAccountValue,
 } from '@/main/utils/store-storage';
 import { getIcon, resolveResource } from '@/main/utils/theme';
+import { errorMessage } from '@/shared/errors';
 import type { SteamLibraryFailure } from '@/shared/types';
 
 // Pinned in the ops source as well; this copy is only for logs.
@@ -171,7 +172,7 @@ export async function addLbkLauncherToSteamLibrary(): Promise<AddShortcutResult>
     return {
       ok: false,
       reason: 'failed',
-      error: error instanceof Error ? error.message : 'Bridge shortcut failed',
+      error: errorMessage(error, 'Bridge shortcut failed'),
     };
   }
 }

@@ -13,18 +13,19 @@
  * aside rather than copied, or it would beat the `.png` we write.
  */
 
-import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { app } from 'electron';
 import got from 'got';
+import pTimeout from 'p-timeout';
 import { getSteamGridPath } from '@/main/game-detector/steam';
 import { writeFileAtomic } from '@/main/utils/atomic-write';
+import { sha256, sha256FileSync } from '@/main/utils/hash';
 import { getSteamBridge, type SteamBridge } from '@/main/utils/steam-bridge';
 import { jsLiteral } from '@/main/utils/steam-cef';
 import { readRendererSetting } from '@/main/utils/store-storage';
-import { withTimeout } from '@/main/utils/with-timeout';
 import { getMainWindow } from '@/main/window';
+import { errnoCode } from '@/shared/errors';
 
 const DOWNLOAD_TIMEOUT_MS = 15_000;
 const DOWNLOAD_RETRY_LIMIT = 1;
@@ -82,18 +83,6 @@ function isSteamArtworkEnabledInSettings(): boolean {
   return readRendererSetting('steamCustomArtworkEnabled', true);
 }
 
-function sha256(bytes: Buffer): string {
-  return crypto.hash('sha256', bytes);
-}
-
-function hashFile(filePath: string): string | null {
-  try {
-    return sha256(fs.readFileSync(filePath));
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Bookkeeping
 // ---------------------------------------------------------------------------
@@ -143,7 +132,7 @@ function deleteRecord(appId: number): void {
 
 /** True when the file on disk is still byte-for-byte what we put there. */
 function isStillOurs(gridDir: string, entry: ArtworkRecordEntry): boolean {
-  return hashFile(path.join(gridDir, entry.name)) === entry.hash;
+  return sha256FileSync(path.join(gridDir, entry.name)) === entry.hash;
 }
 
 // ---------------------------------------------------------------------------
@@ -226,10 +215,12 @@ async function transcodeToPng(
   try {
     // `executeJavaScript` never settles if the renderer dies mid-call, and the
     // check above only covers the state before it.
-    const base64 = await withTimeout(
+    const base64: unknown = await pTimeout(
       window.webContents.executeJavaScript(script, true),
-      TRANSCODE_TIMEOUT_MS,
-      'PNG transcode'
+      {
+        milliseconds: TRANSCODE_TIMEOUT_MS,
+        message: `PNG transcode timed out after ${TRANSCODE_TIMEOUT_MS}ms`,
+      }
     );
     return typeof base64 === 'string' && base64.length > 0
       ? Buffer.from(base64, 'base64')
@@ -313,7 +304,7 @@ function displaceExistingArtwork(
     }
 
     const prior = ours.get(fileName);
-    if (prior && hashFile(fullPath) === prior.hash) {
+    if (prior && sha256FileSync(fullPath) === prior.hash) {
       try {
         fs.unlinkSync(fullPath);
       } catch (error) {
@@ -522,7 +513,7 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
     }
     // Replaced by the user since — leave it, and skip the bridge clear too, which
     // would delete their file.
-    if (hashFile(fullPath) !== entry.hash) {
+    if (sha256FileSync(fullPath) !== entry.hash) {
       console.log(`[SteamArtwork] ${entry.name} was replaced by the user, keeping it`);
       continue;
     }
@@ -540,7 +531,7 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
     try {
       fs.unlinkSync(fullPath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (errnoCode(error) !== 'ENOENT') {
         console.warn(`[SteamArtwork] Failed to remove ${entry.name}:`, error);
       }
     }

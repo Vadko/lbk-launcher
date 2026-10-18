@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { sync as writeFileAtomicSync } from 'write-file-atomic';
 import { isWindows } from './platform';
 
@@ -28,6 +29,33 @@ export function replaceSymlinkAtomic(target: string, linkPath: string): void {
     fs.renameSync(tmp, linkPath);
   } catch (error) {
     fs.rmSync(tmp, { force: true });
+    throw error;
+  }
+}
+
+export function copyFileAtomic(src: string, dest: string): void {
+  const tmp = `${dest}.lbk.tmp`;
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, tmp);
+  try {
+    fs.renameSync(tmp, dest);
+  } catch (error) {
+    fs.rmSync(tmp, { force: true });
+    throw error;
+  }
+}
+
+// `fill` builds the new tree in `<dest>.lbk-new`; a fixed name means a crash leaves one stale copy that the next run removes.
+export function replaceDirAtomic(dest: string, fill: (tmp: string) => void): void {
+  const tmp = `${dest}.lbk-new`;
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  try {
+    fill(tmp);
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.renameSync(tmp, dest);
+  } catch (error) {
+    fs.rmSync(tmp, { recursive: true, force: true });
     throw error;
   }
 }

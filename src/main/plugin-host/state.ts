@@ -31,6 +31,8 @@ import {
   isDeckyInstalledSync,
   resetDeckyDetectCache,
 } from '@/main/utils/decky';
+import { realpathOrNull } from '@/main/utils/fs-safe';
+import { execFileOnHost, isFlatpak } from '@/main/utils/host-exec';
 import { detectMillennium } from '@/main/utils/millennium';
 import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
 import {
@@ -43,7 +45,7 @@ import {
 import { MILLENNIUM_PLUGIN_VERSION } from '@/main/utils/steam-bridge-ops';
 import { getConnectedPluginInfo } from '@/main/utils/steam-bridge-server';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
-import { execFileOnHost, findSteamPids } from '@/main/utils/steam-process';
+import { findSteamPids } from '@/main/utils/steam-process';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type { AchievementsBadge, PluginHostState } from '@/shared/types';
 import { compareVersions } from '@/shared/version';
@@ -99,7 +101,7 @@ async function hasI386OpenSsl(): Promise<boolean> {
       // Try the next location.
     }
   }
-  if (process.env.FLATPAK_ID) {
+  if (isFlatpak()) {
     return false;
   }
   return LIBSSL_DIRS.some((dir) => {
@@ -116,14 +118,6 @@ async function hasI386OpenSsl(): Promise<boolean> {
       return false;
     }
   });
-}
-
-function realpathOrNull(p: string): string | null {
-  try {
-    return fs.realpathSync(p);
-  } catch {
-    return null;
-  }
 }
 
 function readsSteamRt64Beta(home: string): boolean {

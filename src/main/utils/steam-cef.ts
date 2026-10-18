@@ -1,6 +1,7 @@
 // CDP transport of the Steam bridge: Runtime.evaluate of the shared ops in SharedJSContext.
 
 import CDP from 'chrome-remote-interface';
+import pTimeout from 'p-timeout';
 import {
   isPluginOnlyOp,
   STEAM_OPS_SOURCE,
@@ -12,7 +13,6 @@ import {
   discoverCefEndpoint,
   findSteamPids,
 } from '@/main/utils/steam-process';
-import { withTimeout } from '@/main/utils/with-timeout';
 
 const DEFAULT_CEF_PORT = 8080;
 // Chromium 126 binds ::1 when 127.0.0.1 is taken.
@@ -52,11 +52,10 @@ let discoveryCache: {
 // Another app on the port must never receive Steam ops, hence the User-Agent check.
 async function probeEndpoint(host: CefHost, port: number): Promise<boolean> {
   try {
-    const info = await withTimeout(
-      CDP.Version({ host, port }),
-      CEF_PROBE_TIMEOUT_MS,
-      'CEF probe'
-    );
+    const info = await pTimeout(CDP.Version({ host, port }), {
+      milliseconds: CEF_PROBE_TIMEOUT_MS,
+      message: `CEF probe timed out after ${CEF_PROBE_TIMEOUT_MS}ms`,
+    });
     const userAgent = info['User-Agent'];
     return typeof userAgent === 'string' && userAgent.includes(STEAM_USER_AGENT_MARKER);
   } catch {
@@ -157,7 +156,7 @@ async function evaluateAt<T>(
   expression: string,
   timeoutMs: number
 ): Promise<T> {
-  const client = await withTimeout(
+  const client = await pTimeout(
     CDP({
       host: endpoint.host,
       port: endpoint.port,
@@ -172,12 +171,14 @@ async function evaluateAt<T>(
         return target;
       },
     }),
-    CEF_CONNECT_TIMEOUT_MS,
-    'CEF connect'
+    {
+      milliseconds: CEF_CONNECT_TIMEOUT_MS,
+      message: `CEF connect timed out after ${CEF_CONNECT_TIMEOUT_MS}ms`,
+    }
   );
 
   try {
-    const result = await withTimeout(
+    const result = await pTimeout(
       client.Runtime.evaluate({
         // SteamClient rejects with plain objects that CDP describes as just "Object".
         expression: `(async () => {
@@ -193,8 +194,7 @@ async function evaluateAt<T>(
         awaitPromise: true,
         returnByValue: true,
       }),
-      timeoutMs,
-      'CEF evaluate'
+      { milliseconds: timeoutMs, message: `CEF evaluate timed out after ${timeoutMs}ms` }
     );
     if (result.exceptionDetails) {
       const description =

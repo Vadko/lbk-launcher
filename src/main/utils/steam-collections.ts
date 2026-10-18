@@ -34,6 +34,7 @@ import {
   readSteamAccountValue,
   writeSteamAccountValue,
 } from '@/main/utils/store-storage';
+import { errorMessage } from '@/shared/errors';
 import type { SteamCollectionSyncFailure } from '@/shared/types';
 
 const COLLECTION_NAME = 'З українізаторами';
@@ -95,7 +96,7 @@ export async function syncTranslatedGamesCollection(
     return {
       ok: false,
       reason: 'failed',
-      error: error instanceof Error ? error.message : 'Bridge sync failed',
+      error: errorMessage(error, 'Bridge sync failed'),
     };
   }
 }

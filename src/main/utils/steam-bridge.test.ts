@@ -7,7 +7,7 @@ vi.mock('@/main/steam-pending-actions', () => ({
   onSteamExited: () => () => undefined,
   onSteamStarted: () => () => undefined,
 }));
-vi.mock('@/main/window', () => ({ getMainWindow: () => null }));
+vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));
 vi.mock('@/main/plugin-host/state', () => ({
   deckyStateFor: () => null,
   getAchievementsBadge: vi.fn(),

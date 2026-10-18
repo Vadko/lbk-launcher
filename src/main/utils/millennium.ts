@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { G } from '@mobily/ts-belt';
 import { getSteamPath } from '@/main/game-detector/steam';
+import { isFlatpak } from './host-exec';
 import { getPlatform } from './platform';
 
 export type MillenniumGeneration = 'v2' | 'v3';
@@ -271,7 +272,7 @@ function detectUncached(): MillenniumInfo {
             steamPath: steamPath ?? '',
             home,
             env: process.env,
-            insideFlatpak: Boolean(process.env.FLATPAK_ID),
+            insideFlatpak: isFlatpak(),
           })
         )
       : { pluginsDir: null, configPath: null };
