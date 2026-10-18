@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { G } from '@mobily/ts-belt';
-import { replaceDirAtomic } from './atomic-write';
+import { dirSwapPath, replaceDirAtomic } from './atomic-write';
 import { readFileOrNull, readTextOrNull } from './fs-safe';
 import { isFlatpak, system32 } from './host-exec';
 import {
@@ -146,6 +146,13 @@ export function installOrUpdateMillenniumPlugin():
   const bundledIndex = readFileOrNull(path.join(bundledDir, 'frontend', FRONTEND_ENTRY));
   if (!bundledPluginJson || !bundledIndex) {
     return { ok: false, error: `bundled plugin not found at ${bundledDir}` };
+  }
+
+  try {
+    // A crash mid-swap leaves a second copy of our plugin.json in the dir Millennium scans.
+    fs.rmSync(dirSwapPath(dir), { recursive: true, force: true });
+  } catch (error) {
+    console.warn('[Millennium] Stale plugin copy not removed:', error);
   }
 
   const installedPluginJson = readFileOrNull(path.join(dir, PLUGIN_JSON));

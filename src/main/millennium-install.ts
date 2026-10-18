@@ -508,12 +508,17 @@ function cleanupOrphans(snapshot: HostSnapshot): void {
   const pinAsset = snapshot.release
     ? path.posix.basename(snapshot.release.asset.url)
     : null;
-  try {
-    pruneDir(stagingRoot(), (entry) => entry === pinTag || queuedTags.has(entry));
-    pruneDir(downloadsDir(), (entry) => entry === pinAsset);
-  } catch (error) {
-    // A file still locked (e.g. by an AV scan) goes on the next start.
-    console.warn('[Millennium] Orphan cleanup failed:', error);
+  const prunes: [string, (entry: string) => boolean][] = [
+    [stagingRoot(), (entry) => entry === pinTag || queuedTags.has(entry)],
+    [downloadsDir(), (entry) => entry === pinAsset],
+  ];
+  for (const [dir, keep] of prunes) {
+    try {
+      pruneDir(dir, keep);
+    } catch (error) {
+      // A file still locked (e.g. by an AV scan) goes on the next start.
+      console.warn('[Millennium] Orphan cleanup failed:', error);
+    }
   }
 }
 

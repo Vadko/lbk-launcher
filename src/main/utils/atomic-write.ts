@@ -45,9 +45,13 @@ export function copyFileAtomic(src: string, dest: string): void {
   }
 }
 
-// `fill` builds the new tree in `<dest>.lbk-new`; a fixed name means a crash leaves one stale copy that the next run removes.
+export function dirSwapPath(dest: string): string {
+  return `${dest}.lbk-new`;
+}
+
+// `fill` builds the new tree in `dirSwapPath(dest)`; a fixed name means a crash leaves one stale copy that the next run removes.
 export function replaceDirAtomic(dest: string, fill: (tmp: string) => void): void {
-  const tmp = `${dest}.lbk-new`;
+  const tmp = dirSwapPath(dest);
   fs.rmSync(tmp, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   try {

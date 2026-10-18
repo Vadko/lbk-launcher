@@ -176,6 +176,18 @@ describe('plugin install and data files', () => {
     });
   });
 
+  it('removes a copy a crash left mid-swap even when already up to date', () => {
+    plugin.installOrUpdateMillenniumPlugin();
+    const stale = path.join(pluginsDir, 'lbk-bridge.lbk-new');
+    fs.mkdirSync(stale);
+    fs.copyFileSync(installed('plugin.json'), path.join(stale, 'plugin.json'));
+    expect(plugin.installOrUpdateMillenniumPlugin()).toEqual({
+      ok: true,
+      changed: false,
+    });
+    expect(fs.readdirSync(pluginsDir)).toEqual(['lbk-bridge']);
+  });
+
   it('refuses without Millennium v3', () => {
     fake.info = { ...(fake.info as MillenniumModule.MillenniumInfo), generation: 'v2' };
     expect(plugin.installOrUpdateMillenniumPlugin().ok).toBe(false);
