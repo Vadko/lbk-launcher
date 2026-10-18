@@ -1,113 +1,76 @@
-import { describe, expect, it, vi } from 'vitest';
-import {
-  achievementQueryAppId,
-  hookAchievementQueries,
-  type QueryClient,
-  translateQueryData,
-} from './achievement-query-cache';
+import { QueryClient } from '@tanstack/query-core';
+import { describe, expect, it } from 'vitest';
+import { achievementQueryAppId, hookAchievementQueries } from './achievement-query-cache';
 import type { AchText } from './achievement-text';
 import { steamBetaAchievements as fixture } from './fixtures/steam-beta-achievements';
 
+type Schema = typeof fixture.schema;
+
 const JACKBOX = 1552350;
-const strings: Record<string, AchText> = {
-  DRAWFULANIMATE_FOOL_SAME_PLAYER: {
-    name: 'Малювач Анімач: Обдури мене тричі',
-    desc: 'Обдуріть одного й того ж гравця тричі за гру',
-  },
-  DRAWFULANIMATE_USE_ALL_THREE_COLORS: { name: 'Малювач Анімач: Очисник палітри' },
+const [FOOL, COLORS] = fixture.schema.groups[0].achievements.map((a) => a.api_name);
+const v1: Record<string, AchText> = {
+  [FOOL]: { name: 'Обдури мене тричі', desc: 'Обдуріть одного гравця тричі за гру' },
+  [COLORS]: { name: 'Очисник палітри' },
 };
-const lookup = (appid: unknown, id: unknown): AchText | undefined =>
-  String(appid) === String(JACKBOX) ? strings[String(id)] : undefined;
-const has = (appid: unknown): boolean => String(appid) === String(JACKBOX);
-const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v));
+const v2: Record<string, AchText> = { [FOOL]: { name: 'Тричі обдурений' } };
 
 const schemaKey = ['achievements', JACKBOX, 'schema'];
 const byStatusKey = ['achievements', JACKBOX, 'by_status', '<steamid>', 1, 2, 3];
+const steamText = fixture.schema.groups[0].achievements.map((a) => [
+  a.api_name,
+  a.name,
+  a.description,
+]);
 
-interface FakeQuery {
-  queryKey: unknown[];
-  state: { data: unknown; dataUpdatedAt: number };
-}
-
-class FakeQueryClient implements QueryClient {
-  queries: FakeQuery[] = [];
-  listeners = new Set<(event: unknown) => void>();
-  writes: { key: unknown; updatedAt: number }[] = [];
-
-  getQueryCache() {
-    return {
-      getAll: () => this.queries,
-      subscribe: (listener: (event: unknown) => void) => {
-        this.listeners.add(listener);
-        return () => {
-          this.listeners.delete(listener);
-        };
-      },
-    };
-  }
-
-  setQueryData(key: unknown, data: unknown, options: { updatedAt: number }): unknown {
-    const query = this.find(key);
-    if (!query) {
-      throw new Error('no query');
-    }
-    this.writes.push({ key, updatedAt: options.updatedAt });
-    query.state = { data, dataUpdatedAt: options.updatedAt };
-    this.emit({ type: 'updated', query, action: { type: 'success', manual: true } });
-    return data;
-  }
-
-  fetched(key: unknown[], data: unknown, updatedAt: number): FakeQuery {
-    let query = this.find(key);
-    if (!query) {
-      query = { queryKey: key, state: { data: undefined, dataUpdatedAt: 0 } };
-      this.queries.push(query);
-      this.emit({ type: 'added', query });
-    }
-    query.state = { data, dataUpdatedAt: updatedAt };
-    this.emit({ type: 'updated', query, action: { type: 'success' } });
-    return query;
-  }
-
-  remove(key: unknown[]): void {
-    const query = this.find(key);
-    this.queries = this.queries.filter((q) => q !== query);
-    this.emit({ type: 'removed', query });
-  }
-
-  private find(key: unknown): FakeQuery | undefined {
-    return this.queries.find((q) => JSON.stringify(q.queryKey) === JSON.stringify(key));
-  }
-
-  private emit(event: unknown): void {
-    for (const listener of this.listeners) {
-      listener(event);
-    }
-  }
-}
-
-function setup() {
-  const client = new FakeQueryClient();
-  const tasks: (() => void)[] = [];
-  const queries = hookAchievementQueries(client, has, lookup, (fn) => tasks.push(fn));
-  const flush = () => {
-    for (const task of tasks.splice(0)) {
-      task();
-    }
-  };
-  return { client, queries, flush };
-}
-
-const names = (data: unknown): unknown[] => {
-  const out: unknown[] = [];
+// [api_name, name, description] of every achievement record in a query's data.
+const shown = (data: unknown): unknown[][] => {
+  const out: unknown[][] = [];
   JSON.stringify(data, (_key, value: unknown) => {
     if (typeof value === 'object' && value !== null && 'api_name' in value) {
-      out.push((value as { name?: unknown }).name);
+      const rec = value as Record<string, unknown>;
+      out.push([rec.api_name, rec.name, rec.description]);
     }
     return value;
   });
   return out;
 };
+
+function setup(client = steamClient()) {
+  let strings: Record<string, AchText> | null = v1;
+  const tasks: (() => void)[] = [];
+  const queries = hookAchievementQueries(
+    client,
+    (appid) => strings !== null && String(appid) === String(JACKBOX),
+    (appid, id) =>
+      String(appid) === String(JACKBOX) ? strings?.[String(id)] : undefined,
+    (fn) => tasks.push(fn)
+  );
+  const flush = () => {
+    for (const task of tasks.splice(0)) {
+      task();
+    }
+  };
+  return {
+    client,
+    queries,
+    flush,
+    async load(queryKey: unknown[], data: unknown) {
+      await client.fetchQuery({ queryKey, queryFn: () => structuredClone(data) });
+      flush();
+    },
+    // What replaceData does after achievements.json changes.
+    setStrings(next: Record<string, AchText> | null) {
+      strings = next;
+      queries.sync(new Set([String(JACKBOX)]));
+    },
+  };
+}
+
+function steamClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { staleTime: Infinity, gcTime: Infinity } },
+  });
+}
 
 describe('achievementQueryAppId', () => {
   it('reads the app id from every achievements key the beta builds', () => {
@@ -119,103 +82,118 @@ describe('achievementQueryAppId', () => {
   });
 });
 
-describe('translateQueryData', () => {
-  it('translates a copy of the schema and shares what it did not touch', () => {
-    const schema = copy(fixture.schema);
-    const before = JSON.stringify(schema);
-    const out = translateQueryData(schema, JACKBOX, lookup) as typeof schema;
-
-    expect(JSON.stringify(schema)).toBe(before);
-    const [fool, colors, untouched] = out.groups[0].achievements;
-    expect(fool).toMatchObject({
-      api_name: 'DRAWFULANIMATE_FOOL_SAME_PLAYER',
-      name: 'Малювач Анімач: Обдури мене тричі',
-      description: 'Обдуріть одного й того ж гравця тричі за гру',
-      internal_key: 256,
+describe('hookAchievementQueries', () => {
+  it('translates fetched data and leaves the query state Steam relies on', async () => {
+    const { client, queries, flush } = setup();
+    expect(queries.seen()).toBe(false);
+    await client.fetchQuery({
+      queryKey: schemaKey,
+      queryFn: () => structuredClone(fixture.schema),
     });
-    expect(colors.name).toBe('Малювач Анімач: Очисник палітри');
-    expect(colors.description).toBe(schema.groups[0].achievements[1].description);
-    expect(untouched).toBe(schema.groups[0].achievements[2]);
-    expect(out.groups[0]).not.toBe(schema.groups[0]);
+    const before = client.getQueryState<Schema>(schemaKey);
+    flush();
+
+    const after = client.getQueryState<Schema>(schemaKey);
+    expect(shown(after?.data)).toEqual([
+      [FOOL, v1[FOOL].name, v1[FOOL].desc],
+      [COLORS, v1[COLORS].name, steamText[1][2]],
+      steamText[2],
+    ]);
+    expect(after).toMatchObject({
+      dataUpdatedAt: before?.dataUpdatedAt,
+      dataUpdateCount: before?.dataUpdateCount,
+      isInvalidated: false,
+    });
+    expect(after?.data?.groups[0].achievements[2]).toBe(
+      before?.data?.groups[0].achievements[2]
+    );
+    expect(queries.seen()).toBe(true);
   });
 
-  it('translates the copies by_status keeps of the same records', () => {
-    const out = translateQueryData(copy(fixture.byStatus), JACKBOX, lookup);
-    expect(names(out)).toEqual([
-      'Малювач Анімач: Очисник палітри',
-      'Малювач Анімач: Обдури мене тричі',
-      fixture.byStatus.locked[1].name,
+  it('adds no text to records that had none and skips other apps and queries', async () => {
+    const { client, load } = setup();
+    const progress = { achievements: [{ api_name: FOOL, unlocked: true }] };
+    const otherApp = ['achievements', 10, 'schema'];
+    const storeItem = ['StoreItem', JACKBOX];
+    await load(['achievements', JACKBOX, 'user_achievements', '<steamid>'], progress);
+    await load(otherApp, fixture.schema);
+    await load(storeItem, fixture.schema);
+
+    expect(
+      client.getQueryData(['achievements', JACKBOX, 'user_achievements', '<steamid>'])
+    ).toStrictEqual(progress);
+    expect(client.getQueryData(otherApp)).toStrictEqual(fixture.schema);
+    expect(client.getQueryData(storeItem)).toStrictEqual(fixture.schema);
+  });
+
+  it('restores Steam text in copies Steam built from translated data', async () => {
+    const { client, flush, load, setStrings } = setup();
+    await load(schemaKey, fixture.schema);
+    await client.fetchQuery({
+      queryKey: byStatusKey,
+      queryFn: () => ({
+        locked: client
+          .getQueryData<Schema>(schemaKey)
+          ?.groups[0].achievements.slice(0, 1),
+      }),
+    });
+    client.setQueryData<Schema>(schemaKey, (old) => old && { ...old, schema_version: 4 });
+    flush();
+
+    setStrings(null);
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
+    expect(shown(client.getQueryData(byStatusKey))).toEqual([steamText[0]]);
+  });
+
+  it('switches translations without clearing invalidation or errors', async () => {
+    const { client, load, setStrings } = setup();
+    await load(schemaKey, fixture.schema);
+    await client.invalidateQueries({ queryKey: schemaKey, refetchType: 'none' });
+    await client
+      .fetchQuery({
+        queryKey: schemaKey,
+        queryFn: () => Promise.reject(new Error('offline')),
+      })
+      .catch(() => undefined);
+
+    setStrings(v2);
+    expect(client.getQueryState(schemaKey)).toMatchObject({
+      status: 'error',
+      isInvalidated: true,
+    });
+    expect(shown(client.getQueryData(schemaKey))).toEqual([
+      [FOOL, v2[FOOL].name, steamText[0][2]],
+      steamText[1],
+      steamText[2],
+    ]);
+
+    setStrings(null);
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
+  });
+
+  it('translates what Steam loaded before the hook', async () => {
+    const client = steamClient();
+    await client.fetchQuery({
+      queryKey: schemaKey,
+      queryFn: () => structuredClone(fixture.schema),
+    });
+    const { queries } = setup(client);
+    queries.sync(null);
+    expect(shown(client.getQueryData(schemaKey))[0]).toEqual([
+      FOOL,
+      v1[FOOL].name,
+      v1[FOOL].desc,
     ]);
   });
 
-  it('returns the same object when nothing matches', () => {
-    const schema = copy(fixture.schema);
-    expect(translateQueryData(schema, 999, lookup)).toBe(schema);
-  });
-});
-
-describe('hookAchievementQueries', () => {
-  it('writes the translation back with the query timestamp, once', () => {
-    const { client, flush } = setup();
-    const query = client.fetched(schemaKey, copy(fixture.schema), 1000);
-    expect(client.writes).toEqual([]);
-
-    flush();
-    flush();
-    expect(client.writes).toEqual([{ key: schemaKey, updatedAt: 1000 }]);
-    expect(query.state.dataUpdatedAt).toBe(1000);
-    expect(names(query.state.data)[0]).toBe('Малювач Анімач: Обдури мене тричі');
-  });
-
-  it('leaves other apps and unrelated queries alone', () => {
-    const { client, flush } = setup();
-    client.fetched(['achievements', 10, 'schema'], copy(fixture.schema), 1);
-    client.fetched(
-      ['StoreItem', JACKBOX],
-      { name: 'x', api_name: 'DRAWFULANIMATE_FOOL_SAME_PLAYER' },
-      1
-    );
-    flush();
-    expect(client.writes).toEqual([]);
-  });
-
-  it('translates what Steam loaded before the hook on refresh', () => {
-    const client = new FakeQueryClient();
-    client.fetched(byStatusKey, copy(fixture.byStatus), 5);
-    const queries = hookAchievementQueries(client, has, lookup, () => undefined);
-    queries.refresh();
-    expect(client.writes).toEqual([{ key: byStatusKey, updatedAt: 5 }]);
-  });
-
-  it('reverts its own copies but not data Steam refetched since', () => {
-    const { client, queries, flush } = setup();
-    const schema = client.fetched(schemaKey, copy(fixture.schema), 1);
-    const byStatus = client.fetched(byStatusKey, copy(fixture.byStatus), 1);
-    flush();
-    const refetched = copy(fixture.byStatus);
-    client.fetched(byStatusKey, refetched, 2);
-
-    queries.revert(new Set([String(JACKBOX)]));
-    expect(schema.state.data).toEqual(fixture.schema);
-    expect(schema.state.dataUpdatedAt).toBe(1);
-    expect(byStatus.state.data).toBe(refetched);
-  });
-
-  it('forgets removed queries and stops listening on dispose', () => {
-    const { client, queries, flush } = setup();
-    const query = client.fetched(schemaKey, copy(fixture.schema), 1);
-    flush();
-    client.remove(schemaKey);
-    const writes = client.writes.length;
+  it('restores Steam text and stops listening on dispose', async () => {
+    const { client, flush, load, queries } = setup();
+    await load(schemaKey, fixture.schema);
     queries.dispose();
-    expect(client.writes).toHaveLength(writes);
-    expect(names(query.state.data)[0]).toBe('Малювач Анімач: Обдури мене тричі');
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
 
-    const listener = vi.fn();
-    client.listeners.add(listener);
-    client.fetched(schemaKey, copy(fixture.schema), 2);
+    await client.refetchQueries({ queryKey: schemaKey });
     flush();
-    expect(client.listeners.size).toBe(1);
-    expect(client.writes).toHaveLength(writes);
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
   });
 });

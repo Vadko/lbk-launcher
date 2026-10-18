@@ -82,54 +82,7 @@ export const steamBetaAchievements = {
     schema_hash: 1466709475,
     schema_version: 3,
   },
-  byStatus: {
-    unlocked: [
-      {
-        internal_key: 257,
-        api_name: 'DRAWFULANIMATE_USE_ALL_THREE_COLORS',
-        name: 'Drawful Animate: Palette Cleanser',
-        description: 'Used all three colors in an animation ',
-        hidden: false,
-        archived: false,
-        icon_achieved:
-          'https://shared.steamstatic.com/community_assets/images/apps/1552350/1de7008797d5738537ad27c452e26245a633157b.jpg',
-        icon_unachieved:
-          'https://shared.steamstatic.com/community_assets/images/apps/1552350/79ca5462610054437917e191839c8644ee24dba7.jpg',
-        groupid: 0,
-      },
-    ],
-    locked: [
-      {
-        internal_key: 256,
-        api_name: 'DRAWFULANIMATE_FOOL_SAME_PLAYER',
-        name: 'Drawful Animate: Fool Me Three Times',
-        description: 'Fooled the same player three times in a game',
-        hidden: false,
-        archived: false,
-        icon_achieved:
-          'https://shared.steamstatic.com/community_assets/images/apps/1552350/1de7008797d5738537ad27c452e26245a633157b.jpg',
-        icon_unachieved:
-          'https://shared.steamstatic.com/community_assets/images/apps/1552350/79ca5462610054437917e191839c8644ee24dba7.jpg',
-        groupid: 0,
-      },
-      {
-        internal_key: 264,
-        api_name: 'JOB_JOB_TWO_SYNERGIES',
-        name: 'Job Job: Totally Synergized',
-        description: 'Got two Synergies in one round',
-        hidden: false,
-        archived: false,
-        icon_achieved:
-          'https://shared.steamstatic.com/community_assets/images/apps/1552350/f339a8bfd9fec2343a5d6d23411a860cf93a3af0.jpg',
-        icon_unachieved:
-          'https://shared.steamstatic.com/community_assets/images/apps/1552350/79ca5462610054437917e191839c8644ee24dba7.jpg',
-        groupid: 0,
-      },
-    ],
-  },
   achievementMap: {
-    owner: 1912410,
-    version: 5,
     data: [
       [
         1912410,

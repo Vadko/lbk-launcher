@@ -43,6 +43,31 @@ describe('achievement map cache', () => {
     expect(recs.map(([, r]) => r.strName)).toEqual([steamName(0), 'LBK: талісман']);
   });
 
+  it('restores what it wrote after the translation changed or went away', () => {
+    let current: Record<string, Record<string, AchText>> = strings;
+    const t = createActivityTranslator(
+      (appid, id) => current[String(appid)]?.[String(id)]
+    );
+    const v1 = t.mapJson(json, false);
+    current = { [GAME]: { [WITCH]: { name: 'LBK: v2' } } };
+    const v2 = t.mapJson(v1, false);
+    expect(parse(v2)[0][1][0][1].strName).toBe('LBK: v2');
+    current = {};
+    expect(t.mapJson(v1, true)).toBe(json);
+    expect(t.mapJson(v2, true)).toBe(json);
+  });
+
+  it('reverts only the text it wrote', () => {
+    const t = createActivityTranslator((_appid, id) =>
+      id === WITCH ? { name: 'LBK: відьма' } : undefined
+    );
+    t.mapJson(json, false);
+    const renamed = records();
+    renamed[0][1].strName = 'Steam renamed it';
+    const steamJson = JSON.stringify([[GAME, renamed]]);
+    expect(t.mapJson(steamJson, true)).toBe(steamJson);
+  });
+
   it('returns the same string when there is nothing to change', () => {
     const t = createActivityTranslator(() => undefined);
     expect(t.mapJson(json, false)).toBe(json);

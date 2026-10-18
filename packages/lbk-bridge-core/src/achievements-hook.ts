@@ -1,4 +1,4 @@
-import { createActivityTranslator, isActivityStore } from './achievement-activity';
+import { installActivityHooks } from './achievement-activity';
 import {
   type AchievementQueries,
   hookAchievementQueries,
@@ -10,7 +10,7 @@ import {
   createTextPatcher,
 } from './achievement-text';
 import { type AnyFn, isFn, isRecord, type SteamGlobals } from './steam-globals';
-import { findWebpackExport, steamWebpackRequire } from './steam-webpack';
+import { findWebpackExports, steamWebpackRequire } from './steam-webpack';
 
 const ACH_KEY = Symbol.for('lbk.achievementStrings');
 // A plugin update reloads into a SharedJSContext that still holds the previous hook; a new version replaces it.
@@ -132,23 +132,20 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
   safe(() => {
     req = steamWebpackRequire(g);
   });
-  // A MobX ObservableMap, not a Map instance.
-  const achStore = findWebpackExport(req, 'LoadMyAchievements', isAchievementStore);
+  const { achStore, ToastData, queryClient } = findWebpackExports(req, {
+    // A MobX ObservableMap, not a Map instance.
+    achStore: { marker: 'LoadMyAchievements', pred: isAchievementStore },
+    ToastData: { marker: 'CClientNotificationAchievement', pred: isToastClass },
+    // The module that creates the shared client also mounts its devtools.
+    queryClient: { marker: 'ReactQueryDevtools', pred: isQueryClient },
+  });
   coverage.achStore = Boolean(achStore);
-  const ToastData = findWebpackExport(
-    req,
-    'CClientNotificationAchievement',
-    isToastClass
-  );
-  // The shared client sits next to its devtools toggle; the beta's grouped achievements UI reads from it.
-  const queryClient = findWebpackExport(req, 'ReactQueryDevtools', isQueryClient);
   let queries: AchievementQueries | null = null;
   safe(() => {
     queries = queryClient ? hookAchievementQueries(queryClient, has, lookup) : null;
   });
-  coverage.queryCacheSchema = Boolean(queries);
-  const activity = createActivityTranslator(lookup);
-  const activityStore = isActivityStore(g.appActivityStore) ? g.appActivityStore : null;
+  coverage.queryClient = Boolean(queries);
+  const activity = installActivityHooks({ g, wrap, safe, has, lookup });
 
   const afterResult = (o: AnyFn): AnyFn =>
     function (this: unknown, appid: unknown, ...rest: unknown[]) {
@@ -185,7 +182,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         let stored = value;
         if (key === ACHIEVEMENT_MAP_KEY && typeof value === 'string') {
           safe(() => {
-            stored = activity.mapJson(value, true);
+            stored = activity.saveCache(value);
           });
         } else if (key === ACHIEVEMENTS_KEY && has(appid)) {
           safe(() => {
@@ -197,14 +194,15 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         const r = o.call(this, appid, key, ver, stored, ...rest);
         if (key === ACHIEVEMENTS_KEY && has(appid)) {
           // AppDetailsChanged stores a MobX copy of the details just before this call; the UI renders that copy.
-          safe(() => patchLoaded([appid], false));
+          patchDetails([String(appid)], false);
         }
         return r;
       },
     'appDetails'
   );
+  // Without the save wrapper a translated read would reach the disk with the next save.
   wrap(
-    g.appDetailsCache,
+    coverage.appDetails ? g.appDetailsCache : null,
     'LookupCachedDataForApp',
     (o) =>
       function (this: unknown, appid: unknown, key: unknown, ...rest: unknown[]) {
@@ -212,7 +210,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         let out: unknown = r;
         if (key === ACHIEVEMENT_MAP_KEY && typeof r === 'string') {
           safe(() => {
-            out = activity.mapJson(r, false);
+            out = activity.readCache(r);
           });
         } else if (key === ACHIEVEMENTS_KEY && has(appid) && isRecord(r)) {
           safe(() => {
@@ -223,47 +221,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       },
     'cachedReads'
   );
-  coverage.activityCards = Boolean(activityStore) && coverage.cachedReads === true;
-
-  // The activity class is module-private; its instances in the store lead to it before any server merge.
-  let activityClassHooked = false;
-  const hookActivityClass = (): void => {
-    if (activityClassHooked || !activityStore) {
-      return;
-    }
-    for (const instance of activityStore.m_mapAppActivity.values()) {
-      const ctor: unknown = isRecord(instance) ? instance.constructor : undefined;
-      if (!isFn(ctor) || !isFn(Reflect.get(ctor, 'BuildAchievementMapFromProto'))) {
-        continue;
-      }
-      activityClassHooked = true;
-      wrap(
-        ctor,
-        'BuildAchievementMapFromProto',
-        (o) =>
-          function (this: unknown, recs: unknown, appid: unknown, ...rest: unknown[]) {
-            const r = o.call(this, recs, appid, ...rest);
-            if (has(appid)) {
-              safe(() => activity.patchMap(recs, appid));
-            }
-            return r;
-          },
-        'activityProto'
-      );
-      return;
-    }
-  };
-  safe(hookActivityClass);
-  wrap(
-    activityStore,
-    'FetchLatestActivityFromServer',
-    (o) =>
-      function (this: unknown, ...args: unknown[]) {
-        safe(hookActivityClass);
-        return o.apply(this, args);
-      },
-    'activityFeed'
-  );
+  coverage.activityCards = coverage.appDetails === true && coverage.cachedReads === true;
 
   if (ToastData && !isFn(ToastData.prototype.name)) {
     // Protobuf message classes define their accessors on the prototype on first construction.
@@ -326,18 +284,11 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       }
     }
   };
-  const patchLoaded = (appids: Iterable<unknown>, revert: boolean): void => {
-    const ids = new Set([...appids].map(String));
-    if (activityStore) {
-      safe(() => activity.patchStore(activityStore, ids, revert));
-    }
+  const patchDetails = (appids: Iterable<string>, revert: boolean): void => {
     const store = g.appDetailsStore;
-    if (!store || typeof store.GetAppDetails !== 'function') {
-      return;
-    }
-    for (const id of ids) {
+    for (const id of appids) {
       safe(() => {
-        const details = store.GetAppDetails?.(Number(id));
+        const details = store?.GetAppDetails?.(Number(id));
         walk(id, details?.achievements, revert, 0);
       });
     }
@@ -350,17 +301,25 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
     },
     replaceData(p) {
       const next = new Map(Object.entries(p?.apps || {}));
-      const touched = new Set([...data.keys(), ...next.keys()]);
-      patchLoaded(touched, true);
-      safe(() => queries?.revert(touched));
+      // LBK replays the whole file on every change; only apps whose strings changed are touched.
+      const changed = new Set(
+        [...data.keys(), ...next.keys()].filter(
+          (id) => JSON.stringify(data.get(id)) !== JSON.stringify(next.get(id))
+        )
+      );
+      stamp = p ? p.stamp : null;
+      if (changed.size === 0) {
+        return;
+      }
+      patchDetails(changed, true);
       data.clear();
       for (const [k, v] of next) {
         data.set(k, v);
       }
-      patchLoaded(touched, false);
-      safe(() => queries?.refresh());
-      invalidate(touched);
-      stamp = p ? p.stamp : null;
+      patchDetails(changed, false);
+      safe(() => activity.patch(changed, false));
+      safe(() => queries?.sync(changed));
+      invalidate(changed);
     },
     report() {
       return {
@@ -368,12 +327,13 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         version: ACH_VERSION,
         stamp,
         apps: data.size,
-        coverage: { ...coverage },
+        coverage: { ...coverage, queryCacheSchema: queries?.seen() ?? false },
       };
     },
     uninstall() {
       const all = [...data.keys()];
-      patchLoaded(all, true);
+      patchDetails(all, true);
+      safe(() => activity.patch(new Set(all), true));
       safe(() => queries?.dispose());
       for (const restore of undo.splice(0).reverse()) {
         safe(restore);

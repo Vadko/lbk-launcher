@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@decky/ui": "4.13.0",
+    "@tanstack/query-core": "5.104.0",
     "esbuild": "0.27.7"
   }
 }

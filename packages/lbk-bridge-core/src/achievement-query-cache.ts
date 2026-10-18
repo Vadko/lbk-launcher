@@ -1,49 +1,60 @@
-import type { AchText } from './achievement-text';
-import { type AnyFn, isFn, isRecord } from './steam-globals';
-
-type Lookup = (appid: unknown, id: unknown) => AchText | undefined;
+import { type AchLookup, type AchText, createTextMemory } from './achievement-text';
+import { isFn, isRecord } from './steam-globals';
 
 interface Query {
   queryKey: unknown;
-  state: { data: unknown; dataUpdatedAt: number };
+  state: { data: unknown };
+  setState(state: { data: unknown }): void;
 }
 
-export interface QueryClient {
-  getQueryCache(): { getAll(): Query[]; subscribe(listener: AnyFn): () => void };
-  setQueryData(key: unknown, data: unknown, options: { updatedAt: number }): unknown;
+interface QueryClient {
+  getQueryCache(): {
+    getAll(): unknown[];
+    subscribe(listener: (event: unknown) => void): () => void;
+  };
 }
+
+type Rec = Record<string, unknown>;
 
 export interface AchievementQueries {
-  refresh(): void;
-  revert(appids: Set<string> | null): void;
+  sync(appids: Set<string> | null): void;
+  seen(): boolean;
   dispose(): void;
 }
 
+const FIELDS: readonly (readonly [string, keyof AchText])[] = [
+  ['name', 'name'],
+  ['description', 'desc'],
+];
+
 export const isQueryClient = (v: unknown): v is QueryClient =>
-  isRecord(v) && isFn(v.getQueryCache) && isFn(v.setQueryData);
+  isRecord(v) && isFn(v.getQueryCache) && isFn(v.setQueryData) && isFn(v.getQueryData);
 
 const isQuery = (v: unknown): v is Query =>
-  isRecord(v) && 'queryKey' in v && isRecord(v.state);
+  isRecord(v) && 'queryKey' in v && isRecord(v.state) && isFn(v.setState);
+
+const isPlainObject = (v: unknown): v is Rec => {
+  if (!isRecord(v)) {
+    return false;
+  }
+  const proto: unknown = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+};
 
 // The grouped achievements UI keys all of an app's data as ['achievements', appid, ...].
 export function achievementQueryAppId(key: unknown): unknown {
   return Array.isArray(key) && key[0] === 'achievements' ? key[1] : undefined;
 }
 
-// A translated copy that shares every untouched branch, or `data` itself when nothing changed.
-export function translateQueryData(
-  data: unknown,
-  appid: unknown,
-  lookup: Lookup,
-  depth = 0
-): unknown {
-  if (!isRecord(data) || depth > 6) {
+// Copy-on-write over every { api_name, ... } record; untouched branches stay shared.
+function mapRecords(data: unknown, fn: (rec: Rec) => Rec, depth = 0): unknown {
+  if (depth > 6) {
     return data;
   }
   if (Array.isArray(data)) {
     let out: unknown[] | null = null;
     data.forEach((item, i) => {
-      const next = translateQueryData(item, appid, lookup, depth + 1);
+      const next = mapRecords(item, fn, depth + 1);
       if (next !== item) {
         out ??= data.slice();
         out[i] = next;
@@ -51,17 +62,15 @@ export function translateQueryData(
     });
     return out ?? data;
   }
-  if (typeof data.api_name === 'string') {
-    const t = lookup(appid, data.api_name);
-    const name = t?.name ?? data.name;
-    const description = t?.desc ?? data.description;
-    return name === data.name && description === data.description
-      ? data
-      : { ...data, name, description };
+  if (!isPlainObject(data)) {
+    return data;
   }
-  let out: Record<string, unknown> | null = null;
+  if (typeof data.api_name === 'string') {
+    return fn(data);
+  }
+  let out: Rec | null = null;
   for (const k of Object.keys(data)) {
-    const next = translateQueryData(data[k], appid, lookup, depth + 1);
+    const next = mapRecords(data[k], fn, depth + 1);
     if (next !== data[k]) {
       out ??= { ...data };
       out[k] = next;
@@ -70,90 +79,95 @@ export function translateQueryData(
   return out ?? data;
 }
 
-// Writes translated copies back with the query's own dataUpdatedAt: the derived queries key on it, and nothing refetches.
+// Query.setState swaps only the data: timestamps, invalidation and errors stay Steam's, and nothing refetches.
 export function hookAchievementQueries(
   client: QueryClient,
   has: (appid: unknown) => boolean,
-  lookup: Lookup,
+  lookup: AchLookup,
   schedule: (fn: () => void) => void = queueMicrotask
 ): AchievementQueries {
-  const originals = new Map<Query, unknown>();
-  const translated = new WeakSet<object>();
+  const memory = createTextMemory();
   let writing = false;
+  let seen = false;
 
-  const write = (q: Query, data: unknown): void => {
+  const update = (q: Query, revert: boolean): void => {
+    const appid = achievementQueryAppId(q.queryKey);
+    const translate = !revert && has(appid);
+    const next = mapRecords(q.state.data, (rec) => {
+      const t = translate ? lookup(appid, rec.api_name) : undefined;
+      let out = rec;
+      for (const [key, field] of FIELDS) {
+        const current = rec[key];
+        if (typeof current !== 'string') {
+          continue;
+        }
+        const text = memory.show(appid, rec.api_name, field, current, t?.[field]);
+        if (text !== current) {
+          out = out === rec ? { ...rec } : out;
+          out[key] = text;
+        }
+      }
+      return out;
+    });
+    if (next === q.state.data) {
+      return;
+    }
     writing = true;
     try {
-      client.setQueryData(q.queryKey, data, { updatedAt: q.state.dataUpdatedAt });
+      q.setState({ data: next });
     } finally {
       writing = false;
     }
   };
-  const translate = (q: Query): void => {
-    const appid = achievementQueryAppId(q.queryKey);
-    const data = q.state.data;
-    if (appid === undefined || !has(appid) || !isRecord(data) || translated.has(data)) {
-      return;
-    }
-    const next = translateQueryData(data, appid, lookup);
-    if (next === data) {
-      return;
-    }
-    originals.set(q, data);
-    write(q, next);
-    if (isRecord(q.state.data)) {
-      translated.add(q.state.data);
-    }
-  };
-  const safeTranslate = (q: Query): void => {
+  const safeUpdate = (q: Query, revert: boolean): void => {
     try {
-      translate(q);
+      update(q, revert);
     } catch (e) {
       console.warn('[LBK] achievements query', e);
     }
   };
-
-  const unsubscribe = client.getQueryCache().subscribe((event: unknown) => {
-    if (writing || !isRecord(event) || !isQuery(event.query)) {
-      return;
-    }
-    const q = event.query;
-    if (event.type === 'removed') {
-      originals.delete(q);
-    } else if (
-      event.type === 'added' ||
-      (event.type === 'updated' &&
-        isRecord(event.action) &&
-        event.action.type === 'success')
-    ) {
-      // Outside the dispatch that delivered the data; React Query notifies observers on a later task.
-      schedule(() => safeTranslate(q));
-    }
-  });
-
-  const revert = (appids: Set<string> | null): void => {
-    for (const [q, original] of originals) {
-      if (appids && !appids.has(String(achievementQueryAppId(q.queryKey)))) {
+  const updateAll = (appids: Set<string> | null, revert: boolean): void => {
+    for (const q of client.getQueryCache().getAll()) {
+      if (!isQuery(q)) {
         continue;
       }
-      originals.delete(q);
-      // A refetch since then already replaced our copy with Steam's own data.
-      if (isRecord(q.state.data) && translated.has(q.state.data)) {
-        write(q, original);
+      const appid = achievementQueryAppId(q.queryKey);
+      if (appid === undefined) {
+        continue;
+      }
+      seen = true;
+      if (!appids || appids.has(String(appid))) {
+        safeUpdate(q, revert);
       }
     }
   };
 
+  const unsubscribe = client.getQueryCache().subscribe((event) => {
+    if (writing || !isRecord(event) || !isQuery(event.query)) {
+      return;
+    }
+    const q = event.query;
+    const appid = achievementQueryAppId(q.queryKey);
+    if (appid === undefined) {
+      return;
+    }
+    seen = true;
+    const action = isRecord(event.action) ? event.action.type : undefined;
+    const delivered =
+      event.type === 'added' ||
+      (event.type === 'updated' && (action === 'success' || action === 'setState'));
+    if (delivered && has(appid)) {
+      // Outside the dispatch that delivered the data; React Query notifies observers on a later task.
+      schedule(() => safeUpdate(q, false));
+    }
+  });
+
   return {
-    refresh() {
-      for (const q of client.getQueryCache().getAll()) {
-        safeTranslate(q);
-      }
-    },
-    revert,
+    sync: (appids) => updateAll(appids, false),
+    seen: () => seen,
     dispose() {
       unsubscribe();
-      revert(null);
+      updateAll(null, true);
     },
   };
 }

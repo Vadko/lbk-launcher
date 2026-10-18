@@ -1,18 +1,29 @@
-import type { AchText } from './achievement-text';
-import { isRecord } from './steam-globals';
+import { type AchLookup, type AchText, createTextMemory } from './achievement-text';
+import { type AnyFn, isFn, isRecord, type SteamGlobals } from './steam-globals';
 
-type Lookup = (appid: unknown, id: unknown) => AchText | undefined;
-
-interface Original {
-  name: unknown;
-  desc: unknown;
-}
-
-export interface ActivityStore {
+interface ActivityStore {
   m_mapAppActivity: { values(): Iterable<unknown> };
 }
 
-export const isActivityStore = (v: unknown): v is ActivityStore =>
+interface ActivityHookDeps {
+  g: SteamGlobals;
+  wrap: (
+    obj: object | null | undefined,
+    key: string,
+    make: (orig: AnyFn) => AnyFn,
+    label: string
+  ) => void;
+  safe: (fn: () => void) => void;
+  has: (appid: unknown) => boolean;
+  lookup: AchLookup;
+}
+
+const FIELDS: readonly (readonly [string, keyof AchText])[] = [
+  ['strName', 'name'],
+  ['strDescription', 'desc'],
+];
+
+const isActivityStore = (v: unknown): v is ActivityStore =>
   isRecord(v) &&
   isRecord(v.m_mapAppActivity) &&
   typeof v.m_mapAppActivity.values === 'function';
@@ -23,36 +34,27 @@ const mapValues = (v: unknown): unknown[] =>
     : [];
 
 // Activity cards show achievements from an app's achievement map: { strID, strName, strDescription } per achievement.
-export function createActivityTranslator(lookup: Lookup) {
-  const originals = new Map<string, Original>();
+export function createActivityTranslator(lookup: AchLookup) {
+  const memory = createTextMemory();
 
   const record = (appid: unknown, rec: unknown, revert: boolean): boolean => {
     if (!isRecord(rec) || typeof rec.strID !== 'string') {
       return false;
     }
-    const t = lookup(appid, rec.strID);
-    if (!t) {
-      return false;
-    }
-    const key = `${String(appid)}\u0000${rec.strID}`;
-    const name = t.name ?? rec.strName;
-    const desc = t.desc ?? rec.strDescription;
-    if (revert) {
-      const o = originals.get(key);
-      if (!o || (rec.strName !== name && rec.strDescription !== desc)) {
-        return false;
+    const t = revert ? undefined : lookup(appid, rec.strID);
+    let changed = false;
+    for (const [key, field] of FIELDS) {
+      const current = rec[key];
+      if (typeof current !== 'string') {
+        continue;
       }
-      rec.strName = o.name;
-      rec.strDescription = o.desc;
-      return true;
+      const text = memory.show(appid, rec.strID, field, current, t?.[field]);
+      if (text !== current) {
+        rec[key] = text;
+        changed = true;
+      }
     }
-    if (rec.strName === name && rec.strDescription === desc) {
-      return false;
-    }
-    originals.set(key, { name: rec.strName, desc: rec.strDescription });
-    rec.strName = name;
-    rec.strDescription = desc;
-    return true;
+    return changed;
   };
 
   // Steam caches the map as JSON [[appid, [[apiName, record], ...]], ...]; the inner appid owns the strings.
@@ -86,7 +88,7 @@ export function createActivityTranslator(lookup: Lookup) {
     }
   };
 
-  // Patches the maps and the cards already built from them; cards copy their records, so both need it.
+  // Cards copy their records from the maps, so both need it; neither is observable, so cards on screen update on their next render.
   const patchStore = (
     store: ActivityStore,
     appids: Set<string>,
@@ -123,4 +125,68 @@ export function createActivityTranslator(lookup: Lookup) {
   };
 
   return { mapJson, patchMap, patchStore };
+}
+
+export function installActivityHooks({ g, wrap, safe, has, lookup }: ActivityHookDeps) {
+  const translator = createActivityTranslator(lookup);
+  const store = (): ActivityStore | null =>
+    isActivityStore(g.appActivityStore) ? g.appActivityStore : null;
+
+  // The activity class is module-private; its instances in the store lead to it before any server merge.
+  let classHooked = false;
+  const hookClass = (): void => {
+    const s = store();
+    if (classHooked || !s) {
+      return;
+    }
+    for (const instance of s.m_mapAppActivity.values()) {
+      const ctor: unknown = isRecord(instance) ? instance.constructor : undefined;
+      if (!isFn(ctor) || !isFn(Reflect.get(ctor, 'BuildAchievementMapFromProto'))) {
+        continue;
+      }
+      classHooked = true;
+      wrap(
+        ctor,
+        'BuildAchievementMapFromProto',
+        (o) =>
+          function (this: unknown, recs: unknown, appid: unknown, ...rest: unknown[]) {
+            const r = o.call(this, recs, appid, ...rest);
+            if (has(appid)) {
+              safe(() => translator.patchMap(recs, appid));
+            }
+            return r;
+          },
+        'activityProto'
+      );
+      return;
+    }
+  };
+  safe(hookClass);
+  // Both merge server news into an activity the store already holds.
+  for (const [method, label] of [
+    ['FetchLatestActivityFromServer', 'activityFeed'],
+    ['FetchActivityHistory', 'activityHistory'],
+  ] as const) {
+    wrap(
+      store(),
+      method,
+      (o) =>
+        function (this: unknown, ...args: unknown[]) {
+          safe(hookClass);
+          return o.apply(this, args);
+        },
+      label
+    );
+  }
+
+  return {
+    readCache: (json: string): string => translator.mapJson(json, false),
+    saveCache: (json: string): string => translator.mapJson(json, true),
+    patch(appids: Set<string>, revert: boolean): void {
+      const s = store();
+      if (s) {
+        translator.patchStore(s, appids, revert);
+      }
+    },
+  };
 }

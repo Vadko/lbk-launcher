@@ -300,6 +300,9 @@ importers:
       '@decky/ui':
         specifier: 4.13.0
         version: 4.13.0
+      '@tanstack/query-core':
+        specifier: 5.104.0
+        version: 5.104.0
       esbuild:
         specifier: 0.27.7
         version: 0.27.7
