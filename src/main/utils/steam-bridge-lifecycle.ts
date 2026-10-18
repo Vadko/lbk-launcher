@@ -4,7 +4,10 @@ import pWaitFor from 'p-wait-for';
 import { appEvents } from '@/main/app-events';
 import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import { isPluginConnected } from '@/main/steam-bridge-server/bridge-server';
-import { isCefFlagFilePresent } from '@/main/utils/cef-flag-file';
+import {
+  isCefFlagFilePresent,
+  restoreCefFlagFileAfterMillennium,
+} from '@/main/utils/cef-flag-file';
 import { detectMillennium } from '@/main/utils/millennium';
 import {
   getSteamBridgeStatus,
@@ -152,6 +155,8 @@ export const verifyBridgeAfterLaunch = pMemoize(verifyAndRefresh, {
 export const startSteamBridge = F.once((): void => {
   appEvents.on('plugin-connection', async (connected) => {
     if (connected) {
+      // The macOS fork deletes the flag ~1 s into every wrapper start; a later Dock-started Steam needs it for CDP.
+      restoreCefFlagFileAfterMillennium();
       noteBridgeAvailable('plugin');
     } else {
       notePluginDisconnected();
