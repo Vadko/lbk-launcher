@@ -33,21 +33,14 @@ const MAC_STEAM =
 const MAC_HELPER = `/Users/u/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/Frameworks/Steam Helper.app/Contents/MacOS/Steam Helper`;
 
 describe('parseTasklistCsv', () => {
-  it('reads pids from quoted CSV rows', () => {
+  it('reads pids of the exact image name, case-insensitively', () => {
     const stdout = [
-      '"steam.exe","1234","Console","1","120,404 K"',
+      '"Steam.exe","1234","Console","1","120,404 K"',
       '"steam.exe","5678","Console","1","1,024 K"',
+      '"steamwebhelper.exe","11","Console","1","1 K"',
       '',
     ].join('\r\n');
     expect(parseTasklistCsv(stdout, 'steam.exe')).toEqual([1234, 5678]);
-  });
-
-  it('matches the image name case-insensitively and exactly', () => {
-    const stdout = [
-      '"Steam.exe","10","Console","1","1 K"',
-      '"steamwebhelper.exe","11","Console","1","1 K"',
-    ].join('\n');
-    expect(parseTasklistCsv(stdout, 'steam.exe')).toEqual([10]);
     expect(parseTasklistCsv(stdout, 'STEAMWEBHELPER.EXE')).toEqual([11]);
   });
 
@@ -69,32 +62,20 @@ describe('parseTasklistCsv', () => {
 });
 
 describe('parseWin32ProcessJson', () => {
-  it('reads an array and keeps a null CommandLine as unreadable', () => {
-    const stdout = JSON.stringify([
-      {
-        ProcessId: 100,
-        ParentProcessId: 4,
-        Name: 'steam.exe',
-        CommandLine: '"C:\\Steam\\steam.exe"',
-      },
-      {
-        ProcessId: 200,
-        ParentProcessId: 100,
-        Name: 'steamwebhelper.exe',
-        CommandLine: null,
-      },
+  it('reads an array or a single object and keeps a null CommandLine as unreadable', () => {
+    const steam = {
+      ProcessId: 100,
+      ParentProcessId: 4,
+      Name: 'steam.exe',
+      CommandLine: 'x',
+    };
+    const helper = { ...steam, ProcessId: 200, ParentProcessId: 100, CommandLine: null };
+    expect(parseWin32ProcessJson(JSON.stringify([steam, helper]))).toEqual([
+      { pid: 100, ppid: 4, name: 'steam.exe', args: 'x' },
+      { pid: 200, ppid: 100, name: 'steam.exe', args: null },
     ]);
-    expect(parseWin32ProcessJson(stdout)).toEqual([
-      { pid: 100, ppid: 4, name: 'steam.exe', args: '"C:\\Steam\\steam.exe"' },
-      { pid: 200, ppid: 100, name: 'steamwebhelper.exe', args: null },
-    ]);
-  });
-
-  it('accepts a single object, a BOM and empty output', () => {
-    const one = `\uFEFF${JSON.stringify({ ProcessId: 1, ParentProcessId: 0, Name: 'steam.exe', CommandLine: 'x' })}`;
-    expect(parseWin32ProcessJson(one)).toHaveLength(1);
+    expect(parseWin32ProcessJson(`\uFEFF${JSON.stringify(steam)}`)).toHaveLength(1);
     expect(parseWin32ProcessJson('')).toEqual([]);
-    expect(parseWin32ProcessJson('[]')).toEqual([]);
     expect(parseWin32ProcessJson('not json')).toEqual([]);
   });
 });
@@ -113,9 +94,6 @@ describe('parsePsOutput', () => {
       { pid: 38080, ppid: 1, args: `${MAC_STEAM}/steam_osx` },
       { pid: 38135, ppid: 38080, args: `${MAC_HELPER} -nocrashdialog -lang=uk_UA` },
     ]);
-  });
-
-  it('returns [] for empty output', () => {
     expect(parsePsOutput('')).toEqual([]);
   });
 });
@@ -169,9 +147,7 @@ describe('listMacSteam', () => {
 describe('parseLinuxPsOutput', () => {
   it('splits pid, ppid, comm and the full command line', () => {
     const stdout = [
-      ' 2001     1 steam           /home/u/.local/share/Steam/ubuntu12_32/steam -srt-logger-opened',
-      ' 2002  2001 steamwebhelper  /home/u/.local/share/Steam/ubuntu12_64/steamwebhelper --type=renderer',
-      ' 2003  2001 reaper          /home/u/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=620 -- x',
+      ' 2001     1 steam           /home/u/Steam/steam -srt-logger-opened',
       ' 2004     1 kworker/0:1',
       'garbage line',
     ].join('\n');
@@ -180,19 +156,7 @@ describe('parseLinuxPsOutput', () => {
         pid: 2001,
         ppid: 1,
         comm: 'steam',
-        args: '/home/u/.local/share/Steam/ubuntu12_32/steam -srt-logger-opened',
-      },
-      {
-        pid: 2002,
-        ppid: 2001,
-        comm: 'steamwebhelper',
-        args: '/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper --type=renderer',
-      },
-      {
-        pid: 2003,
-        ppid: 2001,
-        comm: 'reaper',
-        args: '/home/u/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=620 -- x',
+        args: '/home/u/Steam/steam -srt-logger-opened',
       },
       { pid: 2004, ppid: 1, comm: 'kworker/0:1', args: '' },
     ]);

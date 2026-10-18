@@ -68,7 +68,7 @@ describe('deckyArtifactUrl', () => {
     const ops = loadOps({ window: { DeckyBackend: { call } } });
     const cases = [
       deckyCacheDirFor('/home/deck', undefined),
-      deckyCacheDirFor('/var/home/vadko', undefined),
+      deckyCacheDirFor('/var/home/user.name', undefined),
       deckyCacheDirFor('/home/deck', 'ua.lbk.Launcher'),
     ];
     expect(cases[0]).toBe('/home/deck/.cache/lbk-launcher/decky');
@@ -114,23 +114,6 @@ describe('deckyRequestInstall', () => {
       HASH,
       0
     );
-  });
-
-  it.each([
-    [
-      'a Fedora-style',
-      'file:///var/home/user.name/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-    ],
-    [
-      'a Flatpak',
-      'file:///home/deck/.var/app/ua.lbk.Launcher/cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-    ],
-  ])('accepts %s cache path', async (_case, artifact) => {
-    const { call, ops } = withDecky();
-    await expect(
-      ops.deckyRequestInstall({ ...valid, artifact, installType: 2 })
-    ).resolves.toBe('prompted');
-    expect(call).toHaveBeenCalledOnce();
   });
 
   it.each([

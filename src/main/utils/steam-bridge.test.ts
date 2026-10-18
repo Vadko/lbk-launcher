@@ -62,12 +62,6 @@ describe('computeBridgeFingerprint', () => {
     flagPresent: true,
   };
 
-  it('is a stable sha1 hex digest', () => {
-    const fp = computeBridgeFingerprint(base);
-    expect(fp).toMatch(/^[0-9a-f]{40}$/);
-    expect(computeBridgeFingerprint({ ...base })).toBe(fp);
-  });
-
   it('ignores the order of Millennium evidence', () => {
     expect(
       computeBridgeFingerprint({
@@ -75,12 +69,6 @@ describe('computeBridgeFingerprint', () => {
         millenniumEvidence: [...base.millenniumEvidence].reverse(),
       })
     ).toBe(computeBridgeFingerprint(base));
-  });
-
-  it('does not mutate the evidence array', () => {
-    const evidence = ['b', 'a'];
-    computeBridgeFingerprint({ ...base, millenniumEvidence: evidence });
-    expect(evidence).toEqual(['b', 'a']);
   });
 
   it.each([

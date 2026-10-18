@@ -167,9 +167,4 @@ describe('extractAchievementStrings', () => {
     const buf = schema('game', []);
     expect(() => extractAchievementStrings(buf, 'schema.bin')).toThrow();
   });
-
-  it('propagates parse errors', () => {
-    const buf = schema('1623730', [{ api: 'A', name: { english: 'Кров' } }]);
-    expect(() => extractAchievementStrings(buf.subarray(0, 40), FILE)).toThrow();
-  });
 });

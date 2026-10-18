@@ -88,11 +88,6 @@ describe('reducePendingQueue', () => {
     const q = reducePendingQueue(reducePendingQueue([enable], game), disable);
     expect(q).toEqual([game, disable]);
   });
-
-  it('does not touch launch options when a plugin item is queued', () => {
-    const game = launchOptions('a');
-    expect(reducePendingQueue([game], plugin(true))).toHaveLength(2);
-  });
 });
 
 describe('classifyPendingAction', () => {

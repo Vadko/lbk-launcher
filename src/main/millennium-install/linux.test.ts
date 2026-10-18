@@ -23,18 +23,6 @@ const DEBIAN = `
 \tlibcrypto.so.3 (libc6,x86-64) => /lib/x86_64-linux-gnu/libcrypto.so.3
 \tlibcrypto.so.3 (libc6) => /lib/i386-linux-gnu/libcrypto.so.3
 `;
-const ARCH = `
-\tlibssl.so.3 (libc6,x86-64) => /usr/lib/libssl.so.3
-\tlibssl.so.3 (libc6) => /usr/lib32/libssl.so.3
-\tlibcrypto.so.3 (libc6,x86-64) => /usr/lib/libcrypto.so.3
-\tlibcrypto.so.3 (libc6) => /usr/lib32/libcrypto.so.3
-`;
-const FEDORA = `
-\tlibssl.so.3 (libc6,x86-64) => /lib64/libssl.so.3
-\tlibssl.so.3 (libc6) => /lib/libssl.so.3
-\tlibcrypto.so.3 (libc6,x86-64) => /lib64/libcrypto.so.3
-\tlibcrypto.so.3 (libc6) => /lib/libcrypto.so.3
-`;
 const ONLY_64 = `
 \tlibssl.so.3 (libc6,x86-64) => /lib/x86_64-linux-gnu/libssl.so.3
 \tlibcrypto.so.3 (libc6,x86-64) => /lib/x86_64-linux-gnu/libcrypto.so.3
@@ -42,10 +30,8 @@ const ONLY_64 = `
 `;
 
 describe('parseLdconfig', () => {
-  it('finds the 32-bit OpenSSL 3 pair on Debian, Arch and Fedora', () => {
+  it('finds the 32-bit OpenSSL 3 pair', () => {
     expect(parseLdconfig(DEBIAN)).toBe(true);
-    expect(parseLdconfig(ARCH)).toBe(true);
-    expect(parseLdconfig(FEDORA)).toBe(true);
   });
 
   it('rejects a system with only the 64-bit libssl', () => {

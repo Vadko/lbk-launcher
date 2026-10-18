@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe('watchDeckyPlugins', () => {
-  it('refreshes the host state as soon as Decky deletes a plugin folder', async () => {
+  it('refreshes the host state when Decky deletes a plugin folder or disables it', async () => {
     watchDeckyPlugins();
     await watchReady();
     fs.rmSync(pluginDir(), { recursive: true });
@@ -58,17 +58,13 @@ describe('watchDeckyPlugins', () => {
     expect(mocks.resetDeckyDetectCache).toHaveBeenCalled();
     expect(mocks.syncBridgePluginSetup).toHaveBeenCalledTimes(1);
     expect(mocks.publishPluginHostState).toHaveBeenCalledTimes(1);
-  });
 
-  it('follows the disabled-plugins list Decky keeps in settings', async () => {
-    watchDeckyPlugins();
-    await watchReady();
     fs.writeFileSync(
       path.join(root, 'settings', 'loader.json'),
       '{"disabled_plugins":["LBK Bridge"]}'
     );
     await settle();
-    expect(mocks.publishPluginHostState).toHaveBeenCalledTimes(1);
+    expect(mocks.publishPluginHostState).toHaveBeenCalledTimes(2);
   });
 
   it('watches nothing without Decky and starts once a later call finds it', async () => {

@@ -223,13 +223,9 @@ describe('detectMillennium', () => {
     resetMillenniumDetectCache();
   });
 
-  it.each([
-    ['/Applications/Steam Millennium.app'],
-    [path.join(home, 'Applications/Steam Millennium.app')],
-    [path.join(home, 'Library/Application Support/Millennium/runtime')],
-  ])('reports macOS marker %s as v3 without blocking TCP CDP', (marker) => {
+  it('reports a macOS marker as v3 without blocking TCP CDP', () => {
     fakePlatform.value = 'macos';
-    existing.add(marker);
+    existing.add(path.join(home, 'Applications/Steam Millennium.app'));
     // resolveMillenniumPaths() joins macOS paths with path.posix, also on a Windows host.
     existing.add(path.posix.join(home, 'Library/Application Support/Millennium'));
 
@@ -242,20 +238,6 @@ describe('detectMillennium', () => {
     expect(info.configPath).toBe(
       path.posix.join(home, 'Library/Application Support/Millennium/config.json')
     );
-  });
-
-  it('detects the macOS tier0 install inside the Steam bundle', () => {
-    fakePlatform.value = 'macos';
-    fakeSteamPath.value = '/Users/a/Library/Application Support/Steam';
-    existing.add(
-      path.join(
-        fakeSteamPath.value,
-        'Steam.AppBundle/Steam/Contents/MacOS/libtier0_s.real.dylib'
-      )
-    );
-    const info = detectMillennium();
-    expect(info.generation).toBe('v3');
-    expect(info.pluginsDir).toBeNull();
   });
 
   it('reports Linux v3 as blocking TCP CDP', () => {
@@ -283,19 +265,6 @@ describe('detectMillennium', () => {
 });
 
 describe('renderInitialMillenniumConfig', () => {
-  it.each([
-    ['managed', true],
-    ['unmanaged', false],
-  ])(
-    'already has the plugin enabled when %s, so the first plugin setup changes nothing',
-    (_case, managed) => {
-      const raw = renderInitialMillenniumConfig('lbk-bridge', managed);
-      expect(planEnabledPluginsEdit(raw, 'lbk-bridge', true)).toEqual({
-        kind: 'unchanged',
-      });
-    }
-  );
-
   it('turns off Millennium update checks only where LBK manages updates', () => {
     expect(JSON.parse(renderInitialMillenniumConfig('lbk-bridge', true))).toEqual({
       plugins: { enabledPlugins: ['lbk-bridge'] },

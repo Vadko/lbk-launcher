@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AchievementsBadge } from '@/shared/plugin-host-types';
 import type { AchievementsComponent } from '@/shared/types';
 
 const state = vi.hoisted(() => ({
@@ -9,7 +10,7 @@ const state = vi.hoisted(() => ({
   pluginData: [] as unknown[],
   pluginConnected: false,
   settingOn: true,
-  generation: null as 'v2' | 'v3' | null,
+  badge: 'needs-millennium' as AchievementsBadge['state'],
   reload: vi.fn(() => Promise.resolve({ apps: 1, coverage: {} })),
 }));
 
@@ -24,29 +25,10 @@ vi.mock('@/main/installer/download-and-extract', () => ({
 }));
 vi.mock('@/main/game-detector', () => ({ getFirstAvailableGamePath: vi.fn() }));
 vi.mock('@/main/db/games-repository', () => ({ GamesRepository: {} }));
-vi.mock('@/main/plugin-host/state', async () => {
-  const { computeAchievementsBadge } = await import('@/main/plugin-host/support');
-  return {
-    getAchievementsBadge: () =>
-      Promise.resolve(
-        computeAchievementsBadge({
-          os: 'windows',
-          settingOn: state.settingOn,
-          host: state.generation === 'v3' ? 'millennium' : 'none',
-          steamRunning: true,
-          connectedHost: state.pluginConnected ? 'millennium' : null,
-          millennium: {
-            v3: state.generation === 'v3',
-            pluginInstalled: false,
-            pluginEnabled: false,
-            activationPending: false,
-          },
-          support: { supported: true, reason: null },
-          decky: null,
-        })
-      ),
-  };
-});
+vi.mock('@/main/plugin-host/state', () => ({
+  getAchievementsBadge: () =>
+    Promise.resolve({ state: state.badge, unsupportedReason: null }),
+}));
 vi.mock('@/main/utils/plugin-data', () => ({
   writeBridgePluginData: (_file: string, data: unknown) => {
     state.pluginData.push(data);
@@ -128,7 +110,7 @@ beforeEach(() => {
   state.pluginData = [];
   state.pluginConnected = false;
   state.settingOn = true;
-  state.generation = null;
+  state.badge = 'needs-millennium';
   state.reload.mockClear();
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -248,10 +230,11 @@ describe('syncAchievementsToPlugin', () => {
       apps: { 400: { ACH_ONE: { name: 'Кекс для героя', desc: 'Отримати кекс' } } },
     });
 
-    state.generation = 'v3';
+    state.badge = 'after-restart';
     expect(await syncAchievementsToPlugin()).toBe('plugin-next-start');
     expect(state.reload).not.toHaveBeenCalled();
 
+    state.badge = 'millennium';
     state.pluginConnected = true;
     expect(await syncAchievementsToPlugin()).toBe('plugin-live');
     expect(state.reload).toHaveBeenCalledTimes(1);
@@ -260,6 +243,7 @@ describe('syncAchievementsToPlugin', () => {
     expect(await syncAchievementsToPlugin()).toBe('plugin-next-start');
 
     state.settingOn = false;
+    state.badge = 'setting-off';
     expect(await syncAchievementsToPlugin()).toBe('disabled');
   });
 

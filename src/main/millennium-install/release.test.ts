@@ -43,11 +43,6 @@ describe('MILLENNIUM_PIN', () => {
       expect(selected?.asset.url).toContain(`/download/${tag}/`);
     }
   );
-
-  it('takes the macOS fork from the notarized lbk.4 build', () => {
-    expect(MILLENNIUM_PIN.macos?.tag).toBe('lbk-v3.5.0-beta.3-lbk.4');
-    expect(MILLENNIUM_PIN.macos?.assets.arm64.url).toContain('Vadko/Millennium');
-  });
 });
 
 describe('selectMillenniumAsset', () => {

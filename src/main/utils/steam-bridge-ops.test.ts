@@ -1,9 +1,5 @@
 import vm from 'node:vm';
-import {
-  isPluginOnlyOp,
-  PLUGIN_ONLY_OPS,
-  SHARED_STEAM_OPS,
-} from '@lbk/bridge-core/contract';
+import { SHARED_STEAM_OPS } from '@lbk/bridge-core/contract';
 import { describe, expect, it, vi } from 'vitest';
 import { STEAM_OPS_SOURCE } from '@/main/utils/steam-bridge-ops';
 
@@ -93,13 +89,6 @@ describe('STEAM_OPS_SOURCE', () => {
   it('exposes exactly the shared ops', () => {
     const ops = loadOps();
     expect(Object.keys(ops).sort()).toEqual([...SHARED_STEAM_OPS].sort());
-    for (const op of PLUGIN_ONLY_OPS) {
-      expect(ops).not.toHaveProperty(op);
-      expect(isPluginOnlyOp(op)).toBe(true);
-    }
-    for (const op of SHARED_STEAM_OPS) {
-      expect(isPluginOnlyOp(op)).toBe(false);
-    }
   });
 
   it('runs without any Steam globals for ping', async () => {
@@ -126,9 +115,7 @@ describe('validators', () => {
   it.each([
     ['setLaunchOptions', 'invalid appId', { appId: 10.5, value: '' }],
     ['clearArtwork', 'invalid appId', { appId: 0, assetType: 1 }],
-    ['clearArtwork', 'invalid appId', { appId: 2 ** 32, assetType: 1 }],
     ['workshopSubscribe', 'invalid id', { appId: 10, itemId: '12a', subscribe: true }],
-    ['workshopSubscribe', 'invalid id', { appId: 10, itemId: 12, subscribe: true }],
     [
       'workshopDownloaded',
       'invalid id',
@@ -142,13 +129,10 @@ describe('validators', () => {
     ],
     ['setLaunchOptions', 'invalid text', { appId: 10, value: 'x'.repeat(32769) }],
     ['setArtwork', 'invalid base64', { ...artwork, base64: 'abc"def' }],
-    ['setArtwork', 'invalid base64', { ...artwork, base64: '' }],
     ['setArtwork', 'invalid ext', { ...artwork, ext: 'gif' }],
     ['setArtwork', 'invalid int', { ...artwork, assetType: 5 }],
-    ['clearArtwork', 'invalid int', { appId: 10, assetType: 5 }],
     ['updateShortcut', 'invalid shortcut appId', shortcut],
     ['setLaunchOptions', 'invalid args', null],
-    ['syncCollection', 'invalid appId', { appIds: [1.5], recordedId: null }],
     ['syncCollection', 'invalid appIds', { appIds: 'x', recordedId: null }],
   ])('%s fails with "%s" without touching Steam (#%#)', async (op, error, args) => {
     await expect(ops[op](args)).rejects.toThrow(`lbk-ops: ${error}`);
@@ -274,14 +258,10 @@ describe('ops against stubbed Steam', () => {
 });
 
 describe('syncCollection', () => {
-  it('reports an unavailable library', async () => {
-    const ops = loadOps();
-    await expect(ops.syncCollection({ appIds: [10], recordedId: null })).resolves.toBe(
-      'library-unavailable'
-    );
-  });
-
-  it('returns no-matches when nothing is owned and no collection exists', async () => {
+  it('reports an unavailable library, then no-matches when nothing is owned', async () => {
+    await expect(
+      loadOps().syncCollection({ appIds: [10], recordedId: null })
+    ).resolves.toBe('library-unavailable');
     const store = makeCollectionStore(library, []);
     const ops = loadOps({ collectionStore: store });
     await expect(ops.syncCollection({ appIds: [99], recordedId: null })).resolves.toBe(

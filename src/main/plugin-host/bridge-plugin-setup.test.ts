@@ -103,21 +103,7 @@ describe('syncBridgePluginSetup with Millennium v3', () => {
     expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledWith(true);
   });
 
-  it('queues the enable once while Steam runs instead of on every sync', async () => {
-    vi.mocked(installOrUpdateMillenniumPlugin).mockReturnValue({
-      ok: true,
-      changed: false,
-    });
-    vi.mocked(setMillenniumPluginEnabledInConfig).mockResolvedValue('steam-running');
-
-    await syncBridgePluginSetup();
-    await syncBridgePluginSetup();
-
-    expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledTimes(1);
-    expect(env.queue).toMatchObject([{ kind: 'millennium-plugin', enable: true }]);
-  });
-
-  it('queues the enable once when two syncs overlap', async () => {
+  it('queues the enable once while Steam runs, also when syncs overlap', async () => {
     vi.mocked(installOrUpdateMillenniumPlugin).mockReturnValue({
       ok: true,
       changed: false,
@@ -125,9 +111,10 @@ describe('syncBridgePluginSetup with Millennium v3', () => {
     vi.mocked(setMillenniumPluginEnabledInConfig).mockResolvedValue('steam-running');
 
     await Promise.all([syncBridgePluginSetup(), syncBridgePluginSetup()]);
+    await syncBridgePluginSetup();
 
     expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledTimes(1);
-    expect(env.queue).toHaveLength(1);
+    expect(env.queue).toMatchObject([{ kind: 'millennium-plugin', enable: true }]);
   });
 
   it('runs a toggle-off issued mid-enable only after the enable', async () => {

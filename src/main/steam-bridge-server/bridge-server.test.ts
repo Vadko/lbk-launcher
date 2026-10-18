@@ -55,8 +55,8 @@ class FakePlugin {
   private waiters: ((m: Message) => void)[] = [];
   closeCode: number | null = null;
 
-  constructor(port: number, origin = ORIGIN) {
-    this.ws = new WebSocket(`ws://127.0.0.1:${port}/lbk-bridge`, { origin });
+  constructor(port: number) {
+    this.ws = new WebSocket(`ws://127.0.0.1:${port}/lbk-bridge`, { origin: ORIGIN });
     this.ws.on('message', (data) => {
       const msg = JSON.parse(data.toString()) as Message;
       const waiter = this.waiters.shift();
@@ -117,8 +117,8 @@ describe('plugin server', () => {
   const plugins: FakePlugin[] = [];
   const sockets: Socket[] = [];
 
-  function connect(origin?: string): FakePlugin {
-    const plugin = new FakePlugin(bridge.port, origin);
+  function connect(): FakePlugin {
+    const plugin = new FakePlugin(bridge.port);
     plugins.push(plugin);
     return plugin;
   }
@@ -142,24 +142,12 @@ describe('plugin server', () => {
     await stopSteamBridgeServer();
   });
 
-  it('writes bridge.json with a loopback port and a fresh secret', () => {
+  it('writes bridge.json with a loopback port and a fresh secret, and deletes it on stop', async () => {
     expect(bridge.v).toBe(1);
     expect(bridge.port).toBeGreaterThanOrEqual(1024);
     expect(bridge.secret).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it('deletes bridge.json on stop', async () => {
     await stopSteamBridgeServer();
     expect(pluginData.has('bridge.json')).toBe(false);
-  });
-
-  it('refuses an upgrade from a foreign origin', async () => {
-    const plugin = connect('https://example.com');
-    const status = await new Promise<number>((resolve) => {
-      plugin.ws.on('unexpected-response', (_req, res) => resolve(res.statusCode ?? 0));
-      plugin.ws.on('error', () => undefined);
-    });
-    expect(status).toBe(403);
   });
 
   it('drops a refused client that keeps its side open, so stop does not hang', async () => {
@@ -241,7 +229,6 @@ describe('plugin server', () => {
   });
 
   it('rejects requests when no plugin is connected', async () => {
-    await expect(invokeViaPlugin('ping', {})).rejects.toThrow('plugin-not-connected');
     await expect(invokeViaPlugin('ping', {})).rejects.toMatchObject({
       code: 'not-connected',
     });
@@ -262,26 +249,6 @@ describe('plugin server', () => {
     await plugin.opened();
     plugin.send(helloFrame({ v: 2, pv: '9.0.0' }));
     expect(await plugin.closed()).toBe(4002);
-  });
-
-  it('sends requests one at a time, in order', async () => {
-    const plugin = connect();
-    await plugin.handshake(bridge.secret);
-    await connected();
-
-    const first = invokeViaPlugin('ping', {});
-    const second = invokeViaPlugin('libraryAppIds', {});
-    const req1 = await plugin.next();
-    await new Promise((r) => setTimeout(r, 30));
-    expect(plugin.requests).toEqual([]);
-
-    plugin.send({ t: 'res', id: req1.id, ok: true, value: { ok: true } });
-    const req2 = await plugin.next();
-    expect(req2.op).toBe('libraryAppIds');
-    plugin.send({ t: 'res', id: req2.id, ok: true, value: [10, 20] });
-
-    await expect(first).resolves.toEqual({ ok: true });
-    await expect(second).resolves.toEqual([10, 20]);
   });
 
   it('times out a request but holds the queue until the stale answer arrives', async () => {

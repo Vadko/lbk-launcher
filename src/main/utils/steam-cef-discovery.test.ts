@@ -12,35 +12,44 @@ const MAC_STEAM =
 const MAC_HELPER = `/Users/u/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/Frameworks/Steam Helper.app/Contents/MacOS/Steam Helper`;
 
 describe('parseWebhelperDebugArgs', () => {
-  it('reads a NUL-separated Linux cmdline', () => {
-    const cmdline = [
-      '/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper',
-      '-lang=en_US',
-      '--remote-debugging-port=8080',
-      '',
-    ].join('\0');
-    expect(parseWebhelperDebugArgs(cmdline)).toEqual({
-      isMain: true,
-      port: 8080,
-      pipe: false,
-      millenniumFlags: false,
-    });
-  });
-
-  it('reads a space-joined (title-rewritten) cmdline', () => {
-    const args = parseWebhelperDebugArgs(
-      '/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper -nocrashdialog --remote-debugging-port=9222 --enable-smooth-scrolling'
-    );
-    expect(args.port).toBe(9222);
-    expect(args.isMain).toBe(true);
-  });
-
-  it('marks --type= children as not main', () => {
-    const args = parseWebhelperDebugArgs(
-      `${MAC_HELPER} --type=renderer --enable-chrome-runtime --remote-debugging-port=8080 --lang=uk`
-    );
-    expect(args.isMain).toBe(false);
-    expect(args.port).toBe(8080);
+  it.each([
+    [
+      'a NUL-separated Linux cmdline',
+      [
+        '/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper',
+        '-lang=en_US',
+        '--remote-debugging-port=8080',
+        '',
+      ].join('\0'),
+      { isMain: true, port: 8080, pipe: false, millenniumFlags: false },
+    ],
+    [
+      'a space-joined (title-rewritten) cmdline',
+      '/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper -nocrashdialog --remote-debugging-port=9222 --enable-smooth-scrolling',
+      { isMain: true, port: 9222, pipe: false, millenniumFlags: false },
+    ],
+    [
+      'a --type= child as not main',
+      `${MAC_HELPER} --type=renderer --enable-chrome-runtime --remote-debugging-port=8080 --lang=uk`,
+      { isMain: false, port: 8080, pipe: false, millenniumFlags: false },
+    ],
+    [
+      'the Windows Millennium pipe flags',
+      '"C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe" -lang=en_US --remote-debugging-pipe --remote-debugging-io-pipes=1234,5678 --millennium-loopback-ipc-handles=1,2',
+      { isMain: true, port: null, pipe: true, millenniumFlags: true },
+    ],
+    [
+      'a bare --remote-debugging-pipe at the end',
+      'steamwebhelper --remote-debugging-pipe',
+      { isMain: true, port: null, pipe: true, millenniumFlags: true },
+    ],
+    [
+      'a cmdline with no debug flags',
+      `${MAC_HELPER} -nocrashdialog -lang=uk_UA`,
+      { isMain: true, port: null, pipe: false, millenniumFlags: false },
+    ],
+  ])('reads %s', (_label, cmdline, expected) => {
+    expect(parseWebhelperDebugArgs(cmdline)).toEqual(expected);
   });
 
   it.each([
@@ -54,19 +63,6 @@ describe('parseWebhelperDebugArgs', () => {
     ['ignores a longer flag name', '--x-remote-debugging-port=8080', null],
   ])('%s', (_label, flag, port) => {
     expect(parseWebhelperDebugArgs(`steamwebhelper ${flag}`).port).toBe(port);
-  });
-
-  it('detects the Windows Millennium pipe flags', () => {
-    const args = parseWebhelperDebugArgs(
-      '"C:\\Program Files (x86)\\Steam\\bin\\cef\\cef.win7x64\\steamwebhelper.exe" -lang=en_US --remote-debugging-pipe --remote-debugging-io-pipes=1234,5678 --millennium-loopback-ipc-handles=1,2'
-    );
-    expect(args).toEqual({ isMain: true, port: null, pipe: true, millenniumFlags: true });
-  });
-
-  it('treats a bare --remote-debugging-pipe at the end as a pipe', () => {
-    expect(parseWebhelperDebugArgs('steamwebhelper --remote-debugging-pipe').pipe).toBe(
-      true
-    );
   });
 
   it.each([
@@ -90,15 +86,6 @@ describe('parseWebhelperDebugArgs', () => {
     const args = parseWebhelperDebugArgs(cmdline);
     expect(args.millenniumFlags).toBe(true);
     expect(args.pipe).toBe(pipe);
-  });
-
-  it('reports nothing for a cmdline with no debug flags', () => {
-    expect(parseWebhelperDebugArgs(`${MAC_HELPER} -nocrashdialog -lang=uk_UA`)).toEqual({
-      isMain: true,
-      port: null,
-      pipe: false,
-      millenniumFlags: false,
-    });
   });
 });
 

@@ -10,24 +10,12 @@ import {
 
 const DELAYS = { poll: 1000, idle: 5000, recheck: 3000 };
 
-interface Harness {
-  actor: Actor<typeof steamMonitorMachine>;
-  steam: { running: boolean };
-  // Probes that a test holds open; empty means probes answer at once.
-  held: ((output: ProbeOutput) => void)[];
-  hold: { next: boolean };
-  probe: ReturnType<typeof vi.fn>;
-  handleStopped: ReturnType<typeof vi.fn<() => Promise<'came-back' | 'ran'>>>;
-  refreshBridge: ReturnType<typeof vi.fn<() => Promise<null>>>;
-  fireStarted: ReturnType<typeof vi.fn>;
-  fireExited: ReturnType<typeof vi.fn>;
-}
+let running: Actor<typeof steamMonitorMachine> | null = null;
 
-let harness: Harness | null = null;
-
-function start(opts: { running: boolean; polling?: boolean }): Harness {
+function start(opts: { running: boolean; polling?: boolean }) {
   const steam = { running: opts.running };
-  const held: Harness['held'] = [];
+  // Probes that a test holds open; empty means probes answer at once.
+  const held: ((output: ProbeOutput) => void)[] = [];
   const hold = { next: false };
   const probe = vi.fn();
   const handleStopped = vi.fn(() => Promise.resolve<'came-back' | 'ran'>('ran'));
@@ -61,7 +49,8 @@ function start(opts: { running: boolean; polling?: boolean }): Harness {
     })
   );
   actor.start();
-  harness = {
+  running = actor;
+  return {
     actor,
     steam,
     held,
@@ -72,8 +61,9 @@ function start(opts: { running: boolean; polling?: boolean }): Harness {
     fireStarted,
     fireExited,
   };
-  return harness;
 }
+
+type Harness = ReturnType<typeof start>;
 
 const loop = (h: Harness) => h.actor.getSnapshot().value.loop;
 const recheck = (h: Harness) => h.actor.getSnapshot().value.recheck;
@@ -85,8 +75,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  harness?.actor.stop();
-  harness = null;
+  running?.stop();
+  running = null;
   vi.useRealTimers();
   vi.restoreAllMocks();
 });

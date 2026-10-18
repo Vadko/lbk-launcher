@@ -133,18 +133,16 @@ describe('Millennium bundle', () => {
     disposeBridge(sandbox);
   });
 
-  it('falls back to its own URL in the stack when no script tag names it', async () => {
-    const { sandbox, fetched } = loadInSteam([], SCRIPT_URL);
+  it.each([
+    'https://steamloopback.host/plugins/lbk-bridge',
+    'https://x/C:/Program%20Files%20(x86)/Steam/plugins/lbk-bridge',
+  ])('falls back to its own URL in the stack under %s', async (pluginDir) => {
+    const { sandbox, fetched } = loadInSteam(
+      [],
+      `${pluginDir}/.millennium/Dist/index.js`
+    );
     await settle();
-    expect(fetched[0]).toMatch(BRIDGE_JSON_URL);
-    disposeBridge(sandbox);
-  });
-
-  it('finds its URL in the stack when the Steam path has parentheses', async () => {
-    const steamDir = 'https://x/C:/Program%20Files%20(x86)/Steam/plugins/lbk-bridge';
-    const { sandbox, fetched } = loadInSteam([], `${steamDir}/.millennium/Dist/index.js`);
-    await settle();
-    expect(fetched[0]?.split('?')[0]).toBe(`${steamDir}/.millennium/Dist/bridge.json`);
+    expect(fetched[0]?.split('?')[0]).toBe(`${pluginDir}/.millennium/Dist/bridge.json`);
     disposeBridge(sandbox);
   });
 });

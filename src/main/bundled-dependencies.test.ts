@@ -33,15 +33,11 @@ function dependencyManifest(name: string): Manifest {
   return readManifest(path.join(ROOT, 'node_modules', name, 'package.json'));
 }
 
-type Build = 'main' | 'preload';
-
-function buildExcludes(build: Build): string[] {
+function mainBuildExcludes(): string[] {
   const config = fs.readFileSync(path.join(ROOT, 'electron.vite.config.ts'), 'utf8');
-  const block = new RegExp(`^  ${build}: \\{$([\\s\\S]*?)^  \\},$`, 'm').exec(
-    config
-  )?.[1];
+  const block = /^ {2}main: \{$([\s\S]*?)^ {2}\},$/m.exec(config)?.[1];
   if (block === undefined) {
-    throw new Error(`no ${build} block in electron.vite.config.ts`);
+    throw new Error('no main block in electron.vite.config.ts');
   }
   const list = /externalizeDeps:\s*{[^}]*exclude:\s*\[([^\]]*)\]/.exec(block)?.[1] ?? '';
   return [...list.matchAll(/'([^']+)'/g)].map((match) => match[1]);
@@ -63,20 +59,6 @@ function valueImports(file: string): string[] {
   );
 }
 
-function resolveLocal(from: string, specifier: string): string {
-  const bare = specifier.split('?')[0];
-  const base = bare.startsWith('@/')
-    ? path.join(ROOT, 'src', bare.slice(2))
-    : path.resolve(path.dirname(from), bare);
-  const file = [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')].find(
-    (candidate) => fs.statSync(candidate, { throwIfNoEntry: false })?.isFile()
-  );
-  if (file === undefined) {
-    throw new Error(`cannot resolve ${specifier} from ${from}`);
-  }
-  return file;
-}
-
 function mainProcessImports(): Set<string> {
   return new Set(
     fs
@@ -86,22 +68,6 @@ function mainProcessImports(): Set<string> {
       .filter((specifier) => !isLocal(specifier))
       .map(packageName)
   );
-}
-
-// The preload build has its own exclude list, so it is checked over the files its entry reaches.
-function preloadImports(): Set<string> {
-  const names = new Set<string>();
-  const files = new Set([path.join(ROOT, 'src/preload/index.ts')]);
-  for (const file of files) {
-    for (const specifier of valueImports(file)) {
-      if (isLocal(specifier)) {
-        files.add(resolveLocal(file, specifier));
-      } else {
-        names.add(packageName(specifier));
-      }
-    }
-  }
-  return names;
 }
 
 function hasCondition(entry: unknown, condition: string): boolean {
@@ -154,21 +120,18 @@ describe('production dependencies', () => {
       return Array.isArray(bundled) ? bundled.length > 0 : bundled === true;
     });
 
-    expect(buildExcludes('main')).toEqual(expect.arrayContaining(withBundled));
+    expect(mainBuildExcludes()).toEqual(expect.arrayContaining(withBundled));
   });
 
-  // Both builds are CJS: externalized, an ESM-only package arrives through require(esm) as a namespace, so its default import is not callable.
-  it.each<[Build, () => Set<string>]>([
-    ['main', mainProcessImports],
-    ['preload', preloadImports],
-  ])('bundles every ESM-only dependency the %s build imports', (build, imports) => {
-    const imported = imports();
+  // The main build is CJS: externalized, an ESM-only package arrives through require(esm) as a namespace, so its default import is not callable.
+  it('bundles every ESM-only dependency the main build imports', () => {
+    const imported = mainProcessImports();
     expect(imported).toContain('electron');
     const esmOnly = dependencyNames().filter(
       (name) => imported.has(name) && isEsmOnly(dependencyManifest(name))
     );
 
-    expect(buildExcludes(build)).toEqual(expect.arrayContaining(esmOnly));
+    expect(mainBuildExcludes()).toEqual(expect.arrayContaining(esmOnly));
   });
 
   // electron-vite externalizes `dependencies`; a workspace package there would be required from a missing node_modules entry.

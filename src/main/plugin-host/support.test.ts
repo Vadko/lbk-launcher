@@ -62,6 +62,7 @@ describe('evaluateMillenniumSupport', () => {
     [linuxDesktop({ steamOS: true }), 'steamos'],
     [linuxDesktop({ deckyInstalled: true }), 'decky-present'],
     [linuxDesktop({ nixos: true }), 'nixos'],
+    [{ ...linuxDesktop({ nixos: true }), millenniumGeneration: 'v3' }, null],
     [linuxDesktop({ homeLinkOk: false }), 'steam-home-link'],
     [linuxDesktop({ rt64: true }), 'steam-rt64'],
     [linuxDesktop({ libssl32: false }), 'missing-libssl32'],
@@ -78,14 +79,6 @@ describe('evaluateMillenniumSupport', () => {
     const support = evaluateMillenniumSupport(facts);
     expect(support.reason).toBe(reason);
     expect(support.supported).toBe(reason === null);
-  });
-
-  it('lets an existing NixOS Millennium through to the plugin', () => {
-    const facts = {
-      ...linuxDesktop({ nixos: true }),
-      millenniumGeneration: 'v3' as const,
-    };
-    expect(evaluateMillenniumSupport(facts).reason).toBeNull();
   });
 });
 
@@ -147,37 +140,30 @@ describe('deckyLoaderOffer', () => {
       ...overrides,
     });
 
-  it('offers the installer only where Decky is the host and missing', () => {
-    expect(offer()).toEqual({ installing: false, blockedBy: null, repair: false });
-    expect(offer({ host: 'millennium' })).toBeNull();
-    expect(offer({ host: 'none' })).toBeNull();
-    expect(offer({ deckyInstalled: true, deckyRunning: true })).toBeNull();
-  });
+  const shown = { installing: false, blockedBy: null, repair: false };
 
-  it('keeps offering a repair when the installed loader does not run', () => {
-    expect(offer({ deckyInstalled: true })).toEqual({
-      installing: false,
-      blockedBy: null,
-      repair: true,
-    });
-  });
-
-  it('blocks the zenity-driven installer in Game Mode', () => {
-    expect(offer({ gamescope: true })).toEqual({
-      installing: false,
-      blockedBy: 'game-mode',
-      repair: false,
-    });
-  });
-
-  it('keeps reporting a running install after PluginLoader appears mid-run', () => {
-    expect(offer({ deckyInstalled: true, deckyRunning: true, installing: true })).toEqual(
-      {
-        installing: true,
-        blockedBy: null,
-        repair: false,
-      }
-    );
+  it.each([
+    ['the installer where Decky is the host and missing', {}, shown],
+    ['nothing under Millennium', { host: 'millennium' }, null],
+    ['nothing without a host', { host: 'none' }, null],
+    ['nothing once Decky runs', { deckyInstalled: true, deckyRunning: true }, null],
+    [
+      'a repair when the loader does not run',
+      { deckyInstalled: true },
+      { ...shown, repair: true },
+    ],
+    [
+      'a Game Mode block for the zenity installer',
+      { gamescope: true },
+      { ...shown, blockedBy: 'game-mode' },
+    ],
+    [
+      'a running install after PluginLoader appears mid-run',
+      { deckyInstalled: true, deckyRunning: true, installing: true },
+      { ...shown, installing: true },
+    ],
+  ] as const)('offers %s', (_label, overrides, expected) => {
+    expect(offer(overrides)).toEqual(expected);
   });
 });
 
@@ -293,15 +279,7 @@ describe('computeAchievementsBadge', () => {
     ).toBe('needs-millennium');
     expect(
       computeAchievementsBadge(facts({ os: 'macos', host: 'none', support: noRelease }))
-        .state
-    ).toBe('unsupported');
-  });
-
-  it('carries the unsupported reason for the tooltip', () => {
-    const badge = computeAchievementsBadge(
-      facts({ host: 'none', support: { supported: false, reason: 'macos-too-old' } })
-    );
-    expect(badge).toEqual({ state: 'unsupported', unsupportedReason: 'macos-too-old' });
+    ).toEqual({ state: 'unsupported', unsupportedReason: 'no-release' });
   });
 });
 

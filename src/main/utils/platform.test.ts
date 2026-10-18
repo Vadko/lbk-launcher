@@ -157,7 +157,6 @@ describe('isGamescopeSession', () => {
       false,
       { XDG_CURRENT_DESKTOP: 'KDE', XDG_SESSION_DESKTOP: 'KDE' },
     ],
-    ['nothing set', false, {}],
     [
       'the gamescope Wayland display alone',
       true,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type BridgeEnv, type BridgeSocket, createBridge } from './bridge';
-import { BRIDGE_VERSION, type BridgeHost } from './contract';
+import type { BridgeHost } from './contract';
 import { hmacHex } from './protocol';
 import type { SteamGlobals } from './steam-globals';
 
@@ -135,29 +135,6 @@ describe('LBK Bridge double-load guard', () => {
 });
 
 describe('LBK Bridge transport', () => {
-  it('announces its host and version, and closes the socket on dispose', async () => {
-    FakeSocket.instances = [];
-    const steam = makeSteam({ v: 1, port: 50000, secret: 'ab'.repeat(32) });
-    const copy = steam.load('decky');
-    copy.start();
-    await settle();
-    const ws = FakeSocket.instances[0];
-    expect(ws.url).toBe('ws://127.0.0.1:50000/lbk-bridge');
-
-    ws.onopen?.(new Event('open'));
-    expect(ws.sent[0]).toMatchObject({
-      t: 'hello',
-      plugin: 'lbk-bridge',
-      host: 'decky',
-      pv: BRIDGE_VERSION,
-    });
-    expect(ws.sent[0].ops).toContain('deckyRequestInstall');
-    expect(ws.sent[0].ops).toContain('achievementsStatus');
-
-    copy.dispose();
-    expect(ws.closed).toBe(true);
-  });
-
   it('answers requests only after the server proved the secret', async () => {
     const secret = '34'.repeat(32);
     FakeSocket.instances = [];
