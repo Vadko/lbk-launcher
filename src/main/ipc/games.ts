@@ -141,9 +141,16 @@ export function setupGamesHandlers(): void {
   );
 
   // Detection: which Workshop translations are already installed when the cache is empty or reset
-  ipcMain.handle('list-installed-workshop-games', async () =>
-    installedWorkshopGameIds(GamesRepository.getInstance().getWorkshopTargets())
-  );
+  ipcMain.handle('list-installed-workshop-games', async () => {
+    try {
+      return await installedWorkshopGameIds(
+        GamesRepository.getInstance().getWorkshopTargets()
+      );
+    } catch (error) {
+      console.error('[Main] Listing installed Workshop games failed:', error);
+      return null;
+    }
+  });
 
   ipcMain.handle(
     'is-workshop-item-downloaded',

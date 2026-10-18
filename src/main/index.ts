@@ -443,6 +443,17 @@ if (!gotTheLock) {
   let isQuitting = false;
   let skipQuitTracking = false;
 
+  // macOS keeps the app alive after its last window closes, so services stop only on a real quit.
+  const stopBackgroundServices = () => {
+    stopUpdateCheck();
+    stopSteamWatcher();
+    stopDeckyWatcher();
+    stopStoreLibraryWatcher();
+    stopInstallationWatcher();
+    realtimeManager?.unsubscribe();
+    closeDatabase();
+  };
+
   ipcMain.on('skip-quit-tracking', () => {
     skipQuitTracking = true;
   });
@@ -484,25 +495,13 @@ if (!gotTheLock) {
       }
 
       console.log('[Main] Tracking complete, quitting app');
+      stopBackgroundServices();
       // Without real awaits this runs inside the will-quit emit, where Electron ignores a second quit.
       setImmediate(() => app.quit());
     })();
   });
 
   app.on('window-all-closed', () => {
-    // Cleanup
-    stopUpdateCheck();
-    stopSteamWatcher();
-    stopDeckyWatcher();
-    stopStoreLibraryWatcher();
-    stopInstallationWatcher();
-
-    // Unsubscribe from realtime updates (games + feedback replies)
-    realtimeManager?.unsubscribe();
-
-    // Close the database
-    closeDatabase();
-
     if (!isMacOS()) {
       app.quit();
     }
