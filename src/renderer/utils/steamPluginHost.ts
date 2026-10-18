@@ -6,8 +6,6 @@ import type {
   MillenniumUnsupportedReason,
 } from '@/shared/plugin-host-types';
 
-const DECKY_URL = 'https://decky.xyz';
-
 type HostOs = 'windows' | 'linux' | 'macos' | 'unknown';
 
 let cachedOs: HostOs | null = null;
@@ -29,11 +27,15 @@ export function hostOs(): HostOs {
   return cachedOs;
 }
 
-export function openDeckySite(): void {
-  window.electronAPI?.openExternal?.(DECKY_URL).catch((error: unknown) => {
-    console.warn('[SteamPluginHost] Opening the Decky Loader site failed:', error);
+function openSite(url: string, label: string): void {
+  window.electronAPI?.openExternal?.(url).catch((error: unknown) => {
+    console.warn(`[SteamPluginHost] Opening the ${label} site failed:`, error);
   });
 }
+
+export const openMillenniumSite = (): void =>
+  openSite('https://steambrew.app', 'Millennium');
+export const openDeckySite = (): void => openSite('https://decky.xyz', 'Decky Loader');
 
 const DECKY_HOST_TEXT =
   'Millennium несумісний із Decky Loader, тож тут переклад досягнень показується через плагін «LBK Bridge» для Decky Loader.';

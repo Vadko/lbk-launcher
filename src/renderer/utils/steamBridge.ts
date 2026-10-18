@@ -3,14 +3,6 @@ import type { RestartFailureReason, SteamBridgeStatus } from '@/shared/plugin-ho
 import { plural } from '@/shared/plural';
 import { useModalStore } from '../store/useModalStore';
 
-const MILLENNIUM_URL = 'https://steambrew.app';
-
-export function openMillenniumSite(): void {
-  window.electronAPI?.openExternal?.(MILLENNIUM_URL).catch((error: unknown) => {
-    console.warn('[SteamBridge] Opening the Millennium site failed:', error);
-  });
-}
-
 const CEF_BLOCKED_TEXT =
   'Steam не відкрив канал для лаунчера навіть після перезапуску, тож лаунчер більше не проситиме перезапускати Steam. Параметри запуску застосовуватимуться після закриття Steam. Можливо, канал блокує інший мод Steam.';
 

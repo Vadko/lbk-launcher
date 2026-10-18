@@ -6,6 +6,12 @@ import type { AchievementsOptionState } from '../../../utils/installOptions';
 import { AchievementsDeliveryBadge } from '../../ui/AchievementsDeliveryBadge';
 import { AchievementsDeliveryNote } from './AchievementsDeliveryNote';
 
+const PLANNED_CHANGES = [
+  ['willRemove', 'Буде видалено', Trash2Icon, 'text-red-400'],
+  ['willDownload', 'Буде завантажено', ArchiveIcon, 'text-green-400'],
+  ['willReinstall', 'Буде перевстановлено', ArchiveIcon, 'text-green-400'],
+] as const;
+
 interface AchievementsOptionProps {
   game: Game;
   hasArchive: boolean;
@@ -77,23 +83,13 @@ export const AchievementsOption: React.FC<AchievementsOptionProps> = ({
               <span>Розмір: {game.achievements_archive_size}</span>
             </p>
           )}
-          {option.willRemove && (
-            <p className="flex items-center gap-1 mt-1 text-red-400">
-              <Trash2Icon size={14} />
-              <span>Буде видалено</span>
-            </p>
-          )}
-          {option.willDownload && (
-            <p className="flex items-center gap-1 mt-1 text-green-400">
-              <ArchiveIcon size={14} />
-              <span>Буде завантажено</span>
-            </p>
-          )}
-          {option.willReinstall && (
-            <p className="flex items-center gap-1 mt-1 text-green-400">
-              <ArchiveIcon size={14} />
-              <span>Буде перевстановлено</span>
-            </p>
+          {PLANNED_CHANGES.filter(([key]) => option[key]).map(
+            ([key, text, Icon, color]) => (
+              <p key={key} className={`flex items-center gap-1 mt-1 ${color}`}>
+                <Icon size={14} />
+                <span>{text}</span>
+              </p>
+            )
           )}
         </div>
       </div>

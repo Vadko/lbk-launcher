@@ -5,12 +5,11 @@ import type {
   MillenniumProgress,
   PluginHostState,
 } from '@/shared/plugin-host-types';
-import { restartFailureMessage } from '../../../utils/steamBridge';
 import {
   millenniumPhaseText,
   steamRunningBeforeChange,
 } from '../../../utils/steamPluginHost';
-import type { RestartChoice } from './millenniumSetup';
+import { type RestartChoice, restartFailedText } from './millenniumSetup';
 
 const QUEUED_TEXT = 'Millennium буде видалено, щойно ви закриєте Steam.';
 
@@ -31,10 +30,10 @@ export function outcomeStep(result: MillenniumInstallResult | null): UninstallRe
       message:
         'Файли Steam ще зайняті. Millennium буде видалено після наступного закриття Steam.',
     }))
-    .with({ reason: 'restart-failed' }, ({ restartReason, error, queued }) => {
-      const text = restartFailureMessage(restartReason, error, false);
-      return { kind: 'error', message: queued ? `${text}\n\n${QUEUED_TEXT}` : text };
-    })
+    .with({ reason: 'restart-failed' }, (failure) => ({
+      kind: 'error',
+      message: restartFailedText(failure, QUEUED_TEXT),
+    }))
     .with(P.nullish, () => ({
       kind: 'error',
       message: 'Не вдалося видалити Millennium.',

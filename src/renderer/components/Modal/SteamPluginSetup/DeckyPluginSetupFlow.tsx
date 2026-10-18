@@ -13,12 +13,12 @@ import {
   SetupCloseButton,
   SetupDoneButton,
   SetupFrame,
+  SetupProgress,
   type SetupView,
 } from './SetupParts';
-import { DECKY_TITLE, deckyLoaderView } from './steps/deckyLoaderView';
+import { DECKY_TITLE, deckyLoaderView, type LoaderStage } from './steps/deckyLoaderView';
 import { deckyPluginView } from './steps/deckyPluginView';
-import { resultView } from './steps/resultView';
-import { waitingPluginView } from './steps/waitingPluginView';
+import { resultView } from './steps/setupView';
 
 const WAITING_TEXT =
   'Підтвердіть встановлення плагіна «LBK Bridge» у вікні Decky Loader. Якщо вікна не видно, натисніть кнопку Steam.';
@@ -65,7 +65,14 @@ export const DeckyPluginSetupFlow: React.FC = () => {
     close();
   }, [close, declineOffer]);
 
-  const installLoader = () => send({ type: 'INSTALL_LOADER' });
+  const loaderView = (stage: LoaderStage) =>
+    deckyLoaderView({
+      stage,
+      source,
+      onInstall: () => send({ type: 'INSTALL_LOADER' }),
+      onDecline: handleDecline,
+      onClose: close,
+    });
   const { loaderInstalled, loaderFailure, showSaveZip, savedMessage } = snapshot.context;
   const saveZipButton = (primary: boolean) => (
     <SetupButton
@@ -86,16 +93,10 @@ export const DeckyPluginSetupFlow: React.FC = () => {
       case 'refreshingHost': {
         const loader = state?.deckyLoader;
         if (loader && (!state?.decky?.installed || loader.repair)) {
-          return deckyLoaderView({
-            stage: {
-              kind: 'offer',
-              repair: loader.repair,
-              gameMode: loader.blockedBy === 'game-mode',
-            },
-            source,
-            onInstall: installLoader,
-            onDecline: handleDecline,
-            onClose: close,
+          return loaderView({
+            kind: 'offer',
+            repair: loader.repair,
+            gameMode: loader.blockedBy === 'game-mode',
           });
         }
         return deckyPluginView({
@@ -111,28 +112,20 @@ export const DeckyPluginSetupFlow: React.FC = () => {
       }
       case 'loaderInstalling':
       case 'loaderRunning':
-        return deckyLoaderView({
-          stage: { kind: 'installing' },
-          source,
-          onInstall: installLoader,
-          onDecline: handleDecline,
-          onClose: close,
-        });
+        return loaderView({ kind: 'installing' });
       case 'loaderFailed':
-        return deckyLoaderView({
-          stage: { kind: 'failed', reason: loaderFailure },
-          source,
-          onInstall: installLoader,
-          onDecline: handleDecline,
-          onClose: close,
-        });
+        return loaderView({ kind: 'failed', reason: loaderFailure });
       case 'waiting':
-        return waitingPluginView({
+        return resultView({
           title: DECKY_TITLE,
-          text: WAITING_TEXT,
+          body: <SetupProgress text={WAITING_TEXT} percent={null} />,
           note: savedMessage,
-          onClose: close,
-          buttons: showSaveZip && saveZipButton(false),
+          buttons: (
+            <>
+              {showSaveZip && saveZipButton(false)}
+              <SetupCloseButton onClose={close} />
+            </>
+          ),
         });
       case 'fallback':
         return resultView({

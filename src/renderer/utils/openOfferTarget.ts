@@ -4,8 +4,7 @@ import {
   useSteamPluginSetupStore,
 } from '../store/useSteamPluginSetupStore';
 import type { OfferTarget } from './pluginHostOffer';
-import { openMillenniumSite } from './steamBridge';
-import { openDeckySite } from './steamPluginHost';
+import { openDeckySite, openMillenniumSite } from './steamPluginHost';
 
 const OPENERS: Record<OfferTarget, (source: SteamPluginSetupSource) => void> = {
   'millennium-site': openMillenniumSite,

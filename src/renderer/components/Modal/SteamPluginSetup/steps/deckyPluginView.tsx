@@ -1,11 +1,10 @@
 import { Download } from 'lucide';
-import { CircleArrowUpIcon, ExternalLinkIcon } from 'lucide-react';
-import React from 'react';
+import { CircleArrowUpIcon } from 'lucide-react';
 import type { ActionPhase } from '@/renderer/hooks/useActionPhase';
 import type { PluginHostState } from '@/shared/plugin-host-types';
 import type { SteamPluginSetupSource } from '../../../../store/useSteamPluginSetupStore';
+import { DECKY_PLUGIN_DISABLED_TEXT } from '../../../../utils/pluginHostEntries';
 import { deckyOffer } from '../../../../utils/pluginHostOffer';
-import { openDeckySite } from '../../../../utils/steamPluginHost';
 import { AppActionIcon } from '../../../ui/AppActionIcon';
 import {
   OfferDismissButtons,
@@ -16,14 +15,13 @@ import {
   SetupText,
   type SetupView,
 } from '../SetupParts';
-import { DECKY_TITLE } from './deckyLoaderView';
+import { DECKY_TITLE, deckySiteButton } from './deckyLoaderView';
+import { closeFooter, setupView } from './setupView';
 
 const INTRO_TEXT =
   'Плагін показує в Steam перекладені досягнення — у бібліотеці, сповіщеннях і оверлеї. Усе інше лаунчер уміє й без нього. Decky Loader покаже запит на встановлення — підтвердьте його в Steam.';
 const NO_DECKY_TEXT =
   'Decky Loader не знайдено. Спершу встановіть Decky Loader — після цього лаунчер зможе додати до нього плагін «LBK Bridge».';
-const DISABLED_TEXT =
-  'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.';
 const LOADER_DONE_TEXT = 'Decky Loader встановлено.';
 
 interface DeckyPluginViewProps {
@@ -47,22 +45,15 @@ export function deckyPluginView({
   onDecline,
   onClose,
 }: DeckyPluginViewProps): SetupView {
-  const view = (body: React.ReactNode, footer: React.ReactNode): SetupView => ({
-    title: DECKY_TITLE,
-    dismissable: true,
-    body,
-    footer,
-  });
-  const textView = (paragraphs: string[], footer: React.ReactNode) =>
-    view(<SetupText paragraphs={paragraphs} />, footer);
-  const closeFooter = (
-    <SetupFooter>
-      <SetupCloseButton onClose={onClose} />
-    </SetupFooter>
-  );
+  const textView = (paragraphs: string[], footer = closeFooter(onClose)) =>
+    setupView(DECKY_TITLE, <SetupText paragraphs={paragraphs} />, footer);
 
   if (!state) {
-    return view(<SetupProgress text="Перевірка системи…" percent={null} />, closeFooter);
+    return setupView(
+      DECKY_TITLE,
+      <SetupProgress text="Перевірка системи…" percent={null} />,
+      closeFooter(onClose)
+    );
   }
 
   const offer = deckyOffer(state);
@@ -71,24 +62,14 @@ export function deckyPluginView({
       return textView(
         [NO_DECKY_TEXT],
         <SetupFooter>
-          <SetupButton
-            tone="primary"
-            onClick={openDeckySite}
-            gamepad="confirm"
-            icon={<ExternalLinkIcon size={16} />}
-          >
-            Що таке Decky Loader
-          </SetupButton>
+          {deckySiteButton(true)}
           <SetupCloseButton onClose={onClose} />
         </SetupFooter>
       );
     case 'plugin-disabled':
-      return textView([DISABLED_TEXT], closeFooter);
+      return textView([DECKY_PLUGIN_DISABLED_TEXT]);
     case 'plugin-ready':
-      return textView(
-        ['Плагін «LBK Bridge» для Decky Loader уже встановлено.'],
-        closeFooter
-      );
+      return textView(['Плагін «LBK Bridge» для Decky Loader уже встановлено.']);
     case 'plugin-missing':
     case 'plugin-outdated': {
       const outdated = offer.kind === 'plugin-outdated';

@@ -1,4 +1,4 @@
-import { assign, fromPromise, setup } from 'xstate';
+import { assign, fromPromise, not, setup } from 'xstate';
 import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
@@ -27,11 +27,6 @@ type DeckySetupEvent =
   | { type: 'INSTALL_LOADER' }
   | { type: 'REQUEST' }
   | { type: 'SAVE_ZIP' };
-
-function pluginReady(state: PluginHostState | null): boolean {
-  const plugin = state?.decky?.plugin;
-  return plugin?.installed === true && !plugin.outdated;
-}
 
 const savedMessage = (result: SaveZipResult): string =>
   result.success && result.path
@@ -67,7 +62,10 @@ export const deckySetupMachine = setup({
   guards: {
     // The modal may be reopened while an installer it started earlier is still running.
     loaderBusy: ({ context }) => context.host?.deckyLoader?.installing === true,
-    pluginReady: ({ context }) => pluginReady(context.host),
+    pluginReady: ({ context }) => {
+      const plugin = context.host?.decky?.plugin;
+      return plugin?.installed === true && !plugin.outdated;
+    },
   },
   delays: {
     saveZipReveal: 30_000,
@@ -95,12 +93,7 @@ export const deckySetupMachine = setup({
           always: { guard: 'loaderBusy', target: 'loaderRunning' },
           on: { INSTALL_LOADER: 'loaderInstalling', REQUEST: 'requesting' },
         },
-        loaderRunning: {
-          always: {
-            guard: ({ context }) => context.host?.deckyLoader?.installing !== true,
-            target: 'intro',
-          },
-        },
+        loaderRunning: { always: { guard: not('loaderBusy'), target: 'intro' } },
         loaderInstalling: {
           invoke: {
             src: 'installLoader',

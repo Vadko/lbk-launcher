@@ -58,6 +58,14 @@ export function queuedParagraphs(): string[] {
   return hostOs() === 'macos' ? [QUEUED_TEXT, MAC_QUEUED_TEXT] : [QUEUED_TEXT];
 }
 
+export function restartFailedText(
+  { restartReason, error, queued }: MillenniumInstallResult,
+  queuedText: string
+): string {
+  const text = restartFailureMessage(restartReason, error, false);
+  return queued ? `${text}\n\n${queuedText}` : text;
+}
+
 export function failureStep(
   result: MillenniumInstallResult,
   unsupportedReason: MillenniumUnsupportedReason | null
@@ -82,10 +90,9 @@ export function failureStep(
     .with({ reason: 'restart-failed', restartReason: 'launch-failed' }, () =>
       setupError(STEAM_NOT_BACK_TEXT, 'steam-not-back')
     )
-    .with({ reason: 'restart-failed' }, ({ restartReason, error, queued }) => {
-      const text = restartFailureMessage(restartReason, error, false);
-      return setupError(queued ? `${text}\n\n${QUEUED_TEXT}` : text, 'none');
-    })
+    .with({ reason: 'restart-failed' }, (failure) =>
+      setupError(restartFailedText(failure, QUEUED_TEXT), 'none')
+    )
     .with(
       {
         reason: P.optional(

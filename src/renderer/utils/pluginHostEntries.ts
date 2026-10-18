@@ -19,6 +19,9 @@ interface PluginHostEntries {
   actions: OfferAction[];
 }
 
+export const DECKY_PLUGIN_DISABLED_TEXT =
+  'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.';
+
 const RECOMMEND_LINE: PluginHostLine = {
   key: 'recommend',
   text: 'Порада: з Millennium лаунчер також показуватиме в Steam переклад досягнень.',
@@ -41,12 +44,7 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
         : [OFFER_ACTIONS.deckyInfo],
     }))
     .with({ kind: 'plugin-disabled' }, () => ({
-      lines: [
-        {
-          key: 'disabled',
-          text: 'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.',
-        },
-      ],
+      lines: [{ key: 'disabled', text: DECKY_PLUGIN_DISABLED_TEXT }],
       actions: [],
     }))
     .with({ kind: 'plugin-missing' }, () => ({

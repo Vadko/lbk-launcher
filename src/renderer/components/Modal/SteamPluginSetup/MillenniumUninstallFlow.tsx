@@ -13,7 +13,7 @@ import {
   type SetupView,
 } from './SetupParts';
 import { restartChoiceView } from './steps/restartChoiceView';
-import { resultView } from './steps/resultView';
+import { resultView, setupView } from './steps/setupView';
 
 const TITLE = 'Видалення Millennium';
 
@@ -64,56 +64,51 @@ export const MillenniumUninstallFlow: React.FC = () => {
         ),
       });
     }
-    return {
-      title: TITLE,
-      dismissable: true,
-      body: (
-        <div className="flex flex-col gap-4">
-          <SetupText
-            paragraphs={[
-              'Millennium буде видалено з теки Steam. Плагіни й теми Millennium залишаться, якщо не позначити «Видалити також плагіни й налаштування Millennium».',
-            ]}
-          />
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={purge}
-            onClick={() => send({ type: 'TOGGLE_PURGE' })}
-            data-gamepad-modal-item
-            className="flex items-start gap-3 rounded-xl p-2 text-left text-sm text-text-main hover:bg-glass-hover transition-colors"
+    return setupView(
+      TITLE,
+      <div className="flex flex-col gap-4">
+        <SetupText
+          paragraphs={[
+            'Millennium буде видалено з теки Steam. Плагіни й теми Millennium залишаться, якщо не позначити «Видалити також плагіни й налаштування Millennium».',
+          ]}
+        />
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={purge}
+          onClick={() => send({ type: 'TOGGLE_PURGE' })}
+          data-gamepad-modal-item
+          className="flex items-start gap-3 rounded-xl p-2 text-left text-sm text-text-main hover:bg-glass-hover transition-colors"
+        >
+          <span
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+              purge
+                ? 'bg-color-main border-color-main text-text-dark'
+                : 'bg-glass border-border'
+            }`}
           >
-            <span
-              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-                purge
-                  ? 'bg-color-main border-color-main text-text-dark'
-                  : 'bg-glass border-border'
-              }`}
-            >
-              {purge && <CheckIcon size={14} />}
-            </span>
-            <span className="min-w-0">
-              Видалити також плагіни й налаштування Millennium
-            </span>
-          </button>
-        </div>
-      ),
-      footer: (
-        <SetupFooter>
-          <SetupButton
-            tone="danger"
-            onClick={() => send({ type: 'CONFIRM', steamRunning: state?.steamRunning })}
-            disabled={!state || state.busy}
-            gamepad="confirm"
-            icon={<Trash2Icon size={16} />}
-          >
-            Видалити Millennium
-          </SetupButton>
-          <SetupButton tone="secondary" onClick={close} gamepad="cancel">
-            Скасувати
-          </SetupButton>
-        </SetupFooter>
-      ),
-    };
+            {purge && <CheckIcon size={14} />}
+          </span>
+          <span className="min-w-0">
+            Видалити також плагіни й налаштування Millennium
+          </span>
+        </button>
+      </div>,
+      <SetupFooter>
+        <SetupButton
+          tone="danger"
+          onClick={() => send({ type: 'CONFIRM', steamRunning: state?.steamRunning })}
+          disabled={!state || state.busy}
+          gamepad="confirm"
+          icon={<Trash2Icon size={16} />}
+        >
+          Видалити Millennium
+        </SetupButton>
+        <SetupButton tone="secondary" onClick={close} gamepad="cancel">
+          Скасувати
+        </SetupButton>
+      </SetupFooter>
+    );
   };
 
   return <SetupFrame view={stepView()} onClose={close} />;

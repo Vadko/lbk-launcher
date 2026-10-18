@@ -1,13 +1,12 @@
 import { useMachine } from '@xstate/react';
 import { RefreshCw } from 'lucide';
-import { ExternalLinkIcon, PlayIcon, RotateCwIcon, Trash2Icon } from 'lucide-react';
+import { PlayIcon, RotateCwIcon, Trash2Icon } from 'lucide-react';
 import React, { useCallback, useEffect } from 'react';
 import { fromPromise } from 'xstate';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
-import { openMillenniumSite } from '@/renderer/utils/steamBridge';
 import { millenniumPhaseText } from '@/renderer/utils/steamPluginHost';
 import { AppActionIcon } from '../../ui/AppActionIcon';
 import { millenniumInstallMachine } from './millenniumInstallMachine';
@@ -21,10 +20,13 @@ import {
   SetupProgress,
   type SetupView,
 } from './SetupParts';
-import { MILLENNIUM_TITLE, millenniumIntroView } from './steps/millenniumIntroView';
+import {
+  MILLENNIUM_TITLE,
+  millenniumIntroView,
+  millenniumSiteButton,
+} from './steps/millenniumIntroView';
 import { restartChoiceView } from './steps/restartChoiceView';
-import { resultView } from './steps/resultView';
-import { waitingPluginView } from './steps/waitingPluginView';
+import { resultView } from './steps/setupView';
 
 export const MillenniumInstallFlow: React.FC = () => {
   const close = useSteamPluginSetupStore((s) => s.close);
@@ -74,16 +76,7 @@ export const MillenniumInstallFlow: React.FC = () => {
           Спробувати ще раз
         </SetupButton>
       ),
-      site: (
-        <SetupButton
-          tone="primary"
-          onClick={openMillenniumSite}
-          gamepad="confirm"
-          icon={<ExternalLinkIcon size={16} />}
-        >
-          Відкрити сайт Millennium
-        </SetupButton>
-      ),
+      site: millenniumSiteButton(),
       'steam-not-back': (
         <>
           <SetupButton
@@ -174,10 +167,15 @@ export const MillenniumInstallFlow: React.FC = () => {
       });
     }
     if (snapshot.matches('waitingPlugin')) {
-      return waitingPluginView({
+      return resultView({
         title: MILLENNIUM_TITLE,
-        text: millenniumPhaseText('wait-plugin', 'install'),
-        onClose: close,
+        body: (
+          <SetupProgress
+            text={millenniumPhaseText('wait-plugin', 'install')}
+            percent={null}
+          />
+        ),
+        buttons: <SetupCloseButton onClose={close} />,
       });
     }
     if (result.kind === 'done') {

@@ -12,6 +12,7 @@ import {
   SetupText,
   type SetupView,
 } from '../SetupParts';
+import { closeFooter, setupView } from './setupView';
 
 export const DECKY_TITLE = 'Плагін «LBK Bridge» для Decky Loader';
 
@@ -49,10 +50,21 @@ const RETRYABLE: ReadonlySet<LoaderFailure> = new Set([
   'download-failed',
 ]);
 
-type LoaderStage =
+export type LoaderStage =
   | { kind: 'offer'; repair: boolean; gameMode: boolean }
   | { kind: 'installing' }
   | { kind: 'failed'; reason: LoaderFailure };
+
+export const deckySiteButton = (primary: boolean): React.ReactNode => (
+  <SetupButton
+    tone={primary ? 'primary' : 'secondary'}
+    onClick={openDeckySite}
+    gamepad={primary ? 'confirm' : undefined}
+    icon={<ExternalLinkIcon size={16} />}
+  >
+    Що таке Decky Loader
+  </SetupButton>
+);
 
 interface DeckyLoaderViewProps {
   stage: LoaderStage;
@@ -69,16 +81,6 @@ export function deckyLoaderView({
   onDecline,
   onClose,
 }: DeckyLoaderViewProps): SetupView {
-  const siteButton = (primary: boolean) => (
-    <SetupButton
-      tone={primary ? 'primary' : 'secondary'}
-      onClick={openDeckySite}
-      gamepad={primary ? 'confirm' : undefined}
-      icon={<ExternalLinkIcon size={16} />}
-    >
-      Що таке Decky Loader
-    </SetupButton>
-  );
   const installButton = (label: string) => (
     <SetupButton
       tone="primary"
@@ -89,17 +91,12 @@ export function deckyLoaderView({
       {label}
     </SetupButton>
   );
-  const view = (body: React.ReactNode, footer: React.ReactNode): SetupView => ({
-    title: DECKY_TITLE,
-    dismissable: true,
-    body,
-    footer,
-  });
 
   switch (stage.kind) {
     case 'offer': {
       const offer = stage.repair ? [LOADER_REPAIR_TEXT] : LOADER_OFFER_PARAGRAPHS;
-      return view(
+      return setupView(
+        DECKY_TITLE,
         <SetupText
           paragraphs={stage.gameMode ? [...offer, LOADER_GAME_MODE_TEXT] : offer}
         />,
@@ -108,25 +105,25 @@ export function deckyLoaderView({
             installButton(
               stage.repair ? 'Відновити Decky Loader' : 'Встановити Decky Loader'
             )}
-          {siteButton(stage.gameMode)}
+          {deckySiteButton(stage.gameMode)}
           <OfferDismissButtons source={source} onClose={onClose} onDecline={onDecline} />
         </SetupFooter>
       );
     }
     case 'installing':
-      return view(
+      return setupView(
+        DECKY_TITLE,
         <SetupProgress text={LOADER_INSTALLING_TEXT} percent={null} />,
-        <SetupFooter>
-          <SetupCloseButton onClose={onClose} />
-        </SetupFooter>
+        closeFooter(onClose)
       );
     case 'failed': {
       const retry = RETRYABLE.has(stage.reason);
-      return view(
+      return setupView(
+        DECKY_TITLE,
         <SetupText paragraphs={[LOADER_FAILURE_TEXT[stage.reason]]} />,
         <SetupFooter>
           {retry && installButton('Спробувати ще раз')}
-          {siteButton(!retry)}
+          {deckySiteButton(!retry)}
           <SetupCloseButton onClose={onClose} />
         </SetupFooter>
       );

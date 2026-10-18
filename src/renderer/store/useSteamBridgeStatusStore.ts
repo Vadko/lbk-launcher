@@ -9,34 +9,27 @@ interface SteamBridgeStatusStore {
 }
 
 // Kept warm from App so dialogs render the last known badge at once and only revalidate on open.
-export const useSteamBridgeStatusStore = create<SteamBridgeStatusStore>((set) => ({
-  status: null,
-
-  setStatus: (status) => set({ status }),
-
-  refresh: async () => {
+export const useSteamBridgeStatusStore = create<SteamBridgeStatusStore>((set) => {
+  const load = async (call: () => Promise<SteamBridgeStatus | null>, label: string) => {
     try {
-      const next = await window.electronAPI.getSteamBridgeStatus();
+      const next = await call();
       if (next) {
         set({ status: next });
       }
       return next;
     } catch (error) {
-      console.warn('[SteamBridgeStatus] Status fetch failed:', error);
+      console.warn(`[SteamBridgeStatus] ${label} failed:`, error);
       return null;
     }
-  },
+  };
 
-  recheck: async () => {
-    try {
-      const next = await window.electronAPI.recheckSteamBridge();
-      if (next) {
-        set({ status: next });
-      }
-      return next;
-    } catch (error) {
-      console.warn('[SteamBridgeStatus] Recheck failed:', error);
-      return null;
-    }
-  },
-}));
+  return {
+    status: null,
+
+    setStatus: (status) => set({ status }),
+
+    refresh: () => load(() => window.electronAPI.getSteamBridgeStatus(), 'Status fetch'),
+
+    recheck: () => load(() => window.electronAPI.recheckSteamBridge(), 'Recheck'),
+  };
+});

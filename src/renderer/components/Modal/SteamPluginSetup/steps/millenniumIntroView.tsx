@@ -8,8 +8,11 @@ import {
 import React from 'react';
 import type { PluginHostState } from '@/shared/plugin-host-types';
 import type { SteamPluginSetupSource } from '../../../../store/useSteamPluginSetupStore';
-import { openMillenniumSite } from '../../../../utils/steamBridge';
-import { hostOs, millenniumUnsupportedText } from '../../../../utils/steamPluginHost';
+import {
+  hostOs,
+  millenniumUnsupportedText,
+  openMillenniumSite,
+} from '../../../../utils/steamPluginHost';
 import { EXTERNAL_TEXT, introMode, queuedParagraphs } from '../millenniumSetup';
 import {
   OfferDismissButtons,
@@ -20,8 +23,20 @@ import {
   SetupText,
   type SetupView,
 } from '../SetupParts';
+import { closeFooter, setupView } from './setupView';
 
 export const MILLENNIUM_TITLE = 'Millennium і плагін «LBK Bridge»';
+
+export const millenniumSiteButton = (): React.ReactNode => (
+  <SetupButton
+    tone="primary"
+    onClick={openMillenniumSite}
+    gamepad="confirm"
+    icon={<ExternalLinkIcon size={16} />}
+  >
+    Відкрити сайт Millennium
+  </SetupButton>
+);
 
 function offerParagraphs(): string[] {
   const os = hostOs();
@@ -71,46 +86,33 @@ export function millenniumIntroView({
 }: MillenniumIntroViewProps): SetupView {
   const mode = introMode(state);
   const busy = state?.busy === true;
-  const view = (
-    body: React.ReactNode,
-    footer: React.ReactNode,
-    title = MILLENNIUM_TITLE
-  ): SetupView => ({ title, dismissable: true, body, footer });
 
   switch (mode) {
     case 'loading':
-      return view(
+      return setupView(
+        MILLENNIUM_TITLE,
         <SetupProgress text="Перевірка системи…" percent={null} />,
-        <SetupFooter>
-          <SetupCloseButton onClose={onClose} />
-        </SetupFooter>
+        closeFooter(onClose)
       );
     case 'unsupported':
     case 'external': {
       const reason = state?.millennium.unsupportedReason ?? null;
-      return view(
+      return setupView(
+        MILLENNIUM_TITLE,
         <SetupText
           paragraphs={[
             mode === 'external' ? EXTERNAL_TEXT : millenniumUnsupportedText(reason),
           ]}
         />,
         <SetupFooter>
-          {mode === 'unsupported' && reason === 'millennium-v2' && (
-            <SetupButton
-              tone="primary"
-              onClick={openMillenniumSite}
-              gamepad="confirm"
-              icon={<ExternalLinkIcon size={16} />}
-            >
-              Відкрити сайт Millennium
-            </SetupButton>
-          )}
+          {mode === 'unsupported' && reason === 'millennium-v2' && millenniumSiteButton()}
           <SetupCloseButton onClose={onClose} />
         </SetupFooter>
       );
     }
     case 'pending':
-      return view(
+      return setupView(
+        MILLENNIUM_TITLE,
         <SetupText paragraphs={queuedParagraphs()} />,
         <SetupFooter>
           {state?.steamRunning && state.canRestartSteam && (
@@ -129,7 +131,8 @@ export function millenniumIntroView({
       );
     case 'update':
     case 'repair':
-      return view(
+      return setupView(
+        mode === 'update' ? 'Оновлення Millennium' : 'Відновлення Millennium',
         <SetupText
           paragraphs={[
             mode === 'update'
@@ -157,11 +160,11 @@ export function millenniumIntroView({
           <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
             Скасувати
           </SetupButton>
-        </SetupFooter>,
-        mode === 'update' ? 'Оновлення Millennium' : 'Відновлення Millennium'
+        </SetupFooter>
       );
     case 'offer':
-      return view(
+      return setupView(
+        MILLENNIUM_TITLE,
         <SetupText paragraphs={offerParagraphs()} />,
         <SetupFooter>
           <SetupButton

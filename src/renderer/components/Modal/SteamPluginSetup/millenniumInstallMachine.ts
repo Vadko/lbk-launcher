@@ -6,7 +6,6 @@ import type {
   RestartSteamResult,
   SteamBridgeStatus,
 } from '@/shared/plugin-host-types';
-import { restartFailureMessage } from '../../../utils/steamBridge';
 import {
   activationOutcome,
   millenniumFailureText,
@@ -55,11 +54,6 @@ type MillenniumInstallEvent =
   | { type: 'RECHECK' }
   | { type: 'PROGRESS'; progress: MillenniumProgress };
 
-const failed = (reason: MillenniumInstallResult['reason']): MillenniumInstallResult => ({
-  success: false,
-  reason,
-});
-
 function workFor(
   phase: MillenniumProgress['phase'],
   percent: number | null = null
@@ -97,7 +91,7 @@ export const millenniumInstallMachine = setup({
     prepare: fromPromise<MillenniumInstallResult>(() =>
       window.electronAPI.prepareMillennium().catch((error: unknown) => {
         console.error('[MillenniumSetup] Prepare failed:', error);
-        return failed('download-failed');
+        return { success: false, reason: 'download-failed' };
       })
     ),
     activate: fromPromise<MillenniumInstallResult, { restart: RestartChoice }>(
@@ -106,7 +100,7 @@ export const millenniumInstallMachine = setup({
           .activateMillennium({ restart: input.restart })
           .catch((error: unknown) => {
             console.error('[MillenniumSetup] Activation failed:', error);
-            return failed('script-failed');
+            return { success: false, reason: 'script-failed' };
           })
     ),
     restartSteam: fromPromise<RestartSteamResult | null>(() =>
@@ -250,16 +244,15 @@ export const millenniumInstallMachine = setup({
                 target: '#millenniumInstall.result',
                 actions: assign({
                   result: ({ event }) =>
-                    event.output?.reason === 'launch-failed'
-                      ? setupError(STEAM_NOT_BACK_TEXT, 'steam-not-back')
-                      : setupError(
-                          restartFailureMessage(
-                            event.output?.reason,
-                            event.output?.error,
-                            false
-                          ),
-                          'none'
-                        ),
+                    failureStep(
+                      {
+                        success: false,
+                        reason: 'restart-failed',
+                        restartReason: event.output?.reason,
+                        error: event.output?.error,
+                      },
+                      null
+                    ),
                 }),
               },
               {
