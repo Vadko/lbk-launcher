@@ -28,6 +28,16 @@ const {
 
 const SECRET = 'ab'.repeat(32);
 const CN = '0123456789abcdef0123456789abcdef';
+const helloFrame = (extra: Record<string, unknown> = {}) => ({
+  t: 'hello',
+  v: 1,
+  plugin: 'lbk-bridge',
+  pv: '1.1.0',
+  host: 'millennium',
+  ops: [],
+  cn: CN,
+  ...extra,
+});
 const SN = 'fedcba9876543210fedcba9876543210';
 const ORIGIN = 'https://steamloopback.host';
 
@@ -140,7 +150,7 @@ class FakePlugin {
     ops: string[] = ['ping', 'libraryAppIds']
   ): Promise<void> {
     await this.opened();
-    this.send({ t: 'hello', v: 1, plugin: 'lbk-bridge', pv: '1.0.0', ops, cn: CN });
+    this.send(helloFrame({ ops }));
     const challenge = await this.next();
     expect(challenge.t).toBe('challenge');
     const sn = challenge.sn as string;
@@ -207,7 +217,7 @@ describe('plugin server', () => {
     await connected();
     expect(isPluginConnected()).toBe(true);
     expect(getConnectedPluginInfo()).toEqual({
-      pluginVersion: '1.0.0',
+      pluginVersion: '1.1.0',
       ops: ['ping', 'libraryAppIds'],
       host: 'millennium',
     });
@@ -255,7 +265,7 @@ describe('plugin server', () => {
   it('closes a client with a wrong proof', async () => {
     const plugin = connect();
     await plugin.opened();
-    plugin.send({ t: 'hello', v: 1, plugin: 'lbk-bridge', pv: '1.0.0', ops: [], cn: CN });
+    plugin.send(helloFrame());
     await plugin.next();
     plugin.send({ t: 'auth', cp: '00'.repeat(32) });
     expect(await plugin.closed()).toBe(4003);
@@ -265,7 +275,7 @@ describe('plugin server', () => {
   it('closes a client that speaks another protocol version', async () => {
     const plugin = connect();
     await plugin.opened();
-    plugin.send({ t: 'hello', v: 2, plugin: 'lbk-bridge', pv: '9.0.0', ops: [], cn: CN });
+    plugin.send(helloFrame({ v: 2, pv: '9.0.0' }));
     expect(await plugin.closed()).toBe(4002);
   });
 
@@ -326,7 +336,7 @@ describe('plugin server', () => {
 
     const second = connect();
     await second.opened();
-    second.send({ t: 'hello', v: 1, plugin: 'lbk-bridge', pv: '1.0.0', ops: [], cn: CN });
+    second.send(helloFrame());
     const challenge = await second.next();
     const sn = challenge.sn as string;
     expect(challenge.sp).not.toBe(await pluginHmac(spent, `server|${CN}|${sn}`));
@@ -347,7 +357,7 @@ describe('plugin server', () => {
 
     const second = connect();
     await second.opened();
-    second.send({ t: 'hello', v: 1, plugin: 'lbk-bridge', pv: '1.0.0', ops: [], cn: CN });
+    second.send(helloFrame());
     const challenge = await second.next();
     const sn = challenge.sn as string;
     second.send({ t: 'auth', cp: await pluginHmac(bridge.secret, `client|${sn}|${CN}`) });
@@ -380,26 +390,13 @@ describe('plugin server', () => {
 });
 
 describe('parseHello', () => {
-  const hello = (extra: Record<string, unknown> = {}) => ({
-    t: 'hello',
-    v: 1,
-    plugin: 'lbk-bridge',
-    pv: '1.1.0',
-    ops: ['ping'],
-    cn: CN,
-    ...extra,
+  it.each(['millennium', 'decky'])('accepts the %s host', (host) => {
+    expect(parseHello(helloFrame({ host }))?.host).toBe(host);
   });
 
-  it('defaults a missing host to millennium for 1.0.0 plugins', () => {
-    expect(parseHello(hello())?.host).toBe('millennium');
-  });
-
-  it('accepts the Decky host', () => {
-    expect(parseHello(hello({ host: 'decky' }))?.host).toBe('decky');
-  });
-
-  it('rejects an unknown host', () => {
-    expect(parseHello(hello({ host: 'browser' }))).toBeNull();
-    expect(parseHello(hello({ host: 1 }))).toBeNull();
+  it('rejects a missing or unknown host', () => {
+    expect(parseHello(helloFrame({ host: undefined }))).toBeNull();
+    expect(parseHello(helloFrame({ host: 'browser' }))).toBeNull();
+    expect(parseHello(helloFrame({ host: 1 }))).toBeNull();
   });
 });

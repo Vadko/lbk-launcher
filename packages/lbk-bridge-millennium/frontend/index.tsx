@@ -1,7 +1,8 @@
 import { browserEnv, createBridge } from '@lbk/bridge-core/bridge';
 
 const ENTRY_PATH = '/lbk-bridge/.millennium/Dist/index.js';
-const ENTRY_IN_STACK = /(https?:\/\/[^\s()]+\/lbk-bridge\/\.millennium\/Dist\/index\.js)/;
+// Lazy and whitespace-bounded, not paren-free: Windows Steam lives in Program Files (x86).
+const ENTRY_IN_STACK = /(https?:\/\/\S+?\/lbk-bridge\/\.millennium\/Dist\/index\.js)/;
 
 // ttc emits an IIFE, so import.meta.url is not ours; Millennium injects a script tag with the full URL of this file.
 function ownScriptUrl(): string | null {

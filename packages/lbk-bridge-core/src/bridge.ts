@@ -4,6 +4,7 @@ import {
   BRIDGE_PLUGIN_NAME,
   BRIDGE_PROTOCOL,
   BRIDGE_VERSION,
+  BRIDGE_WS_PATH,
   type BridgeHost,
 } from './contract';
 import { createOps } from './ops';
@@ -227,7 +228,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
       state.status = 'connecting';
       let ws: BridgeSocket;
       try {
-        ws = env.openSocket(`ws://127.0.0.1:${cfg.port}/lbk-bridge`);
+        ws = env.openSocket(`ws://127.0.0.1:${cfg.port}${BRIDGE_WS_PATH}`);
       } catch (e) {
         state.lastError = errText(e);
         schedule();

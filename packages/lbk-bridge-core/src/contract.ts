@@ -2,8 +2,10 @@
 export const BRIDGE_VERSION = '1.1.0';
 export const BRIDGE_PLUGIN_NAME = 'lbk-bridge';
 export const BRIDGE_PROTOCOL = 1;
+export const BRIDGE_WS_PATH = '/lbk-bridge';
+export const BRIDGE_HOSTS = ['millennium', 'decky'] as const;
 
-export type BridgeHost = 'millennium' | 'decky';
+export type BridgeHost = (typeof BRIDGE_HOSTS)[number];
 
 type CollectionSyncAnswer =
   | 'library-unavailable'

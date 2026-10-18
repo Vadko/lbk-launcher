@@ -1,7 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { once } from 'node:events';
 import {
+  BRIDGE_HOSTS,
   BRIDGE_PLUGIN_NAME,
+  BRIDGE_PROTOCOL,
+  BRIDGE_WS_PATH,
+  type BridgeHost,
   type SteamOpName,
   type SteamOps,
 } from '@lbk/bridge-core/contract';
@@ -9,8 +13,6 @@ import { type RawData, WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
 import { deleteBridgePluginData, writeBridgePluginData } from '@/main/utils/plugin-data';
 
-const PROTOCOL_VERSION = 1;
-const BRIDGE_PATH = '/lbk-bridge';
 const ALLOWED_ORIGIN = 'https://steamloopback.host';
 const MAX_PAYLOAD_BYTES = 32 * 1024 * 1024;
 const HANDSHAKE_TIMEOUT_MS = 5000;
@@ -47,16 +49,15 @@ interface InFlightRequest {
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
 
-// Plugins before 1.1.0 send no host; they are all the Millennium build.
 const helloSchema = z
   .object({
     t: z.literal('hello'),
-    v: z.literal(PROTOCOL_VERSION),
+    v: z.literal(BRIDGE_PROTOCOL),
     plugin: z.literal(BRIDGE_PLUGIN_NAME),
     pv: z.string().max(64),
     ops: z.array(z.string().max(64)).max(256),
     cn: z.string().regex(HEX32),
-    host: z.enum(['millennium', 'decky']).default('millennium'),
+    host: z.enum(BRIDGE_HOSTS),
   })
   .transform(({ pv, ops, cn, host }) => ({ pv, ops, cn, host }));
 
@@ -74,13 +75,12 @@ const sessionMessageSchema = z.discriminatedUnion('t', [
 ]);
 
 type PluginHello = z.infer<typeof helloSchema>;
-type PluginHostKind = PluginHello['host'];
 type PluginResponse = Extract<z.infer<typeof sessionMessageSchema>, { t: 'res' }>;
 
 interface PluginSession {
   ws: WebSocket;
   pluginVersion: string;
-  host: PluginHostKind;
+  host: BridgeHost;
   ops: Set<string>;
   queue: QueuedRequest[];
   inFlight: InFlightRequest | null;
@@ -154,7 +154,7 @@ export function isPluginConnected(): boolean {
 export function getConnectedPluginInfo(): {
   pluginVersion: string;
   ops: string[];
-  host: PluginHostKind;
+  host: BridgeHost;
 } | null {
   return session
     ? { pluginVersion: session.pluginVersion, ops: [...session.ops], host: session.host }
@@ -339,7 +339,7 @@ export function parseHello(msg: unknown): PluginHello | null {
 
 function publishBridgeData(state: ServerState): void {
   writeBridgePluginData('bridge.json', {
-    v: PROTOCOL_VERSION,
+    v: BRIDGE_PROTOCOL,
     port: state.port,
     secret: state.secret,
   });
@@ -430,7 +430,7 @@ async function listen(): Promise<void> {
   const wss = new WebSocketServer({
     host: '127.0.0.1',
     port: 0,
-    path: BRIDGE_PATH,
+    path: BRIDGE_WS_PATH,
     maxPayload: MAX_PAYLOAD_BYTES,
     verifyClient: (info, cb) => {
       if (isAllowedUpgrade({ origin: info.origin, host: info.req.headers.host }, port)) {

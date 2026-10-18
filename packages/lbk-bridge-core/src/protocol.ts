@@ -1,9 +1,6 @@
 import * as z from 'zod/mini';
 import { BRIDGE_PROTOCOL } from './contract';
 
-// zod's JIT compiles validators with new Function, which Steam's CSP may block.
-z.config({ jitless: true });
-
 const hex = (length: number) =>
   z.string().check(z.regex(new RegExp(`^[0-9a-f]{${length}}$`)));
 

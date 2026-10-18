@@ -47,6 +47,14 @@ function disposeBridge(owner: Record<string, unknown>): void {
   }
 }
 
+// Steam's CSP may forbid eval; zod/mini never compiles validators, and the full zod would.
+it.each([
+  ['Millennium', MILLENNIUM_INDEX],
+  ['Decky', DECKY_INDEX],
+])('the %s bundle compiles no code at runtime', (_host, file) => {
+  expect(fs.readFileSync(file, 'utf8')).not.toMatch(/\bFunction\b|\beval\(/);
+});
+
 describe('Millennium bundle', () => {
   const source = fs.readFileSync(MILLENNIUM_INDEX, 'utf8');
 
@@ -129,6 +137,14 @@ describe('Millennium bundle', () => {
     const { sandbox, fetched } = loadInSteam([], SCRIPT_URL);
     await settle();
     expect(fetched[0]).toMatch(BRIDGE_JSON_URL);
+    disposeBridge(sandbox);
+  });
+
+  it('finds its URL in the stack when the Steam path has parentheses', async () => {
+    const steamDir = 'https://x/C:/Program%20Files%20(x86)/Steam/plugins/lbk-bridge';
+    const { sandbox, fetched } = loadInSteam([], `${steamDir}/.millennium/Dist/index.js`);
+    await settle();
+    expect(fetched[0]?.split('?')[0]).toBe(`${steamDir}/.millennium/Dist/bridge.json`);
     disposeBridge(sandbox);
   });
 });
