@@ -2,40 +2,12 @@ import type * as ChildProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as MillenniumModule from '@/main/utils/millennium';
-import {
-  MILLENNIUM_PLUGIN_VERSION,
-  STEAM_OPS_SOURCE,
-} from '@/main/utils/steam-bridge-ops';
 
-const REPO_PLUGIN_DIR = path.resolve(__dirname, '../../../resources/millennium-plugin');
-const PLUGIN_INDEX = path.join(REPO_PLUGIN_DIR, 'lbk-bridge/frontend/index.js');
-const PLUGIN_JSON = path.join(REPO_PLUGIN_DIR, 'lbk-bridge/plugin.json');
-const DECKY_DIR = path.resolve(__dirname, '../../../resources/decky-plugin/lbk-bridge');
-const DECKY_INDEX = path.join(DECKY_DIR, 'frontend/index.js');
-const CORE_BEGIN = '/* @lbk-core:begin */\n';
-const CORE_END = '\n/* @lbk-core:end */';
-
-function coreOf(source: string): string {
-  const start = source.indexOf(CORE_BEGIN);
-  const stop = source.indexOf(CORE_END, start);
-  expect(start).toBeGreaterThan(-1);
-  expect(stop).toBeGreaterThan(start);
-  return source.slice(start + CORE_BEGIN.length, stop);
-}
-
-async function expectValidModule(file: string): Promise<void> {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-plugin-'));
-  const tmp = path.join(dir, 'index.mjs');
-  fs.copyFileSync(file, tmp);
-  const real = await vi.importActual<typeof ChildProcess>('node:child_process');
-  try {
-    expect(() => real.execFileSync(process.execPath, ['--check', tmp])).not.toThrow();
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-}
+const PACKAGE_DIR = path.resolve(__dirname, '../../../packages/lbk-bridge-millennium');
+const PLUGIN_INDEX = path.join(PACKAGE_DIR, '.millennium/Dist/index.js');
 
 const fake = {
   info: null as MillenniumModule.MillenniumInfo | null,
@@ -43,8 +15,11 @@ const fake = {
   psOutput: '',
 };
 
-vi.mock('@/main/utils/theme', () => ({
-  resolveResource: (name: string) => path.join(REPO_PLUGIN_DIR, '..', name),
+vi.mock('@/main/plugin-host/bundled-bridge', () => ({
+  bundledBridgeFiles: () => ({
+    pluginJson: path.join(PACKAGE_DIR, 'plugin.json'),
+    index: PLUGIN_INDEX,
+  }),
 }));
 vi.mock('@/main/utils/platform', () => ({
   isWindows: () => false,
@@ -68,65 +43,6 @@ vi.mock('node:child_process', async (importOriginal) => ({
 
 const plugin = await import('@/main/utils/millennium-plugin');
 const pluginData = await import('@/main/utils/plugin-data');
-
-describe('bundled plugin files', () => {
-  const source = fs.readFileSync(PLUGIN_INDEX, 'utf8');
-
-  it('carries the generated ops block', () => {
-    const begin = '/* @lbk-ops:begin */\n';
-    const end = '\n/* @lbk-ops:end */';
-    const start = source.indexOf(begin);
-    const stop = source.indexOf(end, start);
-    expect(start).toBeGreaterThan(-1);
-    expect(stop).toBeGreaterThan(start);
-    expect(source.slice(start + begin.length, stop)).toBe(
-      `const OPS = ${STEAM_OPS_SOURCE};`
-    );
-  });
-
-  it('has a plugin.json matching the TS contract', () => {
-    const json = JSON.parse(fs.readFileSync(PLUGIN_JSON, 'utf8'));
-    expect(json.name).toBe(plugin.MILLENNIUM_PLUGIN_NAME);
-    expect(json.version).toBe(MILLENNIUM_PLUGIN_VERSION);
-    expect(json.useBackend).toBe(false);
-    expect(source).toContain(`const VERSION = '${MILLENNIUM_PLUGIN_VERSION}';`);
-    expect(source).toContain(`const PLUGIN = '${plugin.MILLENNIUM_PLUGIN_NAME}';`);
-  });
-
-  it('is a syntactically valid ES module', async () => {
-    await expectValidModule(PLUGIN_INDEX);
-  });
-});
-
-describe('bundled Decky plugin', () => {
-  const millennium = fs.readFileSync(PLUGIN_INDEX, 'utf8');
-  const decky = fs.readFileSync(DECKY_INDEX, 'utf8');
-
-  it('shares the whole core with the Millennium build', () => {
-    expect(coreOf(decky)).toBe(coreOf(millennium));
-    expect(coreOf(millennium)).toContain('/* @lbk-ops:begin */');
-    expect(millennium).toContain("const HOST = 'millennium';");
-    expect(decky).toContain("const HOST = 'decky';");
-    expect(decky).toContain("new URL('../data/', import.meta.url)");
-  });
-
-  it('has the manifest fields Decky reads without defaults', () => {
-    const pluginJson = JSON.parse(
-      fs.readFileSync(path.join(DECKY_DIR, 'plugin.json'), 'utf8')
-    );
-    expect(pluginJson).toEqual({ name: 'LBK Bridge', author: 'LBK Team', flags: [] });
-    const pkg = JSON.parse(fs.readFileSync(path.join(DECKY_DIR, 'package.json'), 'utf8'));
-    expect(pkg.version).toBe(MILLENNIUM_PLUGIN_VERSION);
-    expect(pkg.type).toBe('module');
-    expect(fs.existsSync(path.join(DECKY_DIR, 'main.py'))).toBe(false);
-  });
-
-  it('is an ES module with a default export', async () => {
-    expect(decky).toMatch(/^export default \(\) => \{$/m);
-    expect(millennium).not.toContain('export default');
-    await expectValidModule(DECKY_INDEX);
-  });
-});
 
 describe('plugin install and data files', () => {
   let root: string;
@@ -171,7 +87,7 @@ describe('plugin install and data files', () => {
     expect(state).toMatchObject({
       supported: true,
       installed: true,
-      installedVersion: MILLENNIUM_PLUGIN_VERSION,
+      installedVersion: BRIDGE_VERSION,
       enabled: false,
     });
   });

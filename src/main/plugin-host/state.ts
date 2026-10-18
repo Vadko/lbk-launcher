@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
+import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { isI386Elf, parseLdconfig } from '@/main/millennium-install/linux';
@@ -42,7 +43,6 @@ import {
   isSteamDeckHardware,
   isSteamOS,
 } from '@/main/utils/platform';
-import { MILLENNIUM_PLUGIN_VERSION } from '@/main/utils/steam-bridge-ops';
 import { getConnectedPluginInfo } from '@/main/utils/steam-bridge-server';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
 import { findSteamPids } from '@/main/utils/steam-process';
@@ -238,7 +238,7 @@ export function deckyStateFor(decky: DeckyInfo | null): PluginHostState['decky']
   const connected = getConnectedPluginInfo();
   const live = connected?.host === 'decky' ? connected.pluginVersion : null;
   const older = (v: string | null) =>
-    v === null || compareVersions(v, MILLENNIUM_PLUGIN_VERSION) < 0;
+    v === null || compareVersions(v, BRIDGE_VERSION) < 0;
   return {
     installed: decky.installed,
     running: decky.running,

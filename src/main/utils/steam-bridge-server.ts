@@ -1,10 +1,13 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { once } from 'node:events';
+import {
+  BRIDGE_PLUGIN_NAME,
+  type SteamOpName,
+  type SteamOps,
+} from '@lbk/bridge-core/contract';
 import { type RawData, WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
-import { MILLENNIUM_PLUGIN_NAME } from '@/main/utils/millennium-plugin';
 import { deleteBridgePluginData, writeBridgePluginData } from '@/main/utils/plugin-data';
-import type { SteamOpName, SteamOps } from '@/main/utils/steam-bridge-ops';
 
 const PROTOCOL_VERSION = 1;
 const BRIDGE_PATH = '/lbk-bridge';
@@ -49,7 +52,7 @@ const helloSchema = z
   .object({
     t: z.literal('hello'),
     v: z.literal(PROTOCOL_VERSION),
-    plugin: z.literal(MILLENNIUM_PLUGIN_NAME),
+    plugin: z.literal(BRIDGE_PLUGIN_NAME),
     pv: z.string().max(64),
     ops: z.array(z.string().max(64)).max(256),
     cn: z.string().regex(HEX32),

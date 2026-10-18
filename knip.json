@@ -1,10 +1,25 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "project": ["src/**/*.{ts,tsx,css}"],
-  "ignore": [
-    "src/lib/database.types.ts",
-    "src/renderer/queries/useTrendingGames.ts"
-  ],
+  "workspaces": {
+    ".": {
+      "project": ["src/**/*.{ts,tsx,css}"],
+      "ignore": [
+        "src/lib/database.types.ts",
+        "src/renderer/queries/useTrendingGames.ts"
+      ]
+    },
+    "packages/lbk-bridge-core": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/lbk-bridge-decky": {
+      "entry": ["src/index.tsx"],
+      "project": ["src/**/*.tsx"]
+    },
+    "packages/lbk-bridge-millennium": {
+      "entry": ["frontend/index.tsx"],
+      "project": ["frontend/**/*.tsx"]
+    }
+  },
   "ignoreDependencies": [
     "7zip-bin-full",
     "playwright-core"

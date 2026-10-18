@@ -1,11 +1,11 @@
 import vm from 'node:vm';
-import { describe, expect, it, vi } from 'vitest';
 import {
   isPluginOnlyOp,
   PLUGIN_ONLY_OPS,
   SHARED_STEAM_OPS,
-  STEAM_OPS_SOURCE,
-} from '@/main/utils/steam-bridge-ops';
+} from '@lbk/bridge-core/contract';
+import { describe, expect, it, vi } from 'vitest';
+import { STEAM_OPS_SOURCE } from '@/main/utils/steam-bridge-ops';
 
 type OpFn = (args: unknown) => Promise<unknown>;
 
@@ -85,9 +85,9 @@ const library: FakeApp[] = [
 ];
 
 describe('STEAM_OPS_SOURCE', () => {
-  it('has no backticks and no template interpolation', () => {
-    expect(STEAM_OPS_SOURCE).not.toContain('`');
-    expect(STEAM_OPS_SOURCE).not.toContain('${');
+  // LBK sends the whole bundle with every CDP call.
+  it('stays small', () => {
+    expect(STEAM_OPS_SOURCE.length).toBeLessThan(24 * 1024);
   });
 
   it('exposes exactly the shared ops', () => {

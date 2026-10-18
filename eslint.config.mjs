@@ -113,4 +113,26 @@ export default tseslint.config(
     files: ['src/main/liquid-glass.ts'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
+  {
+    // Decky imports the bundle once; there is no fast refresh to keep working.
+    files: ['packages/lbk-bridge-decky/src/**'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    // LBK sends the whole ops bundle with every CDP call.
+    files: ['packages/lbk-bridge-core/src/ops*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?!\\./)',
+              message: 'The CDP ops bundle may only import sibling modules (no zod).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

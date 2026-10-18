@@ -2,6 +2,11 @@ import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import {
+  BRIDGE_PLUGIN_NAME,
+  type SteamOpName,
+  type SteamOps,
+} from '@lbk/bridge-core/contract';
 import { z } from 'zod';
 import { getSteamPath } from '@/main/game-detector/steam';
 import {
@@ -16,12 +21,8 @@ import {
 } from '@/main/steam-pending-actions';
 import { isCefFlagFilePresent, syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
 import { detectMillennium, planEnabledPluginsEdit } from '@/main/utils/millennium';
-import {
-  getMillenniumPluginState,
-  MILLENNIUM_PLUGIN_NAME,
-} from '@/main/utils/millennium-plugin';
+import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
 import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';
-import type { SteamOpName, SteamOps } from '@/main/utils/steam-bridge-ops';
 import {
   getConnectedPluginInfo,
   invokeViaPlugin,
@@ -291,7 +292,7 @@ function isPluginConfigUsable(configPath: string | null): boolean {
   }
   try {
     const raw = fs.readFileSync(configPath, 'utf8');
-    return planEnabledPluginsEdit(raw, MILLENNIUM_PLUGIN_NAME, true).kind !== 'invalid';
+    return planEnabledPluginsEdit(raw, BRIDGE_PLUGIN_NAME, true).kind !== 'invalid';
   } catch {
     return false;
   }

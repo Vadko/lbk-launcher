@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { BRIDGE_PLUGIN_NAME } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { resetHostFacts } from '@/main/plugin-host/state';
@@ -12,7 +13,6 @@ import {
   renderInitialMillenniumConfig,
   resetMillenniumDetectCache,
 } from '@/main/utils/millennium';
-import { MILLENNIUM_PLUGIN_NAME } from '@/main/utils/millennium-plugin';
 import { getPlatform } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type { MillenniumFailure } from '@/shared/plugin-host-types';
@@ -151,7 +151,7 @@ function ensureInitialConfig(configPath: string, lbkManagesUpdates: boolean): vo
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
   writeFileAtomic(
     configPath,
-    renderInitialMillenniumConfig(MILLENNIUM_PLUGIN_NAME, lbkManagesUpdates)
+    renderInitialMillenniumConfig(BRIDGE_PLUGIN_NAME, lbkManagesUpdates)
   );
 }
 
@@ -292,7 +292,7 @@ function removeFiles(
   record: MillenniumInstallRecord,
   purge: boolean
 ): void {
-  const pluginDir = path.join(ctx.paths.pluginsDir, MILLENNIUM_PLUGIN_NAME);
+  const pluginDir = path.join(ctx.paths.pluginsDir, BRIDGE_PLUGIN_NAME);
   if (ctx.os === 'windows') {
     applyWindowsRemoval(ctx.steamPath, purge, 'millennium/plugins/lbk-bridge');
   } else if (ctx.os === 'linux' && ctx.paths.linux) {

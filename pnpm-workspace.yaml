@@ -1,8 +1,12 @@
+packages:
+  - packages/*
+
 enablePrePostScripts: true
 minimumReleaseAge: 4320
 dangerouslyAllowAllBuilds: false
 
 allowBuilds:
+  '@parcel/watcher': false
   '@sentry/cli': true
   '@swc/core': true
   better-sqlite3: true
@@ -10,6 +14,10 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   registry-js: true
+
+# ttc's `typescript: >=5.0.0` resolves to TS 7, which has no compiler API for its prod build.
+overrides:
+  '@steambrew/ttc>typescript': 6.0.3
 
 patchedDependencies:
   node-7z@3.0.0: patches/node-7z@3.0.0.patch

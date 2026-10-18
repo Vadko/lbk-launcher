@@ -1,12 +1,9 @@
-import { webcrypto } from 'node:crypto';
+import { hmacHex } from '@lbk/bridge-core/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WebSocket from 'ws';
 
 const pluginData = vi.hoisted(() => new Map<string, unknown>());
 
-vi.mock('@/main/utils/millennium-plugin', () => ({
-  MILLENNIUM_PLUGIN_NAME: 'lbk-bridge',
-}));
 vi.mock('@/main/utils/plugin-data', () => ({
   writeBridgePluginData: (file: string, data: unknown) => {
     pluginData.set(file, data);
@@ -34,22 +31,8 @@ const CN = '0123456789abcdef0123456789abcdef';
 const SN = 'fedcba9876543210fedcba9876543210';
 const ORIGIN = 'https://steamloopback.host';
 
-// Same construction as the plugin's hmac() in resources/millennium-plugin/lbk-bridge/frontend/index.js.
-async function pluginHmac(secretHex: string, message: string): Promise<string> {
-  const key = await webcrypto.subtle.importKey(
-    'raw',
-    Buffer.from(secretHex, 'hex'),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await webcrypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(message)
-  );
-  return Buffer.from(signature).toString('hex');
-}
+const pluginHmac = (secretHex: string, message: string) =>
+  hmacHex(crypto.subtle, secretHex, message);
 
 describe('handshake proofs', () => {
   it('server proof equals the plugin-side HMAC of "server|cn|sn"', async () => {

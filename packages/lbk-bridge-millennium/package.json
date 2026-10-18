@@ -1,0 +1,15 @@
+{
+  "name": "@lbk/bridge-millennium",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "millennium-ttc --build dev --watch --no-update"
+  },
+  "devDependencies": {
+    "@lbk/bridge-core": "workspace:*",
+    "@steambrew/ttc": "3.3.7"
+  }
+}

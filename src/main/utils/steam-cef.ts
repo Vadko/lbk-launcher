@@ -1,13 +1,13 @@
 // CDP transport of the Steam bridge: Runtime.evaluate of the shared ops in SharedJSContext.
 
-import CDP from 'chrome-remote-interface';
-import pTimeout from 'p-timeout';
 import {
   isPluginOnlyOp,
-  STEAM_OPS_SOURCE,
   type SteamOpName,
   type SteamOps,
-} from '@/main/utils/steam-bridge-ops';
+} from '@lbk/bridge-core/contract';
+import CDP from 'chrome-remote-interface';
+import pTimeout from 'p-timeout';
+import { STEAM_OPS_SOURCE } from '@/main/utils/steam-bridge-ops';
 import {
   type CefEndpointDiscovery,
   discoverCefEndpoint,

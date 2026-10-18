@@ -42,6 +42,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The ops IIFE (imported with ?raw) and the plugin bundles are generated, and tests and knip read them.
+      - name: Build LBK Bridge
+        run: pnpm build:bridge
+
       - name: TypeScript check
         run: pnpm type-check
 

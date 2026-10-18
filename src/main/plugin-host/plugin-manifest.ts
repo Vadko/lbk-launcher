@@ -9,10 +9,6 @@ const pluginManifestSchema = z.object({
 
 export type PluginManifest = z.infer<typeof pluginManifestSchema>;
 
-export function parsePluginManifest(raw: unknown): PluginManifest | null {
-  return pluginManifestSchema.safeParse(raw).data ?? null;
-}
-
 export function readPluginManifest(file: string): PluginManifest | null {
   return readJsonFile(file, pluginManifestSchema);
 }

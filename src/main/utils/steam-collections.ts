@@ -1,7 +1,7 @@
 /**
  * Syncs the Steam library collection «З українізаторами» through the Steam
  * bridge — the same path `steam-workshop.ts` uses to subscribe to the Workshop.
- * The in-page body is the `syncCollection` op in `steam-bridge-ops.ts`, which pins the name.
+ * The in-page body is the `syncCollection` op in `packages/lbk-bridge-core/src/ops.ts`, which pins the name.
  *
  * The steps were reverse-engineered against `collectionStore` in SharedJSContext
  * (the same JS store the Steam library uses for drag-and-drop between collections):

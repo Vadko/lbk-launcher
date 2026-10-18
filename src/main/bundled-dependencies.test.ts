@@ -30,4 +30,14 @@ describe('production dependencies', () => {
 
     expect(mainBuildExcludes()).toEqual(expect.arrayContaining(withBundled));
   });
+
+  // electron-vite externalizes `dependencies`; a workspace package there would be required from a missing node_modules entry.
+  it('keeps workspace packages out of dependencies so they are bundled', () => {
+    const dependencies = readManifest(path.join(ROOT, 'package.json')).dependencies;
+    expect(
+      Object.values(dependencies as Record<string, string>).filter((spec) =>
+        spec.startsWith('workspace:')
+      )
+    ).toEqual([]);
+  });
 });

@@ -1,7 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { BRIDGE_PLUGIN_NAME } from '@lbk/bridge-core/contract';
 import { G } from '@mobily/ts-belt';
+import { bundledBridgeFiles } from '@/main/plugin-host/bundled-bridge';
 import { readPluginManifest } from '@/main/plugin-host/plugin-manifest';
 import { dirSwapPath, replaceDirAtomic } from './atomic-write';
 import { readFileOrNull, readTextOrNull } from './fs-safe';
@@ -13,9 +15,6 @@ import {
 } from './millennium';
 import { isLinux, isMacOS, isWindows } from './platform';
 import { isCrashpadHandler, MAC_MILLENNIUM_LAUNCHER_RE } from './steam-process-match';
-import { resolveResource } from './theme';
-
-export const MILLENNIUM_PLUGIN_NAME = 'lbk-bridge';
 
 type PluginDataFile = 'bridge.json' | 'achievements.json';
 
@@ -37,15 +36,11 @@ function getPluginDir(): string | null {
   if (info.generation !== 'v3' || !info.pluginsDir) {
     return null;
   }
-  return path.join(info.pluginsDir, MILLENNIUM_PLUGIN_NAME);
-}
-
-function getBundledPluginDir(): string {
-  return path.join(resolveResource('millennium-plugin'), MILLENNIUM_PLUGIN_NAME);
+  return path.join(info.pluginsDir, BRIDGE_PLUGIN_NAME);
 }
 
 function isOurPluginDir(dir: string): boolean {
-  return readPluginManifest(path.join(dir, PLUGIN_JSON))?.name === MILLENNIUM_PLUGIN_NAME;
+  return readPluginManifest(path.join(dir, PLUGIN_JSON))?.name === BRIDGE_PLUGIN_NAME;
 }
 
 function dataFileMode(): number | undefined {
@@ -59,9 +54,7 @@ export function getMillenniumPluginState(): MillenniumPluginState {
     info.pluginsDir !== null &&
     fs.existsSync(path.dirname(info.pluginsDir));
   const dir =
-    supported && info.pluginsDir
-      ? path.join(info.pluginsDir, MILLENNIUM_PLUGIN_NAME)
-      : null;
+    supported && info.pluginsDir ? path.join(info.pluginsDir, BRIDGE_PLUGIN_NAME) : null;
   const installed =
     dir !== null &&
     fs.existsSync(path.join(dir, FRONTEND_SUBDIR, FRONTEND_ENTRY)) &&
@@ -75,7 +68,7 @@ export function getMillenniumPluginState(): MillenniumPluginState {
       installed && dir
         ? (readPluginManifest(path.join(dir, PLUGIN_JSON))?.version ?? null)
         : null,
-    enabled: Boolean(enabledList?.includes(MILLENNIUM_PLUGIN_NAME)),
+    enabled: Boolean(enabledList?.includes(BRIDGE_PLUGIN_NAME)),
     dir,
   };
 }
@@ -120,12 +113,15 @@ export function installOrUpdateMillenniumPlugin():
   }
 
   const pluginsDir = info.pluginsDir;
-  const dir = path.join(pluginsDir, MILLENNIUM_PLUGIN_NAME);
-  const bundledDir = getBundledPluginDir();
-  const bundledPluginJson = readFileOrNull(path.join(bundledDir, PLUGIN_JSON));
-  const bundledIndex = readFileOrNull(path.join(bundledDir, 'frontend', FRONTEND_ENTRY));
+  const dir = path.join(pluginsDir, BRIDGE_PLUGIN_NAME);
+  const bundled = bundledBridgeFiles('millennium');
+  const bundledPluginJson = readFileOrNull(bundled.pluginJson);
+  const bundledIndex = readFileOrNull(bundled.index);
   if (!bundledPluginJson || !bundledIndex) {
-    return { ok: false, error: `bundled plugin not found at ${bundledDir}` };
+    return {
+      ok: false,
+      error: `bundled plugin not found at ${path.dirname(bundled.pluginJson)}`,
+    };
   }
 
   try {
@@ -167,7 +163,7 @@ export function installOrUpdateMillenniumPlugin():
     return { ok: false, error: String(error) };
   }
 
-  console.log(`[Millennium] Plugin ${MILLENNIUM_PLUGIN_NAME} installed to ${dir}`);
+  console.log(`[Millennium] Plugin ${BRIDGE_PLUGIN_NAME} installed to ${dir}`);
   return { ok: true, changed: true };
 }
 
@@ -287,7 +283,7 @@ export function setMillenniumPluginEnabledInConfig(
     return 'no-config';
   }
 
-  const plan = planEnabledPluginsEdit(raw, MILLENNIUM_PLUGIN_NAME, enable);
+  const plan = planEnabledPluginsEdit(raw, BRIDGE_PLUGIN_NAME, enable);
   if (plan.kind === 'invalid') {
     console.warn(`[Millennium] Not editing ${configPath}: ${plan.error}`);
     return 'invalid-config';
@@ -312,7 +308,7 @@ export function setMillenniumPluginEnabledInConfig(
   }
 
   console.log(
-    `[Millennium] ${enable ? 'Enabled' : 'Disabled'} ${MILLENNIUM_PLUGIN_NAME} in ${configPath}`
+    `[Millennium] ${enable ? 'Enabled' : 'Disabled'} ${BRIDGE_PLUGIN_NAME} in ${configPath}`
   );
   return 'changed';
 }

@@ -1,0 +1,22 @@
+{
+  "name": "@lbk/bridge-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    "./steam-ops.iife.js": "./dist/steam-ops.iife.js",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "esbuild src/ops-cdp.ts --bundle --format=iife --global-name=__lbkOps --target=es2020 --log-level=warning --outfile=dist/steam-ops.iife.js",
+    "watch": "esbuild src/ops-cdp.ts --bundle --format=iife --global-name=__lbkOps --target=es2020 --outfile=dist/steam-ops.iife.js --watch"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@decky/ui": "4.13.0",
+    "esbuild": "0.27.7"
+  }
+}

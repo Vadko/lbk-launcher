@@ -1,4 +1,5 @@
 import vm from 'node:vm';
+import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { describe, expect, it, vi } from 'vitest';
 import {
   deckyArtifactUrl,
@@ -8,7 +9,7 @@ import {
   isPluginDisabled,
   parseUnprivilegedPath,
 } from './decky';
-import { MILLENNIUM_PLUGIN_VERSION, STEAM_OPS_SOURCE } from './steam-bridge-ops';
+import { STEAM_OPS_SOURCE } from './steam-bridge-ops';
 
 describe('parseUnprivilegedPath', () => {
   it('reads the homebrew dir from the systemd unit', () => {
@@ -70,12 +71,12 @@ describe('deckyArtifactUrl', () => {
     expect(cases[0]).toBe('/home/deck/.cache/lbk-launcher/decky');
     expect(cases[2]).toBe('/home/deck/.var/app/ua.lbk.Launcher/cache/lbk-launcher/decky');
     for (const dir of cases) {
-      const artifact = deckyArtifactUrl(dir, MILLENNIUM_PLUGIN_VERSION);
+      const artifact = deckyArtifactUrl(dir, BRIDGE_VERSION);
       expect(artifact.startsWith('file:///')).toBe(true);
       await expect(
         ops.deckyRequestInstall({
           artifact,
-          version: MILLENNIUM_PLUGIN_VERSION,
+          version: BRIDGE_VERSION,
           hash: 'f'.repeat(64),
           installType: 0,
         })
