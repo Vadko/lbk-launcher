@@ -47,32 +47,46 @@ const launchOptionsParamsSchema = z.object({
 const queuedAt = z.string();
 const attempts = z.int().nonnegative();
 
+const launchOptionsItem = z.object({
+  kind: z.literal('launch-options'),
+  gameId: z.string(),
+  gameName: z.string(),
+  accountId: z.string().nullable(),
+  params: launchOptionsParamsSchema,
+  queuedAt,
+});
+const pluginToggleItem = z.object({
+  kind: z.literal('millennium-plugin'),
+  enable: z.boolean(),
+  queuedAt,
+});
+const activateItem = z.strictObject({
+  kind: z.literal('millennium-activate'),
+  tag: z.string().regex(/^[\w.-]{1,64}$/),
+  queuedAt,
+  attempts,
+});
+const deactivateItem = z.strictObject({
+  kind: z.literal('millennium-deactivate'),
+  purge: z.boolean(),
+  queuedAt,
+  attempts,
+});
+
 // The store key is renderer-writable: Millennium items carry no paths and reject extra keys, main derives the rest.
 const pendingSteamActionSchema = z.discriminatedUnion('kind', [
-  z.looseObject({
-    kind: z.literal('launch-options'),
-    gameId: z.string(),
-    gameName: z.string(),
-    accountId: z.string().nullable(),
-    params: launchOptionsParamsSchema,
-    queuedAt,
-  }),
-  z.looseObject({ kind: z.literal('millennium-plugin'), enable: z.boolean(), queuedAt }),
-  z.strictObject({
-    kind: z.literal('millennium-activate'),
-    tag: z.string().regex(/^[\w.-]{1,64}$/),
-    queuedAt,
-    attempts,
-  }),
-  z.strictObject({
-    kind: z.literal('millennium-deactivate'),
-    purge: z.boolean(),
-    queuedAt,
-    attempts,
-  }),
+  launchOptionsItem.loose(),
+  pluginToggleItem.loose(),
+  activateItem,
+  deactivateItem,
 ]);
 
-export type PendingSteamAction = z.infer<typeof pendingSteamActionSchema>;
+// Built from the non-loose shapes so queue items written in code keep excess-property checks.
+export type PendingSteamAction =
+  | z.infer<typeof launchOptionsItem>
+  | z.infer<typeof pluginToggleItem>
+  | z.infer<typeof activateItem>
+  | z.infer<typeof deactivateItem>;
 
 type MillenniumInstallAction = Extract<
   PendingSteamAction,
@@ -103,7 +117,7 @@ const EXIT_SETTLE_MS = 2000;
 // Slightly longer than the bridge's post-launch verification window.
 const POST_START_RECHECK_MS = 65000;
 
-// The schema has no transforms, so a valid item is already its own parsed output.
+// Stored items are kept as they are, unknown keys included; the schema only decides which survive.
 export function isPendingSteamAction(value: unknown): value is PendingSteamAction {
   return pendingSteamActionSchema.safeParse(value).success;
 }

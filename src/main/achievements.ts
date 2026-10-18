@@ -72,7 +72,7 @@ const storedStringsSchema = z.object({
 
 type StoredAchievementStrings = z.infer<typeof storedStringsSchema>;
 
-const achievementsComponentSchema = z.looseObject({
+const achievementsComponentSchema = z.object({
   installed: z.boolean(),
   files: z.array(z.string()),
   archiveHash: z.string().optional(),
@@ -84,7 +84,7 @@ const installationRecordSchema = z.looseObject({
   gameId: z.string(),
   gamePath: z.string(),
   components: z
-    .looseObject({ achievements: achievementsComponentSchema.optional() })
+    .looseObject({ achievements: achievementsComponentSchema.loose().optional() })
     .optional(),
 });
 
