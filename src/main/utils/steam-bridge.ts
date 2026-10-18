@@ -1,17 +1,10 @@
-import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
-import * as path from 'node:path';
 import {
   BRIDGE_PLUGIN_NAME,
   type SteamOpName,
   type SteamOps,
 } from '@lbk/bridge-core/contract';
-import { F } from '@mobily/ts-belt';
-import pMemoize from 'p-memoize';
-import pWaitFor from 'p-wait-for';
-import { z } from 'zod';
 import { appEvents } from '@/main/app-events';
-import { getSteamPath } from '@/main/game-detector/steam';
 import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import {
   deckyStateFor,
@@ -29,18 +22,19 @@ import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { isCefFlagFilePresent } from '@/main/utils/cef-flag-file';
 import { detectMillennium, planEnabledPluginsEdit } from '@/main/utils/millennium';
 import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
-import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';
+import { isGamescopeSession } from '@/main/utils/platform';
+import {
+  claimPromptForFingerprint,
+  clearBlockedVerdict,
+  clearSteamBridgeVerdict,
+  isBlockedVerdictPresent,
+} from '@/main/utils/steam-bridge-verdict';
 import {
   invokeViaCdp,
   resetCefEndpointCache,
   resolveCefEndpoint,
 } from '@/main/utils/steam-cef';
-import {
-  deleteStoreValue,
-  isCefDebuggingEnabledInSettings,
-  readStoreValue,
-  writeStoreValue,
-} from '@/main/utils/store-storage';
+import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import { sendToRenderer } from '@/main/window';
 import type {
   SteamBridgeStatus,
@@ -58,28 +52,9 @@ export interface SteamBridge {
   ): Promise<SteamOps[K]['result']>;
 }
 
-type VerifyOutcome = 'ready' | 'blocked' | 'unknown';
-
-// Main-only key, but the renderer's generic store setter can write any name, so the shape is checked.
-const bridgeVerdictSchema = z.object({
-  verdict: z.literal('blocked-no-port'),
-  fingerprint: z.string(),
-  decidedAt: z.string(),
-  evidence: z.array(z.string()),
-});
-
-type BridgeVerdict = z.infer<typeof bridgeVerdictSchema>;
-
-const VERDICT_KEY = 'steam-bridge-verdict';
-const PROMPTED_KEY = 'steam-restart-prompted';
 const DEFAULT_OP_TIMEOUT_MS = 15000;
 const SLOW_OP_TIMEOUT_MS = 30000;
 const SLOW_OPS: ReadonlySet<SteamOpName> = new Set(['setArtwork', 'syncCollection']);
-const VERIFY_WINDOW_MS = 60000;
-const VERIFY_POLL_MS = 2000;
-// A webhelper younger than this may simply not have opened its port yet.
-const VERIFY_MIN_HELPER_AGE_MS = 20000;
-
 let lastTransport: SteamBridgeTransport | null = null;
 let lastPublished: string | null = null;
 
@@ -113,19 +88,6 @@ const pluginBridge: SteamBridge = {
   },
 };
 
-export function computeBridgeFingerprint(i: {
-  millenniumEvidence: string[];
-  steamClientMtimeMs: number | null;
-  flagPresent: boolean;
-}): string {
-  const canonical = JSON.stringify({
-    millenniumEvidence: [...i.millenniumEvidence].sort(),
-    steamClientMtimeMs: i.steamClientMtimeMs,
-    flagPresent: i.flagPresent,
-  });
-  return hash('sha1', canonical);
-}
-
 export function computeBridgeStatusCode(i: {
   settingOn: boolean;
   steamRunning: boolean;
@@ -156,75 +118,24 @@ export function computeBridgeStatusCode(i: {
   return 'restart-pending';
 }
 
-function steamClientMtimeMs(): number | null {
-  const steamPath = getSteamPath();
-  if (!steamPath) {
-    return null;
-  }
-  const candidates = forCurrentOS<string[]>({
-    windows: ['steamclient64.dll', 'steamclient.dll'],
-    linux: ['ubuntu12_32/steamclient.so'],
-    macos: [
-      'Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib',
-      'steamclient.dylib',
-    ],
-    other: [],
-  });
-  for (const candidate of candidates) {
-    try {
-      return fs.statSync(path.join(steamPath, candidate)).mtimeMs;
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
-}
-
-function currentFingerprint(): string {
-  return computeBridgeFingerprint({
-    millenniumEvidence: detectMillennium().evidence,
-    steamClientMtimeMs: steamClientMtimeMs(),
-    flagPresent: isCefFlagFilePresent(),
-  });
-}
-
-function readVerdict(fingerprint: string): BridgeVerdict | null {
-  const raw = readStoreValue(VERDICT_KEY);
-  if (raw === undefined) {
-    return null;
-  }
-  const verdict = bridgeVerdictSchema.safeParse(raw).data;
-  if (verdict?.fingerprint !== fingerprint) {
-    deleteStoreValue(VERDICT_KEY);
-    return null;
-  }
-  return verdict;
-}
-
-function clearVerdict(): void {
-  if (readStoreValue(VERDICT_KEY) !== undefined) {
-    deleteStoreValue(VERDICT_KEY);
-    console.log('[SteamBridge] Cleared the blocked verdict');
-  }
-}
-
-export function clearSteamBridgeVerdict(): void {
-  clearVerdict();
-  deleteStoreValue(PROMPTED_KEY);
-}
-
-function noteBridgeAvailable(transport: SteamBridgeTransport): void {
+export function noteBridgeAvailable(transport: SteamBridgeTransport): void {
   if (lastTransport === transport) {
     return;
   }
   lastTransport = transport;
-  clearVerdict();
+  clearBlockedVerdict();
   console.log(`[SteamBridge] Steam bridge available via ${transport}`);
   appEvents.emit('bridge-ready');
 }
 
-function noteBridgeUnavailable(): void {
+export function noteBridgeUnavailable(): void {
   lastTransport = null;
+}
+
+export function notePluginDisconnected(): void {
+  if (lastTransport === 'plugin') {
+    noteBridgeUnavailable();
+  }
 }
 
 export async function getSteamBridge(): Promise<SteamBridge | null> {
@@ -316,7 +227,7 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
     noteBridgeUnavailable();
   }
 
-  const verdictPresent = readVerdict(currentFingerprint()) !== null;
+  const verdictPresent = isBlockedVerdictPresent();
   const steamElevated = steamRunning ? await isSteamElevated() : false;
   const gamescope = isGamescopeSession();
   const host = await getHostSnapshot();
@@ -395,174 +306,5 @@ export async function claimSteamRestartPrompt(): Promise<boolean> {
   if (status.code !== 'restart-pending' || !status.canRestartSteam) {
     return false;
   }
-  if (!isCefFlagFilePresent()) {
-    return false;
-  }
-  const fingerprint = currentFingerprint();
-  if (readStoreValue(PROMPTED_KEY) === fingerprint) {
-    return false;
-  }
-  writeStoreValue(PROMPTED_KEY, fingerprint);
-  return true;
+  return isCefFlagFilePresent() && claimPromptForFingerprint();
 }
-
-type VerifyStep = 'ready-plugin' | 'ready-cdp' | 'blocked' | 'plugin-only' | 'poll';
-
-// A pipe only proves Steam has no TCP port; with Millennium v3 present its plugin may still connect.
-export function nextVerifyStep(i: {
-  pluginConnected: boolean;
-  endpoint: boolean;
-  discovery: 'port' | 'pipe' | 'none' | 'unreadable' | null;
-  millenniumV3: boolean;
-}): VerifyStep {
-  if (i.pluginConnected) {
-    return 'ready-plugin';
-  }
-  if (i.endpoint) {
-    return 'ready-cdp';
-  }
-  if (i.discovery === 'pipe') {
-    return i.millenniumV3 ? 'plugin-only' : 'blocked';
-  }
-  return 'poll';
-}
-
-async function runVerify(
-  trigger: 'lbk-restart' | 'observed-start'
-): Promise<VerifyOutcome> {
-  if (!isCefDebuggingEnabledInSettings()) {
-    return 'unknown';
-  }
-  const flagPresentAtLaunch = isCefFlagFilePresent();
-  const millennium = detectMillennium();
-  let waitForPluginOnly = millennium.generation === 'v3' && millennium.blocksTcpCdp;
-  let helperSeenAt: number | null = null;
-  let unreadable = false;
-  let portAssumed = false;
-
-  const settled = await pWaitFor<VerifyOutcome | null>(
-    async () => {
-      if (isPluginConnected()) {
-        noteBridgeAvailable('plugin');
-        return pWaitFor.resolveWith('ready');
-      }
-      if (waitForPluginOnly) {
-        return false;
-      }
-      const resolution = await resolveCefEndpoint({ fresh: true });
-      const discovery = resolution.discovery;
-      const step = nextVerifyStep({
-        pluginConnected: false,
-        endpoint: Boolean(resolution.endpoint),
-        discovery: discovery?.kind ?? null,
-        millenniumV3: detectMillennium().generation === 'v3',
-      });
-      if (step === 'ready-cdp') {
-        noteBridgeAvailable('cdp');
-        return pWaitFor.resolveWith('ready');
-      }
-      if (step === 'blocked') {
-        console.warn(
-          '[SteamBridge] Steam runs CDP over a pipe; only the plugin can connect'
-        );
-        return pWaitFor.resolveWith('blocked');
-      }
-      if (step === 'plugin-only') {
-        console.log('[SteamBridge] CDP is on a pipe; waiting for the Millennium plugin');
-        waitForPluginOnly = true;
-        return false;
-      }
-      if (discovery && discovery.kind !== 'none' && helperSeenAt === null) {
-        helperSeenAt = Date.now();
-      }
-      unreadable = discovery?.kind === 'unreadable';
-      portAssumed = discovery?.kind === 'port' && discovery.assumed === true;
-      return false;
-    },
-    {
-      interval: VERIFY_POLL_MS,
-      timeout: { milliseconds: VERIFY_WINDOW_MS, fallback: () => null },
-    }
-  );
-  if (settled) {
-    return settled;
-  }
-
-  if (waitForPluginOnly) {
-    return 'blocked';
-  }
-  if (unreadable || !flagPresentAtLaunch) {
-    return 'unknown';
-  }
-  if (helperSeenAt === null || Date.now() - helperSeenAt < VERIFY_MIN_HELPER_AGE_MS) {
-    return 'unknown';
-  }
-
-  let evidence: string;
-  if (!isCefFlagFilePresent()) {
-    evidence = 'flag-removed';
-  } else if (portAssumed) {
-    evidence = 'no-port-arg';
-  } else {
-    evidence = 'probe-failed';
-  }
-  const verdict: BridgeVerdict = {
-    verdict: 'blocked-no-port',
-    fingerprint: currentFingerprint(),
-    decidedAt: new Date().toISOString(),
-    evidence: [evidence],
-  };
-  writeStoreValue(VERDICT_KEY, verdict);
-  console.warn(`[SteamBridge] Steam did not open CDP after ${trigger}: ${evidence}`);
-  return 'blocked';
-}
-
-async function verifyAndRefresh(
-  trigger: 'lbk-restart' | 'observed-start'
-): Promise<VerifyOutcome> {
-  try {
-    return await runVerify(trigger);
-  } catch (error) {
-    console.warn('[SteamBridge] Bridge verification failed:', error);
-    return 'unknown';
-  } finally {
-    void refreshSteamBridgeStatus();
-  }
-}
-
-// One verification at a time; a second trigger joins the running one.
-export const verifyBridgeAfterLaunch = pMemoize(verifyAndRefresh, {
-  cache: false,
-  cacheKey: () => 'verify',
-});
-
-// Plugin setup runs here and on the toggle, a recheck and a host change, never per status computation.
-export const startSteamBridge = F.once((): void => {
-  appEvents.on('plugin-connection', async (connected) => {
-    if (connected) {
-      noteBridgeAvailable('plugin');
-    } else if (lastTransport === 'plugin') {
-      noteBridgeUnavailable();
-    }
-    await refreshSteamBridgeStatus();
-  });
-
-  // Millennium appears, and a failed plugin install or enable gets its retry, around a Steam restart.
-  appEvents.on('steam-started', async () => {
-    resetCefEndpointCache();
-    await syncBridgePluginSetup();
-    const status = await getSteamBridgeStatus();
-    if (status.code === 'restart-pending') {
-      await verifyBridgeAfterLaunch('observed-start');
-    }
-  });
-
-  appEvents.on('steam-exited', async () => {
-    resetCefEndpointCache();
-    noteBridgeUnavailable();
-    await syncBridgePluginSetup();
-    await refreshSteamBridgeStatus();
-  });
-
-  void syncBridgePluginSetup().then(refreshSteamBridgeStatus);
-});

@@ -170,7 +170,7 @@ import {
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
-import { startSteamBridge } from './utils/steam-bridge';
+import { startSteamBridge } from './utils/steam-bridge-lifecycle';
 import { createMainWindow, getMainWindow } from './window';
 
 // Global managers

@@ -25,7 +25,7 @@ vi.mock('@/main/steam-pending-actions/queue', () => ({
 vi.mock('@/main/plugin-host/bridge-plugin-setup', () => ({
   setCefDebuggingEnabled: vi.fn(),
 }));
-vi.mock('@/main/utils/steam-bridge', () => ({
+vi.mock('@/main/utils/steam-bridge-lifecycle', () => ({
   verifyBridgeAfterLaunch: mocks.verifyBridgeAfterLaunch,
 }));
 vi.mock('@/main/utils/steam-launch-options', () => ({

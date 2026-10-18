@@ -12,7 +12,7 @@ import {
 import { pauseSteamMonitor } from '@/main/steam-pending-actions/monitor';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { waitForSteamStart } from '@/main/steam-process/lifecycle';
-import { verifyBridgeAfterLaunch } from '@/main/utils/steam-bridge';
+import { verifyBridgeAfterLaunch } from '@/main/utils/steam-bridge-lifecycle';
 import { launchOptionsParamsFor, needsGameDir } from '@/main/utils/steam-launch-options';
 import { restartSteamProcess } from '@/main/utils/steam-launcher';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';

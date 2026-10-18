@@ -47,13 +47,13 @@ const { syncBridgePluginSetup } = await import('@/main/plugin-host/bridge-plugin
 const { detectMillennium } = await import('@/main/utils/millennium');
 const { getMillenniumPluginState } = await import('@/main/utils/millennium-plugin');
 const { resolveCefEndpoint } = await import('@/main/utils/steam-cef');
-const {
-  computeBridgeFingerprint,
-  computeBridgeStatusCode,
-  getSteamBridgeStatus,
-  nextVerifyStep,
-  startSteamBridge,
-} = await import('@/main/utils/steam-bridge');
+const { computeBridgeStatusCode, getSteamBridgeStatus } = await import(
+  '@/main/utils/steam-bridge'
+);
+const { nextVerifyStep, startSteamBridge } = await import(
+  '@/main/utils/steam-bridge-lifecycle'
+);
+const { computeBridgeFingerprint } = await import('@/main/utils/steam-bridge-verdict');
 
 describe('computeBridgeFingerprint', () => {
   const base = {

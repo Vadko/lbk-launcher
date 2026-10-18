@@ -19,9 +19,9 @@ import {
 } from '@/main/utils/plugin-data';
 import {
   claimSteamRestartPrompt,
-  clearSteamBridgeVerdict,
   refreshSteamBridgeStatus,
 } from '@/main/utils/steam-bridge';
+import { clearSteamBridgeVerdict } from '@/main/utils/steam-bridge-verdict';
 import { resetCefEndpointCache } from '@/main/utils/steam-cef';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import { sendToRenderer } from '@/main/window';
