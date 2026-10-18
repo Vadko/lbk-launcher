@@ -14,7 +14,8 @@ import { findWebpackExport, steamWebpackRequire } from './steam-webpack';
 
 const ACH_KEY = Symbol.for('lbk.achievementStrings');
 // A plugin update reloads into a SharedJSContext that still holds the previous hook; a new version replaces it.
-const ACH_VERSION = 2;
+const ACH_VERSION = 3;
+const ACHIEVEMENTS_KEY = 'achievements';
 const ACHIEVEMENT_MAP_KEY = 'achievementmap';
 
 interface HookReport {
@@ -81,7 +82,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
   }
 
   const data = new Map<string, AchievementsPayload['apps'][string]>();
-  const { has, lookup, walk } = createTextPatcher(data);
+  const { has, lookup, walk, copyOriginal, copyTranslated } = createTextPatcher(data);
   const undo: (() => void)[] = [];
   const coverage: Record<string, boolean> = {};
   let stamp: string | null = null;
@@ -163,33 +164,11 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       };
       return isThenable(r) ? r.then(patch) : patch(r);
     };
-  const patchJson = (appid: unknown, r: unknown): unknown => {
-    if (typeof r !== 'string' || !has(appid)) {
-      return r;
-    }
-    try {
-      const j: unknown = JSON.parse(r);
-      walk(appid, j, false, 0);
-      return JSON.stringify(j);
-    } catch {
-      return r;
-    }
-  };
 
   const steamApps = g.SteamClient?.Apps;
   wrap(steamApps, 'GetMyAchievementsForApp', afterResult, 'library');
   wrap(steamApps, 'GetFriendAchievementsForApp', afterResult, 'friends');
   wrap(steamApps, 'GetAchievementsInTimeRange', afterResult, 'timeline');
-  wrap(
-    steamApps,
-    'GetCachedAppDetails',
-    (o) =>
-      function (this: unknown, appid: unknown, ...rest: unknown[]) {
-        const r = o.call(this, appid, ...rest);
-        return isThenable(r) ? r.then((v) => patchJson(appid, v)) : patchJson(appid, r);
-      },
-    'cachedDetails'
-  );
   wrap(
     g.appDetailsCache,
     'SetCachedDataForApp',
@@ -202,17 +181,21 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         value: unknown,
         ...rest: unknown[]
       ) {
+        // Every save writes all of an app's cached keys to disk, so the cache keeps Steam's own strings and reads translate.
         let stored = value;
         if (key === ACHIEVEMENT_MAP_KEY && typeof value === 'string') {
-          // The cache keeps Steam's own strings; LookupCachedDataForApp translates them on the way out.
           safe(() => {
             stored = activity.mapJson(value, true);
           });
-        } else if (has(appid)) {
-          safe(() => walk(appid, value, false, 0));
+        } else if (key === ACHIEVEMENTS_KEY && has(appid)) {
+          safe(() => {
+            stored = copyOriginal(value);
+            // AppDetailsChanged hands the same details to its listeners after this call.
+            walk(appid, value, false, 0);
+          });
         }
         const r = o.call(this, appid, key, ver, stored, ...rest);
-        if (key === 'achievements' && has(appid)) {
+        if (key === ACHIEVEMENTS_KEY && has(appid)) {
           // AppDetailsChanged stores a MobX copy of the details just before this call; the UI renders that copy.
           safe(() => patchLoaded([appid], false));
         }
@@ -226,20 +209,21 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
     (o) =>
       function (this: unknown, appid: unknown, key: unknown, ...rest: unknown[]) {
         const r = o.call(this, appid, key, ...rest);
-        if (key !== ACHIEVEMENT_MAP_KEY || typeof r !== 'string') {
-          return r;
-        }
         let out: unknown = r;
-        safe(() => {
-          out = activity.mapJson(r, false);
-        });
+        if (key === ACHIEVEMENT_MAP_KEY && typeof r === 'string') {
+          safe(() => {
+            out = activity.mapJson(r, false);
+          });
+        } else if (key === ACHIEVEMENTS_KEY && has(appid) && isRecord(r)) {
+          safe(() => {
+            out = copyTranslated(appid, r);
+          });
+        }
         return out;
       },
-    'activityCards'
+    'cachedReads'
   );
-  if (!activityStore) {
-    coverage.activityCards = false;
-  }
+  coverage.activityCards = Boolean(activityStore) && coverage.cachedReads === true;
 
   // The activity class is module-private; its instances in the store lead to it before any server merge.
   let activityClassHooked = false;

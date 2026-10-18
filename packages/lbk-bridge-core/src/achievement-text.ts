@@ -63,14 +63,17 @@ export function createTextPatcher(data: Map<string, AppStrings>) {
     return data.get(String(appid))?.[String(id)];
   };
 
+  const textKeys = (rec: Record<string, unknown>) => ({
+    nameKey: 'strName' in rec ? 'strName' : 'name',
+    descKey: 'strDescription' in rec ? 'strDescription' : 'desc',
+  });
   const patchRecord = (
     appid: unknown,
     rec: Record<string, unknown>,
     keyHint: string | undefined,
     revert: boolean
   ): void => {
-    const nameKey = 'strName' in rec ? 'strName' : 'name';
-    const descKey = 'strDescription' in rec ? 'strDescription' : 'desc';
+    const { nameKey, descKey } = textKeys(rec);
     const orig = rec[ACH_ORIG];
     if (revert) {
       if (isRecord(orig)) {
@@ -128,6 +131,31 @@ export function createTextPatcher(data: Map<string, AppStrings>) {
       walk(appid, node[k], revert, depth + 1, k);
     }
   };
+  // A deep copy with Steam's own text back in every record walk() translated.
+  const copyOriginal = (node: unknown, depth = 0): unknown => {
+    if (!isRecord(node) || depth > 6) {
+      return node;
+    }
+    if (Array.isArray(node)) {
+      return node.map((x) => copyOriginal(x, depth + 1));
+    }
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(node)) {
+      out[k] = copyOriginal(node[k], depth + 1);
+    }
+    const orig = node[ACH_ORIG];
+    if (isRecord(orig)) {
+      const { nameKey, descKey } = textKeys(node);
+      out[nameKey] = orig.n;
+      out[descKey] = orig.d;
+    }
+    return out;
+  };
+  const copyTranslated = (appid: unknown, node: unknown): unknown => {
+    const out = copyOriginal(node);
+    walk(appid, out, false, 0);
+    return out;
+  };
 
-  return { has, lookup, walk };
+  return { has, lookup, walk, copyOriginal, copyTranslated };
 }
