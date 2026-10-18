@@ -10,7 +10,6 @@ vi.mock('@/main/installer/cache', () => ({
 vi.mock('@/main/millennium-install/apply', () => ({
   applyQueuedMillenniumAction: vi.fn(),
   millenniumQueueContext: vi.fn(),
-  notifyMillenniumStateChanged: vi.fn(),
 }));
 vi.mock('@/main/utils/cef-flag-file', () => ({ isCefFlagFilePresent: () => false }));
 vi.mock('@/main/utils/millennium', () => ({ detectMillennium: vi.fn() }));
@@ -19,10 +18,7 @@ vi.mock('@/main/utils/millennium-plugin', () => ({
   removeMillenniumPluginFiles: vi.fn(),
   setMillenniumPluginEnabledInConfig: vi.fn(),
 }));
-vi.mock('@/main/utils/steam-bridge', () => ({
-  getSteamBridgeStatus: vi.fn(),
-  onSteamBridgeReady: () => () => undefined,
-}));
+vi.mock('@/main/utils/steam-bridge', () => ({ getSteamBridgeStatus: vi.fn() }));
 vi.mock('@/main/utils/steam-launch-options', () => ({
   writeSteamLaunchOptions: vi.fn(),
 }));

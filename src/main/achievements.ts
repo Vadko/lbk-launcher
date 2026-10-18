@@ -1,18 +1,16 @@
-import { G } from '@mobily/ts-belt';
+import { F, G } from '@mobily/ts-belt';
 import { hash } from 'crypto';
 import { app } from 'electron';
 import fs from 'fs';
+import pLimit from 'p-limit';
 import path from 'path';
 import { z } from 'zod';
+import { appEvents } from '@/main/app-events';
 import { GamesRepository } from '@/main/db/games-repository';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { extractArchive } from '@/main/installer/archive';
 import { BACKUP_SUFFIX } from '@/main/installer/backup';
-import {
-  findInstallationInfoFile,
-  getAllInstalledGameIds,
-  onInstallationRecordRemoved,
-} from '@/main/installer/cache';
+import { findInstallationInfoFile, getAllInstalledGameIds } from '@/main/installer/cache';
 import { downloadFile } from '@/main/installer/download';
 import { NetworkError, RateLimitError } from '@/main/installer/errors';
 import { cleanupDownloadDir, getAllFiles } from '@/main/installer/files';
@@ -29,11 +27,7 @@ import { writeFileAtomic } from '@/main/utils/atomic-write';
 import { readFileOrNull } from '@/main/utils/fs-safe';
 import { readJsonFile } from '@/main/utils/json-file';
 import { writeBridgePluginData } from '@/main/utils/plugin-data';
-import {
-  invokeViaPlugin,
-  isPluginConnected,
-  onPluginConnectionChange,
-} from '@/main/utils/steam-bridge-server';
+import { invokeViaPlugin, isPluginConnected } from '@/main/utils/steam-bridge-server';
 import {
   isCefDebuggingEnabledInSettings,
   readStoreValue,
@@ -355,13 +349,11 @@ async function syncNow(): Promise<AchievementsDelivery> {
   }
 }
 
-let syncQueue: Promise<unknown> = Promise.resolve();
+const syncSerially = pLimit(1);
 
 // Never rejects. Serialised so an install and a plugin reconnect cannot interleave writes.
 export function syncAchievementsToPlugin(): Promise<AchievementsDelivery> {
-  const run = syncQueue.then(syncNow, syncNow);
-  syncQueue = run;
-  return run;
+  return syncSerially(syncNow);
 }
 
 function readInstallationCacheEntries(): InstallationRecord[] {
@@ -632,20 +624,14 @@ async function migrateLegacyAchievements(): Promise<void> {
   }, REDOWNLOAD_DELAY_MS);
 }
 
-let started = false;
-
-// Call once from app startup, inside the single-instance branch.
-export function startAchievements(): void {
-  if (started) {
-    return;
-  }
-  started = true;
-  onPluginConnectionChange((connected) => {
+// Call from app startup, inside the single-instance branch.
+export const startAchievements = F.once((): void => {
+  appEvents.on('plugin-connection', (connected) => {
     if (connected) {
       void syncAchievementsToPlugin();
     }
   });
-  onInstallationRecordRemoved((gameId) => {
+  appEvents.on('install-record-removed', (gameId) => {
     if (removeStringsOwnedBy(new Set([gameId]))) {
       void syncAchievementsToPlugin();
     }
@@ -656,4 +642,4 @@ export function startAchievements(): void {
     )
     .finally(() => void syncAchievementsToPlugin());
   void migrateLegacyAchievements();
-}
+});

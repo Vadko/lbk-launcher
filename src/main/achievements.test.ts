@@ -10,7 +10,6 @@ const state = vi.hoisted(() => ({
   settingOn: true,
   generation: null as 'v2' | 'v3' | null,
   reload: vi.fn(() => Promise.resolve({ apps: 1, coverage: {} })),
-  recordRemoved: null as ((gameId: string) => void) | null,
 }));
 
 vi.mock('electron', () => ({
@@ -29,10 +28,6 @@ vi.mock('@/main/installer/cache', () => ({
   getAllInstalledGameIds: async () => {
     const dir = path.join(state.root, 'userData', 'installation-cache');
     return fs.existsSync(dir) ? fs.readdirSync(dir).map((name) => name.slice(0, -5)) : [];
-  },
-  onInstallationRecordRemoved: (listener: (gameId: string) => void) => {
-    state.recordRemoved = listener;
-    return () => undefined;
   },
 }));
 vi.mock('@/main/installer/download', () => ({ downloadFile: vi.fn() }));
@@ -68,7 +63,6 @@ vi.mock('@/main/utils/plugin-data', () => ({
 vi.mock('@/main/utils/steam-bridge-server', () => ({
   invokeViaPlugin: () => state.reload(),
   isPluginConnected: () => state.pluginConnected,
-  onPluginConnectionChange: () => () => undefined,
 }));
 vi.mock('@/main/utils/store-storage', () => ({
   isCefDebuggingEnabledInSettings: () => state.settingOn,
@@ -85,6 +79,7 @@ import {
   startAchievements,
   syncAchievementsToPlugin,
 } from './achievements';
+import { appEvents } from './app-events';
 
 const END = Buffer.from([0x08]);
 const cstr = (s: string) => Buffer.concat([Buffer.from(s, 'utf8'), Buffer.from([0])]);
@@ -324,7 +319,7 @@ describe('startup', () => {
     expect(hasAchievementStrings([400], 'game-a')).toBe(true);
     await vi.waitFor(() => expect(fs.existsSync(stringsFile(500))).toBe(false));
 
-    state.recordRemoved?.('game-a');
+    appEvents.emit('install-record-removed', 'game-a');
     expect(fs.existsSync(stringsFile(400))).toBe(false);
   });
 });

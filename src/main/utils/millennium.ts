@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { G } from '@mobily/ts-belt';
+import { LRUCache } from 'lru-cache';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { isFlatpak } from './host-exec';
 import { getPlatform } from './platform';
@@ -232,8 +233,6 @@ function pickPaths(candidates: { pluginsDirs: string[]; configPaths: string[] })
   return { pluginsDir: null, configPath: null };
 }
 
-let detectCache: { at: number; value: MillenniumInfo } | null = null;
-
 function detectUncached(): MillenniumInfo {
   const platform = getPlatform();
   const none: MillenniumInfo = {
@@ -300,23 +299,28 @@ export function findMacMillenniumWrapper(): string | null {
   return null;
 }
 
+// Expired entries stay readable through peek(), so a re-detection logs only when the result changed.
+const detected: LRUCache<'millennium', MillenniumInfo> = new LRUCache({
+  max: 1,
+  ttl: DETECT_CACHE_MS,
+  noDeleteOnStaleGet: true,
+  memoMethod: () => {
+    const previous = detected.peek('millennium', { allowStale: true });
+    const value = detectUncached();
+    if (
+      previous?.generation !== value.generation ||
+      previous.pluginsDir !== value.pluginsDir
+    ) {
+      console.log('[Millennium] Detection:', JSON.stringify(value));
+    }
+    return value;
+  },
+});
+
 export function resetMillenniumDetectCache(): void {
-  detectCache = null;
+  detected.clear();
 }
 
 export function detectMillennium(): MillenniumInfo {
-  const now = Date.now();
-  if (detectCache && now - detectCache.at < DETECT_CACHE_MS && now >= detectCache.at) {
-    return detectCache.value;
-  }
-  const value = detectUncached();
-  if (
-    !detectCache ||
-    detectCache.value.generation !== value.generation ||
-    detectCache.value.pluginsDir !== value.pluginsDir
-  ) {
-    console.log('[Millennium] Detection:', JSON.stringify(value));
-  }
-  detectCache = { at: now, value };
-  return value;
+  return detected.memo('millennium');
 }

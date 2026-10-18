@@ -9,8 +9,10 @@ import {
   type SteamOpName,
   type SteamOps,
 } from '@lbk/bridge-core/contract';
+import pLimit from 'p-limit';
 import { type RawData, WebSocket, WebSocketServer } from 'ws';
 import { z } from 'zod';
+import { appEvents } from '@/main/app-events';
 import { deleteBridgePluginData, writeBridgePluginData } from '@/main/utils/plugin-data';
 
 const ALLOWED_ORIGIN = 'https://steamloopback.host';
@@ -96,10 +98,10 @@ interface ServerState {
 }
 
 let server: ServerState | null = null;
-let starting: Promise<void> | null = null;
+// Start and stop run one at a time, so a stop issued mid-start closes the server that start opens.
+const lifecycle = pLimit(1);
 let session: PluginSession | null = null;
 let nextMessageId = 1;
-const connectionListeners = new Set<(connected: boolean) => void>();
 
 export function computeServerProof(secretHex: string, cn: string, sn: string): string {
   return createHmac('sha256', Buffer.from(secretHex, 'hex'))
@@ -128,23 +130,6 @@ export function isAllowedUpgrade(
   port: number
 ): boolean {
   return headers.origin === ALLOWED_ORIGIN && headers.host === `127.0.0.1:${port}`;
-}
-
-function setConnected(connected: boolean): void {
-  for (const listener of connectionListeners) {
-    try {
-      listener(connected);
-    } catch (error) {
-      console.warn('[SteamBridge] Connection listener failed:', error);
-    }
-  }
-}
-
-export function onPluginConnectionChange(cb: (connected: boolean) => void): () => void {
-  connectionListeners.add(cb);
-  return () => {
-    connectionListeners.delete(cb);
-  };
 }
 
 export function isPluginConnected(): boolean {
@@ -251,7 +236,7 @@ function endSession(s: PluginSession): void {
   if (session === s) {
     session = null;
     console.log('[SteamBridge] Plugin disconnected');
-    setConnected(false);
+    appEvents.emit('plugin-connection', false);
   }
 }
 
@@ -330,7 +315,7 @@ function promote(ws: WebSocket, hello: PluginHello): void {
   });
 
   console.log(`[SteamBridge] Plugin ${hello.pv} connected with ${hello.ops.length} ops`);
-  setConnected(true);
+  appEvents.emit('plugin-connection', true);
 }
 
 export function parseHello(msg: unknown): PluginHello | null {
@@ -460,34 +445,33 @@ async function listen(): Promise<void> {
   console.log(`[SteamBridge] Plugin server listening on 127.0.0.1:${port}`);
 }
 
-export async function startSteamBridgeServer(): Promise<void> {
-  if (server) {
-    return;
-  }
-  if (!starting) {
-    starting = listen().finally(() => {
-      starting = null;
-    });
-  }
-  await starting;
+export function startSteamBridgeServer(): Promise<void> {
+  return lifecycle(async () => {
+    if (!server) {
+      await listen();
+    }
+  });
 }
 
 // A crashed LBK never deleted its bridge.json; the plugin would keep dialing that port for anyone who binds it.
 export function deleteStaleBridgeData(): void {
-  if (!server && !starting) {
+  if (!server && lifecycle.activeCount + lifecycle.pendingCount === 0) {
     deleteBridgePluginData('bridge.json');
   }
 }
 
-export async function stopSteamBridgeServer(): Promise<void> {
+export function stopSteamBridgeServer(): Promise<void> {
   deleteBridgePluginData('bridge.json');
-  if (starting) {
-    await starting.catch(() => undefined);
-  }
+  return lifecycle(closeServer);
+}
+
+async function closeServer(): Promise<void> {
   const current = server;
   if (!current) {
     return;
   }
+  // Again: a start that finished after the stop was requested has rewritten it.
+  deleteBridgePluginData('bridge.json');
   server = null;
   if (session) {
     session.ws.close(CLOSE_SHUTDOWN, 'server stopping');

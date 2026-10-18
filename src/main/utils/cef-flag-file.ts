@@ -12,7 +12,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
-import { queueSteamAction } from '@/main/steam-pending-actions';
+import { getPendingSteamActions, queueSteamAction } from '@/main/steam-pending-actions';
 import { sendToRenderer } from '@/main/window';
 import { errnoCode } from '@/shared/errors';
 import { detectDeckyPluginSync, isDeckyInstalledSync } from './decky';
@@ -149,12 +149,7 @@ export function isCefFlagFilePresent(): boolean {
   return filePath !== null && fs.existsSync(filePath);
 }
 
-let millenniumSetupKey: string | null = null;
-// undefined until the first pass, so a missing plugin still gets its orphan cleanup once.
-let deckySetupKey: string | null | undefined;
-
-// False when the config could not be edited, so the caller can retry on the next sync.
-function applyPluginEnabled(enable: boolean): boolean {
+function applyPluginEnabled(enable: boolean): void {
   const result = setMillenniumPluginEnabledInConfig(enable);
   if (result === 'steam-running') {
     queueSteamAction({
@@ -165,25 +160,24 @@ function applyPluginEnabled(enable: boolean): boolean {
     console.log(
       `[Millennium] Plugin ${enable ? 'enable' : 'disable'} queued until Steam exits`
     );
-    return true;
+    return;
   }
   if (result === 'invalid-config' || result === 'no-config') {
     console.warn(
       `[Millennium] Cannot ${enable ? 'enable' : 'disable'} the plugin: ${result}`
     );
-    return false;
+    return;
   }
   if (!enable) {
     removeMillenniumPluginFiles();
   }
-  return true;
 }
 
-// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; memoized per detected install.
-export function syncBridgePluginSetup(opts: { force?: boolean } = {}): void {
+// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; every step is a no-op once done.
+export function syncBridgePluginSetup(): void {
   if (isCefDebuggingEnabledInSettings()) {
-    setupMillenniumPlugin(opts.force ?? false);
-    setupDeckyPlugin(opts.force ?? false);
+    setupMillenniumPlugin();
+    setupDeckyPlugin();
   }
 }
 
@@ -194,15 +188,8 @@ function startBridgeServer(): void {
 }
 
 // Decky installs the plugin itself, through its own prompt; LBK only serves it.
-function setupDeckyPlugin(force: boolean): void {
+function setupDeckyPlugin(): void {
   const decky = detectDeckyPluginSync();
-  const key = decky?.plugin.installed
-    ? `${decky.plugin.dir}|${decky.plugin.version}|${decky.plugin.disabled}`
-    : null;
-  if (key === deckySetupKey && !force) {
-    return;
-  }
-  deckySetupKey = key;
   if (!decky) {
     return;
   }
@@ -214,20 +201,17 @@ function setupDeckyPlugin(force: boolean): void {
   resyncBridgePluginData();
 }
 
-function setupMillenniumPlugin(force: boolean): void {
-  const info = detectMillennium();
-  if (info.generation !== 'v3') {
-    millenniumSetupKey = null;
-    return;
-  }
-  const key = `${info.pluginsDir}|${info.configPath}`;
-  if (millenniumSetupKey === key && !force) {
-    return;
-  }
+// A queued enable already waits for Steam's exit; queueing it again would only rewrite the queue.
+function isEnableQueued(): boolean {
+  return getPendingSteamActions().some((a) => a.kind === 'millennium-plugin' && a.enable);
+}
 
+function setupMillenniumPlugin(): void {
+  if (detectMillennium().generation !== 'v3') {
+    return;
+  }
   const installed = installOrUpdateMillenniumPlugin();
   if (!installed.ok) {
-    // No memo: an antivirus holding the files for a moment must not cost the whole session.
     console.warn('[Millennium] Plugin install failed:', installed.error);
     return;
   }
@@ -236,15 +220,15 @@ function setupMillenniumPlugin(force: boolean): void {
     resyncBridgePluginData();
   }
   startBridgeServer();
-  if (getMillenniumPluginState().enabled || applyPluginEnabled(true)) {
-    millenniumSetupKey = key;
+  if (!getMillenniumPluginState().enabled && !isEnableQueued()) {
+    applyPluginEnabled(true);
   }
 }
 
 // Startup never prompts; the toggle prompts at most once per bridge fingerprint.
 async function enableCefDebugging(prompt: boolean): Promise<void> {
-  setupMillenniumPlugin(false);
-  setupDeckyPlugin(false);
+  setupMillenniumPlugin();
+  setupDeckyPlugin();
 
   const millennium = detectMillennium();
   if (millennium.blocksTcpCdp) {
@@ -263,8 +247,6 @@ async function enableCefDebugging(prompt: boolean): Promise<void> {
 }
 
 function disableCefDebugging(): void {
-  millenniumSetupKey = null;
-  deckySetupKey = undefined;
   const millennium = detectMillennium();
   // Decky creates the same file only in its installer and never restores it.
   if (!millennium.blocksTcpCdp && !isDeckyInstalledSync()) {

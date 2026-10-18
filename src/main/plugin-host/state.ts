@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { promisify } from 'node:util';
 import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
+import { LRUCache } from 'lru-cache';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { isI386Elf, parseLdconfig } from '@/main/millennium-install/linux';
 import { parseHwArm64 } from '@/main/millennium-install/macos';
@@ -156,8 +157,6 @@ interface GatheredFacts {
   hwArch: MacHardwareArch | null;
 }
 
-let factsCache: { at: number; value: Promise<GatheredFacts> } | null = null;
-
 async function gatherHostFacts(): Promise<GatheredFacts> {
   const platform = getPlatform();
   const steamPath = getSteamPath();
@@ -185,25 +184,21 @@ async function gatherHostFacts(): Promise<GatheredFacts> {
   };
 }
 
+// Concurrent callers share one gathering; a failed one is not kept.
+const gatheredFacts = new LRUCache<'facts', GatheredFacts>({
+  max: 1,
+  ttl: FACTS_CACHE_MS,
+  ignoreFetchAbort: true,
+  fetchMethod: gatherHostFacts,
+});
+
 export function resetHostFacts(): void {
-  factsCache = null;
+  gatheredFacts.clear();
   resetDeckyDetectCache();
 }
 
-function cachedFacts(): Promise<GatheredFacts> {
-  const now = Date.now();
-  if (!factsCache || now - factsCache.at >= FACTS_CACHE_MS || now < factsCache.at) {
-    const value = gatherHostFacts();
-    factsCache = { at: now, value };
-    value.catch(() => {
-      factsCache = null;
-    });
-  }
-  return factsCache.value;
-}
-
 export async function getHostSnapshot(): Promise<HostSnapshot> {
-  const { facts, release, hwArch } = await cachedFacts();
+  const { facts, release, hwArch } = await gatheredFacts.forceFetch('facts');
   // Millennium detection has its own cache and may have changed since the facts were gathered.
   const live: HostFacts = {
     ...facts,

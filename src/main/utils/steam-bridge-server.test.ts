@@ -13,13 +13,13 @@ vi.mock('@/main/utils/plugin-data', () => ({
   },
 }));
 
+const { appEvents } = await import('@/main/app-events');
 const {
   computeServerProof,
   getConnectedPluginInfo,
   invokeViaPlugin,
   isAllowedUpgrade,
   isPluginConnected,
-  onPluginConnectionChange,
   parseHello,
   startSteamBridgeServer,
   stopSteamBridgeServer,
@@ -211,7 +211,8 @@ describe('plugin server', () => {
 
   it('authenticates, runs requests and reports the connection', async () => {
     const events: boolean[] = [];
-    const off = onPluginConnectionChange((c) => events.push(c));
+    const onConnection = (c: boolean) => events.push(c);
+    appEvents.on('plugin-connection', onConnection);
     const plugin = connect();
     await plugin.handshake(bridge.secret);
     await connected();
@@ -240,7 +241,7 @@ describe('plugin server', () => {
     }
     expect(isPluginConnected()).toBe(false);
     expect(events).toEqual([true, false]);
-    off();
+    appEvents.off('plugin-connection', onConnection);
   });
 
   it('rejects ops the plugin did not announce without sending them', async () => {

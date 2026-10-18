@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import type { ConflictingTranslation, Game, InstallationInfo } from '../../shared/types';
+import { appEvents } from '../app-events';
 import { GamesRepository } from '../db/games-repository';
 import { getFirstAvailableGamePath } from '../game-detector';
 import { getWorkshopInstalledGameIds } from '../utils/store-storage';
@@ -16,21 +17,10 @@ const INSTALLATION_INFO_FILE = '.lbk-translation.json';
 // Cache for installed game IDs
 let installedGameIdsCache: string[] | null = null;
 
-const recordRemovedListeners = new Set<(gameId: string) => void>();
-
 // Data kept outside the game folder (achievement strings) must go with the record.
-export function onInstallationRecordRemoved(
-  listener: (gameId: string) => void
-): () => void {
-  recordRemovedListeners.add(listener);
-  return () => recordRemovedListeners.delete(listener);
-}
-
 async function removeRecordFile(filePath: string, gameId: string): Promise<void> {
   await unlink(filePath);
-  for (const listener of recordRemovedListeners) {
-    listener(gameId);
-  }
+  appEvents.emit('install-record-removed', gameId);
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   type SteamOps,
 } from '@lbk/bridge-core/contract';
 import CDP from 'chrome-remote-interface';
+import { LRUCache } from 'lru-cache';
 import pTimeout from 'p-timeout';
 import { STEAM_OPS_SOURCE } from '@/main/utils/steam-bridge-ops';
 import {
@@ -41,13 +42,25 @@ interface CefResolution {
   discovery: CefEndpointDiscovery | null;
 }
 
-let endpointCache: { pidKey: string; endpoint: CefEndpoint; verifiedAt: number } | null =
-  null;
-let discoveryCache: {
-  pidKey: string;
-  at: number;
-  discovery: CefEndpointDiscovery;
-} | null = null;
+const NO_DISCOVERY: CefEndpointDiscovery = { kind: 'none' };
+
+// Stale entries stay so the next lookup can re-probe the last endpoint instead of scanning ports.
+const endpoints = new LRUCache<'cef', { pidKey: string; endpoint: CefEndpoint }>({
+  max: 1,
+  ttl: ENDPOINT_REUSE_MS,
+  noDeleteOnStaleGet: true,
+});
+
+// Keyed by the Steam pid set; `none` usually means the webhelper has not started yet, so it is not stored.
+const discoveries = new LRUCache<string, CefEndpointDiscovery>({
+  max: 1,
+  ttl: DISCOVERY_REUSE_MS,
+  ignoreFetchAbort: true,
+  fetchMethod: async () => {
+    const discovery = await discoverCefEndpoint();
+    return discovery.kind === 'none' ? undefined : discovery;
+  },
+});
 
 // Another app on the port must never receive Steam ops, hence the User-Agent check.
 async function probeEndpoint(host: CefHost, port: number): Promise<boolean> {
@@ -72,35 +85,17 @@ async function probePort(port: number): Promise<CefEndpoint | null> {
   return null;
 }
 
-async function discover(pidKey: string, fresh: boolean): Promise<CefEndpointDiscovery> {
-  const now = Date.now();
-  if (
-    !fresh &&
-    discoveryCache?.pidKey === pidKey &&
-    now - discoveryCache.at < DISCOVERY_REUSE_MS
-  ) {
-    return discoveryCache.discovery;
-  }
-  const discovery = await discoverCefEndpoint();
-  // `none` usually means the webhelper has not started yet, so it is not worth remembering.
-  discoveryCache = discovery.kind === 'none' ? null : { pidKey, at: now, discovery };
-  return discovery;
-}
-
 export function resetCefEndpointCache(): void {
-  endpointCache = null;
-  discoveryCache = null;
+  endpoints.clear();
+  discoveries.clear();
 }
 
 export async function resolveCefEndpoint(
   opts: { fresh?: boolean } = {}
 ): Promise<CefResolution> {
-  if (
-    !opts.fresh &&
-    endpointCache &&
-    Date.now() - endpointCache.verifiedAt < ENDPOINT_REUSE_MS
-  ) {
-    return { steamRunning: true, endpoint: endpointCache.endpoint, discovery: null };
+  const recent = opts.fresh ? undefined : endpoints.get('cef');
+  if (recent) {
+    return { steamRunning: true, endpoint: recent.endpoint, discovery: null };
   }
   const pids = await findSteamPids();
   if (pids.length === 0) {
@@ -109,30 +104,30 @@ export async function resolveCefEndpoint(
   }
   const pidKey = [...pids].sort((a, b) => a - b).join(',');
 
-  if (endpointCache && endpointCache.pidKey !== pidKey) {
-    endpointCache = null;
-  }
-  if (endpointCache) {
-    const { host, port } = endpointCache.endpoint;
+  const known = endpoints.get('cef', { allowStale: true });
+  endpoints.clear();
+  if (known?.pidKey === pidKey) {
+    const { host, port } = known.endpoint;
     if (await probeEndpoint(host, port)) {
-      endpointCache.verifiedAt = Date.now();
-      return { steamRunning: true, endpoint: endpointCache.endpoint, discovery: null };
+      endpoints.set('cef', known);
+      return { steamRunning: true, endpoint: known.endpoint, discovery: null };
     }
-    endpointCache = null;
   }
 
   const byDefault = await probePort(DEFAULT_CEF_PORT);
   if (byDefault) {
-    endpointCache = { pidKey, endpoint: byDefault, verifiedAt: Date.now() };
+    endpoints.set('cef', { pidKey, endpoint: byDefault });
     return { steamRunning: true, endpoint: byDefault, discovery: null };
   }
 
-  const discovery = await discover(pidKey, opts.fresh ?? false);
+  const discovery =
+    (await discoveries.fetch(pidKey, { forceRefresh: opts.fresh ?? false })) ??
+    NO_DISCOVERY;
   if (discovery.kind === 'port' && discovery.port !== DEFAULT_CEF_PORT) {
     const found = await probePort(discovery.port);
     if (found) {
       console.log(`[SteamBridge] CDP found on ${found.host} port ${found.port}`);
-      endpointCache = { pidKey, endpoint: found, verifiedAt: Date.now() };
+      endpoints.set('cef', { pidKey, endpoint: found });
       return { steamRunning: true, endpoint: found, discovery };
     }
   }

@@ -1,7 +1,7 @@
 import type * as NodeFs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const existing = new Set<string>();
 const links = new Map<string, string>();
@@ -32,6 +32,7 @@ const {
   detectMillennium,
   planEnabledPluginsEdit,
   renderInitialMillenniumConfig,
+  resetMillenniumDetectCache,
   resolveMillenniumPaths,
 } = await import('@/main/utils/millennium');
 
@@ -275,18 +276,13 @@ describe('planEnabledPluginsEdit', () => {
 
 describe('detectMillennium', () => {
   const home = os.homedir();
-  let clock = Date.parse('2026-10-09T00:00:00Z');
 
   beforeEach(() => {
     existing.clear();
     links.clear();
     fakeSteamPath.value = null;
-    // Step past the 60 s detection cache.
-    clock += 120_000;
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(clock);
+    resetMillenniumDetectCache();
   });
-  afterAll(() => vi.useRealTimers());
 
   it.each([
     ['/Applications/Steam Millennium.app'],

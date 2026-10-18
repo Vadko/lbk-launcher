@@ -1,7 +1,9 @@
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
+import pMemoize from 'p-memoize';
+import pWaitFor from 'p-wait-for';
 import { getCleanEnv } from '@/main/installer/archive';
 import { publishPluginHostState } from '@/main/millennium-install';
 import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
@@ -45,48 +47,55 @@ function lastOutputLine(output: string): string | null {
   return lines.length > 0 ? lines[lines.length - 1].slice(0, 300) : null;
 }
 
-function runOnHost(script: string): Promise<{ code: number | null; output: string }> {
-  return new Promise((resolve) => {
-    const child = isFlatpak()
-      ? spawn('flatpak-spawn', ['--host', 'bash', script], {
-          stdio: ['ignore', 'pipe', 'pipe'],
-        })
-      : spawn('bash', [script], {
-          env: getCleanEnv(),
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-    let output = '';
-    const keep = (chunk: Buffer) => {
-      output = (output + chunk.toString('utf8')).slice(-OUTPUT_TAIL);
-    };
-    child.stdout?.on('data', keep);
-    child.stderr?.on('data', keep);
-    const timer = setTimeout(() => resolve({ code: null, output }), RUN_TIMEOUT_MS);
-    timer.unref();
-    child.on('error', (error) => {
-      clearTimeout(timer);
-      resolve({ code: null, output: `${output}\n${error.message}` });
+async function runOnHost(
+  script: string
+): Promise<{ code: number | null; output: string }> {
+  const child = isFlatpak()
+    ? spawn('flatpak-spawn', ['--host', 'bash', script], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+    : spawn('bash', [script], {
+        env: getCleanEnv(),
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+  let output = '';
+  const keep = (chunk: Buffer) => {
+    output = (output + chunk.toString('utf8')).slice(-OUTPUT_TAIL);
+  };
+  child.stdout?.on('data', keep);
+  child.stderr?.on('data', keep);
+  // A late error, after LBK stopped waiting, must not become an uncaught exception.
+  child.on('error', () => undefined);
+  try {
+    const [code] = await once(child, 'close', {
+      signal: AbortSignal.timeout(RUN_TIMEOUT_MS),
     });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      resolve({ code, output });
-    });
-  });
+    return { code: typeof code === 'number' ? code : null, output };
+  } catch (error) {
+    // A spawn error rejects with that error; the timeout rejects with an AbortError and leaves the child running.
+    const spawnError =
+      error instanceof Error && error.name !== 'AbortError' ? `\n${error.message}` : '';
+    return { code: null, output: `${output}${spawnError}` };
+  }
 }
 
 // The script's exit code says nothing: it re-runs itself under sudo and always exits 1 afterwards.
-async function waitForDecky(): Promise<DeckyInfo | null> {
-  const deadline = Date.now() + SETTLE_MS;
+function waitForDecky(): Promise<DeckyInfo | null> {
   let decky: DeckyInfo | null = null;
-  do {
-    resetDeckyDetectCache();
-    decky = await detectDecky().catch(() => null);
-    if (decky?.running) {
-      return decky;
+  return pWaitFor<DeckyInfo | null>(
+    async () => {
+      resetDeckyDetectCache();
+      decky = await detectDecky().catch(() => null);
+      return decky?.running ? pWaitFor.resolveWith(decky) : false;
+    },
+    {
+      interval: POLL_MS,
+      timeout: {
+        milliseconds: SETTLE_MS,
+        fallback: () => (decky?.installed ? decky : null),
+      },
     }
-    await sleep(POLL_MS);
-  } while (Date.now() < deadline);
-  return decky?.installed ? decky : null;
+  );
 }
 
 async function runInstall(): Promise<DeckyLoaderInstallResult> {
@@ -143,19 +152,13 @@ async function runInstall(): Promise<DeckyLoaderInstallResult> {
     setDeckyLoaderInstalling(false);
     resetHostFacts();
     watchDeckyPlugins();
-    syncBridgePluginSetup({ force: true });
+    syncBridgePluginSetup();
     await publishPluginHostState();
   }
 }
 
-let running: Promise<DeckyLoaderInstallResult> | null = null;
-
 // A second caller (the modal reopened mid-install) joins the run instead of starting another installer.
-export function installDeckyLoader(): Promise<DeckyLoaderInstallResult> {
-  if (!running) {
-    running = runInstall().finally(() => {
-      running = null;
-    });
-  }
-  return running;
-}
+export const installDeckyLoader = pMemoize(runInstall, {
+  cache: false,
+  cacheKey: () => 'install',
+});

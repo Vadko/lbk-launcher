@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { BRIDGE_PLUGIN_NAME } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
+import { appEvents } from '@/main/app-events';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { resetHostFacts } from '@/main/plugin-host/state';
 import { replaceSymlinkAtomic, writeFileAtomic } from '@/main/utils/atomic-write';
@@ -55,32 +56,10 @@ export interface MillenniumApplyReport {
   outcome: ApplyOutcome;
   reason?: MillenniumFailure;
   error?: string;
-  at: number;
 }
 
 const READY_MARKER = '.lbk-ready';
 const LOCKED_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
-
-let lastReport: MillenniumApplyReport | null = null;
-type ApplyPhase = 'install-files' | 'installed';
-
-let phaseListener: ((phase: ApplyPhase) => void) | null = null;
-let stateListener: (() => void) | null = null;
-
-export function getLastMillenniumApplyReport(): MillenniumApplyReport | null {
-  return lastReport;
-}
-
-export function setMillenniumPhaseListener(
-  cb: ((phase: ApplyPhase) => void) | null
-): void {
-  phaseListener = cb;
-}
-
-// The queue can apply an item long after the IPC call that queued it, so the UI needs its own push.
-export function setMillenniumStateListener(cb: (() => void) | null): void {
-  stateListener = cb;
-}
 
 const millenniumWorkDir = (): string => path.join(app.getPath('userData'), 'millennium');
 
@@ -328,9 +307,8 @@ function report(
   outcome: ApplyOutcome,
   reason?: MillenniumFailure,
   error?: string
-): ApplyOutcome {
-  lastReport = { kind, outcome, reason, error, at: Date.now() };
-  return outcome;
+): MillenniumApplyReport {
+  return { kind, outcome, reason, error };
 }
 
 function failureFor(error: unknown): {
@@ -350,15 +328,10 @@ function failureFor(error: unknown): {
   return { outcome: 'drop', reason: 'script-failed' };
 }
 
-// Called by the queue once it has rewritten itself, so the pushed state no longer lists the applied item.
-export function notifyMillenniumStateChanged(): void {
-  stateListener?.();
-}
-
 // Runs only from the pending-actions queue with Steam confirmed off.
 export function applyQueuedMillenniumAction(
   action: QueuedMillenniumAction
-): ApplyOutcome {
+): MillenniumApplyReport {
   const kind = action.kind === 'millennium-activate' ? 'activate' : 'deactivate';
   const ctx = currentRecord();
   if (!ctx) {
@@ -366,14 +339,14 @@ export function applyQueuedMillenniumAction(
   }
   try {
     if (action.kind === 'millennium-activate') {
-      phaseListener?.('install-files');
+      appEvents.emit('millennium-phase', 'install-files');
       const recordPath = recordPathIn(ctx.paths.root);
       const record = activateFiles(ctx, action.tag, (r) =>
         writeInstallRecord(recordPath, r)
       );
       writeInstallRecord(recordPath, record);
       afterChange();
-      syncBridgePluginSetup({ force: true });
+      syncBridgePluginSetup();
       fs.rmSync(stagingDirFor(action.tag), { recursive: true, force: true });
       fs.rmSync(downloadsDir(), { recursive: true, force: true });
       console.log(`[Millennium] Activated ${record.version} (${record.mode})`);
@@ -381,13 +354,13 @@ export function applyQueuedMillenniumAction(
       if (!ctx.record) {
         return report(kind, 'drop', 'unsupported', 'not installed by LBK');
       }
-      phaseListener?.('install-files');
+      appEvents.emit('millennium-phase', 'install-files');
       removeFiles(ctx, ctx.record, action.purge);
       afterChange();
       restoreCefFlagFileAfterMillennium();
       console.log(`[Millennium] Removed${action.purge ? ' with data' : ''}`);
     }
-    phaseListener?.('installed');
+    appEvents.emit('millennium-phase', 'installed');
     return report(kind, 'applied');
   } catch (error) {
     const failure = failureFor(error);

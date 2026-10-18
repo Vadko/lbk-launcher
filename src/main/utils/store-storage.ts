@@ -110,6 +110,12 @@ export function deleteStoreValue(key: string): void {
   store.delete(key);
 }
 
+// Fires synchronously on every in-process write that changes the value.
+export function onStoreValueChanged(key: string, callback: () => void): () => void {
+  mainOnlyKeys.add(key);
+  return store.onDidChange(key, () => callback());
+}
+
 const LAST_GAME_FOLDER_KEY = 'last-game-folder';
 
 mainOnlyKeys.add(LAST_GAME_FOLDER_KEY);

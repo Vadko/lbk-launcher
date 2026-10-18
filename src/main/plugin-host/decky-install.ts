@@ -1,13 +1,13 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
+import { LRUCache } from 'lru-cache';
+import pWaitFor from 'p-wait-for';
 import { createZip } from '@/main/installer/archive';
-import { publishPluginHostState } from '@/main/millennium-install';
 import { bundledBridgeFiles } from '@/main/plugin-host/bundled-bridge';
-import { syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
+import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
 import {
   DECKY_PLUGIN_DIR,
   deckyArtifactUrl,
@@ -28,7 +28,6 @@ import { errorMessage } from '@/shared/errors';
 import type { DeckyInstallResult } from '@/shared/plugin-host-types';
 
 const POLL_MS = 2000;
-const WATCH_MS = 5 * 60 * 1000;
 const FRONTEND_WAIT_MS = 20_000;
 // Decky loads dist/index.js as ESM only with "type": "module" and requires `version` once package.json exists.
 const PACKAGE_JSON = `${JSON.stringify(
@@ -47,9 +46,15 @@ interface DeckyZip {
   hash: string;
 }
 
+interface ZipSources {
+  cacheDir: string;
+  name: string;
+  files: { to: string; data: Buffer }[];
+}
+
 type SaveZipResult = { success: boolean; path?: string; error?: string };
 
-function readBundled(): { to: string; data: Buffer }[] {
+function readBundled(): ZipSources['files'] {
   const bundled = bundledBridgeFiles('decky');
   return [
     { to: 'plugin.json', data: fs.readFileSync(bundled.pluginJson) },
@@ -58,25 +63,8 @@ function readBundled(): { to: string; data: Buffer }[] {
   ];
 }
 
-// Only a zip this process built is reused: the cache dir is user-writable, and Decky installs whatever matches the hash LBK hands it.
-let lastBuilt: { digest: string; zip: DeckyZip } | null = null;
-
-async function buildZip(): Promise<DeckyZip> {
-  const files = readBundled();
-  const digest = sha256(files.map((f) => `${f.to}\0${sha256(f.data)}`).join('\n'));
-  const cacheDir = deckyCacheDirFor(os.homedir(), process.env.FLATPAK_ID);
-  const name = `lbk-bridge-${BRIDGE_VERSION}.zip`;
+async function buildZip({ cacheDir, name, files }: ZipSources): Promise<DeckyZip> {
   const file = path.join(cacheDir, name);
-  // A rebuilt zip gets a new hash, which would fail an install prompt that is still open in Decky.
-  if (
-    lastBuilt?.digest === digest &&
-    lastBuilt.zip.file === file &&
-    fs.existsSync(file) &&
-    sha256(fs.readFileSync(file)) === lastBuilt.zip.hash
-  ) {
-    return lastBuilt.zip;
-  }
-
   const stageRoot = path.join(cacheDir, 'stage');
   const stage = path.join(stageRoot, DECKY_PLUGIN_DIR);
   const partial = path.join(cacheDir, 'partial.zip');
@@ -99,73 +87,36 @@ async function buildZip(): Promise<DeckyZip> {
     (entry) => entry === name || !/^lbk-bridge-.*\.zip(\.source)?$/.test(entry)
   );
   console.log(`[Decky] Built ${file}`);
-  const zip = { file, hash: sha256(fs.readFileSync(file)) };
-  lastBuilt = { digest, zip };
-  return zip;
+  return { file, hash: sha256(fs.readFileSync(file)) };
 }
 
-let building: Promise<DeckyZip> | null = null;
+// Only a zip this process built is reused: the cache dir is user-writable, and Decky installs whatever matches the hash LBK hands it.
+const builtZips = new LRUCache<string, DeckyZip, ZipSources>({
+  max: 1,
+  ignoreFetchAbort: true,
+  fetchMethod: (_key, _stale, { context }) => buildZip(context),
+});
 
+// A rebuilt zip gets a new hash, which would fail an install prompt that is still open in Decky.
 function getDeckyZip(): Promise<DeckyZip> {
-  if (!building) {
-    building = buildZip().finally(() => {
-      building = null;
-    });
-  }
-  return building;
-}
-
-let watchTimer: NodeJS.Timeout | null = null;
-
-function stopWatch(): void {
-  if (watchTimer) {
-    clearTimeout(watchTimer);
-    watchTimer = null;
-  }
-}
-
-function pluginFingerprint(plugin: {
-  dir: string | null;
-  version: string | null;
-}): string {
-  let ino = '';
-  try {
-    ino = plugin.dir ? String(fs.statSync(plugin.dir).ino) : '';
-  } catch {
-    ino = '';
-  }
-  return `${plugin.dir}|${ino}|${plugin.version}`;
-}
-
-// install_plugin returns once the prompt is shown, so success is the plugin folder appearing afterwards.
-function watchForInstall(before: string | null): void {
-  stopWatch();
-  const startedAt = Date.now();
-  const tick = async (): Promise<void> => {
-    watchTimer = null;
-    resetDeckyDetectCache();
-    const decky = await detectDecky().catch(() => null);
-    const plugin = decky?.plugin;
-    const done =
-      plugin?.installed === true &&
-      plugin.version === BRIDGE_VERSION &&
-      pluginFingerprint(plugin) !== before;
-    if (done) {
-      console.log(`[Decky] Plugin ${plugin.version} installed at ${plugin.dir}`);
-      syncBridgePluginSetup({ force: true });
-      await publishPluginHostState();
-      return;
-    }
-    if (Date.now() - startedAt >= WATCH_MS) {
-      console.warn('[Decky] No plugin install seen after the prompt');
-      await publishPluginHostState();
-      return;
-    }
-    watchTimer = setTimeout(() => void tick(), POLL_MS);
-    watchTimer.unref();
+  const sources: ZipSources = {
+    cacheDir: deckyCacheDirFor(os.homedir(), process.env.FLATPAK_ID),
+    name: `lbk-bridge-${BRIDGE_VERSION}.zip`,
+    files: readBundled(),
   };
-  watchTimer = setTimeout(() => void tick(), POLL_MS);
-  watchTimer.unref();
+  const digest = sha256(
+    sources.files.map((f) => `${f.to}\0${sha256(f.data)}`).join('\n')
+  );
+  const key = `${path.join(sources.cacheDir, sources.name)}|${digest}`;
+  const built = builtZips.get(key);
+  const intact =
+    built !== undefined &&
+    fs.existsSync(built.file) &&
+    sha256(fs.readFileSync(built.file)) === built.hash;
+  return builtZips.forceFetch(key, {
+    context: sources,
+    forceRefresh: built !== undefined && !intact,
+  });
 }
 
 export async function requestDeckyPluginInstall(): Promise<DeckyInstallResult> {
@@ -205,23 +156,28 @@ export async function requestDeckyPluginInstall(): Promise<DeckyInstallResult> {
   startSteamBridgeServer().catch((error) => {
     console.warn('[SteamBridge] Plugin server failed to start:', error);
   });
+  // install_plugin returns once the prompt is shown; the watcher picks up the plugin folder Decky creates.
+  watchDeckyPlugins();
 
-  const before = pluginFingerprint(decky.plugin);
   const request = {
     artifact: deckyArtifactUrl(path.dirname(zip.file), BRIDGE_VERSION),
     version: BRIDGE_VERSION,
     hash: zip.hash,
     installType: deckyInstallType(decky.plugin, BRIDGE_VERSION),
   };
-  // Decky injects its frontend ~10 s after its service starts, e.g. right after LBK installed it.
-  const deadline = Date.now() + FRONTEND_WAIT_MS;
   let answer: 'no-decky' | 'prompted';
   try {
-    answer = await bridge.invoke('deckyRequestInstall', request);
-    while (answer === 'no-decky' && Date.now() < deadline) {
-      await sleep(POLL_MS);
-      answer = await bridge.invoke('deckyRequestInstall', request);
-    }
+    // Decky injects its frontend ~10 s after its service starts, e.g. right after LBK installed it.
+    answer = await pWaitFor<'no-decky' | 'prompted'>(
+      async () => {
+        const reply = await bridge.invoke('deckyRequestInstall', request);
+        return reply === 'no-decky' ? false : pWaitFor.resolveWith(reply);
+      },
+      {
+        interval: POLL_MS,
+        timeout: { milliseconds: FRONTEND_WAIT_MS, fallback: () => 'no-decky' },
+      }
+    );
   } catch (error) {
     console.warn('[Decky] Install request failed:', error);
     return { success: false, reason: 'failed', error: errorMessage(error) };
@@ -230,7 +186,6 @@ export async function requestDeckyPluginInstall(): Promise<DeckyInstallResult> {
     // Decky's frontend is not injected into Steam right now.
     return { success: false, reason: 'decky-not-running', error: answer };
   }
-  watchForInstall(before);
   return { success: true, state: 'prompted' };
 }
 

@@ -4,8 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
 vi.mock('@/main/steam-pending-actions', () => ({
   getPendingSteamActions: () => [],
-  onSteamExited: () => () => undefined,
-  onSteamStarted: () => () => undefined,
 }));
 vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));
 vi.mock('@/main/plugin-host/state', () => ({
@@ -27,7 +25,6 @@ vi.mock('@/main/utils/millennium-plugin', () => ({
 vi.mock('@/main/utils/steam-bridge-server', () => ({
   invokeViaPlugin: vi.fn(),
   isPluginConnected: () => false,
-  onPluginConnectionChange: () => () => undefined,
 }));
 vi.mock('@/main/utils/steam-cef', () => ({
   invokeViaCdp: vi.fn(),

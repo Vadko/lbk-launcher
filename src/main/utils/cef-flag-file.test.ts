@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PendingSteamAction } from '@/main/steam-pending-actions';
 import {
   restoreCefFlagFileAfterMillennium,
   syncBridgePluginSetup,
@@ -17,10 +18,14 @@ const env = vi.hoisted(() => ({
   settingOn: true,
   blocksTcpCdp: false,
   generation: null as 'v3' | null,
+  queue: [] as PendingSteamAction[],
 }));
 
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => env.steamPath }));
-vi.mock('@/main/steam-pending-actions', () => ({ queueSteamAction: vi.fn() }));
+vi.mock('@/main/steam-pending-actions', () => ({
+  getPendingSteamActions: () => env.queue,
+  queueSteamAction: vi.fn((action: PendingSteamAction) => env.queue.push(action)),
+}));
 vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));
 vi.mock('./decky', () => ({
   detectDeckyPluginSync: () => null,
@@ -66,6 +71,7 @@ beforeEach(() => {
   env.settingOn = true;
   env.blocksTcpCdp = false;
   env.generation = null;
+  env.queue = [];
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
 });
 
@@ -91,21 +97,42 @@ describe('restoreCefFlagFileAfterMillennium', () => {
 });
 
 describe('syncBridgePluginSetup with Millennium v3', () => {
-  it('retries a failed plugin install on the next sync and stops once it worked', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  beforeEach(() => {
+    vi.clearAllMocks();
     env.generation = 'v3';
+    vi.mocked(getMillenniumPluginState).mockReturnValue({
+      supported: true,
+      installed: true,
+      installedVersion: '1.1.0',
+      enabled: false,
+      dir: '/mill/plugins/lbk-bridge',
+    });
+  });
+
+  it('enables the plugin only after an install that went through', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const install = vi.mocked(installOrUpdateMillenniumPlugin);
     install.mockReturnValueOnce({ ok: false, error: 'EBUSY' });
     install.mockReturnValue({ ok: true, changed: true });
-    vi.mocked(getMillenniumPluginState).mockReturnValue({
-      enabled: false,
-    } as ReturnType<typeof getMillenniumPluginState>);
     vi.mocked(setMillenniumPluginEnabledInConfig).mockReturnValue('changed');
 
     syncBridgePluginSetup();
+    expect(setMillenniumPluginEnabledInConfig).not.toHaveBeenCalled();
+    syncBridgePluginSetup();
+    expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledWith(true);
+  });
+
+  it('queues the enable once while Steam runs instead of on every sync', () => {
+    vi.mocked(installOrUpdateMillenniumPlugin).mockReturnValue({
+      ok: true,
+      changed: false,
+    });
+    vi.mocked(setMillenniumPluginEnabledInConfig).mockReturnValue('steam-running');
+
     syncBridgePluginSetup();
     syncBridgePluginSetup();
 
-    expect(install).toHaveBeenCalledTimes(2);
+    expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledTimes(1);
+    expect(env.queue).toMatchObject([{ kind: 'millennium-plugin', enable: true }]);
   });
 });

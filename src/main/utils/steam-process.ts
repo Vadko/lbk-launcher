@@ -1,10 +1,11 @@
 import { execFile } from 'child_process';
 import { parse as vdfParse } from 'fast-vdf';
 import { promises as fsp } from 'fs';
+import { LRUCache } from 'lru-cache';
 import { homedir } from 'os';
+import pWaitFor from 'p-wait-for';
 import path from 'path';
 import { HKEY } from 'registry-js';
-import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
 import { z } from 'zod';
 import { getSteamPath } from '@/main/game-detector/steam';
@@ -416,20 +417,11 @@ async function isAnySteamProcessLeft(): Promise<boolean> {
 
 const STEAM_POLL_MS = 500;
 
-async function pollUntil(
-  check: () => Promise<boolean>,
-  timeoutMs: number
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  for (;;) {
-    if (await check()) {
-      return true;
-    }
-    if (Date.now() >= deadline) {
-      return false;
-    }
-    await sleep(STEAM_POLL_MS);
-  }
+function pollUntil(check: () => Promise<boolean>, timeoutMs: number): Promise<boolean> {
+  return pWaitFor<boolean>(async () => (await check()) && pWaitFor.resolveWith(true), {
+    interval: STEAM_POLL_MS,
+    timeout: { milliseconds: timeoutMs, fallback: () => false },
+  });
 }
 
 export function waitForSteamGone(timeoutMs: number): Promise<boolean> {
@@ -450,7 +442,12 @@ function probePid(pid: number): 'alive' | 'denied' | 'gone' {
   }
 }
 
-let elevationCache: { pids: string; elevated: boolean } | null = null;
+// Keyed by the sorted pid list: elevation holds for the life of those processes.
+const elevation = new LRUCache<string, boolean, readonly number[]>({
+  max: 1,
+  memoMethod: (_key, _stale, { context }) =>
+    context.some((pid) => probePid(pid) === 'denied'),
+});
 
 export async function isSteamElevated(): Promise<boolean> {
   if (!isWindows()) {
@@ -463,13 +460,7 @@ export async function isSteamElevated(): Promise<boolean> {
   }
 
   const key = [...pids].sort((a, b) => a - b).join(',');
-  if (elevationCache?.pids === key) {
-    return elevationCache.elevated;
-  }
-
-  const elevated = pids.some((pid) => probePid(pid) === 'denied');
-  elevationCache = { pids: key, elevated };
-  return elevated;
+  return elevation.memo(key, { context: pids });
 }
 
 async function readWebhelperLogEntry(): Promise<{ pid: number; args: string } | null> {

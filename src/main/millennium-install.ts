@@ -2,13 +2,12 @@ import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { promisify } from 'node:util';
+import { appEvents } from '@/main/app-events';
 import {
   downloadsDir,
-  getLastMillenniumApplyReport,
   isStagingReady,
+  type MillenniumApplyReport,
   markStagingReady,
-  setMillenniumPhaseListener,
-  setMillenniumStateListener,
   stagingDirFor,
   stagingRoot,
 } from '@/main/millennium-install/apply';
@@ -49,6 +48,7 @@ import {
 } from '@/main/plugin-host/state';
 import {
   getPendingSteamActions,
+  onPendingSteamActionsChanged,
   queueSteamAction,
   runPendingSteamActions,
 } from '@/main/steam-pending-actions';
@@ -327,11 +327,6 @@ function isQueued(kind: 'activate' | 'deactivate'): boolean {
   return pendingMillenniumAction() === kind;
 }
 
-function appliedSince(kind: 'activate' | 'deactivate', since: number) {
-  const report = getLastMillenniumApplyReport();
-  return report && report.kind === kind && report.at >= since ? report : null;
-}
-
 async function linuxDiagnostics(): Promise<MillenniumInstallResult['diagnostics']> {
   const environs = await readSteamEnvirons();
   const mapped = await steamMapsContain(LINUX_RUNTIME_LIB);
@@ -343,9 +338,9 @@ async function linuxDiagnostics(): Promise<MillenniumInstallResult['diagnostics'
 
 function outcomeFailure(
   kind: 'activate' | 'deactivate',
-  since: number
+  applied: MillenniumApplyReport | undefined
 ): MillenniumInstallResult | null {
-  const report = appliedSince(kind, since);
+  const report = applied?.kind === kind ? applied : undefined;
   if (report?.outcome === 'applied') {
     return null;
   }
@@ -359,20 +354,20 @@ async function runQueuedChange(
   kind: 'activate' | 'deactivate',
   restart: 'now' | 'on-exit'
 ): Promise<MillenniumInstallResult> {
-  const since = Date.now();
   let restarting = false;
-  setMillenniumPhaseListener((phase) => {
+  const onPhase = (phase: 'install-files' | 'installed') => {
     if (phase === 'install-files') {
       progress({ phase: 'install-files' });
     } else if (restarting) {
       progress({ phase: 'start-steam' });
     }
-  });
+  };
+  appEvents.on('millennium-phase', onPhase);
   try {
     if ((await findSteamPids()).length === 0) {
-      await runPendingSteamActions('manual');
+      const run = await runPendingSteamActions('manual');
       return (
-        outcomeFailure(kind, since) ?? {
+        outcomeFailure(kind, run.millennium) ?? {
           success: true,
           bridge: 'unknown',
           steamRunning: false,
@@ -385,7 +380,9 @@ async function runQueuedChange(
 
     restarting = true;
     progress({ phase: 'stop-steam' });
-    const result = await restartSteamOrchestrated({ verifyBridge: kind === 'activate' });
+    const { result, gap } = await restartSteamOrchestrated({
+      verifyBridge: kind === 'activate',
+    });
     if (!result.success) {
       return {
         success: false,
@@ -395,7 +392,7 @@ async function runQueuedChange(
         error: result.error,
       };
     }
-    const failure = outcomeFailure(kind, since);
+    const failure = outcomeFailure(kind, gap.millennium);
     if (failure) {
       return failure;
     }
@@ -407,7 +404,7 @@ async function runQueuedChange(
       steamRunning: true,
     };
   } finally {
-    setMillenniumPhaseListener(null);
+    appEvents.off('millennium-phase', onPhase);
   }
 }
 
@@ -562,7 +559,8 @@ function pruneLinuxRuntime(snapshot: HostSnapshot): void {
 }
 
 export function startMillenniumInstall(): void {
-  setMillenniumStateListener(() => void publishPluginHostState());
+  // The queue can apply an item long after the IPC call that queued it, so the UI needs its own push.
+  onPendingSteamActionsChanged(() => void publishPluginHostState());
   void (async () => {
     try {
       const snapshot = await getHostSnapshot();

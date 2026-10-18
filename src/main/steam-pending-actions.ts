@@ -1,14 +1,18 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { F } from '@mobily/ts-belt';
 import { Notification } from 'electron';
+import pLimit from 'p-limit';
+import { type Actor, createActor, fromPromise } from 'xstate';
 import { z } from 'zod';
+import { appEvents } from '@/main/app-events';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { getAllInstalledGameIds } from '@/main/installer/cache';
 import {
   applyQueuedMillenniumAction,
+  type MillenniumApplyReport,
   millenniumQueueContext,
-  notifyMillenniumStateChanged,
 } from '@/main/millennium-install/apply';
+import { type BridgeFacts, steamMonitorMachine } from '@/main/steam-monitor-machine';
 import { isCefFlagFilePresent } from '@/main/utils/cef-flag-file';
 import { detectMillennium } from '@/main/utils/millennium';
 import {
@@ -16,8 +20,8 @@ import {
   removeMillenniumPluginFiles,
   setMillenniumPluginEnabledInConfig,
 } from '@/main/utils/millennium-plugin';
-import { isMacOS, isWindows } from '@/main/utils/platform';
-import { getSteamBridgeStatus, onSteamBridgeReady } from '@/main/utils/steam-bridge';
+import { isMacOS } from '@/main/utils/platform';
+import { getSteamBridgeStatus } from '@/main/utils/steam-bridge';
 import {
   type WriteLaunchOptionsParams,
   writeSteamLaunchOptions,
@@ -27,13 +31,13 @@ import { waitForSteamGone } from '@/main/utils/steam-process';
 import {
   deleteStoreValue,
   isCefDebuggingEnabledInSettings,
+  onStoreValueChanged,
   readStoreValue,
   writeStoreValue,
 } from '@/main/utils/store-storage';
 import { getIcon } from '@/main/utils/theme';
 import { getMainWindow, sendToRenderer } from '@/main/window';
 import { errorMessage } from '@/shared/errors';
-import type { SteamBridgeStatusCode } from '@/shared/plugin-host-types';
 import { plural } from '@/shared/plural';
 
 const launchOptionsParamsSchema = z.object({
@@ -100,22 +104,18 @@ type PendingTrigger =
   | 'bridge-ready'
   | 'manual';
 
-interface PendingRunResult {
+export interface PendingRunResult {
   appliedGameIds: string[];
   failed: { gameId: string; reason: string }[];
+  millennium?: MillenniumApplyReport;
 }
 
 const QUEUE_KEY = 'pending-steam-actions';
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-const POLL_MS = isWindows() ? 15000 : 10000;
-// Idle wake-ups only read the store and stat a file; no process is spawned.
-const IDLE_MS = 60000;
 const STEAM_GONE_TIMEOUT_MS = 30000;
 const MILLENNIUM_MAX_ATTEMPTS = 5;
 // Steam and Millennium flush their configs right after the processes disappear.
 const EXIT_SETTLE_MS = 2000;
-// Slightly longer than the bridge's post-launch verification window.
-const POST_START_RECHECK_MS = 65000;
 
 // Stored items are kept as they are, unknown keys included; the schema only decides which survive.
 export function isPendingSteamAction(value: unknown): value is PendingSteamAction {
@@ -228,51 +228,18 @@ export function queueSteamAction(a: PendingSteamAction): void {
       `[PendingActions] Queued launch options for ${a.gameName} until Steam exits`
     );
     setImmediate(() => {
-      void refreshBridgeStatus();
+      void refreshBridgeFacts();
     });
   }
-  wakeMonitor();
+  monitor?.send({ type: 'WAKE' });
 }
 
 export function getPendingSteamActions(): PendingSteamAction[] {
   return readQueue();
 }
 
-const exitedListeners = new Set<() => Promise<void> | void>();
-const startedListeners = new Set<() => void>();
-
-export function onSteamExited(cb: () => Promise<void> | void): () => void {
-  exitedListeners.add(cb);
-  return () => {
-    exitedListeners.delete(cb);
-  };
-}
-
-export function onSteamStarted(cb: () => void): () => void {
-  startedListeners.add(cb);
-  return () => {
-    startedListeners.delete(cb);
-  };
-}
-
-async function fireExited(): Promise<void> {
-  for (const listener of exitedListeners) {
-    try {
-      await listener();
-    } catch (error) {
-      console.warn('[PendingActions] Steam exit listener failed:', error);
-    }
-  }
-}
-
-function fireStarted(): void {
-  for (const listener of startedListeners) {
-    try {
-      listener();
-    } catch (error) {
-      console.warn('[PendingActions] Steam start listener failed:', error);
-    }
-  }
+export function onPendingSteamActionsChanged(callback: () => void): () => void {
+  return onStoreValueChanged(QUEUE_KEY, callback);
 }
 
 function notifyApplied(names: string[], trigger: PendingTrigger): void {
@@ -325,7 +292,6 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
       millennium: millenniumQueueContext(),
     };
     const bumped = new Set<string>();
-    let millenniumChanged = false;
 
     for (const action of orderPendingQueue(queue)) {
       // Config edits need Steam off, which a live bridge implies it is not.
@@ -341,7 +307,6 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
       }
       if (decision === 'drop') {
         removed.add(actionKey(action));
-        millenniumChanged ||= isMillenniumInstallAction(action);
         console.log(
           `[PendingActions] Dropped stale ${action.kind}${action.kind === 'launch-options' ? ` for ${action.gameName}` : ''}`
         );
@@ -353,9 +318,9 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
         if (isSteamRunningSync() !== false) {
           continue;
         }
-        const outcome = applyQueuedMillenniumAction(action);
-        millenniumChanged = true;
-        if (outcome === 'retry') {
+        const report = applyQueuedMillenniumAction(action);
+        result.millennium = report;
+        if (report.outcome === 'retry') {
           bumped.add(actionKey(action));
         } else {
           removed.add(actionKey(action));
@@ -426,10 +391,7 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
               : a
           )
       );
-      void refreshBridgeStatus();
-    }
-    if (millenniumChanged) {
-      notifyMillenniumStateChanged();
+      void refreshBridgeFacts();
     }
     if (result.appliedGameIds.length > 0) {
       sendToRenderer('steam-pending-actions-applied', {
@@ -446,189 +408,130 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
   }
 
   if (trigger === 'steam-exit' || trigger === 'restart-gap') {
-    bridgeUp = false;
-    await fireExited();
+    appEvents.emit('steam-exited');
   }
   return result;
 }
 
-let batchChain: Promise<unknown> = Promise.resolve();
+const runSerially = pLimit(1);
 
 export function runPendingSteamActions(
   trigger: PendingTrigger
 ): Promise<PendingRunResult> {
-  const run = batchChain.then(() => runBatch(trigger));
-  batchChain = run.catch(() => undefined);
-  return run;
+  return runSerially(() => runBatch(trigger));
 }
 
-let started = false;
-let paused = 0;
-let timer: NodeJS.Timeout | null = null;
-let ticking = false;
-let lastRunning: boolean | null = null;
-let bridgeUp = false;
-let lastBridgeCode: SteamBridgeStatusCode | null = null;
-let bridgeCandidate = false;
+let monitor: Actor<typeof steamMonitorMachine> | null = null;
 
-async function refreshBridgeStatus(): Promise<void> {
+async function refreshBridgeFacts(): Promise<BridgeFacts | null> {
   try {
     const status = await getSteamBridgeStatus();
-    lastBridgeCode = status.code;
-    bridgeUp = status.transport !== null;
+    const bridge = { up: status.transport !== null, code: status.code };
+    monitor?.send({ type: 'BRIDGE_STATUS', bridge });
+    return bridge;
   } catch (error) {
     console.warn('[PendingActions] Steam bridge status refresh failed:', error);
+    return null;
   }
 }
 
 // Cheap predicate for "the bridge may be waiting for a Steam restart"; confirmed via the real status.
-function bridgeMayAwaitRestart(): boolean {
+function bridgeMayAwaitRestart(bridge: BridgeFacts): boolean {
   return (
-    !bridgeUp &&
-    lastBridgeCode !== 'cef-blocked' &&
+    !bridge.up &&
+    bridge.code !== 'cef-blocked' &&
     isCefDebuggingEnabledInSettings() &&
     isCefFlagFilePresent() &&
     !detectMillennium().blocksTcpCdp
   );
 }
 
-function needsSteamPolling(): boolean {
+function needsSteamPolling(bridge: BridgeFacts): boolean {
   if (readQueue().length > 0) {
     return true;
   }
-  return !bridgeUp && lastBridgeCode === 'restart-pending';
+  return !bridge.up && bridge.code === 'restart-pending';
 }
 
-function schedule(ms: number): void {
-  if (!started) {
-    return;
-  }
-  if (timer) {
-    clearTimeout(timer);
-  }
-  timer = setTimeout(() => {
-    void tick();
-  }, ms);
-}
-
-function wakeMonitor(): void {
-  if (started && !ticking) {
-    schedule(0);
-  }
-}
-
-const schedulePostStartRecheck = F.debounce(() => {
-  void refreshBridgeStatus().then(wakeMonitor);
-}, POST_START_RECHECK_MS);
-
-async function handleSteamStopped(): Promise<void> {
-  bridgeUp = false;
-  await waitForSteamGone(STEAM_GONE_TIMEOUT_MS);
-  await sleep(EXIT_SETTLE_MS);
-  if (await isSteamRunning()) {
-    console.log('[PendingActions] Steam came back before the queue could run');
-    await fireExited();
-    lastRunning = true;
-    fireStarted();
-    schedulePostStartRecheck();
-    return;
-  }
-  await runPendingSteamActions('steam-exit');
-}
-
-async function tick(): Promise<void> {
-  timer = null;
-  ticking = true;
-  try {
-    if (paused > 0) {
-      lastRunning = null;
-      return;
-    }
-    if (!needsSteamPolling()) {
-      lastRunning = null;
-      const candidate = bridgeMayAwaitRestart();
-      if (candidate && !bridgeCandidate) {
-        await refreshBridgeStatus();
-      }
-      bridgeCandidate = candidate;
-      if (!needsSteamPolling()) {
-        return;
-      }
-    }
-
-    const running = await isSteamRunning();
-    const previous = lastRunning;
-    lastRunning = running;
-    if (previous === null) {
-      if (!running && readQueue().length > 0) {
-        await handleSteamStopped();
-      }
-    } else if (previous && !running) {
-      console.log('[PendingActions] Steam exited');
-      await handleSteamStopped();
-    } else if (!previous && running) {
-      console.log('[PendingActions] Steam started');
-      fireStarted();
-      schedulePostStartRecheck();
-    }
-  } catch (error) {
-    console.warn('[PendingActions] Steam monitor tick failed:', error);
-  } finally {
-    ticking = false;
-    schedule(paused === 0 && needsSteamPolling() ? POLL_MS : IDLE_MS);
-  }
-}
-
-// LBK's own restart runs the queue in its gap; the monitor must not race it or see the exit twice.
-export function pauseSteamMonitor(): () => void {
-  paused += 1;
-  let resumed = false;
-  return () => {
-    if (resumed) {
-      return;
-    }
-    resumed = true;
-    paused -= 1;
-    if (paused === 0) {
-      lastRunning = null;
-      schedulePostStartRecheck();
-      wakeMonitor();
-    }
-  };
-}
-
-export function startPendingSteamActions(): void {
-  if (started) {
-    return;
-  }
-  started = true;
-
-  onSteamBridgeReady(() => {
-    bridgeUp = true;
-    if (readQueue().some((a) => a.kind === 'launch-options')) {
-      setImmediate(() => {
-        runPendingSteamActions('bridge-ready').catch((error) => {
-          console.warn('[PendingActions] Live apply failed:', error);
-        });
-      });
-    }
-  });
-
-  void (async () => {
-    ticking = true;
-    try {
+const monitorImpl = steamMonitorMachine.provide({
+  actors: {
+    startup: fromPromise(async () => {
       const running = await isSteamRunning();
       if (!running && readQueue().length > 0) {
         await runPendingSteamActions('startup');
       }
-      lastRunning = running;
-      await refreshBridgeStatus();
-      bridgeCandidate = bridgeMayAwaitRestart();
-    } catch (error) {
-      console.warn('[PendingActions] Startup check failed:', error);
-    } finally {
-      ticking = false;
-      schedule(needsSteamPolling() ? POLL_MS : IDLE_MS);
-    }
-  })();
+      const bridge = await refreshBridgeFacts();
+      return {
+        running,
+        candidate: bridgeMayAwaitRestart(bridge ?? { up: false, code: null }),
+      };
+    }),
+    probe: fromPromise(async ({ input }) => {
+      let bridge = input.bridge;
+      let candidate: boolean | null = null;
+      if (!needsSteamPolling(bridge)) {
+        candidate = bridgeMayAwaitRestart(bridge);
+        if (candidate && !input.candidate) {
+          bridge = (await refreshBridgeFacts()) ?? bridge;
+        }
+        if (!needsSteamPolling(bridge)) {
+          return { running: null, queued: false, candidate };
+        }
+      }
+      const running = await isSteamRunning();
+      return { running, queued: readQueue().length > 0, candidate };
+    }),
+    handleStopped: fromPromise(async () => {
+      await waitForSteamGone(STEAM_GONE_TIMEOUT_MS);
+      await sleep(EXIT_SETTLE_MS);
+      if (await isSteamRunning()) {
+        return 'came-back' as const;
+      }
+      await runPendingSteamActions('steam-exit');
+      return 'ran' as const;
+    }),
+    refreshBridge: fromPromise(() => refreshBridgeFacts()),
+  },
+  actions: {
+    fireStarted: () => {
+      appEvents.emit('steam-started');
+    },
+    fireExited: () => {
+      appEvents.emit('steam-exited');
+    },
+    applyLiveLaunchOptions: () => {
+      if (readQueue().some((a) => a.kind === 'launch-options')) {
+        setImmediate(() => {
+          runPendingSteamActions('bridge-ready').catch((error) => {
+            console.warn('[PendingActions] Live apply failed:', error);
+          });
+        });
+      }
+    },
+  },
+  guards: {
+    needsPolling: ({ context }) => needsSteamPolling(context.bridge),
+  },
+});
+
+// LBK's own restart runs the queue in its gap; the monitor must not race it or see the exit twice.
+export function pauseSteamMonitor(): () => void {
+  const paused = monitor;
+  paused?.send({ type: 'PAUSE' });
+  return F.once(() => {
+    paused?.send({ type: 'RESUME' });
+  });
+}
+
+export function startPendingSteamActions(): void {
+  if (monitor) {
+    return;
+  }
+  monitor = createActor(monitorImpl);
+  monitor.subscribe({
+    error: (error) => console.error('[PendingActions] Steam monitor stopped:', error),
+  });
+  appEvents.on('bridge-ready', () => monitor?.send({ type: 'BRIDGE_READY' }));
+  appEvents.on('steam-exited', () => monitor?.send({ type: 'STEAM_EXITED' }));
+  monitor.start();
 }

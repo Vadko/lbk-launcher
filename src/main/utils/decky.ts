@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { LRUCache } from 'lru-cache';
 import { z } from 'zod';
 import {
   type PluginManifest,
@@ -148,24 +149,26 @@ export function detectDeckyPluginSync(): Omit<DeckyInfo, 'installed' | 'running'
   return { homebrewDir, plugin: findInstalledPlugin(homebrewDir) };
 }
 
-let cache: { at: number; value: DeckyInfo | null } | null = null;
+// Boxed because the cache cannot hold null; concurrent callers share one loader probe.
+const detected = new LRUCache<'decky', { info: DeckyInfo | null }>({
+  max: 1,
+  ttl: DETECT_CACHE_MS,
+  ignoreFetchAbort: true,
+  fetchMethod: async () => {
+    const found = detectDeckyPluginSync();
+    return {
+      info: found ? { installed: true, running: await probeLoader(), ...found } : null,
+    };
+  },
+});
 
 export function resetDeckyDetectCache(): void {
-  cache = null;
+  detected.clear();
 }
 
 export async function detectDecky(): Promise<DeckyInfo | null> {
   if (!isLinux()) {
     return null;
   }
-  const now = Date.now();
-  if (cache && now - cache.at < DETECT_CACHE_MS && now >= cache.at) {
-    return cache.value;
-  }
-  const found = detectDeckyPluginSync();
-  const value: DeckyInfo | null = found
-    ? { installed: true, running: await probeLoader(), ...found }
-    : null;
-  cache = { at: now, value };
-  return value;
+  return (await detected.forceFetch('decky')).info;
 }

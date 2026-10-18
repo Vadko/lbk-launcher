@@ -1,9 +1,11 @@
 import * as fs from 'node:fs';
+import pMemoize from 'p-memoize';
 import { getFirstAvailableGamePath } from '@/main/game-detector';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { checkInstallation } from '@/main/installer/cache';
 import {
   getPendingSteamActions,
+  type PendingRunResult,
   pauseSteamMonitor,
   queueSteamAction,
   runPendingSteamActions,
@@ -20,26 +22,18 @@ import type {
 } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
 
-interface GapOutcome {
-  appliedGameIds: string[];
-  failed: { gameId: string; reason: string }[];
-}
-
 interface OrchestratedRestart {
   result: RestartSteamResult;
-  gap: GapOutcome;
+  gap: PendingRunResult;
 }
 
 const STEAM_START_TIMEOUT_MS = 30000;
 
-async function runGapWork(gap: GapOutcome): Promise<void> {
-  try {
-    const applied = await runPendingSteamActions('restart-gap');
-    gap.appliedGameIds = applied.appliedGameIds;
-    gap.failed = applied.failed;
-  } catch (error) {
+async function runGapWork(): Promise<PendingRunResult> {
+  const gap = await runPendingSteamActions('restart-gap').catch((error: unknown) => {
     console.warn('[PendingActions] Restart-gap queue run failed:', error);
-  }
+    return { appliedGameIds: [], failed: [] };
+  });
   if (isCefDebuggingEnabledInSettings()) {
     try {
       // Steam is off, so a missing flag file can be restored before it starts again.
@@ -48,14 +42,19 @@ async function runGapWork(gap: GapOutcome): Promise<void> {
       console.warn('[SteamBridge] Re-ensuring the CEF flag file failed:', error);
     }
   }
+  return gap;
 }
 
 async function orchestrate(verifyBridge: boolean): Promise<OrchestratedRestart> {
-  const gap: GapOutcome = { appliedGameIds: [], failed: [] };
+  let gap: PendingRunResult = { appliedGameIds: [], failed: [] };
   const resume = pauseSteamMonitor();
   let result: RestartSteamResult;
   try {
-    result = await restartSteamProcess({ beforeLaunch: () => runGapWork(gap) });
+    result = await restartSteamProcess({
+      beforeLaunch: async () => {
+        gap = await runGapWork();
+      },
+    });
     if (!result.success) {
       return { result, gap };
     }
@@ -81,21 +80,24 @@ async function orchestrate(verifyBridge: boolean): Promise<OrchestratedRestart> 
   return { result, gap };
 }
 
-let inFlight: Promise<OrchestratedRestart> | null = null;
-
-function orchestrateOnce(verifyBridge: boolean): Promise<OrchestratedRestart> {
-  if (!inFlight) {
-    inFlight = orchestrate(verifyBridge).finally(() => {
-      inFlight = null;
-    });
-  }
-  return inFlight;
-}
+// One restart at a time. Nothing inside orchestrate() may call restartSteamOrchestrated: it would wait on itself.
+const orchestrateOnce = pMemoize(orchestrate, {
+  cache: false,
+  cacheKey: () => 'restart',
+});
 
 export async function restartSteamOrchestrated(opts: {
   verifyBridge: boolean;
-}): Promise<RestartSteamResult> {
-  return (await orchestrateOnce(opts.verifyBridge)).result;
+}): Promise<OrchestratedRestart> {
+  const run = await orchestrateOnce(opts.verifyBridge);
+  // A caller that joined a restart started without verification still needs the bridge verdict.
+  if (opts.verifyBridge && run.result.success && run.result.bridge === undefined) {
+    return {
+      ...run,
+      result: { ...run.result, bridge: await verifyBridgeAfterLaunch('lbk-restart') },
+    };
+  }
+  return run;
 }
 
 function isQueuedFor(gameId: string): boolean {

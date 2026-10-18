@@ -685,7 +685,7 @@ export function setupGamesHandlers(): void {
 
   ipcMain.handle('restart-steam', async (): Promise<RestartSteamResult> => {
     try {
-      return await restartSteamOrchestrated({ verifyBridge: true });
+      return (await restartSteamOrchestrated({ verifyBridge: true })).result;
     } catch (error) {
       console.error('[Steam] Restart failed:', error);
       return {

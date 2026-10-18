@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { LRUCache } from 'lru-cache';
 import { NtExecutable, NtExecutableResource, Resource } from 'resedit';
 import { coerce } from 'semver';
 import { copyFileAtomic } from '@/main/utils/atomic-write';
@@ -134,7 +135,28 @@ export function applyWindowsRemoval(
   }
 }
 
-let dllVersionCache: { key: string; version: string | null } | null = null;
+function parseDllVersion(file: string): string | null {
+  try {
+    const exe = NtExecutable.from(fs.readFileSync(file), { ignoreCert: true });
+    const [info] = Resource.VersionInfo.fromEntries(
+      NtExecutableResource.from(exe).entries
+    );
+    const raw = info
+      ?.getAllLanguagesForStringValues()
+      .map((lang) => info.getStringValues(lang).FileVersion)
+      .find(Boolean);
+    return coerce(raw ?? null)?.version ?? null;
+  } catch (error) {
+    console.warn('[Millennium] Cannot read the millennium.dll version:', error);
+    return null;
+  }
+}
+
+// Keyed by path, size and mtime; boxed because the cache cannot hold null.
+const dllVersions = new LRUCache<string, { version: string | null }, string>({
+  max: 1,
+  memoMethod: (_key, _stale, { context }) => ({ version: parseDllVersion(context) }),
+});
 
 // Millennium on Windows updates itself in place, so the version LBK recorded at install goes stale.
 export function readMillenniumDllVersion(steamPath: string): string | null {
@@ -146,23 +168,5 @@ export function readMillenniumDllVersion(steamPath: string): string | null {
     return null;
   }
   const key = `${file}:${stat.size}:${stat.mtimeMs}`;
-  if (dllVersionCache?.key === key) {
-    return dllVersionCache.version;
-  }
-  let version: string | null = null;
-  try {
-    const exe = NtExecutable.from(fs.readFileSync(file), { ignoreCert: true });
-    const [info] = Resource.VersionInfo.fromEntries(
-      NtExecutableResource.from(exe).entries
-    );
-    const raw = info
-      ?.getAllLanguagesForStringValues()
-      .map((lang) => info.getStringValues(lang).FileVersion)
-      .find(Boolean);
-    version = coerce(raw ?? null)?.version ?? null;
-  } catch (error) {
-    console.warn('[Millennium] Cannot read the millennium.dll version:', error);
-  }
-  dllVersionCache = { key, version };
-  return version;
+  return dllVersions.memo(key, { context: file }).version;
 }

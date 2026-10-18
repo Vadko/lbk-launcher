@@ -71,7 +71,10 @@
     "mixpanel-browser": "2.83.0",
     "node-7z": "3.0.0",
     "node-machine-id": "1.1.12",
+    "p-limit": "7.3.3",
+    "p-memoize": "8.0.0",
     "p-timeout": "7.0.2",
+    "p-wait-for": "6.0.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-lazy-load-image-component": "^1.6.3",
@@ -85,6 +88,7 @@
     "tar": "7.5.22",
     "write-file-atomic": "8.0.0",
     "ws": "8.22.0",
+    "xstate": "5.33.2",
     "zod": "4.6.5",
     "zustand": "5.0.15"
   },
