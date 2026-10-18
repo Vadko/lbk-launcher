@@ -16,6 +16,7 @@ import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';
 import { ShareModal } from '../Modal/ShareModal';
 import { Button } from '../ui/Button';
+import { DiscountBadges } from '../ui/DiscountBadges';
 
 interface GameHeroProps {
   game: Game;
@@ -206,6 +207,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           </motion.div>
         )}
         <div className="absolute bottom-4 right-4 flex gap-2">
+          <DiscountBadges game={game} />
           <div className="hidden sm:block w-0 h-10 my-auto border-l border-border-hover mx-2 last:hidden first:hidden" />
           <Button
             variant="secondary"
