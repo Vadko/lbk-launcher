@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { AchievementsBadge, MillenniumUnsupportedReason } from '@/shared/types';
+import type {
+  AchievementsBadge,
+  MillenniumUnsupportedReason,
+} from '@/shared/plugin-host-types';
 import {
   achievementsBadgeDetail,
   activationOutcome,

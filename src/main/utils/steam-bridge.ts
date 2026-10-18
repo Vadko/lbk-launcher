@@ -2,6 +2,7 @@ import { hash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { z } from 'zod';
 import { getSteamPath } from '@/main/game-detector/steam';
 import {
   deckyStateFor,
@@ -42,10 +43,10 @@ import {
 import { sendToRenderer } from '@/main/window';
 import { errorMessage } from '@/shared/errors';
 import type {
-  SteamBridgeFailure,
   SteamBridgeStatus,
   SteamBridgeStatusCode,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
+import type { SteamBridgeFailure } from '@/shared/types';
 
 type SteamBridgeTransport = 'cdp' | 'plugin';
 
@@ -59,12 +60,15 @@ export interface SteamBridge {
 
 type VerifyOutcome = 'ready' | 'blocked' | 'unknown';
 
-interface BridgeVerdict {
-  verdict: 'blocked-no-port';
-  fingerprint: string;
-  decidedAt: string;
-  evidence: string[];
-}
+// Main-only key, but the renderer's generic store setter can write any name, so the shape is checked.
+const bridgeVerdictSchema = z.object({
+  verdict: z.literal('blocked-no-port'),
+  fingerprint: z.string(),
+  decidedAt: z.string(),
+  evidence: z.array(z.string()),
+});
+
+type BridgeVerdict = z.infer<typeof bridgeVerdictSchema>;
 
 const VERDICT_KEY = 'steam-bridge-verdict';
 const PROMPTED_KEY = 'steam-restart-prompted';
@@ -162,14 +166,14 @@ function steamClientMtimeMs(): number | null {
   if (!steamPath) {
     return null;
   }
-  const candidates = forCurrentOS({
+  const candidates = forCurrentOS<string[]>({
     windows: ['steamclient64.dll', 'steamclient.dll'],
     linux: ['ubuntu12_32/steamclient.so'],
     macos: [
       'Steam.AppBundle/Steam/Contents/MacOS/steamclient.dylib',
       'steamclient.dylib',
     ],
-    other: [] as string[],
+    other: [],
   });
   for (const candidate of candidates) {
     try {
@@ -189,30 +193,17 @@ function currentFingerprint(): string {
   });
 }
 
-// Main-only key, but the renderer's generic store setter can write any name, so the shape is checked.
-function isBridgeVerdict(value: unknown): value is BridgeVerdict {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const v = value as Record<string, unknown>;
-  return (
-    v.verdict === 'blocked-no-port' &&
-    typeof v.fingerprint === 'string' &&
-    typeof v.decidedAt === 'string' &&
-    Array.isArray(v.evidence)
-  );
-}
-
 function readVerdict(fingerprint: string): BridgeVerdict | null {
   const raw = readStoreValue(VERDICT_KEY);
   if (raw === undefined) {
     return null;
   }
-  if (!isBridgeVerdict(raw) || raw.fingerprint !== fingerprint) {
+  const verdict = bridgeVerdictSchema.safeParse(raw).data;
+  if (verdict?.fingerprint !== fingerprint) {
     deleteStoreValue(VERDICT_KEY);
     return null;
   }
-  return raw;
+  return verdict;
 }
 
 function clearVerdict(): void {

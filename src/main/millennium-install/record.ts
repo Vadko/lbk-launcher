@@ -1,102 +1,60 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { G } from '@mobily/ts-belt';
+import { z } from 'zod';
 import { writeFileAtomic } from '@/main/utils/atomic-write';
+import { readJsonFile } from '@/main/utils/json-file';
 import { LINK_BACKUP_SUFFIX, LINUX_LINK_RELS } from './linux';
 import { LINUX_ENV_FILE_NAME, MAC_WRAPPER_APP } from './paths';
 import type { MillenniumOs } from './release';
 
-type MillenniumInstallMode = 'windows' | 'linux-user' | 'macos-wrapper';
+const INSTALL_RECORD_FILE = '.lbk-install.json';
 
-export interface MillenniumInstallRecord {
-  format: 1;
-  os: MillenniumOs;
-  mode: MillenniumInstallMode;
-  tag: string;
-  version: string;
-  activatedAt: string;
-  steamPath: string;
-  // Linux: pre-existing regular files (Valve's own libXtst) moved aside before linking.
-  xtstBackups: { link: string; backup: string }[];
-  runtimeDir?: string;
-  envFile?: string;
-  appBundle?: string;
-}
-
-const RECORD_FILE = '.lbk-install.json';
-
-const MODE_FOR_OS: Record<MillenniumOs, MillenniumInstallMode> = {
-  windows: 'windows',
-  linux: 'linux-user',
-  macos: 'macos-wrapper',
-};
-
-function optionalString(value: unknown): boolean {
-  return value === undefined || (typeof value === 'string' && value.length > 0);
-}
-
-function isPlainAbsolute(value: string): boolean {
-  return (
-    path.posix.isAbsolute(value) && !value.split('/').some((segment) => segment === '..')
-  );
-}
+const nonEmpty = z.string().min(1);
 
 // These paths are later deleted or renamed, and the record sits where any Millennium plugin can write.
-function optionalPath(value: unknown, valid: (p: string) => boolean): boolean {
-  return value === undefined || (typeof value === 'string' && valid(value));
-}
+const plainAbsolutePath = z
+  .string()
+  .refine((p) => path.posix.isAbsolute(p) && !p.split('/').includes('..'));
 
-function isWrapperAppPath(p: string): boolean {
-  return (
-    isPlainAbsolute(p) &&
-    path.posix.basename(p) === MAC_WRAPPER_APP &&
-    path.posix.basename(path.posix.dirname(p)) === 'Applications'
+const linkBackup = z
+  .object({ link: plainAbsolutePath, backup: z.string() })
+  .refine(
+    ({ link, backup }) =>
+      LINUX_LINK_RELS.some((rel) => link.endsWith(`/.steam/steam/${rel}`)) &&
+      backup === `${link}${LINK_BACKUP_SUFFIX}`
   );
-}
 
-function isEnvFilePath(p: string): boolean {
-  return isPlainAbsolute(p) && p.endsWith(`/environment.d/${LINUX_ENV_FILE_NAME}`);
-}
+const recordFields = {
+  format: z.literal(1),
+  tag: nonEmpty,
+  version: nonEmpty,
+  activatedAt: nonEmpty,
+  steamPath: nonEmpty,
+  // Linux: pre-existing regular files (Valve's own libXtst) moved aside before linking.
+  xtstBackups: z.array(linkBackup),
+  runtimeDir: nonEmpty.optional(),
+  envFile: plainAbsolutePath
+    .refine((p) => p.endsWith(`/environment.d/${LINUX_ENV_FILE_NAME}`))
+    .optional(),
+  appBundle: plainAbsolutePath
+    .refine(
+      (p) =>
+        path.posix.basename(p) === MAC_WRAPPER_APP &&
+        path.posix.basename(path.posix.dirname(p)) === 'Applications'
+    )
+    .optional(),
+};
 
-function isLinkBackup(b: unknown): boolean {
-  if (!G.isObject(b) || typeof b.link !== 'string' || typeof b.backup !== 'string') {
-    return false;
-  }
-  const link = b.link;
-  return (
-    isPlainAbsolute(link) &&
-    LINUX_LINK_RELS.some((rel) => link.endsWith(`/.steam/steam/${rel}`)) &&
-    b.backup === `${link}${LINK_BACKUP_SUFFIX}`
-  );
-}
+const installRecordSchema = z.discriminatedUnion('os', [
+  z.object({ ...recordFields, os: z.literal('windows'), mode: z.literal('windows') }),
+  z.object({ ...recordFields, os: z.literal('linux'), mode: z.literal('linux-user') }),
+  z.object({ ...recordFields, os: z.literal('macos'), mode: z.literal('macos-wrapper') }),
+]);
+
+export type MillenniumInstallRecord = z.infer<typeof installRecordSchema>;
 
 export function parseInstallRecord(raw: unknown): MillenniumInstallRecord | null {
-  if (!G.isObject(raw) || raw.format !== 1) {
-    return null;
-  }
-  const os = raw.os;
-  if (os !== 'windows' && os !== 'linux' && os !== 'macos') {
-    return null;
-  }
-  if (raw.mode !== MODE_FOR_OS[os]) {
-    return null;
-  }
-  for (const key of ['tag', 'version', 'activatedAt', 'steamPath'] as const) {
-    if (typeof raw[key] !== 'string' || raw[key] === '') {
-      return null;
-    }
-  }
-  if (!optionalString(raw.runtimeDir) || !optionalPath(raw.envFile, isEnvFilePath)) {
-    return null;
-  }
-  if (!optionalPath(raw.appBundle, isWrapperAppPath)) {
-    return null;
-  }
-  const backups = raw.xtstBackups;
-  if (!Array.isArray(backups) || !backups.every(isLinkBackup)) {
-    return null;
-  }
-  return raw as unknown as MillenniumInstallRecord;
+  return installRecordSchema.safeParse(raw).data ?? null;
 }
 
 function normalizeSteamPath(os: MillenniumOs, value: string): string {
@@ -122,17 +80,13 @@ export function managedByFor(
     : 'external';
 }
 
-// The record lives inside Millennium's own data root so it survives LBK's clear-all-data.
+// The record describes this Steam's Millennium files, so it lives and dies with them.
 export function recordPathIn(millenniumRoot: string): string {
-  return path.join(millenniumRoot, RECORD_FILE);
+  return path.join(millenniumRoot, INSTALL_RECORD_FILE);
 }
 
 export function readInstallRecord(file: string): MillenniumInstallRecord | null {
-  try {
-    return parseInstallRecord(JSON.parse(fs.readFileSync(file, 'utf8')));
-  } catch {
-    return null;
-  }
+  return readJsonFile(file, installRecordSchema);
 }
 
 export function writeInstallRecord(file: string, record: MillenniumInstallRecord): void {

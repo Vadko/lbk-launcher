@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SteamBridgeStatus } from '@/shared/types';
+import type { SteamBridgeStatus } from '@/shared/plugin-host-types';
 
 interface SteamBridgeStatusStore {
   status: SteamBridgeStatus | null;

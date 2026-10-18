@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { SteamBridgeStatus } from '@/shared/types';
+import type { SteamBridgeStatus } from '@/shared/plugin-host-types';
 import { useSteamBridgeStatusStore } from '../store/useSteamBridgeStatusStore';
 
 interface UseSteamBridgeStatusResult {

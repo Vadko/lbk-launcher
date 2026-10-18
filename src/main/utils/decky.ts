@@ -2,9 +2,14 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { G } from '@mobily/ts-belt';
+import { z } from 'zod';
+import {
+  type PluginManifest,
+  readPluginManifest,
+} from '@/main/plugin-host/plugin-manifest';
 import { compareVersions } from '@/shared/version';
 import { readTextOrNull } from './fs-safe';
+import { readJsonFile } from './json-file';
 import { isLinux } from './platform';
 
 // plugin.json "name"; Decky addresses the plugin by it and its install prompt must pass the same value.
@@ -35,19 +40,18 @@ export function parseUnprivilegedPath(unit: string): string | null {
 }
 
 export function findPluginDir(
-  entries: readonly { dir: string; pluginJson: unknown }[]
+  entries: readonly { dir: string; pluginJson: PluginManifest | null }[]
 ): string | null {
-  const found = entries.find(
-    (entry) => G.isObject(entry.pluginJson) && entry.pluginJson.name === DECKY_PLUGIN_NAME
-  );
+  const found = entries.find((entry) => entry.pluginJson?.name === DECKY_PLUGIN_NAME);
   return found?.dir ?? null;
 }
 
-export function isPluginDisabled(loaderJson: unknown): boolean {
-  if (!G.isObject(loaderJson) || !Array.isArray(loaderJson.disabled_plugins)) {
-    return false;
-  }
-  return loaderJson.disabled_plugins.includes(DECKY_PLUGIN_NAME);
+const loaderSettingsSchema = z.object({ disabled_plugins: z.array(z.unknown()) });
+
+export function isPluginDisabled(
+  loaderJson: z.infer<typeof loaderSettingsSchema> | null
+): boolean {
+  return loaderJson?.disabled_plugins.includes(DECKY_PLUGIN_NAME) ?? false;
 }
 
 // Must stay inside what the deckyRequestInstall op accepts: Decky opens it as root.
@@ -72,14 +76,6 @@ export function deckyInstallType(
     return 0;
   }
   return plugin.version === null || compareVersions(plugin.version, current) < 0 ? 2 : 1;
-}
-
-function readJson(file: string): unknown {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return null;
-  }
 }
 
 function homebrewDirFor(home: string): string {
@@ -124,19 +120,21 @@ function findInstalledPlugin(homebrewDir: string): DeckyInfo['plugin'] {
   const dir = findPluginDir(
     names.map((name) => ({
       dir: path.join(pluginsDir, name),
-      pluginJson: readJson(path.join(pluginsDir, name, 'plugin.json')),
+      pluginJson: readPluginManifest(path.join(pluginsDir, name, 'plugin.json')),
     }))
   );
   if (!dir) {
     return { installed: false, dir: null, version: null, disabled: false };
   }
-  const pkg = readJson(path.join(dir, 'package.json'));
   return {
     installed: true,
     dir,
-    version: G.isObject(pkg) && typeof pkg.version === 'string' ? pkg.version : null,
+    version: readPluginManifest(path.join(dir, 'package.json'))?.version ?? null,
     disabled: isPluginDisabled(
-      readJson(path.join(homebrewDir, 'settings', 'loader.json'))
+      readJsonFile(
+        path.join(homebrewDir, 'settings', 'loader.json'),
+        loaderSettingsSchema
+      )
     ),
   };
 }

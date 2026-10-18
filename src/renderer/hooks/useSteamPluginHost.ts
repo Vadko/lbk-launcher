@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { PluginHostState } from '@/shared/types';
+import type { PluginHostState } from '@/shared/plugin-host-types';
 
 interface UseSteamPluginHostResult {
   state: PluginHostState | null;

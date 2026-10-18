@@ -70,7 +70,7 @@ import type {
   MillenniumInstallResult,
   MillenniumProgress,
   PluginHostState,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
 
 const execFileAsync = promisify(execFile);
 

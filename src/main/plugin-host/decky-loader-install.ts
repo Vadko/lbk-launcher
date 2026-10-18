@@ -21,7 +21,7 @@ import {
 import { isFlatpak } from '@/main/utils/host-exec';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
 import { errorMessage } from '@/shared/errors';
-import type { DeckyLoaderInstallResult } from '@/shared/types';
+import type { DeckyLoaderInstallResult } from '@/shared/plugin-host-types';
 
 // Decky's own installer, pinned like Millennium; it downloads the latest PluginLoader release itself.
 const DECKY_INSTALLER = {

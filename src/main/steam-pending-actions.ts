@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { F } from '@mobily/ts-belt';
 import { Notification } from 'electron';
+import { z } from 'zod';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { getAllInstalledGameIds } from '@/main/installer/cache';
 import {
@@ -32,22 +33,46 @@ import {
 import { getIcon } from '@/main/utils/theme';
 import { getMainWindow, sendToRenderer } from '@/main/window';
 import { errorMessage } from '@/shared/errors';
+import type { SteamBridgeStatusCode } from '@/shared/plugin-host-types';
 import { plural } from '@/shared/plural';
-import type { SteamBridgeStatusCode } from '@/shared/types';
 
-export type PendingSteamAction =
-  | {
-      kind: 'launch-options';
-      gameId: string;
-      gameName: string;
-      accountId: string | null;
-      params: WriteLaunchOptionsParams;
-      queuedAt: string;
-    }
-  | { kind: 'millennium-plugin'; enable: boolean; queuedAt: string }
-  // No paths in these: the store key is renderer-writable, so main derives staging and mode itself.
-  | { kind: 'millennium-activate'; tag: string; queuedAt: string; attempts: number }
-  | { kind: 'millennium-deactivate'; purge: boolean; queuedAt: string; attempts: number };
+const launchOptionsParamsSchema = z.object({
+  appId: z.int().positive(),
+  windowsOptions: z.string().nullable(),
+  linuxOptions: z.string().nullable(),
+  macosOptions: z.string().nullable(),
+  gamePath: z.string().nullish(),
+}) satisfies z.ZodType<WriteLaunchOptionsParams>;
+
+const queuedAt = z.string();
+const attempts = z.int().nonnegative();
+
+// The store key is renderer-writable: Millennium items carry no paths and reject extra keys, main derives the rest.
+const pendingSteamActionSchema = z.discriminatedUnion('kind', [
+  z.looseObject({
+    kind: z.literal('launch-options'),
+    gameId: z.string(),
+    gameName: z.string(),
+    accountId: z.string().nullable(),
+    params: launchOptionsParamsSchema,
+    queuedAt,
+  }),
+  z.looseObject({ kind: z.literal('millennium-plugin'), enable: z.boolean(), queuedAt }),
+  z.strictObject({
+    kind: z.literal('millennium-activate'),
+    tag: z.string().regex(/^[\w.-]{1,64}$/),
+    queuedAt,
+    attempts,
+  }),
+  z.strictObject({
+    kind: z.literal('millennium-deactivate'),
+    purge: z.boolean(),
+    queuedAt,
+    attempts,
+  }),
+]);
+
+export type PendingSteamAction = z.infer<typeof pendingSteamActionSchema>;
 
 type MillenniumInstallAction = Extract<
   PendingSteamAction,
@@ -73,61 +98,14 @@ const POLL_MS = isWindows() ? 15000 : 10000;
 const IDLE_MS = 60000;
 const STEAM_GONE_TIMEOUT_MS = 30000;
 const MILLENNIUM_MAX_ATTEMPTS = 5;
-const ACTIVATE_KEYS = ['kind', 'tag', 'queuedAt', 'attempts'];
-const DEACTIVATE_KEYS = ['kind', 'purge', 'queuedAt', 'attempts'];
 // Steam and Millennium flush their configs right after the processes disappear.
 const EXIT_SETTLE_MS = 2000;
 // Slightly longer than the bridge's post-launch verification window.
 const POST_START_RECHECK_MS = 65000;
 
-function isLaunchOptionsParams(value: unknown): value is WriteLaunchOptionsParams {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const p = value as Record<string, unknown>;
-  const optional = (v: unknown) => v === null || typeof v === 'string';
-  return (
-    typeof p.appId === 'number' &&
-    Number.isInteger(p.appId) &&
-    p.appId > 0 &&
-    optional(p.windowsOptions) &&
-    optional(p.linuxOptions) &&
-    optional(p.macosOptions) &&
-    (p.gamePath === undefined || optional(p.gamePath))
-  );
-}
-
-// Main-only key, but the renderer's generic store setter can write any name, so the shape is checked.
+// The schema has no transforms, so a valid item is already its own parsed output.
 export function isPendingSteamAction(value: unknown): value is PendingSteamAction {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const a = value as Record<string, unknown>;
-  if (typeof a.queuedAt !== 'string') {
-    return false;
-  }
-  if (a.kind === 'millennium-plugin') {
-    return typeof a.enable === 'boolean';
-  }
-  if (a.kind === 'millennium-activate' || a.kind === 'millennium-deactivate') {
-    const allowed = a.kind === 'millennium-activate' ? ACTIVATE_KEYS : DEACTIVATE_KEYS;
-    return (
-      Object.keys(a).every((key) => allowed.includes(key)) &&
-      typeof a.attempts === 'number' &&
-      Number.isInteger(a.attempts) &&
-      a.attempts >= 0 &&
-      (a.kind === 'millennium-activate'
-        ? typeof a.tag === 'string' && /^[\w.-]{1,64}$/.test(a.tag)
-        : typeof a.purge === 'boolean')
-    );
-  }
-  return (
-    a.kind === 'launch-options' &&
-    typeof a.gameId === 'string' &&
-    typeof a.gameName === 'string' &&
-    (a.accountId === null || typeof a.accountId === 'string') &&
-    isLaunchOptionsParams(a.params)
-  );
+  return pendingSteamActionSchema.safeParse(value).success;
 }
 
 function readQueue(): PendingSteamAction[] {

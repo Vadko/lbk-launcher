@@ -6,6 +6,7 @@ import path from 'path';
 import { HKEY } from 'registry-js';
 import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
+import { z } from 'zod';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { execFileOnHost, isFlatpak, system32 } from '@/main/utils/host-exec';
 import { forCurrentOS, isLinux, isMacOS, isWindows } from '@/main/utils/platform';
@@ -136,9 +137,23 @@ export function parsePsOutput(
   return rows;
 }
 
+const win32ProcessSchema = z
+  .object({
+    ProcessId: z.number(),
+    Name: z.string(),
+    ParentProcessId: z.number().catch(0),
+    CommandLine: z.string().nullable().catch(null),
+  })
+  .transform((p) => ({
+    pid: p.ProcessId,
+    ppid: p.ParentProcessId,
+    name: p.Name,
+    args: p.CommandLine,
+  }));
+
 export function parseWin32ProcessJson(
   stdout: string
-): { pid: number; ppid: number; name: string; args: string | null }[] {
+): z.infer<typeof win32ProcessSchema>[] {
   const text = stdout.replace(/^\uFEFF/, '').trim();
   if (!text) {
     return [];
@@ -151,24 +166,10 @@ export function parseWin32ProcessJson(
     return [];
   }
 
-  const items = Array.isArray(parsed) ? parsed : [parsed];
-  const rows: { pid: number; ppid: number; name: string; args: string | null }[] = [];
-  for (const item of items) {
-    if (!item || typeof item !== 'object') {
-      continue;
-    }
-    const record = item as Record<string, unknown>;
-    if (typeof record.ProcessId !== 'number' || typeof record.Name !== 'string') {
-      continue;
-    }
-    rows.push({
-      pid: record.ProcessId,
-      ppid: typeof record.ParentProcessId === 'number' ? record.ParentProcessId : 0,
-      name: record.Name,
-      args: typeof record.CommandLine === 'string' ? record.CommandLine : null,
-    });
-  }
-  return rows;
+  // A single process comes back as a bare object, not a one-element array.
+  return (Array.isArray(parsed) ? parsed : [parsed]).flatMap(
+    (item) => win32ProcessSchema.safeParse(item).data ?? []
+  );
 }
 
 type SteamProcessKind = 'steam' | 'webhelper' | 'other';

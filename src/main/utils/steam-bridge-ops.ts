@@ -111,7 +111,7 @@ _assertNever<Exclude<PluginOnlyOpName, (typeof PLUGIN_ONLY_OPS)[number]>>();
 _assertNever<Exclude<(typeof PLUGIN_ONLY_OPS)[number], PluginOnlyOpName>>();
 
 export function isPluginOnlyOp(op: SteamOpName): op is PluginOnlyOpName {
-  return (PLUGIN_ONLY_OPS as readonly string[]).includes(op);
+  return PLUGIN_ONLY_OPS.some((name) => name === op);
 }
 
 // Evaluated over CDP and inlined into the Millennium plugin: no backticks, no interpolation.

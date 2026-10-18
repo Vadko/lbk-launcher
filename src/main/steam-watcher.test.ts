@@ -28,6 +28,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
 
 let root: string;
 const send = vi.fn();
+// eslint-disable-next-line no-restricted-syntax -- a test double that implements only webContents.send
 const mainWindow = { webContents: { send } } as unknown as Electron.BrowserWindow;
 
 // Steam writes these files to a temp name and renames it over the original

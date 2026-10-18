@@ -14,8 +14,8 @@ import {
   Volume2Icon,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { AchievementsBadge } from '../../../shared/plugin-host-types';
 import type {
-  AchievementsBadge,
   Game,
   GamePath,
   InstallationInfo,

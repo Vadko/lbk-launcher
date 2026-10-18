@@ -1,6 +1,6 @@
 import { CircleCheckIcon, ClockIcon, EyeOffIcon, TriangleAlertIcon } from 'lucide-react';
 import React from 'react';
-import type { AchievementsBadge } from '@/shared/types';
+import type { AchievementsBadge } from '@/shared/plugin-host-types';
 import { achievementsBadgeDetail } from '../../utils/steamPluginHost';
 
 type BadgeTone = 'success' | 'neutral' | 'warning' | 'muted';

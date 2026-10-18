@@ -15,7 +15,7 @@ import {
 import { MILLENNIUM_PLUGIN_NAME } from '@/main/utils/millennium-plugin';
 import { getPlatform } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';
-import type { MillenniumFailure } from '@/shared/types';
+import type { MillenniumFailure } from '@/shared/plugin-host-types';
 import {
   applyLinuxLinks,
   LINUX_RUNTIME_LIB,

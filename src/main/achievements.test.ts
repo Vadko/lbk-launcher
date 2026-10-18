@@ -281,8 +281,9 @@ describe('startup', () => {
       version: '1.0.0',
       installedAt: '2026-01-01T00:00:00.000Z',
       gamePath,
+      installedPlatform: 'steam',
       components: {
-        text: { installed: true, files: [] },
+        text: { installed: true, files: ['a.txt'] },
         achievements: { installed: true, files: [file], archiveHash: 'h' },
       },
     };
@@ -309,6 +310,16 @@ describe('startup', () => {
       });
     });
     expect(readAch(path.join(gamePath, '.lbk-translation.json')).files).toEqual([]);
+    for (const copy of [
+      path.join(cacheDir, 'game-a.json'),
+      path.join(gamePath, '.lbk-translation.json'),
+    ]) {
+      expect(JSON.parse(fs.readFileSync(copy, 'utf8'))).toMatchObject({
+        version: '1.0.0',
+        installedPlatform: 'steam',
+        components: { text: { installed: true, files: ['a.txt'] } },
+      });
+    }
     expect(fs.readFileSync(statsFile(file))).toEqual(OFFICIAL());
     expect(hasAchievementStrings([400], 'game-a')).toBe(true);
     await vi.waitFor(() => expect(fs.existsSync(stringsFile(500))).toBe(false));

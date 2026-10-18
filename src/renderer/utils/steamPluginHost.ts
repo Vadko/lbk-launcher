@@ -4,7 +4,7 @@ import type {
   MillenniumInstallResult,
   MillenniumProgress,
   MillenniumUnsupportedReason,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
 
 const DECKY_URL = 'https://decky.xyz';
 

@@ -36,7 +36,9 @@ function makeSteamClient() {
         )
       ),
       SubscribeWorkshopItem: steamCall(),
-      AddShortcut: vi.fn((..._args: unknown[]) => Promise.resolve(SHORTCUT_ID)),
+      AddShortcut: vi.fn((..._args: unknown[]) =>
+        Promise.resolve<number | undefined>(SHORTCUT_ID)
+      ),
       SetShortcutName: steamCall(),
       SetShortcutExe: steamCall(),
       SetShortcutStartDir: steamCall(),
@@ -295,7 +297,7 @@ describe('ops against stubbed Steam', () => {
     expect(steam.Apps.SetShortcutIcon).toHaveBeenCalledWith(SHORTCUT_ID, '/a/icon.png');
     expect(steam.Apps.SetShortcutLaunchOptions).toHaveBeenCalledWith(SHORTCUT_ID, '');
 
-    steam.Apps.AddShortcut.mockResolvedValueOnce(undefined as unknown as number);
+    steam.Apps.AddShortcut.mockResolvedValueOnce(undefined);
     await expect(
       ops.addShortcut({ exe: '"/a/lbk"', startDir: '"/a"', launchOptions: '' })
     ).rejects.toThrow('AddShortcut returned undefined');

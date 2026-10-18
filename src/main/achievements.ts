@@ -3,6 +3,7 @@ import { hash } from 'crypto';
 import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { GamesRepository } from '@/main/db/games-repository';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { extractArchive } from '@/main/installer/archive';
@@ -26,6 +27,7 @@ import {
 } from '@/main/utils/achievement-strings';
 import { writeFileAtomic } from '@/main/utils/atomic-write';
 import { readFileOrNull } from '@/main/utils/fs-safe';
+import { readJsonFile } from '@/main/utils/json-file';
 import { writeBridgePluginData } from '@/main/utils/plugin-data';
 import {
   invokeViaPlugin,
@@ -37,22 +39,57 @@ import {
   readStoreValue,
   writeStoreValue,
 } from '@/main/utils/store-storage';
-import type {
-  AchievementsComponent,
-  AchievementsDelivery,
-  Game,
-  InstallationInfo,
-} from '@/shared/types';
+import type { AchievementsDelivery } from '@/shared/plugin-host-types';
+import type { AchievementsComponent, Game } from '@/shared/types';
 
 type AchievementStrings = ExtractedAchievementStrings['strings'];
 
-interface StoredAchievementStrings {
-  format: 1;
-  appid: number;
-  gameId: string;
-  archiveHash: string | null;
-  strings: AchievementStrings;
+const achievementText = z.string().min(1).optional().catch(undefined);
+const storedEntrySchema = z.object({ name: achievementText, desc: achievementText });
+
+// A malformed entry is skipped, not fatal: the rest of the app's strings still reach Steam.
+function cleanStrings(raw: Record<string, unknown>): AchievementStrings {
+  const out: AchievementStrings = Object.create(null);
+  for (const [apiName, value] of Object.entries(raw)) {
+    const { name, desc } = storedEntrySchema.safeParse(value).data ?? {};
+    if (name !== undefined || desc !== undefined) {
+      out[apiName] = {
+        ...(name !== undefined ? { name } : {}),
+        ...(desc !== undefined ? { desc } : {}),
+      };
+    }
+  }
+  return out;
 }
+
+const storedStringsSchema = z.object({
+  format: z.literal(1),
+  appid: z.number(),
+  gameId: z.string(),
+  archiveHash: z.string().nullable().catch(null),
+  strings: z.record(z.string(), z.unknown()).transform(cleanStrings),
+});
+
+type StoredAchievementStrings = z.infer<typeof storedStringsSchema>;
+
+const achievementsComponentSchema = z.looseObject({
+  installed: z.boolean(),
+  files: z.array(z.string()),
+  archiveHash: z.string().optional(),
+  appIds: z.array(z.number()).optional(),
+});
+
+// Rewritten in place, so every field this module does not read must survive the round trip.
+const installationRecordSchema = z.looseObject({
+  gameId: z.string(),
+  gamePath: z.string(),
+  components: z
+    .looseObject({ achievements: achievementsComponentSchema.optional() })
+    .optional(),
+});
+
+type InstallationRecord = z.infer<typeof installationRecordSchema>;
+type AchievementsComponentRecord = z.infer<typeof achievementsComponentSchema>;
 
 const STRINGS_DIR_NAME = 'achievement-strings';
 const SCHEMA_FILE = /^UserGameStatsSchema_(\d+)\.bin$/i;
@@ -79,56 +116,12 @@ function schemaFileAppId(file: string): number | null {
   return Number.isSafeInteger(appId) && appId > 0 ? appId : null;
 }
 
-function sanitizeStrings(raw: unknown): AchievementStrings | null {
-  if (!G.isObject(raw)) {
-    return null;
-  }
-  const out: AchievementStrings = Object.create(null);
-  for (const [apiName, entry] of Object.entries(raw)) {
-    if (!G.isObject(entry)) {
-      continue;
-    }
-    const name = typeof entry.name === 'string' && entry.name ? entry.name : undefined;
-    const desc = typeof entry.desc === 'string' && entry.desc ? entry.desc : undefined;
-    if (name !== undefined || desc !== undefined) {
-      out[apiName] = {
-        ...(name !== undefined ? { name } : {}),
-        ...(desc !== undefined ? { desc } : {}),
-      };
-    }
-  }
-  return out;
-}
-
 function readStoredStrings(appId: number): StoredAchievementStrings | null {
-  const raw = readFileOrNull(path.join(getStringsDir(), `${appId}.json`));
-  if (!raw) {
-    return null;
-  }
-  try {
-    const parsed: unknown = JSON.parse(raw.toString('utf8'));
-    if (
-      !G.isObject(parsed) ||
-      parsed.format !== 1 ||
-      parsed.appid !== appId ||
-      typeof parsed.gameId !== 'string'
-    ) {
-      return null;
-    }
-    const strings = sanitizeStrings(parsed.strings);
-    if (!strings) {
-      return null;
-    }
-    return {
-      format: 1,
-      appid: appId,
-      gameId: parsed.gameId,
-      archiveHash: typeof parsed.archiveHash === 'string' ? parsed.archiveHash : null,
-      strings,
-    };
-  } catch {
-    return null;
-  }
+  const entry = readJsonFile(
+    path.join(getStringsDir(), `${appId}.json`),
+    storedStringsSchema
+  );
+  return entry?.appid === appId ? entry : null;
 }
 
 function writeStoredStrings(entry: StoredAchievementStrings): void {
@@ -371,7 +364,7 @@ export function syncAchievementsToPlugin(): Promise<AchievementsDelivery> {
   return run;
 }
 
-function readInstallationCacheEntries(): InstallationInfo[] {
+function readInstallationCacheEntries(): InstallationRecord[] {
   const dir = getInstallationCacheDir();
   let names: string[];
   try {
@@ -379,34 +372,23 @@ function readInstallationCacheEntries(): InstallationInfo[] {
   } catch {
     return [];
   }
-  const out: InstallationInfo[] = [];
-  for (const name of names) {
-    try {
-      const parsed: unknown = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
-      if (
-        G.isObject(parsed) &&
-        parsed.gameId === name.slice(0, -'.json'.length) &&
-        typeof parsed.gamePath === 'string'
-      ) {
-        out.push(parsed as unknown as InstallationInfo);
-      }
-    } catch {
-      // A corrupt cache entry is the installer's problem, not the migration's.
-    }
-  }
-  return out;
+  // A corrupt cache entry is the installer's problem, not the migration's.
+  return names.flatMap((name) => {
+    const info = readJsonFile(path.join(dir, name), installationRecordSchema);
+    return info?.gameId === name.slice(0, -'.json'.length) ? [info] : [];
+  });
 }
 
-function readCacheEntry(gameId: string): InstallationInfo | null {
+function readCacheEntry(gameId: string): InstallationRecord | null {
   return readInstallationCacheEntries().find((info) => info.gameId === gameId) ?? null;
 }
 
 // Both copies are rewritten: checkInstallation prefers the game folder's file over the cache.
 async function rewriteAchievementsComponent(
-  info: InstallationInfo,
-  component: AchievementsComponent
+  info: InstallationRecord,
+  component: AchievementsComponentRecord
 ): Promise<void> {
-  const withComponent = (i: InstallationInfo): InstallationInfo => ({
+  const withComponent = (i: InstallationRecord): InstallationRecord => ({
     ...i,
     components: {
       ...(i.components ?? { text: { installed: false, files: [] } }),
@@ -416,16 +398,13 @@ async function rewriteAchievementsComponent(
 
   try {
     const gameInfoPath = findInstallationInfoFile(info.gamePath);
-    const raw = readFileOrNull(gameInfoPath);
-    if (raw) {
-      const gameInfo = JSON.parse(raw.toString('utf8')) as InstallationInfo;
-      if (gameInfo.gameId === info.gameId) {
-        await fs.promises.writeFile(
-          gameInfoPath,
-          JSON.stringify(withComponent(gameInfo), null, 2),
-          'utf-8'
-        );
-      }
+    const gameInfo = readJsonFile(gameInfoPath, installationRecordSchema);
+    if (gameInfo?.gameId === info.gameId) {
+      await fs.promises.writeFile(
+        gameInfoPath,
+        JSON.stringify(withComponent(gameInfo), null, 2),
+        'utf-8'
+      );
     }
   } catch (error) {
     console.warn(`[Achievements] Could not update ${info.gamePath} install info:`, error);

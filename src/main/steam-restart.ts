@@ -16,9 +16,9 @@ import { waitForSteamStart } from '@/main/utils/steam-process';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type {
   ApplyPendingLaunchOptionsResult,
-  Game,
   RestartSteamResult,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
+import type { Game } from '@/shared/types';
 
 interface GapOutcome {
   appliedGameIds: string[];

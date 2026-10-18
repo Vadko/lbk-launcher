@@ -4,7 +4,7 @@ import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
   MillenniumInstallResult,
-} from '../../shared/types';
+} from '../../shared/plugin-host-types';
 import {
   activateMillennium,
   cancelMillennium,

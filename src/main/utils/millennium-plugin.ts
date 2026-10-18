@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { G } from '@mobily/ts-belt';
+import { readPluginManifest } from '@/main/plugin-host/plugin-manifest';
 import { dirSwapPath, replaceDirAtomic } from './atomic-write';
 import { readFileOrNull, readTextOrNull } from './fs-safe';
 import { isFlatpak, system32 } from './host-exec';
@@ -43,32 +44,8 @@ function getBundledPluginDir(): string {
   return path.join(resolveResource('millennium-plugin'), MILLENNIUM_PLUGIN_NAME);
 }
 
-function readVersion(pluginJsonPath: string): string | null {
-  try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(pluginJsonPath, 'utf8'));
-    if (typeof parsed === 'object' && parsed !== null && 'version' in parsed) {
-      const version = (parsed as { version: unknown }).version;
-      return typeof version === 'string' ? version : null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 function isOurPluginDir(dir: string): boolean {
-  try {
-    const parsed: unknown = JSON.parse(
-      fs.readFileSync(path.join(dir, PLUGIN_JSON), 'utf8')
-    );
-    return (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      (parsed as { name?: unknown }).name === MILLENNIUM_PLUGIN_NAME
-    );
-  } catch {
-    return false;
-  }
+  return readPluginManifest(path.join(dir, PLUGIN_JSON))?.name === MILLENNIUM_PLUGIN_NAME;
 }
 
 function dataFileMode(): number | undefined {
@@ -94,7 +71,10 @@ export function getMillenniumPluginState(): MillenniumPluginState {
   return {
     supported,
     installed,
-    installedVersion: installed && dir ? readVersion(path.join(dir, PLUGIN_JSON)) : null,
+    installedVersion:
+      installed && dir
+        ? (readPluginManifest(path.join(dir, PLUGIN_JSON))?.version ?? null)
+        : null,
     enabled: Boolean(enabledList?.includes(MILLENNIUM_PLUGIN_NAME)),
     dir,
   };

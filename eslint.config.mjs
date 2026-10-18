@@ -80,6 +80,15 @@ export default tseslint.config(
         },
       ],
 
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
+          message: 'Parse untrusted values with a zod schema instead of `as unknown as`.',
+        },
+      ],
+
       'no-console': 'off',
       'no-debugger': 'warn',
       'no-duplicate-imports': 'error',

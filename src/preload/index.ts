@@ -6,6 +6,11 @@ Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
 import type {
+  MillenniumProgress,
+  PluginHostState,
+  SteamBridgeStatus,
+} from '../shared/plugin-host-types';
+import type {
   DownloadProgress,
   ElectronAPI,
   FeedbackReplyPayload,
@@ -13,12 +18,9 @@ import type {
   Game,
   InstallationStatus,
   InstallOptions,
-  MillenniumProgress,
-  PluginHostState,
   RunInstallerDecision,
   RunInstallerRequest,
   SortOrderType,
-  SteamBridgeStatus,
 } from '../shared/types';
 
 const electronAPI: ElectronAPI = {

@@ -4,7 +4,7 @@ import type {
   AchievementsDelivery,
   MillenniumUnsupportedReason,
   PluginHostState,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
 
 export interface HostFacts {
   os: 'windows' | 'linux' | 'macos' | 'unknown';

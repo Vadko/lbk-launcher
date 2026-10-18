@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { G } from '@mobily/ts-belt';
+import { z } from 'zod';
 import { replaceDirAtomic, replaceSymlinkAtomic } from '@/main/utils/atomic-write';
 import { isPathInside, pruneDir } from '@/main/utils/fs-safe';
 import { sha256FileSync } from '@/main/utils/hash';
@@ -21,30 +21,36 @@ export function parseHwArm64(sysctlOutput: string): boolean {
   return sysctlOutput.trim() === '1';
 }
 
+const macManifestSchema = z.object({
+  arch: z.string(),
+  version: z.string().regex(/^[\w.-]+$/),
+  files: z.record(z.string(), z.string()),
+});
+
 export function verifyMacManifest(
-  manifest: unknown,
+  raw: unknown,
   arch: MacHardwareArch,
   bundleRoot: string,
   hashOf: (file: string) => string | null
 ): { ok: true; version: string } | { ok: false; error: string } {
-  if (!G.isObject(manifest) || !G.isObject(manifest.files)) {
-    return { ok: false, error: 'manifest has no files' };
+  const parsed = macManifestSchema.safeParse(raw);
+  if (!parsed.success) {
+    const fields = parsed.error.issues.map((issue) => issue.path.join('.') || 'root');
+    return { ok: false, error: `bad manifest: ${fields.join(', ')}` };
   }
+  const manifest = parsed.data;
   if (manifest.arch !== arch) {
-    return { ok: false, error: `manifest arch ${String(manifest.arch)} != ${arch}` };
-  }
-  if (typeof manifest.version !== 'string' || !/^[\w.-]+$/.test(manifest.version)) {
-    return { ok: false, error: 'manifest has no usable version' };
+    return { ok: false, error: `manifest arch ${manifest.arch} != ${arch}` };
   }
   const files = manifest.files;
   for (const item of MAC_RUNTIME_ITEMS) {
-    if (!(`runtime/${item}` in files)) {
+    if (!Object.hasOwn(files, `runtime/${item}`)) {
       return { ok: false, error: `manifest lacks runtime/${item}` };
     }
   }
   for (const [rel, expected] of Object.entries(files)) {
     const file = path.posix.join(bundleRoot, rel);
-    if (!isPathInside(bundleRoot, file) || typeof expected !== 'string') {
+    if (!isPathInside(bundleRoot, file)) {
       return { ok: false, error: `bad manifest entry ${rel}` };
     }
     const actual = hashOf(file);

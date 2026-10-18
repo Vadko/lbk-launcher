@@ -47,7 +47,7 @@ import { getConnectedPluginInfo } from '@/main/utils/steam-bridge-server';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
 import { findSteamPids } from '@/main/utils/steam-process';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
-import type { AchievementsBadge, PluginHostState } from '@/shared/types';
+import type { AchievementsBadge, PluginHostState } from '@/shared/plugin-host-types';
 import { compareVersions } from '@/shared/version';
 import {
   computeAchievementsBadge,

@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { app } from 'electron';
 import { createZip } from '@/main/installer/archive';
 import { publishPluginHostState } from '@/main/millennium-install';
+import { parsePluginManifest } from '@/main/plugin-host/plugin-manifest';
 import { syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
 import {
   DECKY_PLUGIN_DIR,
@@ -25,7 +26,7 @@ import {
 } from '@/main/utils/steam-bridge-server';
 import { resolveResource } from '@/main/utils/theme';
 import { errorMessage } from '@/shared/errors';
-import type { DeckyInstallResult } from '@/shared/types';
+import type { DeckyInstallResult } from '@/shared/plugin-host-types';
 
 const POLL_MS = 2000;
 const WATCH_MS = 5 * 60 * 1000;
@@ -49,13 +50,11 @@ function readBundled(): { to: string; data: Buffer }[] {
     to,
     data: fs.readFileSync(path.join(dir, from)),
   }));
-  const pkg: unknown = JSON.parse(
-    files.find((f) => f.to === 'package.json')?.data.toString('utf8') ?? 'null'
-  );
-  const version =
-    typeof pkg === 'object' && pkg !== null
-      ? (pkg as { version?: unknown }).version
-      : null;
+  const version = parsePluginManifest(
+    JSON.parse(
+      files.find((f) => f.to === 'package.json')?.data.toString('utf8') ?? 'null'
+    )
+  )?.version;
   if (version !== MILLENNIUM_PLUGIN_VERSION) {
     throw new Error(
       `bundled Decky plugin is ${String(version)}, expected ${MILLENNIUM_PLUGIN_VERSION}`

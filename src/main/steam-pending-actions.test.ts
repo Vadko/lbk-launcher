@@ -245,4 +245,14 @@ describe('Millennium install items', () => {
     expect(isPendingSteamAction({ ...activate(), tag: '../x' })).toBe(false);
     expect(isPendingSteamAction({ ...activate(), attempts: -1 })).toBe(false);
   });
+
+  it('keeps unknown keys on launch-options and toggle items but checks their params', () => {
+    expect(isPendingSteamAction({ ...launchOptions('a'), source: 'newer-lbk' })).toBe(
+      true
+    );
+    expect(isPendingSteamAction({ ...plugin(true), source: 'newer-lbk' })).toBe(true);
+    const bad = launchOptions('a');
+    expect(isPendingSteamAction({ ...bad, params: { appId: 0 } })).toBe(false);
+    expect(isPendingSteamAction({ ...bad, accountId: undefined })).toBe(false);
+  });
 });

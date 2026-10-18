@@ -25,8 +25,9 @@ const record: MillenniumInstallRecord = {
 };
 
 describe('parseInstallRecord', () => {
-  it('accepts a well-formed record', () => {
+  it('accepts a well-formed record and drops keys it does not know', () => {
     expect(parseInstallRecord(record)).toEqual(record);
+    expect(parseInstallRecord({ ...record, purgeDir: '/' })).toStrictEqual(record);
   });
 
   it('rejects a wrong format, a mode that does not fit the OS or bad fields', () => {

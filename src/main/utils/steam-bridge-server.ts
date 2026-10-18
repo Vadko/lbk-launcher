@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { once } from 'node:events';
-import type { AddressInfo } from 'node:net';
 import { type RawData, WebSocket, WebSocketServer } from 'ws';
+import { z } from 'zod';
 import { MILLENNIUM_PLUGIN_NAME } from '@/main/utils/millennium-plugin';
 import { deleteBridgePluginData, writeBridgePluginData } from '@/main/utils/plugin-data';
 import type { SteamOpName, SteamOps } from '@/main/utils/steam-bridge-ops';
@@ -42,14 +42,37 @@ interface InFlightRequest {
   timer: NodeJS.Timeout;
 }
 
-type PluginHostKind = 'millennium' | 'decky';
+const jsonObjectSchema = z.record(z.string(), z.unknown());
 
-interface PluginHello {
-  pv: string;
-  ops: string[];
-  cn: string;
-  host: PluginHostKind;
-}
+// Plugins before 1.1.0 send no host; they are all the Millennium build.
+const helloSchema = z
+  .object({
+    t: z.literal('hello'),
+    v: z.literal(PROTOCOL_VERSION),
+    plugin: z.literal(MILLENNIUM_PLUGIN_NAME),
+    pv: z.string().max(64),
+    ops: z.array(z.string().max(64)).max(256),
+    cn: z.string().regex(HEX32),
+    host: z.enum(['millennium', 'decky']).default('millennium'),
+  })
+  .transform(({ pv, ops, cn, host }) => ({ pv, ops, cn, host }));
+
+const authSchema = z.object({ t: z.literal('auth'), cp: z.string() });
+
+const sessionMessageSchema = z.discriminatedUnion('t', [
+  z.object({ t: z.literal('pong') }),
+  z.object({
+    t: z.literal('res'),
+    id: z.number(),
+    ok: z.boolean().catch(false),
+    value: z.unknown().optional(),
+    error: z.string().catch('plugin op failed'),
+  }),
+]);
+
+type PluginHello = z.infer<typeof helloSchema>;
+type PluginHostKind = PluginHello['host'];
+type PluginResponse = Extract<z.infer<typeof sessionMessageSchema>, { t: 'res' }>;
 
 interface PluginSession {
   ws: WebSocket;
@@ -145,10 +168,7 @@ function send(ws: WebSocket, message: Record<string, unknown>): boolean {
 
 function parseMessage(data: RawData): Record<string, unknown> | null {
   try {
-    const parsed: unknown = JSON.parse(data.toString());
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
+    return jsonObjectSchema.safeParse(JSON.parse(data.toString())).data ?? null;
   } catch {
     return null;
   }
@@ -196,18 +216,16 @@ function releaseInFlight(s: PluginSession, id: number): void {
   pump(s);
 }
 
-function handleResponse(s: PluginSession, msg: Record<string, unknown>): void {
+function handleResponse(s: PluginSession, msg: PluginResponse): void {
   const inFlight = s.inFlight;
   if (!inFlight || msg.id !== inFlight.id) {
     return;
   }
   if (!inFlight.stale) {
-    if (msg.ok === true) {
+    if (msg.ok) {
       inFlight.request.resolve(msg.value);
     } else {
-      inFlight.request.reject(
-        new Error(typeof msg.error === 'string' ? msg.error : 'plugin op failed')
-      );
+      inFlight.request.reject(new Error(msg.error));
     }
   }
   releaseInFlight(s, inFlight.id);
@@ -284,7 +302,7 @@ function promote(ws: WebSocket, hello: PluginHello): void {
   }, PING_INTERVAL_MS);
 
   ws.on('message', (data) => {
-    const msg = parseMessage(data);
+    const msg = sessionMessageSchema.safeParse(parseMessage(data)).data;
     if (!msg) {
       return;
     }
@@ -312,27 +330,8 @@ function promote(ws: WebSocket, hello: PluginHello): void {
   setConnected(true);
 }
 
-// Plugins before 1.1.0 send no host; they are all the Millennium build.
-export function parseHello(msg: Record<string, unknown>): PluginHello | null {
-  const { t, v, plugin, pv, ops, cn, host } = msg;
-  if (host !== undefined && host !== 'millennium' && host !== 'decky') {
-    return null;
-  }
-  if (
-    t !== 'hello' ||
-    v !== PROTOCOL_VERSION ||
-    plugin !== MILLENNIUM_PLUGIN_NAME ||
-    typeof pv !== 'string' ||
-    pv.length > 64 ||
-    !Array.isArray(ops) ||
-    ops.length > 256 ||
-    !ops.every((op): op is string => typeof op === 'string' && op.length <= 64) ||
-    typeof cn !== 'string' ||
-    !HEX32.test(cn)
-  ) {
-    return null;
-  }
-  return { pv, ops, cn, host: host ?? 'millennium' };
+export function parseHello(msg: unknown): PluginHello | null {
+  return helloSchema.safeParse(msg).data ?? null;
 }
 
 function publishBridgeData(state: ServerState): void {
@@ -386,12 +385,12 @@ function handleConnection(ws: WebSocket): void {
       send(ws, { t: 'challenge', sn, sp: computeServerProof(secret, hello.cn, sn) });
       return;
     }
+    const auth = authSchema.safeParse(msg).data;
     if (
-      msg.t !== 'auth' ||
+      !auth ||
       sn === null ||
       secret === null ||
-      typeof msg.cp !== 'string' ||
-      !verifyClientProof(secret, sn, hello.cn, msg.cp)
+      !verifyClientProof(secret, sn, hello.cn, auth.cp)
     ) {
       console.warn('[SteamBridge] Plugin failed authentication');
       ws.close(CLOSE_AUTH, 'auth failed');
@@ -448,7 +447,11 @@ async function listen(): Promise<void> {
   });
   wss.on('connection', (ws) => handleConnection(ws));
 
-  port = (wss.address() as AddressInfo).port;
+  const address = wss.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error(`bridge server bound to ${address}, expected a TCP port`);
+  }
+  port = address.port;
   server = { wss, port, secret: randomBytes(32).toString('hex') };
   publishBridgeData(server);
   console.log(`[SteamBridge] Plugin server listening on 127.0.0.1:${port}`);

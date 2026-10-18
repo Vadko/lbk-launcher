@@ -2,8 +2,8 @@ import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { errorMessage } from '@/shared/errors';
+import type { ApplyPendingLaunchOptionsResult } from '../../shared/plugin-host-types';
 import type {
-  ApplyPendingLaunchOptionsResult,
   Game,
   InstallOptions,
   InstallResult,

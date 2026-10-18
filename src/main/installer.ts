@@ -3,9 +3,9 @@ import path from 'path';
 import { promisify } from 'util';
 import { formatBytes } from '../shared/formatters';
 import { isExeInstaller } from '../shared/installer-kind';
+import type { AchievementsDelivery } from '../shared/plugin-host-types';
 import type {
   AchievementsComponent,
-  AchievementsDelivery,
   DownloadProgress,
   Game,
   InstallationInfo,

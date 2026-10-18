@@ -1,7 +1,7 @@
 import { CheckIcon, RotateCwIcon, Trash2Icon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
-import type { MillenniumInstallResult } from '@/shared/types';
+import type { MillenniumInstallResult } from '@/shared/plugin-host-types';
 import { useSteamPluginSetupStore } from '../../../store/useSteamPluginSetupStore';
 import { restartFailureMessage } from '../../../utils/steamBridge';
 import {

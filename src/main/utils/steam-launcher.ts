@@ -22,7 +22,10 @@ import {
   waitForSteamStart,
 } from '@/main/utils/steam-process';
 import { errnoCode, errorMessage } from '@/shared/errors';
-import type { RestartFailureReason, RestartSteamResult } from '@/shared/types';
+import type {
+  RestartFailureReason,
+  RestartSteamResult,
+} from '@/shared/plugin-host-types';
 
 const execFileAsync = promisify(execFile);
 

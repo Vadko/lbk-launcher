@@ -1,5 +1,6 @@
 import { G } from '@mobily/ts-belt';
-import { type KvObject, type KvValue, parse as parseBinaryKv } from 'binarykvparser';
+import { type KvObject, parse as parseBinaryKv } from 'binarykvparser';
+import { z } from 'zod';
 
 interface AchievementStringEntry {
   name?: string;
@@ -17,14 +18,40 @@ const SCHEMA_FILE_NAME = /UserGameStatsSchema_(\d+)\.bin$/i;
 const MAX_STRING_BYTES = 1024;
 const OUR_STRINGS_MIN_SHARE = 0.25;
 
-const asObject = (value: KvValue | undefined): KvObject | null =>
-  G.isObject(value) ? value : null;
+const kvString = z.string().optional().catch(undefined);
 
-const childrenOf = (value: KvValue | undefined): KvValue[] =>
-  typeof value === 'object' ? Object.values(value) : [];
+// Old schemas store display.name as a bare string instead of a {lang: str} map.
+const langText = z
+  .preprocess(
+    (value) => (typeof value === 'string' ? { english: value } : value),
+    z.object({ english: kvString, ukrainian: kvString })
+  )
+  .optional()
+  .catch(undefined);
 
-const asString = (value: KvValue | undefined): string | null =>
-  G.isString(value) ? value : null;
+// Objects keyed 0..n-1 come back as arrays; a malformed entry is skipped, not fatal.
+function kvList<T extends z.ZodType>(item: T) {
+  return z
+    .union([z.array(z.unknown()), z.record(z.string(), z.unknown())])
+    .transform((list) =>
+      Object.values(list).flatMap((entry) => {
+        const parsed = item.safeParse(entry);
+        return parsed.success ? [parsed.data] : [];
+      })
+    )
+    .catch([]);
+}
+
+const bitSchema = z.object({
+  name: z.string().min(1),
+  display: z.object({ name: langText, desc: langText }),
+});
+
+const appSchema = z.object({
+  stats: kvList(z.object({ bits: kvList(bitSchema) })),
+});
+
+type LangText = z.infer<typeof langText>;
 
 const utf8 = new TextEncoder();
 
@@ -34,57 +61,26 @@ function truncateUtf8(value: string, maxBytes: number): string {
   return value.slice(0, read);
 }
 
-// Old schemas store display.name as a bare string instead of a {lang: str} map.
-function languageMap(field: KvValue | undefined): KvObject | null {
-  if (typeof field === 'string') {
-    return { english: field };
-  }
-  return asObject(field);
-}
-
 // LBK archives write Ukrainian into the `english` key, so only Cyrillic there counts as a translation.
-function pickTranslation(field: KvValue | undefined): string | undefined {
-  const langs = languageMap(field);
-  if (!langs) {
-    return undefined;
-  }
-  const ukrainian = asString(langs.ukrainian)?.trim();
+function pickTranslation(langs: LangText): string | undefined {
+  const ukrainian = langs?.ukrainian?.trim();
   if (ukrainian) {
     return truncateUtf8(ukrainian, MAX_STRING_BYTES);
   }
-  const english = asString(langs.english)?.trim();
+  const english = langs?.english?.trim();
   if (english && CYRILLIC_WORD.test(english)) {
     return truncateUtf8(english, MAX_STRING_BYTES);
   }
   return undefined;
 }
 
-interface SchemaAchievement {
-  apiName: string;
-  display: KvObject;
+function schemaAchievements(app: unknown): z.infer<typeof bitSchema>[] {
+  return appSchema.safeParse(app).data?.stats.flatMap((stat) => stat.bits) ?? [];
 }
 
-function* schemaAchievements(app: KvObject): Generator<SchemaAchievement> {
-  for (const stat of childrenOf(app.stats)) {
-    for (const bit of childrenOf(asObject(stat)?.bits)) {
-      const bitObj = asObject(bit);
-      const apiName = asString(bitObj?.name);
-      const display = asObject(bitObj?.display);
-      if (apiName && display) {
-        yield { apiName, display };
-      }
-    }
-  }
-}
-
-function findAppRoot(root: KvObject): { key: string; app: KvObject } | null {
-  for (const [key, value] of Object.entries(root)) {
-    const app = asObject(value);
-    if (app) {
-      return { key, app };
-    }
-  }
-  return null;
+function findAppRoot(root: KvObject): { key: string; app: unknown } | null {
+  const entry = Object.entries(root).find(([, value]) => G.isObject(value));
+  return entry ? { key: entry[0], app: entry[1] } : null;
 }
 
 function resolveAppId(rootKey: string, fileName: string): number {
@@ -122,7 +118,7 @@ export function extractAchievementStrings(
   const appId = resolveAppId(found.key, fileName);
 
   const strings: Record<string, AchievementStringEntry> = Object.create(null);
-  for (const { apiName, display } of schemaAchievements(found.app)) {
+  for (const { name: apiName, display } of schemaAchievements(found.app)) {
     if (apiName in strings) {
       continue;
     }
@@ -160,7 +156,7 @@ export function hasOurStrings(buf: Buffer): boolean {
   let cyrillic = 0;
   for (const { display } of schemaAchievements(found.app)) {
     for (const field of [display.name, display.desc]) {
-      const value = asString(languageMap(field)?.english)?.trim();
+      const value = field?.english?.trim();
       if (!value) {
         continue;
       }

@@ -16,7 +16,7 @@ import type {
   PluginHostState,
   RestartFailureReason,
   SteamBridgeStatus,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useSteamPluginSetupStore } from '../../../store/useSteamPluginSetupStore';
 import { openMillenniumSite, restartFailureMessage } from '../../../utils/steamBridge';

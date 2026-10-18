@@ -7,7 +7,7 @@ import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
   PluginHostState,
-} from '@/shared/types';
+} from '@/shared/plugin-host-types';
 import { useSettingsStore } from '../../../store/useSettingsStore';
 import { useSteamPluginSetupStore } from '../../../store/useSteamPluginSetupStore';
 import { openDeckySite } from '../../../utils/steamPluginHost';

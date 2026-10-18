@@ -1,6 +1,6 @@
 import { errorMessage } from '@/shared/errors';
+import type { RestartFailureReason, SteamBridgeStatus } from '@/shared/plugin-host-types';
 import { plural } from '@/shared/plural';
-import type { RestartFailureReason, SteamBridgeStatus } from '@/shared/types';
 import { useModalStore } from '../store/useModalStore';
 
 const MILLENNIUM_URL = 'https://steambrew.app';

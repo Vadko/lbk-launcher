@@ -1,12 +1,8 @@
 import os from 'node:os';
 import { app, ipcMain } from 'electron';
 import { errorMessage } from '@/shared/errors';
-import type {
-  Game,
-  GetGamesParams,
-  RestartSteamResult,
-  SortOrderType,
-} from '../../shared/types';
+import type { RestartSteamResult } from '../../shared/plugin-host-types';
+import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   fetchGames,
   fetchGamesByIds,
