@@ -13,6 +13,16 @@ const BRIDGE_FILES = {
   },
 };
 
+// A platform `files` replaces the root list as the app matcher, and a list of only exclusions packs the whole repo.
+function appFiles(foreignPrebuilds) {
+  return [
+    'out/**/*',
+    '!node_modules/7zip-bin-full/**',
+    '!node_modules/better-sqlite3/{deps,src,build}/**',
+    `!node_modules/better-sqlite3/prebuilds/{${foreignPrebuilds}}-*.node`,
+  ];
+}
+
 function bridgeResources(host) {
   return Object.entries(BRIDGE_FILES[host]).map(([name, from]) => {
     if (!fs.existsSync(path.join(__dirname, from))) {
@@ -35,12 +45,6 @@ module.exports = {
     buildResources: 'resources',
     output: 'release/${version}',
   },
-
-  files: [
-    'out/**/*',
-    '!node_modules/7zip-bin-full/**',
-    '!node_modules/better-sqlite3/{deps,src,build}/**',
-  ],
 
   extraResources: [
     {
@@ -90,7 +94,7 @@ module.exports = {
   ],
 
   win: {
-    files: ['!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node'],
+    files: appFiles('darwin,linux,linuxmusl'),
     target: [
       {
         target: 'nsis',
@@ -140,7 +144,7 @@ module.exports = {
   },
 
   linux: {
-    files: ['!node_modules/better-sqlite3/prebuilds/{darwin,win32,linuxmusl}-*.node'],
+    files: appFiles('darwin,win32,linuxmusl'),
     target: ['AppImage', 'rpm'],
     artifactName: 'LBK-Launcher-${os}.${ext}',
     category: 'Utility',
@@ -194,7 +198,7 @@ module.exports = {
   },
 
   mac: {
-    files: ['!node_modules/better-sqlite3/prebuilds/{win32,linux,linuxmusl}-*.node'],
+    files: appFiles('win32,linux,linuxmusl'),
     target: [
       {
         target: 'dmg',
