@@ -12,11 +12,14 @@ import {
 } from '../Icons/BrandIcons';
 import { Button } from './Button';
 
+type BadgeStyleType = 'button' | 'badge';
+
 interface DiscountBadgeProps {
   icon: React.ReactNode;
   percent: number;
   onClick: () => void;
   title: string;
+  type: BadgeStyleType;
 }
 
 const DiscountBadge: React.FC<DiscountBadgeProps> = ({
@@ -24,9 +27,18 @@ const DiscountBadge: React.FC<DiscountBadgeProps> = ({
   percent,
   title,
   onClick,
+  type,
 }) => {
   if (percent <= 0) {
     return null;
+  }
+
+  if (type === 'badge') {
+    return (
+      <div className="flex items-center gap-2 bg-white/80 rounded-full leading-none text-text-dark p-[6px] ring-[6px] ring-[rgba(255,255,255,0.15)]">
+        {icon}-{percent}%
+      </div>
+    );
   }
 
   return (
@@ -43,7 +55,10 @@ const DiscountBadge: React.FC<DiscountBadgeProps> = ({
   );
 };
 
-export const DiscountBadges: React.FC<{ game: Game }> = ({ game }) => {
+export const DiscountBadges: React.FC<{ game: Game; type: BadgeStyleType }> = ({
+  game,
+  type,
+}) => {
   const steamPercent = useSteamDiscount();
   const steamAppId = game.steam_app_id;
 
@@ -53,8 +68,9 @@ export const DiscountBadges: React.FC<{ game: Game }> = ({ game }) => {
         <DiscountBadge
           percent={steamPercent}
           title="Відкрити в Steam"
-          icon={<SteamIcon size={22} />}
+          icon={<SteamIcon size={type === 'button' ? 22 : 20} />}
           onClick={() => openSteamPage(steamAppId)}
+          type={type}
         />
       )}
     </>
