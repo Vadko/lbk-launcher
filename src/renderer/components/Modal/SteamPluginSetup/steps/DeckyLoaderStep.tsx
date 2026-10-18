@@ -68,7 +68,7 @@ export const DeckyLoaderStep: React.FC<DeckyLoaderStepProps> = ({
   onInstall,
   onDecline,
   onClose,
-}) => {
+}): React.ReactElement => {
   const siteButton = (primary: boolean) => (
     <SetupButton
       tone={primary ? 'primary' : 'secondary'}

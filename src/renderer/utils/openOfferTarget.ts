@@ -7,24 +7,21 @@ import type { OfferTarget } from './pluginHostOffer';
 import { openMillenniumSite } from './steamBridge';
 import { openDeckySite } from './steamPluginHost';
 
+const OPENERS: Record<OfferTarget, (source: SteamPluginSetupSource) => void> = {
+  'millennium-site': openMillenniumSite,
+  'decky-site': openDeckySite,
+  settings: () => useSettingsStore.getState().openSettingsModal(),
+  'millennium-install': (source) =>
+    useSteamPluginSetupStore.getState().openSetup('millennium-install', source),
+  'millennium-uninstall': (source) =>
+    useSteamPluginSetupStore.getState().openSetup('millennium-uninstall', source),
+  'decky-install': (source) =>
+    useSteamPluginSetupStore.getState().openSetup('decky-install', source),
+};
+
 export function openOfferTarget(
   target: OfferTarget,
   source: SteamPluginSetupSource
 ): void {
-  switch (target) {
-    case 'millennium-site':
-      openMillenniumSite();
-      return;
-    case 'decky-site':
-      openDeckySite();
-      return;
-    case 'settings':
-      useSettingsStore.getState().openSettingsModal();
-      return;
-    case 'millennium-install':
-    case 'millennium-uninstall':
-    case 'decky-install':
-      useSteamPluginSetupStore.getState().openSetup(target, source);
-      return;
-  }
+  OPENERS[target](source);
 }

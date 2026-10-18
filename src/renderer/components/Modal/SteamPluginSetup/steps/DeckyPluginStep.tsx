@@ -46,7 +46,7 @@ export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
   onRequest,
   onDecline,
   onClose,
-}) => {
+}): React.ReactElement => {
   const frame = (paragraphs: string[], footer: React.ReactNode) => (
     <SetupFrame title={DECKY_TITLE} dismissable onClose={onClose} footer={footer}>
       <SetupText paragraphs={paragraphs} />

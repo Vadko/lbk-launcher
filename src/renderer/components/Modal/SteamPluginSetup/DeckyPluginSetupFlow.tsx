@@ -21,7 +21,7 @@ const FALLBACK_TEXT =
 const DONE_TEXT =
   "Плагін «LBK Bridge» встановлено. Переклад досягнень з'явиться в Steam.";
 
-export const DeckyPluginSetupFlow: React.FC = () => {
+export const DeckyPluginSetupFlow: React.FC = (): React.ReactElement => {
   const close = useSteamPluginSetupStore((s) => s.close);
   const source = useSteamPluginSetupStore((s) => s.source);
   const declineOffer = useSettingsStore((s) => s.declineDeckyPluginOffer);

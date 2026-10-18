@@ -19,24 +19,21 @@ const TONE_ICONS: Record<BadgeTone, React.ReactNode> = {
   muted: <EyeOffIcon size={12} className="shrink-0" />,
 };
 
-function badgeView(badge: AchievementsBadge): { label: string; tone: BadgeTone } {
-  switch (badge.state) {
-    case 'millennium':
-      return { label: 'Працюватиме через Millennium', tone: 'success' };
-    case 'decky':
-      return { label: 'Працюватиме через Decky', tone: 'success' };
-    case 'after-restart':
-      return { label: "З'явиться після перезапуску Steam", tone: 'neutral' };
-    case 'needs-millennium':
-      return { label: 'Потрібен Millennium', tone: 'warning' };
-    case 'needs-decky-plugin':
-      return { label: 'Потрібен плагін для Decky', tone: 'warning' };
-    case 'needs-decky':
-      return { label: 'Потрібен Decky Loader', tone: 'warning' };
-    default:
-      return { label: 'Не покажуться в Steam', tone: 'muted' };
-  }
-}
+const HIDDEN_VIEW = { label: 'Не покажуться в Steam', tone: 'muted' } as const;
+
+const BADGE_VIEWS: Record<
+  AchievementsBadge['state'],
+  { label: string; tone: BadgeTone }
+> = {
+  millennium: { label: 'Працюватиме через Millennium', tone: 'success' },
+  decky: { label: 'Працюватиме через Decky', tone: 'success' },
+  'after-restart': { label: "З'явиться після перезапуску Steam", tone: 'neutral' },
+  'needs-millennium': { label: 'Потрібен Millennium', tone: 'warning' },
+  'needs-decky-plugin': { label: 'Потрібен плагін для Decky', tone: 'warning' },
+  'needs-decky': { label: 'Потрібен Decky Loader', tone: 'warning' },
+  unsupported: HIDDEN_VIEW,
+  'setting-off': HIDDEN_VIEW,
+};
 
 interface AchievementsDeliveryBadgeProps {
   badge: AchievementsBadge;
@@ -45,7 +42,7 @@ interface AchievementsDeliveryBadgeProps {
 export const AchievementsDeliveryBadge: React.FC<AchievementsDeliveryBadgeProps> = ({
   badge,
 }) => {
-  const { label, tone } = badgeView(badge);
+  const { label, tone } = BADGE_VIEWS[badge.state];
   return (
     <span
       className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium leading-tight ${TONE_CLASSES[tone]}`}

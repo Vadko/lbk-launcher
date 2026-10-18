@@ -68,7 +68,7 @@ export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
   onRestartSteam,
   onDecline,
   onClose,
-}) => {
+}): React.ReactElement => {
   const mode = introMode(state);
   const busy = state?.busy === true;
   const frame = (
