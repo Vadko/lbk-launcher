@@ -27,6 +27,17 @@ import type {
 
 export const APP_UPDATE_GAME_ID = 'app';
 
+const MAX_NOTIFICATIONS = 200;
+const MAX_SEEN_FEEDBACK_REPLY_IDS = 500;
+
+const prependNotification = (
+  notifications: Notification[],
+  notification: Notification
+) => {
+  const next = [notification, ...notifications].slice(0, MAX_NOTIFICATIONS);
+  return { notifications: next, unreadCount: next.filter((n) => !n.read).length };
+};
+
 interface SubscriptionsStore extends PersistedSubscriptionsState {
   // Toast notifications (non-persisted, auto-dismiss)
   toasts: ToastNotification[];
@@ -277,10 +288,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       addNotification: (notificationParams, showToast = true) => {
         const notification = createNotification(notificationParams);
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
           const message = getNotificationMessage(notificationParams);
@@ -322,8 +330,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           newNotifiedVersions.set(gameId, newVersion);
 
           return {
-            notifications: [notification, ...state.notifications],
-            unreadCount: state.unreadCount + 1,
+            ...prependNotification(state.notifications, notification),
             notifiedVersions: newNotifiedVersions,
           };
         });
@@ -359,10 +366,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           idPrefix: `${gameId}-progress`,
         });
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
           const message = `${progressType}: ${oldValue}% → ${newValue}%`;
@@ -393,8 +397,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           newNotifiedVersions.set(APP_UPDATE_GAME_ID, newVersion);
 
           return {
-            notifications: [notification, ...state.notifications],
-            unreadCount: state.unreadCount + 1,
+            ...prependNotification(state.notifications, notification),
             notifiedVersions: newNotifiedVersions,
           };
         });
@@ -423,10 +426,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           idPrefix: `team-new-game-${gameId}`,
         });
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
           const message = `Нова локалізація від ${teamName}`;
@@ -460,10 +460,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           idPrefix: `team-status-${gameId}`,
         });
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
           const message = `${teamName}: стан змінено на "${newStatus}"`;
@@ -487,10 +484,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           idPrefix: `first-favorite-${gameId}`,
         });
 
-        set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-        }));
+        set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
           const message = getNotificationMessage({
@@ -527,9 +521,11 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         };
 
         set((state) => ({
-          notifications: [notification, ...state.notifications],
-          unreadCount: state.unreadCount + 1,
-          seenFeedbackReplyIds: [reply.replyId, ...(state.seenFeedbackReplyIds ?? [])],
+          ...prependNotification(state.notifications, notification),
+          seenFeedbackReplyIds: [
+            reply.replyId,
+            ...(state.seenFeedbackReplyIds ?? []),
+          ].slice(0, MAX_SEEN_FEEDBACK_REPLY_IDS),
         }));
 
         if (showToast) {
