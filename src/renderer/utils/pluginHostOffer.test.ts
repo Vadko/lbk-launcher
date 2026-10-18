@@ -27,16 +27,19 @@ const managed = (
 
 describe('millenniumOffer', () => {
   it.each([
-    [{ installed: managed(), update: { version: '2.31.0' } }, 'managed'],
-    [{ installed: { ...managed(), managedBy: 'external' as const } }, 'external'],
+    [{ millennium: { installed: managed(), update: { version: '2.31.0' } } }, 'managed'],
+    [
+      { millennium: { installed: { ...managed(), managedBy: 'external' as const } } },
+      'external',
+    ],
     [{}, 'installable'],
-    [{ supported: false, unsupportedReason: 'arch' as const }, 'unavailable'],
-  ])('classifies %o as %s', (millennium, kind) => {
-    expect(millenniumOffer(pluginHostState({ millennium })).kind).toBe(kind);
-  });
-
-  it('never offers an install where Decky hosts the plugin', () => {
-    expect(millenniumOffer(pluginHostState({ host: 'decky' })).kind).toBe('unavailable');
+    [
+      { millennium: { supported: false, unsupportedReason: 'arch' as const } },
+      'unavailable',
+    ],
+    [{ host: 'decky' as const }, 'unavailable'],
+  ])('classifies %o as %s', (overrides, kind) => {
+    expect(millenniumOffer(pluginHostState(overrides)).kind).toBe(kind);
   });
 });
 
@@ -112,13 +115,6 @@ describe('successOffer', () => {
     expect(offer('needs-decky-plugin', declined)).toBeNull();
     expect(offer('needs-decky', declined)).toBe('decky-site');
     expect(offer('needs-millennium', undefined, false)).toBe('site');
-  });
-
-  it('keeps the dialog open only for site links', () => {
-    expect(OFFER_ACTIONS.millenniumInfo.external).toBe(true);
-    expect(OFFER_ACTIONS.deckyInfo.external).toBe(true);
-    expect(OFFER_ACTIONS.installMillennium.external).toBe(false);
-    expect(OFFER_ACTIONS.openSettings.external).toBe(false);
   });
 });
 

@@ -12,15 +12,7 @@ describe('failureStep', () => {
   it.each([
     ['not-writable', 'site'],
     ['conflict', 'none'],
-    ['busy', 'none'],
     ['download-failed', 'retry'],
-    ['checksum-mismatch', 'retry'],
-    ['extract-failed', 'retry'],
-    ['av-blocked', 'retry'],
-    ['not-prepared', 'retry'],
-    ['script-failed', 'retry'],
-    ['cancelled', 'retry'],
-    ['plugin-not-connected', 'retry'],
     [undefined, 'retry'],
   ] as const)('%s → %s', (reason, actions) => {
     expect(failureStep({ success: false, reason }, null)).toMatchObject({

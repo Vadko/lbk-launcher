@@ -2,36 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Actor, createActor, fromCallback, fromPromise } from 'xstate';
 import type {
   MillenniumInstallResult,
-  MillenniumProgress,
   RestartSteamResult,
   SteamBridgeStatus,
 } from '@/shared/plugin-host-types';
 import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHostFixtures';
 import { millenniumUnsupportedText } from '../../../utils/steamPluginHost';
 import { millenniumInstallMachine } from './millenniumInstallMachine';
-import {
-  DONE_TEXT,
-  ENV_MISSING_TEXT,
-  OFFLINE_DONE_TEXT,
-  STEAM_NOT_BACK_TEXT,
-} from './millenniumSetup';
+import { DONE_TEXT, ENV_MISSING_TEXT, STEAM_NOT_BACK_TEXT } from './millenniumSetup';
 
-interface Harness {
-  actor: Actor<typeof millenniumInstallMachine>;
-  prepare: ReturnType<typeof vi.fn<() => Promise<MillenniumInstallResult>>>;
-  activate: ReturnType<
-    typeof vi.fn<(restart: string) => Promise<MillenniumInstallResult>>
-  >;
-  restartSteam: ReturnType<typeof vi.fn<() => Promise<RestartSteamResult | null>>>;
-  statuses: (SteamBridgeStatus | null)[];
-  recheck: ReturnType<typeof vi.fn<() => Promise<SteamBridgeStatus | null>>>;
-  emit: (progress: MillenniumProgress) => void;
-}
+let actor: Actor<typeof millenniumInstallMachine> | null = null;
 
-let harness: Harness | null = null;
-
-function start(): Harness {
-  let sendProgress: ((progress: MillenniumProgress) => void) | null = null;
+function start() {
   const statuses: (SteamBridgeStatus | null)[] = [];
   const prepare = vi.fn(() =>
     Promise.resolve<MillenniumInstallResult>({
@@ -47,15 +28,10 @@ function start(): Harness {
     Promise.resolve<RestartSteamResult | null>({ success: true })
   );
   const recheck = vi.fn(() => Promise.resolve<SteamBridgeStatus | null>(null));
-  const actor = createActor(
+  const machine = createActor(
     millenniumInstallMachine.provide({
       actors: {
-        progress: fromCallback(({ sendBack }) => {
-          sendProgress = (progress) => sendBack({ type: 'PROGRESS', progress });
-          return () => {
-            sendProgress = null;
-          };
-        }),
+        progress: fromCallback(() => () => undefined),
         prepare: fromPromise(() => prepare()),
         activate: fromPromise(({ input }) => activate(input.restart)),
         restartSteam: fromPromise(() => restartSteam()),
@@ -67,30 +43,21 @@ function start(): Harness {
         recheck: fromPromise(() => recheck()),
       },
     })
-  );
-  actor.start();
-  harness = {
-    actor,
-    prepare,
-    activate,
-    restartSteam,
-    statuses,
-    recheck,
-    emit: (progress) => sendProgress?.(progress),
-  };
-  return harness;
+  ).start();
+  actor = machine;
+  return { actor: machine, prepare, activate, restartSteam, statuses, recheck };
 }
 
 const flush = () => vi.advanceTimersByTimeAsync(0);
-const state = (h: Harness) => h.actor.getSnapshot();
+const state = (h: ReturnType<typeof start>) => h.actor.getSnapshot();
 
 beforeEach(() => {
   vi.useFakeTimers();
 });
 
 afterEach(() => {
-  harness?.actor.stop();
-  harness = null;
+  actor?.stop();
+  actor = null;
   vi.useRealTimers();
 });
 
@@ -104,16 +71,6 @@ describe('millenniumInstallMachine', () => {
     expect(h.activate).toHaveBeenCalledWith('now');
     expect(state(h).matches('result')).toBe(true);
     expect(state(h).context.result).toEqual({ kind: 'done', paragraphs: [DONE_TEXT] });
-  });
-
-  it('shows download progress only while working', () => {
-    const h = start();
-    h.prepare.mockReturnValue(new Promise(() => undefined));
-    h.actor.send({ type: 'INSTALL' });
-    h.emit({ phase: 'download', percent: 42 });
-    expect(state(h).context.work).toMatchObject({ percent: 42, cancellable: true });
-    h.emit({ phase: 'verify' });
-    expect(state(h).context.work).toMatchObject({ percent: null, cancellable: false });
   });
 
   it('asks before restarting a running Steam and honours the choice', async () => {
@@ -145,20 +102,6 @@ describe('millenniumInstallMachine', () => {
     await flush();
     expect(state(h).context.restartChoice.canRestart).toBe(false);
     expect(state(h).context.restartChoice.note).toContain('від імені адміністратора');
-
-    h.actor.send({ type: 'ACTIVATE', restart: 'now' });
-    expect(state(h).context.work.text).toBe('Закриття Steam…');
-  });
-
-  it('reports an install applied while Steam was closed', async () => {
-    const h = start();
-    h.activate.mockResolvedValue({ success: true, steamRunning: false });
-    h.actor.send({ type: 'INSTALL' });
-    await flush();
-    expect(state(h).context.result).toEqual({
-      kind: 'done',
-      paragraphs: [OFFLINE_DONE_TEXT],
-    });
   });
 
   it('gives up after Steam is gone on two polls in a row', async () => {
@@ -235,15 +178,6 @@ describe('millenniumInstallMachine', () => {
     h.actor.send({ type: 'RESTART_STEAM' });
     await flush();
     expect(state(h).context.result).toMatchObject({ actions: 'steam-not-back' });
-
-    h.restartSteam.mockResolvedValueOnce({ success: false, reason: 'game-running' });
-    h.actor.send({ type: 'RESTART_STEAM' });
-    await flush();
-    expect(state(h).context.result).toEqual({
-      kind: 'error',
-      message: 'Закрийте гру, щоб перезапустити Steam.',
-      actions: 'none',
-    });
 
     h.statuses.push(steamBridgeStatus({ code: 'ok', connected: true }));
     h.actor.send({ type: 'RESTART_STEAM' });

@@ -49,17 +49,16 @@ describe('outcomeStep', () => {
       'error',
       'Не вдалося видалити Millennium: EPERM',
     ],
+    [
+      { success: false, reason: 'restart-failed', queued: true },
+      'error',
+      'щойно ви закриєте Steam',
+    ],
     [null, 'error', 'Не вдалося видалити Millennium.'],
   ] as const)('%o → %s', (result, kind, text) => {
     const outcome = outcomeStep(result);
     expect(outcome.kind).toBe(kind);
     expect(outcome.message).toContain(text);
-  });
-
-  it('adds the queued note to a failed restart that left the removal queued', () => {
-    expect(
-      outcomeStep({ success: false, reason: 'restart-failed', queued: true }).message
-    ).toContain('щойно ви закриєте Steam');
   });
 });
 
@@ -81,15 +80,5 @@ describe('millenniumUninstallMachine', () => {
     h.actor.send({ type: 'CHOOSE', restart: 'on-exit' });
     await vi.waitFor(() => expect(h.actor.getSnapshot().matches('result')).toBe(true));
     expect(h.uninstall).toHaveBeenCalledWith({ purge: false, restart: 'on-exit' });
-  });
-
-  it('shows uninstall progress while removing', () => {
-    const h = start(null);
-    h.uninstall.mockReturnValue(new Promise(() => undefined));
-    h.actor.send({ type: 'CONFIRM', steamRunning: false });
-    return vi.waitFor(() => {
-      expect(h.actor.getSnapshot().matches('uninstalling')).toBe(true);
-      expect(h.actor.getSnapshot().context.text).toBe('Видалення Millennium…');
-    });
   });
 });

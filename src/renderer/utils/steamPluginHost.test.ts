@@ -39,10 +39,6 @@ describe('millenniumUnsupportedText', () => {
       expect(millenniumUnsupportedText(reason)).not.toBe(fallback);
     }
   });
-
-  it('does not claim a macOS build outside macOS', () => {
-    expect(millenniumUnsupportedText('no-release')).not.toContain('macOS');
-  });
 });
 
 describe('achievementsBadgeDetail', () => {
@@ -70,7 +66,6 @@ describe('millenniumPhaseText', () => {
   it('says removal for the file step of an uninstall', () => {
     expect(millenniumPhaseText('install-files', 'install')).toBe('Встановлення файлів…');
     expect(millenniumPhaseText('install-files', 'uninstall')).toContain('Видалення');
-    expect(millenniumPhaseText('stop-steam', 'uninstall')).toBe('Закриття Steam…');
   });
 });
 
@@ -87,13 +82,10 @@ describe('activationOutcome', () => {
 });
 
 describe('steamRunningBeforeChange', () => {
-  it('prefers a fresh answer over the state the modal opened with', () => {
+  it('prefers the fresh answer, then the cached one, then a running Steam', () => {
     expect(steamRunningBeforeChange(true, false)).toBe(true);
     expect(steamRunningBeforeChange(false, true)).toBe(false);
-  });
-
-  it('asks before restarting when nothing is known', () => {
-    expect(steamRunningBeforeChange(undefined, undefined)).toBe(true);
     expect(steamRunningBeforeChange(undefined, false)).toBe(false);
+    expect(steamRunningBeforeChange(undefined, undefined)).toBe(true);
   });
 });

@@ -18,21 +18,17 @@ const option = (overrides: Partial<Parameters<typeof achievementsOptionState>[0]
   });
 
 describe('achievementsOptionState', () => {
-  it.each(['millennium', 'decky', 'after-restart'] as const)(
-    'unlocks the box when the strings reach Steam via %s',
-    (state) => {
-      expect(option({ badge: badge(state) }).canToggle).toBe(true);
-    }
-  );
-
   it.each([
-    'needs-millennium',
-    'needs-decky-plugin',
-    'needs-decky',
-    'unsupported',
-    'setting-off',
-  ] as const)('locks the box for %s', (state) => {
-    expect(option({ badge: badge(state) }).canToggle).toBe(false);
+    ['millennium', true],
+    ['decky', true],
+    ['after-restart', true],
+    ['needs-millennium', false],
+    ['needs-decky-plugin', false],
+    ['needs-decky', false],
+    ['unsupported', false],
+    ['setting-off', false],
+  ] as const)('%s → canToggle %s', (state, canToggle) => {
+    expect(option({ badge: badge(state) }).canToggle).toBe(canToggle);
   });
 
   it('never sends false for installed strings behind a locked box', () => {

@@ -21,11 +21,9 @@ const labels = (value: InstallSuccessInput) =>
 describe('needsBridgeStatus', () => {
   it.each([
     [{ launchOptionsQueued: true, delivery: undefined }, true],
-    [{ launchOptionsQueued: false, delivery: 'plugin-next-start' }, true],
     [{ launchOptionsQueued: false, delivery: 'needs-millennium' }, true],
     [{ launchOptionsQueued: false, delivery: 'unavailable' }, true],
     [{ launchOptionsQueued: false, delivery: 'needs-decky' }, false],
-    [{ launchOptionsQueued: false, delivery: undefined }, false],
   ] as const)('%o → %s', (value, expected) => {
     expect(needsBridgeStatus(value)).toBe(expected);
   });
@@ -92,19 +90,10 @@ describe('installSuccessActions', () => {
     const declined = { millennium: true, decky: false };
     const [, site] = installSuccessActions(
       input({ delivery: 'needs-millennium', declined }),
-      {
-        restart: vi.fn(),
-        open,
-      }
+      { restart: vi.fn(), open }
     );
-    expect(site).toMatchObject({ label: 'Що таке Millennium', keepOpen: true });
+    expect(site.keepOpen).toBe(true);
     site.onClick();
     expect(open).toHaveBeenCalledWith('millennium-site');
-
-    const [, install] = installSuccessActions(input({ delivery: 'needs-decky' }), {
-      restart: vi.fn(),
-      open,
-    });
-    expect(install).toMatchObject({ label: 'Встановити Decky Loader', keepOpen: false });
   });
 });

@@ -8,14 +8,7 @@ import type {
 import { deckyState, pluginHostState } from '../../../utils/pluginHostFixtures';
 import { deckySetupMachine } from './deckySetupMachine';
 
-interface Harness {
-  actor: Actor<typeof deckySetupMachine>;
-  request: ReturnType<typeof vi.fn<() => Promise<DeckyInstallResult>>>;
-  installLoader: ReturnType<typeof vi.fn<() => Promise<DeckyLoaderInstallResult>>>;
-  refreshHost: ReturnType<typeof vi.fn<() => Promise<PluginHostState | null>>>;
-}
-
-let harness: Harness | null = null;
+let actor: Actor<typeof deckySetupMachine> | null = null;
 
 const savedZip = () =>
   Promise.resolve<{ success: boolean; path?: string }>({
@@ -23,7 +16,7 @@ const savedZip = () =>
     path: '/tmp/lbk.zip',
   });
 
-function start(initialHost: PluginHostState | null = null): Harness {
+function start(initialHost: PluginHostState | null = null) {
   const request = vi.fn(() =>
     Promise.resolve<DeckyInstallResult>({ success: true, state: 'prompted' })
   );
@@ -31,7 +24,7 @@ function start(initialHost: PluginHostState | null = null): Harness {
     Promise.resolve<DeckyLoaderInstallResult>({ success: true })
   );
   const refreshHost = vi.fn(() => Promise.resolve<PluginHostState | null>(null));
-  const actor = createActor(
+  const machine = createActor(
     deckySetupMachine.provide({
       actors: {
         request: fromPromise(() => request()),
@@ -41,13 +34,12 @@ function start(initialHost: PluginHostState | null = null): Harness {
       },
     }),
     { input: { host: initialHost } }
-  );
-  actor.start();
-  harness = { actor, request, installLoader, refreshHost };
-  return harness;
+  ).start();
+  actor = machine;
+  return { actor: machine, request, installLoader, refreshHost };
 }
 
-const flow = (h: Harness) => h.actor.getSnapshot().value.flow;
+const flow = (h: ReturnType<typeof start>) => h.actor.getSnapshot().value.flow;
 const flush = () => vi.advanceTimersByTimeAsync(0);
 const host = (
   decky: PluginHostState['decky'],
@@ -59,8 +51,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  harness?.actor.stop();
-  harness = null;
+  actor?.stop();
+  actor = null;
   vi.useRealTimers();
 });
 
@@ -98,9 +90,12 @@ describe('deckySetupMachine', () => {
     [{ success: true, state: 'installed' }, 'done'],
     [{ success: false, reason: 'no-decky' }, 'intro'],
     [{ success: false, reason: 'timeout' }, 'fallback'],
+    [new Error('ipc'), 'fallback'],
   ] as const)('routes %o to %s', async (result, target) => {
     const h = start();
-    h.request.mockResolvedValue(result);
+    h.request.mockImplementation(() =>
+      result instanceof Error ? Promise.reject(result) : Promise.resolve(result)
+    );
     h.actor.send({ type: 'REQUEST' });
     await flush();
     expect(flow(h)).toBe(target);
@@ -125,14 +120,6 @@ describe('deckySetupMachine', () => {
     resolveRefresh(null);
     await flush();
     expect(flow(h)).toBe('intro');
-  });
-
-  it('falls back when the request throws', async () => {
-    const h = start();
-    h.request.mockRejectedValue(new Error('ipc'));
-    h.actor.send({ type: 'REQUEST' });
-    await flush();
-    expect(flow(h)).toBe('fallback');
   });
 
   it('installs the loader once and returns to the plugin intro', async () => {
