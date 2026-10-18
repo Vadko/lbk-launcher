@@ -8,9 +8,9 @@ import {
   SetupButton,
   SetupCloseButton,
   SetupFooter,
-  SetupFrame,
   SetupProgress,
   SetupText,
+  type SetupView,
 } from '../SetupParts';
 
 export const DECKY_TITLE = 'Плагін «LBK Bridge» для Decky Loader';
@@ -54,7 +54,7 @@ type LoaderStage =
   | { kind: 'installing' }
   | { kind: 'failed'; reason: LoaderFailure };
 
-interface DeckyLoaderStepProps {
+interface DeckyLoaderViewProps {
   stage: LoaderStage;
   source: SteamPluginSetupSource;
   onInstall: () => void;
@@ -62,13 +62,13 @@ interface DeckyLoaderStepProps {
   onClose: () => void;
 }
 
-export const DeckyLoaderStep: React.FC<DeckyLoaderStepProps> = ({
+export function deckyLoaderView({
   stage,
   source,
   onInstall,
   onDecline,
   onClose,
-}): React.ReactElement => {
+}: DeckyLoaderViewProps): SetupView {
   const siteButton = (primary: boolean) => (
     <SetupButton
       tone={primary ? 'primary' : 'secondary'}
@@ -89,16 +89,17 @@ export const DeckyLoaderStep: React.FC<DeckyLoaderStepProps> = ({
       {label}
     </SetupButton>
   );
-  const frame = (body: React.ReactNode, footer: React.ReactNode) => (
-    <SetupFrame title={DECKY_TITLE} dismissable onClose={onClose} footer={footer}>
-      {body}
-    </SetupFrame>
-  );
+  const view = (body: React.ReactNode, footer: React.ReactNode): SetupView => ({
+    title: DECKY_TITLE,
+    dismissable: true,
+    body,
+    footer,
+  });
 
   switch (stage.kind) {
     case 'offer': {
       const offer = stage.repair ? [LOADER_REPAIR_TEXT] : LOADER_OFFER_PARAGRAPHS;
-      return frame(
+      return view(
         <SetupText
           paragraphs={stage.gameMode ? [...offer, LOADER_GAME_MODE_TEXT] : offer}
         />,
@@ -113,7 +114,7 @@ export const DeckyLoaderStep: React.FC<DeckyLoaderStepProps> = ({
       );
     }
     case 'installing':
-      return frame(
+      return view(
         <SetupProgress text={LOADER_INSTALLING_TEXT} percent={null} />,
         <SetupFooter>
           <SetupCloseButton onClose={onClose} />
@@ -121,7 +122,7 @@ export const DeckyLoaderStep: React.FC<DeckyLoaderStepProps> = ({
       );
     case 'failed': {
       const retry = RETRYABLE.has(stage.reason);
-      return frame(
+      return view(
         <SetupText paragraphs={[LOADER_FAILURE_TEXT[stage.reason]]} />,
         <SetupFooter>
           {retry && installButton('Спробувати ще раз')}
@@ -131,4 +132,4 @@ export const DeckyLoaderStep: React.FC<DeckyLoaderStepProps> = ({
       );
     }
   }
-};
+}

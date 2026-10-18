@@ -16,9 +16,9 @@ import {
   SetupButton,
   SetupCloseButton,
   SetupFooter,
-  SetupFrame,
   SetupProgress,
   SetupText,
+  type SetupView,
 } from '../SetupParts';
 
 export const MILLENNIUM_TITLE = 'Millennium і плагін «LBK Bridge»';
@@ -52,7 +52,7 @@ function offerParagraphs(): string[] {
   return paragraphs;
 }
 
-interface MillenniumIntroProps {
+interface MillenniumIntroViewProps {
   state: PluginHostState | null;
   source: SteamPluginSetupSource;
   onInstall: () => void;
@@ -61,29 +61,25 @@ interface MillenniumIntroProps {
   onClose: () => void;
 }
 
-export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
+export function millenniumIntroView({
   state,
   source,
   onInstall,
   onRestartSteam,
   onDecline,
   onClose,
-}): React.ReactElement => {
+}: MillenniumIntroViewProps): SetupView {
   const mode = introMode(state);
   const busy = state?.busy === true;
-  const frame = (
+  const view = (
     body: React.ReactNode,
     footer: React.ReactNode,
     title = MILLENNIUM_TITLE
-  ) => (
-    <SetupFrame title={title} dismissable onClose={onClose} footer={footer}>
-      {body}
-    </SetupFrame>
-  );
+  ): SetupView => ({ title, dismissable: true, body, footer });
 
   switch (mode) {
     case 'loading':
-      return frame(
+      return view(
         <SetupProgress text="Перевірка системи…" percent={null} />,
         <SetupFooter>
           <SetupCloseButton onClose={onClose} />
@@ -92,7 +88,7 @@ export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
     case 'unsupported':
     case 'external': {
       const reason = state?.millennium.unsupportedReason ?? null;
-      return frame(
+      return view(
         <SetupText
           paragraphs={[
             mode === 'external' ? EXTERNAL_TEXT : millenniumUnsupportedText(reason),
@@ -114,7 +110,7 @@ export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
       );
     }
     case 'pending':
-      return frame(
+      return view(
         <SetupText paragraphs={queuedParagraphs()} />,
         <SetupFooter>
           {state?.steamRunning && state.canRestartSteam && (
@@ -133,7 +129,7 @@ export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
       );
     case 'update':
     case 'repair':
-      return frame(
+      return view(
         <SetupText
           paragraphs={[
             mode === 'update'
@@ -165,7 +161,7 @@ export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
         mode === 'update' ? 'Оновлення Millennium' : 'Відновлення Millennium'
       );
     case 'offer':
-      return frame(
+      return view(
         <SetupText paragraphs={offerParagraphs()} />,
         <SetupFooter>
           <SetupButton
@@ -181,4 +177,4 @@ export const MillenniumIntro: React.FC<MillenniumIntroProps> = ({
         </SetupFooter>
       );
   }
-};
+}

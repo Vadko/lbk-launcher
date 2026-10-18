@@ -27,6 +27,11 @@ export const ENV_MISSING_TEXT =
 export const EXTERNAL_TEXT =
   'Millennium уже встановлено — лаунчер сам додасть до нього плагін «LBK Bridge».';
 
+export type RestartChoice = 'now' | 'on-exit';
+
+export const isPluginConnected = (status: SteamBridgeStatus | null): boolean =>
+  status?.millennium.plugin.connected === true;
+
 export type ErrorActions =
   | 'retry'
   | 'site'
@@ -124,12 +129,18 @@ export function introMode(state: PluginHostState | null): IntroMode {
   if (state.millennium.pending === 'activate') {
     return 'pending';
   }
-  return match(millenniumOffer(state))
-    .returnType<IntroMode>()
-    .with({ kind: 'managed', needsRepair: true }, () => 'repair')
-    .with({ kind: 'managed', update: P.string }, () => 'update')
-    .with({ kind: P.union('managed', 'external') }, () => 'external')
-    .with({ kind: 'installable' }, () => 'offer')
-    .with({ kind: 'unavailable' }, () => 'unsupported')
-    .exhaustive();
+  const offer = millenniumOffer(state);
+  switch (offer.kind) {
+    case 'managed':
+      if (offer.needsRepair) {
+        return 'repair';
+      }
+      return offer.update !== null ? 'update' : 'external';
+    case 'external':
+      return 'external';
+    case 'installable':
+      return 'offer';
+    case 'unavailable':
+      return 'unsupported';
+  }
 }

@@ -10,6 +10,7 @@ import {
   millenniumPhaseText,
   steamRunningBeforeChange,
 } from '../../../utils/steamPluginHost';
+import type { RestartChoice } from './millenniumSetup';
 
 const QUEUED_TEXT = 'Millennium буде видалено, щойно ви закриєте Steam.';
 
@@ -45,8 +46,6 @@ export function outcomeStep(result: MillenniumInstallResult | null): UninstallRe
         : 'Не вдалося видалити Millennium.',
     }));
 }
-
-type RestartChoice = 'now' | 'on-exit';
 
 interface UninstallContext {
   purge: boolean;

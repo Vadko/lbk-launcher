@@ -16,8 +16,10 @@ import {
   DONE_TEXT,
   ENV_MISSING_TEXT,
   failureStep,
+  isPluginConnected,
   OFFLINE_DONE_TEXT,
   queuedParagraphs,
+  type RestartChoice,
   restartBlockedNote,
   type SetupResult,
   STEAM_NOT_BACK_TEXT,
@@ -32,8 +34,6 @@ export interface SetupWork {
   percent: number | null;
   cancellable: boolean;
 }
-
-type RestartChoice = 'now' | 'on-exit';
 
 interface MillenniumInstallContext {
   host: PluginHostState | null;
@@ -54,9 +54,6 @@ type MillenniumInstallEvent =
   | { type: 'RESTART_STEAM' }
   | { type: 'RECHECK' }
   | { type: 'PROGRESS'; progress: MillenniumProgress };
-
-const isConnected = (status: SteamBridgeStatus | null): boolean =>
-  status?.millennium.plugin.connected === true;
 
 const failed = (reason: MillenniumInstallResult['reason']): MillenniumInstallResult => ({
   success: false,
@@ -291,7 +288,7 @@ export const millenniumInstallMachine = setup({
             src: 'bridgeStatus',
             onDone: [
               {
-                guard: ({ event }) => isConnected(event.output),
+                guard: ({ event }) => isPluginConnected(event.output),
                 target: '#millenniumInstall.result',
                 actions: assign({ result: setupDone([DONE_TEXT]) }),
               },
@@ -345,7 +342,7 @@ export const millenniumInstallMachine = setup({
         src: 'recheck',
         onDone: [
           {
-            guard: ({ event }) => isConnected(event.output),
+            guard: ({ event }) => isPluginConnected(event.output),
             target: 'result',
             actions: assign({ result: setupDone([DONE_TEXT]) }),
           },

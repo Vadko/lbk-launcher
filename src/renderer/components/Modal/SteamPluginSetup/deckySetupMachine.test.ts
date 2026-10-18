@@ -12,7 +12,7 @@ interface Harness {
   actor: Actor<typeof deckySetupMachine>;
   request: ReturnType<typeof vi.fn<() => Promise<DeckyInstallResult>>>;
   installLoader: ReturnType<typeof vi.fn<() => Promise<DeckyLoaderInstallResult>>>;
-  refreshHost: ReturnType<typeof vi.fn>;
+  refreshHost: ReturnType<typeof vi.fn<() => Promise<PluginHostState | null>>>;
 }
 
 let harness: Harness | null = null;
@@ -23,23 +23,24 @@ const savedZip = () =>
     path: '/tmp/lbk.zip',
   });
 
-function start(): Harness {
+function start(initialHost: PluginHostState | null = null): Harness {
   const request = vi.fn(() =>
     Promise.resolve<DeckyInstallResult>({ success: true, state: 'prompted' })
   );
   const installLoader = vi.fn(() =>
     Promise.resolve<DeckyLoaderInstallResult>({ success: true })
   );
-  const refreshHost = vi.fn();
+  const refreshHost = vi.fn(() => Promise.resolve<PluginHostState | null>(null));
   const actor = createActor(
     deckySetupMachine.provide({
       actors: {
         request: fromPromise(() => request()),
         installLoader: fromPromise(() => installLoader()),
         saveZip: fromPromise(() => savedZip()),
+        refreshHost: fromPromise(() => refreshHost()),
       },
-      actions: { refreshHost },
-    })
+    }),
+    { input: { host: initialHost } }
   );
   actor.start();
   harness = { actor, request, installLoader, refreshHost };
@@ -106,6 +107,26 @@ describe('deckySetupMachine', () => {
     expect(h.refreshHost).toHaveBeenCalledTimes(target === 'intro' ? 1 : 0);
   });
 
+  it('stays on the request screen until the host state after no-decky is in', async () => {
+    const h = start();
+    let resolveRefresh: (state: PluginHostState | null) => void = () => undefined;
+    h.refreshHost.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRefresh = resolve;
+      })
+    );
+    h.request.mockResolvedValue({ success: false, reason: 'no-decky' });
+    h.actor.send({ type: 'REQUEST' });
+    await flush();
+    expect(flow(h)).toBe('refreshingHost');
+    h.actor.send({ type: 'REQUEST' });
+    expect(h.request).toHaveBeenCalledTimes(1);
+
+    resolveRefresh(null);
+    await flush();
+    expect(flow(h)).toBe('intro');
+  });
+
   it('falls back when the request throws', async () => {
     const h = start();
     h.request.mockRejectedValue(new Error('ipc'));
@@ -131,6 +152,11 @@ describe('deckySetupMachine', () => {
     await flush();
     expect(flow(h)).toBe('loaderFailed');
     expect(h.actor.getSnapshot().context.loaderFailure).toBe('game-mode');
+  });
+
+  it('opens on an installer that is already running in the stored host state', () => {
+    const h = start(host(null, { installing: true, blockedBy: null, repair: false }));
+    expect(flow(h)).toBe('loaderRunning');
   });
 
   it('shows an installer started earlier until it exits', () => {

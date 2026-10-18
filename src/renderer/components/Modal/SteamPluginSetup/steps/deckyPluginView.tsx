@@ -12,11 +12,11 @@ import {
   SetupButton,
   SetupCloseButton,
   SetupFooter,
-  SetupFrame,
   SetupProgress,
   SetupText,
+  type SetupView,
 } from '../SetupParts';
-import { DECKY_TITLE } from './DeckyLoaderStep';
+import { DECKY_TITLE } from './deckyLoaderView';
 
 const INTRO_TEXT =
   'Плагін показує в Steam перекладені досягнення — у бібліотеці, сповіщеннях і оверлеї. Усе інше лаунчер уміє й без нього. Decky Loader покаже запит на встановлення — підтвердьте його в Steam.';
@@ -26,7 +26,7 @@ const DISABLED_TEXT =
   'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.';
 const LOADER_DONE_TEXT = 'Decky Loader встановлено.';
 
-interface DeckyPluginStepProps {
+interface DeckyPluginViewProps {
   state: PluginHostState | null;
   source: SteamPluginSetupSource;
   loaderInstalled: boolean;
@@ -37,7 +37,7 @@ interface DeckyPluginStepProps {
   onClose: () => void;
 }
 
-export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
+export function deckyPluginView({
   state,
   source,
   loaderInstalled,
@@ -46,12 +46,15 @@ export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
   onRequest,
   onDecline,
   onClose,
-}): React.ReactElement => {
-  const frame = (paragraphs: string[], footer: React.ReactNode) => (
-    <SetupFrame title={DECKY_TITLE} dismissable onClose={onClose} footer={footer}>
-      <SetupText paragraphs={paragraphs} />
-    </SetupFrame>
-  );
+}: DeckyPluginViewProps): SetupView {
+  const view = (body: React.ReactNode, footer: React.ReactNode): SetupView => ({
+    title: DECKY_TITLE,
+    dismissable: true,
+    body,
+    footer,
+  });
+  const textView = (paragraphs: string[], footer: React.ReactNode) =>
+    view(<SetupText paragraphs={paragraphs} />, footer);
   const closeFooter = (
     <SetupFooter>
       <SetupCloseButton onClose={onClose} />
@@ -59,17 +62,13 @@ export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
   );
 
   if (!state) {
-    return (
-      <SetupFrame title={DECKY_TITLE} dismissable onClose={onClose} footer={closeFooter}>
-        <SetupProgress text="Перевірка системи…" percent={null} />
-      </SetupFrame>
-    );
+    return view(<SetupProgress text="Перевірка системи…" percent={null} />, closeFooter);
   }
 
   const offer = deckyOffer(state);
   switch (offer.kind) {
     case 'no-decky':
-      return frame(
+      return textView(
         [NO_DECKY_TEXT],
         <SetupFooter>
           <SetupButton
@@ -84,9 +83,9 @@ export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
         </SetupFooter>
       );
     case 'plugin-disabled':
-      return frame([DISABLED_TEXT], closeFooter);
+      return textView([DISABLED_TEXT], closeFooter);
     case 'plugin-ready':
-      return frame(
+      return textView(
         ['Плагін «LBK Bridge» для Decky Loader уже встановлено.'],
         closeFooter
       );
@@ -96,7 +95,7 @@ export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
       const intro = outdated
         ? ['Доступне оновлення плагіна «LBK Bridge» для Decky.', INTRO_TEXT]
         : [INTRO_TEXT];
-      return frame(
+      return textView(
         loaderInstalled ? [LOADER_DONE_TEXT, ...intro] : intro,
         <SetupFooter>
           <SetupButton
@@ -129,4 +128,4 @@ export const DeckyPluginStep: React.FC<DeckyPluginStepProps> = ({
       );
     }
   }
-};
+}

@@ -10,9 +10,10 @@ import {
   SetupFrame,
   SetupProgress,
   SetupText,
+  type SetupView,
 } from './SetupParts';
-import { RestartChoiceStep } from './steps/RestartChoiceStep';
-import { ResultStep } from './steps/ResultStep';
+import { restartChoiceView } from './steps/restartChoiceView';
+import { resultView } from './steps/resultView';
 
 const TITLE = 'Видалення Millennium';
 
@@ -22,52 +23,81 @@ export const MillenniumUninstallFlow: React.FC = () => {
   const [snapshot, send] = useMachine(millenniumUninstallMachine);
   const { purge, text, result } = snapshot.context;
 
-  if (snapshot.matches('confirmRestart')) {
-    const canRestart = state?.canRestartSteam === true;
-    return (
-      <RestartChoiceStep
-        title={TITLE}
-        paragraphs={[
+  const stepView = (): SetupView => {
+    if (snapshot.matches('confirmRestart')) {
+      const canRestart = state?.canRestartSteam === true;
+      return restartChoiceView({
+        title: TITLE,
+        paragraphs: [
           'Щоб видалити Millennium, Steam потрібно закрити й запустити знову.',
           ...(canRestart
             ? []
             : ['Лаунчер не може перезапустити Steam зараз. Закрийте Steam самостійно.']),
-        ]}
-        canRestart={canRestart}
-        onChoose={(restart) => send({ type: 'CHOOSE', restart })}
-        onClose={close}
-        cancellable={false}
-      />
-    );
-  }
-  if (snapshot.matches('uninstalling')) {
-    return (
-      <SetupFrame title={TITLE} dismissable={false} onClose={close} footer={null}>
-        <SetupProgress text={text} percent={null} />
-      </SetupFrame>
-    );
-  }
-  if (snapshot.matches('result')) {
-    const done = result.kind === 'done';
-    return (
-      <ResultStep title={TITLE} paragraphs={[result.message]} onClose={close}>
-        <SetupButton
-          tone={done ? 'primary' : 'secondary'}
-          onClick={close}
-          gamepad="confirm"
-        >
-          {done ? 'Зрозуміло' : 'Закрити'}
-        </SetupButton>
-      </ResultStep>
-    );
-  }
-
-  return (
-    <SetupFrame
-      title={TITLE}
-      dismissable
-      onClose={close}
-      footer={
+        ],
+        canRestart,
+        onChoose: (restart) => send({ type: 'CHOOSE', restart }),
+        onClose: close,
+        cancellable: false,
+      });
+    }
+    if (snapshot.matches('uninstalling')) {
+      return {
+        title: TITLE,
+        dismissable: false,
+        body: <SetupProgress text={text} percent={null} />,
+        footer: null,
+      };
+    }
+    if (snapshot.matches('result')) {
+      const done = result.kind === 'done';
+      return resultView({
+        title: TITLE,
+        paragraphs: [result.message],
+        buttons: (
+          <SetupButton
+            tone={done ? 'primary' : 'secondary'}
+            onClick={close}
+            gamepad="confirm"
+          >
+            {done ? 'Зрозуміло' : 'Закрити'}
+          </SetupButton>
+        ),
+      });
+    }
+    return {
+      title: TITLE,
+      dismissable: true,
+      body: (
+        <div className="flex flex-col gap-4">
+          <SetupText
+            paragraphs={[
+              'Millennium буде видалено з теки Steam. Плагіни й теми Millennium залишаться, якщо не позначити «Видалити також плагіни й налаштування Millennium».',
+            ]}
+          />
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={purge}
+            onClick={() => send({ type: 'TOGGLE_PURGE' })}
+            data-gamepad-modal-item
+            className="flex items-start gap-3 rounded-xl p-2 text-left text-sm text-text-main hover:bg-glass-hover transition-colors"
+          >
+            <span
+              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                purge
+                  ? 'bg-color-main border-color-main text-text-dark'
+                  : 'bg-glass border-border'
+              }`}
+            >
+              {purge && <CheckIcon size={14} />}
+            </span>
+            <span className="min-w-0">
+              Видалити також плагіни й налаштування Millennium
+            </span>
+          </button>
+        </div>
+      ),
+      footer: (
         <SetupFooter>
           <SetupButton
             tone="danger"
@@ -82,36 +112,9 @@ export const MillenniumUninstallFlow: React.FC = () => {
             Скасувати
           </SetupButton>
         </SetupFooter>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <SetupText
-          paragraphs={[
-            'Millennium буде видалено з теки Steam. Плагіни й теми Millennium залишаться, якщо не позначити «Видалити також плагіни й налаштування Millennium».',
-          ]}
-        />
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={purge}
-          onClick={() => send({ type: 'TOGGLE_PURGE' })}
-          data-gamepad-modal-item
-          className="flex items-start gap-3 rounded-xl p-2 text-left text-sm text-text-main hover:bg-glass-hover transition-colors"
-        >
-          <span
-            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
-              purge
-                ? 'bg-color-main border-color-main text-text-dark'
-                : 'bg-glass border-border'
-            }`}
-          >
-            {purge && <CheckIcon size={14} />}
-          </span>
-          <span className="min-w-0">
-            Видалити також плагіни й налаштування Millennium
-          </span>
-        </button>
-      </div>
-    </SetupFrame>
-  );
+      ),
+    };
+  };
+
+  return <SetupFrame view={stepView()} onClose={close} />;
 };

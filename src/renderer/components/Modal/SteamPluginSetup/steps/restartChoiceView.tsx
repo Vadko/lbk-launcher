@@ -1,30 +1,30 @@
 import { RotateCwIcon } from 'lucide-react';
-import React from 'react';
-import { SetupButton, SetupFooter, SetupFrame, SetupText } from '../SetupParts';
+import type { RestartChoice } from '../millenniumSetup';
+import { SetupButton, SetupFooter, SetupText, type SetupView } from '../SetupParts';
 
-interface RestartChoiceStepProps {
+interface RestartChoiceViewProps {
   title: string;
   paragraphs: readonly string[];
   canRestart: boolean;
-  onChoose: (restart: 'now' | 'on-exit') => void;
+  onChoose: (restart: RestartChoice) => void;
   onClose: () => void;
   // Adds «Не зараз»; the uninstall confirmation goes on without it.
   cancellable: boolean;
 }
 
-export const RestartChoiceStep: React.FC<RestartChoiceStepProps> = ({
+export function restartChoiceView({
   title,
   paragraphs,
   canRestart,
   onChoose,
   onClose,
   cancellable,
-}) => (
-  <SetupFrame
-    title={title}
-    dismissable
-    onClose={onClose}
-    footer={
+}: RestartChoiceViewProps): SetupView {
+  return {
+    title,
+    dismissable: true,
+    body: <SetupText paragraphs={paragraphs} />,
+    footer: (
       <SetupFooter>
         {canRestart && (
           <SetupButton
@@ -49,8 +49,6 @@ export const RestartChoiceStep: React.FC<RestartChoiceStepProps> = ({
           </SetupButton>
         )}
       </SetupFooter>
-    }
-  >
-    <SetupText paragraphs={paragraphs} />
-  </SetupFrame>
-);
+    ),
+  };
+}

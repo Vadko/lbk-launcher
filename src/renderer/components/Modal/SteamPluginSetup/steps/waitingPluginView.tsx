@@ -2,39 +2,41 @@ import React from 'react';
 import {
   SetupCloseButton,
   SetupFooter,
-  SetupFrame,
   SetupNote,
   SetupProgress,
+  type SetupView,
 } from '../SetupParts';
 
-interface WaitingPluginStepProps {
+interface WaitingPluginViewProps {
   title: string;
   text: string;
   onClose: () => void;
   note?: string | null;
   // Extra footer buttons, placed before «Закрити».
-  children?: React.ReactNode;
+  buttons?: React.ReactNode;
 }
 
-export const WaitingPluginStep: React.FC<WaitingPluginStepProps> = ({
+export function waitingPluginView({
   title,
   text,
   onClose,
   note = null,
-  children,
-}) => (
-  <SetupFrame
-    title={title}
-    dismissable
-    onClose={onClose}
-    footer={
+  buttons,
+}: WaitingPluginViewProps): SetupView {
+  return {
+    title,
+    dismissable: true,
+    body: (
+      <>
+        <SetupProgress text={text} percent={null} />
+        <SetupNote text={note} />
+      </>
+    ),
+    footer: (
       <SetupFooter>
-        {children}
+        {buttons}
         <SetupCloseButton onClose={onClose} />
       </SetupFooter>
-    }
-  >
-    <SetupProgress text={text} percent={null} />
-    <SetupNote text={note} />
-  </SetupFrame>
-);
+    ),
+  };
+}

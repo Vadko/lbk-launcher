@@ -4,6 +4,7 @@ import type {
   DeckyLoaderInstallResult,
   PluginHostState,
 } from '@/shared/plugin-host-types';
+import type { ElectronAPI } from '@/shared/types';
 import { useSteamPluginHostStore } from '../../../store/useSteamPluginHostStore';
 
 export type LoaderFailure = Extract<
@@ -11,11 +12,7 @@ export type LoaderFailure = Extract<
   { success: false }
 >['reason'];
 
-interface SaveZipResult {
-  success: boolean;
-  path?: string;
-  error?: string;
-}
+type SaveZipResult = Awaited<ReturnType<ElectronAPI['saveDeckyPluginZip']>>;
 
 interface DeckySetupContext {
   host: PluginHostState | null;
@@ -46,6 +43,7 @@ export const deckySetupMachine = setup({
   types: {
     context: {} as DeckySetupContext,
     events: {} as DeckySetupEvent,
+    input: {} as { host: PluginHostState | null },
   },
   actors: {
     installLoader: fromPromise<DeckyLoaderInstallResult>(async () => {
@@ -62,11 +60,9 @@ export const deckySetupMachine = setup({
       window.electronAPI.requestDeckyPluginInstall()
     ),
     saveZip: fromPromise<SaveZipResult>(() => window.electronAPI.saveDeckyPluginZip()),
-  },
-  actions: {
-    refreshHost: () => {
-      void useSteamPluginHostStore.getState().refresh();
-    },
+    refreshHost: fromPromise<PluginHostState | null>(() =>
+      useSteamPluginHostStore.getState().refresh()
+    ),
   },
   guards: {
     // The modal may be reopened while an installer it started earlier is still running.
@@ -80,13 +76,14 @@ export const deckySetupMachine = setup({
 }).createMachine({
   id: 'deckySetup',
   type: 'parallel',
-  context: {
-    host: null,
+  // Seeded with the host state already in the store, so a reopened modal goes straight to a running installer.
+  context: ({ input }) => ({
+    host: input.host,
     loaderInstalled: false,
     loaderFailure: 'not-installed',
     showSaveZip: false,
     savedMessage: null,
-  },
+  }),
   on: {
     HOST_STATE: { actions: assign({ host: ({ event }) => event.state }) },
   },
@@ -143,8 +140,7 @@ export const deckySetupMachine = setup({
               {
                 guard: ({ event }) =>
                   !event.output.success && event.output.reason === 'no-decky',
-                target: 'intro',
-                actions: 'refreshHost',
+                target: 'refreshingHost',
               },
               { target: 'fallback' },
             ],
@@ -154,6 +150,10 @@ export const deckySetupMachine = setup({
                 console.warn('[DeckySetup] Install request failed:', event.error),
             },
           },
+        },
+        // Waits for the fresh state, so the intro never renders the stale plugin offer first.
+        refreshingHost: {
+          invoke: { src: 'refreshHost', onDone: 'intro', onError: 'intro' },
         },
         waiting: {
           always: { guard: 'pluginReady', target: 'done' },

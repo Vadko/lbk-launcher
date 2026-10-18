@@ -8,7 +8,7 @@ interface SteamPluginHostStore {
 }
 
 // Kept current by the push in useSteamBridgeStatusSync; components only revalidate when they open.
-export const useSteamPluginHostStore = create<SteamPluginHostStore>()((set) => ({
+export const useSteamPluginHostStore = create<SteamPluginHostStore>((set) => ({
   state: null,
 
   setState: (state) => set({ state }),

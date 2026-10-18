@@ -7,21 +7,22 @@ import { Modal } from '../Modal';
 
 const noop = () => undefined;
 
-interface SetupFrameProps {
+export interface SetupView {
   title: string;
   dismissable: boolean;
-  onClose: () => void;
-  footer?: React.ReactNode;
-  children: React.ReactNode;
+  body: React.ReactNode;
+  footer: React.ReactNode;
 }
 
-export const SetupFrame: React.FC<SetupFrameProps> = ({
-  title,
-  dismissable,
-  onClose,
-  footer,
-  children,
-}) => {
+interface SetupFrameProps {
+  view: SetupView;
+  onClose: () => void;
+}
+
+// Each flow renders exactly one frame and swaps its view, so the Modal and its AnimatePresence stay mounted across steps.
+export const SetupFrame: React.FC<SetupFrameProps> = ({ view, onClose }) => {
+  const { title, dismissable, body, footer } = view;
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') {
@@ -46,7 +47,7 @@ export const SetupFrame: React.FC<SetupFrameProps> = ({
       showCloseButton={dismissable}
       footer={footer}
     >
-      {children}
+      {body}
     </Modal>
   );
 };

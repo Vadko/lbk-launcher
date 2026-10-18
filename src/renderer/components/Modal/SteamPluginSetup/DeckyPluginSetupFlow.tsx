@@ -8,11 +8,17 @@ import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
 import { AppActionIcon } from '../../ui/AppActionIcon';
 import { deckySetupMachine } from './deckySetupMachine';
-import { SetupButton, SetupCloseButton, SetupDoneButton } from './SetupParts';
-import { DECKY_TITLE, DeckyLoaderStep } from './steps/DeckyLoaderStep';
-import { DeckyPluginStep } from './steps/DeckyPluginStep';
-import { ResultStep } from './steps/ResultStep';
-import { WaitingPluginStep } from './steps/WaitingPluginStep';
+import {
+  SetupButton,
+  SetupCloseButton,
+  SetupDoneButton,
+  SetupFrame,
+  type SetupView,
+} from './SetupParts';
+import { DECKY_TITLE, deckyLoaderView } from './steps/deckyLoaderView';
+import { deckyPluginView } from './steps/deckyPluginView';
+import { resultView } from './steps/resultView';
+import { waitingPluginView } from './steps/waitingPluginView';
 
 const WAITING_TEXT =
   'Підтвердіть встановлення плагіна «LBK Bridge» у вікні Decky Loader. Якщо вікна не видно, натисніть кнопку Steam.';
@@ -21,7 +27,7 @@ const FALLBACK_TEXT =
 const DONE_TEXT =
   "Плагін «LBK Bridge» встановлено. Переклад досягнень з'явиться в Steam.";
 
-export const DeckyPluginSetupFlow: React.FC = (): React.ReactElement => {
+export const DeckyPluginSetupFlow: React.FC = () => {
   const close = useSteamPluginSetupStore((s) => s.close);
   const source = useSteamPluginSetupStore((s) => s.source);
   const declineOffer = useSettingsStore((s) => s.declineDeckyPluginOffer);
@@ -46,7 +52,8 @@ export const DeckyPluginSetupFlow: React.FC = (): React.ReactElement => {
           })
         ),
       },
-    })
+    }),
+    { input: { host: state } }
   );
 
   useEffect(() => {
@@ -60,7 +67,6 @@ export const DeckyPluginSetupFlow: React.FC = (): React.ReactElement => {
 
   const installLoader = () => send({ type: 'INSTALL_LOADER' });
   const { loaderInstalled, loaderFailure, showSaveZip, savedMessage } = snapshot.context;
-  const flow = snapshot.value.flow;
   const saveZipButton = (primary: boolean) => (
     <SetupButton
       tone={primary ? 'primary' : 'secondary'}
@@ -73,87 +79,81 @@ export const DeckyPluginSetupFlow: React.FC = (): React.ReactElement => {
     </SetupButton>
   );
 
-  switch (flow) {
-    case 'intro':
-    case 'requesting': {
-      const loader = state?.deckyLoader;
-      if (loader && (!state?.decky?.installed || loader.repair)) {
-        return (
-          <DeckyLoaderStep
-            stage={{
+  const stepView = (): SetupView => {
+    switch (snapshot.value.flow) {
+      case 'intro':
+      case 'requesting':
+      case 'refreshingHost': {
+        const loader = state?.deckyLoader;
+        if (loader && (!state?.decky?.installed || loader.repair)) {
+          return deckyLoaderView({
+            stage: {
               kind: 'offer',
               repair: loader.repair,
               gameMode: loader.blockedBy === 'game-mode',
-            }}
-            source={source}
-            onInstall={installLoader}
-            onDecline={handleDecline}
-            onClose={close}
-          />
-        );
+            },
+            source,
+            onInstall: installLoader,
+            onDecline: handleDecline,
+            onClose: close,
+          });
+        }
+        return deckyPluginView({
+          state,
+          source,
+          loaderInstalled,
+          requestPhase,
+          isRequesting,
+          onRequest: () => send({ type: 'REQUEST' }),
+          onDecline: handleDecline,
+          onClose: close,
+        });
       }
-      return (
-        <DeckyPluginStep
-          state={state}
-          source={source}
-          loaderInstalled={loaderInstalled}
-          requestPhase={requestPhase}
-          isRequesting={isRequesting}
-          onRequest={() => send({ type: 'REQUEST' })}
-          onDecline={handleDecline}
-          onClose={close}
-        />
-      );
+      case 'loaderInstalling':
+      case 'loaderRunning':
+        return deckyLoaderView({
+          stage: { kind: 'installing' },
+          source,
+          onInstall: installLoader,
+          onDecline: handleDecline,
+          onClose: close,
+        });
+      case 'loaderFailed':
+        return deckyLoaderView({
+          stage: { kind: 'failed', reason: loaderFailure },
+          source,
+          onInstall: installLoader,
+          onDecline: handleDecline,
+          onClose: close,
+        });
+      case 'waiting':
+        return waitingPluginView({
+          title: DECKY_TITLE,
+          text: WAITING_TEXT,
+          note: savedMessage,
+          onClose: close,
+          buttons: showSaveZip && saveZipButton(false),
+        });
+      case 'fallback':
+        return resultView({
+          title: DECKY_TITLE,
+          paragraphs: [FALLBACK_TEXT],
+          note: savedMessage,
+          buttons: (
+            <>
+              {saveZipButton(true)}
+              <SetupCloseButton onClose={close} />
+            </>
+          ),
+        });
+      case 'done':
+        return resultView({
+          title: DECKY_TITLE,
+          paragraphs: [DONE_TEXT],
+          buttons: <SetupDoneButton onClose={close} />,
+        });
     }
-    case 'loaderInstalling':
-    case 'loaderRunning':
-      return (
-        <DeckyLoaderStep
-          stage={{ kind: 'installing' }}
-          source={source}
-          onInstall={installLoader}
-          onDecline={handleDecline}
-          onClose={close}
-        />
-      );
-    case 'loaderFailed':
-      return (
-        <DeckyLoaderStep
-          stage={{ kind: 'failed', reason: loaderFailure }}
-          source={source}
-          onInstall={installLoader}
-          onDecline={handleDecline}
-          onClose={close}
-        />
-      );
-    case 'waiting':
-      return (
-        <WaitingPluginStep
-          title={DECKY_TITLE}
-          text={WAITING_TEXT}
-          note={savedMessage}
-          onClose={close}
-        >
-          {showSaveZip && saveZipButton(false)}
-        </WaitingPluginStep>
-      );
-    case 'fallback':
-      return (
-        <ResultStep
-          title={DECKY_TITLE}
-          paragraphs={[FALLBACK_TEXT]}
-          note={savedMessage}
-          onClose={close}
-        >
-          {saveZipButton(true)}
-          <SetupCloseButton onClose={close} />
-        </ResultStep>
-      );
-    case 'done':
-      return (
-        <ResultStep title={DECKY_TITLE} paragraphs={[DONE_TEXT]} onClose={close}>
-          <SetupDoneButton onClose={close} />
-        </ResultStep>
-      );
-  }
+  };
+
+  return <SetupFrame view={stepView()} onClose={close} />;
 };
