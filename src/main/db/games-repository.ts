@@ -634,6 +634,10 @@ export class GamesRepository {
     return row ? this.rowToGame(row) : null;
   }
 
+  isGameVisible(gameId: string): boolean {
+    return this.hasVisibleMatch({ sql: 'id = ?', params: [gameId] });
+  }
+
   /**
    * Tags for the filter: only those present in visible games, with localized names.
    * The JOIN with the dictionary also filters out ids whose names haven't synced yet.
