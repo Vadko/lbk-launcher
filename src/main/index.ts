@@ -158,6 +158,10 @@ import {
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
 import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import {
+  deleteStaleBridgeData,
+  shutdownSteamBridgeServer,
+} from './steam-bridge-server/bridge-server';
 import { startPendingSteamActions } from './steam-pending-actions';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 import {
@@ -167,10 +171,6 @@ import {
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { bootstrapCefDebugging } from './utils/cef-flag-file';
 import { startSteamBridge } from './utils/steam-bridge';
-import {
-  deleteStaleBridgeData,
-  shutdownSteamBridgeServer,
-} from './utils/steam-bridge-server';
 import { createMainWindow, getMainWindow } from './window';
 
 // Global managers

@@ -60,7 +60,7 @@ vi.mock('@/main/utils/plugin-data', () => ({
     state.pluginData.push(data);
   },
 }));
-vi.mock('@/main/utils/steam-bridge-server', () => ({
+vi.mock('@/main/steam-bridge-server/bridge-server', () => ({
   invokeViaPlugin: () => state.reload(),
   isPluginConnected: () => state.pluginConnected,
 }));

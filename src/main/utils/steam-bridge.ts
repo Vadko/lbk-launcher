@@ -17,17 +17,18 @@ import {
   getAchievementsBadge,
   getHostSnapshot,
 } from '@/main/plugin-host/state';
+import {
+  getConnectedPluginInfo,
+  invokeViaPlugin,
+  isPluginConnected,
+} from '@/main/steam-bridge-server/bridge-server';
+import { PluginBridgeError } from '@/main/steam-bridge-server/protocol';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { isCefFlagFilePresent, syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
 import { detectMillennium, planEnabledPluginsEdit } from '@/main/utils/millennium';
 import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
 import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';
-import {
-  getConnectedPluginInfo,
-  invokeViaPlugin,
-  isPluginConnected,
-} from '@/main/utils/steam-bridge-server';
 import {
   invokeViaCdp,
   resetCefEndpointCache,
@@ -40,7 +41,6 @@ import {
   writeStoreValue,
 } from '@/main/utils/store-storage';
 import { sendToRenderer } from '@/main/window';
-import { errorMessage } from '@/shared/errors';
 import type {
   SteamBridgeStatus,
   SteamBridgeStatusCode,
@@ -98,8 +98,10 @@ const pluginBridge: SteamBridge = {
       return await invokeViaPlugin(op, args, opTimeout(op));
     } catch (error) {
       // Only errors raised before the request reached Steam are safe to retry over CDP.
-      const message = errorMessage(error, '');
-      if (message === 'plugin-not-connected' || message === 'plugin-outdated') {
+      if (
+        error instanceof PluginBridgeError &&
+        (error.code === 'not-connected' || error.code === 'outdated')
+      ) {
         const { endpoint } = await resolveCefEndpoint();
         if (endpoint) {
           return invokeViaCdp(op, args, opTimeout(op));

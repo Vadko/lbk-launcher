@@ -17,6 +17,10 @@ import { cleanupDownloadDir, getAllFiles } from '@/main/installer/files';
 import { verifyFileHash } from '@/main/installer/hash';
 import { getAchievementsBadge } from '@/main/plugin-host/state';
 import { deliveryFromBadge } from '@/main/plugin-host/support';
+import {
+  invokeViaPlugin,
+  isPluginConnected,
+} from '@/main/steam-bridge-server/bridge-server';
 import { getSignedDownloadUrl } from '@/main/tracking';
 import {
   type ExtractedAchievementStrings,
@@ -27,7 +31,6 @@ import { writeFileAtomic } from '@/main/utils/atomic-write';
 import { readFileOrNull } from '@/main/utils/fs-safe';
 import { readJsonFile } from '@/main/utils/json-file';
 import { writeBridgePluginData } from '@/main/utils/plugin-data';
-import { invokeViaPlugin, isPluginConnected } from '@/main/utils/steam-bridge-server';
 import {
   isCefDebuggingEnabledInSettings,
   readStoreValue,

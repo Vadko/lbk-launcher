@@ -9,6 +9,10 @@ import { createZip } from '@/main/installer/archive';
 import { bundledBridgeFiles } from '@/main/plugin-host/bundled-bridge';
 import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
 import {
+  getConnectedPluginInfo,
+  startSteamBridgeServer,
+} from '@/main/steam-bridge-server/bridge-server';
+import {
   DECKY_PLUGIN_DIR,
   deckyArtifactUrl,
   deckyCacheDirFor,
@@ -20,10 +24,6 @@ import { pruneDir } from '@/main/utils/fs-safe';
 import { sha256 } from '@/main/utils/hash';
 import { isLinux } from '@/main/utils/platform';
 import { getSteamBridge } from '@/main/utils/steam-bridge';
-import {
-  getConnectedPluginInfo,
-  startSteamBridgeServer,
-} from '@/main/utils/steam-bridge-server';
 import { errorMessage } from '@/shared/errors';
 import type { DeckyInstallResult } from '@/shared/plugin-host-types';
 

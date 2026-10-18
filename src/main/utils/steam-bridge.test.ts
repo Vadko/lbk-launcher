@@ -22,7 +22,7 @@ vi.mock('@/main/utils/millennium', () => ({
 vi.mock('@/main/utils/millennium-plugin', () => ({
   getMillenniumPluginState: vi.fn(),
 }));
-vi.mock('@/main/utils/steam-bridge-server', () => ({
+vi.mock('@/main/steam-bridge-server/bridge-server', () => ({
   invokeViaPlugin: vi.fn(),
   isPluginConnected: () => false,
 }));

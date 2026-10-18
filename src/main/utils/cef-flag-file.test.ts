@@ -57,7 +57,7 @@ vi.mock('./steam-bridge', () => ({
   clearSteamBridgeVerdict: vi.fn(),
   refreshSteamBridgeStatus: vi.fn(),
 }));
-vi.mock('./steam-bridge-server', () => ({
+vi.mock('@/main/steam-bridge-server/bridge-server', () => ({
   startSteamBridgeServer: vi.fn(async () => undefined),
   stopSteamBridgeServer: vi.fn(),
 }));

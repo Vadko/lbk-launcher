@@ -26,6 +26,7 @@ import {
   type SelectedMillenniumRelease,
   selectMillenniumAsset,
 } from '@/main/millennium-install/release';
+import { getConnectedPluginInfo } from '@/main/steam-bridge-server/bridge-server';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { findSteamPids } from '@/main/steam-process/lifecycle';
 import {
@@ -45,7 +46,6 @@ import {
   isSteamDeckHardware,
   isSteamOS,
 } from '@/main/utils/platform';
-import { getConnectedPluginInfo } from '@/main/utils/steam-bridge-server';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type { AchievementsBadge, PluginHostState } from '@/shared/plugin-host-types';

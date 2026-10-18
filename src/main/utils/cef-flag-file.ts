@@ -12,6 +12,10 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
+import {
+  startSteamBridgeServer,
+  stopSteamBridgeServer,
+} from '@/main/steam-bridge-server/bridge-server';
 import { queueSteamAction } from '@/main/steam-pending-actions';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { sendToRenderer } from '@/main/window';
@@ -31,7 +35,6 @@ import {
   clearSteamBridgeVerdict,
   refreshSteamBridgeStatus,
 } from './steam-bridge';
-import { startSteamBridgeServer, stopSteamBridgeServer } from './steam-bridge-server';
 import { resetCefEndpointCache } from './steam-cef';
 import { isCefDebuggingEnabledInSettings } from './store-storage';
 

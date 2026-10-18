@@ -15,18 +15,13 @@ vi.mock('@/main/utils/plugin-data', () => ({
 
 const { appEvents } = await import('@/main/app-events');
 const {
-  computeServerProof,
   getConnectedPluginInfo,
   invokeViaPlugin,
-  isAllowedUpgrade,
   isPluginConnected,
-  parseHello,
   startSteamBridgeServer,
   stopSteamBridgeServer,
-  verifyClientProof,
-} = await import('@/main/utils/steam-bridge-server');
+} = await import('@/main/steam-bridge-server/bridge-server');
 
-const SECRET = 'ab'.repeat(32);
 const CN = '0123456789abcdef0123456789abcdef';
 const helloFrame = (extra: Record<string, unknown> = {}) => ({
   t: 'hello',
@@ -38,55 +33,10 @@ const helloFrame = (extra: Record<string, unknown> = {}) => ({
   cn: CN,
   ...extra,
 });
-const SN = 'fedcba9876543210fedcba9876543210';
 const ORIGIN = 'https://steamloopback.host';
 
 const pluginHmac = (secretHex: string, message: string) =>
   hmacHex(crypto.subtle, secretHex, message);
-
-describe('handshake proofs', () => {
-  it('server proof equals the plugin-side HMAC of "server|cn|sn"', async () => {
-    expect(computeServerProof(SECRET, CN, SN)).toBe(
-      await pluginHmac(SECRET, `server|${CN}|${SN}`)
-    );
-  });
-
-  it('accepts the plugin-side client proof and rejects anything else', async () => {
-    const cp = await pluginHmac(SECRET, `client|${SN}|${CN}`);
-    expect(verifyClientProof(SECRET, SN, CN, cp)).toBe(true);
-    expect(
-      verifyClientProof(
-        SECRET,
-        SN,
-        CN,
-        cp.replace(/.$/, (c) => (c === '0' ? '1' : '0'))
-      )
-    ).toBe(false);
-    expect(verifyClientProof(SECRET, CN, SN, cp)).toBe(false);
-    expect(verifyClientProof(SECRET, SN, CN, cp.slice(0, 62))).toBe(false);
-    expect(verifyClientProof(SECRET, SN, CN, 'zz'.repeat(32))).toBe(false);
-    expect(verifyClientProof(SECRET, SN, CN, computeServerProof(SECRET, CN, SN))).toBe(
-      false
-    );
-  });
-});
-
-describe('isAllowedUpgrade', () => {
-  it('accepts only the Steam origin on the exact loopback host', () => {
-    expect(isAllowedUpgrade({ origin: ORIGIN, host: '127.0.0.1:4567' }, 4567)).toBe(true);
-  });
-
-  it.each([
-    ['foreign origin', { origin: 'https://example.com', host: '127.0.0.1:4567' }],
-    ['missing origin', { host: '127.0.0.1:4567' }],
-    ['localhost host', { origin: ORIGIN, host: 'localhost:4567' }],
-    ['wrong port', { origin: ORIGIN, host: '127.0.0.1:4568' }],
-    ['missing host', { origin: ORIGIN }],
-    ['http origin', { origin: 'http://steamloopback.host', host: '127.0.0.1:4567' }],
-  ])('rejects %s', (_label, headers) => {
-    expect(isAllowedUpgrade(headers, 4567)).toBe(false);
-  });
-});
 
 interface BridgeJson {
   v: number;
@@ -261,6 +211,9 @@ describe('plugin server', () => {
 
   it('rejects requests when no plugin is connected', async () => {
     await expect(invokeViaPlugin('ping', {})).rejects.toThrow('plugin-not-connected');
+    await expect(invokeViaPlugin('ping', {})).rejects.toMatchObject({
+      code: 'not-connected',
+    });
   });
 
   it('closes a client with a wrong proof', async () => {
@@ -394,7 +347,7 @@ describe('shutdown', () => {
   it('stays down when a disconnect listener starts the server again', async () => {
     vi.resetModules();
     const { appEvents: events } = await import('@/main/app-events');
-    const bridgeServer = await import('@/main/utils/steam-bridge-server');
+    const bridgeServer = await import('@/main/steam-bridge-server/bridge-server');
     pluginData.clear();
     await bridgeServer.startSteamBridgeServer();
     const { port, secret } = pluginData.get('bridge.json') as BridgeJson;
@@ -417,17 +370,5 @@ describe('shutdown', () => {
     expect(restarts).toHaveLength(1);
     expect(await plugin.closed()).toBe(4010);
     expect(pluginData.has('bridge.json')).toBe(false);
-  });
-});
-
-describe('parseHello', () => {
-  it.each(['millennium', 'decky'])('accepts the %s host', (host) => {
-    expect(parseHello(helloFrame({ host }))?.host).toBe(host);
-  });
-
-  it('rejects a missing or unknown host', () => {
-    expect(parseHello(helloFrame({ host: undefined }))).toBeNull();
-    expect(parseHello(helloFrame({ host: 'browser' }))).toBeNull();
-    expect(parseHello(helloFrame({ host: 1 }))).toBeNull();
   });
 });
