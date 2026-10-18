@@ -11,6 +11,12 @@ import {
 } from './decky';
 import { STEAM_OPS_SOURCE } from './steam-bridge-ops';
 
+const loadOps = (globals: Record<string, unknown> = {}) =>
+  vm.runInContext(STEAM_OPS_SOURCE, vm.createContext(globals)) as Record<
+    string,
+    (args: unknown) => Promise<unknown>
+  >;
+
 describe('parseUnprivilegedPath', () => {
   it('reads the homebrew dir from the systemd unit', () => {
     const unit = `[Service]
@@ -59,10 +65,7 @@ describe('deckyInstallType', () => {
 describe('deckyArtifactUrl', () => {
   it('produces exactly what the deckyRequestInstall op accepts', async () => {
     const call = vi.fn(() => Promise.resolve(undefined));
-    const ops = vm.runInContext(
-      STEAM_OPS_SOURCE,
-      vm.createContext({ window: { DeckyBackend: { call } } })
-    ) as Record<string, (args: unknown) => Promise<unknown>>;
+    const ops = loadOps({ window: { DeckyBackend: { call } } });
     const cases = [
       deckyCacheDirFor('/home/deck', undefined),
       deckyCacheDirFor('/var/home/vadko', undefined),
@@ -82,5 +85,86 @@ describe('deckyArtifactUrl', () => {
         })
       ).resolves.toBe('prompted');
     }
+  });
+});
+
+describe('deckyRequestInstall', () => {
+  const HASH = 'a'.repeat(64);
+  const CACHE = 'file:///home/deck/.cache/lbk-launcher/decky';
+  const valid = {
+    artifact: `${CACHE}/lbk-bridge-1.1.0.zip`,
+    version: '1.1.0',
+    hash: HASH,
+    installType: 0,
+  };
+
+  function withDecky() {
+    const call = vi.fn((..._args: unknown[]) => Promise.resolve(undefined));
+    return { call, ops: loadOps({ window: { DeckyBackend: { call } } }) };
+  }
+
+  it('asks Decky to show its own install prompt', async () => {
+    const { call, ops } = withDecky();
+    await expect(ops.deckyRequestInstall(valid)).resolves.toBe('prompted');
+    expect(call).toHaveBeenCalledWith(
+      'utilities/install_plugin',
+      valid.artifact,
+      'LBK Bridge',
+      '1.1.0',
+      HASH,
+      0
+    );
+  });
+
+  it('accepts Fedora-style and Flatpak cache paths', async () => {
+    const { call, ops } = withDecky();
+    for (const artifact of [
+      'file:///var/home/user.name/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
+      'file:///home/deck/.var/app/ua.lbk.Launcher/cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
+    ]) {
+      await expect(
+        ops.deckyRequestInstall({ ...valid, artifact, installType: 2 })
+      ).resolves.toBe('prompted');
+    }
+    expect(call).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['invalid artifact', { artifact: 'https://example.com/lbk-bridge-1.1.0.zip' }],
+    ['invalid artifact', { artifact: `${CACHE}/lbk-bridge-1.0.0.zip` }],
+    [
+      'invalid artifact',
+      { artifact: 'file:///home/../root/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip' },
+    ],
+    ['invalid artifact', { artifact: `${CACHE}/../../evil/lbk-bridge-1.1.0.zip` }],
+    ['invalid artifact', { artifact: 'file:///etc/lbk-bridge-1.1.0.zip' }],
+    ['invalid artifact', { artifact: `${CACHE}/lbk-bridge-1.1.0.zip?x` }],
+    [
+      'invalid artifact',
+      {
+        artifact:
+          'file:///home/deck/.var/app/../cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
+      },
+    ],
+    ['invalid version', { version: '1.1' }],
+    ['invalid hash', { hash: 'A'.repeat(64) }],
+    ['invalid hash', { hash: HASH.slice(1) }],
+    ['invalid int', { installType: 3 }],
+    ['invalid int', { installType: -1 }],
+    ['invalid int', { installType: 1.5 }],
+    ['invalid int', { installType: '0' }],
+  ])('fails with "%s" for %j without calling Decky', async (error, change) => {
+    const { call, ops } = withDecky();
+    await expect(ops.deckyRequestInstall({ ...valid, ...change })).rejects.toThrow(
+      `lbk-ops: ${error}`
+    );
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it('answers no-decky when Decky is not injected', async () => {
+    await expect(loadOps().deckyRequestInstall(valid)).resolves.toBe('no-decky');
+    await expect(loadOps({ window: {} }).deckyRequestInstall(valid)).resolves.toBe(
+      'no-decky'
+    );
   });
 });

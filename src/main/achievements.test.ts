@@ -115,6 +115,13 @@ const statsFile = (name: string) => path.join(statsDir(), name);
 const stringsFile = (appId: number) =>
   path.join(state.root, 'userData', 'achievement-strings', `${appId}.json`);
 
+async function seedOurStrings(): Promise<void> {
+  const dir = path.join(state.root, 'x');
+  fs.mkdirSync(dir);
+  fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
+  saveAchievementStrings(await readAchievementStringsFromDir(dir), 'game-a', null);
+}
+
 beforeEach(() => {
   state.root = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-ach-'));
   fs.mkdirSync(statsDir(), { recursive: true });
@@ -174,11 +181,7 @@ describe('achievement strings store', () => {
   });
 
   it('leaves strings owned by another translation of the same app', async () => {
-    const dir = path.join(state.root, 'x');
-    fs.mkdirSync(dir);
-    fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
-    const [entry] = await readAchievementStringsFromDir(dir);
-    saveAchievementStrings([entry], 'game-a', null);
+    await seedOurStrings();
 
     await removeInstalledAchievements('game-b', { files: [], appIds: [400] });
     expect(fs.existsSync(stringsFile(400))).toBe(true);
@@ -213,10 +216,7 @@ describe('legacy appcache cleanup', () => {
   });
 
   it('removes the strings of the app named by a legacy file', async () => {
-    const dir = path.join(state.root, 'x');
-    fs.mkdirSync(dir);
-    fs.writeFileSync(path.join(dir, file), OURS());
-    saveAchievementStrings(await readAchievementStringsFromDir(dir), 'game-a', null);
+    await seedOurStrings();
 
     await removeInstalledAchievements('game-a', { files: [file] });
     expect(fs.existsSync(stringsFile(400))).toBe(false);
@@ -224,15 +224,8 @@ describe('legacy appcache cleanup', () => {
 });
 
 describe('syncAchievementsToPlugin', () => {
-  const seed = async () => {
-    const dir = path.join(state.root, 'x');
-    fs.mkdirSync(dir);
-    fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
-    saveAchievementStrings(await readAchievementStringsFromDir(dir), 'game-a', null);
-  };
-
   it('writes the aggregate payload and reports the delivery', async () => {
-    await seed();
+    await seedOurStrings();
     expect(await syncAchievementsToPlugin()).toBe('needs-millennium');
     expect(state.pluginData.at(-1)).toMatchObject({
       v: 1,
@@ -255,7 +248,7 @@ describe('syncAchievementsToPlugin', () => {
   });
 
   it('keeps the stamp stable for unchanged data', async () => {
-    await seed();
+    await seedOurStrings();
     await syncAchievementsToPlugin();
     await syncAchievementsToPlugin();
     const [a, b] = state.pluginData as { stamp: string }[];

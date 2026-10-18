@@ -121,41 +121,21 @@ describe('parsePsOutput', () => {
 });
 
 describe('classifyMacProcess', () => {
-  it('recognises steam_osx', () => {
-    expect(classifyMacProcess(`${MAC_STEAM}/steam_osx`)).toBe('steam');
-    expect(
-      classifyMacProcess('/Applications/Steam.app/Contents/MacOS/steam_osx -foo')
-    ).toBe('steam');
-  });
-
-  it('recognises Steam Helper even though its args mention steam_osx', () => {
-    expect(
-      classifyMacProcess(
-        `${MAC_HELPER} -nocrashdialog -steampath=${MAC_STEAM}/steam_osx -launcher=0`
-      )
-    ).toBe('webhelper');
-    expect(classifyMacProcess(`${MAC_HELPER} --type=renderer`)).toBe('webhelper');
-  });
-
-  it('ignores other Steam binaries', () => {
-    expect(classifyMacProcess(`${MAC_STEAM}/ipcserver`)).toBe('other');
-    expect(classifyMacProcess('/usr/bin/some_steam_osx_tool')).toBe('other');
-  });
-
-  it('ignores the Millennium launcher and its probe child', () => {
-    expect(
-      classifyMacProcess(
-        '/Users/u/Applications/Steam Millennium.app/Contents/MacOS/steam_osx'
-      )
-    ).toBe('other');
-    expect(
-      classifyMacProcess(
-        '/Users/u/Library/Application Support/Millennium/runtime/v3.5.0/steam_osx'
-      )
-    ).toBe('other');
-    expect(classifyMacProcess(`${MAC_STEAM}/steam_osx -devtools-port 60519`)).toBe(
-      'steam'
-    );
+  it.each([
+    [`${MAC_STEAM}/steam_osx`, 'steam'],
+    ['/Applications/Steam.app/Contents/MacOS/steam_osx -foo', 'steam'],
+    [`${MAC_STEAM}/steam_osx -devtools-port 60519`, 'steam'],
+    [
+      `${MAC_HELPER} -nocrashdialog -steampath=${MAC_STEAM}/steam_osx -launcher=0`,
+      'webhelper',
+    ],
+    [`${MAC_HELPER} --type=renderer`, 'webhelper'],
+    [`${MAC_STEAM}/ipcserver`, 'other'],
+    ['/usr/bin/some_steam_osx_tool', 'other'],
+    ['/Users/u/Applications/Steam Millennium.app/Contents/MacOS/steam_osx', 'other'],
+    ['/Users/u/Library/Application Support/Millennium/runtime/v3.5.0/steam_osx', 'other'],
+  ])('classifies %s as %s', (args, kind) => {
+    expect(classifyMacProcess(args)).toBe(kind);
   });
 });
 
@@ -223,64 +203,65 @@ describe('parseRunningAppId', () => {
   const registry = (id: string) =>
     `"Registry"\n{\n\t"HKCU"\n\t{\n\t\t"Software"\n\t\t{\n\t\t\t"Valve"\n\t\t\t{\n\t\t\t\t"Steam"\n\t\t\t\t{\n\t\t\t\t\t"RunningAppID"\t\t"${id}"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n`;
 
-  it('returns the running Steam game', () => {
-    expect(parseRunningAppId(registry('1552350'))).toBe(1552350);
-  });
-
-  it('ignores no game, non-Steam shortcuts and broken files', () => {
-    expect(parseRunningAppId(registry('0'))).toBeNull();
-    expect(parseRunningAppId(registry('3221225472'))).toBeNull();
-    expect(parseRunningAppId('"Registry" { "HKCU" { } }')).toBeNull();
-    expect(parseRunningAppId('not vdf {')).toBeNull();
+  it.each([
+    ['a Steam game', registry('1552350'), 1552350],
+    ['no game', registry('0'), null],
+    ['a non-Steam shortcut', registry('3221225472'), null],
+    ['a file without the key', '"Registry" { "HKCU" { } }', null],
+    ['a broken file', 'not vdf {', null],
+  ])('reads %s', (_label, text, appId) => {
+    expect(parseRunningAppId(text)).toBe(appId);
   });
 });
 
 describe('parseReaperAppId', () => {
   const steam = '/home/deck/.local/share/Steam';
+  const proton = [
+    `${steam}/ubuntu12_32/reaper`,
+    'SteamLaunch',
+    'AppId=1552350',
+    '--',
+    `${steam}/steamapps/common/SteamLinuxRuntime_soldier/_v2-entry-point`,
+    '--verb=waitforexitandrun',
+    '--',
+    `${steam}/steamapps/common/The Jackbox Party Pack 8/Launcher.sh`,
+  ].join(' ');
 
-  it('reads the game a Linux Steam reaper runs', () => {
-    const args = [
-      `${steam}/ubuntu12_32/reaper`,
-      'SteamLaunch',
-      'AppId=1552350',
-      '--',
-      `${steam}/steamapps/common/SteamLinuxRuntime_soldier/_v2-entry-point`,
-      '--verb=waitforexitandrun',
-      '--',
-      `${steam}/steamapps/common/The Jackbox Party Pack 8/Launcher.sh`,
-    ].join(' ');
-    expect(parseReaperAppId(args)).toBe(1552350);
-    expect(
-      parseReaperAppId('/home/u/My Games/Steam/ubuntu12_32/reaper SteamLaunch AppId=620')
-    ).toBe(620);
-  });
-
-  it('ignores non-Steam shortcuts and AppId in the game arguments', () => {
-    expect(
-      parseReaperAppId(`${steam}/ubuntu12_32/reaper SteamLaunch AppId=3221225472 -- x`)
-    ).toBeNull();
-    expect(
-      parseReaperAppId(`${steam}/ubuntu12_32/reaper -- /bin/game SteamLaunch AppId=10`)
-    ).toBeNull();
-    expect(parseReaperAppId('')).toBeNull();
+  it.each([
+    ['a game under the runtime', proton, 1552350],
+    [
+      'a Steam path with spaces',
+      '/home/u/My Games/Steam/ubuntu12_32/reaper SteamLaunch AppId=620',
+      620,
+    ],
+    [
+      'a non-Steam shortcut',
+      `${steam}/ubuntu12_32/reaper SteamLaunch AppId=3221225472 -- x`,
+      null,
+    ],
+    [
+      'AppId in the game arguments',
+      `${steam}/ubuntu12_32/reaper -- /bin/game SteamLaunch AppId=10`,
+      null,
+    ],
+    ['an empty command line', '', null],
+  ])('reads %s', (_label, args, appId) => {
+    expect(parseReaperAppId(args)).toBe(appId);
   });
 });
 
 describe('parseEnvSteamGameId', () => {
+  const helper =
+    '/Users/u/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/Frameworks/Steam Helper.app/Contents/MacOS/Steam Helper -steampid=10493 HOME=/Users/u';
   const game =
     '/bin/bash /Users/u/Library/Application Support/Steam/steamapps/common/Stardew Valley/Contents/MacOS/StardewValley SteamClientLaunch=1 SteamGameId=413150 SteamAppId=413150 HOME=/Users/u';
 
-  it('reads the game id macOS Steam hands down to a game process', () => {
-    const helper =
-      '/Users/u/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/Frameworks/Steam Helper.app/Contents/MacOS/Steam Helper -steampid=10493 HOME=/Users/u';
-    expect(parseEnvSteamGameId(`${helper}\n${game}\n`)).toBe(413150);
-  });
-
-  it('ignores shortcuts, lookalike keys and an idle Steam', () => {
-    expect(parseEnvSteamGameId('/bin/game SteamGameId=3221225472')).toBeNull();
-    expect(parseEnvSteamGameId('/bin/game NotSteamGameId=10 SteamGameId=x')).toBeNull();
-    expect(
-      parseEnvSteamGameId('/Applications/Steam.app/Contents/MacOS/steam_osx\n')
-    ).toBeNull();
+  it.each([
+    ['the id Steam hands down to a game', `${helper}\n${game}\n`, 413150],
+    ['a shortcut', '/bin/game SteamGameId=3221225472', null],
+    ['lookalike keys', '/bin/game NotSteamGameId=10 SteamGameId=x', null],
+    ['an idle Steam', '/Applications/Steam.app/Contents/MacOS/steam_osx\n', null],
+  ])('reads %s', (_label, text, appId) => {
+    expect(parseEnvSteamGameId(text)).toBe(appId);
   });
 });

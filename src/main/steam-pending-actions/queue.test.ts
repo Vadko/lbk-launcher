@@ -96,56 +96,50 @@ describe('reducePendingQueue', () => {
 });
 
 describe('classifyPendingAction', () => {
-  it('applies an item for the current account', () => {
-    expect(classifyPendingAction(launchOptions('a'), ctx)).toBe('apply');
-  });
+  const old = new Date(NOW - 31 * DAY_MS).toISOString();
+  const fresh = new Date(NOW - 29 * DAY_MS).toISOString();
 
-  it('keeps an item queued for another Steam account', () => {
-    expect(classifyPendingAction(launchOptions('a', { accountId: '999' }), ctx)).toBe(
-      'keep'
-    );
-    expect(classifyPendingAction(launchOptions('a'), { ...ctx, accountId: null })).toBe(
-      'keep'
-    );
-  });
-
-  it('applies an item whose account was unknown when it was queued', () => {
-    expect(classifyPendingAction(launchOptions('a', { accountId: null }), ctx)).toBe(
-      'apply'
-    );
-  });
-
-  it('drops an item for a game that is no longer installed', () => {
-    expect(classifyPendingAction(launchOptions('gone'), ctx)).toBe('drop');
-  });
-
-  it('drops items older than 30 days, even for another account', () => {
-    const old = new Date(NOW - 31 * DAY_MS).toISOString();
-    expect(
-      classifyPendingAction(launchOptions('a', { queuedAt: old, accountId: '999' }), ctx)
-    ).toBe('drop');
-    expect(classifyPendingAction(plugin(true, old), ctx)).toBe('drop');
-    const fresh = new Date(NOW - 29 * DAY_MS).toISOString();
-    expect(classifyPendingAction(launchOptions('a', { queuedAt: fresh }), ctx)).toBe(
-      'apply'
-    );
-  });
-
-  it('drops an item with an unparsable timestamp', () => {
-    expect(classifyPendingAction(launchOptions('a', { queuedAt: 'soon' }), ctx)).toBe(
-      'drop'
-    );
-  });
-
-  it('drops a plugin item that contradicts the current setting', () => {
-    expect(classifyPendingAction(plugin(true), ctx)).toBe('apply');
-    expect(classifyPendingAction(plugin(false), ctx)).toBe('drop');
-    expect(classifyPendingAction(plugin(false), { ...ctx, settingOn: false })).toBe(
-      'apply'
-    );
-    expect(classifyPendingAction(plugin(true), { ...ctx, settingOn: false })).toBe(
-      'drop'
-    );
+  it.each([
+    ['an item for the current account', 'apply', launchOptions('a'), {}],
+    ['an item for another account', 'keep', launchOptions('a', { accountId: '999' }), {}],
+    [
+      'an item while the account is unknown',
+      'keep',
+      launchOptions('a'),
+      { accountId: null },
+    ],
+    [
+      'an item queued without an account',
+      'apply',
+      launchOptions('a', { accountId: null }),
+      {},
+    ],
+    ['a game that is no longer installed', 'drop', launchOptions('gone'), {}],
+    [
+      'an old item for another account',
+      'drop',
+      launchOptions('a', { queuedAt: old, accountId: '999' }),
+      {},
+    ],
+    ['an old plugin item', 'drop', plugin(true, old), {}],
+    ['an item 29 days old', 'apply', launchOptions('a', { queuedAt: fresh }), {}],
+    ['an unparsable timestamp', 'drop', launchOptions('a', { queuedAt: 'soon' }), {}],
+    ['a plugin enable while the setting is on', 'apply', plugin(true), {}],
+    ['a plugin disable while the setting is on', 'drop', plugin(false), {}],
+    [
+      'a plugin disable while the setting is off',
+      'apply',
+      plugin(false),
+      { settingOn: false },
+    ],
+    [
+      'a plugin enable while the setting is off',
+      'drop',
+      plugin(true),
+      { settingOn: false },
+    ],
+  ] as const)('%s → %s', (_label, decision, item, change) => {
+    expect(classifyPendingAction(item, { ...ctx, ...change })).toBe(decision);
   });
 });
 

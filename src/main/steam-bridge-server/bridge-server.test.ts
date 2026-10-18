@@ -123,11 +123,8 @@ describe('plugin server', () => {
     return plugin;
   }
 
-  async function connected(): Promise<void> {
-    for (let i = 0; i < 50 && !isPluginConnected(); i++) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
-  }
+  const connected = (state = true) =>
+    vi.waitFor(() => expect(isPluginConnected()).toBe(state));
 
   beforeEach(async () => {
     pluginData.clear();
@@ -204,7 +201,6 @@ describe('plugin server', () => {
     const plugin = connect();
     await plugin.handshake(bridge.secret);
     await connected();
-    expect(isPluginConnected()).toBe(true);
     expect(getConnectedPluginInfo()).toEqual({
       pluginVersion: '1.1.0',
       ops: ['ping', 'libraryAppIds'],
@@ -224,10 +220,7 @@ describe('plugin server', () => {
 
     plugin.ws.close();
     await plugin.closed();
-    for (let i = 0; i < 50 && isPluginConnected(); i++) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
-    expect(isPluginConnected()).toBe(false);
+    await connected(false);
     expect(events).toEqual([true, false]);
     appEvents.off('plugin-connection', onConnection);
   });
@@ -318,9 +311,7 @@ describe('plugin server', () => {
 
     first.ws.close();
     await first.closed();
-    for (let i = 0; i < 50 && isPluginConnected(); i++) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
+    await connected(false);
     const rotated = pluginData.get('bridge.json') as BridgeJson;
     expect(rotated.port).toBe(bridge.port);
     expect(rotated.secret).toMatch(/^[0-9a-f]{64}$/);
@@ -391,9 +382,7 @@ describe('shutdown', () => {
     const { port, secret } = pluginData.get('bridge.json') as BridgeJson;
     const plugin = new FakePlugin(port);
     await plugin.handshake(secret);
-    for (let i = 0; i < 50 && !bridgeServer.isPluginConnected(); i++) {
-      await new Promise((r) => setTimeout(r, 10));
-    }
+    await vi.waitFor(() => expect(bridgeServer.isPluginConnected()).toBe(true));
     const restarts: Promise<void>[] = [];
     events.on('plugin-connection', (connected) => {
       if (!connected) {

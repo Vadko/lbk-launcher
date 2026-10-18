@@ -90,23 +90,24 @@ describe('evaluateMillenniumSupport', () => {
 });
 
 describe('pickPluginHost', () => {
-  const host = (f: HostFacts) => pickPluginHost(f, evaluateMillenniumSupport(f));
-
-  it('prefers Decky over everything on Linux, and on SteamOS without Decky', () => {
-    expect(host(linuxDesktop({ deckyInstalled: true }))).toBe('decky');
-    expect(
-      host({ ...linuxDesktop({ deckyInstalled: true }), millenniumGeneration: 'v3' })
-    ).toBe('decky');
-    expect(host(linuxDesktop({ steamOS: true }))).toBe('decky');
-  });
-
-  it('uses Millennium when it is supported or already installed', () => {
-    expect(host(linuxDesktop())).toBe('millennium');
-    expect(
-      host({ ...linuxDesktop({ steamType: 'flatpak' }), millenniumGeneration: 'v3' })
-    ).toBe('millennium');
-    expect(host(linuxDesktop({ steamType: 'flatpak' }))).toBe('none');
-    expect(host(mac([21, 0]))).toBe('none');
+  it.each([
+    ['Decky where it is installed', linuxDesktop({ deckyInstalled: true }), 'decky'],
+    [
+      'Decky over an installed Millennium',
+      { ...linuxDesktop({ deckyInstalled: true }), millenniumGeneration: 'v3' },
+      'decky',
+    ],
+    ['Decky on SteamOS without Decky', linuxDesktop({ steamOS: true }), 'decky'],
+    ['a supported Millennium', linuxDesktop(), 'millennium'],
+    [
+      'an installed Millennium the checks would refuse',
+      { ...linuxDesktop({ steamType: 'flatpak' }), millenniumGeneration: 'v3' },
+      'millennium',
+    ],
+    ['nothing for Flatpak Steam', linuxDesktop({ steamType: 'flatpak' }), 'none'],
+    ['nothing for an old macOS', mac([21, 0]), 'none'],
+  ] as const)('picks %s', (_label, facts, host) => {
+    expect(pickPluginHost(facts, evaluateMillenniumSupport(facts))).toBe(host);
   });
 });
 
@@ -198,6 +199,15 @@ const facts = (overrides: Partial<AchievementsFacts> = {}): AchievementsFacts =>
 });
 
 describe('computeAchievementsBadge', () => {
+  const decky = (
+    overrides: Partial<NonNullable<AchievementsFacts['decky']>> = {}
+  ): AchievementsFacts['decky'] => ({
+    installed: true,
+    running: true,
+    pluginInstalled: true,
+    pluginDisabled: false,
+    ...overrides,
+  });
   const v3 = {
     v3: true,
     pluginInstalled: true,
@@ -240,42 +250,17 @@ describe('computeAchievementsBadge', () => {
     ],
     [
       'Decky plugin connected',
-      facts({
-        host: 'decky',
-        connectedHost: 'decky',
-        decky: {
-          installed: true,
-          running: true,
-          pluginInstalled: true,
-          pluginDisabled: false,
-        },
-      }),
+      facts({ host: 'decky', connectedHost: 'decky', decky: decky() }),
       'decky',
     ],
     [
       'Decky plugin missing',
-      facts({
-        host: 'decky',
-        decky: {
-          installed: true,
-          running: true,
-          pluginInstalled: false,
-          pluginDisabled: false,
-        },
-      }),
+      facts({ host: 'decky', decky: decky({ pluginInstalled: false }) }),
       'needs-decky-plugin',
     ],
     [
       'Decky plugin disabled',
-      facts({
-        host: 'decky',
-        decky: {
-          installed: true,
-          running: true,
-          pluginInstalled: true,
-          pluginDisabled: true,
-        },
-      }),
+      facts({ host: 'decky', decky: decky({ pluginDisabled: true }) }),
       'needs-decky-plugin',
     ],
     ['Deck without Decky', facts({ host: 'decky', decky: null }), 'needs-decky'],
@@ -284,26 +269,13 @@ describe('computeAchievementsBadge', () => {
       facts({
         host: 'decky',
         connectedHost: 'millennium',
-        decky: {
-          installed: true,
-          running: false,
-          pluginInstalled: false,
-          pluginDisabled: false,
-        },
+        decky: decky({ running: false, pluginInstalled: false }),
       }),
       'millennium',
     ],
     [
       'Decky installed but its loader is down',
-      facts({
-        host: 'decky',
-        decky: {
-          installed: true,
-          running: false,
-          pluginInstalled: true,
-          pluginDisabled: false,
-        },
-      }),
+      facts({ host: 'decky', decky: decky({ running: false }) }),
       'needs-decky',
     ],
   ] as const)('%s → %s', (_label, input, state) => {
@@ -334,23 +306,18 @@ describe('computeAchievementsBadge', () => {
 });
 
 describe('deliveryFromBadge', () => {
-  const badge = (state: Parameters<typeof deliveryFromBadge>[0]['state']) => ({
-    state,
-    unsupportedReason: null,
-  });
-
-  it('maps every badge state onto a delivery', () => {
-    expect(deliveryFromBadge(badge('setting-off'), true)).toBe('disabled');
-    expect(deliveryFromBadge(badge('millennium'), true)).toBe('plugin-live');
-    expect(deliveryFromBadge(badge('millennium'), false)).toBe('plugin-next-start');
-    expect(deliveryFromBadge(badge('decky'), false)).toBe('plugin-next-start');
-    expect(deliveryFromBadge(badge('after-restart'), false)).toBe('plugin-next-start');
-    expect(deliveryFromBadge(badge('needs-millennium'), false)).toBe('needs-millennium');
-    expect(deliveryFromBadge(badge('needs-decky-plugin'), false)).toBe(
-      'needs-decky-plugin'
-    );
-    expect(deliveryFromBadge(badge('needs-decky'), false)).toBe('needs-decky');
-    expect(deliveryFromBadge(badge('unsupported'), false)).toBe('unavailable');
+  it.each([
+    ['setting-off', true, 'disabled'],
+    ['millennium', true, 'plugin-live'],
+    ['millennium', false, 'plugin-next-start'],
+    ['decky', false, 'plugin-next-start'],
+    ['after-restart', false, 'plugin-next-start'],
+    ['needs-millennium', false, 'needs-millennium'],
+    ['needs-decky-plugin', false, 'needs-decky-plugin'],
+    ['needs-decky', false, 'needs-decky'],
+    ['unsupported', false, 'unavailable'],
+  ] as const)('maps %s (live %s) to %s', (state, live, delivery) => {
+    expect(deliveryFromBadge({ state, unsupportedReason: null }, live)).toBe(delivery);
   });
 });
 

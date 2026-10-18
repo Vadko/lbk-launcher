@@ -151,37 +151,29 @@ describe('isGamescopeSession', () => {
     }
   }
 
-  it('is false on a plain desktop session', () => {
-    stubSession({ XDG_CURRENT_DESKTOP: 'KDE', XDG_SESSION_DESKTOP: 'KDE' });
-    expect(isGamescopeSession()).toBe(false);
-  });
-
-  it('is false with nothing set', () => {
-    stubSession({});
-    expect(isGamescopeSession()).toBe(false);
-  });
-
-  it('detects the gamescope Wayland display alone', () => {
-    stubSession({ GAMESCOPE_WAYLAND_DISPLAY: 'gamescope-0' });
-    expect(isGamescopeSession()).toBe(true);
-  });
-
-  it('treats an empty gamescope display as unset', () => {
-    stubSession({ GAMESCOPE_WAYLAND_DISPLAY: '' });
-    expect(isGamescopeSession()).toBe(false);
-  });
-
-  it.each(['XDG_CURRENT_DESKTOP', 'XDG_SESSION_DESKTOP'])(
-    'detects %s=gamescope',
-    (key) => {
-      stubSession({ [key]: 'gamescope' });
-      expect(isGamescopeSession()).toBe(true);
-    }
-  );
-
-  it('does not substring-match the desktop name', () => {
-    stubSession({ XDG_CURRENT_DESKTOP: 'gamescope-like' });
-    expect(isGamescopeSession()).toBe(false);
+  it.each([
+    [
+      'a plain desktop session',
+      false,
+      { XDG_CURRENT_DESKTOP: 'KDE', XDG_SESSION_DESKTOP: 'KDE' },
+    ],
+    ['nothing set', false, {}],
+    [
+      'the gamescope Wayland display alone',
+      true,
+      { GAMESCOPE_WAYLAND_DISPLAY: 'gamescope-0' },
+    ],
+    ['an empty gamescope display', false, { GAMESCOPE_WAYLAND_DISPLAY: '' }],
+    ['XDG_CURRENT_DESKTOP=gamescope', true, { XDG_CURRENT_DESKTOP: 'gamescope' }],
+    ['XDG_SESSION_DESKTOP=gamescope', true, { XDG_SESSION_DESKTOP: 'gamescope' }],
+    [
+      'a desktop name that only contains gamescope',
+      false,
+      { XDG_CURRENT_DESKTOP: 'gamescope-like' },
+    ],
+  ])('with %s: %s', (_label, expected, env: Record<string, string>) => {
+    stubSession(env);
+    expect(isGamescopeSession()).toBe(expected);
   });
 });
 

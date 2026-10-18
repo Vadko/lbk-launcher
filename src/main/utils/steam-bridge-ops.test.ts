@@ -110,82 +110,51 @@ describe('STEAM_OPS_SOURCE', () => {
 
 describe('validators', () => {
   const steam = makeSteamClient();
-  const ops = loadOps({ SteamClient: steam });
-
-  it('rejects a float appId', async () => {
-    await expect(ops.setLaunchOptions({ appId: 10.5, value: '' })).rejects.toThrow(
-      'lbk-ops: invalid appId'
-    );
-    await expect(ops.clearArtwork({ appId: 0, assetType: 1 })).rejects.toThrow('appId');
-    await expect(ops.clearArtwork({ appId: 2 ** 32, assetType: 1 })).rejects.toThrow(
-      'appId'
-    );
+  const ops = loadOps({
+    SteamClient: steam,
+    collectionStore: makeCollectionStore(library, []),
   });
+  const artwork = { appId: 10, base64: 'iVBORw0KGgo=', ext: 'png', assetType: 1 };
+  const shortcut = {
+    appId: 10,
+    exe: '"a"',
+    startDir: '"b"',
+    icon: 'c',
+    launchOptions: '',
+  };
 
-  it('rejects a non-digit itemId', async () => {
-    await expect(
-      ops.workshopSubscribe({ appId: 10, itemId: '12a', subscribe: true })
-    ).rejects.toThrow('lbk-ops: invalid id');
-    await expect(
-      ops.workshopSubscribe({ appId: 10, itemId: 12, subscribe: true })
-    ).rejects.toThrow('lbk-ops: invalid id');
-    await expect(
-      ops.workshopDownloaded({ targets: [{ id: 'g', appId: 10, itemId: '1);' }] })
-    ).rejects.toThrow('lbk-ops: invalid id');
-  });
-
-  it('rejects a non-boolean subscribe flag', async () => {
-    await expect(
-      ops.workshopSubscribe({ appId: 10, itemId: '1', subscribe: 'true' })
-    ).rejects.toThrow('lbk-ops: invalid flag');
-  });
-
-  it('rejects overlong text', async () => {
-    await expect(
-      ops.addShortcut({ exe: 'x'.repeat(4097), startDir: '', launchOptions: '' })
-    ).rejects.toThrow('lbk-ops: invalid text');
-    await expect(
-      ops.setLaunchOptions({ appId: 10, value: 'x'.repeat(32769) })
-    ).rejects.toThrow('lbk-ops: invalid text');
-    expect(steam.Apps.AddShortcut).not.toHaveBeenCalled();
-    expect(steam.Apps.SetAppLaunchOptions).not.toHaveBeenCalled();
-  });
-
-  it('rejects bad base64 and unknown extensions', async () => {
-    const base = { appId: 10, base64: 'iVBORw0KGgo=', ext: 'png', assetType: 1 };
-    await expect(ops.setArtwork({ ...base, base64: 'abc"def' })).rejects.toThrow(
-      'lbk-ops: invalid base64'
-    );
-    await expect(ops.setArtwork({ ...base, base64: '' })).rejects.toThrow('base64');
-    await expect(ops.setArtwork({ ...base, ext: 'gif' })).rejects.toThrow(
-      'lbk-ops: invalid ext'
-    );
-    expect(steam.Apps.SetCustomArtworkForApp).not.toHaveBeenCalled();
-  });
-
-  it('rejects assetType 5', async () => {
-    const base = { appId: 10, base64: 'iVBORw0KGgo=', ext: 'png', assetType: 5 };
-    await expect(ops.setArtwork(base)).rejects.toThrow('lbk-ops: invalid int');
-    await expect(ops.clearArtwork({ appId: 10, assetType: 5 })).rejects.toThrow(
-      'lbk-ops: invalid int'
-    );
-  });
-
-  it('rejects a shortcut appId below 2^31 without touching Steam', async () => {
-    await expect(
-      ops.updateShortcut({
-        appId: 10,
-        exe: '"a"',
-        startDir: '"b"',
-        icon: 'c',
-        launchOptions: '',
-      })
-    ).rejects.toThrow('lbk-ops: invalid shortcut appId');
-    expect(steam.Apps.SetShortcutName).not.toHaveBeenCalled();
-  });
-
-  it('rejects a missing args object', async () => {
-    await expect(ops.setLaunchOptions(null)).rejects.toThrow('lbk-ops: invalid args');
+  it.each([
+    ['setLaunchOptions', 'invalid appId', { appId: 10.5, value: '' }],
+    ['clearArtwork', 'invalid appId', { appId: 0, assetType: 1 }],
+    ['clearArtwork', 'invalid appId', { appId: 2 ** 32, assetType: 1 }],
+    ['workshopSubscribe', 'invalid id', { appId: 10, itemId: '12a', subscribe: true }],
+    ['workshopSubscribe', 'invalid id', { appId: 10, itemId: 12, subscribe: true }],
+    [
+      'workshopDownloaded',
+      'invalid id',
+      { targets: [{ id: 'g', appId: 10, itemId: '1);' }] },
+    ],
+    ['workshopSubscribe', 'invalid flag', { appId: 10, itemId: '1', subscribe: 'true' }],
+    [
+      'addShortcut',
+      'invalid text',
+      { exe: 'x'.repeat(4097), startDir: '', launchOptions: '' },
+    ],
+    ['setLaunchOptions', 'invalid text', { appId: 10, value: 'x'.repeat(32769) }],
+    ['setArtwork', 'invalid base64', { ...artwork, base64: 'abc"def' }],
+    ['setArtwork', 'invalid base64', { ...artwork, base64: '' }],
+    ['setArtwork', 'invalid ext', { ...artwork, ext: 'gif' }],
+    ['setArtwork', 'invalid int', { ...artwork, assetType: 5 }],
+    ['clearArtwork', 'invalid int', { appId: 10, assetType: 5 }],
+    ['updateShortcut', 'invalid shortcut appId', shortcut],
+    ['setLaunchOptions', 'invalid args', null],
+    ['syncCollection', 'invalid appId', { appIds: [1.5], recordedId: null }],
+    ['syncCollection', 'invalid appIds', { appIds: 'x', recordedId: null }],
+  ])('%s fails with "%s" without touching Steam (#%#)', async (op, error, args) => {
+    await expect(ops[op](args)).rejects.toThrow(`lbk-ops: ${error}`);
+    for (const call of Object.values(steam.Apps)) {
+      expect(call).not.toHaveBeenCalled();
+    }
   });
 });
 
@@ -395,100 +364,5 @@ describe('syncCollection', () => {
     ).resolves.toEqual({
       error: 'steam said no',
     });
-  });
-
-  it('throws on invalid arguments', async () => {
-    const ops = loadOps({ collectionStore: makeCollectionStore(library, []) });
-    await expect(ops.syncCollection({ appIds: [1.5], recordedId: null })).rejects.toThrow(
-      'lbk-ops: invalid appId'
-    );
-    await expect(ops.syncCollection({ appIds: 'x', recordedId: null })).rejects.toThrow(
-      'lbk-ops: invalid appIds'
-    );
-  });
-});
-
-describe('deckyRequestInstall', () => {
-  const HASH = 'a'.repeat(64);
-  const valid = {
-    artifact: 'file:///home/deck/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-    version: '1.1.0',
-    hash: HASH,
-    installType: 0,
-  };
-
-  function withDecky() {
-    const call = vi.fn((..._args: unknown[]) => Promise.resolve(undefined));
-    return { call, ops: loadOps({ window: { DeckyBackend: { call } } }) };
-  }
-
-  it('asks Decky to show its own install prompt', async () => {
-    const { call, ops } = withDecky();
-    await expect(ops.deckyRequestInstall(valid)).resolves.toBe('prompted');
-    expect(call).toHaveBeenCalledWith(
-      'utilities/install_plugin',
-      valid.artifact,
-      'LBK Bridge',
-      '1.1.0',
-      HASH,
-      0
-    );
-  });
-
-  it('accepts Fedora-style and Flatpak cache paths', async () => {
-    const { call, ops } = withDecky();
-    for (const artifact of [
-      'file:///var/home/user.name/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-      'file:///home/deck/.var/app/ua.lbk.Launcher/cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-    ]) {
-      await expect(
-        ops.deckyRequestInstall({ ...valid, artifact, installType: 2 })
-      ).resolves.toBe('prompted');
-    }
-    expect(call).toHaveBeenCalledTimes(2);
-  });
-
-  it('rejects any other artifact without calling Decky', async () => {
-    const { call, ops } = withDecky();
-    for (const artifact of [
-      'https://example.com/lbk-bridge-1.1.0.zip',
-      'file:///home/deck/.cache/lbk-launcher/decky/lbk-bridge-1.0.0.zip',
-      'file:///home/../root/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-      'file:///home/deck/.cache/lbk-launcher/decky/../../evil/lbk-bridge-1.1.0.zip',
-      'file:///etc/lbk-bridge-1.1.0.zip',
-      'file:///home/deck/.cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip?x',
-      'file:///home/deck/.var/app/../cache/lbk-launcher/decky/lbk-bridge-1.1.0.zip',
-    ]) {
-      await expect(ops.deckyRequestInstall({ ...valid, artifact })).rejects.toThrow(
-        'lbk-ops: invalid artifact'
-      );
-    }
-    expect(call).not.toHaveBeenCalled();
-  });
-
-  it('rejects a bad version, hash or install type', async () => {
-    const { call, ops } = withDecky();
-    await expect(ops.deckyRequestInstall({ ...valid, version: '1.1' })).rejects.toThrow(
-      'lbk-ops: invalid version'
-    );
-    await expect(
-      ops.deckyRequestInstall({ ...valid, hash: 'A'.repeat(64) })
-    ).rejects.toThrow('lbk-ops: invalid hash');
-    await expect(
-      ops.deckyRequestInstall({ ...valid, hash: HASH.slice(1) })
-    ).rejects.toThrow('lbk-ops: invalid hash');
-    for (const installType of [3, -1, 1.5, '0']) {
-      await expect(ops.deckyRequestInstall({ ...valid, installType })).rejects.toThrow(
-        'lbk-ops: invalid int'
-      );
-    }
-    expect(call).not.toHaveBeenCalled();
-  });
-
-  it('answers no-decky when Decky is not injected', async () => {
-    await expect(loadOps().deckyRequestInstall(valid)).resolves.toBe('no-decky');
-    await expect(loadOps({ window: {} }).deckyRequestInstall(valid)).resolves.toBe(
-      'no-decky'
-    );
   });
 });

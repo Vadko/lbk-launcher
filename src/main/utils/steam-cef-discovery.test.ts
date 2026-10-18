@@ -43,25 +43,17 @@ describe('parseWebhelperDebugArgs', () => {
     expect(args.port).toBe(8080);
   });
 
-  it('keeps only the digits of a port with a trailing comma', () => {
-    expect(
-      parseWebhelperDebugArgs('steamwebhelper --remote-debugging-port=8080,').port
-    ).toBe(8080);
-  });
-
-  it('rejects port 0 and out-of-range ports', () => {
-    expect(
-      parseWebhelperDebugArgs('steamwebhelper --remote-debugging-port=0').port
-    ).toBeNull();
-    expect(
-      parseWebhelperDebugArgs('steamwebhelper --remote-debugging-port=70000').port
-    ).toBeNull();
-  });
-
-  it('does not take the port from a longer flag name', () => {
-    expect(
-      parseWebhelperDebugArgs('steamwebhelper --x-remote-debugging-port=8080').port
-    ).toBeNull();
+  it.each([
+    [
+      'keeps the digits of a port with a trailing comma',
+      '--remote-debugging-port=8080,',
+      8080,
+    ],
+    ['rejects port 0', '--remote-debugging-port=0', null],
+    ['rejects an out-of-range port', '--remote-debugging-port=70000', null],
+    ['ignores a longer flag name', '--x-remote-debugging-port=8080', null],
+  ])('%s', (_label, flag, port) => {
+    expect(parseWebhelperDebugArgs(`steamwebhelper ${flag}`).port).toBe(port);
   });
 
   it('detects the Windows Millennium pipe flags', () => {
@@ -77,25 +69,27 @@ describe('parseWebhelperDebugArgs', () => {
     );
   });
 
-  it('detects the Millennium Linux env wrapper', () => {
-    const args = parseWebhelperDebugArgs(
+  it.each([
+    [
+      'the Linux env wrapper with its fds',
       [
         '/usr/bin/env',
         'PRESSURE_VESSEL_PREFIX=/tmp/millennium-pv',
         '/home/u/.local/share/Steam/ubuntu12_64/steamwebhelper.sh',
         '--remote-debugging-pipe',
         '--millennium-loopback-ipc-fds=5,6',
-      ].join('\0')
-    );
+      ].join('\0'),
+      true,
+    ],
+    [
+      'the PRESSURE_VESSEL_PREFIX wrapper on its own',
+      '/usr/bin/env PRESSURE_VESSEL_PREFIX=/x steamwebhelper',
+      false,
+    ],
+  ])('detects Millennium from %s', (_label, cmdline, pipe) => {
+    const args = parseWebhelperDebugArgs(cmdline);
     expect(args.millenniumFlags).toBe(true);
-    expect(args.pipe).toBe(true);
-  });
-
-  it('flags the PRESSURE_VESSEL_PREFIX wrapper on its own', () => {
-    expect(
-      parseWebhelperDebugArgs('/usr/bin/env PRESSURE_VESSEL_PREFIX=/x steamwebhelper')
-        .millenniumFlags
-    ).toBe(true);
+    expect(args.pipe).toBe(pipe);
   });
 
   it('reports nothing for a cmdline with no debug flags', () => {
@@ -109,25 +103,15 @@ describe('parseWebhelperDebugArgs', () => {
 });
 
 describe('parseDevtoolsPortArg', () => {
-  it('reads "-devtools-port N"', () => {
-    expect(
-      parseDevtoolsPortArg(
-        `${MAC_STEAM}/steam_osx -cef-enable-debugging -devtools-port 41234`
-      )
-    ).toBe(41234);
-  });
-
-  it('reads "-devtools-port=N" and NUL-separated args', () => {
-    expect(parseDevtoolsPortArg('steam_osx -devtools-port=9333')).toBe(9333);
-    expect(parseDevtoolsPortArg(['steam_osx', '-devtools-port', '9444'].join('\0'))).toBe(
-      9444
-    );
-  });
-
-  it('ignores the double-dash Chromium flag and missing values', () => {
-    expect(parseDevtoolsPortArg('steam_osx --devtools-port 9333')).toBeNull();
-    expect(parseDevtoolsPortArg('steam_osx -devtools-port')).toBeNull();
-    expect(parseDevtoolsPortArg('steam_osx')).toBeNull();
+  it.each([
+    [`${MAC_STEAM}/steam_osx -cef-enable-debugging -devtools-port 41234`, 41234],
+    ['steam_osx -devtools-port=9333', 9333],
+    [['steam_osx', '-devtools-port', '9444'].join('\0'), 9444],
+    ['steam_osx --devtools-port 9333', null],
+    ['steam_osx -devtools-port', null],
+    ['steam_osx', null],
+  ])('reads %j as %s', (args, port) => {
+    expect(parseDevtoolsPortArg(args)).toBe(port);
   });
 });
 

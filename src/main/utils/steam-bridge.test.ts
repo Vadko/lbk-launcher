@@ -105,92 +105,64 @@ describe('computeBridgeStatusCode', () => {
     cdpOnPipe: false,
     verdictPresent: false,
   } as const;
+  const blockingV3 = { millenniumGeneration: 'v3', blocksTcpCdp: true } as const;
 
-  it('reports setting-off before anything else', () => {
-    expect(
-      computeBridgeStatusCode({
-        ...healthy,
+  it.each([
+    [
+      'setting-off before anything else',
+      {
         settingOn: false,
         steamRunning: false,
         transport: 'plugin',
         millenniumGeneration: 'v2',
         verdictPresent: true,
-      })
-    ).toBe('setting-off');
-  });
-
-  it('reports steam-not-running before transport and Millennium', () => {
-    expect(
-      computeBridgeStatusCode({
-        ...healthy,
-        steamRunning: false,
-        millenniumGeneration: 'v3',
-        blocksTcpCdp: true,
-        verdictPresent: true,
-      })
-    ).toBe('steam-not-running');
-  });
-
-  it('reports ok for either transport, even with Millennium or a stale verdict', () => {
-    expect(computeBridgeStatusCode({ ...healthy, transport: 'cdp' })).toBe('ok');
-    expect(
-      computeBridgeStatusCode({
-        ...healthy,
-        transport: 'plugin',
-        millenniumGeneration: 'v3',
-        blocksTcpCdp: true,
-        verdictPresent: true,
-      })
-    ).toBe('ok');
-  });
-
-  it('reports millennium-outdated for v2 ahead of the plugin path and the verdict', () => {
-    expect(
-      computeBridgeStatusCode({
-        ...healthy,
+      },
+      'setting-off',
+    ],
+    [
+      'steam-not-running before transport and Millennium',
+      { steamRunning: false, ...blockingV3, verdictPresent: true },
+      'steam-not-running',
+    ],
+    ['ok over CDP', { transport: 'cdp' }, 'ok'],
+    [
+      'ok over the plugin, even with Millennium and a stale verdict',
+      { transport: 'plugin', ...blockingV3, verdictPresent: true },
+      'ok',
+    ],
+    [
+      'millennium-outdated for v2 ahead of the plugin path and the verdict',
+      {
         millenniumGeneration: 'v2',
         blocksTcpCdp: true,
         cdpOnPipe: true,
         verdictPresent: true,
-      })
-    ).toBe('millennium-outdated');
-  });
-
-  it('reports millennium-plugin-pending for v3 that blocks TCP CDP', () => {
-    expect(
-      computeBridgeStatusCode({
-        ...healthy,
-        millenniumGeneration: 'v3',
-        blocksTcpCdp: true,
-        verdictPresent: true,
-      })
-    ).toBe('millennium-plugin-pending');
-  });
-
-  it('reports millennium-plugin-pending when the webhelper runs CDP over a pipe', () => {
-    expect(computeBridgeStatusCode({ ...healthy, cdpOnPipe: true })).toBe(
-      'millennium-plugin-pending'
-    );
-  });
-
-  it('does not block macOS Millennium v3, which keeps the TCP port', () => {
-    expect(
-      computeBridgeStatusCode({
-        ...healthy,
-        millenniumGeneration: 'v3',
-        blocksTcpCdp: false,
-      })
-    ).toBe('restart-pending');
-  });
-
-  it('reports cef-blocked only from a persisted verdict', () => {
-    expect(computeBridgeStatusCode({ ...healthy, verdictPresent: true })).toBe(
-      'cef-blocked'
-    );
-  });
-
-  it('falls back to restart-pending', () => {
-    expect(computeBridgeStatusCode(healthy)).toBe('restart-pending');
+      },
+      'millennium-outdated',
+    ],
+    [
+      'millennium-plugin-pending for v3 that blocks TCP CDP',
+      { ...blockingV3, verdictPresent: true },
+      'millennium-plugin-pending',
+    ],
+    [
+      'millennium-plugin-pending when the webhelper runs CDP over a pipe',
+      { cdpOnPipe: true },
+      'millennium-plugin-pending',
+    ],
+    [
+      'restart-pending for macOS Millennium v3, which keeps the TCP port',
+      { millenniumGeneration: 'v3' },
+      'restart-pending',
+    ],
+    [
+      'cef-blocked only from a persisted verdict',
+      { verdictPresent: true },
+      'cef-blocked',
+    ],
+    ['restart-pending as the fallback', {}, 'restart-pending'],
+  ] as const)('reports %s', (_label, change, code) => {
+    expect(computeBridgeStatusCode({ ...healthy, ...change })).toBe(code);
   });
 });
 
@@ -202,27 +174,15 @@ describe('nextVerifyStep', () => {
     millenniumV3: false,
   } as const;
 
-  it('waits for the plugin when CDP is on a pipe and Millennium v3 is installed', () => {
-    expect(nextVerifyStep({ ...base, discovery: 'pipe', millenniumV3: true })).toBe(
-      'plugin-only'
-    );
-  });
-
-  it('reports blocked for a pipe without Millennium v3', () => {
-    expect(nextVerifyStep({ ...base, discovery: 'pipe' })).toBe('blocked');
-  });
-
-  it('prefers a connected plugin, then an open endpoint, else keeps polling', () => {
-    expect(nextVerifyStep({ ...base, pluginConnected: true, endpoint: true })).toBe(
-      'ready-plugin'
-    );
-    expect(nextVerifyStep({ ...base, endpoint: true, discovery: 'pipe' })).toBe(
-      'ready-cdp'
-    );
-    expect(nextVerifyStep({ ...base, discovery: 'port' })).toBe('poll');
-    expect(nextVerifyStep({ ...base, discovery: 'none', millenniumV3: true })).toBe(
-      'poll'
-    );
+  it.each([
+    [{ discovery: 'pipe', millenniumV3: true }, 'plugin-only'],
+    [{ discovery: 'pipe' }, 'blocked'],
+    [{ pluginConnected: true, endpoint: true }, 'ready-plugin'],
+    [{ endpoint: true, discovery: 'pipe' }, 'ready-cdp'],
+    [{ discovery: 'port' }, 'poll'],
+    [{ discovery: 'none', millenniumV3: true }, 'poll'],
+  ] as const)('%o → %s', (change, step) => {
+    expect(nextVerifyStep({ ...base, ...change })).toBe(step);
   });
 });
 
