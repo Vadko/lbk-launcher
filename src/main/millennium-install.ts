@@ -355,6 +355,11 @@ async function runQueuedChange(
   restart: 'now' | 'on-exit'
 ): Promise<MillenniumInstallResult> {
   let restarting = false;
+  // The monitor's Steam-exit batch can take the item before the batch run here gets the queue.
+  let applied: MillenniumApplyReport | undefined;
+  const onApplied = (report: MillenniumApplyReport) => {
+    applied = report;
+  };
   const onPhase = (phase: 'install-files' | 'installed') => {
     if (phase === 'install-files') {
       progress({ phase: 'install-files' });
@@ -362,12 +367,13 @@ async function runQueuedChange(
       progress({ phase: 'start-steam' });
     }
   };
+  appEvents.on('millennium-applied', onApplied);
   appEvents.on('millennium-phase', onPhase);
   try {
     if ((await findSteamPids()).length === 0) {
-      const run = await runPendingSteamActions('manual');
+      await runPendingSteamActions('manual');
       return (
-        outcomeFailure(kind, run.millennium) ?? {
+        outcomeFailure(kind, applied) ?? {
           success: true,
           bridge: 'unknown',
           steamRunning: false,
@@ -380,7 +386,7 @@ async function runQueuedChange(
 
     restarting = true;
     progress({ phase: 'stop-steam' });
-    const { result, gap } = await restartSteamOrchestrated({
+    const { result } = await restartSteamOrchestrated({
       verifyBridge: kind === 'activate',
     });
     if (!result.success) {
@@ -392,7 +398,7 @@ async function runQueuedChange(
         error: result.error,
       };
     }
-    const failure = outcomeFailure(kind, gap.millennium);
+    const failure = outcomeFailure(kind, applied);
     if (failure) {
       return failure;
     }
@@ -404,6 +410,7 @@ async function runQueuedChange(
       steamRunning: true,
     };
   } finally {
+    appEvents.off('millennium-applied', onApplied);
     appEvents.off('millennium-phase', onPhase);
   }
 }

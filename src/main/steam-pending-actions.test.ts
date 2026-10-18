@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { PendingSteamAction } from '@/main/steam-pending-actions';
 
-// Only the pure queue helpers are under test; everything that reaches Steam, Electron or disk is stubbed.
+const store = vi.hoisted(() => new Map<string, unknown>());
+
+// Everything that reaches Steam, Electron or disk is stubbed; the store is an in-memory map.
 vi.mock('electron', () => ({ Notification: { isSupported: () => false } }));
 vi.mock('@/main/game-detector/steam', () => ({ getCurrentSteamAccountId: () => null }));
 vi.mock('@/main/installer/cache', () => ({
@@ -29,10 +31,10 @@ vi.mock('@/main/utils/steam-process', () => ({
   waitForSteamGone: () => Promise.resolve(true),
 }));
 vi.mock('@/main/utils/store-storage', () => ({
-  deleteStoreValue: vi.fn(),
+  deleteStoreValue: (key: string) => store.delete(key),
   isCefDebuggingEnabledInSettings: () => true,
-  readStoreValue: () => undefined,
-  writeStoreValue: vi.fn(),
+  readStoreValue: (key: string) => store.get(key),
+  writeStoreValue: (key: string, value: unknown) => store.set(key, value),
 }));
 vi.mock('@/main/utils/theme', () => ({ getIcon: () => '' }));
 vi.mock('@/main/window', () => ({
@@ -40,11 +42,16 @@ vi.mock('@/main/window', () => ({
   sendToRenderer: () => undefined,
 }));
 
+const { appEvents } = await import('@/main/app-events');
+const { applyQueuedMillenniumAction, millenniumQueueContext } = await import(
+  '@/main/millennium-install/apply'
+);
 const {
   classifyPendingAction,
   isPendingSteamAction,
   orderPendingQueue,
   reducePendingQueue,
+  runPendingSteamActions,
 } = await import('@/main/steam-pending-actions');
 
 const NOW = Date.parse('2026-10-09T12:00:00.000Z');
@@ -250,5 +257,32 @@ describe('Millennium install items', () => {
     const bad = launchOptions('a');
     expect(isPendingSteamAction({ ...bad, params: { appId: 0 } })).toBe(false);
     expect(isPendingSteamAction({ ...bad, accountId: undefined })).toBe(false);
+  });
+});
+
+describe('runPendingSteamActions', () => {
+  it('reports a Millennium apply on the bus from whichever batch takes the item', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    store.set('pending-steam-actions', [
+      activate({ queuedAt: new Date().toISOString() }),
+    ]);
+    vi.mocked(millenniumQueueContext).mockReturnValue(ctx.millennium);
+    vi.mocked(applyQueuedMillenniumAction).mockReturnValue({
+      kind: 'activate',
+      outcome: 'applied',
+    });
+    const reports: unknown[] = [];
+    const onApplied = (report: unknown) => reports.push(report);
+    appEvents.on('millennium-applied', onApplied);
+
+    const exitRun = runPendingSteamActions('steam-exit');
+    const clickRun = runPendingSteamActions('manual');
+    await Promise.all([exitRun, clickRun]);
+    appEvents.off('millennium-applied', onApplied);
+
+    expect(applyQueuedMillenniumAction).toHaveBeenCalledTimes(1);
+    expect(reports).toEqual([{ kind: 'activate', outcome: 'applied' }]);
+    expect(store.has('pending-steam-actions')).toBe(false);
   });
 });

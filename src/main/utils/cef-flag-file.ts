@@ -173,7 +173,7 @@ function applyPluginEnabled(enable: boolean): void {
   }
 }
 
-// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; every step is a no-op once done.
+// Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; every trigger reruns it.
 export function syncBridgePluginSetup(): void {
   if (isCefDebuggingEnabledInSettings()) {
     setupMillenniumPlugin();

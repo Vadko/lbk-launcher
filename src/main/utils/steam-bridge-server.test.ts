@@ -390,6 +390,36 @@ describe('plugin server', () => {
   });
 });
 
+describe('shutdown', () => {
+  it('stays down when a disconnect listener starts the server again', async () => {
+    vi.resetModules();
+    const { appEvents: events } = await import('@/main/app-events');
+    const bridgeServer = await import('@/main/utils/steam-bridge-server');
+    pluginData.clear();
+    await bridgeServer.startSteamBridgeServer();
+    const { port, secret } = pluginData.get('bridge.json') as BridgeJson;
+    const plugin = new FakePlugin(port);
+    await plugin.handshake(secret);
+    for (let i = 0; i < 50 && !bridgeServer.isPluginConnected(); i++) {
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    const restarts: Promise<void>[] = [];
+    events.on('plugin-connection', (connected) => {
+      if (!connected) {
+        restarts.push(bridgeServer.startSteamBridgeServer());
+      }
+    });
+
+    await bridgeServer.shutdownSteamBridgeServer();
+    await Promise.all(restarts);
+    await bridgeServer.startSteamBridgeServer();
+
+    expect(restarts).toHaveLength(1);
+    expect(await plugin.closed()).toBe(4010);
+    expect(pluginData.has('bridge.json')).toBe(false);
+  });
+});
+
 describe('parseHello', () => {
   it.each(['millennium', 'decky'])('accepts the %s host', (host) => {
     expect(parseHello(helloFrame({ host }))?.host).toBe(host);

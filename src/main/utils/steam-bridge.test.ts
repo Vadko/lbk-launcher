@@ -9,11 +9,11 @@ vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));
 vi.mock('@/main/plugin-host/state', () => ({
   deckyStateFor: () => null,
   getAchievementsBadge: vi.fn(),
-  getHostSnapshot: vi.fn(),
+  getHostSnapshot: () => Promise.resolve({ host: 'none', decky: null }),
 }));
 vi.mock('@/main/utils/cef-flag-file', () => ({
   isCefFlagFilePresent: () => false,
-  syncBridgePluginSetup: () => undefined,
+  syncBridgePluginSetup: vi.fn(),
 }));
 vi.mock('@/main/utils/millennium', () => ({
   detectMillennium: vi.fn(),
@@ -42,8 +42,18 @@ vi.mock('@/main/utils/store-storage', () => ({
   writeStoreValue: vi.fn(),
 }));
 
-const { computeBridgeFingerprint, computeBridgeStatusCode, nextVerifyStep } =
-  await import('@/main/utils/steam-bridge');
+const { appEvents } = await import('@/main/app-events');
+const { syncBridgePluginSetup } = await import('@/main/utils/cef-flag-file');
+const { detectMillennium } = await import('@/main/utils/millennium');
+const { getMillenniumPluginState } = await import('@/main/utils/millennium-plugin');
+const { resolveCefEndpoint } = await import('@/main/utils/steam-cef');
+const {
+  computeBridgeFingerprint,
+  computeBridgeStatusCode,
+  getSteamBridgeStatus,
+  nextVerifyStep,
+  startSteamBridge,
+} = await import('@/main/utils/steam-bridge');
 
 describe('computeBridgeFingerprint', () => {
   const base = {
@@ -213,5 +223,39 @@ describe('nextVerifyStep', () => {
     expect(nextVerifyStep({ ...base, discovery: 'none', millenniumV3: true })).toBe(
       'poll'
     );
+  });
+});
+
+describe('plugin setup', () => {
+  it('runs on startup and around Steam restarts, never while computing the status', async () => {
+    vi.mocked(detectMillennium).mockReturnValue({
+      installed: false,
+      generation: null,
+      blocksTcpCdp: false,
+      pluginsDir: null,
+      configPath: null,
+      evidence: [],
+    });
+    vi.mocked(getMillenniumPluginState).mockReturnValue({
+      supported: false,
+      installed: false,
+      installedVersion: null,
+      enabled: false,
+      dir: null,
+    });
+    vi.mocked(resolveCefEndpoint).mockResolvedValue({
+      steamRunning: false,
+      endpoint: null,
+      discovery: null,
+    });
+    const setup = vi.mocked(syncBridgePluginSetup);
+
+    startSteamBridge();
+    expect(setup).toHaveBeenCalledTimes(1);
+    await getSteamBridgeStatus();
+    expect(setup).toHaveBeenCalledTimes(1);
+    appEvents.emit('steam-started');
+    appEvents.emit('steam-exited');
+    expect(setup).toHaveBeenCalledTimes(3);
   });
 });

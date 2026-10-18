@@ -9,7 +9,6 @@ import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { getAllInstalledGameIds } from '@/main/installer/cache';
 import {
   applyQueuedMillenniumAction,
-  type MillenniumApplyReport,
   millenniumQueueContext,
 } from '@/main/millennium-install/apply';
 import { type BridgeFacts, steamMonitorMachine } from '@/main/steam-monitor-machine';
@@ -107,7 +106,6 @@ type PendingTrigger =
 export interface PendingRunResult {
   appliedGameIds: string[];
   failed: { gameId: string; reason: string }[];
-  millennium?: MillenniumApplyReport;
 }
 
 const QUEUE_KEY = 'pending-steam-actions';
@@ -319,7 +317,8 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
           continue;
         }
         const report = applyQueuedMillenniumAction(action);
-        result.millennium = report;
+        // Whichever batch takes the item, the click that queued it waits for this report.
+        appEvents.emit('millennium-applied', report);
         if (report.outcome === 'retry') {
           bumped.add(actionKey(action));
         } else {
@@ -446,6 +445,16 @@ function bridgeMayAwaitRestart(bridge: BridgeFacts): boolean {
   );
 }
 
+// A throwing action or guard sends the actor to its error state, which ends Steam monitoring for the session.
+function safely<T>(label: string, fallback: T, fn: () => T): T {
+  try {
+    return fn();
+  } catch (error) {
+    console.warn(`[PendingActions] ${label} failed:`, error);
+    return fallback;
+  }
+}
+
 function needsSteamPolling(bridge: BridgeFacts): boolean {
   if (readQueue().length > 0) {
     return true;
@@ -494,13 +503,16 @@ const monitorImpl = steamMonitorMachine.provide({
   },
   actions: {
     fireStarted: () => {
-      appEvents.emit('steam-started');
+      safely('Steam start listeners', false, () => appEvents.emit('steam-started'));
     },
     fireExited: () => {
-      appEvents.emit('steam-exited');
+      safely('Steam exit listeners', false, () => appEvents.emit('steam-exited'));
     },
     applyLiveLaunchOptions: () => {
-      if (readQueue().some((a) => a.kind === 'launch-options')) {
+      const queued = safely('Queue read', false, () =>
+        readQueue().some((a) => a.kind === 'launch-options')
+      );
+      if (queued) {
         setImmediate(() => {
           runPendingSteamActions('bridge-ready').catch((error) => {
             console.warn('[PendingActions] Live apply failed:', error);
@@ -510,7 +522,8 @@ const monitorImpl = steamMonitorMachine.provide({
     },
   },
   guards: {
-    needsPolling: ({ context }) => needsSteamPolling(context.bridge),
+    needsPolling: ({ context }) =>
+      safely('Queue read', false, () => needsSteamPolling(context.bridge)),
   },
 });
 

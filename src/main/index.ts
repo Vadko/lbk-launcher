@@ -169,7 +169,7 @@ import { bootstrapCefDebugging } from './utils/cef-flag-file';
 import { startSteamBridge } from './utils/steam-bridge';
 import {
   deleteStaleBridgeData,
-  stopSteamBridgeServer,
+  shutdownSteamBridgeServer,
 } from './utils/steam-bridge-server';
 import { createMainWindow, getMainWindow } from './window';
 
@@ -449,7 +449,7 @@ if (!gotTheLock) {
 
   // Deletes bridge.json so the Millennium plugin stops dialing a dead port.
   app.on('before-quit', () => {
-    stopSteamBridgeServer().catch((err) => {
+    shutdownSteamBridgeServer().catch((err) => {
       console.warn('[Main] Steam bridge server stop failed:', err);
     });
   });

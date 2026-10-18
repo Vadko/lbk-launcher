@@ -100,6 +100,7 @@ interface ServerState {
 let server: ServerState | null = null;
 // Start and stop run one at a time, so a stop issued mid-start closes the server that start opens.
 const lifecycle = pLimit(1);
+let shuttingDown = false;
 let session: PluginSession | null = null;
 let nextMessageId = 1;
 
@@ -400,7 +401,9 @@ function handleConnection(ws: WebSocket): void {
         return;
       }
       promote(ws, verified);
-    })();
+    })().catch((error: unknown) => {
+      console.warn('[SteamBridge] Plugin handshake failed:', error);
+    });
   };
 
   ws.on('message', onHandshakeMessage);
@@ -447,7 +450,7 @@ async function listen(): Promise<void> {
 
 export function startSteamBridgeServer(): Promise<void> {
   return lifecycle(async () => {
-    if (!server) {
+    if (!server && !shuttingDown) {
       await listen();
     }
   });
@@ -463,6 +466,12 @@ export function deleteStaleBridgeData(): void {
 export function stopSteamBridgeServer(): Promise<void> {
   deleteBridgePluginData('bridge.json');
   return lifecycle(closeServer);
+}
+
+// Final: the disconnect it causes refreshes the status, and a start queued then must not rewrite bridge.json.
+export function shutdownSteamBridgeServer(): Promise<void> {
+  shuttingDown = true;
+  return stopSteamBridgeServer();
 }
 
 async function closeServer(): Promise<void> {

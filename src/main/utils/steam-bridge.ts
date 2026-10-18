@@ -287,9 +287,6 @@ function pendingLaunchOptions(): SteamBridgeStatus['pendingLaunchOptions'] {
 
 async function computeStatus(): Promise<SteamBridgeStatus> {
   const settingOn = isCefDebuggingEnabledInSettings();
-  if (settingOn) {
-    syncBridgePluginSetup();
-  }
   const millennium = detectMillennium();
   const pluginState = getMillenniumPluginState();
   const connected = isPluginConnected();
@@ -384,9 +381,7 @@ export async function refreshSteamBridgeStatus(): Promise<void> {
 export function recheckSteamBridge(): Promise<SteamBridgeStatus> {
   clearSteamBridgeVerdict();
   resetCefEndpointCache();
-  if (isCefDebuggingEnabledInSettings()) {
-    syncBridgePluginSetup();
-  }
+  syncBridgePluginSetup();
   return getSteamBridgeStatus();
 }
 
@@ -537,36 +532,34 @@ export const verifyBridgeAfterLaunch = pMemoize(verifyAndRefresh, {
   cacheKey: () => 'verify',
 });
 
+// Plugin setup runs here and on the toggle, a recheck and a host change, never per status computation.
 export const startSteamBridge = F.once((): void => {
-  if (isCefDebuggingEnabledInSettings()) {
-    syncBridgePluginSetup();
-  }
+  syncBridgePluginSetup();
 
-  appEvents.on('plugin-connection', (connected) => {
+  appEvents.on('plugin-connection', async (connected) => {
     if (connected) {
       noteBridgeAvailable('plugin');
     } else if (lastTransport === 'plugin') {
       noteBridgeUnavailable();
     }
-    void refreshSteamBridgeStatus();
+    await refreshSteamBridgeStatus();
   });
 
-  appEvents.on('steam-started', () => {
+  // Millennium appears, and a failed plugin install or enable gets its retry, around a Steam restart.
+  appEvents.on('steam-started', async () => {
     resetCefEndpointCache();
-    void (async () => {
-      const status = await getSteamBridgeStatus();
-      if (status.code === 'restart-pending') {
-        await verifyBridgeAfterLaunch('observed-start');
-      }
-    })().catch((error) => {
-      console.warn('[SteamBridge] Observed-start check failed:', error);
-    });
+    syncBridgePluginSetup();
+    const status = await getSteamBridgeStatus();
+    if (status.code === 'restart-pending') {
+      await verifyBridgeAfterLaunch('observed-start');
+    }
   });
 
-  appEvents.on('steam-exited', () => {
+  appEvents.on('steam-exited', async () => {
     resetCefEndpointCache();
     noteBridgeUnavailable();
-    void refreshSteamBridgeStatus();
+    syncBridgePluginSetup();
+    await refreshSteamBridgeStatus();
   });
 
   void refreshSteamBridgeStatus();
