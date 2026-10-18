@@ -1,27 +1,18 @@
 import { FolderOpen, Gamepad, Library, LockOpen, RefreshCw } from 'lucide';
 import {
   BrushCleaningIcon,
-  CircleArrowUpIcon,
-  DownloadIcon,
-  ExternalLinkIcon,
   FileTextIcon,
   HeartIcon,
   MessageCircleIcon,
   PlayIcon,
-  RotateCwIcon,
   Settings2Icon,
   ShieldIcon,
   SparklesIcon,
   Trash2Icon,
-  WrenchIcon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
-import { useSteamBridgeStatus } from '@/renderer/hooks/useSteamBridgeStatus';
-import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import { useModalStore } from '@/renderer/store/useModalStore';
-import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
-import type { PluginHostState } from '@/shared/plugin-host-types';
 import { plural } from '@/shared/plural';
 import type { SteamCollectionSyncFailure } from '@/shared/types';
 import { APP_VERSION } from '../../constants/appVersion';
@@ -36,13 +27,6 @@ import {
   playNavigateSound,
 } from '../../utils/gamepadSounds';
 import { playNotificationSound } from '../../utils/notificationSounds';
-import {
-  openMillenniumSite,
-  pendingLaunchOptionsText,
-  runSteamRestart,
-  steamBridgeStatusText,
-} from '../../utils/steamBridge';
-import { millenniumUnsupportedText, openDeckySite } from '../../utils/steamPluginHost';
 import { Modal } from '../Modal/Modal';
 import { PrivacyPolicyModal } from '../Modal/PrivacyPolicyModal';
 import { SendLogsModal } from '../Modal/SendLogsModal';
@@ -51,6 +35,7 @@ import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
+import { SteamBridgeStatusCard } from './SteamBridgeStatusCard';
 
 const SettingItem = React.memo<{
   id: string;
@@ -76,309 +61,32 @@ const SettingItem = React.memo<{
 
 SettingItem.displayName = 'SettingItem';
 
-interface PluginHostLine {
-  key: string;
-  text: string;
-}
-
-interface PluginHostAction {
-  key: string;
-  label: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}
-
-function pluginHostEntries(
-  host: PluginHostState,
-  openSetup: ReturnType<typeof useSteamPluginSetupStore.getState>['openSetup']
-): { lines: PluginHostLine[]; actions: PluginHostAction[] } {
-  const lines: PluginHostLine[] = [];
-  const actions: PluginHostAction[] = [];
-  const recommend = () => {
-    lines.push({
-      key: 'recommend',
-      text: 'Порада: з Millennium лаунчер також показуватиме в Steam переклад досягнень.',
-    });
-    actions.push({
-      key: 'site',
-      label: 'Що таке Millennium',
-      icon: <ExternalLinkIcon size={16} />,
-      onClick: openMillenniumSite,
-    });
-  };
-
-  if (host.host === 'decky') {
-    const decky = host.decky;
-    if (!decky?.installed) {
-      lines.push({
-        key: 'no-decky',
-        text: host.deckyLoader
-          ? 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Лаунчер може встановити Decky Loader разом із плагіном.'
-          : 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Спершу встановіть Decky Loader.',
-      });
-      if (host.deckyLoader) {
-        actions.push({
-          key: 'decky-loader-install',
-          label: 'Встановити Decky Loader',
-          icon: <DownloadIcon size={16} />,
-          onClick: () => openSetup('decky-install', 'settings'),
-        });
-      }
-      actions.push({
-        key: 'decky-site',
-        label: 'Що таке Decky Loader',
-        icon: <ExternalLinkIcon size={16} />,
-        onClick: openDeckySite,
-      });
-    } else if (decky.plugin.installed && decky.plugin.disabled) {
-      lines.push({
-        key: 'disabled',
-        text: 'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.',
-      });
-    } else if (!decky.plugin.installed) {
-      lines.push({
-        key: 'decky-plugin',
-        text: 'Плагін «LBK Bridge» для Decky Loader показує в Steam перекладені досягнення.',
-      });
-      actions.push({
-        key: 'decky-install',
-        label: 'Встановити плагін для Decky',
-        icon: <DownloadIcon size={16} />,
-        onClick: () => openSetup('decky-install', 'settings'),
-      });
-    } else if (decky.plugin.outdated) {
-      lines.push({
-        key: 'decky-outdated',
-        text: 'Доступне оновлення плагіна «LBK Bridge» для Decky.',
-      });
-      actions.push({
-        key: 'decky-update',
-        label: 'Оновити плагін для Decky',
-        icon: <CircleArrowUpIcon size={16} />,
-        onClick: () => openSetup('decky-install', 'settings'),
-      });
-    }
-    return { lines, actions };
-  }
-
-  const { millennium } = host;
-  if (millennium.pending === 'activate') {
-    lines.push({
-      key: 'pending-activate',
-      text: 'Millennium встановиться, щойно ви закриєте Steam.',
-    });
-  } else if (millennium.pending === 'deactivate') {
-    lines.push({
-      key: 'pending-deactivate',
-      text: 'Millennium буде видалено, щойно ви закриєте Steam.',
-    });
-  }
-
-  const installed = millennium.installed;
-  if (installed?.managedBy === 'lbk') {
-    if (installed.version && !installed.needsRepair) {
-      lines.push({
-        key: 'installed-version',
-        text: `Встановлено Millennium ${installed.version}.`,
-      });
-    }
-    if (installed.needsRepair) {
-      lines.push({
-        key: 'repair',
-        text: 'Файли Millennium у теці Steam пошкоджено або видалено.',
-      });
-      actions.push({
-        key: 'repair',
-        label: 'Відновити Millennium',
-        icon: <WrenchIcon size={16} />,
-        onClick: () => openSetup('millennium-install', 'settings'),
-      });
-    } else if (millennium.update) {
-      lines.push({
-        key: 'update',
-        text: `Доступне оновлення Millennium: ${millennium.update.version}.`,
-      });
-      actions.push({
-        key: 'update',
-        label: `Оновити Millennium до ${millennium.update.version}`,
-        icon: <CircleArrowUpIcon size={16} />,
-        onClick: () => openSetup('millennium-install', 'settings'),
-      });
-    }
-    if (millennium.pending !== 'deactivate') {
-      actions.push({
-        key: 'uninstall',
-        label: 'Видалити Millennium',
-        icon: <Trash2Icon size={16} />,
-        onClick: () => openSetup('millennium-uninstall', 'settings'),
-      });
-    }
-    return { lines, actions };
-  }
-  if (installed || millennium.pending) {
-    return { lines, actions };
-  }
-
-  if (millennium.supported && host.host === 'millennium') {
-    recommend();
-    actions.unshift({
-      key: 'install',
-      label: 'Встановити Millennium',
-      icon: <DownloadIcon size={16} />,
-      onClick: () => openSetup('millennium-install', 'settings'),
-    });
-  } else if (
-    millennium.unsupportedReason === null ||
-    millennium.unsupportedReason === 'no-release'
-  ) {
-    recommend();
-  } else {
-    lines.push({
-      key: 'unsupported',
-      text: `Переклад досягнень у Steam недоступний: ${millenniumUnsupportedText(millennium.unsupportedReason)}`,
-    });
-  }
-  return { lines, actions };
-}
-
-interface SteamBridgeStatusCardProps {
-  isOpen: boolean;
-}
-
-const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({ isOpen }) => {
-  const { status, recheck } = useSteamBridgeStatus(isOpen);
-  const settingOn = useSettingsStore((state) => state.steamCefDebuggingEnabled);
-  const { state: hostState } = useSteamPluginHost(isOpen && settingOn);
-  const openSetup = useSteamPluginSetupStore((state) => state.openSetup);
-  const {
-    phase: recheckPhase,
-    isPending: isRechecking,
-    run: runRecheck,
-  } = useActionPhase();
-
-  const handleRecheck = useCallback(async () => {
-    if (isRechecking) {
-      return;
-    }
-    try {
-      await runRecheck(recheck, { isSuccess: (next) => next !== null });
-    } catch (error) {
-      console.error('[Settings] Steam bridge recheck failed:', error);
-    }
-  }, [isRechecking, runRecheck, recheck]);
-
-  const handleRestart = useCallback(() => {
-    void runSteamRestart(() => window.electronAPI.restartSteam(), {
-      launchOptions: (status?.pendingLaunchOptions.length ?? 0) > 0,
-    });
-  }, [status]);
-
-  if (!status) {
-    return null;
-  }
-
-  const statusText = steamBridgeStatusText(status);
-  const pendingCount = status.pendingLaunchOptions.length;
-  const showRestart = status.code === 'restart-pending' && status.canRestartSteam;
-  const showRecheck =
-    status.code === 'cef-blocked' || status.code === 'millennium-plugin-pending';
-  const { lines, actions } =
-    settingOn && hostState
-      ? pluginHostEntries(hostState, openSetup)
-      : { lines: [], actions: [] };
-  const hostBusy = hostState?.busy === true;
-
-  if (
-    !statusText &&
-    !status.steamElevated &&
-    pendingCount === 0 &&
-    lines.length === 0 &&
-    actions.length === 0
-  ) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-2 p-4 rounded-xl bg-glass border border-border text-xs text-text-muted">
-      {statusText && <p className="text-text-main">{statusText}</p>}
-      {status.steamElevated && (
-        <p>
-          Steam запущено від імені адміністратора, тому лаунчер не може його
-          перезапустити.
-        </p>
-      )}
-      {pendingCount > 0 && <p>{pendingLaunchOptionsText(pendingCount)}</p>}
-      {lines.map((line) => (
-        <p key={line.key}>{line.text}</p>
-      ))}
-      {(showRestart || showRecheck || actions.length > 0) && (
-        <div className="flex flex-wrap gap-2 mt-1">
-          {showRestart && (
-            <Button
-              onClick={handleRestart}
-              variant="secondary"
-              data-gamepad-modal-item
-              className="px-4! py-2! min-h-0! text-sm"
-              icon={<RotateCwIcon size={16} />}
-            >
-              Перезапустити Steam
-            </Button>
-          )}
-          {showRecheck && (
-            <Button
-              onClick={handleRecheck}
-              aria-busy={isRechecking}
-              variant="secondary"
-              data-gamepad-modal-item
-              className="px-4! py-2! min-h-0! text-sm aria-busy:opacity-60 aria-busy:cursor-wait"
-              icon={<AppActionIcon phase={recheckPhase} icon={RefreshCw} size={16} />}
-            >
-              Перевірити ще раз
-            </Button>
-          )}
-          {actions.map((action) => (
-            <Button
-              key={action.key}
-              onClick={action.onClick}
-              disabled={hostBusy && action.key !== 'site' && action.key !== 'decky-site'}
-              variant="secondary"
-              data-gamepad-modal-item
-              className="px-4! py-2! min-h-0! text-sm"
-              icon={action.icon}
-            >
-              {action.label}
-            </Button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+const STEAM_ACTION_ERRORS: Record<
+  SteamCollectionSyncFailure,
+  (purpose: string) => string
+> = {
+  'steam-not-running': () => 'Steam не запущено. Запустіть Steam і спробуйте ще раз.',
+  'cef-unavailable': (purpose) =>
+    `Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг ${purpose}.`,
+  'cef-blocked': (purpose) =>
+    `Steam не відкрив канал для лаунчера навіть після перезапуску. Щоб лаунчер міг ${purpose}, перевірте, чи не блокує його інший мод Steam, і натисніть «Перевірити ще раз» у налаштуваннях.`,
+  'millennium-plugin-pending': (purpose) =>
+    `Millennium закриває канал, через який лаунчер працює зі Steam. Плагін «LBK Bridge» увімкнеться після наступного закриття Steam — тоді лаунчер зможе ${purpose}. Або увімкніть його вже зараз у налаштуваннях Millennium (Plugins).`,
+  'millennium-outdated': (purpose) =>
+    `Ваша версія Millennium застаріла. Оновіть Millennium до версії 3, щоб лаунчер міг ${purpose}.`,
+  'library-unavailable': () =>
+    'Бібліотека Steam ще завантажується. Спробуйте за кілька секунд.',
+  'no-translated-games': () =>
+    'У каталозі немає перекладів до ігор Steam. Якщо каталог ще синхронізується, спробуйте за хвилину.',
+  'no-matches': () => 'Серед ваших ігор у бібліотеці Steam немає жодної з перекладом.',
+  failed: () => 'Спробуйте ще раз пізніше.',
 };
 
 function steamActionErrorMessage(
   reason: SteamCollectionSyncFailure,
   purpose: string
 ): string {
-  switch (reason) {
-    case 'steam-not-running':
-      return 'Steam не запущено. Запустіть Steam і спробуйте ще раз.';
-    case 'cef-unavailable':
-      return `Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг ${purpose}.`;
-    case 'cef-blocked':
-      return `Steam не відкрив канал для лаунчера навіть після перезапуску. Щоб лаунчер міг ${purpose}, перевірте, чи не блокує його інший мод Steam, і натисніть «Перевірити ще раз» у налаштуваннях.`;
-    case 'millennium-plugin-pending':
-      return `Millennium закриває канал, через який лаунчер працює зі Steam. Плагін «LBK Bridge» увімкнеться після наступного закриття Steam — тоді лаунчер зможе ${purpose}. Або увімкніть його вже зараз у налаштуваннях Millennium (Plugins).`;
-    case 'millennium-outdated':
-      return `Ваша версія Millennium застаріла. Оновіть Millennium до версії 3, щоб лаунчер міг ${purpose}.`;
-    case 'library-unavailable':
-      return 'Бібліотека Steam ще завантажується. Спробуйте за кілька секунд.';
-    case 'no-translated-games':
-      return 'У каталозі немає перекладів до ігор Steam. Якщо каталог ще синхронізується, спробуйте за хвилину.';
-    case 'no-matches':
-      return 'Серед ваших ігор у бібліотеці Steam немає жодної з перекладом.';
-    default:
-      return 'Спробуйте ще раз пізніше.';
-  }
+  return STEAM_ACTION_ERRORS[reason](purpose);
 }
 
 export const SettingsModal: React.FC = () => {

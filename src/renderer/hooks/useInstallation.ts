@@ -13,13 +13,19 @@ import type {
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { useSteamPluginSetupStore } from '../store/useSteamPluginSetupStore';
+import { useSteamBridgeStatusStore } from '../store/useSteamBridgeStatusStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
-import { openMillenniumSite, runSteamRestart } from '../utils/steamBridge';
-import { millenniumUnsupportedText, openDeckySite } from '../utils/steamPluginHost';
+import {
+  type InstallSuccessInput,
+  installSuccessActions,
+  installSuccessMessage,
+  needsBridgeStatus,
+  restartSteamAfterInstall,
+} from '../utils/installSuccess';
+import { openOfferTarget } from '../utils/openOfferTarget';
 import { type ActionPhase, useActionPhase } from './useActionPhase';
 import { useIsWorkshopChangePending } from './useInstalledTranslations';
 
@@ -311,138 +317,33 @@ export function useInstallation({
             });
           }
 
-          let message = isUpdateAvailable
-            ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
-            : `Українізатор ${selectedGame.name} успішно встановлено!`;
-
           const launchOptionsQueued = result.launchOptionsQueued === true;
-          if (launchOptionsQueued) {
-            message +=
-              '\n\nПараметри запуску застосуються автоматично, щойно ви закриєте Steam. Лаунчер має бути відкритим — його можна згорнути в трей.';
-          }
-
-          // Files are in place, but without its launch options the translation
-          // runs unmodded — say so instead of reporting a clean success.
-          if (result.launchOptionsError) {
-            message += `\n\nНе вдалося налаштувати параметри запуску Steam: ${result.launchOptionsError}`;
-          }
-
-          const achievementsDelivery = effectiveOptions.installAchievements
+          const delivery = effectiveOptions.installAchievements
             ? result.achievementsDelivery
             : undefined;
-          let millenniumInstallable = true;
-          if (achievementsDelivery === 'plugin-next-start') {
-            message += "\n\nПереклад досягнень з'явиться після наступного запуску Steam.";
-          } else if (achievementsDelivery === 'needs-millennium') {
-            const status = await window.electronAPI
-              .getSteamBridgeStatus()
-              .catch(() => null);
-            millenniumInstallable =
-              (status?.achievements.unsupportedReason ?? null) === null;
-            message += millenniumInstallable
-              ? '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium — лаунчер може встановити його сам.'
-              : '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium.';
-          } else if (achievementsDelivery === 'needs-decky-plugin') {
-            message +=
-              '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, встановіть плагін «LBK Bridge» для Decky Loader.';
-          } else if (achievementsDelivery === 'needs-decky') {
-            message +=
-              '\n\nПереклад досягнень збережено. На Steam Deck його показує плагін «LBK Bridge» для Decky Loader — лаунчер може встановити Decky Loader сам.';
-          } else if (achievementsDelivery === 'unavailable') {
-            const status = await window.electronAPI
-              .getSteamBridgeStatus()
-              .catch(() => null);
-            message += `\n\nПереклад досягнень збережено, але на цій системі Steam не може його показати: ${millenniumUnsupportedText(status?.achievements.unsupportedReason ?? null)}`;
-          } else if (achievementsDelivery === 'disabled') {
-            message +=
-              '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, увімкніть у налаштуваннях «Швидке застосування параметрів запуску Steam».';
-          }
-
-          const restartHelps =
-            launchOptionsQueued || achievementsDelivery === 'plugin-next-start';
-          const bridgeStatus = restartHelps
-            ? await window.electronAPI.getSteamBridgeStatus().catch(() => null)
-            : null;
-          const offerRestart = bridgeStatus?.canRestartSteam === true;
-
-          const actions: Array<{
-            label: string;
-            onClick: () => void;
-            variant: 'primary' | 'secondary';
-            keepOpen?: boolean;
-          }> = [{ label: 'Зрозуміло', onClick: () => undefined, variant: 'primary' }];
-          if (offerRestart) {
-            actions.push({
-              label: 'Перезапустити Steam зараз',
-              onClick: () => {
-                if (launchOptionsQueued) {
-                  void runSteamRestart(
-                    () => window.electronAPI.applyPendingLaunchOptions(selectedGame),
-                    {
-                      launchOptions: true,
-                      failureTitle: 'Параметри запуску не застосовано',
-                      successTitle: 'Параметри запуску застосовано',
-                      successMessage: 'Параметри запуску записано. Можна запускати гру.',
-                    }
-                  );
-                  return;
-                }
-                void runSteamRestart(() => window.electronAPI.restartSteam(), {
-                  launchOptions: false,
-                });
-              },
-              keepOpen: true,
-              variant: 'secondary',
-            });
-          }
           const settings = useSettingsStore.getState();
-          const openSetup = useSteamPluginSetupStore.getState().openSetup;
-          if (achievementsDelivery === 'needs-millennium') {
-            if (!settings.millenniumOfferDeclined && millenniumInstallable) {
-              actions.push({
-                label: 'Встановити Millennium',
-                onClick: () => openSetup('millennium-install', 'offer'),
-                variant: 'secondary',
-              });
-            } else {
-              actions.push({
-                label: 'Що таке Millennium',
-                onClick: openMillenniumSite,
-                keepOpen: true,
-                variant: 'secondary',
-              });
-            }
-          } else if (
-            achievementsDelivery === 'needs-decky-plugin' &&
-            !settings.deckyPluginOfferDeclined
-          ) {
-            actions.push({
-              label: 'Встановити плагін для Decky',
-              onClick: () => openSetup('decky-install', 'offer'),
-              variant: 'secondary',
-            });
-          } else if (achievementsDelivery === 'needs-decky') {
-            actions.push(
-              settings.deckyPluginOfferDeclined
-                ? {
-                    label: 'Що таке Decky Loader',
-                    onClick: openDeckySite,
-                    keepOpen: true,
-                    variant: 'secondary',
-                  }
-                : {
-                    label: 'Встановити Decky Loader',
-                    onClick: () => openSetup('decky-install', 'offer'),
-                    variant: 'secondary',
-                  }
-            );
-          } else if (achievementsDelivery === 'disabled') {
-            actions.push({
-              label: 'Відкрити налаштування',
-              onClick: settings.openSettingsModal,
-              variant: 'secondary',
-            });
-          }
+          const successInput: InstallSuccessInput = {
+            launchOptionsQueued,
+            launchOptionsError: result.launchOptionsError,
+            delivery,
+            status: needsBridgeStatus({ delivery, launchOptionsQueued })
+              ? await useSteamBridgeStatusStore.getState().refresh()
+              : null,
+            declined: {
+              millennium: settings.millenniumOfferDeclined,
+              decky: settings.deckyPluginOfferDeclined,
+            },
+          };
+          const message = installSuccessMessage(
+            isUpdateAvailable
+              ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
+              : `Українізатор ${selectedGame.name} успішно встановлено!`,
+            successInput
+          );
+          const actions = installSuccessActions(successInput, {
+            restart: () => restartSteamAfterInstall(selectedGame, launchOptionsQueued),
+            open: (target) => openOfferTarget(target, 'offer'),
+          });
 
           showModal({
             title: isUpdateAvailable

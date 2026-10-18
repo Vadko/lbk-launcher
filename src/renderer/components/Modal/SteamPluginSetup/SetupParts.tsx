@@ -1,5 +1,6 @@
 import { LoaderCircle } from 'lucide';
 import React, { useEffect } from 'react';
+import type { SteamPluginSetupSource } from '../../../store/useSteamPluginSetupStore';
 import { AppActionIcon } from '../../ui/AppActionIcon';
 import { AppNumberFlow } from '../../ui/AppNumberFlow';
 import { Modal } from '../Modal';
@@ -138,4 +139,51 @@ export const SetupText: React.FC<SetupTextProps> = ({ paragraphs }) => (
       </p>
     ))}
   </div>
+);
+
+interface SetupNoteProps {
+  text: string | null;
+}
+
+export const SetupNote: React.FC<SetupNoteProps> = ({ text }) =>
+  text ? <p className="mt-3 text-sm text-text-main wrap-break-word">{text}</p> : null;
+
+interface SetupCloseProps {
+  onClose: () => void;
+}
+
+export const SetupCloseButton: React.FC<SetupCloseProps> = ({ onClose }) => (
+  <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
+    Закрити
+  </SetupButton>
+);
+
+export const SetupDoneButton: React.FC<SetupCloseProps> = ({ onClose }) => (
+  <SetupButton tone="primary" onClick={onClose} gamepad="confirm">
+    Зрозуміло
+  </SetupButton>
+);
+
+interface OfferDismissButtonsProps {
+  source: SteamPluginSetupSource;
+  onClose: () => void;
+  // Omitted where declining makes no sense, e.g. for an update.
+  onDecline?: () => void;
+}
+
+export const OfferDismissButtons: React.FC<OfferDismissButtonsProps> = ({
+  source,
+  onClose,
+  onDecline,
+}) => (
+  <>
+    <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
+      {source === 'offer' ? 'Не зараз' : 'Скасувати'}
+    </SetupButton>
+    {source === 'offer' && onDecline && (
+      <SetupButton tone="secondary" onClick={onDecline}>
+        Більше не пропонувати
+      </SetupButton>
+    )}
+  </>
 );

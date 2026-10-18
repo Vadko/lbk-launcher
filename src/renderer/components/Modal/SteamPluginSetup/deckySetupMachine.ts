@@ -1,0 +1,192 @@
+import { assign, fromPromise, setup } from 'xstate';
+import type {
+  DeckyInstallResult,
+  DeckyLoaderInstallResult,
+  PluginHostState,
+} from '@/shared/plugin-host-types';
+import { useSteamPluginHostStore } from '../../../store/useSteamPluginHostStore';
+
+export type LoaderFailure = Extract<
+  DeckyLoaderInstallResult,
+  { success: false }
+>['reason'];
+
+interface SaveZipResult {
+  success: boolean;
+  path?: string;
+  error?: string;
+}
+
+interface DeckySetupContext {
+  host: PluginHostState | null;
+  loaderInstalled: boolean;
+  loaderFailure: LoaderFailure;
+  showSaveZip: boolean;
+  savedMessage: string | null;
+}
+
+type DeckySetupEvent =
+  | { type: 'HOST_STATE'; state: PluginHostState | null }
+  | { type: 'INSTALL_LOADER' }
+  | { type: 'REQUEST' }
+  | { type: 'SAVE_ZIP' };
+
+function pluginReady(state: PluginHostState | null): boolean {
+  const plugin = state?.decky?.plugin;
+  return plugin?.installed === true && !plugin.outdated;
+}
+
+const savedMessage = (result: SaveZipResult): string =>
+  result.success && result.path
+    ? `Файл збережено: ${result.path}`
+    : `Не вдалося зберегти файл${result.error ? `: ${result.error}` : '.'}`;
+
+// The plugin dir appearing (pushed by main's Decky watcher) is the only success signal: Decky's install call returns before the user confirms.
+export const deckySetupMachine = setup({
+  types: {
+    context: {} as DeckySetupContext,
+    events: {} as DeckySetupEvent,
+  },
+  actors: {
+    installLoader: fromPromise<DeckyLoaderInstallResult>(async () => {
+      const result = await window.electronAPI
+        .installDeckyLoader()
+        .catch((error: unknown): DeckyLoaderInstallResult => {
+          console.warn('[DeckySetup] Decky Loader install failed:', error);
+          return { success: false, reason: 'not-installed' };
+        });
+      await useSteamPluginHostStore.getState().refresh();
+      return result;
+    }),
+    request: fromPromise<DeckyInstallResult>(() =>
+      window.electronAPI.requestDeckyPluginInstall()
+    ),
+    saveZip: fromPromise<SaveZipResult>(() => window.electronAPI.saveDeckyPluginZip()),
+  },
+  actions: {
+    refreshHost: () => {
+      void useSteamPluginHostStore.getState().refresh();
+    },
+  },
+  guards: {
+    // The modal may be reopened while an installer it started earlier is still running.
+    loaderBusy: ({ context }) => context.host?.deckyLoader?.installing === true,
+    pluginReady: ({ context }) => pluginReady(context.host),
+  },
+  delays: {
+    saveZipReveal: 30_000,
+    fallback: 5 * 60 * 1000,
+  },
+}).createMachine({
+  id: 'deckySetup',
+  type: 'parallel',
+  context: {
+    host: null,
+    loaderInstalled: false,
+    loaderFailure: 'not-installed',
+    showSaveZip: false,
+    savedMessage: null,
+  },
+  on: {
+    HOST_STATE: { actions: assign({ host: ({ event }) => event.state }) },
+  },
+  states: {
+    flow: {
+      initial: 'intro',
+      states: {
+        intro: {
+          always: { guard: 'loaderBusy', target: 'loaderRunning' },
+          on: { INSTALL_LOADER: 'loaderInstalling', REQUEST: 'requesting' },
+        },
+        loaderRunning: {
+          always: {
+            guard: ({ context }) => context.host?.deckyLoader?.installing !== true,
+            target: 'intro',
+          },
+        },
+        loaderInstalling: {
+          invoke: {
+            src: 'installLoader',
+            onDone: [
+              {
+                guard: ({ event }) => event.output.success,
+                target: 'intro',
+                actions: assign({ loaderInstalled: true }),
+              },
+              {
+                target: 'loaderFailed',
+                actions: assign({
+                  loaderFailure: ({ event }) =>
+                    event.output.success ? 'not-installed' : event.output.reason,
+                }),
+              },
+            ],
+            onError: {
+              target: 'loaderFailed',
+              actions: assign({ loaderFailure: 'not-installed' }),
+            },
+          },
+        },
+        loaderFailed: {
+          on: { INSTALL_LOADER: 'loaderInstalling' },
+        },
+        requesting: {
+          invoke: {
+            src: 'request',
+            onDone: [
+              {
+                guard: ({ event }) =>
+                  event.output.success && event.output.state === 'installed',
+                target: 'done',
+              },
+              { guard: ({ event }) => event.output.success, target: 'waiting' },
+              {
+                guard: ({ event }) =>
+                  !event.output.success && event.output.reason === 'no-decky',
+                target: 'intro',
+                actions: 'refreshHost',
+              },
+              { target: 'fallback' },
+            ],
+            onError: {
+              target: 'fallback',
+              actions: ({ event }) =>
+                console.warn('[DeckySetup] Install request failed:', event.error),
+            },
+          },
+        },
+        waiting: {
+          always: { guard: 'pluginReady', target: 'done' },
+          after: {
+            saveZipReveal: { actions: assign({ showSaveZip: true }) },
+            fallback: 'fallback',
+          },
+        },
+        fallback: {},
+        done: {},
+      },
+    },
+    zip: {
+      initial: 'idle',
+      states: {
+        idle: { on: { SAVE_ZIP: 'saving' } },
+        saving: {
+          invoke: {
+            src: 'saveZip',
+            onDone: {
+              target: 'idle',
+              actions: assign({
+                savedMessage: ({ event }) => savedMessage(event.output),
+              }),
+            },
+            onError: {
+              target: 'idle',
+              actions: ({ event }) =>
+                console.warn('[DeckySetup] Saving the zip failed:', event.error),
+            },
+          },
+        },
+      },
+    },
+  },
+});

@@ -5,19 +5,18 @@ import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
 import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
+import { useSteamBridgeStatusSync } from './hooks/useSteamBridgeStatusSync';
+import { useSteamRestartPrompt } from './hooks/useSteamRestartPrompt';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
 import { NewsPage } from './pages/NewsPage';
 import { SitePage } from './pages/SitePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
-import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
-import { useSteamBridgeStatusStore } from './store/useSteamBridgeStatusStore';
 import { useStore } from './store/useStore';
 import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
 import { trackEvent } from './utils/analytics';
 import { isValidGamepad } from './utils/isValidGamepad';
-import { runSteamRestart } from './utils/steamBridge';
 
 // Higher deadzone for mode switching to prevent accidental triggers from stick drift
 const MODE_SWITCH_DEADZONE = 0.8;
@@ -401,57 +400,8 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Sent only by the Settings toggle, at most once per bridge fingerprint.
-  useEffect(() => {
-    if (!window.electronAPI?.onSteamRestartRequired) {
-      return;
-    }
-    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
-      useModalStore.getState().showModal({
-        title: 'Перезапустіть Steam',
-        message:
-          'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
-          'Можна зробити це пізніше — налаштування вже збережено.',
-        type: 'info',
-        actions: [
-          {
-            label: 'Перезапустити Steam',
-            onClick: () => {
-              void runSteamRestart(() => window.electronAPI.restartSteam(), {
-                launchOptions: false,
-              });
-            },
-            keepOpen: true,
-            variant: 'primary',
-          },
-        ],
-      });
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    const api = window.electronAPI;
-    if (!api?.onSteamBridgeStatusChanged) {
-      return;
-    }
-    const store = useSteamBridgeStatusStore.getState();
-    const unsubscribeStatus = api.onSteamBridgeStatusChanged(store.setStatus);
-    // Main also republishes after a batch; a refetch covers a publish that compared equal.
-    const unsubscribeApplied = api.onSteamPendingActionsApplied(() => {
-      void store.refresh();
-    });
-    return () => {
-      unsubscribeStatus();
-      unsubscribeApplied();
-    };
-  }, []);
-
-  useIdleEffect(() => {
-    if (window.electronAPI) {
-      void useSteamBridgeStatusStore.getState().refresh();
-    }
-  }, []);
+  useSteamRestartPrompt();
+  useSteamBridgeStatusSync();
 
   const handleOnlineEvent = () => {
     setOnline(true);

@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 
-type SteamPluginSetupVariant =
+export type SteamPluginSetupVariant =
   | 'millennium-install'
   | 'millennium-uninstall'
   | 'decky-install';
 
 // 'offer' comes from a contextual suggestion and may be declined for good; 'settings' is user-initiated.
-type SteamPluginSetupSource = 'offer' | 'settings';
+export type SteamPluginSetupSource = 'offer' | 'settings';
 
 interface SteamPluginSetupStore {
   open: boolean;

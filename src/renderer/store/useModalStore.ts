@@ -24,7 +24,7 @@ interface ModalConfig {
   mandatory?: boolean;
 }
 
-interface ModalAction {
+export interface ModalAction {
   label: string;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'danger';

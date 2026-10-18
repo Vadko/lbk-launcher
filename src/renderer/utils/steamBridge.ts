@@ -28,61 +28,78 @@ function millenniumPendingText(status: SteamBridgeStatus): string {
   return 'Виявлено Millennium. Він закриває канал, через який лаунчер працює зі Steam, тому лаунчер встановив плагін «LBK Bridge» для Millennium. Плагін увімкнеться автоматично, щойно ви закриєте Steam. Або увімкніть його вже зараз: налаштування Millennium → Plugins → LBK Bridge.';
 }
 
+const STATUS_TEXT: Record<
+  SteamBridgeStatus['code'],
+  (status: SteamBridgeStatus) => string | null
+> = {
+  ok: (status) => {
+    if (status.transport !== 'plugin') {
+      return 'Підключено до Steam.';
+    }
+    return status.pluginHost === 'decky'
+      ? 'Підключено до Steam через плагін «LBK Bridge» для Decky.'
+      : 'Підключено до Steam через плагін «LBK Bridge» для Millennium.';
+  },
+  'setting-off': () => null,
+  'steam-not-running': () => 'Steam не запущено.',
+  'restart-pending': () =>
+    'Щоб увімкнути швидке застосування, перезапустіть Steam один раз.',
+  'cef-blocked': () => CEF_BLOCKED_TEXT,
+  'millennium-plugin-pending': millenniumPendingText,
+  'millennium-outdated': () =>
+    'Виявлено застарілий Millennium 2.x. Оновіть Millennium до версії 3 — тоді лаунчер зможе працювати з ним через плагін. До того параметри запуску застосовуватимуться після закриття Steam.',
+};
+
 export function steamBridgeStatusText(status: SteamBridgeStatus): string | null {
-  switch (status.code) {
-    case 'ok':
-      if (status.transport !== 'plugin') {
-        return 'Підключено до Steam.';
-      }
-      return status.pluginHost === 'decky'
-        ? 'Підключено до Steam через плагін «LBK Bridge» для Decky.'
-        : 'Підключено до Steam через плагін «LBK Bridge» для Millennium.';
-    case 'steam-not-running':
-      return 'Steam не запущено.';
-    case 'restart-pending':
-      return 'Щоб увімкнути швидке застосування, перезапустіть Steam один раз.';
-    case 'cef-blocked':
-      return CEF_BLOCKED_TEXT;
-    case 'millennium-plugin-pending':
-      return millenniumPendingText(status);
-    case 'millennium-outdated':
-      return 'Виявлено застарілий Millennium 2.x. Оновіть Millennium до версії 3 — тоді лаунчер зможе працювати з ним через плагін. До того параметри запуску застосовуватимуться після закриття Steam.';
-    default:
-      return null;
-  }
+  return STATUS_TEXT[status.code](status);
 }
 
 export function pendingLaunchOptionsText(count: number): string {
   return `Очікують закриття Steam: параметри запуску для ${count} ${plural(count, 'гри', 'ігор', 'ігор')}.`;
 }
 
+const LAUNCH_FAILED_TEXT =
+  'Steam закрито, але не вдалося запустити його знову. Запустіть Steam вручну.';
+
+const RESTART_FAILURE_TEXT: Record<
+  RestartFailureReason,
+  { launchOptions: string; plain: string }
+> = {
+  'access-denied': {
+    launchOptions:
+      'Steam запущено від імені адміністратора, тому лаунчер не може його перезапустити. Закрийте Steam самостійно — параметри запуску застосуються автоматично.',
+    plain:
+      'Steam запущено від імені адміністратора, тому лаунчер не може його перезапустити. Перезапустіть Steam самостійно.',
+  },
+  gamescope: {
+    launchOptions:
+      'В ігровому режимі лаунчер не перезапускає Steam. Параметри запуску застосуються, щойно Steam буде закрито — наприклад, після переходу в режим робочого столу.',
+    plain:
+      'В ігровому режимі лаунчер не перезапускає Steam. Перезапустіть його самостійно — наприклад, перейдіть у режим робочого столу.',
+  },
+  'game-running': {
+    launchOptions:
+      'Закрийте гру, щоб перезапустити Steam. Параметри запуску застосуються, щойно Steam буде закрито.',
+    plain: 'Закрийте гру, щоб перезапустити Steam.',
+  },
+  timeout: {
+    launchOptions:
+      'Steam не закрився вчасно. Закрийте його вручну — параметри запуску застосуються автоматично.',
+    plain: 'Steam не закрився вчасно. Перезапустіть його вручну.',
+  },
+  'launch-failed': { launchOptions: LAUNCH_FAILED_TEXT, plain: LAUNCH_FAILED_TEXT },
+};
+
 export function restartFailureMessage(
   reason: RestartFailureReason | undefined,
   error: string | undefined,
   launchOptions: boolean
 ): string {
-  switch (reason) {
-    case 'access-denied':
-      return launchOptions
-        ? 'Steam запущено від імені адміністратора, тому лаунчер не може його перезапустити. Закрийте Steam самостійно — параметри запуску застосуються автоматично.'
-        : 'Steam запущено від імені адміністратора, тому лаунчер не може його перезапустити. Перезапустіть Steam самостійно.';
-    case 'gamescope':
-      return launchOptions
-        ? 'В ігровому режимі лаунчер не перезапускає Steam. Параметри запуску застосуються, щойно Steam буде закрито — наприклад, після переходу в режим робочого столу.'
-        : 'В ігровому режимі лаунчер не перезапускає Steam. Перезапустіть його самостійно — наприклад, перейдіть у режим робочого столу.';
-    case 'game-running':
-      return launchOptions
-        ? 'Закрийте гру, щоб перезапустити Steam. Параметри запуску застосуються, щойно Steam буде закрито.'
-        : 'Закрийте гру, щоб перезапустити Steam.';
-    case 'timeout':
-      return launchOptions
-        ? 'Steam не закрився вчасно. Закрийте його вручну — параметри запуску застосуються автоматично.'
-        : 'Steam не закрився вчасно. Перезапустіть його вручну.';
-    case 'launch-failed':
-      return 'Steam закрито, але не вдалося запустити його знову. Запустіть Steam вручну.';
-    default:
-      return error ?? 'Не вдалося перезапустити Steam.';
+  if (reason === undefined) {
+    return error ?? 'Не вдалося перезапустити Steam.';
   }
+  const text = RESTART_FAILURE_TEXT[reason];
+  return launchOptions ? text.launchOptions : text.plain;
 }
 
 interface SteamRestartOutcome {

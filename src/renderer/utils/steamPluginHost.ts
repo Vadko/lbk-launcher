@@ -35,71 +35,70 @@ export function openDeckySite(): void {
   });
 }
 
+const DECKY_HOST_TEXT =
+  'Millennium несумісний із Decky Loader, тож тут переклад досягнень показується через плагін «LBK Bridge» для Decky Loader.';
+
+const UNSUPPORTED_TEXT: Record<MillenniumUnsupportedReason, string> = {
+  'flatpak-steam': 'Millennium не підтримує Steam, встановлений через Flatpak.',
+  'snap-steam': 'Millennium не підтримує Steam, встановлений через Snap.',
+  arch: "Millennium працює лише на комп'ютерах з процесором x86-64.",
+  'steam-rt64':
+    'Millennium не працює з 64-бітною бета-версією клієнта Steam. Вийдіть із бета-програми в налаштуваннях Steam («Сумісність»/«Бета-версії»).',
+  'missing-libssl32':
+    'Бракує 32-бітної бібліотеки OpenSSL 3 (пакет libssl3:i386 або lib32-openssl). Встановіть її й спробуйте ще раз.',
+  'steam-home-link':
+    'Не знайдено ~/.steam/steam, який вказує на теку Steam. Запустіть Steam один раз і спробуйте ще раз.',
+  nixos:
+    'На NixOS встановіть Millennium засобами системи — лаунчер сам додасть до нього плагін «LBK Bridge».',
+  'macos-too-old': 'Millennium потребує macOS 13.3 або новішої.',
+  'no-release': 'Встановлення Millennium з лаунчера для цієї системи ще готується.',
+  'millennium-v2':
+    'У вас стара версія Millennium. Оновіть її до версії 3 офіційним інсталятором — після цього лаунчер сам додасть плагін «LBK Bridge».',
+  steamos: DECKY_HOST_TEXT,
+  'decky-present': DECKY_HOST_TEXT,
+  'no-steam': 'Лаунчер не знайшов Steam на цьому пристрої.',
+};
+
 export function millenniumUnsupportedText(
   reason: MillenniumUnsupportedReason | null
 ): string {
-  switch (reason) {
-    case 'flatpak-steam':
-      return 'Millennium не підтримує Steam, встановлений через Flatpak.';
-    case 'snap-steam':
-      return 'Millennium не підтримує Steam, встановлений через Snap.';
-    case 'arch':
-      return "Millennium працює лише на комп'ютерах з процесором x86-64.";
-    case 'steam-rt64':
-      return 'Millennium не працює з 64-бітною бета-версією клієнта Steam. Вийдіть із бета-програми в налаштуваннях Steam («Сумісність»/«Бета-версії»).';
-    case 'missing-libssl32':
-      return 'Бракує 32-бітної бібліотеки OpenSSL 3 (пакет libssl3:i386 або lib32-openssl). Встановіть її й спробуйте ще раз.';
-    case 'steam-home-link':
-      return 'Не знайдено ~/.steam/steam, який вказує на теку Steam. Запустіть Steam один раз і спробуйте ще раз.';
-    case 'nixos':
-      return 'На NixOS встановіть Millennium засобами системи — лаунчер сам додасть до нього плагін «LBK Bridge».';
-    case 'macos-too-old':
-      return 'Millennium потребує macOS 13.3 або новішої.';
-    case 'no-release':
-      return hostOs() === 'macos'
-        ? 'Збірка Millennium для macOS ще готується.'
-        : 'Встановлення Millennium з лаунчера для цієї системи ще готується.';
-    case 'millennium-v2':
-      return 'У вас стара версія Millennium. Оновіть її до версії 3 офіційним інсталятором — після цього лаунчер сам додасть плагін «LBK Bridge».';
-    case 'steamos':
-    case 'decky-present':
-      return 'Millennium несумісний із Decky Loader, тож тут переклад досягнень показується через плагін «LBK Bridge» для Decky Loader.';
-    case 'no-steam':
-      return 'Лаунчер не знайшов Steam на цьому пристрої.';
-    default:
-      return 'Millennium не підтримується на цій системі.';
+  if (reason === null) {
+    return 'Millennium не підтримується на цій системі.';
   }
+  if (reason === 'no-release' && hostOs() === 'macos') {
+    return 'Збірка Millennium для macOS ще готується.';
+  }
+  return UNSUPPORTED_TEXT[reason];
 }
 
+const INSTALL_FAILED_TEXT = 'Не вдалося встановити Millennium.';
+
+const FAILURE_TEXT: Record<MillenniumFailure, string> = {
+  'download-failed':
+    "Не вдалося завантажити Millennium. Перевірте з'єднання з інтернетом і спробуйте ще раз.",
+  'checksum-mismatch':
+    'Завантажений файл Millennium пошкоджено або підмінено. Встановлення скасовано.',
+  'extract-failed': 'Не вдалося розпакувати Millennium.',
+  'av-blocked':
+    'Антивірус видалив або заблокував файли Millennium. Додайте теку Steam до винятків антивіруса й спробуйте ще раз.',
+  'not-writable':
+    'Лаунчер не має доступу на запис до теки Steam. Встановіть Millennium офіційним інсталятором.',
+  conflict:
+    'У теці Steam уже є файли іншого мода, який завантажується так само, як Millennium. Лаунчер не змінюватиме їх.',
+  'not-prepared': 'Спершу завантажте Millennium ще раз.',
+  'script-failed': 'Не вдалося встановити файли Millennium.',
+  'files-locked':
+    'Файли Steam ще зайняті. Millennium встановиться після наступного закриття Steam.',
+  cancelled: 'Встановлення Millennium скасовано.',
+  busy: 'Лаунчер уже змінює Millennium. Зачекайте, доки це завершиться.',
+  'plugin-not-connected':
+    'Millennium встановлено, але плагін «LBK Bridge» ще не підключився. Перевірте, чи Steam запущено, і натисніть «Перевірити ще раз».',
+  unsupported: INSTALL_FAILED_TEXT,
+  'restart-failed': INSTALL_FAILED_TEXT,
+};
+
 export function millenniumFailureText(reason: MillenniumFailure | undefined): string {
-  switch (reason) {
-    case 'download-failed':
-      return "Не вдалося завантажити Millennium. Перевірте з'єднання з інтернетом і спробуйте ще раз.";
-    case 'checksum-mismatch':
-      return 'Завантажений файл Millennium пошкоджено або підмінено. Встановлення скасовано.';
-    case 'extract-failed':
-      return 'Не вдалося розпакувати Millennium.';
-    case 'av-blocked':
-      return 'Антивірус видалив або заблокував файли Millennium. Додайте теку Steam до винятків антивіруса й спробуйте ще раз.';
-    case 'not-writable':
-      return 'Лаунчер не має доступу на запис до теки Steam. Встановіть Millennium офіційним інсталятором.';
-    case 'conflict':
-      return 'У теці Steam уже є файли іншого мода, який завантажується так само, як Millennium. Лаунчер не змінюватиме їх.';
-    case 'not-prepared':
-      return 'Спершу завантажте Millennium ще раз.';
-    case 'script-failed':
-      return 'Не вдалося встановити файли Millennium.';
-    case 'files-locked':
-      return 'Файли Steam ще зайняті. Millennium встановиться після наступного закриття Steam.';
-    case 'cancelled':
-      return 'Встановлення Millennium скасовано.';
-    case 'busy':
-      return 'Лаунчер уже змінює Millennium. Зачекайте, доки це завершиться.';
-    case 'plugin-not-connected':
-      return 'Millennium встановлено, але плагін «LBK Bridge» ще не підключився. Перевірте, чи Steam запущено, і натисніть «Перевірити ще раз».';
-    default:
-      return 'Не вдалося встановити Millennium.';
-  }
+  return reason === undefined ? INSTALL_FAILED_TEXT : FAILURE_TEXT[reason];
 }
 
 const PHASE_TEXT: Record<MillenniumProgress['phase'], string> = {

@@ -1,20 +1,14 @@
 import {
   ArchiveIcon,
   CheckIcon,
-  DownloadIcon,
-  ExternalLinkIcon,
   FileTextIcon,
-  InfoIcon,
   MonitorIcon,
-  Settings2Icon,
   ShieldIcon,
   TerminalIcon,
   Trash2Icon,
-  TrophyIcon,
   Volume2Icon,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { AchievementsBadge } from '../../../shared/plugin-host-types';
 import type {
   Game,
   GamePath,
@@ -24,150 +18,10 @@ import type {
 } from '../../../shared/types';
 import { getReadablePlatform } from '../../helpers/getReadablePlatform';
 import { useSteamBridgeStatus } from '../../hooks/useSteamBridgeStatus';
-import { useSettingsStore } from '../../store/useSettingsStore';
-import { useSteamPluginSetupStore } from '../../store/useSteamPluginSetupStore';
-import { openMillenniumSite } from '../../utils/steamBridge';
-import { achievementsBadgeDetail, openDeckySite } from '../../utils/steamPluginHost';
-import { AchievementsDeliveryBadge } from '../ui/AchievementsDeliveryBadge';
+import { achievementsOptionState, calculateTotalSize } from '../../utils/installOptions';
 import { SelectDropdown, type SelectOption } from '../ui/SelectDropdown';
+import { AchievementsOption } from './InstallOptions/AchievementsOption';
 import { Modal } from './Modal';
-
-const NOTE_ACTION_CLASS =
-  'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-opacity hover:opacity-90';
-const NOTE_PRIMARY_CLASS = `${NOTE_ACTION_CLASS} bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark`;
-const NOTE_LINK_CLASS = 'inline-flex items-center gap-1 text-color-main hover:underline';
-const FILES_NOTE = 'Steam більше не показує перекладені досягнення зі звичайних файлів.';
-const IN_GAME_NOTE = 'У меню самої гри назви лишаться мовою розробника.';
-// 'after-restart' counts: the host is installed and the strings reach Steam on its next start.
-const ACHIEVEMENTS_READY_STATES: ReadonlySet<AchievementsBadge['state']> = new Set([
-  'millennium',
-  'decky',
-  'after-restart',
-]);
-
-interface AchievementsDeliveryNoteProps {
-  badge: AchievementsBadge;
-}
-
-// The install buttons ignore the "don't offer again" flags: next to a disabled checkbox they are the only way to enable it.
-const AchievementsDeliveryNote: React.FC<AchievementsDeliveryNoteProps> = ({ badge }) => {
-  const openSettingsModal = useSettingsStore((s) => s.openSettingsModal);
-  const openSetup = useSteamPluginSetupStore((s) => s.openSetup);
-
-  let text: string;
-  let actions: React.ReactNode = null;
-  switch (badge.state) {
-    case 'needs-millennium':
-      text = `${FILES_NOTE} Щоб встановити переклад досягнень і бачити його в бібліотеці, сповіщеннях та оверлеї Steam, потрібен Millennium. ${IN_GAME_NOTE}`;
-      actions = (
-        <>
-          {badge.unsupportedReason === null && (
-            <button
-              type="button"
-              onClick={() => openSetup('millennium-install', 'offer')}
-              data-gamepad-modal-item
-              className={NOTE_PRIMARY_CLASS}
-            >
-              <DownloadIcon size={14} />
-              Встановити Millennium
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={openMillenniumSite}
-            data-gamepad-modal-item
-            className={NOTE_LINK_CLASS}
-          >
-            <ExternalLinkIcon size={14} />
-            Що таке Millennium
-          </button>
-        </>
-      );
-      break;
-    case 'needs-decky-plugin':
-      text = `${FILES_NOTE} Щоб встановити переклад досягнень і бачити його в бібліотеці, сповіщеннях та оверлеї Steam, потрібен плагін «LBK Bridge» для Decky Loader. ${IN_GAME_NOTE}`;
-      actions = (
-        <button
-          type="button"
-          onClick={() => openSetup('decky-install', 'offer')}
-          data-gamepad-modal-item
-          className={NOTE_PRIMARY_CLASS}
-        >
-          <DownloadIcon size={14} />
-          Встановити плагін для Decky
-        </button>
-      );
-      break;
-    case 'needs-decky':
-      text = `${FILES_NOTE} На Steam Deck переклад досягнень показує плагін «LBK Bridge» для Decky Loader, тож спершу потрібен Decky Loader. ${IN_GAME_NOTE}`;
-      actions = (
-        <>
-          <button
-            type="button"
-            onClick={() => openSetup('decky-install', 'offer')}
-            data-gamepad-modal-item
-            className={NOTE_PRIMARY_CLASS}
-          >
-            <DownloadIcon size={14} />
-            Встановити Decky Loader
-          </button>
-          <button
-            type="button"
-            onClick={openDeckySite}
-            data-gamepad-modal-item
-            className={NOTE_LINK_CLASS}
-          >
-            <ExternalLinkIcon size={14} />
-            Що таке Decky Loader
-          </button>
-        </>
-      );
-      break;
-    case 'setting-off':
-      text = `Переклад досягнень недоступний, поки вимкнено інтеграцію зі Steam. ${achievementsBadgeDetail(badge) ?? ''}`;
-      actions = (
-        <button
-          type="button"
-          onClick={openSettingsModal}
-          data-gamepad-modal-item
-          className={NOTE_LINK_CLASS}
-        >
-          <Settings2Icon size={14} />
-          Відкрити налаштування
-        </button>
-      );
-      break;
-    case 'unsupported':
-      text = `Переклад досягнень недоступний: на цій системі Steam не може його показати. ${achievementsBadgeDetail(badge) ?? ''}`;
-      actions =
-        badge.unsupportedReason === 'millennium-v2' ? (
-          <button
-            type="button"
-            onClick={openMillenniumSite}
-            data-gamepad-modal-item
-            className={NOTE_LINK_CLASS}
-          >
-            <ExternalLinkIcon size={14} />
-            Відкрити сайт Millennium
-          </button>
-        ) : null;
-      break;
-    default:
-      return null;
-  }
-
-  return (
-    <div className="bg-glass rounded-xl p-3 border border-border flex items-start gap-2 text-sm">
-      <InfoIcon size={16} className="text-color-main shrink-0 mt-0.5" />
-      <div className="text-text-muted min-w-0">
-        <p>{text}</p>
-        {actions && (
-          <div className="mt-2 flex flex-wrap items-center gap-3">{actions}</div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 interface InstallOptionsDialogProps {
   isOpen: boolean;
@@ -278,31 +132,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const willDownloadVoice = hasVoiceArchive && installVoice && !isVoiceInstalled;
   const { status: bridgeStatus } = useSteamBridgeStatus(isOpen && hasAchievementsArchive);
   const achievementsBadge = bridgeStatus?.achievements ?? null;
-  const isCheckingAchievements = hasAchievementsArchive && !achievementsBadge;
-  const canToggleAchievements =
-    hasAchievementsArchive &&
-    !!achievementsBadge &&
-    ACHIEVEMENTS_READY_STATES.has(achievementsBadge.state);
-  // A locked box keeps what is installed: sending false would make the installer delete existing strings.
-  const effectiveInstallAchievements = canToggleAchievements
-    ? installAchievements
-    : isAchievementsInstalled;
-  const willDownloadAchievements =
-    canToggleAchievements && installAchievements && !isAchievementsInstalled;
-  const willReinstallAchievements =
-    canToggleAchievements &&
-    installAchievements &&
-    isAchievementsInstalled &&
-    isReinstall;
+  const achievements = achievementsOptionState({
+    hasArchive: hasAchievementsArchive,
+    installed: isAchievementsInstalled,
+    checked: installAchievements,
+    isReinstall,
+    badge: achievementsBadge,
+  });
   const willRemoveVoice = hasVoiceArchive && !installVoice && isVoiceInstalled;
-  const wantsAchievements = canToggleAchievements && installAchievements;
-  // With the box unchecked the reason is otherwise only in a title tooltip, unreachable on a gamepad.
-  const achievementsBadgeHint =
-    canToggleAchievements && !installAchievements && achievementsBadge
-      ? achievementsBadgeDetail(achievementsBadge)
-      : null;
-  const willRemoveAchievements =
-    canToggleAchievements && !installAchievements && isAchievementsInstalled;
 
   const steamLaunchOptionsWindows = game.steam_launch_options_windows?.trim() || null;
   const steamLaunchOptionsLinux = game.steam_launch_options_linux?.trim() || null;
@@ -318,14 +155,12 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         createBackup,
         installText,
         installVoice: hasVoiceArchive ? installVoice : false,
-        installAchievements: hasAchievementsArchive
-          ? effectiveInstallAchievements
-          : false,
+        installAchievements: achievements.install,
         platform: selectedPlatform,
       },
       {
         removeVoice: willRemoveVoice,
-        removeAchievements: willRemoveAchievements,
+        removeAchievements: achievements.willRemove,
       }
     );
     onClose();
@@ -343,7 +178,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       sizes.push(game.voice_archive_size ?? null);
     }
 
-    if (willDownloadAchievements || willReinstallAchievements) {
+    if (achievements.willDownload || achievements.willReinstall) {
       sizes.push(game.achievements_archive_size ?? null);
     }
 
@@ -352,8 +187,8 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     game,
     installText,
     willDownloadVoice,
-    willDownloadAchievements,
-    willReinstallAchievements,
+    achievements.willDownload,
+    achievements.willReinstall,
   ]);
 
   // Compute approximate backup size (same as what will be installed)
@@ -368,13 +203,13 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
       sizes.push(game.voice_archive_size ?? null);
     }
 
-    if (wantsAchievements) {
+    if (achievements.wants) {
       sizes.push(game.achievements_archive_size ?? null);
     }
 
     const result = calculateTotalSize(sizes.filter(Boolean) as string[]);
     return result !== 'N/A' ? result : null;
-  }, [game, isReinstall, installText, installVoice, hasVoiceArchive, wantsAchievements]);
+  }, [game, isReinstall, installText, installVoice, hasVoiceArchive, achievements.wants]);
 
   // Prepare platform options for dropdown
   const platformOptions = useMemo(() => {
@@ -414,11 +249,11 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const hasChanges = isReinstall
     ? installText ||
       willDownloadVoice ||
-      willDownloadAchievements ||
-      willReinstallAchievements ||
+      achievements.willDownload ||
+      achievements.willReinstall ||
       willRemoveVoice ||
-      willRemoveAchievements
-    : installText || (hasVoiceArchive && installVoice) || wantsAchievements;
+      achievements.willRemove
+    : installText || (hasVoiceArchive && installVoice) || achievements.wants;
 
   return (
     <Modal
@@ -642,108 +477,15 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           </div>
         </label>
 
-        {/* Achievements archive option - Steam only */}
         {isSteamGame && (
-          <label
-            className={`flex items-start gap-4 group ${canToggleAchievements ? 'cursor-pointer' : 'cursor-not-allowed'} ${hasAchievementsArchive ? '' : 'opacity-50'}`}
-          >
-            <div className="relative flex items-center justify-center mt-0.5">
-              <input
-                type="checkbox"
-                checked={hasAchievementsArchive && effectiveInstallAchievements}
-                onChange={(e) => setInstallAchievements(e.target.checked)}
-                disabled={!canToggleAchievements}
-                data-gamepad-modal-item
-                className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-hidden disabled:opacity-50 ${canToggleAchievements ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-              />
-              <svg
-                className={`absolute w-3 h-3 text-text-dark pointer-events-none transition-opacity ${
-                  hasAchievementsArchive && effectiveInstallAchievements
-                    ? 'opacity-100'
-                    : 'opacity-0'
-                }`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <TrophyIcon
-                  size={18}
-                  className={canToggleAchievements ? 'text-green-400' : 'text-text-muted'}
-                />
-                <span
-                  className={`font-medium transition-colors ${canToggleAchievements ? 'text-text-main group-hover:text-green-400' : 'text-text-muted'}`}
-                >
-                  Досягнення Steam
-                </span>
-                {!hasAchievementsArchive && (
-                  <span className="text-xs text-text-muted">(недоступно)</span>
-                )}
-                {isCheckingAchievements && (
-                  <span className="text-xs text-text-muted">Перевірка…</span>
-                )}
-                {isAchievementsInstalled && (
-                  <span className="flex items-center gap-1 text-xs text-green-400">
-                    <CheckIcon size={12} />
-                    встановлено
-                  </span>
-                )}
-                {hasAchievementsArchive && achievementsBadge && (
-                  <AchievementsDeliveryBadge badge={achievementsBadge} />
-                )}
-              </div>
-              <div className="text-sm text-text-muted mt-1">
-                <p>Переклад досягнень Steam.</p>
-                {achievementsBadgeHint && (
-                  <p className="mt-1 text-xs">{achievementsBadgeHint}</p>
-                )}
-                {game.achievements_archive_size && (
-                  <p className="flex items-center gap-1 mt-1 text-green-400">
-                    <ArchiveIcon size={14} />
-                    <span>Розмір: {game.achievements_archive_size}</span>
-                  </p>
-                )}
-                {willRemoveAchievements && (
-                  <p className="flex items-center gap-1 mt-1 text-red-400">
-                    <Trash2Icon size={14} />
-                    <span>Буде видалено</span>
-                  </p>
-                )}
-                {willDownloadAchievements && (
-                  <p className="flex items-center gap-1 mt-1 text-green-400">
-                    <ArchiveIcon size={14} />
-                    <span>Буде завантажено</span>
-                  </p>
-                )}
-                {willReinstallAchievements && (
-                  <p className="flex items-center gap-1 mt-1 text-green-400">
-                    <ArchiveIcon size={14} />
-                    <span>Буде перевстановлено</span>
-                  </p>
-                )}
-              </div>
-            </div>
-          </label>
-        )}
-
-        {isSteamGame && hasAchievementsArchive && achievementsBadge && (
-          <AchievementsDeliveryNote badge={achievementsBadge} />
-        )}
-
-        {/* Third-party achievements info */}
-        {wantsAchievements && game.achievements_third_party && (
-          <div className="bg-glass rounded-xl p-3 border border-border flex items-center gap-2 text-sm">
-            <InfoIcon size={16} className="text-color-main shrink-0" />
-            <span className="text-text-muted">
-              Автор перекладу досягнень:{' '}
-              <span className="text-text-main">{game.achievements_third_party}</span>
-            </span>
-          </div>
+          <AchievementsOption
+            game={game}
+            hasArchive={hasAchievementsArchive}
+            installed={isAchievementsInstalled}
+            badge={achievementsBadge}
+            option={achievements}
+            onToggle={setInstallAchievements}
+          />
         )}
 
         {/* Steam launch options info */}
@@ -772,7 +514,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         )}
 
         {/* InfoIcon about what will happen */}
-        {(totalDownloadSize !== 'N/A' || willRemoveVoice || willRemoveAchievements) && (
+        {(totalDownloadSize !== 'N/A' || willRemoveVoice || achievements.willRemove) && (
           <div className="bg-glass rounded-xl p-4 border border-border space-y-2">
             {totalDownloadSize !== 'N/A' && (
               <div className="flex items-center gap-2 text-sm">
@@ -781,14 +523,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 <span className="text-text-main font-medium">{totalDownloadSize}</span>
               </div>
             )}
-            {(willRemoveVoice || willRemoveAchievements) && (
+            {(willRemoveVoice || achievements.willRemove) && (
               <div className="flex items-center gap-2 text-sm">
                 <Trash2Icon size={16} className="text-red-400" />
                 <span className="text-red-400">
                   Буде видалено:{' '}
                   {[
                     willRemoveVoice && 'озвучення',
-                    willRemoveAchievements && 'досягнення',
+                    achievements.willRemove && 'досягнення',
                   ]
                     .filter(Boolean)
                     .join(', ')}
@@ -826,50 +568,3 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     </Modal>
   );
 };
-
-/**
- * Calculate total size from size strings like "150.00 MB" and "50.00 MB"
- */
-function calculateTotalSize(sizes: string[]): string {
-  if (sizes.length === 0) {
-    return 'N/A';
-  }
-  if (sizes.length === 1) {
-    return sizes[0];
-  }
-
-  const parseSize = (sizeStr: string): number => {
-    const match = sizeStr.trim().match(/([\d.]+)\s*(B|KB|MB|GB)/i);
-    if (!match) {
-      return 0;
-    }
-
-    const value = parseFloat(match[1]);
-    const unit = match[2].toUpperCase();
-
-    const multipliers: Record<string, number> = {
-      B: 1,
-      KB: 1024,
-      MB: 1024 * 1024,
-      GB: 1024 * 1024 * 1024,
-    };
-
-    return value * (multipliers[unit] || 0);
-  };
-
-  const formatSize = (bytes: number): string => {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-    if (bytes < 1024 * 1024) {
-      return `${(bytes / 1024).toFixed(2)} KB`;
-    }
-    if (bytes < 1024 * 1024 * 1024) {
-      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-    }
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
-
-  const totalBytes = sizes.reduce((sum, size) => sum + parseSize(size), 0);
-  return formatSize(totalBytes);
-}
