@@ -62,11 +62,12 @@ describe('deckyOffer', () => {
 });
 
 describe('deliveryNote', () => {
-  it('stays silent when the strings will reach Steam', () => {
-    for (const state of ['millennium', 'decky', 'after-restart'] as const) {
+  it.each(['millennium', 'decky', 'after-restart'] as const)(
+    'stays silent for %s, where the strings will reach Steam',
+    (state) => {
       expect(deliveryNote(badge(state))).toBeNull();
     }
-  });
+  );
 
   it('offers the Millennium install only where LBK can install it', () => {
     expect(deliveryNote(badge('needs-millennium'))?.actions).toEqual([

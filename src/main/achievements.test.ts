@@ -159,25 +159,41 @@ describe('achievement strings store', () => {
     expect(hasAchievementStrings([], 'game-a')).toBe(false);
   });
 
-  it('skips a re-install only for the same archive whose strings the game owns', () => {
-    saveAchievementStrings(
-      [{ appId: 400, strings: { A: { name: 'Кекс' } } }],
-      'game-a',
-      'h'
-    );
-    const current = { installed: true, files: [], archiveHash: 'h', appIds: [400] };
-    expect(isAchievementsComponentCurrent(current, 'game-a', 'h')).toBe(true);
-    const stale: [AchievementsComponent | undefined, string, string | null][] = [
-      [current, 'game-a', 'h2'],
-      [current, 'game-a', null],
-      [current, 'game-b', 'h'],
-      [{ ...current, appIds: [] }, 'game-a', 'h'],
-      [{ ...current, files: ['UserGameStatsSchema_400.bin'] }, 'game-a', 'h'],
-      [undefined, 'game-a', 'h'],
-    ];
-    for (const [component, gameId, hash] of stale) {
+  describe('isAchievementsComponentCurrent', () => {
+    const current: AchievementsComponent = {
+      installed: true,
+      files: [],
+      archiveHash: 'h',
+      appIds: [400],
+    };
+
+    beforeEach(() => {
+      saveAchievementStrings(
+        [{ appId: 400, strings: { A: { name: 'Кекс' } } }],
+        'game-a',
+        'h'
+      );
+    });
+
+    it('skips a re-install for the same archive whose strings the game owns', () => {
+      expect(isAchievementsComponentCurrent(current, 'game-a', 'h')).toBe(true);
+    });
+
+    it.each<[string, AchievementsComponent | undefined, string, string | null]>([
+      ['another archive', current, 'game-a', 'h2'],
+      ['an unknown archive hash', current, 'game-a', null],
+      ['strings another game owns', current, 'game-b', 'h'],
+      ['a record without app ids', { ...current, appIds: [] }, 'game-a', 'h'],
+      [
+        'legacy .bin copies',
+        { ...current, files: ['UserGameStatsSchema_400.bin'] },
+        'game-a',
+        'h',
+      ],
+      ['no record', undefined, 'game-a', 'h'],
+    ])('re-installs for %s', (_case, component, gameId, hash) => {
       expect(isAchievementsComponentCurrent(component, gameId, hash)).toBe(false);
-    }
+    });
   });
 
   it('leaves strings owned by another translation of the same app', async () => {

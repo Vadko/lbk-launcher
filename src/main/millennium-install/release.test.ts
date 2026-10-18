@@ -34,14 +34,15 @@ describe('MILLENNIUM_PIN', () => {
     }
   });
 
-  it('puts the tag into each asset URL', () => {
-    for (const os of ['windows', 'linux', 'macos'] as const) {
+  it.each(['windows', 'linux', 'macos'] as const)(
+    'puts the tag into the %s asset URL',
+    (os) => {
       const tag = pinnedTagFor(MILLENNIUM_PIN, os);
       const selected = selectMillenniumAsset(MILLENNIUM_PIN, os, 'arm64');
       expect(tag).not.toBeNull();
       expect(selected?.asset.url).toContain(`/download/${tag}/`);
     }
-  });
+  );
 
   it('takes the macOS fork from the notarized lbk.4 build', () => {
     expect(MILLENNIUM_PIN.macos?.tag).toBe('lbk-v3.5.0-beta.3-lbk.4');

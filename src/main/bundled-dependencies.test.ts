@@ -4,10 +4,9 @@ import { G } from '@mobily/ts-belt';
 import { describe, expect, it } from 'vitest';
 
 const ROOT = path.resolve(__dirname, '../..');
-// What the main and preload builds compile; the renderer build bundles every import anyway.
+// What the main build compiles; the renderer build bundles every import anyway.
 const MAIN_SOURCES = [
   'src/main/**/*.ts',
-  'src/preload/**/*.ts',
   'src/shared/**/*.ts',
   'src/lib/**/*.ts',
   'packages/lbk-bridge-core/src/**/*.ts',
@@ -34,9 +33,17 @@ function dependencyManifest(name: string): Manifest {
   return readManifest(path.join(ROOT, 'node_modules', name, 'package.json'));
 }
 
-function mainBuildExcludes(): string[] {
+type Build = 'main' | 'preload';
+
+function buildExcludes(build: Build): string[] {
   const config = fs.readFileSync(path.join(ROOT, 'electron.vite.config.ts'), 'utf8');
-  const list = /externalizeDeps:\s*{[^}]*exclude:\s*\[([^\]]*)\]/.exec(config)?.[1] ?? '';
+  const block = new RegExp(`^  ${build}: \\{$([\\s\\S]*?)^  \\},$`, 'm').exec(
+    config
+  )?.[1];
+  if (block === undefined) {
+    throw new Error(`no ${build} block in electron.vite.config.ts`);
+  }
+  const list = /externalizeDeps:\s*{[^}]*exclude:\s*\[([^\]]*)\]/.exec(block)?.[1] ?? '';
   return [...list.matchAll(/'([^']+)'/g)].map((match) => match[1]);
 }
 
@@ -45,18 +52,52 @@ function packageName(specifier: string): string {
   return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
 }
 
+function isLocal(specifier: string): boolean {
+  return specifier.startsWith('.') || specifier.startsWith('@/');
+}
+
+function valueImports(file: string): string[] {
+  const source = fs.readFileSync(file, 'utf8');
+  return IMPORT_PATTERNS.flatMap((pattern) =>
+    [...source.matchAll(pattern)].map((match) => match[1])
+  );
+}
+
+function resolveLocal(from: string, specifier: string): string {
+  const bare = specifier.split('?')[0];
+  const base = bare.startsWith('@/')
+    ? path.join(ROOT, 'src', bare.slice(2))
+    : path.resolve(path.dirname(from), bare);
+  const file = [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')].find(
+    (candidate) => fs.statSync(candidate, { throwIfNoEntry: false })?.isFile()
+  );
+  if (file === undefined) {
+    throw new Error(`cannot resolve ${specifier} from ${from}`);
+  }
+  return file;
+}
+
 function mainProcessImports(): Set<string> {
-  const files = fs
-    .globSync(MAIN_SOURCES, { cwd: ROOT })
-    .filter((file) => !file.endsWith('.test.ts'));
+  return new Set(
+    fs
+      .globSync(MAIN_SOURCES, { cwd: ROOT })
+      .filter((file) => !file.endsWith('.test.ts'))
+      .flatMap((file) => valueImports(path.join(ROOT, file)))
+      .filter((specifier) => !isLocal(specifier))
+      .map(packageName)
+  );
+}
+
+// The preload build has its own exclude list, so it is checked over the files its entry reaches.
+function preloadImports(): Set<string> {
   const names = new Set<string>();
+  const files = new Set([path.join(ROOT, 'src/preload/index.ts')]);
   for (const file of files) {
-    const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
-    for (const pattern of IMPORT_PATTERNS) {
-      for (const [, specifier] of source.matchAll(pattern)) {
-        if (!specifier.startsWith('.') && !specifier.startsWith('@/')) {
-          names.add(packageName(specifier));
-        }
+    for (const specifier of valueImports(file)) {
+      if (isLocal(specifier)) {
+        files.add(resolveLocal(file, specifier));
+      } else {
+        names.add(packageName(specifier));
       }
     }
   }
@@ -113,18 +154,21 @@ describe('production dependencies', () => {
       return Array.isArray(bundled) ? bundled.length > 0 : bundled === true;
     });
 
-    expect(mainBuildExcludes()).toEqual(expect.arrayContaining(withBundled));
+    expect(buildExcludes('main')).toEqual(expect.arrayContaining(withBundled));
   });
 
-  // The main build is CJS: externalized, an ESM-only package arrives through require(esm) as a namespace, so its default import is not callable.
-  it('bundles every ESM-only dependency the main process imports', () => {
-    const imported = mainProcessImports();
+  // Both builds are CJS: externalized, an ESM-only package arrives through require(esm) as a namespace, so its default import is not callable.
+  it.each<[Build, () => Set<string>]>([
+    ['main', mainProcessImports],
+    ['preload', preloadImports],
+  ])('bundles every ESM-only dependency the %s build imports', (build, imports) => {
+    const imported = imports();
     expect(imported).toContain('electron');
     const esmOnly = dependencyNames().filter(
       (name) => imported.has(name) && isEsmOnly(dependencyManifest(name))
     );
 
-    expect(mainBuildExcludes()).toEqual(expect.arrayContaining(esmOnly));
+    expect(buildExcludes(build)).toEqual(expect.arrayContaining(esmOnly));
   });
 
   // electron-vite externalizes `dependencies`; a workspace package there would be required from a missing node_modules entry.

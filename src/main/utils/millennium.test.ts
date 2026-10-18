@@ -283,14 +283,18 @@ describe('detectMillennium', () => {
 });
 
 describe('renderInitialMillenniumConfig', () => {
-  it('already has the plugin enabled, so the first plugin setup changes nothing', () => {
-    for (const managed of [true, false]) {
+  it.each([
+    ['managed', true],
+    ['unmanaged', false],
+  ])(
+    'already has the plugin enabled when %s, so the first plugin setup changes nothing',
+    (_case, managed) => {
       const raw = renderInitialMillenniumConfig('lbk-bridge', managed);
       expect(planEnabledPluginsEdit(raw, 'lbk-bridge', true)).toEqual({
         kind: 'unchanged',
       });
     }
-  });
+  );
 
   it('turns off Millennium update checks only where LBK manages updates', () => {
     expect(JSON.parse(renderInitialMillenniumConfig('lbk-bridge', true))).toEqual({
