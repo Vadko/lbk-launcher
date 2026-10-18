@@ -25,10 +25,8 @@
     "playwright-core"
   ],
   "ignoreBinaries": [
-    "flatpak",
     "flatpak-spawn",
     "lutris",
-    "xdg-open",
-    "xdg-settings"
+    "xdg-open"
   ]
 }
