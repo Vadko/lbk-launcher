@@ -353,6 +353,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
+  findDeepLinkGameId: (slug: string, team: string) =>
+    ipcRenderer.invoke('find-deep-link-game-id', slug, team),
   notifyReady: () => ipcRenderer.send('renderer-ready'),
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {

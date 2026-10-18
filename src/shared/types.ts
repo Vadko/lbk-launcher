@@ -504,6 +504,7 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  findDeepLinkGameId: (slug: string, team: string) => Promise<string | null>;
   /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
   notifyReady: () => void;
   // Sync status

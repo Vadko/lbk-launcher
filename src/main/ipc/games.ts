@@ -19,6 +19,7 @@ import {
   type ImpressionType,
   recordBannerImpression,
 } from '../db/banners-api';
+import { findDeepLinkGameId } from '../db/deep-link-game';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
@@ -235,6 +236,15 @@ export function setupGamesHandlers(): void {
       }
     }
   );
+
+  ipcMain.handle('find-deep-link-game-id', (_, slug: string, team: string) => {
+    try {
+      return findDeepLinkGameId(slug, team);
+    } catch (error) {
+      console.error('[DeepLink] Error finding game:', error);
+      return null;
+    }
+  });
 
   // Fetch recommended games for game page (dynamically by Steam tag overlap)
   ipcMain.handle('fetch-recommended-games', (_, gameId: string, limit = 3) => {
