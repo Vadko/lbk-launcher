@@ -4,19 +4,23 @@ import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
   MillenniumInstallResult,
+  RestartSteamResult,
 } from '../../shared/plugin-host-types';
 import {
   activateMillennium,
   cancelMillennium,
-  getPluginHostState,
   prepareMillennium,
   uninstallMillennium,
 } from '../millennium-install';
+import { setCefDebuggingEnabled } from '../plugin-host/bridge-plugin-setup';
 import {
   requestDeckyPluginInstall,
   saveDeckyPluginZip,
 } from '../plugin-host/decky-install';
 import { installDeckyLoader } from '../plugin-host/decky-loader-install';
+import { getPluginHostState } from '../plugin-host/state';
+import { restartSteamOrchestrated } from '../steam-restart';
+import { getSteamBridgeStatus, recheckSteamBridge } from '../utils/steam-bridge';
 
 function isRestartMode(value: unknown): value is 'now' | 'on-exit' {
   return value === 'now' || value === 'on-exit';
@@ -112,4 +116,34 @@ export function setupPluginHostHandlers(): void {
   );
 
   ipcMain.handle('decky:save-plugin-zip', () => saveDeckyPluginZip());
+
+  ipcMain.handle('restart-steam', async (): Promise<RestartSteamResult> => {
+    try {
+      return (await restartSteamOrchestrated({ verifyBridge: true })).result;
+    } catch (error) {
+      console.error('[Steam] Restart failed:', error);
+      return {
+        success: false,
+        error: errorMessage(error, 'Не вдалося перезапустити Steam'),
+      };
+    }
+  });
+
+  ipcMain.handle('get-steam-bridge-status', () =>
+    getSteamBridgeStatus().catch((error: unknown) => {
+      console.error('[Steam] Bridge status failed:', error);
+      return null;
+    })
+  );
+
+  ipcMain.handle('recheck-steam-bridge', () =>
+    recheckSteamBridge().catch((error: unknown) => {
+      console.error('[Steam] Bridge recheck failed:', error);
+      return null;
+    })
+  );
+
+  ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
+    setCefDebuggingEnabled(enabled)
+  );
 }

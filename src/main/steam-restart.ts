@@ -3,6 +3,7 @@ import pMemoize from 'p-memoize';
 import { getFirstAvailableGamePath } from '@/main/game-detector';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { checkInstallation } from '@/main/installer/cache';
+import { setCefDebuggingEnabled } from '@/main/plugin-host/bridge-plugin-setup';
 import {
   type PendingRunResult,
   queueSteamAction,
@@ -11,7 +12,6 @@ import {
 import { pauseSteamMonitor } from '@/main/steam-pending-actions/monitor';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { waitForSteamStart } from '@/main/steam-process/lifecycle';
-import { setCefDebuggingEnabled } from '@/main/utils/cef-flag-file';
 import { verifyBridgeAfterLaunch } from '@/main/utils/steam-bridge';
 import { launchOptionsParamsFor, needsGameDir } from '@/main/utils/steam-launch-options';
 import { restartSteamProcess } from '@/main/utils/steam-launcher';

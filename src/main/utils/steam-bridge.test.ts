@@ -11,8 +11,8 @@ vi.mock('@/main/plugin-host/state', () => ({
   getAchievementsBadge: vi.fn(),
   getHostSnapshot: () => Promise.resolve({ host: 'none', decky: null }),
 }));
-vi.mock('@/main/utils/cef-flag-file', () => ({
-  isCefFlagFilePresent: () => false,
+vi.mock('@/main/utils/cef-flag-file', () => ({ isCefFlagFilePresent: () => false }));
+vi.mock('@/main/plugin-host/bridge-plugin-setup', () => ({
   syncBridgePluginSetup: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('@/main/utils/millennium', () => ({
@@ -43,7 +43,7 @@ vi.mock('@/main/utils/store-storage', () => ({
 }));
 
 const { appEvents } = await import('@/main/app-events');
-const { syncBridgePluginSetup } = await import('@/main/utils/cef-flag-file');
+const { syncBridgePluginSetup } = await import('@/main/plugin-host/bridge-plugin-setup');
 const { detectMillennium } = await import('@/main/utils/millennium');
 const { getMillenniumPluginState } = await import('@/main/utils/millennium-plugin');
 const { resolveCefEndpoint } = await import('@/main/utils/steam-cef');

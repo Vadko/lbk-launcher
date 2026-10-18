@@ -22,7 +22,9 @@ vi.mock('@/main/steam-pending-actions/monitor', () => ({
 vi.mock('@/main/steam-pending-actions/queue', () => ({
   getPendingSteamActions: () => [],
 }));
-vi.mock('@/main/utils/cef-flag-file', () => ({ setCefDebuggingEnabled: vi.fn() }));
+vi.mock('@/main/plugin-host/bridge-plugin-setup', () => ({
+  setCefDebuggingEnabled: vi.fn(),
+}));
 vi.mock('@/main/utils/steam-bridge', () => ({
   verifyBridgeAfterLaunch: mocks.verifyBridgeAfterLaunch,
 }));

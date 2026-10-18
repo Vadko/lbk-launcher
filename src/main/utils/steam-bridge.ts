@@ -12,6 +12,7 @@ import pWaitFor from 'p-wait-for';
 import { z } from 'zod';
 import { appEvents } from '@/main/app-events';
 import { getSteamPath } from '@/main/game-detector/steam';
+import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import {
   deckyStateFor,
   getAchievementsBadge,
@@ -25,7 +26,7 @@ import {
 import { PluginBridgeError } from '@/main/steam-bridge-server/protocol';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
-import { isCefFlagFilePresent, syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
+import { isCefFlagFilePresent } from '@/main/utils/cef-flag-file';
 import { detectMillennium, planEnabledPluginsEdit } from '@/main/utils/millennium';
 import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
 import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';

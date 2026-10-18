@@ -21,10 +21,10 @@ vi.mock('@/main/utils/decky', () => ({
       : null,
   resetDeckyDetectCache: mocks.resetDeckyDetectCache,
 }));
-vi.mock('@/main/utils/cef-flag-file', () => ({
+vi.mock('@/main/plugin-host/bridge-plugin-setup', () => ({
   syncBridgePluginSetup: mocks.syncBridgePluginSetup,
 }));
-vi.mock('@/main/millennium-install', () => ({
+vi.mock('@/main/plugin-host/state', () => ({
   publishPluginHostState: mocks.publishPluginHostState,
 }));
 

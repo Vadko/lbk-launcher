@@ -4,11 +4,9 @@ import { BRIDGE_PLUGIN_NAME } from '@lbk/bridge-core/contract';
 import { app } from 'electron';
 import { appEvents } from '@/main/app-events';
 import { getSteamPath } from '@/main/game-detector/steam';
+import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import { resetHostFacts } from '@/main/plugin-host/state';
-import {
-  restoreCefFlagFileAfterMillennium,
-  syncBridgePluginSetup,
-} from '@/main/utils/cef-flag-file';
+import { restoreCefFlagFileAfterMillennium } from '@/main/utils/cef-flag-file';
 import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { getPlatform } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';

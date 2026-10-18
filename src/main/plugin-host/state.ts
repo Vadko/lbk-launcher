@@ -30,7 +30,7 @@ import {
 } from '@/main/millennium-install/release';
 import { getConnectedPluginInfo } from '@/main/steam-bridge-server/bridge-server';
 import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
-import { findSteamPids } from '@/main/steam-process/lifecycle';
+import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import {
   type DeckyInfo,
   detectDecky,
@@ -48,8 +48,10 @@ import {
   isSteamDeckHardware,
   isSteamOS,
 } from '@/main/utils/platform';
+import { refreshSteamBridgeStatus } from '@/main/utils/steam-bridge';
 import { currentLinuxSteamType } from '@/main/utils/steam-launcher';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
+import { sendToRenderer } from '@/main/window';
 import type { AchievementsBadge, PluginHostState } from '@/shared/plugin-host-types';
 import { compareVersions } from '@/shared/version';
 import {
@@ -282,6 +284,17 @@ export function deckyLoaderStateFor(
   });
 }
 
+let millenniumBusy = false;
+
+export function isMillenniumBusy(): boolean {
+  return millenniumBusy;
+}
+
+export function setMillenniumBusy(value: boolean): void {
+  millenniumBusy = value;
+  void publishPluginHostState();
+}
+
 export function pendingMillenniumAction(): 'activate' | 'deactivate' | null {
   for (const action of getPendingSteamActions()) {
     if (action.kind === 'millennium-activate') {
@@ -323,4 +336,57 @@ export async function getAchievementsBadge(
         }
       : null,
   });
+}
+
+export async function getPluginHostState(): Promise<PluginHostState> {
+  const snapshot = await getHostSnapshot();
+  const steamRunning = (await findSteamPids()).length > 0;
+  const elevated = steamRunning ? await isSteamElevated() : false;
+  const { record, release, facts } = snapshot;
+  const host = hostTarget(snapshot);
+
+  let installed: PluginHostState['millennium']['installed'] = null;
+  if (host && record) {
+    const target = { ...host.target, record };
+    installed = {
+      managedBy: 'lbk',
+      version: host.driver.installedVersion(target),
+      mode: record.mode,
+      needsRepair: host.driver.needsRepair(target),
+    };
+  } else if (facts.millenniumGeneration !== null || facts.linux?.systemMillennium) {
+    installed = { managedBy: 'external', version: null, mode: null, needsRepair: false };
+  }
+
+  const update =
+    record && host?.driver.offersUpdates && release && record.tag !== release.tag
+      ? { version: release.version }
+      : null;
+
+  return {
+    host: snapshot.host,
+    millennium: {
+      supported: snapshot.support.supported,
+      unsupportedReason: snapshot.support.reason,
+      installed,
+      update,
+      pending: pendingMillenniumAction(),
+      downloadSize: release?.asset.size ?? null,
+    },
+    decky: deckyStateFor(snapshot.decky),
+    deckyLoader: deckyLoaderStateFor(snapshot),
+    busy: millenniumBusy,
+    steamRunning,
+    canRestartSteam: steamRunning && !elevated && !isGamescopeSession(),
+  };
+}
+
+export async function publishPluginHostState(): Promise<void> {
+  try {
+    const state = await getPluginHostState();
+    sendToRenderer('plugin-host:state-changed', state);
+  } catch (error) {
+    console.warn('[Millennium] State refresh failed:', error);
+  }
+  await refreshSteamBridgeStatus();
 }

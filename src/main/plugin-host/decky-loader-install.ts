@@ -5,15 +5,15 @@ import * as path from 'node:path';
 import pMemoize from 'p-memoize';
 import pWaitFor from 'p-wait-for';
 import { getCleanEnv } from '@/main/installer/archive';
-import { publishPluginHostState } from '@/main/millennium-install';
+import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
 import {
   deckyLoaderStateFor,
   getHostSnapshot,
+  publishPluginHostState,
   resetHostFacts,
   setDeckyLoaderInstalling,
 } from '@/main/plugin-host/state';
-import { syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
 import {
   type DeckyInfo,
   deckyCacheDirFor,

@@ -12,98 +12,38 @@ import { extractMillenniumArchive } from '@/main/millennium-install/extract';
 import { deleteInstallRecord, recordPathIn } from '@/main/millennium-install/record';
 import { MILLENNIUM_PIN, pinnedTagFor } from '@/main/millennium-install/release';
 import {
-  deckyLoaderStateFor,
-  deckyStateFor,
   getHostSnapshot,
+  getPluginHostState,
   type HostSnapshot,
   hostTarget,
+  isMillenniumBusy,
   pendingMillenniumAction,
+  publishPluginHostState,
   resetHostFacts,
+  setMillenniumBusy,
 } from '@/main/plugin-host/state';
 import { queueSteamAction, runPendingSteamActions } from '@/main/steam-pending-actions';
 import {
   getPendingSteamActions,
   onPendingSteamActionsChanged,
 } from '@/main/steam-pending-actions/queue';
-import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
+import { findSteamPids } from '@/main/steam-process/lifecycle';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
 import { pruneDir } from '@/main/utils/fs-safe';
 import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
-import { isGamescopeSession } from '@/main/utils/platform';
-import { refreshSteamBridgeStatus } from '@/main/utils/steam-bridge';
 import { sendToRenderer } from '@/main/window';
 import { errorMessage } from '@/shared/errors';
 import type {
   MillenniumInstallResult,
   MillenniumProgress,
-  PluginHostState,
 } from '@/shared/plugin-host-types';
 
-let busy = false;
 let prepared: { tag: string } | null = null;
 let abort: AbortController | null = null;
 
 function progress(p: MillenniumProgress): void {
   sendToRenderer('millennium:progress', p);
-}
-
-export async function getPluginHostState(): Promise<PluginHostState> {
-  const snapshot = await getHostSnapshot();
-  const steamRunning = (await findSteamPids()).length > 0;
-  const elevated = steamRunning ? await isSteamElevated() : false;
-  const { record, release, facts } = snapshot;
-  const host = hostTarget(snapshot);
-
-  let installed: PluginHostState['millennium']['installed'] = null;
-  if (host && record) {
-    const target = { ...host.target, record };
-    installed = {
-      managedBy: 'lbk',
-      version: host.driver.installedVersion(target),
-      mode: record.mode,
-      needsRepair: host.driver.needsRepair(target),
-    };
-  } else if (facts.millenniumGeneration !== null || facts.linux?.systemMillennium) {
-    installed = { managedBy: 'external', version: null, mode: null, needsRepair: false };
-  }
-
-  const update =
-    record && host?.driver.offersUpdates && release && record.tag !== release.tag
-      ? { version: release.version }
-      : null;
-
-  return {
-    host: snapshot.host,
-    millennium: {
-      supported: snapshot.support.supported,
-      unsupportedReason: snapshot.support.reason,
-      installed,
-      update,
-      pending: pendingMillenniumAction(),
-      downloadSize: release?.asset.size ?? null,
-    },
-    decky: deckyStateFor(snapshot.decky),
-    deckyLoader: deckyLoaderStateFor(snapshot),
-    busy,
-    steamRunning,
-    canRestartSteam: steamRunning && !elevated && !isGamescopeSession(),
-  };
-}
-
-export async function publishPluginHostState(): Promise<void> {
-  try {
-    const state = await getPluginHostState();
-    sendToRenderer('plugin-host:state-changed', state);
-  } catch (error) {
-    console.warn('[Millennium] State refresh failed:', error);
-  }
-  await refreshSteamBridgeStatus();
-}
-
-function setBusy(value: boolean): void {
-  busy = value;
-  void publishPluginHostState();
 }
 
 function fail(
@@ -160,10 +100,10 @@ async function stageRelease(
 }
 
 export async function prepareMillennium(): Promise<MillenniumInstallResult> {
-  if (busy) {
+  if (isMillenniumBusy()) {
     return fail('busy');
   }
-  setBusy(true);
+  setMillenniumBusy(true);
   const controller = new AbortController();
   abort = controller;
   try {
@@ -213,7 +153,7 @@ export async function prepareMillennium(): Promise<MillenniumInstallResult> {
     return fail('extract-failed', errorMessage(error));
   } finally {
     abort = null;
-    setBusy(false);
+    setMillenniumBusy(false);
   }
 }
 
@@ -321,7 +261,7 @@ async function verifyActivation(
 export async function activateMillennium(opts: {
   restart: 'now' | 'on-exit';
 }): Promise<MillenniumInstallResult> {
-  if (busy) {
+  if (isMillenniumBusy()) {
     return fail('busy');
   }
   const snapshot = await getHostSnapshot();
@@ -332,7 +272,7 @@ export async function activateMillennium(opts: {
   if (checkConflict(snapshot)) {
     return fail('conflict');
   }
-  setBusy(true);
+  setMillenniumBusy(true);
   try {
     queueSteamAction({
       kind: 'millennium-activate',
@@ -349,7 +289,7 @@ export async function activateMillennium(opts: {
     console.error('[Millennium] Activation failed:', error);
     return fail('script-failed', errorMessage(error));
   } finally {
-    setBusy(false);
+    setMillenniumBusy(false);
   }
 }
 
@@ -357,14 +297,14 @@ export async function uninstallMillennium(opts: {
   purge: boolean;
   restart: 'now' | 'on-exit';
 }): Promise<MillenniumInstallResult> {
-  if (busy) {
+  if (isMillenniumBusy()) {
     return fail('busy');
   }
   const snapshot = await getHostSnapshot();
   if (!snapshot.record) {
     return fail('unsupported', 'not installed by LBK');
   }
-  setBusy(true);
+  setMillenniumBusy(true);
   try {
     queueSteamAction({
       kind: 'millennium-deactivate',
@@ -377,7 +317,7 @@ export async function uninstallMillennium(opts: {
     console.error('[Millennium] Uninstall failed:', error);
     return fail('script-failed', errorMessage(error));
   } finally {
-    setBusy(false);
+    setMillenniumBusy(false);
   }
 }
 

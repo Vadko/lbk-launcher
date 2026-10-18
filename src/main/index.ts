@@ -157,6 +157,7 @@ import {
   calculatePlaytimeDeltas,
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
+import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
 import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
 import {
   deleteStaleBridgeData,
@@ -169,7 +170,6 @@ import {
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
-import { bootstrapCefDebugging } from './utils/cef-flag-file';
 import { startSteamBridge } from './utils/steam-bridge';
 import { createMainWindow, getMainWindow } from './window';
 

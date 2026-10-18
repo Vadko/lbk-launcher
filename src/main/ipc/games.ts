@@ -1,7 +1,5 @@
 import os from 'node:os';
 import { app, ipcMain } from 'electron';
-import { errorMessage } from '@/shared/errors';
-import type { RestartSteamResult } from '../../shared/plugin-host-types';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   fetchGames,
@@ -47,7 +45,6 @@ import { refreshXboxRootsForGame, whenXboxRootsScanned } from '../game-detector/
 import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
 import { getLibraryMemberships } from '../library-memberships';
-import { restartSteamOrchestrated } from '../steam-restart';
 import { checkStoreLibraries } from '../store-library-watcher';
 import {
   getFeedbackUploadUrls,
@@ -61,13 +58,11 @@ import {
   trackWorkshopOpen,
   uploadFileToSignedUrl,
 } from '../tracking';
-import { setCefDebuggingEnabled } from '../utils/cef-flag-file';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { removeAllSteamArtwork } from '../utils/steam-artwork';
-import { getSteamBridgeStatus, recheckSteamBridge } from '../utils/steam-bridge';
 import { syncTranslatedGamesCollection } from '../utils/steam-collections';
 import { launchSteamGame } from '../utils/steam-launcher';
 import { addLbkLauncherToSteamLibrary } from '../utils/steam-self-shortcut';
@@ -682,37 +677,6 @@ export function setupGamesHandlers(): void {
       };
     }
   });
-
-  ipcMain.handle('restart-steam', async (): Promise<RestartSteamResult> => {
-    try {
-      return (await restartSteamOrchestrated({ verifyBridge: true })).result;
-    } catch (error) {
-      console.error('[Steam] Restart failed:', error);
-      return {
-        success: false,
-        error: errorMessage(error, 'Не вдалося перезапустити Steam'),
-      };
-    }
-  });
-
-  ipcMain.handle('get-steam-bridge-status', () =>
-    getSteamBridgeStatus().catch((error: unknown) => {
-      console.error('[Steam] Bridge status failed:', error);
-      return null;
-    })
-  );
-
-  ipcMain.handle('recheck-steam-bridge', () =>
-    recheckSteamBridge().catch((error: unknown) => {
-      console.error('[Steam] Bridge recheck failed:', error);
-      return null;
-    })
-  );
-
-  // Toggle Steam CEF remote debugging (creates/removes the flag file)
-  ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
-    setCefDebuggingEnabled(enabled)
-  );
 
   // Switching off reverts covers already installed, not just future ones.
   ipcMain.handle('set-steam-custom-artwork', async (_event, enabled: boolean) => {

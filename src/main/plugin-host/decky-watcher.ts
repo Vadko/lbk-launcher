@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { F } from '@mobily/ts-belt';
-import { publishPluginHostState } from '@/main/millennium-install';
-import { syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
+import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
+import { publishPluginHostState } from '@/main/plugin-host/state';
 import { detectDeckyPluginSync, resetDeckyDetectCache } from '@/main/utils/decky';
 
 let current: { root: string; controller: AbortController } | null = null;
