@@ -39,7 +39,7 @@ import {
 } from '@/main/utils/decky';
 import { realpathOrNull } from '@/main/utils/fs-safe';
 import { execFileOnHost, isFlatpak } from '@/main/utils/host-exec';
-import { detectMillennium } from '@/main/utils/millennium';
+import { detectMillennium, resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { getMillenniumPluginState } from '@/main/utils/millennium-plugin';
 import {
   getDarwinVersion,
@@ -199,6 +199,7 @@ const gatheredFacts = new LRUCache<'facts', GatheredFacts>({
 export function resetHostFacts(): void {
   gatheredFacts.clear();
   resetDeckyDetectCache();
+  resetMillenniumDetectCache();
 }
 
 export async function getHostSnapshot(): Promise<HostSnapshot> {

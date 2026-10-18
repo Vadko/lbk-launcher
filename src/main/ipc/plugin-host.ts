@@ -26,122 +26,92 @@ function isRestartMode(value: unknown): value is 'now' | 'on-exit' {
   return value === 'now' || value === 'on-exit';
 }
 
-function crashed(scope: string, error: unknown): MillenniumInstallResult {
-  console.error(`[Millennium] ${scope} crashed:`, error);
-  return {
-    success: false,
-    reason: 'script-failed',
-    error: errorMessage(error),
-  };
-}
-
-export function setupPluginHostHandlers(): void {
-  ipcMain.handle('plugin-host:get-state', () =>
-    getPluginHostState().catch((error: unknown) => {
-      console.error('[Millennium] State failed:', error);
-      return null;
+function handleOr<T, A = undefined>(
+  channel: string,
+  run: (arg: A) => Promise<T>,
+  fallback: (error: unknown) => T
+): void {
+  ipcMain.handle(channel, (_event, arg: A) =>
+    run(arg).catch((error: unknown) => {
+      console.error(`[PluginHost] ${channel} failed:`, error);
+      return fallback(error);
     })
   );
+}
 
-  ipcMain.handle('millennium:prepare', () =>
-    prepareMillennium().catch((error: unknown) => crashed('Prepare', error))
-  );
+const crashed = (error: unknown): MillenniumInstallResult => ({
+  success: false,
+  reason: 'script-failed',
+  error: errorMessage(error),
+});
 
-  ipcMain.handle(
+export function setupPluginHostHandlers(): void {
+  handleOr('plugin-host:get-state', getPluginHostState, () => null);
+
+  handleOr('millennium:prepare', prepareMillennium, crashed);
+
+  handleOr(
     'millennium:activate',
-    (
-      _event,
-      opts: { restart?: unknown } | undefined
-    ): Promise<MillenniumInstallResult> => {
+    async (opts: { restart?: unknown } | undefined): Promise<MillenniumInstallResult> => {
       const restart = opts?.restart;
       if (!isRestartMode(restart)) {
-        return Promise.resolve({
-          success: false,
-          reason: 'not-prepared',
-          error: 'bad args',
-        });
+        return { success: false, reason: 'not-prepared', error: 'bad args' };
       }
-      return activateMillennium({ restart }).catch((error: unknown) =>
-        crashed('Activate', error)
-      );
-    }
+      return activateMillennium({ restart });
+    },
+    crashed
   );
 
-  ipcMain.handle(
+  handleOr(
     'millennium:uninstall',
-    (
-      _event,
+    async (
       opts: { purge?: unknown; restart?: unknown } | undefined
     ): Promise<MillenniumInstallResult> => {
       const restart = opts?.restart;
       if (typeof opts?.purge !== 'boolean' || !isRestartMode(restart)) {
-        return Promise.resolve({
-          success: false,
-          reason: 'unsupported',
-          error: 'bad args',
-        });
+        return { success: false, reason: 'unsupported', error: 'bad args' };
       }
-      return uninstallMillennium({ purge: opts.purge, restart }).catch((error: unknown) =>
-        crashed('Uninstall', error)
-      );
-    }
+      return uninstallMillennium({ purge: opts.purge, restart });
+    },
+    crashed
   );
 
   ipcMain.handle('millennium:cancel', () => cancelMillennium());
 
-  ipcMain.handle(
+  handleOr(
     'decky:request-plugin-install',
-    (): Promise<DeckyInstallResult> =>
-      requestDeckyPluginInstall().catch((error: unknown) => {
-        console.error('[Decky] Install request crashed:', error);
-        return {
-          success: false,
-          reason: 'failed',
-          error: errorMessage(error),
-        };
-      })
+    requestDeckyPluginInstall,
+    (error): DeckyInstallResult => ({
+      success: false,
+      reason: 'failed',
+      error: errorMessage(error),
+    })
   );
 
-  ipcMain.handle(
+  handleOr(
     'decky:install-loader',
-    (): Promise<DeckyLoaderInstallResult> =>
-      installDeckyLoader().catch((error: unknown) => {
-        console.error('[Decky] Loader install crashed:', error);
-        return {
-          success: false,
-          reason: 'not-installed',
-          error: errorMessage(error),
-        };
-      })
+    installDeckyLoader,
+    (error): DeckyLoaderInstallResult => ({
+      success: false,
+      reason: 'not-installed',
+      error: errorMessage(error),
+    })
   );
 
   ipcMain.handle('decky:save-plugin-zip', () => saveDeckyPluginZip());
 
-  ipcMain.handle('restart-steam', async (): Promise<RestartSteamResult> => {
-    try {
-      return (await restartSteamOrchestrated({ verifyBridge: true })).result;
-    } catch (error) {
-      console.error('[Steam] Restart failed:', error);
-      return {
-        success: false,
-        error: errorMessage(error, 'Не вдалося перезапустити Steam'),
-      };
-    }
-  });
-
-  ipcMain.handle('get-steam-bridge-status', () =>
-    getSteamBridgeStatus().catch((error: unknown) => {
-      console.error('[Steam] Bridge status failed:', error);
-      return null;
+  handleOr(
+    'restart-steam',
+    async () => (await restartSteamOrchestrated({ verifyBridge: true })).result,
+    (error): RestartSteamResult => ({
+      success: false,
+      error: errorMessage(error, 'Не вдалося перезапустити Steam'),
     })
   );
 
-  ipcMain.handle('recheck-steam-bridge', () =>
-    recheckSteamBridge().catch((error: unknown) => {
-      console.error('[Steam] Bridge recheck failed:', error);
-      return null;
-    })
-  );
+  handleOr('get-steam-bridge-status', getSteamBridgeStatus, () => null);
+
+  handleOr('recheck-steam-bridge', recheckSteamBridge, () => null);
 
   ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
     setCefDebuggingEnabled(enabled)

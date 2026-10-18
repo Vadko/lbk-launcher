@@ -30,7 +30,6 @@ import {
 import { findSteamPids } from '@/main/steam-process/lifecycle';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
 import { pruneDir } from '@/main/utils/fs-safe';
-import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
 import { sendToRenderer } from '@/main/window';
 import { errorMessage } from '@/shared/errors';
@@ -51,11 +50,6 @@ function fail(
   error?: string
 ): MillenniumInstallResult {
   return { success: false, reason, error };
-}
-
-function checkConflict(snapshot: HostSnapshot): string | null {
-  const host = hostTarget(snapshot);
-  return host ? host.driver.conflict(host.target) : null;
 }
 
 async function stageRelease(
@@ -108,7 +102,6 @@ export async function prepareMillennium(): Promise<MillenniumInstallResult> {
   abort = controller;
   try {
     resetHostFacts();
-    resetMillenniumDetectCache();
     const snapshot = await getHostSnapshot();
     if (snapshot.host !== 'millennium' || !snapshot.support.supported || !snapshot.os) {
       return fail('unsupported', snapshot.support.reason ?? snapshot.host);
@@ -121,13 +114,13 @@ export async function prepareMillennium(): Promise<MillenniumInstallResult> {
     ) {
       return fail('unsupported', 'external');
     }
-    const conflict = checkConflict(snapshot);
+    const host = hostTarget(snapshot);
+    const conflict = host?.driver.conflict(host.target);
     if (conflict) {
       console.warn(`[Millennium] Refusing to install over ${conflict}`);
       return fail('conflict', conflict);
     }
-    const host = hostTarget(snapshot);
-    const blocked = host ? host.driver.preflight(host.target) : null;
+    const blocked = host?.driver.preflight(host.target);
     if (blocked) {
       return fail(blocked);
     }
@@ -165,10 +158,6 @@ export function cancelMillennium(): { success: boolean } {
   return { success: true };
 }
 
-function isQueued(kind: 'activate' | 'deactivate'): boolean {
-  return pendingMillenniumAction() === kind;
-}
-
 function outcomeFailure(
   kind: 'activate' | 'deactivate',
   applied: MillenniumApplyReport | undefined
@@ -177,7 +166,7 @@ function outcomeFailure(
   if (report?.outcome === 'applied') {
     return null;
   }
-  if (isQueued(kind)) {
+  if (pendingMillenniumAction() === kind) {
     return { success: false, reason: 'files-locked', queued: true, error: report?.error };
   }
   return fail(report?.reason ?? 'script-failed', report?.error);
@@ -227,7 +216,7 @@ async function runQueuedChange(
         success: false,
         reason: 'restart-failed',
         restartReason: result.reason,
-        queued: isQueued(kind),
+        queued: pendingMillenniumAction() === kind,
         error: result.error,
       };
     }
@@ -258,6 +247,21 @@ async function verifyActivation(
     : { success: true, bridge };
 }
 
+async function runExclusive(
+  label: string,
+  run: () => Promise<MillenniumInstallResult>
+): Promise<MillenniumInstallResult> {
+  setMillenniumBusy(true);
+  try {
+    return await run();
+  } catch (error) {
+    console.error(`[Millennium] ${label} failed:`, error);
+    return fail('script-failed', errorMessage(error));
+  } finally {
+    setMillenniumBusy(false);
+  }
+}
+
 export async function activateMillennium(opts: {
   restart: 'now' | 'on-exit';
 }): Promise<MillenniumInstallResult> {
@@ -269,11 +273,11 @@ export async function activateMillennium(opts: {
   if (!tag || prepared?.tag !== tag || !isStagingReady(tag)) {
     return fail('not-prepared');
   }
-  if (checkConflict(snapshot)) {
+  const host = hostTarget(snapshot);
+  if (host?.driver.conflict(host.target)) {
     return fail('conflict');
   }
-  setMillenniumBusy(true);
-  try {
+  return runExclusive('Activation', async () => {
     queueSteamAction({
       kind: 'millennium-activate',
       tag,
@@ -285,12 +289,7 @@ export async function activateMillennium(opts: {
       prepared = null;
     }
     return result;
-  } catch (error) {
-    console.error('[Millennium] Activation failed:', error);
-    return fail('script-failed', errorMessage(error));
-  } finally {
-    setMillenniumBusy(false);
-  }
+  });
 }
 
 export async function uninstallMillennium(opts: {
@@ -304,21 +303,15 @@ export async function uninstallMillennium(opts: {
   if (!snapshot.record) {
     return fail('unsupported', 'not installed by LBK');
   }
-  setMillenniumBusy(true);
-  try {
+  return runExclusive('Uninstall', () => {
     queueSteamAction({
       kind: 'millennium-deactivate',
       purge: opts.purge,
       queuedAt: new Date().toISOString(),
       attempts: 0,
     });
-    return await runQueuedChange('deactivate', opts.restart);
-  } catch (error) {
-    console.error('[Millennium] Uninstall failed:', error);
-    return fail('script-failed', errorMessage(error));
-  } finally {
-    setMillenniumBusy(false);
-  }
+    return runQueuedChange('deactivate', opts.restart);
+  });
 }
 
 function cleanupOrphans(snapshot: HostSnapshot): void {
@@ -352,10 +345,9 @@ function maintainInstall(snapshot: HostSnapshot): void {
     return;
   }
   const target = { ...host.target, record };
-  if (host.driver.startupMaintenance(target, isQueued('activate'))) {
+  if (host.driver.startupMaintenance(target, pendingMillenniumAction() === 'activate')) {
     deleteInstallRecord(recordPathIn(target.paths.root));
     resetHostFacts();
-    resetMillenniumDetectCache();
   }
 }
 

@@ -7,7 +7,6 @@ import { getSteamPath } from '@/main/game-detector/steam';
 import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import { resetHostFacts } from '@/main/plugin-host/state';
 import { restoreCefFlagFileAfterMillennium } from '@/main/utils/cef-flag-file';
-import { resetMillenniumDetectCache } from '@/main/utils/millennium';
 import { getPlatform } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type { MillenniumFailure } from '@/shared/plugin-host-types';
@@ -125,11 +124,6 @@ function removeFiles(
   deleteInstallRecord(recordPathIn(target.paths.root));
 }
 
-function afterChange(): void {
-  resetMillenniumDetectCache();
-  resetHostFacts();
-}
-
 function report(
   kind: MillenniumApplyReport['kind'],
   outcome: ApplyOutcome,
@@ -184,7 +178,7 @@ export async function applyQueuedMillenniumAction(
         commit: (r) => writeInstallRecord(recordPath, r),
       });
       writeInstallRecord(recordPath, record);
-      afterChange();
+      resetHostFacts();
       await syncBridgePluginSetup();
       fs.rmSync(stagingDirFor(action.tag), { recursive: true, force: true });
       fs.rmSync(downloadsDir(), { recursive: true, force: true });
@@ -196,7 +190,7 @@ export async function applyQueuedMillenniumAction(
       }
       appEvents.emit('millennium-phase', 'install-files');
       removeFiles(driver, { ...target, record }, action.purge);
-      afterChange();
+      resetHostFacts();
       restoreCefFlagFileAfterMillennium();
       console.log(`[Millennium] Removed${action.purge ? ' with data' : ''}`);
     }
@@ -210,7 +204,7 @@ export async function applyQueuedMillenniumAction(
     } else {
       console.error(`[Millennium] ${kind} failed:`, error);
     }
-    afterChange();
+    resetHostFacts();
     return report(kind, failure.outcome, failure.reason, message);
   }
 }
