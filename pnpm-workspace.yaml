@@ -18,6 +18,8 @@ allowBuilds:
 # ttc's `typescript: >=5.0.0` resolves to TS 7, which has no compiler API for its prod build.
 overrides:
   '@steambrew/ttc>typescript': 6.0.3
+  # ttc lists the npm `fs` placeholder; hoisted, it shadows the builtin and breaks the renderer's dep pre-bundle in `pnpm dev`.
+  '@steambrew/ttc>fs': '-'
 
 patchedDependencies:
   node-7z@3.0.0: patches/node-7z@3.0.0.patch

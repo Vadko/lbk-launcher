@@ -171,6 +171,12 @@ describe('production dependencies', () => {
     expect(buildExcludes(build)).toEqual(expect.arrayContaining(esmOnly));
   });
 
+  // A hoisted npm placeholder has no entry file; named after a builtin (ttc's `fs`), it broke the renderer's dep pre-bundle in `pnpm dev`.
+  it('installs no npm security placeholder packages', () => {
+    const lockfile = fs.readFileSync(path.join(ROOT, 'pnpm-lock.yaml'), 'utf8');
+    expect(lockfile.match(/^ {2}'?\S+@0\.0\.1-security'?:/gm) ?? []).toEqual([]);
+  });
+
   // electron-vite externalizes `dependencies`; a workspace package there would be required from a missing node_modules entry.
   it('keeps workspace packages out of dependencies so they are bundled', () => {
     const dependencies = readManifest(path.join(ROOT, 'package.json')).dependencies;
