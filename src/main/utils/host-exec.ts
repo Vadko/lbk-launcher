@@ -5,6 +5,13 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 const MAX_BUFFER = 16 * 1024 * 1024;
 
+// Inside Steam (a shortcut, Game Mode) LBK inherits the overlay's LD_PRELOAD; children get "wrong ELF class" or the overlay.
+export function getCleanEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  delete env.LD_PRELOAD;
+  return env;
+}
+
 export function isFlatpak(): boolean {
   return Boolean(process.env.FLATPAK_ID);
 }
@@ -28,7 +35,11 @@ export function execFileOnHost(
       maxBuffer: MAX_BUFFER,
     });
   }
-  return execFileAsync(command, args, { timeout, maxBuffer: MAX_BUFFER });
+  return execFileAsync(command, args, {
+    timeout,
+    maxBuffer: MAX_BUFFER,
+    env: getCleanEnv(),
+  });
 }
 
 // Detached so the child outlives LBK; flatpak-spawn drops the sandbox environment, so `env` travels as --env.
@@ -51,7 +62,7 @@ export function spawnOnHost(
     : spawn(command, args, {
         detached: true,
         stdio: 'ignore',
-        env: { ...process.env, ...env },
+        env: { ...getCleanEnv(), ...env },
       });
   child.on('error', (error) => {
     console.error(`[HostExec] Error spawning ${command}:`, error);

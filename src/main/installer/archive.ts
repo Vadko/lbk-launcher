@@ -5,6 +5,7 @@ import { add, extractFull } from 'node-7z';
 import path from 'path';
 import { promisify } from 'util';
 import type { InstallationStatus } from '../../shared/types';
+import { getCleanEnv } from '../utils/host-exec';
 import { forCurrentOS, isLinux } from '../utils/platform';
 
 const mkdir = promisify(fs.mkdir);
@@ -38,13 +39,6 @@ function getResourcesBased7zPath(): string {
  * Get clean environment without Steam's LD_PRELOAD
  * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
  */
-export function getCleanEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
-  delete env.LD_PRELOAD;
-  return env;
-}
-
 /**
  * Check if system 7z is available (for Linux/Steam Deck compatibility)
  */

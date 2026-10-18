@@ -4,7 +4,6 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import pMemoize from 'p-memoize';
 import pWaitFor from 'p-wait-for';
-import { getCleanEnv } from '@/main/installer/archive';
 import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
 import { watchDeckyPlugins } from '@/main/plugin-host/decky-watcher';
 import {
@@ -20,7 +19,7 @@ import {
   detectDecky,
   resetDeckyDetectCache,
 } from '@/main/utils/decky';
-import { isFlatpak } from '@/main/utils/host-exec';
+import { getCleanEnv, isFlatpak } from '@/main/utils/host-exec';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
 import { errorMessage } from '@/shared/errors';
 import type { DeckyLoaderInstallResult } from '@/shared/plugin-host-types';
