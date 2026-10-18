@@ -1,3 +1,9 @@
+import { createActivityTranslator, isActivityStore } from './achievement-activity';
+import {
+  type AchievementQueries,
+  hookAchievementQueries,
+  isQueryClient,
+} from './achievement-query-cache';
 import {
   type AchievementsPayload,
   type AchText,
@@ -7,7 +13,9 @@ import { type AnyFn, isFn, isRecord, type SteamGlobals } from './steam-globals';
 import { findWebpackExport, steamWebpackRequire } from './steam-webpack';
 
 const ACH_KEY = Symbol.for('lbk.achievementStrings');
-const ACH_VERSION = 1;
+// A plugin update reloads into a SharedJSContext that still holds the previous hook; a new version replaces it.
+const ACH_VERSION = 2;
+const ACHIEVEMENT_MAP_KEY = 'achievementmap';
 
 interface HookReport {
   state: 'ok';
@@ -131,6 +139,15 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
     'CClientNotificationAchievement',
     isToastClass
   );
+  // The shared client sits next to its devtools toggle; the beta's grouped achievements UI reads from it.
+  const queryClient = findWebpackExport(req, 'ReactQueryDevtools', isQueryClient);
+  let queries: AchievementQueries | null = null;
+  safe(() => {
+    queries = queryClient ? hookAchievementQueries(queryClient, has, lookup) : null;
+  });
+  coverage.queryCacheSchema = Boolean(queries);
+  const activity = createActivityTranslator(lookup);
+  const activityStore = isActivityStore(g.appActivityStore) ? g.appActivityStore : null;
 
   const afterResult = (o: AnyFn): AnyFn =>
     function (this: unknown, appid: unknown, ...rest: unknown[]) {
@@ -185,10 +202,16 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         value: unknown,
         ...rest: unknown[]
       ) {
-        if (has(appid)) {
+        let stored = value;
+        if (key === ACHIEVEMENT_MAP_KEY && typeof value === 'string') {
+          // The cache keeps Steam's own strings; LookupCachedDataForApp translates them on the way out.
+          safe(() => {
+            stored = activity.mapJson(value, true);
+          });
+        } else if (has(appid)) {
           safe(() => walk(appid, value, false, 0));
         }
-        const r = o.call(this, appid, key, ver, value, ...rest);
+        const r = o.call(this, appid, key, ver, stored, ...rest);
         if (key === 'achievements' && has(appid)) {
           // AppDetailsChanged stores a MobX copy of the details just before this call; the UI renders that copy.
           safe(() => patchLoaded([appid], false));
@@ -196,6 +219,66 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         return r;
       },
     'appDetails'
+  );
+  wrap(
+    g.appDetailsCache,
+    'LookupCachedDataForApp',
+    (o) =>
+      function (this: unknown, appid: unknown, key: unknown, ...rest: unknown[]) {
+        const r = o.call(this, appid, key, ...rest);
+        if (key !== ACHIEVEMENT_MAP_KEY || typeof r !== 'string') {
+          return r;
+        }
+        let out: unknown = r;
+        safe(() => {
+          out = activity.mapJson(r, false);
+        });
+        return out;
+      },
+    'activityCards'
+  );
+  if (!activityStore) {
+    coverage.activityCards = false;
+  }
+
+  // The activity class is module-private; its instances in the store lead to it before any server merge.
+  let activityClassHooked = false;
+  const hookActivityClass = (): void => {
+    if (activityClassHooked || !activityStore) {
+      return;
+    }
+    for (const instance of activityStore.m_mapAppActivity.values()) {
+      const ctor: unknown = isRecord(instance) ? instance.constructor : undefined;
+      if (!isFn(ctor) || !isFn(Reflect.get(ctor, 'BuildAchievementMapFromProto'))) {
+        continue;
+      }
+      activityClassHooked = true;
+      wrap(
+        ctor,
+        'BuildAchievementMapFromProto',
+        (o) =>
+          function (this: unknown, recs: unknown, appid: unknown, ...rest: unknown[]) {
+            const r = o.call(this, recs, appid, ...rest);
+            if (has(appid)) {
+              safe(() => activity.patchMap(recs, appid));
+            }
+            return r;
+          },
+        'activityProto'
+      );
+      return;
+    }
+  };
+  safe(hookActivityClass);
+  wrap(
+    activityStore,
+    'FetchLatestActivityFromServer',
+    (o) =>
+      function (this: unknown, ...args: unknown[]) {
+        safe(hookActivityClass);
+        return o.apply(this, args);
+      },
+    'activityFeed'
   );
 
   if (ToastData && !isFn(ToastData.prototype.name)) {
@@ -260,11 +343,15 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
     }
   };
   const patchLoaded = (appids: Iterable<unknown>, revert: boolean): void => {
+    const ids = new Set([...appids].map(String));
+    if (activityStore) {
+      safe(() => activity.patchStore(activityStore, ids, revert));
+    }
     const store = g.appDetailsStore;
     if (!store || typeof store.GetAppDetails !== 'function') {
       return;
     }
-    for (const id of appids) {
+    for (const id of ids) {
       safe(() => {
         const details = store.GetAppDetails?.(Number(id));
         walk(id, details?.achievements, revert, 0);
@@ -281,11 +368,13 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       const next = new Map(Object.entries(p?.apps || {}));
       const touched = new Set([...data.keys(), ...next.keys()]);
       patchLoaded(touched, true);
+      safe(() => queries?.revert(touched));
       data.clear();
       for (const [k, v] of next) {
         data.set(k, v);
       }
       patchLoaded(touched, false);
+      safe(() => queries?.refresh());
       invalidate(touched);
       stamp = p ? p.stamp : null;
     },
@@ -301,6 +390,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
     uninstall() {
       const all = [...data.keys()];
       patchLoaded(all, true);
+      safe(() => queries?.dispose());
       for (const restore of undo.splice(0).reverse()) {
         safe(restore);
       }

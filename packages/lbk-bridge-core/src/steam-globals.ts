@@ -61,6 +61,7 @@ export interface SteamGlobals {
   appDetailsStore?: AppDetailsStore | null;
   appDetailsCache?: object | null;
   NotificationStore?: object | null;
+  appActivityStore?: unknown;
   webpackChunksteamui?: unknown;
   DeckyBackend?: DeckyBackend | null;
   localStorage?: Pick<Storage, 'getItem' | 'setItem'>;
