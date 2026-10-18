@@ -1,3 +1,4 @@
+import { keepPreviousData, skipToken, useQuery } from '@tanstack/react-query';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { Download, Play, RefreshCw, ReplaceAll } from 'lucide';
 import {
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
+import type { BannerData } from '@/main/db/banners-api';
 import type { BannerType } from '@/shared/types.ts';
 import { AuthorsList } from '../components/MainContent/AuthorsList';
 import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
@@ -63,6 +64,9 @@ const EMPTY_BANNER_INFO: BannerInfo = {
   placementType: null,
 };
 
+// Short on purpose: the server caps banner impressions per machine_id, so a later visit asks again
+const BANNER_GC_TIME = 5 * 60 * 1000;
+
 /**
  * Detailed game information page
  * Displays all info, banners, install buttons, etc.
@@ -93,11 +97,6 @@ export const GamePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [bannerCache, setBannerCache] = useState<ReadonlyMap<string, GameBannersResult>>(
-    () => new Map()
-  );
-  const [failedBannerGameId, setFailedBannerGameId] = useState<string | null>(null);
-  const [lastBannerInfo, setLastBannerInfo] = useState<BannerInfo>(EMPTY_BANNER_INFO);
   const isTombstoned = useGameTombstone(gameId);
 
   useEffect(() => {
@@ -187,65 +186,35 @@ export const GamePage: React.FC = () => {
   const selectedGameId = selectedGame?.id;
   const selectedGameSlug = selectedGame?.slug;
 
-  useEffect(() => {
-    if (
-      !selectedGameId ||
-      selectedGameSlug === undefined ||
-      bannerCache.has(selectedGameId)
-    ) {
-      return;
-    }
+  const { data: banners, isError: bannersFailed } = useQuery({
+    queryKey: ['game-banners', selectedGameId, selectedGameSlug],
+    queryFn:
+      selectedGameId && selectedGameSlug !== undefined
+        ? () => window.electronAPI.fetchBannersForGame(selectedGameId, selectedGameSlug)
+        : skipToken,
+    staleTime: Infinity,
+    gcTime: BANNER_GC_TIME,
+    placeholderData: keepPreviousData,
+  });
 
-    let isMounted = true;
-    window.electronAPI
-      .fetchBannersForGame(selectedGameId, selectedGameSlug)
-      .then((result) => {
-        if (isMounted) {
-          setBannerCache((prev) => new Map(prev).set(selectedGameId, result));
-        }
-      })
-      .catch((error) => {
-        if (!isMounted) {
-          return;
-        }
-        console.error('Error loading banner data:', error);
-        setFailedBannerGameId(selectedGameId);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedGameId, selectedGameSlug, bannerCache]);
-
-  // null while a not-yet-cached game is loading, so the previous banner stays and doesn't flicker
-  const resolvedBannerInfo = useMemo((): BannerInfo | null => {
-    if (!selectedGame) {
+  const bannerInfo = useMemo((): BannerInfo => {
+    if (!selectedGame || (!banners && !bannersFailed)) {
       return EMPTY_BANNER_INFO;
     }
 
-    const result = bannerCache.get(selectedGame.id);
-    if (!result && failedBannerGameId !== selectedGame.id) {
-      return null;
-    }
-
     const type =
-      result?.banner?.type ??
-      (result?.isKuli ? 'narrow' : null) ??
+      banners?.banner?.type ??
+      (banners?.isKuli ? 'narrow' : null) ??
       (selectedGame.support_url ? 'small_square' : null) ??
       null;
 
     return {
-      data: result?.banner || null,
-      isKuli: result?.isKuli || false,
+      data: banners?.banner || null,
+      isKuli: banners?.isKuli || false,
       support_url: selectedGame.support_url || null,
       placementType: type,
     };
-  }, [selectedGame, bannerCache, failedBannerGameId]);
-
-  if (resolvedBannerInfo && resolvedBannerInfo !== lastBannerInfo) {
-    setLastBannerInfo(resolvedBannerInfo);
-  }
-  const bannerInfo = resolvedBannerInfo ?? lastBannerInfo;
+  }, [selectedGame, banners, bannersFailed]);
 
   // Record banner impression: Mixpanel + Supabase together
   const trackBannerImpression = useCallback(
