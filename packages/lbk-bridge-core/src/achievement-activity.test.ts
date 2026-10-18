@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createActivityTranslator } from './achievement-activity';
 import type { AchText } from './achievement-text';
-import { steamBetaAchievements as fixture } from './fixtures/steam-beta-achievements';
+import { steamBetaAchievements as fixture } from './steam-beta-achievements.fixture';
 
 const GAME = 1912410;
 const WITCH = 'COMPLETE_DEFEAT_THE_WANDERING_WITCH_QUEST';

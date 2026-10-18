@@ -4,7 +4,7 @@ import type {
   MillenniumInstallResult,
   PluginHostState,
 } from '@/shared/plugin-host-types';
-import { pluginHostState } from '../../../utils/pluginHostFixtures';
+import { pluginHostState } from '../../../utils/pluginHost.fixture';
 import { millenniumUninstallMachine, outcomeStep } from './millenniumUninstallMachine';
 
 let actor: Actor<typeof millenniumUninstallMachine> | null = null;

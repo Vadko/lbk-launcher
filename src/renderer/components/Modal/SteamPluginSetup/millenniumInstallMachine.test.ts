@@ -5,7 +5,7 @@ import type {
   RestartSteamResult,
   SteamBridgeStatus,
 } from '@/shared/plugin-host-types';
-import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHostFixtures';
+import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHost.fixture';
 import { millenniumUnsupportedText } from '../../../utils/steamPluginHost';
 import { millenniumInstallMachine } from './millenniumInstallMachine';
 import { DONE_TEXT, ENV_MISSING_TEXT, STEAM_NOT_BACK_TEXT } from './millenniumSetup';

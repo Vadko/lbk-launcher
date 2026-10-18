@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AchievementsBadge, AchievementsDelivery } from '@/shared/plugin-host-types';
+import { deckyState, pluginHostState } from './pluginHost.fixture';
 import { pluginHostEntries } from './pluginHostEntries';
-import { deckyState, pluginHostState } from './pluginHostFixtures';
 import {
   deckyOffer,
   deliveryNote,

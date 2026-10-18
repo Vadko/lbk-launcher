@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/query-core';
 import { describe, expect, it } from 'vitest';
 import { achievementQueryAppId, hookAchievementQueries } from './achievement-query-cache';
 import type { AchText } from './achievement-text';
-import { steamBetaAchievements as fixture } from './fixtures/steam-beta-achievements';
+import { steamBetaAchievements as fixture } from './steam-beta-achievements.fixture';
 
 type Schema = typeof fixture.schema;
 

@@ -5,7 +5,7 @@ import type {
   DeckyLoaderInstallResult,
   PluginHostState,
 } from '@/shared/plugin-host-types';
-import { deckyState, pluginHostState } from '../../../utils/pluginHostFixtures';
+import { deckyState, pluginHostState } from '../../../utils/pluginHost.fixture';
 import { deckySetupMachine } from './deckySetupMachine';
 
 let actor: Actor<typeof deckySetupMachine> | null = null;

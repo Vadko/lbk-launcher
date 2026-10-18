@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MillenniumInstallResult } from '@/shared/plugin-host-types';
-import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHostFixtures';
+import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHost.fixture';
 import {
   failureStep,
   introMode,

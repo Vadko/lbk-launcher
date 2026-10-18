@@ -5,7 +5,7 @@ import {
   installSuccessMessage,
   needsBridgeStatus,
 } from './installSuccess';
-import { steamBridgeStatus } from './pluginHostFixtures';
+import { steamBridgeStatus } from './pluginHost.fixture';
 
 const input = (overrides: Partial<InstallSuccessInput> = {}): InstallSuccessInput => ({
   launchOptionsQueued: false,
