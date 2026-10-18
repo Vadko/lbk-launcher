@@ -176,6 +176,16 @@ export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
 }
 
+export function showMainWindow(): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  }
+}
+
 export function sendToRenderer(channel: string, payload?: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, payload);

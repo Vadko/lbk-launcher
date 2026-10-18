@@ -13,10 +13,14 @@ vi.mock('@/main/game-detector', () => ({ getFirstAvailableGamePath: vi.fn() }));
 vi.mock('@/main/game-detector/steam', () => ({ getCurrentSteamAccountId: () => null }));
 vi.mock('@/main/installer/cache', () => ({ checkInstallation: vi.fn() }));
 vi.mock('@/main/steam-pending-actions', () => ({
-  getPendingSteamActions: () => [],
-  pauseSteamMonitor: () => () => undefined,
   queueSteamAction: vi.fn(),
   runPendingSteamActions: () => Promise.resolve({ appliedGameIds: [], failed: [] }),
+}));
+vi.mock('@/main/steam-pending-actions/monitor', () => ({
+  pauseSteamMonitor: () => () => undefined,
+}));
+vi.mock('@/main/steam-pending-actions/queue', () => ({
+  getPendingSteamActions: () => [],
 }));
 vi.mock('@/main/utils/cef-flag-file', () => ({ setCefDebuggingEnabled: vi.fn() }));
 vi.mock('@/main/utils/steam-bridge', () => ({

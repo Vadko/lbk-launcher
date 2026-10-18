@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PendingSteamAction } from '@/main/steam-pending-actions';
+import type { PendingSteamAction } from '@/main/steam-pending-actions/queue';
 import {
   restoreCefFlagFileAfterMillennium,
   syncBridgePluginSetup,
@@ -23,8 +23,10 @@ const env = vi.hoisted(() => ({
 
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => env.steamPath }));
 vi.mock('@/main/steam-pending-actions', () => ({
-  getPendingSteamActions: () => env.queue,
   queueSteamAction: vi.fn((action: PendingSteamAction) => env.queue.push(action)),
+}));
+vi.mock('@/main/steam-pending-actions/queue', () => ({
+  getPendingSteamActions: () => env.queue,
 }));
 vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));
 vi.mock('./decky', () => ({

@@ -17,7 +17,7 @@ import {
   getAchievementsBadge,
   getHostSnapshot,
 } from '@/main/plugin-host/state';
-import { getPendingSteamActions } from '@/main/steam-pending-actions';
+import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { isCefFlagFilePresent, syncBridgePluginSetup } from '@/main/utils/cef-flag-file';
 import { detectMillennium, planEnabledPluginsEdit } from '@/main/utils/millennium';

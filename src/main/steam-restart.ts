@@ -4,12 +4,12 @@ import { getFirstAvailableGamePath } from '@/main/game-detector';
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { checkInstallation } from '@/main/installer/cache';
 import {
-  getPendingSteamActions,
   type PendingRunResult,
-  pauseSteamMonitor,
   queueSteamAction,
   runPendingSteamActions,
 } from '@/main/steam-pending-actions';
+import { pauseSteamMonitor } from '@/main/steam-pending-actions/monitor';
+import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { waitForSteamStart } from '@/main/steam-process/lifecycle';
 import { setCefDebuggingEnabled } from '@/main/utils/cef-flag-file';
 import { verifyBridgeAfterLaunch } from '@/main/utils/steam-bridge';

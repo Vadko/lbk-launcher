@@ -79,9 +79,15 @@ interface RunningGameSource {
 
 const RUNNING_GAME_SOURCES: Record<'windows' | 'linux' | 'macos', RunningGameSource> = {
   windows: {
-    live: async () =>
-      steamGameId(
-        getRegistryDword(HKEY.HKEY_CURRENT_USER, 'Software\\Valve\\Steam', 'RunningAppID')
+    live: () =>
+      Promise.resolve(
+        steamGameId(
+          getRegistryDword(
+            HKEY.HKEY_CURRENT_USER,
+            'Software\\Valve\\Steam',
+            'RunningAppID'
+          )
+        )
       ),
     registryVdfs: () => [],
   },

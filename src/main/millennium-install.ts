@@ -45,12 +45,11 @@ import {
   pendingMillenniumAction,
   resetHostFacts,
 } from '@/main/plugin-host/state';
+import { queueSteamAction, runPendingSteamActions } from '@/main/steam-pending-actions';
 import {
   getPendingSteamActions,
   onPendingSteamActionsChanged,
-  queueSteamAction,
-  runPendingSteamActions,
-} from '@/main/steam-pending-actions';
+} from '@/main/steam-pending-actions/queue';
 import { findSteamPids, isSteamElevated } from '@/main/steam-process/lifecycle';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
 import { missingFiles, pruneDir, realpathOrNull } from '@/main/utils/fs-safe';

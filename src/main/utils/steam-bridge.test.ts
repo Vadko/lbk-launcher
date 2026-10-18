@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 // Only the pure helpers are under test; everything that reaches Steam, Electron or disk is stubbed.
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
-vi.mock('@/main/steam-pending-actions', () => ({
+vi.mock('@/main/steam-pending-actions/queue', () => ({
   getPendingSteamActions: () => [],
 }));
 vi.mock('@/main/window', () => ({ sendToRenderer: () => undefined }));

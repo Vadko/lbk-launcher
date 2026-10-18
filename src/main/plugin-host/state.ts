@@ -26,7 +26,7 @@ import {
   type SelectedMillenniumRelease,
   selectMillenniumAsset,
 } from '@/main/millennium-install/release';
-import { getPendingSteamActions } from '@/main/steam-pending-actions';
+import { getPendingSteamActions } from '@/main/steam-pending-actions/queue';
 import { findSteamPids } from '@/main/steam-process/lifecycle';
 import {
   type DeckyInfo,
