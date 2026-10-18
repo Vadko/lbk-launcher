@@ -6,15 +6,16 @@ import { steamProcesses } from './snapshot';
 
 const STEAM_POLL_MS = 500;
 
-export async function findSteamPids(): Promise<number[]> {
-  return (await steamProcesses())?.steam.map((p) => p.pid) ?? [];
+// The shared snapshot serves status reads; shutdown and kill decisions pass `fresh`.
+export async function findSteamPids(opts: { fresh?: boolean } = {}): Promise<number[]> {
+  return (await steamProcesses(opts))?.steam.map((p) => p.pid) ?? [];
 }
 
 export async function isSteamRunning(): Promise<boolean> {
   return ((await steamProcesses({ fresh: true }))?.steam.length ?? 0) > 0;
 }
 
-// Unknown counts as running: Steam's files must not change under it. Same rule as waitForSteamGone.
+// Counts the processes waitForSteamGone counts, but a failed listing reads as running: Steam's files must not change under it.
 export async function isSteamStopped(): Promise<boolean> {
   const processes = await steamProcesses({ fresh: true });
   return (

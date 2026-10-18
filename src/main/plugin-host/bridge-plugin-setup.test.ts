@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { syncBridgePluginSetup } from '@/main/plugin-host/bridge-plugin-setup';
+import {
+  setCefDebuggingEnabled,
+  syncBridgePluginSetup,
+} from '@/main/plugin-host/bridge-plugin-setup';
 import type { PendingSteamAction } from '@/main/steam-pending-actions/queue';
+import { ensureCefFlagFile, removeCefFlagFile } from '@/main/utils/cef-flag-file';
 import {
   getMillenniumPluginState,
   installOrUpdateMillenniumPlugin,
@@ -21,7 +25,7 @@ vi.mock('@/main/steam-pending-actions/queue', () => ({
 }));
 vi.mock('@/main/steam-bridge-server/bridge-server', () => ({
   startSteamBridgeServer: vi.fn(() => Promise.resolve()),
-  stopSteamBridgeServer: vi.fn(),
+  stopSteamBridgeServer: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('@/main/utils/cef-flag-file', () => ({
   ensureCefFlagFile: vi.fn(),
@@ -51,8 +55,10 @@ vi.mock('@/main/utils/plugin-data', () => ({
 }));
 vi.mock('@/main/utils/steam-bridge', () => ({
   claimSteamRestartPrompt: vi.fn(),
-  clearSteamBridgeVerdict: vi.fn(),
   refreshSteamBridgeStatus: vi.fn(),
+}));
+vi.mock('@/main/utils/steam-bridge-verdict', () => ({
+  clearSteamBridgeVerdict: vi.fn(),
 }));
 vi.mock('@/main/utils/steam-cef', () => ({ resetCefEndpointCache: vi.fn() }));
 vi.mock('@/main/utils/store-storage', () => ({
@@ -109,5 +115,44 @@ describe('syncBridgePluginSetup with Millennium v3', () => {
 
     expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledTimes(1);
     expect(env.queue).toMatchObject([{ kind: 'millennium-plugin', enable: true }]);
+  });
+
+  it('queues the enable once when two syncs overlap', async () => {
+    vi.mocked(installOrUpdateMillenniumPlugin).mockReturnValue({
+      ok: true,
+      changed: false,
+    });
+    vi.mocked(setMillenniumPluginEnabledInConfig).mockResolvedValue('steam-running');
+
+    await Promise.all([syncBridgePluginSetup(), syncBridgePluginSetup()]);
+
+    expect(setMillenniumPluginEnabledInConfig).toHaveBeenCalledTimes(1);
+    expect(env.queue).toHaveLength(1);
+  });
+
+  it('runs a toggle-off issued mid-enable only after the enable', async () => {
+    vi.mocked(installOrUpdateMillenniumPlugin).mockReturnValue({
+      ok: true,
+      changed: false,
+    });
+    vi.mocked(setMillenniumPluginEnabledInConfig).mockResolvedValue('changed');
+    const order: string[] = [];
+    vi.mocked(ensureCefFlagFile).mockImplementation(() => {
+      order.push('ensure');
+    });
+    vi.mocked(removeCefFlagFile).mockImplementation(() => {
+      order.push('remove');
+    });
+
+    await Promise.all([
+      setCefDebuggingEnabled(true, { prompt: false }),
+      setCefDebuggingEnabled(false),
+    ]);
+
+    expect(order).toEqual(['ensure', 'remove']);
+    expect(vi.mocked(setMillenniumPluginEnabledInConfig).mock.calls).toEqual([
+      [true],
+      [false],
+    ]);
   });
 });

@@ -1,3 +1,4 @@
+import pLimit from 'p-limit';
 import {
   startSteamBridgeServer,
   stopSteamBridgeServer,
@@ -26,6 +27,9 @@ import { resetCefEndpointCache } from '@/main/utils/steam-cef';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import { sendToRenderer } from '@/main/window';
 
+// Each run decides from the plugin state and setting it reads, so the next one starts only once it is done.
+const setupRuns = pLimit(1);
+
 async function applyPluginEnabled(enable: boolean): Promise<void> {
   const result = await setMillenniumPluginEnabledInConfig(enable);
   if (result === 'steam-running') {
@@ -51,16 +55,18 @@ async function applyPluginEnabled(enable: boolean): Promise<void> {
 }
 
 // Installs, enables and serves LBK Bridge for Millennium v3 and serves the Decky copy; every trigger reruns it. Never rejects.
-export async function syncBridgePluginSetup(): Promise<void> {
-  if (!isCefDebuggingEnabledInSettings()) {
-    return;
-  }
-  try {
-    await setupMillenniumPlugin();
-    setupDeckyPlugin();
-  } catch (error) {
-    console.warn('[SteamBridge] Plugin setup failed:', error);
-  }
+export function syncBridgePluginSetup(): Promise<void> {
+  return setupRuns(async () => {
+    if (!isCefDebuggingEnabledInSettings()) {
+      return;
+    }
+    try {
+      await setupMillenniumPlugin();
+      setupDeckyPlugin();
+    } catch (error) {
+      console.warn('[SteamBridge] Plugin setup failed:', error);
+    }
+  });
 }
 
 function startBridgeServer(): void {
@@ -155,13 +161,15 @@ export async function setCefDebuggingEnabled(
   enabled: boolean,
   opts: { prompt?: boolean } = {}
 ): Promise<void> {
-  resetCefEndpointCache();
-  if (enabled) {
-    await enableCefDebugging(opts.prompt ?? true);
-  } else {
-    await disableCefDebugging();
-    // Turning the setting off and on again allows one more restart prompt (BRIDGE §3.4 rule d).
-    clearSteamBridgeVerdict();
-  }
+  await setupRuns(async () => {
+    resetCefEndpointCache();
+    if (enabled) {
+      await enableCefDebugging(opts.prompt ?? true);
+    } else {
+      await disableCefDebugging();
+      // Turning the setting off and on again allows one more restart prompt (BRIDGE §3.4 rule d).
+      clearSteamBridgeVerdict();
+    }
+  });
   await refreshSteamBridgeStatus();
 }

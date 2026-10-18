@@ -32,9 +32,6 @@ interface LaunchResult {
   error?: string;
 }
 
-/**
- * Detect Steam installation type on Linux
- */
 function detectLinuxSteamType(): SteamInstallationType {
   const home = homedir();
 
@@ -243,7 +240,7 @@ const windowsControl: SteamOsControl = {
       timeout: EXEC_TIMEOUT_MS,
       windowsHide: true,
     }).catch(() => void 0);
-    return denied && (await findSteamPids()).length > 0;
+    return denied && isSteamRunning();
   },
   launch: openSteamUrl,
 };
@@ -308,7 +305,7 @@ async function requestGracefulExit(): Promise<void> {
 
 async function shutdownSteam(): Promise<ShutdownResult> {
   // Must come first: `steam -shutdown` and steam://exit start Steam when it is not up.
-  const steamPids = await findSteamPids();
+  const steamPids = await findSteamPids({ fresh: true });
   if (steamPids.length === 0) {
     console.log('[Steam] Steam is not running, skipping shutdown');
     return { ok: true };
@@ -343,7 +340,7 @@ async function shutdownSteam(): Promise<ShutdownResult> {
     return { ok: false, reason: 'game-running' };
   }
   console.warn('[Steam] Steam did not exit gracefully, force killing...');
-  if (await osControl().forceKill(await findSteamPids())) {
+  if (await osControl().forceKill(await findSteamPids({ fresh: true }))) {
     console.warn('[Steam] Access denied while force killing Steam');
     return { ok: false, reason: 'access-denied' };
   }
@@ -357,9 +354,6 @@ async function shutdownSteam(): Promise<ShutdownResult> {
   return { ok: false, reason: 'timeout' };
 }
 
-/**
- * Launch a Steam game by App ID
- */
 export async function launchSteamGame(appId: string | number): Promise<LaunchResult> {
   const url = `steam://rungameid/${appId}`;
   console.log(`[Steam] Launching game with App ID: ${appId}`);

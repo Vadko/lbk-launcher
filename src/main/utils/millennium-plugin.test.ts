@@ -153,6 +153,32 @@ describe('plugin install and data files', () => {
     ).toEqual(['core']);
   });
 
+  it('runs overlapping edits one after another', async () => {
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({ plugins: { enabledPlugins: ['core'] } })
+    );
+    const enabledPlugins = () =>
+      JSON.parse(fs.readFileSync(configPath, 'utf8')).plugins.enabledPlugins;
+
+    expect(
+      await Promise.all([
+        plugin.setMillenniumPluginEnabledInConfig(true),
+        plugin.setMillenniumPluginEnabledInConfig(true),
+      ])
+    ).toEqual(['changed', 'unchanged']);
+    expect(enabledPlugins()).toEqual(['core', 'lbk-bridge']);
+
+    expect(
+      await Promise.all([
+        plugin.setMillenniumPluginEnabledInConfig(true),
+        plugin.setMillenniumPluginEnabledInConfig(false),
+      ])
+    ).toEqual(['unchanged', 'changed']);
+    expect(enabledPlugins()).toEqual(['core']);
+    expect(fs.existsSync(`${configPath}.lbk.tmp`)).toBe(false);
+  });
+
   it('reports invalid and missing configs', async () => {
     expect(await plugin.setMillenniumPluginEnabledInConfig(true)).toBe('no-config');
     fs.writeFileSync(configPath, '{ broken');

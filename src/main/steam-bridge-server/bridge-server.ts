@@ -40,8 +40,10 @@ function newSecret(): string {
   return randomBytes(32).toString('hex');
 }
 
+// Destroyed once flushed like ws does: the http server allows half-open sockets, so a client that never closes would keep stop() waiting.
 function refuseUpgrade(socket: Duplex, status: number): void {
   const body = STATUS_CODES[status] ?? '';
+  socket.once('finish', () => socket.destroy());
   socket.end(
     `HTTP/1.1 ${status} ${body}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`
   );

@@ -203,7 +203,7 @@ async function runQueuedChange(
   appEvents.on('millennium-applied', onApplied);
   appEvents.on('millennium-phase', onPhase);
   try {
-    if ((await findSteamPids()).length === 0) {
+    if ((await findSteamPids({ fresh: true })).length === 0) {
       await runPendingSteamActions('manual');
       return (
         outcomeFailure(kind, applied) ?? {

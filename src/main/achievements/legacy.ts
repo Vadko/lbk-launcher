@@ -5,8 +5,8 @@ import { BACKUP_SUFFIX } from '@/main/installer/backup';
 import {
   listInstallationRecords,
   rewriteInstallationRecord,
-} from '@/main/installer/cache';
-import { withAchievementsComponent } from '@/main/installer/installation-info';
+  withAchievementsComponent,
+} from '@/main/installer/installation-info';
 import type { AchievementsComponent } from '@/shared/types';
 import { removeStoredStrings } from './strings-store';
 

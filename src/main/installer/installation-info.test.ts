@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { InstallationInfo } from '@/shared/types';
 import { withAchievementsComponent } from './installation-info';
+
+vi.mock('electron', () => ({ app: { getPath: () => '/user-data' } }));
 
 const base: InstallationInfo = {
   gameId: 'g',

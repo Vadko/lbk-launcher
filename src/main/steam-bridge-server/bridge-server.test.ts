@@ -1,3 +1,5 @@
+import { once } from 'node:events';
+import { connect as connectTcp, type Socket } from 'node:net';
 import { hmacHex } from '@lbk/bridge-core/protocol';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import WebSocket from 'ws';
@@ -113,6 +115,7 @@ class FakePlugin {
 describe('plugin server', () => {
   let bridge: BridgeJson;
   const plugins: FakePlugin[] = [];
+  const sockets: Socket[] = [];
 
   function connect(origin?: string): FakePlugin {
     const plugin = new FakePlugin(bridge.port, origin);
@@ -136,6 +139,9 @@ describe('plugin server', () => {
     for (const plugin of plugins.splice(0)) {
       plugin.ws.terminate();
     }
+    for (const socket of sockets.splice(0)) {
+      socket.destroy();
+    }
     await stopSteamBridgeServer();
   });
 
@@ -157,6 +163,38 @@ describe('plugin server', () => {
       plugin.ws.on('error', () => undefined);
     });
     expect(status).toBe(403);
+  });
+
+  it('drops a refused client that keeps its side open, so stop does not hang', async () => {
+    const socket = connectTcp({
+      host: '127.0.0.1',
+      port: bridge.port,
+      allowHalfOpen: true,
+    });
+    sockets.push(socket);
+    socket.on('error', () => undefined);
+    await once(socket, 'connect');
+    socket.write(
+      [
+        'GET /lbk-bridge HTTP/1.1',
+        `Host: 127.0.0.1:${bridge.port}`,
+        'Upgrade: websocket',
+        'Connection: Upgrade',
+        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+        'Sec-WebSocket-Version: 13',
+        'Origin: https://example.com',
+        '',
+        '',
+      ].join('\r\n')
+    );
+    const [response] = await once(socket, 'data');
+    expect(String(response)).toMatch(/^HTTP\/1\.1 403 /);
+
+    const stopped = await Promise.race([
+      stopSteamBridgeServer().then(() => 'stopped'),
+      new Promise((r) => setTimeout(() => r('hung'), 2000)),
+    ]);
+    expect(stopped).toBe('stopped');
   });
 
   it('authenticates, runs requests and reports the connection', async () => {

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { BRIDGE_PLUGIN_NAME } from '@lbk/bridge-core/contract';
+import pLimit from 'p-limit';
 import { bundledBridgeFiles } from '@/main/plugin-host/bundled-bridge';
 import { readPluginManifest } from '@/main/plugin-host/plugin-manifest';
 import { isSteamStopped } from '@/main/steam-process/lifecycle';
@@ -19,6 +20,9 @@ const DATA_FILES: readonly PluginDataFile[] = ['bridge.json', 'achievements.json
 const PLUGIN_JSON = 'plugin.json';
 const FRONTEND_SUBDIR = path.join('.millennium', 'Dist');
 const FRONTEND_ENTRY = 'index.js';
+
+// Every edit goes through one temp file and plans from what it reads, so two must not overlap.
+const configEdits = pLimit(1);
 
 export interface MillenniumPluginState {
   supported: boolean;
@@ -164,9 +168,20 @@ export function installOrUpdateMillenniumPlugin():
   return { ok: true, changed: true };
 }
 
-export async function setMillenniumPluginEnabledInConfig(
+type ConfigEditResult =
+  | 'changed'
+  | 'unchanged'
+  | 'steam-running'
+  | 'invalid-config'
+  | 'no-config';
+
+export function setMillenniumPluginEnabledInConfig(
   enable: boolean
-): Promise<'changed' | 'unchanged' | 'steam-running' | 'invalid-config' | 'no-config'> {
+): Promise<ConfigEditResult> {
+  return configEdits(() => editEnabledPlugins(enable));
+}
+
+async function editEnabledPlugins(enable: boolean): Promise<ConfigEditResult> {
   const { configPath } = detectMillennium();
   if (!configPath) {
     return 'no-config';

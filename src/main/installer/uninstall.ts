@@ -17,10 +17,10 @@ import {
 import {
   checkInstallation,
   deleteCachedInstallationInfo,
-  findInstallationInfoFile,
   saveInstallationInfo,
 } from './cache';
 import { deleteDirectory } from './files';
+import { findInstallationInfoFile } from './installation-info';
 import { resignMacBundles } from './mac-codesign';
 import { runUninstaller } from './platform';
 
