@@ -89,6 +89,7 @@ export default tseslint.config(
         },
       ],
 
+      'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
       'no-console': 'off',
       'no-debugger': 'warn',
       'no-duplicate-imports': 'error',
@@ -112,6 +113,11 @@ export default tseslint.config(
   {
     files: ['src/main/liquid-glass.ts'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
+    // Supabase codegen output.
+    files: ['src/lib/database.types.ts'],
+    rules: { 'max-lines': 'off' },
   },
   {
     // Decky imports the bundle once; there is no fast refresh to keep working.
