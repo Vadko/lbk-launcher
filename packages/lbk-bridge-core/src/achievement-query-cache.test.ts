@@ -196,6 +196,7 @@ describe('hookAchievementQueries', () => {
       own.setData = theirs;
     }
     const { flush, load, queries } = setup(client);
+    expect(own?.setData).not.toBe(theirs);
     await load(schemaKey, fixture.schema);
     queries.dispose();
     expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
@@ -211,24 +212,31 @@ describe('hookAchievementQueries', () => {
 
 describe('hookAchievementQueries data written through Query.setData', () => {
   const otherApp = ['achievements', 10, 'schema'];
+  const translated = [FOOL, v1[FOOL].name, v1[FOOL].desc];
+
+  // First record of every result an observer receives.
+  function watch(client: QueryClient, queryKey: unknown[]) {
+    const observer = new QueryObserver(client, {
+      queryKey,
+      queryFn: () => structuredClone(fixture.schema),
+    });
+    const results: unknown[] = [];
+    const unsubscribe = observer.subscribe(({ data }) => {
+      if (data !== undefined) {
+        results.push(shown(data)[0]);
+      }
+    });
+    return { observer, results, unsubscribe };
+  }
 
   it.each([
-    ['a translated app', schemaKey, [FOOL, v1[FOOL].name, v1[FOOL].desc]],
+    ['a translated app', schemaKey, translated],
     ['an untranslated app', otherApp, steamText[0]],
   ])(
     'reaches observers of %s as stored, across refetch and setQueryData',
     async (_, queryKey, first) => {
       const { client } = setup();
-      const observer = new QueryObserver(client, {
-        queryKey,
-        queryFn: () => structuredClone(fixture.schema),
-      });
-      const results: unknown[] = [];
-      const unsubscribe = observer.subscribe(({ data }) => {
-        if (data !== undefined) {
-          results.push(shown(data)[0]);
-        }
-      });
+      const { observer, results, unsubscribe } = watch(client, queryKey);
       await observer.refetch();
       await observer.refetch();
       client.setQueryData(queryKey, structuredClone(fixture.schema));
@@ -239,6 +247,33 @@ describe('hookAchievementQueries data written through Query.setData', () => {
     }
   );
 
+  it('translates writes to a query an observer held before the hook', async () => {
+    const client = steamClient();
+    const { observer, results, unsubscribe } = watch(client, schemaKey);
+    await observer.refetch();
+    setup(client).queries.sync(null);
+    results.length = 0;
+    client.setQueryData(schemaKey, structuredClone(fixture.schema));
+    await observer.refetch();
+    unsubscribe();
+
+    expect(results.length).toBeGreaterThan(1);
+    expect(results).toEqual(results.map(() => translated));
+  });
+
+  it.each([
+    ['removeQueries', (c: QueryClient) => c.removeQueries({ queryKey: schemaKey })],
+    ['clear', (c: QueryClient) => c.clear()],
+  ])('lets go of a query dropped by %s while observed', async (_, drop) => {
+    const { client } = setup();
+    const { observer, unsubscribe } = watch(client, schemaKey);
+    await observer.refetch();
+    const query = client.getQueryCache().find({ queryKey: schemaKey });
+    drop(client);
+    unsubscribe();
+    expect(Object.hasOwn(query ?? {}, 'setData')).toBe(false);
+  });
+
   it('keeps the stored data when a refetch brings the same Steam text', async () => {
     const { client, load } = setup();
     await load(schemaKey, fixture.schema);
@@ -247,7 +282,7 @@ describe('hookAchievementQueries data written through Query.setData', () => {
     expect(client.getQueryData(schemaKey)).toBe(before);
   });
 
-  it('wraps setData once per hook, and again only after the previous hook let go', async () => {
+  it('wraps setData once per hook and lets the next hook wrap it after dispose', async () => {
     const { client, load, queries } = setup();
     await load(schemaKey, fixture.schema);
     const query = client.getQueryCache().find({ queryKey: schemaKey });
@@ -257,6 +292,7 @@ describe('hookAchievementQueries data written through Query.setData', () => {
 
     queries.dispose();
     const next = setup(client);
+    expect(Object.hasOwn(query ?? {}, 'setData')).toBe(true);
     expect(query?.setData).not.toBe(wrapped);
     next.queries.dispose();
     expect(Object.hasOwn(query ?? {}, 'setData')).toBe(false);

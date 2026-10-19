@@ -200,7 +200,10 @@ export function hookAchievementQueries(
       release(q);
       return;
     }
-    safely(() => intercept(q, appid));
+    // Only on 'added': a removed query still reports observerRemoved and late updates.
+    if (event.type === 'added') {
+      safely(() => intercept(q, appid));
+    }
     if (writing) {
       return;
     }
