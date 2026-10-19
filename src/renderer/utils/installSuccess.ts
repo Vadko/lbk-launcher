@@ -5,6 +5,7 @@ import type {
 } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
 import type { ModalAction } from '../store/useModalStore';
+import { BRIDGE_UPDATE_TEXT } from './pluginHostEntries';
 import { type OfferTarget, successOffer } from './pluginHostOffer';
 import { runSteamRestart } from './steamBridge';
 import { millenniumUnsupportedText } from './steamPluginHost';
@@ -44,9 +45,6 @@ const DELIVERY_TEXT: Record<
   disabled: () =>
     '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, увімкніть у налаштуваннях «Швидке застосування параметрів запуску Steam».',
 };
-
-const BRIDGE_UPDATE_TEXT =
-  "\n\nЩоб переклад досягнень з'явився й на сторінках спільноти та крамниці Steam, перезапустіть Steam — тоді застосується оновлення плагіна «LBK Bridge».";
 
 function restartHelps(
   input: Pick<InstallSuccessInput, 'delivery' | 'launchOptionsQueued'>
@@ -93,7 +91,7 @@ export function installSuccessMessage(base: string, input: InstallSuccessInput):
     message += DELIVERY_TEXT[input.delivery](unsupportedReason(input));
   }
   if (bridgeUpdatePending(input)) {
-    message += BRIDGE_UPDATE_TEXT;
+    message += `\n\n${BRIDGE_UPDATE_TEXT}`;
   }
   return message;
 }

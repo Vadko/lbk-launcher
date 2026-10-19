@@ -312,7 +312,7 @@ describe('page injector: document-start hint', () => {
     });
   });
 
-  it('swaps the script on every live session: removes the old one, then adds the new one', async () => {
+  it('swaps the script on every live session: the removal and the new script go out back to back', async () => {
     const steam = setUp();
     const ws = await steam.connect();
     const sessions = [await steam.attach('T1'), await steam.attach('T2')];
@@ -321,16 +321,35 @@ describe('page injector: document-start hint', () => {
     steam.injector.setHint(['620']);
     await settle();
     for (const [i, sessionId] of sessions.entries()) {
-      expect(ws.find(REMOVE, sessionId).map((c) => c.params)).toEqual([
-        { identifier: `script-${before[i]}` },
-      ]);
-      expect(sources(ws, sessionId)).toHaveLength(1);
-      ws.reply(REMOVE, {}, sessionId);
+      const swap = ws.sent
+        .filter(
+          (c) => c.sessionId === sessionId && (c.method === ADD || c.method === REMOVE)
+        )
+        .slice(1);
+      expect(swap.map((c) => c.method)).toEqual([REMOVE, ADD]);
+      expect(swap[0].params).toEqual({ identifier: `script-${before[i]}` });
+      expect(String(swap[1].params.source).startsWith(withHint(['620']))).toBe(true);
     }
+  });
+
+  it('removes the swapped-in script on the next change', async () => {
+    const steam = setUp();
+    const ws = await steam.connect();
+    const sessionId = await steam.attach('T1');
+
+    steam.injector.setHint(['620']);
     await settle();
-    for (const sessionId of sessions) {
-      expect(sources(ws, sessionId)[1].startsWith(withHint(['620']))).toBe(true);
-    }
+    ws.reply(REMOVE, {}, sessionId);
+    ws.reply(ADD, {}, sessionId);
+    await settle();
+    const swapped = ws.find(ADD, sessionId)[1].id;
+    steam.injector.setHint(['400']);
+    await settle();
+    expect(ws.find(REMOVE, sessionId).map((c) => c.params)).toEqual([
+      { identifier: `script-${ws.find(ADD, sessionId)[0].id}` },
+      { identifier: `script-${swapped}` },
+    ]);
+    expect(sources(ws, sessionId)[2].startsWith(withHint(['400']))).toBe(true);
   });
 
   it('sends nothing when the apps did not change', async () => {

@@ -10,6 +10,7 @@ vi.mock('@/main/plugin-host/state', () => ({
   deckyStateFor: () => null,
   getAchievementsBadge: vi.fn(),
   getHostSnapshot: () => Promise.resolve({ host: 'none', decky: null }),
+  pendingMillenniumAction: () => null,
 }));
 vi.mock('@/main/utils/cef-flag-file', () => ({ isCefFlagFilePresent: () => false }));
 vi.mock('@/main/plugin-host/bridge-plugin-setup', () => ({
@@ -172,9 +173,19 @@ describe('pluginUpdateAfterRestart', () => {
     ['no installed files', false, { connected: plugin('1.4.2'), installedVersion: null }],
     ['no connected plugin', false, { connected: null }],
     ['the setting off', false, { connected: plugin('1.4.2'), settingOn: false }],
+    [
+      'a queued Millennium removal',
+      false,
+      { connected: plugin('1.4.2'), millenniumRemovalQueued: true },
+    ],
   ] as const)('%s → %s', (_label, expected, change) => {
     expect(
-      pluginUpdateAfterRestart({ settingOn: true, installedVersion: '1.5.0', ...change })
+      pluginUpdateAfterRestart({
+        settingOn: true,
+        installedVersion: '1.5.0',
+        millenniumRemovalQueued: false,
+        ...change,
+      })
     ).toBe(expected);
   });
 });

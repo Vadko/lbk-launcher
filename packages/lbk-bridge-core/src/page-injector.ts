@@ -134,27 +134,28 @@ export function createPageInjector({
         }
       };
 
-      // Remove before add: Chrome runs every registered script in order, and the page module keeps the first hint it reads.
+      // Remove, then add without awaiting the removal: a page keeps the first hint it reads, and no document may start between the two with no script.
       const register = (sessionId: string, session: Session): Promise<void> =>
         session.scripts(async () => {
           const wanted = source;
-          if (session.script?.source === wanted || sessions.get(sessionId) !== session) {
+          const old = session.script;
+          if (old?.source === wanted || sessions.get(sessionId) !== session) {
             return;
           }
-          if (session.script) {
-            const { identifier } = session.script;
-            await send(
-              'Page.removeScriptToEvaluateOnNewDocument',
-              { identifier },
-              sessionId
-            );
-            session.script = null;
-          }
-          const res = await send(
+          session.script = null;
+          const removed = old
+            ? send(
+                'Page.removeScriptToEvaluateOnNewDocument',
+                { identifier: old.identifier },
+                sessionId
+              )
+            : undefined;
+          const added = send(
             'Page.addScriptToEvaluateOnNewDocument',
             { source: wanted },
             sessionId
           );
+          const [, res] = await Promise.all([removed, added]);
           if (!G.isObject(res) || !G.isString(res.identifier)) {
             throw new Error('no script identifier');
           }

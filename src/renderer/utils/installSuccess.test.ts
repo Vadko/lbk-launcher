@@ -107,7 +107,7 @@ describe('installSuccessActions', () => {
 
 describe('an LBK Bridge update waiting for a Steam restart', () => {
   const RESTART = 'Перезапустити Steam зараз';
-  const HINT = 'тоді застосується оновлення плагіна «LBK Bridge»';
+  const HINT = 'Оновлення плагіна «LBK Bridge» застосується після перезапуску Steam.';
   const outdated = (overrides: Parameters<typeof steamBridgeStatus>[0] = {}) =>
     steamBridgeStatus({ connected: true, updateAfterRestart: true, ...overrides });
 

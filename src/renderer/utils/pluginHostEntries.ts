@@ -135,9 +135,12 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
   };
 }
 
+export const BRIDGE_UPDATE_TEXT =
+  'Оновлення плагіна «LBK Bridge» застосується після перезапуску Steam.';
+
 const BRIDGE_UPDATE_LINE: PluginHostLine = {
   key: 'bridge-update',
-  text: 'Оновлення плагіна «LBK Bridge» застосується після перезапуску Steam.',
+  text: BRIDGE_UPDATE_TEXT,
 };
 
 export function pluginHostEntries(

@@ -11,6 +11,7 @@ import {
   deckyStateFor,
   getAchievementsBadge,
   getHostSnapshot,
+  pendingMillenniumAction,
 } from '@/main/plugin-host/state';
 import {
   getConnectedPluginInfo,
@@ -125,9 +126,11 @@ export function pluginUpdateAfterRestart(i: {
   settingOn: boolean;
   connected: { host: BridgeHost; pluginVersion: string } | null;
   installedVersion: string | null;
+  millenniumRemovalQueued: boolean;
 }): boolean {
   return (
     i.settingOn &&
+    !i.millenniumRemovalQueued &&
     i.connected?.host === 'millennium' &&
     i.installedVersion !== null &&
     compareVersions(i.connected.pluginVersion, i.installedVersion) < 0
@@ -277,6 +280,7 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
           settingOn,
           connected: connectedPlugin,
           installedVersion: pluginState.installedVersion,
+          millenniumRemovalQueued: pendingMillenniumAction() === 'deactivate',
         }),
       },
     },
