@@ -277,9 +277,12 @@ describe('hookAchievementQueries data written through Query.setData', () => {
     const { observer, unsubscribe } = watch(client, schemaKey);
     await observer.refetch();
     const query = client.getQueryCache().find({ queryKey: schemaKey });
+    const wrapped = () =>
+      ['setData', 'setState'].filter((name) => Object.hasOwn(query ?? {}, name));
+    expect(wrapped()).toEqual(['setData', 'setState']);
     drop(client);
     unsubscribe();
-    expect(Object.hasOwn(query ?? {}, 'setData')).toBe(false);
+    expect(wrapped()).toEqual([]);
   });
 
   it('keeps the stored data when a refetch brings the same Steam text', async () => {
