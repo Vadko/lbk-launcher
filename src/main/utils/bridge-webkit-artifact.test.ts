@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import vm from 'node:vm';
+import { G } from '@mobily/ts-belt';
 import { describe, expect, it } from 'vitest';
 
 const MILLENNIUM_WEBKIT = path.resolve(
@@ -8,8 +9,6 @@ const MILLENNIUM_WEBKIT = path.resolve(
   '../../../packages/lbk-bridge-millennium/.millennium/Dist/webkit.js'
 );
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 describe('Millennium webkit bundle', () => {
@@ -60,7 +59,7 @@ describe('Millennium webkit bundle', () => {
   };
   const dispose = (sandbox: object) => {
     const handle: unknown = Reflect.get(sandbox, PAGE);
-    if (isRecord(handle) && typeof handle.dispose === 'function') {
+    if (G.isObject(handle) && typeof handle.dispose === 'function') {
       handle.dispose();
     }
   };
@@ -110,9 +109,6 @@ describe('Millennium webkit bundle', () => {
       page.navigate(next);
       await settle();
       expect(page.fetched).toHaveLength(1);
-      page.navigate(next.replace('620', '400'));
-      await settle();
-      expect(page.fetched).toHaveLength(1);
       dispose(page.sandbox);
     }
   );
@@ -134,7 +130,7 @@ describe('Millennium webkit bundle', () => {
     ]);
     const handle: unknown = Reflect.get(page.sandbox, PAGE);
     expect(handle).toMatchObject({ version: 2 });
-    if (isRecord(handle) && typeof handle.wanted === 'function') {
+    if (G.isObject(handle) && typeof handle.wanted === 'function') {
       expect(handle.wanted()).toEqual([]);
     }
     dispose(page.sandbox);

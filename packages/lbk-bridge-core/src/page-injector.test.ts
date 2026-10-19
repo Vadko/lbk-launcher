@@ -296,12 +296,12 @@ describe('page injector: asks from pages', () => {
     }
   );
 
-  it('stops answering past 16 apps in one document', async () => {
+  it('stops answering past 256 apps in one document', async () => {
     const page = await onAchievementsPage();
-    for (let appid = 1; appid <= 20; appid++) {
+    for (let appid = 1; appid <= 260; appid++) {
       await page.ask({ payload: String(appid) });
     }
-    expect(page.strings).toHaveBeenCalledTimes(16);
+    expect(page.strings).toHaveBeenCalledTimes(256);
   });
 });
 

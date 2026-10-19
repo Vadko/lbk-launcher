@@ -20,8 +20,8 @@ const COMMAND_TIMEOUT_MS = 10_000;
 const RETRY_MIN_MS = 2000;
 // Every retry reads /json/version through Decky's proxy, which logs each request.
 const RETRY_MAX_MS = 120_000;
-// The page module asks once per app and document; more than this is not the page module.
-const MAX_ASKS_PER_CONTEXT = 16;
+// A document opened on a profile's games list asks once per game it reaches client-side; the cap only stops a flood.
+const MAX_ASKS_PER_CONTEXT = 256;
 
 // The timers are typed as p-timeout takes them, so the injector also type-checks under Node's typings.
 export interface PageInjectorEnv

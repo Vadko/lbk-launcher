@@ -83,29 +83,40 @@ describe('achievement page bundle', () => {
     expect(source).not.toMatch(pattern);
   });
 
-  it('declares no window name and answers through its Symbol.for global', () => {
-    expect(vm.runInContext(PAGE, runInPage('https://steamcommunity.com/id/x/'))).toBe(
+  it('starts no copy off the achievements sites', () => {
+    expect(vm.runInContext(PAGE, runInPage('https://help.steampowered.com/en/'))).toBe(
       undefined
     );
-
-    const ctx = runInPage('https://steamcommunity.com/achievements/620');
-    expect(vm.runInContext(`${PAGE}.version`, ctx)).toBe(2);
-    expect(vm.runInContext(`${PAGE}.wanted()`, ctx)).toEqual(['620']);
-    vm.runInContext(`${PAGE}.dispose()`, ctx);
-    expect(vm.runInContext(PAGE, ctx)).toBe(undefined);
-    expect(Object.keys(ctx).sort()).toEqual(
-      [
-        'location',
-        'console',
-        'setTimeout',
-        'clearTimeout',
-        'queueMicrotask',
-        'AbortController',
-        'AbortSignal',
-        'URL',
-      ].sort()
-    );
   });
+
+  // Another page of the same site gets a copy that waits for a client-side navigation.
+  it.each([
+    ['https://steamcommunity.com/achievements/620', {}, ['620']],
+    ['https://steamcommunity.com/id/x/', { navigation: new EventTarget() }, []],
+  ])(
+    'declares no window name on %s and answers through its Symbol.for global',
+    (href, extra, wanted) => {
+      const ctx = pageContext(href, extra);
+      vm.runInContext(source, ctx);
+      expect(vm.runInContext(`${PAGE}.version`, ctx)).toBe(2);
+      expect(vm.runInContext(`${PAGE}.wanted()`, ctx)).toEqual(wanted);
+      vm.runInContext(`${PAGE}.dispose()`, ctx);
+      expect(vm.runInContext(PAGE, ctx)).toBe(undefined);
+      expect(Object.keys(ctx).sort()).toEqual(
+        [
+          ...Object.keys(extra),
+          'location',
+          'console',
+          'setTimeout',
+          'clearTimeout',
+          'queueMicrotask',
+          'AbortController',
+          'AbortSignal',
+          'URL',
+        ].sort()
+      );
+    }
+  );
 });
 
 const STRINGS = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'Підйом' } };
