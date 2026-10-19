@@ -1,0 +1,59 @@
+{
+  "name": "@lbk/bridge-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    "./steam-ops.iife.js": "./dist/steam-ops.iife.js",
+    "./achievement-page.iife.js": "./dist/achievement-page.iife.js",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "wireit",
+    "watch": "node build.mjs --watch",
+    "sources": "wireit"
+  },
+  "wireit": {
+    "sources": {
+      "files": [
+        "src/**/*.ts",
+        "!src/**/*.test.ts",
+        "!src/**/*.fixture.ts",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "build": {
+      "command": "node build.mjs",
+      "files": [
+        "build.mjs"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "dependencies": [
+        "sources"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  },
+  "dependencies": {
+    "@mobily/ts-belt": "3.13.1",
+    "p-limit": "7.3.3",
+    "p-timeout": "7.0.2",
+    "p-wait-for": "6.0.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@decky/ui": "4.13.0",
+    "@tanstack/query-core": "5.104.0",
+    "esbuild": "0.28.1",
+    "wireit": "0.14.13"
+  }
+}

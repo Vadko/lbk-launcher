@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type QueryKey, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import type { FacetRow, LibraryMemberships } from '../../shared/types';
+import { useSyncAwareQuery } from '../queries/useSyncAwareQuery';
 import { useStore } from '../store/useStore';
 import { subscribeToWorkshopInstalledChanges } from '../store/useWorkshopInstallsStore';
 import { allInstalledTranslationIds } from './useInstalledTranslations';
@@ -10,152 +12,117 @@ export interface FacetData {
   installedTranslationIds: string[];
 }
 
-type FacetPart = 'rows' | 'libraries' | 'installed';
-
 const RELOAD_DEBOUNCE = 300;
+const ROWS_KEY = ['facet-rows'];
+const LIBRARIES_KEY = ['library-memberships'];
+const INSTALLED_KEY = ['installed-translation-ids'];
 
 const idsKey = (rows: FacetRow[]) => rows.map((row) => row.id).join('|');
 
+// A null IPC result becomes a query error, so the last good data stays
+const orThrow = <T>(value: T | null, part: string): T => {
+  if (value === null) {
+    throw new Error(`[useFacetData] Failed to load ${part}`);
+  }
+  return value;
+};
+
 export function useFacetData(isModalOpen: boolean): FacetData | null {
+  const queryClient = useQueryClient();
   const syncStatus = useStore((state) => state.syncStatus);
   const isCatalogReady = syncStatus === 'ready' || syncStatus === 'error';
+  const [isWarm, setIsWarm] = useState(false);
+  const enabled = isWarm || isModalOpen;
 
-  const [rows, setRows] = useState<FacetRow[] | null>(null);
-  const [libraries, setLibraries] = useState<LibraryMemberships | null>(null);
-  const [installedTranslationIds, setInstalledTranslationIds] = useState<string[] | null>(
-    null
-  );
-
-  const requestSeq = useRef<Record<FacetPart, number>>({
-    rows: 0,
-    libraries: 0,
-    installed: 0,
-  });
-  const rowIdsKey = useRef<string | null>(null);
-  const pendingParts = useRef(new Set<FacetPart>());
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const load = useCallback((part: FacetPart) => {
-    function run(current: FacetPart): void {
-      const seq = ++requestSeq.current[current];
-      const isLatest = () => seq === requestSeq.current[current];
-
-      const request =
-        current === 'rows'
-          ? window.electronAPI.fetchFacetRows().then((next) => {
-              if (!next || !isLatest()) {
-                return;
-              }
-              // Unlocking a hidden translation sends no event, but changes which games the libraries match
-              const nextKey = idsKey(next);
-              if (rowIdsKey.current !== null && rowIdsKey.current !== nextKey) {
-                run('libraries');
-              }
-              rowIdsKey.current = nextKey;
-              setRows(next);
-            })
-          : current === 'libraries'
-            ? window.electronAPI.getLibraryMemberships().then((next) => {
-                if (next && isLatest()) {
-                  setLibraries(next);
-                }
-              })
-            : allInstalledTranslationIds().then((next) => {
-                if (isLatest()) {
-                  setInstalledTranslationIds(next);
-                }
-              });
-
-      request.catch((error) => {
-        console.error(`[useFacetData] Failed to load ${current}:`, error);
-      });
-    }
-
-    run(part);
-  }, []);
-
-  const scheduleLoad = useCallback(
-    (...parts: FacetPart[]) => {
-      for (const part of parts) {
-        pendingParts.current.add(part);
+  const { data: rows } = useSyncAwareQuery({
+    queryKey: ROWS_KEY,
+    queryFn: async () => {
+      const next = orThrow(await window.electronAPI.fetchFacetRows(), 'rows');
+      const previous = queryClient.getQueryData<FacetRow[]>(ROWS_KEY);
+      // Unlocking a hidden translation sends no event, but changes which games the libraries match
+      if (previous && idsKey(previous) !== idsKey(next)) {
+        void queryClient.invalidateQueries({ queryKey: LIBRARIES_KEY });
       }
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-      debounceTimer.current = setTimeout(() => {
-        debounceTimer.current = null;
-        const due = [...pendingParts.current];
-        pendingParts.current.clear();
-        due.forEach(load);
-      }, RELOAD_DEBOUNCE);
+      return next;
     },
-    [load]
-  );
+    enabled,
+    staleTime: Infinity,
+    // useFacetCounts re-reads search matches whenever the rows identity changes
+    structuralSharing: false,
+  });
+  const { data: libraries } = useSyncAwareQuery({
+    queryKey: LIBRARIES_KEY,
+    queryFn: async () =>
+      orThrow(await window.electronAPI.getLibraryMemberships(), 'libraries'),
+    enabled,
+    staleTime: Infinity,
+  });
+  const { data: installedTranslationIds } = useSyncAwareQuery({
+    queryKey: INSTALLED_KEY,
+    queryFn: allInstalledTranslationIds,
+    enabled,
+    staleTime: Infinity,
+  });
 
   // Prewarm off the critical path so the first modal open already has numbers
   useEffect(() => {
-    if (!isCatalogReady) {
+    if (!isCatalogReady || isWarm) {
       return;
     }
-    const id = requestIdleCallback(
-      () => {
-        load('rows');
-        load('libraries');
-        load('installed');
-      },
-      { timeout: 2000 }
-    );
+    const id = requestIdleCallback(() => setIsWarm(true), { timeout: 2000 });
     return () => cancelIdleCallback(id);
-  }, [isCatalogReady, load]);
+  }, [isCatalogReady, isWarm]);
 
   useEffect(() => {
-    if (!isCatalogReady) {
-      return;
-    }
-
-    const pending = pendingParts.current;
-    const onCatalogChanged = () => scheduleLoad('rows', 'libraries');
-    const onInstalledChanged = () => scheduleLoad('libraries', 'installed');
-    const onLibraryChanged = () => scheduleLoad('libraries');
+    const pending = new Set<QueryKey>();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reload =
+      (...keys: QueryKey[]) =>
+      () => {
+        for (const key of keys) {
+          pending.add(key);
+        }
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          for (const queryKey of pending) {
+            void queryClient.invalidateQueries({ queryKey });
+          }
+          pending.clear();
+        }, RELOAD_DEBOUNCE);
+      };
+    const onCatalogChanged = reload(ROWS_KEY, LIBRARIES_KEY);
+    const onLibraryChanged = reload(LIBRARIES_KEY);
 
     window.addEventListener('test-games-updated', onCatalogChanged);
-    const unsubGameUpdated = window.electronAPI.onGameUpdated(onCatalogChanged);
-    const unsubGameRemoved = window.electronAPI.onGameRemoved(onCatalogChanged);
-    const unsubInstalled =
-      window.electronAPI.onInstalledGamesChanged?.(onInstalledChanged);
-    const unsubSteam = window.electronAPI.onSteamLibraryChanged?.(onLibraryChanged);
-    const unsubStores = window.electronAPI.onStoreLibraryChanged(onLibraryChanged);
-    const unsubWorkshop = subscribeToWorkshopInstalledChanges(() =>
-      scheduleLoad('installed')
-    );
+    const unsubscribers = [
+      window.electronAPI.onGameUpdated(onCatalogChanged),
+      window.electronAPI.onGameRemoved(onCatalogChanged),
+      window.electronAPI.onInstalledGamesChanged?.(reload(LIBRARIES_KEY, INSTALLED_KEY)),
+      window.electronAPI.onSteamLibraryChanged?.(onLibraryChanged),
+      window.electronAPI.onStoreLibraryChanged(onLibraryChanged),
+      subscribeToWorkshopInstalledChanges(reload(INSTALLED_KEY)),
+    ];
 
     return () => {
       window.removeEventListener('test-games-updated', onCatalogChanged);
-      unsubGameUpdated();
-      unsubGameRemoved();
-      unsubInstalled?.();
-      unsubSteam?.();
-      unsubStores();
-      unsubWorkshop();
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-        debounceTimer.current = null;
+      for (const unsubscribe of unsubscribers) {
+        unsubscribe?.();
       }
-      pending.clear();
+      clearTimeout(timer);
     };
-  }, [isCatalogReady, scheduleLoad]);
+  }, [queryClient]);
 
   // Delta sync and set-game-visibility send no per-game events, so re-read the cheap rows on open
   useEffect(() => {
     if (!isModalOpen || !isCatalogReady) {
       return;
     }
-    load('rows');
+    void queryClient.invalidateQueries({ queryKey: ROWS_KEY });
     // Re-probes the stores in main; an actual change comes back as store-library-changed
     window.electronAPI.checkStoreLibraries().catch((error) => {
       console.error('[useFacetData] Store library check failed:', error);
     });
-  }, [isModalOpen, isCatalogReady, load]);
+  }, [isModalOpen, isCatalogReady, queryClient]);
 
   return useMemo(
     () =>

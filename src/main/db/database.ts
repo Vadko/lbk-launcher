@@ -262,7 +262,7 @@ class DatabaseManager {
    * Close the database connection
    */
   public close(): void {
-    if (this.db) {
+    if (this.db.open) {
       try {
         // Checkpoint WAL to ensure all data is written to main DB file
         this.db.pragma('wal_checkpoint(TRUNCATE)');
@@ -270,7 +270,6 @@ class DatabaseManager {
         // Ignore checkpoint errors
       }
       this.db.close();
-      this.db = null as unknown as Database.Database;
       DatabaseManager.instance = null;
       console.log('[Database] Database connection closed');
     }

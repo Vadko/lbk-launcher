@@ -1,0 +1,12 @@
+diff --git a/src/lifecycle.js b/src/lifecycle.js
+index 98563cfe7ef2998204ce8f83953e705f1939030b..590b26d3e8cdfcf727a6517af79b60c57ee025b1 100644
+--- a/src/lifecycle.js
++++ b/src/lifecycle.js
+@@ -37,6 +37,7 @@ const createFactory = ({
+   })
+ 
+   seven._bin = Bin.fromOptions(options)
++  seven._spawnOptions = options.$spawnOptions
+   seven._args = []
+     .concat(Args.fromOptions(options))
+     .concat(Flags.fromOptions(options))

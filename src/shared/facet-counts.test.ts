@@ -6,6 +6,7 @@ import {
   type FacetScope,
   type FacetSelection,
 } from './facet-counts';
+import type { OptionCount } from './game-counter';
 import {
   CONTENT_TYPE_FILTERS,
   getGameGroupKey,
@@ -122,9 +123,30 @@ describe('computeFacetCounts', () => {
 
       expect(counts.total).toBe(listedGames(rows, selection, scope));
 
+      // An option of an OR group either narrows the list to its games or, once the group has a pick, adds to it
+      const expectOption = <K>(
+        option: OptionCount | undefined,
+        picked: readonly K[],
+        key: K,
+        select: (keys: K[]) => Partial<FacetSelection>
+      ) => {
+        const adds = picked.length > 0 && !picked.includes(key);
+        const expected = adds
+          ? listedGames(rows, { ...selection, ...select([...picked, key]) }, scope) -
+            counts.total
+          : listedGames(rows, { ...selection, ...select([key]) }, scope);
+        expect(option?.count ?? 0).toBe(expected);
+        expect(option?.adds ?? adds).toBe(adds);
+      };
+
       for (const status of STATUSES) {
-        expect(counts.statuses[status] ?? 0).toBe(
-          listedGames(rows, { ...selection, statuses: [status] }, scope)
+        expectOption(
+          counts.statuses.get(status),
+          selection.statuses,
+          status,
+          (statuses) => ({
+            statuses,
+          })
         );
       }
       for (const type of CONTENT_TYPE_FILTERS) {
@@ -134,8 +156,11 @@ describe('computeFacetCounts', () => {
         );
       }
       for (const type of TRANSLATION_TYPE_FILTERS) {
-        expect(counts.translationTypes[type]).toBe(
-          listedGames(rows, { ...selection, translationTypes: [type] }, scope)
+        expectOption(
+          counts.translationTypes.get(type),
+          selection.translationTypes,
+          type,
+          (translationTypes) => ({ translationTypes })
         );
       }
       for (const filter of SPECIAL_FILTERS) {
@@ -144,14 +169,19 @@ describe('computeFacetCounts', () => {
         );
       }
       for (const author of AUTHORS) {
-        expect(counts.authors.get(author) ?? 0).toBe(
-          listedGames(rows, { ...selection, authors: [author] }, scope)
+        expectOption(
+          counts.authors.get(author),
+          selection.authors,
+          author,
+          (authors) => ({
+            authors,
+          })
         );
       }
       for (const tagId of TAGS) {
-        expect(counts.tags.get(tagId) ?? 0).toBe(
-          listedGames(rows, { ...selection, tagIds: [tagId] }, scope)
-        );
+        expectOption(counts.tags.get(tagId), selection.tagIds, tagId, (tagIds) => ({
+          tagIds,
+        }));
       }
     }
   });
@@ -185,7 +215,7 @@ describe('computeFacetCounts', () => {
 
     expect(counts.total).toBe(2);
     expect(counts.specialFilters['installed-games']).toBe(2);
-    expect(counts.statuses.completed).toBe(2);
-    expect(counts.authors.get('LBK')).toBe(2);
+    expect(counts.statuses.get('completed')?.count).toBe(2);
+    expect(counts.authors.get('LBK')?.count).toBe(2);
   });
 });

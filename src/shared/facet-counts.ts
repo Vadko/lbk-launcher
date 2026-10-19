@@ -1,5 +1,12 @@
 import { A, D, pipe } from '@mobily/ts-belt';
 import {
+  countsFor,
+  GameCounter,
+  type OptionCount,
+  optionChecks,
+  optionCounts,
+} from './game-counter';
+import {
   CONTENT_TYPE_FILTERS,
   getGameGroupKey,
   matchesAuthors,
@@ -34,12 +41,12 @@ export interface FacetScope {
 
 export interface FacetCounts {
   total: number;
-  statuses: Record<string, number>;
+  statuses: Map<string, OptionCount>;
   contentTypes: Record<ContentTypeFilterType, number>;
-  translationTypes: Record<TranslationTypeFilterType, number>;
+  translationTypes: Map<TranslationTypeFilterType, OptionCount>;
   specialFilters: Record<SpecialFilterType, number>;
-  authors: Map<string, number>;
-  tags: Map<number, number>;
+  authors: Map<string, OptionCount>;
+  tags: Map<number, OptionCount>;
 }
 
 interface FacetEntry {
@@ -83,7 +90,7 @@ const FILTER_GROUP_CHECKS = A.map(D.keys(GROUP_CHECKS), (filterGroup) => ({
   passes: GROUP_CHECKS[filterGroup],
 }));
 
-// The hot loop below runs per row on every click, so it stays allocation-free: no per-row arrays or closures
+// The passes below run per row on every click, so they stay allocation-free: no per-row arrays or closures
 const SEVERAL = 'several';
 
 function findBlockingGroup(
@@ -103,52 +110,16 @@ function findBlockingGroup(
   return blockedBy;
 }
 
-const countsIn = (blockedBy: FilterGroup | null, filterGroup: FilterGroup) =>
-  blockedBy === null || blockedBy === filterGroup;
-
-const optionChecks = <K>(
-  options: readonly K[],
-  matches: (row: FacetRow, only: K[]) => boolean
-) =>
-  A.map(options, (option) => {
-    const only = [option];
-    return { option, check: (row: FacetRow) => matches(row, only) };
-  });
+const countsIn = (
+  blockedBy: ReturnType<typeof findBlockingGroup>,
+  filterGroup: FilterGroup
+) => blockedBy === null || blockedBy === filterGroup;
 
 const CONTENT_TYPE_CHECKS = optionChecks(CONTENT_TYPE_FILTERS, matchesContentTypes);
 const TRANSLATION_TYPE_CHECKS = optionChecks(
   TRANSLATION_TYPE_FILTERS,
   matchesTranslationTypes
 );
-
-class GameCounter<K> {
-  readonly counts = new Map<K, number>();
-  private readonly lastGame = new Map<K, number>();
-
-  add(key: K, game: number): void {
-    if (this.lastGame.get(key) === game) {
-      return;
-    }
-    this.lastGame.set(key, game);
-    this.counts.set(key, (this.counts.get(key) ?? 0) + 1);
-  }
-
-  addAll(keys: readonly K[], game: number): void {
-    for (const key of keys) {
-      this.add(key, game);
-    }
-  }
-
-  get(key: K): number {
-    return this.counts.get(key) ?? 0;
-  }
-}
-
-const countsFor = <K extends string>(keys: readonly K[], counter: GameCounter<K>) =>
-  D.fromPairs(A.map(keys, (key) => [key, counter.get(key)] as const)) as Record<
-    K,
-    number
-  >;
 
 export function buildFacetIndex(
   rows: readonly FacetRow[],
@@ -192,44 +163,39 @@ export function computeFacetCounts(
   const specialFilters = new GameCounter<SpecialFilterType>();
   const authors = new GameCounter<string>();
   const tags = new GameCounter<number>();
+  const addedStatuses = new GameCounter<string>();
+  const addedTranslationTypes = new GameCounter<TranslationTypeFilterType>();
+  const addedAuthors = new GameCounter<string>();
+  const addedTags = new GameCounter<number>();
 
-  for (const { row, game, authors: rowAuthors } of index) {
-    if (
-      (hideAiTranslations && row.ai !== null) ||
-      (searchMatchIds && !searchMatchIds.has(row.id))
-    ) {
-      continue;
-    }
+  const specialChecks = A.map(SPECIAL_FILTERS, (filter) => ({
+    option: filter,
+    check: (row: FacetRow) => memberships[filter].has(row.id),
+  }));
 
-    const blockedBy = findBlockingGroup(row, selection, specialMembers);
-    if (blockedBy === SEVERAL) {
-      continue;
-    }
+  const blocks = A.map(index, ({ row }) =>
+    (hideAiTranslations && row.ai !== null) ||
+    (!!searchMatchIds && !searchMatchIds.has(row.id))
+      ? SEVERAL
+      : findBlockingGroup(row, selection, specialMembers)
+  );
+  const listedGames = new Set<number>();
 
+  A.forEachWithIndex(index, (i, { row, game, authors: rowAuthors }) => {
+    const blockedBy = blocks[i];
     if (blockedBy === null) {
+      listedGames.add(game);
       total.add(true, game);
-      for (const { option, check } of CONTENT_TYPE_CHECKS) {
-        if (check(row)) {
-          contentTypes.add(option, game);
-        }
-      }
+      contentTypes.addMatching(CONTENT_TYPE_CHECKS, row, game);
     }
     if (countsIn(blockedBy, 'status')) {
       statuses.add(row.status, game);
     }
     if (countsIn(blockedBy, 'translation')) {
-      for (const { option, check } of TRANSLATION_TYPE_CHECKS) {
-        if (check(row)) {
-          translationTypes.add(option, game);
-        }
-      }
+      translationTypes.addMatching(TRANSLATION_TYPE_CHECKS, row, game);
     }
     if (countsIn(blockedBy, 'special')) {
-      for (const filter of SPECIAL_FILTERS) {
-        if (memberships[filter].has(row.id)) {
-          specialFilters.add(filter, game);
-        }
-      }
+      specialFilters.addMatching(specialChecks, row, game);
     }
     if (countsIn(blockedBy, 'author')) {
       authors.addAll(rowAuthors, game);
@@ -237,15 +203,49 @@ export function computeFacetCounts(
     if (countsIn(blockedBy, 'tag') && row.steam_tag_ids) {
       tags.addAll(row.steam_tag_ids, game);
     }
-  }
+  });
+
+  A.forEachWithIndex(index, (i, { row, game, authors: rowAuthors }) => {
+    const blockedBy = blocks[i];
+    if (listedGames.has(game)) {
+      return;
+    }
+    if (blockedBy === 'status') {
+      addedStatuses.add(row.status, game);
+    }
+    if (blockedBy === 'translation') {
+      addedTranslationTypes.addMatching(TRANSLATION_TYPE_CHECKS, row, game);
+    }
+    if (blockedBy === 'author') {
+      addedAuthors.addAll(rowAuthors, game);
+    }
+    if (blockedBy === 'tag' && row.steam_tag_ids) {
+      addedTags.addAll(row.steam_tag_ids, game);
+    }
+  });
 
   return {
     total: total.get(true),
-    statuses: Object.fromEntries(statuses.counts),
+    statuses: optionCounts(
+      statuses.counts.keys(),
+      selection.statuses,
+      statuses,
+      addedStatuses
+    ),
     contentTypes: countsFor(CONTENT_TYPE_FILTERS, contentTypes),
-    translationTypes: countsFor(TRANSLATION_TYPE_FILTERS, translationTypes),
+    translationTypes: optionCounts(
+      TRANSLATION_TYPE_FILTERS,
+      selection.translationTypes,
+      translationTypes,
+      addedTranslationTypes
+    ),
     specialFilters: countsFor(SPECIAL_FILTERS, specialFilters),
-    authors: authors.counts,
-    tags: tags.counts,
+    authors: optionCounts(
+      authors.counts.keys(),
+      selection.authors,
+      authors,
+      addedAuthors
+    ),
+    tags: optionCounts(tags.counts.keys(), selection.tagIds, tags, addedTags),
   };
 }

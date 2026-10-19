@@ -1,0 +1,44 @@
+{
+  "name": "@lbk/bridge-millennium",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "build": "wireit",
+    "watch": "millennium-ttc --build dev --watch --no-update"
+  },
+  "wireit": {
+    "build": {
+      "command": "node build.mjs",
+      "files": [
+        "frontend/**",
+        "webkit/**",
+        "shared/**",
+        "plugin.json",
+        "build.mjs",
+        "tsconfig.json",
+        ".browserslistrc",
+        ".env",
+        "package.json"
+      ],
+      "output": [
+        ".millennium/**"
+      ],
+      "dependencies": [
+        "../lbk-bridge-core:sources"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@babel/preset-env": "7.29.7",
+    "@babel/preset-react": "7.29.7",
+    "@lbk/bridge-core": "workspace:*",
+    "@mobily/ts-belt": "3.13.1",
+    "@steambrew/ttc": "3.3.7",
+    "wireit": "0.14.13"
+  }
+}

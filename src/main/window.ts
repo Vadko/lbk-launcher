@@ -54,8 +54,8 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     },
   });
 
-  // Show window buttons on macOS for liquid glass
-  if (isSupported) {
+  // The frameless window hides the traffic lights; macOS keeps its own window controls on every version.
+  if (isMacOS()) {
     mainWindow.setWindowButtonVisibility(true);
   }
 
@@ -174,6 +174,27 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
+}
+
+export function showMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    // macOS outlives its last window; the tray and notifications reopen it like the Dock.
+    createMainWindow().catch((error) => {
+      console.error('[Window] Failed to recreate main window:', error);
+    });
+    return;
+  }
+  mainWindow.show();
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.focus();
+}
+
+export function sendToRenderer(channel: string, payload?: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
 }
 
 // IPC handler for toggling liquid glass

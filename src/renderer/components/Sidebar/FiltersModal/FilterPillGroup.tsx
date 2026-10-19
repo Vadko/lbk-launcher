@@ -6,6 +6,7 @@ interface FilterPillOption {
   label: string;
   value: string;
   count?: number;
+  adds?: boolean;
   icon?: React.ReactNode;
 }
 
@@ -43,7 +44,10 @@ export const FilterPillGroup: React.FC<FilterPillGroupProps> = ({
             <span
               className={`bg-glass px-1.5 py-0.5 rounded-lg text-xs leading-4 tabular-nums ${selected ? 'text-color-main' : 'text-text-muted'}`}
             >
-              <AppNumberFlow value={option.count} />
+              <AppNumberFlow
+                value={option.count}
+                prefix={option.adds && option.count > 0 ? '+' : undefined}
+              />
             </span>
           )}
         </Button>

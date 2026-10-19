@@ -1,6 +1,7 @@
 import { NumberFlowGroup } from '@number-flow/react';
 import { EyeIcon } from 'lucide-react';
 import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import type { OptionCount } from '@/shared/game-counter';
 import type {
   ContentTypeFilterType,
   SpecialFilterType,
@@ -51,6 +52,8 @@ interface FiltersModalProps {
   facetData: FacetData | null;
   searchQuery: string;
 }
+
+const NO_GAMES: OptionCount = { count: 0, adds: false };
 
 const SECTION_TITLE_CLASS =
   'text-xs text-text-muted font-medium uppercase tracking-wider mb-3';
@@ -227,7 +230,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       authors.map((author) => ({
         id: author,
         label: author,
-        count: counts && (counts.authors.get(author) ?? 0),
+        ...(counts && (counts.authors.get(author) ?? NO_GAMES)),
       })),
     [authors, counts]
   );
@@ -237,7 +240,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       tags.map((tag) => ({
         id: tag.tagid,
         label: tag.name,
-        count: counts ? (counts.tags.get(tag.tagid) ?? 0) : tag.count,
+        ...(counts ? (counts.tags.get(tag.tagid) ?? NO_GAMES) : { count: tag.count }),
       })),
     [tags, counts]
   );
@@ -363,7 +366,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
               options={STATUS_OPTIONS.map((o) => ({
                 label: o.label,
                 value: o.value,
-                count: counts && (counts.statuses[o.value] ?? 0),
+                ...(counts && (counts.statuses.get(o.value) ?? NO_GAMES)),
                 icon: STATUS_ICONS[o.value],
               }))}
               isSelected={(value) => stagedStatuses.includes(value)}
@@ -396,7 +399,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
                 options={TRANSLATION_TYPE_OPTIONS.map((o) => ({
                   label: o.label,
                   value: o.value,
-                  count: counts?.translationTypes[o.value],
+                  ...counts?.translationTypes.get(o.value),
                   icon: TRANSLATION_TYPE_ICONS[o.value],
                 }))}
                 isSelected={(value) =>

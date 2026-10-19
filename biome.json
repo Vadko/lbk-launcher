@@ -10,6 +10,7 @@
     "includes": [
       "src/**",
       "!src/lib/database.types.ts",
+      "packages/**",
       "electron.vite.config.ts",
       "vitest.config.ts",
       "package.json",

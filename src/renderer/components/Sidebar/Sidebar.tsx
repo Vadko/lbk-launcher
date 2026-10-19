@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -6,6 +7,7 @@ import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
+import { useSyncAwareQuery } from '../../queries/useSyncAwareQuery';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
@@ -24,6 +26,10 @@ import type { GameGroup } from './types';
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
 const FILTERS_RELOAD_DEBOUNCE = 300;
+const TEAMS_KEY = ['teams'];
+const TAG_OPTIONS_KEY = ['tag-options'];
+const NO_AUTHORS: string[] = [];
+const NO_TAGS: TagOption[] = [];
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -160,61 +166,31 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       );
     }, [specialFilter, setSpecialFilter]);
 
-    // Fetch authors and tag options (wait for sync to complete)
-    const syncStatus = useStore((state) => state.syncStatus);
-    const [authors, setAuthors] = useState<string[]>([]);
-    const [authorsLoading, setAuthorsLoading] = useState(true);
-    const [tags, setTags] = useState<TagOption[]>([]);
-    const [tagsLoading, setTagsLoading] = useState(true);
-    const reloadFiltersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const queryClient = useQueryClient();
+    const { data: authors = NO_AUTHORS, isPending: authorsLoading } = useSyncAwareQuery({
+      queryKey: TEAMS_KEY,
+      queryFn: () => window.electronAPI.fetchTeams(),
+    });
+    const { data: tags = NO_TAGS, isPending: tagsLoading } = useSyncAwareQuery({
+      queryKey: TAG_OPTIONS_KEY,
+      queryFn: () => window.electronAPI.fetchTagOptions(),
+    });
 
-    const loadAuthors = useCallback(async () => {
-      try {
-        const fetchedAuthors = await window.electronAPI.fetchTeams();
-        setAuthors(fetchedAuthors);
-      } catch (error) {
-        console.error('[Sidebar] Error fetching authors:', error);
-      } finally {
-        setAuthorsLoading(false);
-      }
-    }, []);
-
-    const loadTags = useCallback(async () => {
-      try {
-        const fetchedTags = await window.electronAPI.fetchTagOptions();
-        setTags(fetchedTags);
-      } catch (error) {
-        console.error('[Sidebar] Error fetching tags:', error);
-      } finally {
-        setTagsLoading(false);
-      }
-    }, []);
-
+    // A bulk catalog update broadcasts many games back-to-back; re-read the filters once it settles
     useEffect(() => {
-      if (syncStatus !== 'ready' && syncStatus !== 'error') {
-        return;
-      }
-      loadAuthors();
-      loadTags();
-
-      // A batch of broadcasts during a bulk catalog update would otherwise cause N
-      // synchronous games scans in the main process back-to-back
-      const unsub = window.electronAPI?.onGameUpdated?.(() => {
-        if (reloadFiltersTimerRef.current) {
-          clearTimeout(reloadFiltersTimerRef.current);
-        }
-        reloadFiltersTimerRef.current = setTimeout(() => {
-          loadAuthors();
-          loadTags();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const unsubscribe = window.electronAPI.onGameUpdated(() => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          void queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+          void queryClient.invalidateQueries({ queryKey: TAG_OPTIONS_KEY });
         }, FILTERS_RELOAD_DEBOUNCE);
       });
       return () => {
-        unsub?.();
-        if (reloadFiltersTimerRef.current) {
-          clearTimeout(reloadFiltersTimerRef.current);
-        }
+        unsubscribe();
+        clearTimeout(timer);
       };
-    }, [syncStatus, loadAuthors, loadTags]);
+    }, [queryClient]);
 
     const {
       games: visibleGames,

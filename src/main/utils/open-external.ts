@@ -1,94 +1,94 @@
-import { execFileSync, spawn } from 'child_process';
+import { F } from '@mobily/ts-belt';
+import { execFile, spawn } from 'child_process';
 import { shell } from 'electron';
+import { promisify } from 'util';
 import { isLinux } from './platform';
+
+const execFileAsync = promisify(execFile);
+const PROBE_TIMEOUT_MS = 2000;
 
 interface BrowserCommand {
   command: string;
   args: string[];
 }
 
-let cachedBrowser: BrowserCommand | null | undefined;
+const FLATPAK_BROWSERS = [
+  'org.mozilla.firefox',
+  'com.google.Chrome',
+  'org.chromium.Chromium',
+  'com.brave.Browser',
+];
+const NATIVE_BROWSERS = [
+  'firefox',
+  'chromium',
+  'chromium-browser',
+  'google-chrome',
+  'brave-browser',
+];
 
-/**
- * Detect an available browser on Linux by directly checking installed apps.
- * On SteamOS, xdg-open delegates to kde-open5, which often fails to find the
- * Flatpak-installed browser and redirects to the Discover app store instead.
- */
-function detectLinuxBrowser(): BrowserCommand | null {
-  const execOpts = { stdio: 'ignore' as const, timeout: 2000 };
+const flatpakBrowser = (appId: string) => ({ command: 'flatpak', args: ['run', appId] });
+const nativeBrowser = (binary: string) => ({ command: binary, args: [] });
 
-  // 1. Try to resolve the xdg default browser directly
+async function succeeds(command: string, args: string[]): Promise<boolean> {
   try {
-    const desktopFile = execFileSync('xdg-settings', ['get', 'default-web-browser'], {
-      encoding: 'utf-8',
-      timeout: 2000,
-    }).trim();
-
-    if (desktopFile) {
-      const appId = desktopFile.replace(/\.desktop$/, '');
-
-      // Check if it's a Flatpak app
-      try {
-        execFileSync('flatpak', ['info', appId], execOpts);
-        return { command: 'flatpak', args: ['run', appId] };
-      } catch {
-        // Not a Flatpak — try as native binary
-        const binaryName = appId.includes('.') ? appId.split('.').pop()! : appId;
-        try {
-          execFileSync('which', [binaryName], execOpts);
-          return { command: binaryName, args: [] };
-        } catch {
-          // Binary not found by simple name
-        }
-      }
-    }
+    await execFileAsync(command, args, { timeout: PROBE_TIMEOUT_MS });
+    return true;
   } catch {
-    // xdg-settings not available or failed
+    return false;
   }
+}
 
-  // 2. Scan for known Flatpak browsers (common on SteamOS)
-  const flatpakBrowsers = [
-    'org.mozilla.firefox',
-    'com.google.Chrome',
-    'org.chromium.Chromium',
-    'com.brave.Browser',
-  ];
+const isFlatpakApp = (appId: string) => succeeds('flatpak', ['info', appId]);
+const isOnPath = (binary: string) => succeeds('which', [binary]);
 
-  for (const appId of flatpakBrowsers) {
-    try {
-      execFileSync('flatpak', ['info', appId], execOpts);
-      return { command: 'flatpak', args: ['run', appId] };
-    } catch {
-      // Not installed
+async function firstFound(
+  candidates: string[],
+  isInstalled: (candidate: string) => Promise<boolean>,
+  toCommand: (candidate: string) => BrowserCommand
+): Promise<BrowserCommand | null> {
+  for (const candidate of candidates) {
+    if (await isInstalled(candidate)) {
+      return toCommand(candidate);
     }
   }
-
-  // 3. Scan for known native browsers
-  const nativeBrowsers = [
-    'firefox',
-    'chromium',
-    'chromium-browser',
-    'google-chrome',
-    'brave-browser',
-  ];
-
-  for (const browser of nativeBrowsers) {
-    try {
-      execFileSync('which', [browser], execOpts);
-      return { command: browser, args: [] };
-    } catch {
-      // Not found
-    }
-  }
-
   return null;
 }
 
-/**
- * Open a URL in the system browser.
- * On Linux (especially SteamOS), bypasses xdg-open to avoid the Discover store redirect
- * by detecting and launching the browser directly.
- */
+async function xdgDefaultBrowser(): Promise<BrowserCommand | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      'xdg-settings',
+      ['get', 'default-web-browser'],
+      { timeout: PROBE_TIMEOUT_MS }
+    );
+    const appId = stdout.trim().replace(/\.desktop$/, '');
+    if (!appId) {
+      return null;
+    }
+    if (await isFlatpakApp(appId)) {
+      return flatpakBrowser(appId);
+    }
+    const binary = appId.split('.').pop() ?? appId;
+    return (await isOnPath(binary)) ? nativeBrowser(binary) : null;
+  } catch {
+    return null;
+  }
+}
+
+// SteamOS's xdg-open goes through kde-open5, which often misses Flatpak browsers and opens Discover instead
+const detectLinuxBrowser = F.once(async (): Promise<BrowserCommand | null> => {
+  const browser =
+    (await xdgDefaultBrowser()) ??
+    (await firstFound(FLATPAK_BROWSERS, isFlatpakApp, flatpakBrowser)) ??
+    (await firstFound(NATIVE_BROWSERS, isOnPath, nativeBrowser));
+  console.log(
+    browser
+      ? `[OpenExternal] Detected browser: ${browser.command} ${browser.args.join(' ')}`
+      : '[OpenExternal] No browser detected, falling back to shell.openExternal'
+  );
+  return browser;
+});
+
 export async function openExternalUrl(
   url: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -113,18 +113,9 @@ export async function openExternalUrl(
       return { success: true };
     }
 
-    // Lazily detect and cache the browser
-    if (cachedBrowser === undefined) {
-      cachedBrowser = detectLinuxBrowser();
-      console.log(
-        cachedBrowser
-          ? `[OpenExternal] Detected browser: ${cachedBrowser.command} ${cachedBrowser.args.join(' ')}`
-          : '[OpenExternal] No browser detected, falling back to shell.openExternal'
-      );
-    }
-
-    if (cachedBrowser) {
-      const child = spawn(cachedBrowser.command, [...cachedBrowser.args, url], {
+    const browser = await detectLinuxBrowser();
+    if (browser) {
+      const child = spawn(browser.command, [...browser.args, url], {
         detached: true,
         stdio: 'ignore',
       });
