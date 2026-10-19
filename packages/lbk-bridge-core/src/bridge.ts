@@ -1,6 +1,7 @@
 import { A, D, F, G, pipe, R } from '@mobily/ts-belt';
 import pLimit from 'p-limit';
 import pTimeout from 'p-timeout';
+import type { AppStrings } from './achievement-text';
 import { createAchievements } from './achievements';
 import {
   type AchievementsHookReport,
@@ -21,6 +22,7 @@ import {
   serverFrameSchema,
   toHex,
 } from './protocol';
+import type { BridgeSocket } from './socket';
 import { type BridgeHandle, type SteamGlobals, steamGlobals } from './steam-globals';
 
 const RETRY_MIN_MS = 2000;
@@ -32,16 +34,6 @@ const SOCKET_OPEN = 1;
 // localStorage outlives a Steam restart: after an LBK crash the stale bridge.json still holds a secret whose session ended.
 const SPENT_KEY = 'lbk-bridge-spent-secrets';
 const SPENT_MAX = 8;
-
-export interface BridgeSocket {
-  readonly readyState: number;
-  send(data: string): void;
-  close(code?: number, reason?: string): void;
-  onopen: ((ev: Event) => void) | null;
-  onmessage: ((ev: MessageEvent) => void) | null;
-  onerror: ((ev: Event) => void) | null;
-  onclose: ((ev: CloseEvent) => void) | null;
-}
 
 // Reconnect backoff, achievements.json retries and the handshake and op timeouts run on env's clock via p-timeout.
 export interface BridgeEnv
@@ -76,6 +68,8 @@ export interface Bridge {
   events: EventTarget;
   start(): void;
   dispose(): void;
+  // Public strings of one app for a Steam web page; never anything that reaches LBK.
+  achievementStrings(appid: string): Promise<AppStrings | undefined>;
 }
 
 interface BridgeOptions {
@@ -360,5 +354,5 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     void transport();
   };
 
-  return { state, events, start, dispose };
+  return { state, events, start, dispose, achievementStrings: achievements.strings };
 }

@@ -1,5 +1,7 @@
-import type { Plugin } from '@decky/api';
+import { fetchNoCors, type Plugin } from '@decky/api';
+import pageScript from '@lbk/bridge-core/achievement-page.iife.js?raw';
 import { type BridgeStatus, browserEnv, createBridge } from '@lbk/bridge-core/bridge';
+import { createPageInjector } from '@lbk/bridge-core/page-injector';
 import { BridgeIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 
@@ -8,6 +10,25 @@ const bridge = createBridge({
   // Decky serves <homebrew>/data/<plugin dir>/ at /plugins/<name>/data/, where LBK writes bridge.json and achievements.json.
   dataBase: new URL('../data/', import.meta.url),
   env: browserEnv(),
+});
+
+const pages = createPageInjector({
+  env: {
+    fetchJson: (url) =>
+      fetchNoCors(url, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)),
+    openSocket: (url) => new WebSocket(url),
+    setTimeout: (fn, ms) => setTimeout(fn, ms),
+    clearTimeout: (handle) => clearTimeout(handle),
+  },
+  script: pageScript,
+  strings: bridge.achievementStrings,
+});
+
+// Stops on dismount, and when Millennium's copy takes over the SharedJSContext and with it Steam's web pages.
+bridge.events.addEventListener('change', () => {
+  if (bridge.state.status === 'disposed') {
+    pages.dispose();
+  }
 });
 
 const WAITING = 'Очікування LBK Launcher';
@@ -40,6 +61,10 @@ const Status = () => {
 // Decky calls onDismount before it uninstalls, updates or reloads the plugin.
 export default (): Plugin => {
   bridge.start();
+  // An idle copy leaves Steam's web pages to Millennium's webkit.js.
+  if (!bridge.state.idle) {
+    pages.start();
+  }
   return {
     name: 'LBK Bridge',
     icon: <BridgeIcon size="1em" />,

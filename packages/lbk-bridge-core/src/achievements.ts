@@ -1,7 +1,11 @@
 import { F, G } from '@mobily/ts-belt';
 import pLimit from 'p-limit';
 import pWaitFor from 'p-wait-for';
-import { type AchievementsPayload, sanitizeAchievements } from './achievement-text';
+import {
+  type AchievementsPayload,
+  type AppStrings,
+  sanitizeAchievements,
+} from './achievement-text';
 import { type AchievementsHook, installAchievementsHook } from './achievements-hook';
 import type { AchievementsHookReport, OpHandlers, PluginOnlySteamOps } from './contract';
 import type { SteamGlobals } from './steam-globals';
@@ -10,6 +14,9 @@ const ACH_POLL_MS = 1000;
 const ACH_READY_TIMEOUT_MS = 5 * 60 * 1000;
 const ACH_FILE_ATTEMPTS = 3;
 const ACH_FILE_RETRY_MS = 2000;
+const PAGE_STRINGS_POLL_MS = 250;
+// A page module applies strings that arrive late, so a page asking during startup can wait for the first read.
+const PAGE_STRINGS_WAIT_MS = 30_000;
 
 function achievementsEnvReady(g: SteamGlobals, minimal: boolean): boolean {
   const hasApps = G.isObject(g.SteamClient) && G.isObject(g.SteamClient.Apps);
@@ -35,6 +42,8 @@ interface AchievementsDeps {
 export interface Achievements {
   start(): void;
   report(): AchievementsHookReport;
+  // One app of the last achievements.json read, for Steam web pages.
+  strings(appid: string): Promise<AppStrings | undefined>;
   ops: OpHandlers<PluginOnlySteamOps>;
   dispose(): void;
 }
@@ -45,6 +54,7 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
   let state: AchievementsHookReport['state'] = 'not-ready';
   let error: string | null = null;
   let hook: AchievementsHook | null = null;
+  let latest: AchievementsPayload | null = null;
   // A reload asked for during a run queues at most one more run.
   const runs = pLimit(1);
   const busy = () => runs.activeCount + runs.pendingCount > 0;
@@ -67,6 +77,7 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
     if (deps.signal.aborted) {
       return;
     }
+    latest = payload;
     const apps = payload ? payload.apps : {};
     // No translations, no hooks: leave Steam untouched until there is something to show.
     if (!hook && Object.keys(apps).length === 0) {
@@ -132,6 +143,15 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
     return out;
   };
 
+  const strings = async (appid: string): Promise<AppStrings | undefined> => {
+    await pWaitFor(() => state !== 'not-ready', {
+      interval: PAGE_STRINGS_POLL_MS,
+      timeout: { milliseconds: PAGE_STRINGS_WAIT_MS, fallback: F.ignore },
+      signal: deps.signal,
+    });
+    return latest && Object.hasOwn(latest.apps, appid) ? latest.apps[appid] : undefined;
+  };
+
   const ops: OpHandlers<PluginOnlySteamOps> = {
     achievementsReload: async () => {
       if (busy()) {
@@ -164,5 +184,5 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
     }
   };
 
-  return { start, report, ops, dispose };
+  return { start, report, strings, ops, dispose };
 }

@@ -105,3 +105,25 @@ describe('achievements startup', () => {
     expect(delay.mock.calls).toEqual([[2000], [2000]]);
   });
 });
+
+describe('achievement strings for Steam web pages', () => {
+  it('waits for the first read of achievements.json, then gives one app at a time', async () => {
+    let release: (file: unknown) => void = () => undefined;
+    const readJson = vi.fn(
+      () =>
+        new Promise<unknown>((resolve) => {
+          release = resolve;
+        })
+    );
+    const achievements = load(withSteamUi(), readJson);
+
+    achievements.start();
+    const asked = achievements.strings('620');
+    await vi.waitFor(() => expect(readJson).toHaveBeenCalledOnce());
+    release({ v: 1, apps: { 620: { 'ACH.WAKE_UP': { name: 'Підйом' } } } });
+
+    await expect(asked).resolves.toEqual({ 'ACH.WAKE_UP': { name: 'Підйом' } });
+    await expect(achievements.strings('400')).resolves.toBeUndefined();
+    await expect(achievements.strings('constructor')).resolves.toBeUndefined();
+  });
+});

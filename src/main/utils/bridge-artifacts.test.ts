@@ -246,10 +246,27 @@ interface ExternalStore {
   getSnapshot: () => string;
 }
 
+const CDP_BROWSER = 'ws://127.0.0.1:8080/devtools/browser/5f1e';
+
 describe('Decky bundle', () => {
   let store: ExternalStore | undefined;
+  const fetchNoCors = vi.fn((_url: string, _init?: RequestInit) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ webSocketDebuggerUrl: CDP_BROWSER }),
+    })
+  );
   beforeEach(() => {
     store = undefined;
+    fetchNoCors.mockClear();
+    // @decky/api connects to the loader when the bundle is imported.
+    vi.stubGlobal('window', globalThis);
+    vi.stubGlobal(
+      '__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit',
+      {
+        connect: () => ({ _version: 2, fetchNoCors }),
+      }
+    );
     vi.stubGlobal('SP_REACT', {
       ...React,
       // Steam renders on the client; renderToStaticMarkup also needs a server snapshot.
@@ -321,8 +338,11 @@ describe('Decky bundle', () => {
       /\/packages\/lbk-bridge-decky\/data\/bridge\.json\?t=\d+$/
     );
     await settle();
-    const ws = FakeSocket.instances[0];
-    expect(ws.url).toBe('ws://127.0.0.1:50011/lbk-bridge');
+    const socket = (url: string) => FakeSocket.instances.find((s) => s.url === url);
+    const ws = socket('ws://127.0.0.1:50011/lbk-bridge');
+    if (!ws) {
+      throw new Error('the bridge did not dial LBK');
+    }
     ws.onopen?.();
     expect(ws.sent[0]).toMatchObject({ t: 'hello', host: 'decky', pv: BRIDGE_VERSION });
     expect(ws.sent[0]).toHaveProperty('ops', [...SHARED_STEAM_OPS, ...PLUGIN_ONLY_OPS]);
@@ -344,6 +364,27 @@ describe('Decky bundle', () => {
     expect(onChange).toHaveBeenCalledTimes(calls);
     expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toBeUndefined();
     expect(ws.readyState).toBe(3);
+    expect(socket(CDP_BROWSER)?.readyState).toBe(3);
+  });
+
+  // CEF's /json endpoints send no CORS headers; the page injector reads them through Decky.
+  it('opens Steam web pages over CEF remote debugging found through fetchNoCors', async () => {
+    FakeSocket.instances = [];
+    vi.stubGlobal('WebSocket', FakeSocket);
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: false, json: () => null }));
+    const plugin = await loadPlugin('?pages');
+    await settle();
+
+    expect(fetchNoCors).toHaveBeenCalledWith('http://127.0.0.1:8080/json/version', {
+      cache: 'no-store',
+    });
+    const cdp = FakeSocket.instances.find((s) => s.url === CDP_BROWSER);
+    cdp?.onopen?.();
+    expect(cdp?.sent).toEqual([
+      { id: 1, method: 'Target.setDiscoverTargets', params: { discover: true } },
+    ]);
+    dismount(plugin);
+    expect(cdp?.readyState).toBe(3);
   });
 
   it('stays idle next to a running Millennium copy and leaves it alone', async () => {
@@ -353,6 +394,8 @@ describe('Decky bundle', () => {
 
     const { content } = isRecord(plugin) ? plugin : {};
     expect(render(content)).toContain('>Працює через Millennium</div>');
+    await settle();
+    expect(fetchNoCors).not.toHaveBeenCalled();
     dismount(plugin);
     expect(millennium.dispose).not.toHaveBeenCalled();
     expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toBe(millennium);

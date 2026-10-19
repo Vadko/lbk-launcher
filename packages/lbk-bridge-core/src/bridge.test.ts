@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { type Bridge, type BridgeEnv, type BridgeSocket, createBridge } from './bridge';
+import { type Bridge, type BridgeEnv, createBridge } from './bridge';
 import type { BridgeHost } from './contract';
 import { hmacHex } from './protocol';
+import type { BridgeSocket } from './socket';
 import type { SteamGlobals } from './steam-globals';
 
 class FakeSocket implements BridgeSocket {

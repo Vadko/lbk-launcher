@@ -19,6 +19,10 @@ export interface AchievementPageMatch {
   appid: string;
 }
 
+// The origin of an execution context, as CDP reports it, that may show an achievements page.
+export const isAchievementPageOrigin = (origin: string): boolean =>
+  PAGE_URLS.some(({ host }) => origin === `https://${host}`);
+
 export function matchAchievementPage(href: string): AchievementPageMatch | undefined {
   let url: URL;
   try {
