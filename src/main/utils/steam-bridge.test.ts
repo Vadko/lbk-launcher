@@ -23,6 +23,7 @@ vi.mock('@/main/utils/millennium-plugin', () => ({
   getMillenniumPluginState: vi.fn(),
 }));
 vi.mock('@/main/steam-bridge-server/bridge-server', () => ({
+  getConnectedPluginInfo: () => null,
   invokeViaPlugin: vi.fn(),
   isPluginConnected: () => false,
 }));
@@ -47,9 +48,8 @@ const { syncBridgePluginSetup } = await import('@/main/plugin-host/bridge-plugin
 const { detectMillennium } = await import('@/main/utils/millennium');
 const { getMillenniumPluginState } = await import('@/main/utils/millennium-plugin');
 const { resolveCefEndpoint } = await import('@/main/utils/steam-cef');
-const { computeBridgeStatusCode, getSteamBridgeStatus } = await import(
-  '@/main/utils/steam-bridge'
-);
+const { computeBridgeStatusCode, getSteamBridgeStatus, pluginUpdateAfterRestart } =
+  await import('@/main/utils/steam-bridge');
 const { nextVerifyStep, startSteamBridge } = await import(
   '@/main/utils/steam-bridge-lifecycle'
 );
@@ -151,6 +151,31 @@ describe('computeBridgeStatusCode', () => {
     ['restart-pending as the fallback', {}, 'restart-pending'],
   ] as const)('reports %s', (_label, change, code) => {
     expect(computeBridgeStatusCode({ ...healthy, ...change })).toBe(code);
+  });
+});
+
+describe('pluginUpdateAfterRestart', () => {
+  const plugin = (
+    pluginVersion: string,
+    host: 'millennium' | 'decky' = 'millennium'
+  ) => ({
+    pluginVersion,
+    host,
+  });
+
+  it.each([
+    ['an older Millennium plugin', true, { connected: plugin('1.4.2') }],
+    ['an unparseable running version', true, { connected: plugin('dev') }],
+    ['the installed version', false, { connected: plugin('1.5.0') }],
+    ['a newer running plugin', false, { connected: plugin('1.6.0') }],
+    ['an older Decky plugin', false, { connected: plugin('1.4.2', 'decky') }],
+    ['no installed files', false, { connected: plugin('1.4.2'), installedVersion: null }],
+    ['no connected plugin', false, { connected: null }],
+    ['the setting off', false, { connected: plugin('1.4.2'), settingOn: false }],
+  ] as const)('%s → %s', (_label, expected, change) => {
+    expect(
+      pluginUpdateAfterRestart({ settingOn: true, installedVersion: '1.5.0', ...change })
+    ).toBe(expected);
   });
 });
 

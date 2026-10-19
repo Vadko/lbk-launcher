@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import {
   BRIDGE_PLUGIN_NAME,
+  type BridgeHost,
   type SteamOpName,
   type SteamOps,
 } from '@lbk/bridge-core/contract';
@@ -41,6 +42,7 @@ import type {
   SteamBridgeStatusCode,
 } from '@/shared/plugin-host-types';
 import type { SteamBridgeFailure } from '@/shared/types';
+import { compareVersions } from '@/shared/version';
 
 type SteamBridgeTransport = 'cdp' | 'plugin';
 
@@ -116,6 +118,20 @@ export function computeBridgeStatusCode(i: {
     return 'cef-blocked';
   }
   return 'restart-pending';
+}
+
+// A Decky plugin reloads on install; Millennium loads the new files only when Steam starts.
+export function pluginUpdateAfterRestart(i: {
+  settingOn: boolean;
+  connected: { host: BridgeHost; pluginVersion: string } | null;
+  installedVersion: string | null;
+}): boolean {
+  return (
+    i.settingOn &&
+    i.connected?.host === 'millennium' &&
+    i.installedVersion !== null &&
+    compareVersions(i.connected.pluginVersion, i.installedVersion) < 0
+  );
 }
 
 export function noteBridgeAvailable(transport: SteamBridgeTransport): void {
@@ -204,7 +220,8 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
   const settingOn = isCefDebuggingEnabledInSettings();
   const millennium = detectMillennium();
   const pluginState = getMillenniumPluginState();
-  const connected = isPluginConnected();
+  const connectedPlugin = getConnectedPluginInfo();
+  const connected = connectedPlugin !== null;
 
   let transport: SteamBridgeTransport | null = null;
   let steamRunning: boolean;
@@ -256,6 +273,11 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
         installed: pluginState.installed,
         enabled: pluginState.enabled,
         connected,
+        updateAfterRestart: pluginUpdateAfterRestart({
+          settingOn,
+          connected: connectedPlugin,
+          installedVersion: pluginState.installedVersion,
+        }),
       },
     },
     steamElevated,
@@ -263,8 +285,7 @@ async function computeStatus(): Promise<SteamBridgeStatus> {
     canRestartSteam: steamRunning && !steamElevated && !gamescope,
     pendingLaunchOptions: pendingLaunchOptions(),
     // The status copy names the plugin that is actually connected, not the host LBK would pick.
-    pluginHost:
-      transport === 'plugin' ? (getConnectedPluginInfo()?.host ?? host.host) : host.host,
+    pluginHost: transport === 'plugin' ? (connectedPlugin?.host ?? host.host) : host.host,
     decky: deckyStateFor(host.decky),
     achievements,
   };

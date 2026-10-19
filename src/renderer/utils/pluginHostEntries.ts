@@ -1,5 +1,5 @@
 import { match } from 'ts-pattern';
-import type { PluginHostState } from '@/shared/plugin-host-types';
+import type { PluginHostState, SteamBridgeStatus } from '@/shared/plugin-host-types';
 import {
   deckyOffer,
   millenniumOffer,
@@ -135,6 +135,24 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
   };
 }
 
-export function pluginHostEntries(host: PluginHostState): PluginHostEntries {
-  return host.host === 'decky' ? deckyEntries(host) : millenniumEntries(host);
+const BRIDGE_UPDATE_LINE: PluginHostLine = {
+  key: 'bridge-update',
+  text: 'Оновлення плагіна «LBK Bridge» застосується після перезапуску Steam.',
+};
+
+export function pluginHostEntries(
+  host: PluginHostState,
+  bridge: SteamBridgeStatus | null
+): PluginHostEntries {
+  const entries = host.host === 'decky' ? deckyEntries(host) : millenniumEntries(host);
+  // Not a Millennium row: a Linux PC with Decky as the host may still run Millennium's copy.
+  if (!bridge?.millennium.plugin.updateAfterRestart) {
+    return entries;
+  }
+  return {
+    lines: [BRIDGE_UPDATE_LINE, ...entries.lines],
+    actions: bridge.canRestartSteam
+      ? [OFFER_ACTIONS.restartSteam, ...entries.actions]
+      : entries.actions,
+  };
 }

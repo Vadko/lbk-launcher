@@ -48,10 +48,12 @@ export function deckyState(
 
 interface BridgeStatusOverrides extends Partial<Omit<SteamBridgeStatus, 'millennium'>> {
   connected?: boolean;
+  updateAfterRestart?: boolean;
 }
 
 export function steamBridgeStatus({
   connected = false,
+  updateAfterRestart = false,
   ...overrides
 }: BridgeStatusOverrides = {}): SteamBridgeStatus {
   return {
@@ -61,7 +63,13 @@ export function steamBridgeStatus({
       detected: connected,
       generation: connected ? 'v3' : null,
       blocksTcpCdp: false,
-      plugin: { supported: true, installed: connected, enabled: connected, connected },
+      plugin: {
+        supported: true,
+        installed: connected,
+        enabled: connected,
+        connected,
+        updateAfterRestart,
+      },
     },
     steamElevated: false,
     gamescope: false,

@@ -176,6 +176,8 @@ export interface SteamBridgeStatus {
       installed: boolean;
       enabled: boolean;
       connected: boolean;
+      // The connected Millennium plugin is older than its installed files, which Steam loads only at its next start.
+      updateAfterRestart: boolean;
     };
   };
   steamElevated: boolean;

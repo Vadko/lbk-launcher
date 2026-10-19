@@ -21,6 +21,7 @@ const labels = (value: InstallSuccessInput) =>
 describe('needsBridgeStatus', () => {
   it.each([
     [{ launchOptionsQueued: true, delivery: undefined }, true],
+    [{ launchOptionsQueued: false, delivery: 'plugin-live' }, true],
     [{ launchOptionsQueued: false, delivery: 'needs-millennium' }, true],
     [{ launchOptionsQueued: false, delivery: 'unavailable' }, true],
     [{ launchOptionsQueued: false, delivery: 'needs-decky' }, false],
@@ -101,5 +102,43 @@ describe('installSuccessActions', () => {
       open,
     });
     expect(install.keepOpen).toBe(false);
+  });
+});
+
+describe('an LBK Bridge update waiting for a Steam restart', () => {
+  const RESTART = 'Перезапустити Steam зараз';
+  const HINT = 'тоді застосується оновлення плагіна «LBK Bridge»';
+  const outdated = (overrides: Parameters<typeof steamBridgeStatus>[0] = {}) =>
+    steamBridgeStatus({ connected: true, updateAfterRestart: true, ...overrides });
+
+  it.each([
+    [
+      'live strings and an outdated plugin',
+      input({ delivery: 'plugin-live', status: outdated() }),
+      true,
+      ['Зрозуміло', RESTART],
+    ],
+    [
+      'an outdated plugin Steam cannot be restarted from here',
+      input({ delivery: 'plugin-live', status: outdated({ canRestartSteam: false }) }),
+      true,
+      ['Зрозуміло'],
+    ],
+    [
+      'live strings and a current plugin',
+      input({ delivery: 'plugin-live', status: steamBridgeStatus({ connected: true }) }),
+      false,
+      ['Зрозуміло'],
+    ],
+    [
+      'strings that already wait for the next Steam start',
+      input({ delivery: 'plugin-next-start', status: outdated() }),
+      false,
+      ['Зрозуміло', RESTART],
+    ],
+    ['skipped achievements', input({ status: outdated() }), false, ['Зрозуміло']],
+  ])('%s', (_label, value, hint, actions) => {
+    expect(installSuccessMessage('Готово!', value).includes(HINT)).toBe(hint);
+    expect(labels(value)).toEqual(actions);
   });
 });

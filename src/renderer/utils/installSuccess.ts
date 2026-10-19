@@ -45,10 +45,21 @@ const DELIVERY_TEXT: Record<
     '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, увімкніть у налаштуваннях «Швидке застосування параметрів запуску Steam».',
 };
 
+const BRIDGE_UPDATE_TEXT =
+  "\n\nЩоб переклад досягнень з'явився й на сторінках спільноти та крамниці Steam, перезапустіть Steam — тоді застосується оновлення плагіна «LBK Bridge».";
+
 function restartHelps(
   input: Pick<InstallSuccessInput, 'delivery' | 'launchOptionsQueued'>
 ) {
   return input.launchOptionsQueued || input.delivery === 'plugin-next-start';
+}
+
+// 'plugin-next-start' already asks for this restart, and the other deliveries have no plugin connected.
+function bridgeUpdatePending(input: InstallSuccessInput): boolean {
+  return (
+    input.delivery === 'plugin-live' &&
+    input.status?.millennium.plugin.updateAfterRestart === true
+  );
 }
 
 export function needsBridgeStatus(
@@ -56,6 +67,7 @@ export function needsBridgeStatus(
 ): boolean {
   return (
     restartHelps(input) ||
+    input.delivery === 'plugin-live' ||
     input.delivery === 'needs-millennium' ||
     input.delivery === 'unavailable'
   );
@@ -80,6 +92,9 @@ export function installSuccessMessage(base: string, input: InstallSuccessInput):
   if (input.delivery) {
     message += DELIVERY_TEXT[input.delivery](unsupportedReason(input));
   }
+  if (bridgeUpdatePending(input)) {
+    message += BRIDGE_UPDATE_TEXT;
+  }
   return message;
 }
 
@@ -90,7 +105,10 @@ export function installSuccessActions(
   const actions: ModalAction[] = [
     { label: 'Зрозуміло', onClick: () => undefined, variant: 'primary' },
   ];
-  if (restartHelps(input) && input.status?.canRestartSteam === true) {
+  if (
+    (restartHelps(input) || bridgeUpdatePending(input)) &&
+    input.status?.canRestartSteam === true
+  ) {
     actions.push({
       label: 'Перезапустити Steam зараз',
       onClick: handlers.restart,

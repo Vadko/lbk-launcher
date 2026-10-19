@@ -12,7 +12,8 @@ export type OfferTarget =
   | SteamPluginSetupVariant
   | 'millennium-site'
   | 'decky-site'
-  | 'settings';
+  | 'settings'
+  | 'steam-restart';
 
 export type OfferIcon =
   | 'download'
@@ -20,7 +21,8 @@ export type OfferIcon =
   | 'update'
   | 'repair'
   | 'remove'
-  | 'settings';
+  | 'settings'
+  | 'restart';
 
 export interface OfferAction {
   key: string;
@@ -92,6 +94,12 @@ export const OFFER_ACTIONS = {
   ),
   deckyInfo: offerAction('decky-site', 'Що таке Decky Loader', 'external', 'decky-site'),
   openSettings: offerAction('settings', 'Відкрити налаштування', 'settings', 'settings'),
+  restartSteam: offerAction(
+    'steam-restart',
+    'Перезапустити Steam',
+    'restart',
+    'steam-restart'
+  ),
 };
 
 export function updateMillenniumAction(version: string): OfferAction {

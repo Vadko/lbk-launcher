@@ -9,7 +9,7 @@ import { openOfferTarget } from '@/renderer/utils/openOfferTarget';
 import { pluginHostEntries } from '@/renderer/utils/pluginHostEntries';
 import {
   pendingLaunchOptionsText,
-  runSteamRestart,
+  restartSteamWithStatus,
   steamBridgeStatusText,
 } from '@/renderer/utils/steamBridge';
 import { AppActionIcon } from '../ui/AppActionIcon';
@@ -43,11 +43,7 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
     }
   }, [isRechecking, runRecheck, recheck]);
 
-  const handleRestart = useCallback(() => {
-    void runSteamRestart(() => window.electronAPI.restartSteam(), {
-      launchOptions: (status?.pendingLaunchOptions.length ?? 0) > 0,
-    });
-  }, [status]);
+  const handleRestart = useCallback(() => restartSteamWithStatus(status), [status]);
 
   if (!status) {
     return null;
@@ -59,7 +55,9 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
   const showRecheck =
     status.code === 'cef-blocked' || status.code === 'millennium-plugin-pending';
   const { lines, actions } =
-    settingOn && hostState ? pluginHostEntries(hostState) : { lines: [], actions: [] };
+    settingOn && hostState
+      ? pluginHostEntries(hostState, status)
+      : { lines: [], actions: [] };
   const hostBusy = hostState?.busy === true;
 
   if (

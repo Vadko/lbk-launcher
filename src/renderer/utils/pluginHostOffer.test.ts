@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AchievementsBadge, AchievementsDelivery } from '@/shared/plugin-host-types';
-import { deckyState, pluginHostState } from './pluginHost.fixture';
+import { deckyState, pluginHostState, steamBridgeStatus } from './pluginHost.fixture';
 import { pluginHostEntries } from './pluginHostEntries';
 import {
   deckyOffer,
@@ -119,8 +119,14 @@ describe('successOffer', () => {
 });
 
 describe('pluginHostEntries', () => {
-  const keys = (...args: Parameters<typeof pluginHostState>) => {
-    const { lines, actions } = pluginHostEntries(pluginHostState(...args));
+  const keys = (
+    overrides: Parameters<typeof pluginHostState>[0] = {},
+    bridge: Parameters<typeof steamBridgeStatus>[0] | null = null
+  ) => {
+    const { lines, actions } = pluginHostEntries(
+      pluginHostState(overrides),
+      bridge && steamBridgeStatus(bridge)
+    );
     return { lines: lines.map((l) => l.key), actions: actions.map((a) => a.key) };
   };
 
@@ -169,6 +175,38 @@ describe('pluginHostEntries', () => {
       lines: ['pending-activate'],
       actions: [],
     });
+  });
+
+  it.each([
+    [
+      'leads with the restart for an outdated plugin',
+      { millennium: { installed: managed() } },
+      { connected: true, updateAfterRestart: true },
+      {
+        lines: ['bridge-update', 'installed-version'],
+        actions: ['steam-restart', 'uninstall'],
+      },
+    ],
+    [
+      'keeps the line when Steam cannot be restarted from here',
+      { millennium: { installed: managed() } },
+      { connected: true, updateAfterRestart: true, canRestartSteam: false },
+      { lines: ['bridge-update', 'installed-version'], actions: ['uninstall'] },
+    ],
+    [
+      'shows it under a Decky host when the Millennium plugin is connected',
+      { host: 'decky' as const, decky: deckyState() },
+      { connected: true, updateAfterRestart: true },
+      { lines: ['bridge-update'], actions: ['steam-restart'] },
+    ],
+    [
+      'stays silent for a current plugin',
+      { millennium: { installed: managed() } },
+      { connected: true },
+      { lines: ['installed-version'], actions: ['uninstall'] },
+    ],
+  ])('%s', (_label, host, bridge, expected) => {
+    expect(keys(host, bridge)).toEqual(expected);
   });
 
   it('recommends Millennium unless the system cannot run it', () => {

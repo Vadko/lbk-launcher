@@ -3,6 +3,7 @@ import {
   DownloadIcon,
   ExternalLinkIcon,
   type LucideIcon,
+  RotateCwIcon,
   Settings2Icon,
   Trash2Icon,
   WrenchIcon,
@@ -17,6 +18,7 @@ const ICONS: Record<OfferIcon, LucideIcon> = {
   repair: WrenchIcon,
   remove: Trash2Icon,
   settings: Settings2Icon,
+  restart: RotateCwIcon,
 };
 
 interface OfferActionIconProps {

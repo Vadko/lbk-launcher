@@ -117,6 +117,12 @@ export function mayReplaceModal(current: ModalConfig | null, own: ModalConfig): 
   return current === null || current === own;
 }
 
+export function restartSteamWithStatus(status: SteamBridgeStatus | null): void {
+  void runSteamRestart(() => window.electronAPI.restartSteam(), {
+    launchOptions: (status?.pendingLaunchOptions.length ?? 0) > 0,
+  });
+}
+
 // Shows progress while Steam restarts, then the outcome; the progress modal is replaced, never stacked.
 export async function runSteamRestart(
   action: () => Promise<SteamRestartOutcome>,
