@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "@lbk/bridge-core": "workspace:*",
+    "@mobily/ts-belt": "3.13.1",
     "@steambrew/ttc": "3.3.7"
   }
 }

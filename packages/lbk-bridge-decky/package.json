@@ -13,6 +13,7 @@
     "@decky/rollup": "1.0.2",
     "@lbk/bridge-core": "workspace:*",
     "@types/react": "19.3.0",
+    "lucide-react": "1.49.0",
     "react": "19.3.0",
     "rollup": "4.62.4"
   }

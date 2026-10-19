@@ -1,6 +1,7 @@
 import type { Plugin } from '@decky/api';
-import { browserEnv, createBridge } from '@lbk/bridge-core/bridge';
-import { useEffect, useState } from 'react';
+import { type BridgeStatus, browserEnv, createBridge } from '@lbk/bridge-core/bridge';
+import { BridgeIcon } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 
 const bridge = createBridge({
   host: 'decky',
@@ -9,21 +10,26 @@ const bridge = createBridge({
   env: browserEnv(),
 });
 
-const statusText = (): string => {
-  if (bridge.state.idle) {
-    return 'Працює через Millennium';
-  }
-  return bridge.state.status === 'connected'
-    ? 'Підключено до LBK Launcher'
-    : 'Очікування LBK Launcher';
+const WAITING = 'Очікування LBK Launcher';
+
+const STATUS_TEXT: Record<BridgeStatus, string> = {
+  idle: WAITING,
+  waiting: WAITING,
+  connecting: WAITING,
+  connected: 'Підключено до LBK Launcher',
+  disposed: WAITING,
+};
+
+const statusText = (): string =>
+  bridge.state.idle ? 'Працює через Millennium' : STATUS_TEXT[bridge.state.status];
+
+const subscribe = (onChange: () => void): (() => void) => {
+  bridge.events.addEventListener('change', onChange);
+  return () => bridge.events.removeEventListener('change', onChange);
 };
 
 const Status = () => {
-  const [text, setText] = useState(statusText);
-  useEffect(() => {
-    const t = setInterval(() => setText(statusText()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const text = useSyncExternalStore(subscribe, statusText);
   return (
     <div style={{ padding: '8px 16px', fontSize: '14px', lineHeight: '20px' }}>
       {text}
@@ -31,27 +37,12 @@ const Status = () => {
   );
 };
 
-const BridgeIcon = () => (
-  <svg
-    width="1em"
-    height="1em"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M2 18h20M5 18v-7M19 18v-7M12 18v-5M3 11c5-6 13-6 18 0" />
-  </svg>
-);
-
 // Decky calls onDismount before it uninstalls, updates or reloads the plugin.
 export default (): Plugin => {
   bridge.start();
   return {
     name: 'LBK Bridge',
-    icon: <BridgeIcon />,
+    icon: <BridgeIcon size="1em" />,
     content: <Status />,
     onDismount: bridge.dispose,
   };

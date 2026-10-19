@@ -232,6 +232,28 @@ describe('LBK Bridge transport', () => {
   });
 });
 
+describe('LBK Bridge events', () => {
+  it('dispatches change once per status transition and not for a repeated status', async () => {
+    const secret = '9a'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50005, secret });
+    const bridge = steam.load('millennium');
+    const seen: string[] = [];
+    bridge.events.addEventListener('change', () => seen.push(bridge.state.status));
+    bridge.start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    await authenticate(ws, secret);
+    expect(bridge.state.connectedAt).not.toBeNull();
+    ws.onclose?.(new CloseEvent('close'));
+    await settle();
+    steam.runTimers();
+    await settle();
+    bridge.dispose();
+    expect(seen).toEqual(['connecting', 'connected', 'waiting', 'disposed']);
+  });
+});
+
 describe('LBK Bridge reconnect backoff', () => {
   const nextWaits = async (steam: ReturnType<typeof makeSteam>) => {
     await settle();

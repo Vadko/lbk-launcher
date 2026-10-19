@@ -9,6 +9,9 @@ import {
   PLUGIN_ONLY_OPS,
   SHARED_STEAM_OPS,
 } from '@lbk/bridge-core/contract';
+import * as React from 'react';
+import * as jsxRuntime from 'react/jsx-runtime';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const PACKAGES = path.resolve(__dirname, '../../../packages');
@@ -88,6 +91,8 @@ describe('Millennium bundle', () => {
       TextEncoder,
       AbortController,
       AbortSignal,
+      EventTarget,
+      Event,
       crypto: webcrypto,
       WebSocket: FakeSocket,
       MILLENNIUM_BACKEND_IPC: { postMessage: () => undefined },
@@ -162,12 +167,22 @@ describe('Decky bundle', () => {
     expect(fs.existsSync(path.join(DECKY_DIR, 'main.py'))).toBe(false);
   });
 
+  it('takes React from Decky instead of bundling a copy', () => {
+    expect(fs.readFileSync(DECKY_INDEX, 'utf8')).not.toMatch(
+      /^import\b|['"]react(-dom)?(\/[\w-]+)?['"]|react\.(transitional\.)?element/m
+    );
+  });
+
   it('starts from its default export, reads ../data/bridge.json and dials LBK', async () => {
     FakeSocket.instances = [];
     const fetched: string[] = [];
-    vi.stubGlobal('SP_JSX', {
-      jsx: (type: unknown, props: unknown) => ({ type, props }),
+    vi.stubGlobal('SP_REACT', {
+      ...React,
+      // Steam renders on the client; renderToStaticMarkup also needs a server snapshot.
+      useSyncExternalStore: (subscribe: () => () => void, snapshot: () => string) =>
+        React.useSyncExternalStore(subscribe, snapshot, snapshot),
     });
+    vi.stubGlobal('SP_JSX', jsxRuntime);
     vi.stubGlobal('WebSocket', FakeSocket);
     vi.stubGlobal('fetch', (url: string) => {
       fetched.push(url);
@@ -177,8 +192,11 @@ describe('Decky bundle', () => {
     const plugin: unknown = (await import(pathToFileURL(DECKY_INDEX).href)).default();
 
     expect(plugin).toMatchObject({ name: 'LBK Bridge' });
-    expect(plugin).toHaveProperty('icon');
-    expect(plugin).toHaveProperty('content');
+    const render = (node: unknown) =>
+      React.isValidElement(node) ? renderToStaticMarkup(node) : null;
+    const { icon, content } = isRecord(plugin) ? plugin : {};
+    expect(render(icon)).toMatch(/^<svg [^>]*width="1em" height="1em"/);
+    expect(render(content)).toContain('>Очікування LBK Launcher</div>');
     expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toMatchObject({
       host: 'decky',
       version: BRIDGE_VERSION,

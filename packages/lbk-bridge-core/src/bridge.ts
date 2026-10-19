@@ -55,10 +55,12 @@ export interface BridgeEnv
   crypto: Pick<Crypto, 'getRandomValues' | 'subtle'>;
 }
 
+export type BridgeStatus = 'idle' | 'waiting' | 'connecting' | 'connected' | 'disposed';
+
 interface BridgeState extends BridgeHandle {
   host: BridgeHost;
   version: string;
-  status: 'idle' | 'waiting' | 'connecting' | 'connected' | 'disposed';
+  status: BridgeStatus;
   idle: boolean;
   connectedAt: number | null;
   lastError: string | null;
@@ -66,8 +68,12 @@ interface BridgeState extends BridgeHandle {
   dispose: () => void;
 }
 
+type ObservedState = Pick<BridgeState, 'status' | 'idle' | 'connectedAt' | 'lastError'>;
+
 export interface Bridge {
   state: BridgeState;
+  // Dispatches 'change' whenever a field of ObservedState changes.
+  events: EventTarget;
   start(): void;
   dispose(): void;
 }
@@ -167,6 +173,15 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     dispose: () => dispose(),
   };
 
+  const events = new EventTarget();
+  const update = (patch: Partial<ObservedState>): void => {
+    const changed = A.some(D.keys(patch), (key) => state[key] !== patch[key]);
+    Object.assign(state, patch);
+    if (changed) {
+      events.dispatchEvent(new Event('change'));
+    }
+  };
+
   const answer = async ({ id, op, args }: RequestFrame): Promise<PluginFrame> => {
     const handler = handlers.get(op);
     if (!handler) {
@@ -187,7 +202,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
   // Resolves once the socket closes, with whether LBK proved the secret first.
   const runSession = (cfg: BridgeConfig): Promise<boolean> =>
     new Promise<boolean>((resolve) => {
-      state.status = 'connecting';
+      update({ status: 'connecting' });
       const ws = env.openSocket(`ws://127.0.0.1:${cfg.port}${BRIDGE_WS_PATH}`);
       socket = ws;
       const cn = toHex(env.crypto.getRandomValues(new Uint8Array(16)));
@@ -229,8 +244,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
         } else if (frame?.t === 'ready' && sn !== null) {
           authed = true;
           handshake.clear();
-          state.status = 'connected';
-          state.connectedAt = Date.now();
+          update({ status: 'connected', connectedAt: Date.now() });
         } else {
           ws.close(4002, 'unexpected message before auth');
         }
@@ -253,7 +267,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
           () => ws.close(4001, 'bad json')
         );
       ws.onerror = () => {
-        state.lastError = 'socket error';
+        update({ lastError: 'socket error' });
       };
       ws.onclose = () => {
         handshake.clear();
@@ -263,7 +277,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
         resolve(authed);
       };
     }).catch((e: unknown) => {
-      state.lastError = errText(e);
+      update({ lastError: errText(e) });
       return false;
     });
 
@@ -281,7 +295,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     let retryMs = RETRY_MIN_MS;
     while (!disposed()) {
       const cfg = await readConfig().catch((e: unknown) => {
-        state.lastError = errText(e);
+        update({ lastError: errText(e) });
         return null;
       });
       if (cfg && !disposed() && (await runSession(cfg))) {
@@ -293,7 +307,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
       if (disposed()) {
         return;
       }
-      state.status = 'waiting';
+      update({ status: 'waiting' });
       await delay(retryMs);
       retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
     }
@@ -304,7 +318,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
       return;
     }
     life.abort();
-    state.status = 'disposed';
+    update({ status: 'disposed' });
     const ws = socket;
     socket = null;
     if (ws) {
@@ -328,7 +342,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     const prev = env.steam.__LBK_BRIDGE__;
     if (prev) {
       if (prev.host !== host && host !== 'millennium') {
-        state.idle = true;
+        update({ idle: true });
         return;
       }
       try {
@@ -342,5 +356,5 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     void transport();
   };
 
-  return { state, start, dispose };
+  return { state, events, start, dispose };
 }

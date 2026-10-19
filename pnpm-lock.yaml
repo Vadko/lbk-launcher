@@ -333,6 +333,9 @@ importers:
       '@types/react':
         specifier: 19.3.0
         version: 19.3.0
+      lucide-react:
+        specifier: 1.49.0
+        version: 1.49.0(@types/react@19.3.0)(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -345,6 +348,9 @@ importers:
       '@lbk/bridge-core':
         specifier: workspace:*
         version: link:../lbk-bridge-core
+      '@mobily/ts-belt':
+        specifier: 3.13.1
+        version: 3.13.1
       '@steambrew/ttc':
         specifier: 3.3.7
         version: 3.3.7(@babel/core@7.29.7)(esbuild@0.27.7)
