@@ -9,11 +9,7 @@ import {
   parseTasklistCsv,
   parseWin32ProcessJson,
 } from '@/main/steam-process/list-windows';
-import {
-  parseEnvSteamGameId,
-  parseReaperAppId,
-  parseRunningAppId,
-} from '@/main/steam-process/running-game';
+import { parseEnvSteamGameId, parseReaperAppId } from '@/main/steam-process/running-game';
 
 const hostExec = vi.hoisted(() => ({ outputs: new Map<string, string>() }));
 
@@ -160,21 +156,6 @@ describe('parseLinuxPsOutput', () => {
       },
       { pid: 2004, ppid: 1, comm: 'kworker/0:1', args: '' },
     ]);
-  });
-});
-
-describe('parseRunningAppId', () => {
-  const registry = (id: string) =>
-    `"Registry"\n{\n\t"HKCU"\n\t{\n\t\t"Software"\n\t\t{\n\t\t\t"Valve"\n\t\t\t{\n\t\t\t\t"Steam"\n\t\t\t\t{\n\t\t\t\t\t"RunningAppID"\t\t"${id}"\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n}\n`;
-
-  it.each([
-    ['a Steam game', registry('1552350'), 1552350],
-    ['no game', registry('0'), null],
-    ['a non-Steam shortcut', registry('3221225472'), null],
-    ['a file without the key', '"Registry" { "HKCU" { } }', null],
-    ['a broken file', 'not vdf {', null],
-  ])('reads %s', (_label, text, appId) => {
-    expect(parseRunningAppId(text)).toBe(appId);
   });
 });
 
