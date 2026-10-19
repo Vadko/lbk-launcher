@@ -15,7 +15,7 @@ import { findWebpackExports, steamWebpackRequire } from './steam-webpack';
 
 const ACH_KEY = Symbol.for('lbk.achievementStrings');
 // A plugin update reloads into a SharedJSContext that still holds the previous hook; a new version replaces it.
-const ACH_VERSION = 4;
+const ACH_VERSION = 5;
 const ACHIEVEMENTS_KEY = 'achievements';
 const ACHIEVEMENT_MAP_KEY = 'achievementmap';
 

@@ -104,7 +104,7 @@ describe('Millennium webkit bundle', () => {
       page.navigate(`${href}&page=2`);
       await settle();
       expect(page.fetched).toEqual([]);
-      expect(Reflect.get(page.sandbox, PAGE)).toMatchObject({ version: 3 });
+      expect(Reflect.get(page.sandbox, PAGE)).toMatchObject({ version: 4 });
 
       page.navigate(next);
       await settle();
@@ -129,7 +129,7 @@ describe('Millennium webkit bundle', () => {
       },
     ]);
     const handle: unknown = Reflect.get(page.sandbox, PAGE);
-    expect(handle).toMatchObject({ version: 3 });
+    expect(handle).toMatchObject({ version: 4 });
     if (G.isObject(handle) && typeof handle.wanted === 'function') {
       expect(handle.wanted()).toEqual([]);
     }

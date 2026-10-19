@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/query-core';
+import { QueryClient, QueryObserver } from '@tanstack/query-core';
 import { describe, expect, it } from 'vitest';
 import { achievementQueryAppId, hookAchievementQueries } from './achievement-query-cache';
 import type { AchText } from './achievement-text';
@@ -186,14 +186,79 @@ describe('hookAchievementQueries', () => {
     ]);
   });
 
-  it('restores Steam text and stops listening on dispose', async () => {
-    const { client, flush, load, queries } = setup();
+  it('restores Steam text and setData and stops listening on dispose', async () => {
+    const client = steamClient();
+    const ownKey = ['achievements', JACKBOX, 'user_achievements', '<steamid>'];
+    await client.fetchQuery({ queryKey: ownKey, queryFn: () => ({}) });
+    const own = client.getQueryCache().find({ queryKey: ownKey });
+    const theirs = own?.setData.bind(own);
+    if (own && theirs) {
+      own.setData = theirs;
+    }
+    const { flush, load, queries } = setup(client);
     await load(schemaKey, fixture.schema);
     queries.dispose();
     expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
+    expect(own?.setData).toBe(theirs);
+    const query = client.getQueryCache().find({ queryKey: schemaKey });
+    expect(Object.hasOwn(query ?? {}, 'setData')).toBe(false);
 
     await client.refetchQueries({ queryKey: schemaKey });
     flush();
     expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
+  });
+});
+
+describe('hookAchievementQueries data written through Query.setData', () => {
+  const otherApp = ['achievements', 10, 'schema'];
+
+  it.each([
+    ['a translated app', schemaKey, [FOOL, v1[FOOL].name, v1[FOOL].desc]],
+    ['an untranslated app', otherApp, steamText[0]],
+  ])(
+    'reaches observers of %s as stored, across refetch and setQueryData',
+    async (_, queryKey, first) => {
+      const { client } = setup();
+      const observer = new QueryObserver(client, {
+        queryKey,
+        queryFn: () => structuredClone(fixture.schema),
+      });
+      const results: unknown[] = [];
+      const unsubscribe = observer.subscribe(({ data }) => {
+        if (data !== undefined) {
+          results.push(shown(data)[0]);
+        }
+      });
+      await observer.refetch();
+      await observer.refetch();
+      client.setQueryData(queryKey, structuredClone(fixture.schema));
+      unsubscribe();
+
+      expect(results.length).toBeGreaterThan(2);
+      expect(results).toEqual(results.map(() => first));
+    }
+  );
+
+  it('keeps the stored data when a refetch brings the same Steam text', async () => {
+    const { client, load } = setup();
+    await load(schemaKey, fixture.schema);
+    const before = client.getQueryData(schemaKey);
+    await client.refetchQueries({ queryKey: schemaKey });
+    expect(client.getQueryData(schemaKey)).toBe(before);
+  });
+
+  it('wraps setData once per hook, and again only after the previous hook let go', async () => {
+    const { client, load, queries } = setup();
+    await load(schemaKey, fixture.schema);
+    const query = client.getQueryCache().find({ queryKey: schemaKey });
+    const wrapped = query?.setData;
+    await client.refetchQueries({ queryKey: schemaKey });
+    expect(query?.setData).toBe(wrapped);
+
+    queries.dispose();
+    const next = setup(client);
+    expect(query?.setData).not.toBe(wrapped);
+    next.queries.dispose();
+    expect(Object.hasOwn(query ?? {}, 'setData')).toBe(false);
   });
 });
