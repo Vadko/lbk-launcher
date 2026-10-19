@@ -10,8 +10,38 @@
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "build": "node build.mjs",
-    "watch": "node build.mjs --watch"
+    "build": "wireit",
+    "watch": "node build.mjs --watch",
+    "sources": "wireit"
+  },
+  "wireit": {
+    "sources": {
+      "files": [
+        "src/**/*.ts",
+        "!src/**/*.test.ts",
+        "!src/**/*.fixture.ts",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    },
+    "build": {
+      "command": "node build.mjs",
+      "files": [
+        "build.mjs"
+      ],
+      "output": [
+        "dist/**"
+      ],
+      "dependencies": [
+        "sources"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
   },
   "dependencies": {
     "@mobily/ts-belt": "3.13.1",
@@ -23,6 +53,7 @@
   "devDependencies": {
     "@decky/ui": "4.13.0",
     "@tanstack/query-core": "5.104.0",
-    "esbuild": "0.27.7"
+    "esbuild": "0.27.7",
+    "wireit": "0.14.13"
   }
 }

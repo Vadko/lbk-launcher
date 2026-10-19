@@ -17,11 +17,11 @@ pnpm format           # biome check --write .
 pnpm dist:win|linux|mac        # electron-builder → release/<version>/
 pnpm dist:mac:local            # env-cmd + CSC_IDENTITY_AUTO_DISCOVERY=false
 pnpm test:e2e         # playwright over CDP :19222 against the packaged app
-pnpm build:bridge     # build packages/*: CDP ops and achievement page IIFEs, Millennium (ttc: index.js, webkit.js) and Decky (rollup) plugins; gitignored output
+pnpm build:bridge     # wireit: build packages/* (CDP ops and achievement page IIFEs, Millennium ttc index.js/webkit.js, Decky rollup) only when their inputs changed; gitignored output, fingerprints and cache in .wireit/
 pnpm dev:bridge       # the same builds in watch mode; `pnpm dev` does not watch packages/
 ```
 
-`.github/workflows/ci.yml` runs `pnpm build:bridge` after install (the `?raw` ops import, tests and knip need the output), then gates 1–5 in that order on Node 24.21.0 / pnpm 11.4.0. `--publish never` is not in the scripts — `release.yml` appends it to `pnpm dist:*`. `.husky/pre-commit` runs `npx lint-staged`, which runs only `biome check --write --no-errors-on-unmatched` on staged `*.{js,ts,tsx,json,css,scss}`; type-check, eslint and knip do not run locally.
+Each package's `wireit` block in its `package.json` lists the inputs (`files`, the lockfile, the workspace packages it reads) and `output`; a build input missing there leaves a stale bundle after `pnpm dev` / `pnpm test:unit`, so add it when a build starts reading a new file. `.github/workflows/ci.yml` runs `pnpm build:bridge` after install (the `?raw` ops import, tests and knip need the output), then gates 1–5 in that order on Node 24.21.0 / pnpm 11.4.0. `--publish never` is not in the scripts — `release.yml` appends it to `pnpm dist:*`. `.husky/pre-commit` runs `npx lint-staged`, which runs only `biome check --write --no-errors-on-unmatched` on staged `*.{js,ts,tsx,json,css,scss}`; type-check, eslint and knip do not run locally.
 
 ## Architecture
 

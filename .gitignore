@@ -50,3 +50,4 @@ spellfix.obj
 .claude/*
 perf-artifacts/
 e2e/results.json
+.wireit/

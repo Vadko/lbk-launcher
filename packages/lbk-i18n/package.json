@@ -6,5 +6,22 @@
   "license": "GPL-3.0-or-later",
   "exports": {
     "./*": "./src/*.ts"
+  },
+  "devDependencies": {
+    "wireit": "0.14.13"
+  },
+  "scripts": {
+    "sources": "wireit"
+  },
+  "wireit": {
+    "sources": {
+      "files": [
+        "src/**/*.ts",
+        "package.json"
+      ],
+      "packageLocks": [
+        "pnpm-lock.yaml"
+      ]
+    }
   }
 }
