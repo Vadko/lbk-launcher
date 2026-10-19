@@ -1,5 +1,5 @@
 // Shared by both plugin builds, the CDP ops bundle and LBK's main process.
-export const BRIDGE_VERSION = '1.4.0';
+export const BRIDGE_VERSION = '1.5.0';
 export const BRIDGE_PLUGIN_NAME = 'lbk-bridge';
 export const BRIDGE_PROTOCOL = 1;
 export const BRIDGE_WS_PATH = '/lbk-bridge';

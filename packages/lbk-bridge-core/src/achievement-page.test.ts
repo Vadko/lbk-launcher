@@ -9,9 +9,13 @@ import {
   queryClientAbove,
   reactRootFiber,
 } from './achievement-page-fiber';
-import { buildSourceMap, toAppStrings } from './achievement-page-sources';
+import {
+  appStringsInFile,
+  buildSourceMap,
+  toAppStrings,
+} from './achievement-page-sources';
 import { matchAchievementPage } from './achievement-page-url';
-import type { AppStrings } from './achievement-text';
+import { type AppStrings, sanitizeAchievements } from './achievement-text';
 import { steamCommunityAchievements as fixture } from './steam-community-achievements.fixture';
 
 const PAGE_KEY = Symbol.for('lbk.achievementPage');
@@ -148,6 +152,27 @@ describe('toAppStrings', () => {
     expect(strings).toEqual({ A: { name: 'Так' }, D: { desc: 'Опис' } });
     expect(strings?.constructor).toBeUndefined();
     expect(toAppStrings({ A: {} })).toBeUndefined();
+  });
+});
+
+describe('appStringsInFile', () => {
+  const file = (apps: unknown, v: unknown = 1) => ({ v, stamp: 's', apps });
+
+  it.each([
+    ['one app', file({ 620: PORTAL2, 400: PORTAL }), '620'],
+    ['another version', file({ 620: PORTAL2 }, 2), '620'],
+    ['an app without strings', file({ 620: PORTAL2 }), '400'],
+    ['an app id from the prototype', file({ 620: PORTAL2 }), 'constructor'],
+    ['apps that are not an object', file([PORTAL2]), '0'],
+    ['an app with blank strings only', file({ 620: { A: { name: '' } } }), '620'],
+    ['a file that is not an object', 'achievements', '620'],
+  ])('reads %s as sanitizeAchievements() does', (_label, raw, appid) => {
+    const sanitized = sanitizeAchievements(raw)?.apps[appid];
+    expect(appStringsInFile(raw, appid)).toEqual(toAppStrings(sanitized));
+  });
+
+  it('keeps the strings of the app it was asked for', () => {
+    expect(appStringsInFile(file({ 620: PORTAL2, 400: PORTAL }), '400')).toEqual(PORTAL);
   });
 });
 

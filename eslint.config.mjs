@@ -186,4 +186,26 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Millennium injects webkit.js into every Steam web page; it gets public achievement strings and nothing that reaches LBK.
+    files: [
+      'packages/lbk-bridge-millennium/webkit/**',
+      'packages/lbk-bridge-millennium/shared/**',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?!\\.\\./shared/|@lbk/bridge-core/achievement-page|@mobily/ts-belt$)',
+              allowTypeImports: true,
+              message:
+                'webkit.js may only import the achievement page modules of the core, ts-belt and ../shared (no zod, no bridge).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

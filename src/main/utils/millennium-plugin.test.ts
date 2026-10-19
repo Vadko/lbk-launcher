@@ -7,16 +7,19 @@ import type * as MillenniumModule from '@/main/utils/millennium';
 
 const PACKAGE_DIR = path.resolve(__dirname, '../../../packages/lbk-bridge-millennium');
 const PLUGIN_INDEX = path.join(PACKAGE_DIR, '.millennium/Dist/index.js');
+const PLUGIN_WEBKIT = path.join(PACKAGE_DIR, '.millennium/Dist/webkit.js');
 
 const fake = {
   info: null as MillenniumModule.MillenniumInfo | null,
   steamRunning: false,
+  webkit: PLUGIN_WEBKIT as string | null,
 };
 
 vi.mock('@/main/plugin-host/bundled-bridge', () => ({
   bundledBridgeFiles: () => ({
     pluginJson: path.join(PACKAGE_DIR, 'plugin.json'),
     index: PLUGIN_INDEX,
+    webkit: fake.webkit,
   }),
 }));
 vi.mock('@/main/utils/platform', () => ({
@@ -47,6 +50,7 @@ describe('plugin install and data files', () => {
     configPath = path.join(root, 'Millennium', 'config.json');
     fs.mkdirSync(path.dirname(pluginsDir), { recursive: true });
     fake.steamRunning = false;
+    fake.webkit = PLUGIN_WEBKIT;
     fake.info = {
       installed: true,
       generation: 'v3',
@@ -69,6 +73,9 @@ describe('plugin install and data files', () => {
     expect(fs.readFileSync(installed('.millennium/Dist/index.js'), 'utf8')).toBe(
       fs.readFileSync(PLUGIN_INDEX, 'utf8')
     );
+    expect(fs.readFileSync(installed('.millennium/Dist/webkit.js'), 'utf8')).toBe(
+      fs.readFileSync(PLUGIN_WEBKIT, 'utf8')
+    );
     expect(plugin.installOrUpdateMillenniumPlugin()).toEqual({
       ok: true,
       changed: false,
@@ -82,6 +89,33 @@ describe('plugin install and data files', () => {
       installedVersion: BRIDGE_VERSION,
       enabled: false,
     });
+  });
+
+  it.each([
+    ['a stale index.js', 'index.js', '// stale'],
+    ['a stale webkit.js', 'webkit.js', '// stale'],
+    ['no webkit.js, as 1.4.0 shipped', 'webkit.js', null],
+  ])('rewrites a plugin with %s', (_label, file, content) => {
+    plugin.installOrUpdateMillenniumPlugin();
+    const target = installed('.millennium/Dist', file);
+    if (content === null) {
+      fs.rmSync(target);
+    } else {
+      fs.writeFileSync(target, content);
+    }
+    expect(plugin.installOrUpdateMillenniumPlugin()).toEqual({ ok: true, changed: true });
+    expect(fs.readFileSync(target)).toEqual(
+      fs.readFileSync(path.join(PACKAGE_DIR, '.millennium/Dist', file))
+    );
+  });
+
+  it('refuses a bundle without webkit.js', () => {
+    fake.webkit = null;
+    expect(plugin.installOrUpdateMillenniumPlugin()).toEqual({
+      ok: false,
+      error: `bundled plugin not found at ${PACKAGE_DIR}`,
+    });
+    expect(fs.existsSync(installed())).toBe(false);
   });
 
   it('removes a copy a crash left mid-swap even when already up to date', () => {
@@ -172,8 +206,9 @@ describe('plugin install and data files', () => {
     expect(fs.readFileSync(configPath, 'utf8')).toBe('{ broken');
   });
 
-  it('removes only its own plugin folder', () => {
+  it('removes only its own plugin folder, webkit.js included', () => {
     plugin.installOrUpdateMillenniumPlugin();
+    expect(fs.existsSync(installed('.millennium/Dist/webkit.js'))).toBe(true);
     plugin.removeMillenniumPluginFiles();
     expect(fs.existsSync(installed())).toBe(false);
   });

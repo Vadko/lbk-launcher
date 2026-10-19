@@ -345,6 +345,12 @@ importers:
 
   packages/lbk-bridge-millennium:
     devDependencies:
+      '@babel/preset-env':
+        specifier: 7.29.7
+        version: 7.29.7(@babel/core@7.29.7)
+      '@babel/preset-react':
+        specifier: 7.29.7
+        version: 7.29.7(@babel/core@7.29.7)
       '@lbk/bridge-core':
         specifier: workspace:*
         version: link:../lbk-bridge-core

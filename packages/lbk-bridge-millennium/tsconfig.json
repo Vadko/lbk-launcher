@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["frontend"]
+  "include": ["frontend", "webkit", "shared"]
 }

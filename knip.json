@@ -16,8 +16,9 @@
       "project": ["src/**/*.tsx"]
     },
     "packages/lbk-bridge-millennium": {
-      "entry": ["frontend/index.tsx"],
-      "project": ["frontend/**/*.tsx"]
+      "entry": ["frontend/index.tsx", "webkit/index.tsx"],
+      "project": ["{frontend,webkit,shared}/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@babel/preset-env", "@babel/preset-react"]
     }
   },
   "ignoreDependencies": [

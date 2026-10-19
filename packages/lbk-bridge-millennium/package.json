@@ -9,6 +9,8 @@
     "watch": "millennium-ttc --build dev --watch --no-update"
   },
   "devDependencies": {
+    "@babel/preset-env": "7.29.7",
+    "@babel/preset-react": "7.29.7",
     "@lbk/bridge-core": "workspace:*",
     "@mobily/ts-belt": "3.13.1",
     "@steambrew/ttc": "3.3.7"

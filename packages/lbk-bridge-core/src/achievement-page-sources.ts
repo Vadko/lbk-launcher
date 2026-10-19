@@ -43,6 +43,13 @@ export function toAppStrings(raw: unknown): AppStrings | undefined {
   return count > 0 ? out : undefined;
 }
 
+// One app of achievements.json under the envelope sanitizeAchievements() checks; web pages get no zod and its global.
+export function appStringsInFile(raw: unknown, appid: string): AppStrings | undefined {
+  const apps: Record<string, unknown> =
+    G.isObject(raw) && raw.v === 1 && G.isObject(raw.apps) ? raw.apps : {};
+  return Object.hasOwn(apps, appid) ? toAppStrings(apps[appid]) : undefined;
+}
+
 const parseQueryData = (raw: unknown): unknown => {
   if (!G.isString(raw)) {
     return raw;

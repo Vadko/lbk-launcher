@@ -6,6 +6,7 @@ const BRIDGE_FILES = {
   millennium: {
     'plugin.json': 'packages/lbk-bridge-millennium/plugin.json',
     'index.js': 'packages/lbk-bridge-millennium/.millennium/Dist/index.js',
+    'webkit.js': 'packages/lbk-bridge-millennium/.millennium/Dist/webkit.js',
   },
   decky: {
     'plugin.json': 'packages/lbk-bridge-decky/plugin.json',

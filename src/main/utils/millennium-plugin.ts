@@ -20,6 +20,8 @@ const DATA_FILES: readonly PluginDataFile[] = ['bridge.json', 'achievements.json
 const PLUGIN_JSON = 'plugin.json';
 const FRONTEND_SUBDIR = path.join('.millennium', 'Dist');
 const FRONTEND_ENTRY = 'index.js';
+// Millennium injects it into Steam's web pages at Steam start; it reads achievements.json from the same folder.
+const WEBKIT_ENTRY = 'webkit.js';
 
 // Every edit goes through one temp file and plans from what it reads, so two must not overlap.
 const configEdits = pLimit(1);
@@ -86,20 +88,52 @@ function collectDataFiles(dir: string): Map<PluginDataFile, string | Buffer> {
   return out;
 }
 
+interface PluginBundle {
+  pluginJson: Buffer;
+  index: Buffer;
+  webkit: Buffer;
+}
+
+function readBundledPlugin(
+  files: ReturnType<typeof bundledBridgeFiles>
+): PluginBundle | null {
+  const pluginJson = readFileOrNull(files.pluginJson);
+  const index = readFileOrNull(files.index);
+  const webkit = files.webkit ? readFileOrNull(files.webkit) : null;
+  return pluginJson && index && webkit ? { pluginJson, index, webkit } : null;
+}
+
+const distFiles = (bundle: PluginBundle): [string, Buffer][] => [
+  [FRONTEND_ENTRY, bundle.index],
+  [WEBKIT_ENTRY, bundle.webkit],
+];
+
+function isUpToDate(dir: string, bundle: PluginBundle): boolean {
+  const same = (file: string, content: Buffer) =>
+    readFileOrNull(file)?.equals(content) === true;
+  return (
+    same(path.join(dir, PLUGIN_JSON), bundle.pluginJson) &&
+    distFiles(bundle).every(([name, content]) =>
+      same(path.join(dir, FRONTEND_SUBDIR, name), content)
+    )
+  );
+}
+
 function writePluginTree(
   target: string,
-  bundledPluginJson: Buffer,
-  bundledIndex: Buffer,
+  bundle: PluginBundle,
   data: Map<PluginDataFile, string | Buffer>
 ): void {
   const frontendDir = path.join(target, FRONTEND_SUBDIR);
   fs.mkdirSync(frontendDir, { recursive: true });
-  fs.writeFileSync(path.join(frontendDir, FRONTEND_ENTRY), bundledIndex);
+  for (const [name, content] of distFiles(bundle)) {
+    fs.writeFileSync(path.join(frontendDir, name), content);
+  }
   for (const [file, content] of data) {
     fs.writeFileSync(path.join(frontendDir, file), content, { mode: dataFileMode() });
   }
   // Written last: Millennium treats any folder with a plugin.json as a plugin.
-  fs.writeFileSync(path.join(target, PLUGIN_JSON), bundledPluginJson);
+  fs.writeFileSync(path.join(target, PLUGIN_JSON), bundle.pluginJson);
 }
 
 export function installOrUpdateMillenniumPlugin():
@@ -115,13 +149,12 @@ export function installOrUpdateMillenniumPlugin():
 
   const pluginsDir = info.pluginsDir;
   const dir = path.join(pluginsDir, BRIDGE_PLUGIN_NAME);
-  const bundled = bundledBridgeFiles('millennium');
-  const bundledPluginJson = readFileOrNull(bundled.pluginJson);
-  const bundledIndex = readFileOrNull(bundled.index);
-  if (!bundledPluginJson || !bundledIndex) {
+  const files = bundledBridgeFiles('millennium');
+  const bundle = readBundledPlugin(files);
+  if (!bundle) {
     return {
       ok: false,
-      error: `bundled plugin not found at ${path.dirname(bundled.pluginJson)}`,
+      error: `bundled plugin not found at ${path.dirname(files.pluginJson)}`,
     };
   }
 
@@ -132,14 +165,7 @@ export function installOrUpdateMillenniumPlugin():
     console.warn('[Millennium] Stale plugin copy not removed:', error);
   }
 
-  const installedPluginJson = readFileOrNull(path.join(dir, PLUGIN_JSON));
-  const installedIndex = readFileOrNull(path.join(dir, FRONTEND_SUBDIR, FRONTEND_ENTRY));
-  if (
-    installedPluginJson &&
-    installedIndex &&
-    installedPluginJson.equals(bundledPluginJson) &&
-    installedIndex.equals(bundledIndex)
-  ) {
+  if (isUpToDate(dir, bundle)) {
     return { ok: true, changed: false };
   }
 
@@ -149,8 +175,7 @@ export function installOrUpdateMillenniumPlugin():
 
   try {
     const data = collectDataFiles(dir);
-    const write = (target: string) =>
-      writePluginTree(target, bundledPluginJson, bundledIndex, data);
+    const write = (target: string) => writePluginTree(target, bundle, data);
     try {
       // Also creates `plugins`, which Millennium makes lazily; the parent existing proves it ran.
       replaceDirAtomic(dir, write);
