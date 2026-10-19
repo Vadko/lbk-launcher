@@ -28,6 +28,7 @@ afterEach(() => {
 });
 
 const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms);
+const POLL_MS = 50;
 
 interface PageSetup {
   strings?: AppStrings;
@@ -86,6 +87,15 @@ function communityPage({
   };
 }
 
+type CommunityPage = ReturnType<typeof communityPage>;
+
+// From document start: the page polls every 50 ms, so it sees a flag set one poll earlier at exactly `at`.
+async function hydrateAt(steam: CommunityPage, at: number): Promise<void> {
+  await advance(at - POLL_MS);
+  steam.ssr.hydrated = true;
+  await advance(POLL_MS);
+}
+
 describe('achievements page: hydration', () => {
   it('leaves the cache alone while a boundary still holds server HTML after SSR.hydrated', async () => {
     const steam = communityPage({ hydrated: true, dehydratedBoundary: true });
@@ -110,7 +120,7 @@ describe('achievements page: hide while waiting', () => {
     steam.page?.dispose();
   });
 
-  it.each<[string, (steam: ReturnType<typeof communityPage>) => Promise<unknown>]>([
+  it.each<[string, (steam: CommunityPage) => Promise<unknown>]>([
     [
       '50 ms after the cache is translated',
       async (steam) => {
@@ -122,9 +132,9 @@ describe('achievements page: hide while waiting', () => {
       },
     ],
     [
-      'after 1 s without a client',
+      '2.5 s after they hid without hydration',
       async (steam) => {
-        await advance(999);
+        await advance(2499);
         expect(steam.hidden()).toBe(1);
         await advance(1);
       },
@@ -159,7 +169,7 @@ describe('achievements page: hide from document start (Decky hint)', () => {
     steam.page?.dispose();
   });
 
-  it.each<[string, (steam: ReturnType<typeof communityPage>) => Promise<unknown>]>([
+  it.each<[string, (steam: CommunityPage) => Promise<unknown>]>([
     [
       'at once when the answer has no strings',
       async (steam) => {
@@ -168,9 +178,27 @@ describe('achievements page: hide from document start (Decky hint)', () => {
       },
     ],
     [
-      '1 s after it hid them, with no answer',
+      '1 s after hydration at 300 ms, with no answer',
       async (steam) => {
+        await hydrateAt(steam, 300);
         await advance(999);
+        expect(steam.hidden()).toBe(1);
+        await advance(1);
+      },
+    ],
+    [
+      '2.5 s after it hid them when hydration comes at 2000 ms',
+      async (steam) => {
+        await hydrateAt(steam, 2000);
+        await advance(499);
+        expect(steam.hidden()).toBe(1);
+        await advance(1);
+      },
+    ],
+    [
+      '2.5 s after it hid them without hydration',
+      async (steam) => {
+        await advance(2499);
         expect(steam.hidden()).toBe(1);
         await advance(1);
       },
@@ -187,16 +215,17 @@ describe('achievements page: hide from document start (Decky hint)', () => {
       },
     ],
     [
-      '50 ms after strings that land once the cache is hooked',
+      '50 ms after strings that land 1200 ms in, after hydration at 300 ms',
       async (steam) => {
-        steam.ssr.hydrated = true;
-        await advance(100);
+        await hydrateAt(steam, 300);
+        await advance(900);
         expect(steam.hidden()).toBe(1);
         steam.page?.provide('620', PORTAL2);
         await advance(0);
         expect(steam.translated()).toBe(true);
+        await advance(49);
         expect(steam.hidden()).toBe(1);
-        await advance(50);
+        await advance(1);
       },
     ],
     ['on dispose', (steam) => Promise.resolve(steam.page?.dispose())],

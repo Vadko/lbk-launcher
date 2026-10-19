@@ -28,12 +28,14 @@ import { isFn } from './steam-globals';
 
 const PAGE_KEY = Symbol.for(PAGE_GLOBAL_KEY);
 // A newer copy started in the same document disposes an older one.
-const PAGE_VERSION = 2;
+const PAGE_VERSION = 3;
 const POLL_MS = 50;
 // Valve reports a failed hydration after 15 s; until then React may still claim any server-rendered node.
 const HYDRATE_MS = 15_000;
 const ISLAND_MS = 15_000;
-const HIDE_MS = 1000;
+// Hidden rows show at most this long after hydration, and never later than the cap from when they hid.
+const HIDE_AFTER_HYDRATION_MS = 1000;
+const HIDE_CAP_MS = 2500;
 // React Query notifies its observers on a later task and React renders right after.
 const SETTLE_MS = 50;
 const PUSH_WAIT_MS = 10_000;
@@ -143,8 +145,11 @@ function findClient(
   );
 }
 
+// Shows the rows now, or within ms; the earliest deadline wins.
+type ShowRows = (ms?: number) => void;
+
 // An adopted sheet adds no node, so React's hydration of the document never meets it.
-function hideFor(win: PageWindow, css: string): () => void {
+function hideFor(win: PageWindow, css: string): ShowRows {
   const doc = win.document;
   if (!doc || typeof CSSStyleSheet === 'undefined') {
     return () => undefined;
@@ -152,11 +157,20 @@ function hideFor(win: PageWindow, css: string): () => void {
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(css);
   doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
-  const timer = setTimeout(() => show(), HIDE_MS);
-  const show = (): void => {
-    clearTimeout(timer);
+  let timers: ReturnType<typeof setTimeout>[] | undefined = [];
+  const show: ShowRows = (ms) => {
+    if (!timers) {
+      return;
+    }
+    if (ms !== undefined) {
+      timers.push(setTimeout(() => show(), ms));
+      return;
+    }
+    timers.forEach(clearTimeout);
+    timers = undefined;
     doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter((s) => s !== sheet);
   };
+  show(HIDE_CAP_MS);
   return show;
 }
 
@@ -175,7 +189,7 @@ function createPage(
   let queries: AchievementQueries | undefined;
   let dom: DomTranslation | undefined;
   let domAllowed = false;
-  let show: (() => void) | undefined;
+  let show: ShowRows | undefined;
   let page: AchievementPageMatch | undefined;
   let unwatch: (() => void) | undefined;
 
@@ -281,6 +295,8 @@ function createPage(
     if (abort.signal.aborted) {
       return;
     }
+    // The server tree hydrated, or the wait gave up long after the cap.
+    show?.(HIDE_AFTER_HYDRATION_MS);
     if (client) {
       queries = hookAchievementQueries(client, has, lookup);
       queries.sync(null);
@@ -344,7 +360,7 @@ function createPage(
       }
     });
     Promise.all([run(PAGE_KINDS[match.kind]), ownAnswer]).then(
-      () => setTimeout(() => show?.(), SETTLE_MS),
+      () => show?.(SETTLE_MS),
       (e: unknown) => {
         if (!abort.signal.aborted) {
           warn(e);
