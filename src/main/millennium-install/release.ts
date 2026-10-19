@@ -52,19 +52,19 @@ export const MILLENNIUM_PIN: MillenniumPin = {
     },
   },
   macos: {
-    tag: 'lbk-v3.5.0-beta.3-lbk.4',
-    version: '3.5.0-beta.3-lbk.4',
+    tag: 'lbk-v3.5.0-beta.3-lbk.5',
+    version: '3.5.0-beta.3-lbk.5',
     assets: {
       arm64: {
-        url: `${FORK}/lbk-v3.5.0-beta.3-lbk.4/millennium-3.5.0-beta.3-lbk.4-darwin-arm64.tar.gz`,
-        sha256: '9d7cd334366c691210330b63a7c4d615b028d5328de88d2f50689edc88e16d52',
-        size: 5895304,
+        url: `${FORK}/lbk-v3.5.0-beta.3-lbk.5/millennium-3.5.0-beta.3-lbk.5-darwin-arm64.tar.gz`,
+        sha256: '2c7a4567fc01fd46e61b7eee8e51dd00a8851a754d8989b509397f204ce58bb8',
+        size: 5896431,
         kind: 'tar.gz',
       },
       x86_64: {
-        url: `${FORK}/lbk-v3.5.0-beta.3-lbk.4/millennium-3.5.0-beta.3-lbk.4-darwin-x86_64.tar.gz`,
-        sha256: '85a919cb733b5f26715bd808d75a9590e0b2110bf45cca8cc1c6cbade170a163',
-        size: 5811648,
+        url: `${FORK}/lbk-v3.5.0-beta.3-lbk.5/millennium-3.5.0-beta.3-lbk.5-darwin-x86_64.tar.gz`,
+        sha256: 'f721fba265e33db863814edf997802fc04c6601c6f4fea1dc7c4050a5c555cd0',
+        size: 5809115,
         kind: 'tar.gz',
       },
     },
