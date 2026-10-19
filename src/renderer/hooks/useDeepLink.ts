@@ -1,11 +1,28 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../store/useStore';
 
-/**
- * Hook for handling deep link navigation.
- * Listens for deep-link events from the main process and navigates to the target translation.
- * URL format: lbk://games/{slug}/{team}
- */
+const isCatalogReady = () => {
+  const { syncStatus } = useStore.getState();
+  return syncStatus === 'ready' || syncStatus === 'error';
+};
+
+// A link can be what launched LBK, while the first sync still leaves the catalog empty
+const whenCatalogReady = () =>
+  new Promise<void>((resolve) => {
+    if (isCatalogReady()) {
+      resolve();
+      return;
+    }
+    const unsubscribe = useStore.subscribe(() => {
+      if (isCatalogReady()) {
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+
+// lbk://games/{slug}/{team}
 export function useDeepLink() {
   const navigate = useNavigate();
 
@@ -15,33 +32,11 @@ export function useDeepLink() {
     }
 
     const handleDeepLink = async (data: { slug: string; team: string }) => {
-      console.log('[DeepLink] Navigating to:', data);
-
       try {
-        // TODO: Optimize - currently loads ALL games to find one
-        // Options: 1) add an API method to search by slug, 2) use a cache
-        const result = await window.electronAPI.fetchGames();
-
-        // Find the game by slug and team
-        const targetGame = result.games.find((game) => {
-          const gameSlug = game.slug || game.id;
-          const slugMatch = gameSlug === data.slug;
-
-          // Check team (can be comma-separated or an exact match)
-          const teamMatch =
-            game.team?.toLowerCase() === data.team.toLowerCase() ||
-            game.team
-              ?.toLowerCase()
-              .split(',')
-              .map((t) => t.trim())
-              .includes(data.team.toLowerCase());
-
-          return slugMatch && teamMatch;
-        });
-
-        if (targetGame) {
-          console.log('[DeepLink] Found game:', targetGame.name, 'by', targetGame.team);
-          navigate(`/game/${targetGame.id}`);
+        await whenCatalogReady();
+        const gameId = await window.electronAPI.findDeepLinkGameId(data.slug, data.team);
+        if (gameId) {
+          navigate(`/game/${gameId}`);
         } else {
           console.warn('[DeepLink] Game not found for:', data);
         }

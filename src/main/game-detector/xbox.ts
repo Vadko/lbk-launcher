@@ -20,6 +20,7 @@
  */
 
 import * as fs from 'fs';
+import pTimeout from 'p-timeout';
 import * as path from 'path';
 import type { InstallPath } from '../../shared/types';
 import { isWindows } from '../utils/platform';
@@ -120,18 +121,13 @@ const stuckDrives = new Set<string>();
 const deadDrives = new Set<string>();
 const rootsListeners = new Set<() => void>();
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
-    timer = setTimeout(() => resolve(TIMED_OUT), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
-}
-
 async function readDriveRoots(drive: string): Promise<XboxRoot[] | typeof TIMED_OUT> {
   const markerPath = path.join(drive, GAMING_ROOT_FILE);
   const read = fs.promises.readFile(markerPath).catch(() => null);
-  const marker = await withTimeout(read, DRIVE_TIMEOUT_MS);
+  const marker = await pTimeout(read, {
+    milliseconds: DRIVE_TIMEOUT_MS,
+    fallback: (): typeof TIMED_OUT => TIMED_OUT,
+  });
 
   if (marker === TIMED_OUT) {
     // A timeout alone proves nothing (HDD spin-up, a busy main thread); the read's own outcome decides

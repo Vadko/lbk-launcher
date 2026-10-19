@@ -1,3 +1,4 @@
+import { keepPreviousData, skipToken, useQuery } from '@tanstack/react-query';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { Download, Play, RefreshCw, ReplaceAll } from 'lucide';
 import {
@@ -10,7 +11,8 @@ import {
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
+import type { BannerData } from '@/main/db/banners-api';
+import { t } from '@/shared/i18n/i18n';
 import type { BannerType } from '@/shared/types.ts';
 import { AuthorsList } from '../components/MainContent/AuthorsList';
 import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
@@ -63,6 +65,9 @@ const EMPTY_BANNER_INFO: BannerInfo = {
   placementType: null,
 };
 
+// Short on purpose: the server caps banner impressions per machine_id, so a later visit asks again
+const BANNER_GC_TIME = 5 * 60 * 1000;
+
 /**
  * Detailed game information page
  * Displays all info, banners, install buttons, etc.
@@ -93,11 +98,6 @@ export const GamePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [bannerCache, setBannerCache] = useState<ReadonlyMap<string, GameBannersResult>>(
-    () => new Map()
-  );
-  const [failedBannerGameId, setFailedBannerGameId] = useState<string | null>(null);
-  const [lastBannerInfo, setLastBannerInfo] = useState<BannerInfo>(EMPTY_BANNER_INFO);
   const isTombstoned = useGameTombstone(gameId);
 
   useEffect(() => {
@@ -187,65 +187,35 @@ export const GamePage: React.FC = () => {
   const selectedGameId = selectedGame?.id;
   const selectedGameSlug = selectedGame?.slug;
 
-  useEffect(() => {
-    if (
-      !selectedGameId ||
-      selectedGameSlug === undefined ||
-      bannerCache.has(selectedGameId)
-    ) {
-      return;
-    }
+  const { data: banners, isError: bannersFailed } = useQuery({
+    queryKey: ['game-banners', selectedGameId, selectedGameSlug],
+    queryFn:
+      selectedGameId && selectedGameSlug !== undefined
+        ? () => window.electronAPI.fetchBannersForGame(selectedGameId, selectedGameSlug)
+        : skipToken,
+    staleTime: Infinity,
+    gcTime: BANNER_GC_TIME,
+    placeholderData: keepPreviousData,
+  });
 
-    let isMounted = true;
-    window.electronAPI
-      .fetchBannersForGame(selectedGameId, selectedGameSlug)
-      .then((result) => {
-        if (isMounted) {
-          setBannerCache((prev) => new Map(prev).set(selectedGameId, result));
-        }
-      })
-      .catch((error) => {
-        if (!isMounted) {
-          return;
-        }
-        console.error('Error loading banner data:', error);
-        setFailedBannerGameId(selectedGameId);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedGameId, selectedGameSlug, bannerCache]);
-
-  // null while a not-yet-cached game is loading, so the previous banner stays and doesn't flicker
-  const resolvedBannerInfo = useMemo((): BannerInfo | null => {
-    if (!selectedGame) {
+  const bannerInfo = useMemo((): BannerInfo => {
+    if (!selectedGame || (!banners && !bannersFailed)) {
       return EMPTY_BANNER_INFO;
     }
 
-    const result = bannerCache.get(selectedGame.id);
-    if (!result && failedBannerGameId !== selectedGame.id) {
-      return null;
-    }
-
     const type =
-      result?.banner?.type ??
-      (result?.isKuli ? 'narrow' : null) ??
+      banners?.banner?.type ??
+      (banners?.isKuli ? 'narrow' : null) ??
       (selectedGame.support_url ? 'small_square' : null) ??
       null;
 
     return {
-      data: result?.banner || null,
-      isKuli: result?.isKuli || false,
+      data: banners?.banner || null,
+      isKuli: banners?.isKuli || false,
       support_url: selectedGame.support_url || null,
       placementType: type,
     };
-  }, [selectedGame, bannerCache, failedBannerGameId]);
-
-  if (resolvedBannerInfo && resolvedBannerInfo !== lastBannerInfo) {
-    setLastBannerInfo(resolvedBannerInfo);
-  }
-  const bannerInfo = resolvedBannerInfo ?? lastBannerInfo;
+  }, [selectedGame, banners, bannersFailed]);
 
   // Record banner impression: Mixpanel + Supabase together
   const trackBannerImpression = useCallback(
@@ -395,7 +365,7 @@ export const GamePage: React.FC = () => {
 
       if (!result.success && result.error) {
         showModal({
-          title: 'Помилка запуску',
+          title: t('launch.errorTitle'),
           message: result.error,
           type: 'error',
         });
@@ -403,8 +373,8 @@ export const GamePage: React.FC = () => {
     } catch (error) {
       console.error('Launch game error:', error);
       showModal({
-        title: 'Помилка запуску',
-        message: error instanceof Error ? error.message : 'Не вдалося запустити гру',
+        title: t('launch.errorTitle'),
+        message: error instanceof Error ? error.message : t('launch.failed'),
         type: 'error',
       });
     }
@@ -437,18 +407,15 @@ export const GamePage: React.FC = () => {
             <EyeOffIcon size={40} className="text-red-400" />
           </div>
           <h2 className="text-xl font-head font-semibold text-text-main mb-3">
-            Контент для дорослих
+            {t('adultWarning.title')}
           </h2>
-          <p className="text-text-muted mb-6">
-            Ця гра містить контент для дорослих (18+). Щоб переглянути цю гру, увімкніть
-            відповідне налаштування.
-          </p>
+          <p className="text-text-muted mb-6">{t('adultWarning.message')}</p>
           <button
             onClick={openSettingsModal}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             <SettingsIcon size={20} />
-            Відкрити налаштування
+            {t('adultWarning.openSettings')}
           </button>
         </div>
       </div>
@@ -504,8 +471,7 @@ export const GamePage: React.FC = () => {
 
           {isTombstoned && (
             <div className="glass-card-no-motion border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
-              Цей переклад більше не доступний у каталозі. Ви можете лише видалити
-              локалізацію — повторне встановлення недоступне.
+              {t('gamePage.tombstone')}
             </div>
           )}
 
@@ -530,7 +496,7 @@ export const GamePage: React.FC = () => {
                   data-gamepad-action
                   data-gamepad-primary-action
                 >
-                  Грати
+                  {t('gameActions.play')}
                 </Button>
               )}
               {isWorkshop && (
@@ -566,9 +532,9 @@ export const GamePage: React.FC = () => {
                   }
                   title={
                     isTombstoned
-                      ? 'Переклад більше не доступний у каталозі'
+                      ? t('gameActions.removedFromCatalog')
                       : !isOnline
-                        ? 'Відсутнє підключення до Інтернету'
+                        ? t('gameActions.offline')
                         : undefined
                   }
                   data-gamepad-primary-action
@@ -589,9 +555,9 @@ export const GamePage: React.FC = () => {
                     onClick={() => void handleRerunInstaller()}
                     aria-busy={rerunPhase === 'pending'}
                     data-gamepad-action
-                    title="Запустити інсталятор/скрипт повторно"
+                    title={t('gameActions.rerunTitle')}
                   >
-                    Перевстановити
+                    {t('gameActions.rerun')}
                   </Button>
                 )}
               {!isWorkshop && installationInfo && !isInstalling && (
@@ -600,7 +566,7 @@ export const GamePage: React.FC = () => {
                   icon={<Trash2Icon size={20} />}
                   onClick={handleUninstall}
                   disabled={isUninstalling}
-                  title="Видалити українізатор"
+                  title={t('gameActions.uninstallTitle')}
                   data-gamepad-action
                 />
               )}
@@ -629,7 +595,7 @@ export const GamePage: React.FC = () => {
                     data-gamepad-action
                     className="support-button"
                   >
-                    Підтримати
+                    {t('gameActions.support')}
                   </Button>
                 )}
               {isTranslationInstalled && (
@@ -640,7 +606,7 @@ export const GamePage: React.FC = () => {
                   data-gamepad-action
                   className="support-button"
                 >
-                  Лишити відгук
+                  {t('gameActions.feedback')}
                 </Button>
               )}
             </div>
@@ -689,7 +655,7 @@ export const GamePage: React.FC = () => {
                             onClick={handleCancelDownload}
                             className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
                           >
-                            Скасувати
+                            {t('gameActions.cancel')}
                           </button>
                         </div>
                       )}
@@ -703,7 +669,7 @@ export const GamePage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm font-medium text-text-main">
-                      Видалення українізатора та відновлення оригінальних файлів...
+                      {t('gamePage.uninstalling')}
                     </span>
                   </div>
                 </div>
@@ -731,8 +697,8 @@ export const GamePage: React.FC = () => {
                   <div>
                     <div className="text-xs text-text-muted">
                       {selectedGame.team.includes(',')
-                        ? 'Автори локалізації'
-                        : 'Автор локалізації'}
+                        ? t('gameAuthors.many')
+                        : t('gameAuthors.one')}
                     </div>
                     <AuthorsList team={selectedGame.team} maxVisible={3} />
                   </div>
@@ -824,7 +790,7 @@ export const GamePage: React.FC = () => {
               className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про українізатор
+                {t('gameSections.aboutTranslation')}
               </h3>
               <MarkdownText
                 text={selectedGame.description}
@@ -868,7 +834,7 @@ export const GamePage: React.FC = () => {
               className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про гру
+                {t('gameSections.aboutGame')}
               </h3>
               <MarkdownText
                 text={selectedGame.game_description}

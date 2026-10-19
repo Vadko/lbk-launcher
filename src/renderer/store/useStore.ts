@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { t } from '@/shared/i18n/i18n';
 import type {
   DetectedGameInfo,
   DownloadProgress,
@@ -75,10 +76,10 @@ interface Store {
 
 // Statuses whose transition to a different status is worth notifying about
 const statusLabels: Record<string, string> = {
-  planned: 'Заплановано',
-  'in-progress': 'Ранній доступ',
-  completed: 'Завершено',
-  'tech-improvement': 'Технічна доробка',
+  planned: t('gameStatus.planned'),
+  'in-progress': t('gameStatus.inProgress'),
+  completed: t('gameStatus.completed'),
+  'tech-improvement': t('gameStatus.techImprovement'),
 };
 
 const watchedStatuses = new Set(['planned', 'tech-improvement']);
@@ -236,7 +237,7 @@ export const useStore = create<Store>((set, get) => ({
         }
 
         const newChecking = new Map(state.isCheckingInstallation);
-        newChecking.set(gameId, false);
+        newChecking.delete(gameId);
 
         return {
           installedTranslations: newInstalledTranslations,
@@ -247,7 +248,7 @@ export const useStore = create<Store>((set, get) => ({
       console.error('Error checking installation:', error);
       set((state) => {
         const newChecking = new Map(state.isCheckingInstallation);
-        newChecking.set(gameId, false);
+        newChecking.delete(gameId);
         return { isCheckingInstallation: newChecking };
       });
     }
@@ -379,11 +380,11 @@ export const useStore = create<Store>((set, get) => ({
 
     // Progress type labels
     const progressLabels: Record<string, string> = {
-      translation_progress: 'Переклад',
-      editing_progress: 'Редактура',
-      voice_progress: 'Озвучення',
-      textures_progress: 'Текстури',
-      fonts_progress: 'Шрифти',
+      translation_progress: t('translationProgress.translation'),
+      editing_progress: t('translationProgress.editing'),
+      voice_progress: t('translationProgress.voice'),
+      textures_progress: t('translationProgress.textures'),
+      fonts_progress: t('translationProgress.fonts'),
     };
 
     // Check each subscribed game

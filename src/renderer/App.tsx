@@ -5,12 +5,13 @@ import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
 import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
+import { useSteamBridgeStatusSync } from './hooks/useSteamBridgeStatusSync';
+import { useSteamRestartPrompt } from './hooks/useSteamRestartPrompt';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
 import { NewsPage } from './pages/NewsPage';
 import { SitePage } from './pages/SitePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
-import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
 import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
@@ -399,32 +400,8 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // "Restart Steam" prompt from the Settings CEF toggle when the port isn't
-  // open yet. Dismissible — installs that need CEF show their own mandatory one.
-  useEffect(() => {
-    if (!window.electronAPI?.onSteamRestartRequired) {
-      return;
-    }
-    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
-      useModalStore.getState().showModal({
-        title: 'Перезапустіть Steam',
-        message:
-          'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
-          'Можна зробити це пізніше — налаштування вже збережено.',
-        type: 'info',
-        actions: [
-          {
-            label: 'Перезапустити Steam',
-            onClick: () => {
-              window.electronAPI.restartSteam();
-            },
-            variant: 'primary',
-          },
-        ],
-      });
-    });
-    return unsubscribe;
-  }, []);
+  useSteamRestartPrompt();
+  useSteamBridgeStatusSync();
 
   const handleOnlineEvent = () => {
     setOnline(true);

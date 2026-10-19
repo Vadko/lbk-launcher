@@ -1,0 +1,355 @@
+import { afterEach, describe, expect, it } from 'vitest';
+import { type Bridge, type BridgeEnv, createBridge } from './bridge';
+import type { BridgeHost } from './contract';
+import { hmacHex } from './protocol';
+import type { BridgeSocket } from './socket';
+import type { SteamGlobals } from './steam-globals';
+
+class FakeSocket implements BridgeSocket {
+  static instances: FakeSocket[] = [];
+  readyState = 1;
+  sent: Record<string, unknown>[] = [];
+  closed = false;
+  onopen: ((ev: Event) => void) | null = null;
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+  onerror: ((ev: Event) => void) | null = null;
+  onclose: ((ev: CloseEvent) => void) | null = null;
+  constructor(readonly url: string) {
+    FakeSocket.instances.push(this);
+  }
+  send(data: string): void {
+    this.sent.push(JSON.parse(data));
+  }
+  close(): void {
+    this.closed = true;
+  }
+}
+
+function makeStorage(): Pick<Storage, 'getItem' | 'setItem'> {
+  const items = new Map<string, string>();
+  return {
+    getItem: (key) => items.get(key) ?? null,
+    setItem: (key, value) => void items.set(key, value),
+  };
+}
+
+// Achievements poll for Steam's UI on real timers until the bridge is disposed.
+const loaded: Bridge[] = [];
+afterEach(() => {
+  for (const bridge of loaded.splice(0)) {
+    bridge.dispose();
+  }
+});
+
+function makeSteam(bridgeJson: unknown = null, localStorage = makeStorage()) {
+  const timers = new Map<number, { fn: TimerHandler; ms: number | undefined }>();
+  let nextTimer = 0;
+  let fetches = 0;
+  const steam: SteamGlobals = { localStorage };
+  steam.window = steam;
+  const env: BridgeEnv = {
+    steam,
+    openSocket: (url) => new FakeSocket(url),
+    fetch: () => {
+      fetches++;
+      return Promise.resolve({
+        ok: bridgeJson !== null,
+        json: () => Promise.resolve(bridgeJson),
+      });
+    },
+    crypto: globalThis.crypto,
+    setTimeout: (fn, ms) => {
+      nextTimer++;
+      timers.set(nextTimer, { fn, ms });
+      return nextTimer;
+    },
+    clearTimeout: (handle) => {
+      if (handle !== undefined) {
+        timers.delete(handle);
+      }
+    },
+  };
+  const dataBase = new URL('http://127.0.0.1:1337/plugins/LBK%20Bridge/data/');
+  return {
+    steam,
+    fetches: () => fetches,
+    load: (host: BridgeHost) => {
+      const bridge = createBridge({ host, dataBase, env });
+      loaded.push(bridge);
+      return bridge;
+    },
+    pendingTimers: () => [...timers.values()].map(({ ms }) => ms),
+    runTimers() {
+      const pending = [...timers.values()];
+      timers.clear();
+      for (const { fn } of pending) {
+        if (typeof fn === 'function') {
+          fn();
+        }
+      }
+    },
+  };
+}
+
+// connect() awaits WebCrypto before it dials.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+const frame = (data: unknown) =>
+  new MessageEvent('message', { data: JSON.stringify(data) });
+
+// Plays LBK's side of the handshake on a socket the bridge dialled.
+async function authenticate(ws: FakeSocket, secret: string): Promise<void> {
+  ws.onopen?.(new Event('open'));
+  const cn = String(ws.sent[0].cn);
+  const sn = 'ef'.repeat(16);
+  const sp = await hmacHex(globalThis.crypto.subtle, secret, `server|${cn}|${sn}`);
+  ws.onmessage?.(frame({ t: 'challenge', sn, sp }));
+  await settle();
+  ws.onmessage?.(frame({ t: 'ready' }));
+}
+
+describe('LBK Bridge double-load guard', () => {
+  it('replaces its own earlier copy on a reload', () => {
+    const steam = makeSteam();
+    const first = steam.load('millennium');
+    first.start();
+    expect(steam.steam.__LBK_BRIDGE__).toBe(first.state);
+
+    const second = steam.load('millennium');
+    second.start();
+    expect(first.state.status).toBe('disposed');
+    expect(second.state.idle).toBe(false);
+    expect(steam.steam.__LBK_BRIDGE__).toBe(second.state);
+  });
+
+  it('keeps the Decky copy idle while Millennium runs the bridge', () => {
+    const steam = makeSteam();
+    const millennium = steam.load('millennium');
+    millennium.start();
+    const decky = steam.load('decky');
+    decky.start();
+    expect(decky.state.idle).toBe(true);
+    expect(millennium.state.status).not.toBe('disposed');
+    expect(steam.steam.__LBK_BRIDGE__).toBe(millennium.state);
+
+    decky.dispose();
+    expect(steam.steam.__LBK_BRIDGE__).toBe(millennium.state);
+  });
+
+  it('lets Millennium take over from a running Decky copy', () => {
+    const steam = makeSteam();
+    const decky = steam.load('decky');
+    decky.start();
+    const millennium = steam.load('millennium');
+    millennium.start();
+    expect(decky.state.status).toBe('disposed');
+    expect(steam.steam.__LBK_BRIDGE__).toBe(millennium.state);
+    expect(millennium.state.host).toBe('millennium');
+  });
+
+  it('stops reconnecting once disposed', async () => {
+    const steam = makeSteam();
+    const copy = steam.load('decky');
+    copy.start();
+    await settle();
+    const fetches = steam.fetches();
+    expect(fetches).toBeGreaterThan(0);
+
+    copy.dispose();
+    expect(steam.steam.__LBK_BRIDGE__).toBeUndefined();
+    steam.runTimers();
+    await settle();
+    expect(steam.fetches()).toBe(fetches);
+  });
+});
+
+describe('LBK Bridge transport', () => {
+  it('answers requests only after the server proved the secret', async () => {
+    const secret = '34'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50002, secret });
+    steam.load('millennium').start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    ws.onopen?.(new Event('open'));
+    const cn = String(ws.sent[0].cn);
+    const sn = 'ef'.repeat(16);
+
+    ws.onmessage?.(frame({ t: 'challenge', sn, sp: 'f'.repeat(64) }));
+    await settle();
+    expect(ws.closed).toBe(true);
+
+    FakeSocket.instances = [];
+    const honest = makeSteam({ v: 1, port: 50002, secret });
+    honest.load('millennium').start();
+    await settle();
+    const ok = FakeSocket.instances[0];
+    ok.onopen?.(new Event('open'));
+    const okCn = String(ok.sent[0].cn);
+    const sp = await hmacHex(globalThis.crypto.subtle, secret, `server|${okCn}|${sn}`);
+    ok.onmessage?.(frame({ t: 'challenge', sn, sp }));
+    await settle();
+    expect(ok.sent[1]).toEqual({
+      t: 'auth',
+      cp: await hmacHex(globalThis.crypto.subtle, secret, `client|${sn}|${okCn}`),
+    });
+    ok.onmessage?.(frame({ t: 'ready' }));
+    ok.onmessage?.(frame({ t: 'req', id: 7, op: 'ping', args: {} }));
+    ok.onmessage?.(frame({ t: 'req', id: 8, op: 'nope' }));
+    await settle();
+    expect(ok.sent.slice(2)).toEqual([
+      { t: 'res', id: 7, ok: true, value: { ok: true } },
+      { t: 'res', id: 8, ok: false, error: 'unknown op' },
+    ]);
+    expect(cn).not.toBe(okCn);
+  });
+
+  it('times out a hung op on its own clock and still answers the next request', async () => {
+    const secret = '56'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50003, secret });
+    steam.steam.DeckyBackend = { call: () => new Promise(() => undefined) };
+    steam.load('decky').start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    await authenticate(ws, secret);
+    const install = {
+      artifact: 'file:///home/deck/.cache/lbk-launcher/decky/lbk-bridge-1.4.0.zip',
+      version: '1.4.0',
+      hash: 'a'.repeat(64),
+      installType: 0,
+    };
+    ws.onmessage?.(frame({ t: 'req', id: 1, op: 'deckyRequestInstall', args: install }));
+    ws.onmessage?.(frame({ t: 'req', id: 2, op: 'ping' }));
+    await settle();
+    expect(ws.sent).toHaveLength(2);
+
+    steam.runTimers();
+    await settle();
+    expect(ws.sent.slice(2)).toEqual([
+      { t: 'res', id: 1, ok: false, error: 'timed out after 30000ms' },
+      { t: 'res', id: 2, ok: true, value: { ok: true } },
+    ]);
+  });
+});
+
+describe('LBK Bridge events', () => {
+  it('dispatches change once per status transition and not for a repeated status', async () => {
+    const secret = '9a'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50005, secret });
+    const bridge = steam.load('millennium');
+    const seen: string[] = [];
+    bridge.events.addEventListener('change', () => seen.push(bridge.state.status));
+    bridge.start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    await authenticate(ws, secret);
+    expect(bridge.state.connectedAt).not.toBeNull();
+    ws.onclose?.(new CloseEvent('close'));
+    await settle();
+    steam.runTimers();
+    await settle();
+    bridge.dispose();
+    expect(seen).toEqual(['connecting', 'connected', 'waiting', 'disposed']);
+  });
+
+  it('dispatches once when a Decky copy goes idle next to Millennium', () => {
+    const steam = makeSteam();
+    steam.load('millennium').start();
+    const decky = steam.load('decky');
+    const seen: boolean[] = [];
+    decky.events.addEventListener('change', () => seen.push(decky.state.idle));
+    decky.start();
+    expect(seen).toEqual([true]);
+  });
+
+  it('dispatches a repeated socket error once and nothing once disposed', async () => {
+    const errorsSeen = async (disposeFirst: boolean) => {
+      FakeSocket.instances = [];
+      const steam = makeSteam({ v: 1, port: 50006, secret: 'bc'.repeat(32) });
+      const bridge = steam.load('millennium');
+      bridge.start();
+      await settle();
+      if (disposeFirst) {
+        bridge.dispose();
+      }
+      const seen: (string | null)[] = [];
+      bridge.events.addEventListener('change', () => seen.push(bridge.state.lastError));
+      const ws = FakeSocket.instances[0];
+      ws.onerror?.(new Event('error'));
+      ws.onerror?.(new Event('error'));
+      return seen;
+    };
+    expect(await errorsSeen(false)).toEqual(['socket error']);
+    expect(await errorsSeen(true)).toEqual([]);
+  });
+});
+
+describe('LBK Bridge reconnect backoff', () => {
+  const nextWaits = async (steam: ReturnType<typeof makeSteam>) => {
+    await settle();
+    const waits = steam.pendingTimers();
+    steam.runTimers();
+    return waits;
+  };
+
+  it('doubles the wait from 2 s up to 10 s while bridge.json is missing', async () => {
+    const steam = makeSteam();
+    steam.load('decky').start();
+    const waits: (number | undefined)[] = [];
+    for (let i = 0; i < 5; i++) {
+      waits.push(...(await nextWaits(steam)));
+    }
+    expect(waits).toEqual([2000, 4000, 8000, 10000, 10000]);
+  });
+
+  it('starts over at 2 s once an authenticated session closes', async () => {
+    const secret = '78'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50004, secret });
+    steam.load('millennium').start();
+    const waits: (number | undefined)[] = [];
+    for (const authed of [false, false, true]) {
+      await settle();
+      const ws = FakeSocket.instances[FakeSocket.instances.length - 1];
+      if (authed) {
+        await authenticate(ws, secret);
+      }
+      ws.onclose?.(new CloseEvent('close'));
+      waits.push(...(await nextWaits(steam)));
+    }
+    waits.push(...(await nextWaits(steam)), ...(await nextWaits(steam)));
+    expect(waits).toEqual([2000, 4000, 2000, 4000, 8000]);
+    expect(FakeSocket.instances).toHaveLength(3);
+  });
+});
+
+describe('LBK Bridge spent secrets', () => {
+  it('never redials a secret whose session ended, even after Steam restarts', async () => {
+    const secret = 'cd'.repeat(32);
+    const bridge = { v: 1, port: 50001, secret };
+    const storage = makeStorage();
+    FakeSocket.instances = [];
+
+    const steam = makeSteam(bridge, storage);
+    steam.load('millennium').start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    await authenticate(ws, secret);
+    ws.onclose?.(new CloseEvent('close'));
+    await settle();
+
+    FakeSocket.instances = [];
+    const restarted = makeSteam(bridge, storage);
+    restarted.load('millennium').start();
+    await settle();
+    expect(FakeSocket.instances).toHaveLength(0);
+
+    FakeSocket.instances = [];
+    const rotated = makeSteam({ ...bridge, secret: '12'.repeat(32) }, storage);
+    rotated.load('millennium').start();
+    await settle();
+    expect(FakeSocket.instances).toHaveLength(1);
+  });
+});

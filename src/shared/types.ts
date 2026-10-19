@@ -4,6 +4,17 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type {
+  AchievementsDelivery,
+  ApplyPendingLaunchOptionsResult,
+  DeckyInstallResult,
+  DeckyLoaderInstallResult,
+  MillenniumInstallResult,
+  MillenniumProgress,
+  PluginHostState,
+  RestartSteamResult,
+  SteamBridgeStatus,
+} from './plugin-host-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
@@ -72,13 +83,13 @@ export interface GamePath {
 interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
-  /**
-   * Source archive hash that produced these files. Used to detect whether a
-   * subsequent update actually changes the component — if the hash matches,
-   * the bytes on disk are identical and we can skip both the re-install and
-   * any "restart Steam" prompts tied to this component.
-   */
+  // Source archive hash; a match on update means the re-install can be skipped.
   archiveHash?: string;
+}
+
+// `files` is empty for new installs; legacy installs list the .bin copied into appcache/stats.
+export interface AchievementsComponent extends InstallationComponent {
+  appIds?: number[];
 }
 
 export interface InstallationInfo {
@@ -96,7 +107,7 @@ export interface InstallationInfo {
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;
-    achievements?: InstallationComponent;
+    achievements?: AchievementsComponent;
   };
 }
 
@@ -140,26 +151,16 @@ export interface InstallationStatus {
 export interface InstallResult {
   success: boolean;
   paused?: boolean;
-  /**
-   * Launch options for the game couldn't be applied because Steam is running
-   * and CEF isn't reachable (typically Millennium-modded Steam). Renderer can
-   * offer the user a "restart Steam to apply" prompt that calls
-   * `applyPendingLaunchOptions`.
-   */
-  launchOptionsPending?: boolean;
+  // Launch options were queued and get written on the next Steam exit.
+  launchOptionsQueued?: boolean;
   /**
    * The launch options could not be written for a reason restarting Steam
    * won't fix. The install itself succeeded; without them the translation
    * runs unmodded, so it is surfaced rather than only logged.
    */
   launchOptionsError?: string;
-  /**
-   * Whether achievement files were actually written this install. False when
-   * the user re-runs an install whose achievement archive hash matches what's
-   * already on disk — used to suppress the "restart Steam for achievements"
-   * prompt in that case.
-   */
-  achievementsChanged?: boolean;
+  // Set only when achievement strings were installed.
+  achievementsDelivery?: AchievementsDelivery;
   error?: {
     message: string;
     needsManualSelection?: boolean;
@@ -234,7 +235,13 @@ export interface FeedbackReplyPayload {
   createdAt: string;
 }
 
-export type SteamBridgeFailure = 'cef-unavailable' | 'steam-not-running' | 'failed';
+export type SteamBridgeFailure =
+  | 'cef-unavailable'
+  | 'steam-not-running'
+  | 'failed'
+  | 'cef-blocked'
+  | 'millennium-plugin-pending'
+  | 'millennium-outdated';
 
 export type SteamLibraryFailure = SteamBridgeFailure | 'library-unavailable';
 
@@ -380,10 +387,35 @@ export interface ElectronAPI {
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
-  restartSteam: () => Promise<{ success: boolean; error?: string }>;
-  applyPendingLaunchOptions: (
-    game: Game
-  ) => Promise<{ success: boolean; error?: string }>;
+  restartSteam: () => Promise<RestartSteamResult>;
+  applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
+  getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
+  // Clears the persisted "blocked" verdict and re-verifies.
+  recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
+  onSteamBridgeStatusChanged: (
+    callback: (status: SteamBridgeStatus) => void
+  ) => () => void;
+  onSteamPendingActionsApplied: (
+    callback: (payload: { gameIds: string[] }) => void
+  ) => () => void;
+  // Millennium / Decky plugin host
+  getPluginHostState: () => Promise<PluginHostState | null>;
+  // Download, verify and stage Millennium; touches nothing outside userData.
+  prepareMillennium: () => Promise<MillenniumInstallResult>;
+  activateMillennium: (opts: {
+    restart: 'now' | 'on-exit';
+  }) => Promise<MillenniumInstallResult>;
+  uninstallMillennium: (opts: {
+    purge: boolean;
+    restart: 'now' | 'on-exit';
+  }) => Promise<MillenniumInstallResult>;
+  cancelMillennium: () => Promise<{ success: boolean }>;
+  requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
+  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
+  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
+  saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
+  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
   /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
   onSteamRestartRequired: (callback: () => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
@@ -472,6 +504,7 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  findDeepLinkGameId: (slug: string, team: string) => Promise<string | null>;
   /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
   notifyReady: () => void;
   // Sync status

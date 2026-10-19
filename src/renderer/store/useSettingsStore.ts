@@ -48,6 +48,8 @@ interface SettingsStore {
   gamepadSoundsEnabled: boolean;
   steamCefDebuggingEnabled: boolean;
   steamCustomArtworkEnabled: boolean;
+  millenniumOfferDeclined: boolean;
+  deckyPluginOfferDeclined: boolean;
   productAnalyticsEnabled: boolean;
   localizationAnalyticsEnabled: boolean;
   crashDiagnosticsEnabled: boolean;
@@ -80,6 +82,8 @@ interface SettingsStore {
   toggleGamepadSounds: () => void;
   toggleSteamCefDebugging: () => void;
   toggleSteamCustomArtwork: () => void;
+  declineMillenniumOffer: () => void;
+  declineDeckyPluginOffer: () => void;
   toggleProductAnalytics: () => void;
   toggleLocalizationAnalytics: () => void;
   toggleCrashDiagnostics: () => void;
@@ -103,6 +107,8 @@ export const useSettingsStore = create<SettingsStore>()(
       gamepadSoundsEnabled: true,
       steamCefDebuggingEnabled: true,
       steamCustomArtworkEnabled: true,
+      millenniumOfferDeclined: false,
+      deckyPluginOfferDeclined: false,
       productAnalyticsEnabled: true,
       localizationAnalyticsEnabled: true,
       crashDiagnosticsEnabled: true,
@@ -211,6 +217,10 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleSteamCustomArtwork: () =>
         set((state) => ({ steamCustomArtworkEnabled: !state.steamCustomArtworkEnabled })),
 
+      declineMillenniumOffer: () => set({ millenniumOfferDeclined: true }),
+
+      declineDeckyPluginOffer: () => set({ deckyPluginOfferDeclined: true }),
+
       toggleProductAnalytics: () =>
         set((state) => ({ productAnalyticsEnabled: !state.productAnalyticsEnabled })),
 
@@ -253,6 +263,8 @@ export const useSettingsStore = create<SettingsStore>()(
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,
         steamCustomArtworkEnabled: state.steamCustomArtworkEnabled,
+        millenniumOfferDeclined: state.millenniumOfferDeclined,
+        deckyPluginOfferDeclined: state.deckyPluginOfferDeclined,
         productAnalyticsEnabled: state.productAnalyticsEnabled,
         localizationAnalyticsEnabled: state.localizationAnalyticsEnabled,
         crashDiagnosticsEnabled: state.crashDiagnosticsEnabled,

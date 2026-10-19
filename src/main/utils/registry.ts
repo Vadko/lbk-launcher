@@ -9,3 +9,12 @@ export function getRegistryString(hive: HKEY, key: string, name: string): string
   );
   return typeof value?.data === 'string' ? value.data : null;
 }
+
+/** A DWORD value of a registry key, or null when the key or value is missing. */
+export function getRegistryDword(hive: HKEY, key: string, name: string): number | null {
+  const lower = name.toLowerCase();
+  const value = enumerateValuesSafe(hive, key).find(
+    (entry) => entry?.name.toLowerCase() === lower
+  );
+  return typeof value?.data === 'number' ? value.data : null;
+}

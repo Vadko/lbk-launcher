@@ -3,6 +3,8 @@ import { init as reactInit } from '@sentry/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { I18nextProvider } from 'react-i18next';
+import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initFeedbackReplies } from './store/feedbackReplyBridge';
@@ -45,9 +47,11 @@ try {
 
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </I18nextProvider>
     </React.StrictMode>
   );
 

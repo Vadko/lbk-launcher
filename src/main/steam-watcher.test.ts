@@ -22,13 +22,15 @@ vi.mock('./game-detector/steam', () => ({
   invalidateSteamLibraryAppIdsCache: vi.fn(),
 }));
 
+const send = vi.hoisted(() => vi.fn());
+
+vi.mock('./window', () => ({ sendToRenderer: send }));
+
 // Longer than the watcher's 2 s debounce
 const SETTLE_MS = 2600;
 const settle = () => new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
 
 let root: string;
-const send = vi.fn();
-const mainWindow = { webContents: { send } } as unknown as Electron.BrowserWindow;
 
 // Steam writes these files to a temp name and renames it over the original
 function replaceFile(file: string, content: string): void {
@@ -57,7 +59,7 @@ beforeEach(() => {
   steam.licensecacheSize = 100;
   steam.lastKnownLicensecacheSize = 100;
   send.mockClear();
-  startSteamWatcher(mainWindow);
+  startSteamWatcher();
 });
 
 afterEach(() => {

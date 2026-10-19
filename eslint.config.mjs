@@ -80,6 +80,16 @@ export default tseslint.config(
         },
       ],
 
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
+          message: 'Parse untrusted values with a zod schema instead of `as unknown as`.',
+        },
+      ],
+
+      'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
       'no-console': 'off',
       'no-debugger': 'warn',
       'no-duplicate-imports': 'error',
@@ -103,5 +113,104 @@ export default tseslint.config(
   {
     files: ['src/main/liquid-glass.ts'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
+    // Supabase codegen output.
+    files: ['src/lib/database.types.ts'],
+    rules: { 'max-lines': 'off' },
+  },
+  {
+    // The whole Ukrainian dictionary stays in one file so a key is found in one place.
+    files: ['packages/lbk-i18n/src/uk.ts'],
+    rules: { 'max-lines': 'off' },
+  },
+  {
+    // Decky imports the bundle once; there is no fast refresh to keep working.
+    files: ['packages/lbk-bridge-decky/src/**'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    // LBK sends the whole ops bundle (ops-cdp.ts and everything it imports) with every CDP call.
+    files: [
+      'packages/lbk-bridge-core/src/ops*.ts',
+      'packages/lbk-bridge-core/src/steam-globals.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@mobily/ts-belt',
+              allowImportNames: ['G'],
+              allowTypeImports: true,
+              message: 'esbuild bundles a whole ts-belt namespace: G costs 2 KB, A 45 KB.',
+            },
+          ],
+          patterns: [
+            {
+              regex: '^(?!\\./|@mobily/ts-belt$)',
+              allowTypeImports: true,
+              message:
+                'The CDP ops bundle may only import sibling modules and G from ts-belt (no zod).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Steam web pages run the achievement page bundle (achievement-page-entry.ts and everything it imports).
+    files: [
+      'packages/lbk-bridge-core/src/achievement-page*.ts',
+      'packages/lbk-bridge-core/src/achievement-query-cache.ts',
+      'packages/lbk-bridge-core/src/achievement-text-memory.ts',
+    ],
+    ignores: ['**/*.test.ts', '**/*.fixture.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@mobily/ts-belt',
+              allowImportNames: ['G'],
+              allowTypeImports: true,
+              message: 'esbuild bundles a whole ts-belt namespace: G costs 2 KB, A 45 KB.',
+            },
+          ],
+          patterns: [
+            {
+              regex: '^(?!\\./|@mobily/ts-belt$|p-wait-for$)',
+              allowTypeImports: true,
+              message:
+                'The achievement page bundle may only import sibling modules, G from ts-belt and p-wait-for (no zod).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Millennium injects webkit.js into every Steam web page; it gets public achievement strings and nothing that reaches LBK.
+    files: [
+      'packages/lbk-bridge-millennium/webkit/**',
+      'packages/lbk-bridge-millennium/shared/**',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?!\\.\\./shared/|@lbk/bridge-core/achievement-page|@mobily/ts-belt$)',
+              allowTypeImports: true,
+              message:
+                'webkit.js may only import the achievement page modules of the core, ts-belt and ../shared (no zod, no bridge).',
+            },
+          ],
+        },
+      ],
+    },
   },
 );

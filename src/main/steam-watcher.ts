@@ -1,5 +1,4 @@
 import { F } from '@mobily/ts-belt';
-import type { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -12,6 +11,7 @@ import {
   updateLastKnownLicensecacheSize,
 } from './game-detector/steam';
 import { parseLibraryFolders } from './utils/vdf-parser';
+import { sendToRenderer } from './window';
 
 let steamappsWatchers: fs.FSWatcher[] = [];
 let licensecacheWatcher: fs.FSWatcher | null = null;
@@ -20,14 +20,14 @@ const DEBOUNCE = { delay: 2000, leading: false };
 const LIBRARY_FOLDERS_FILE = 'libraryfolders.vdf';
 
 /** Appmanifest changes (game install/uninstall). */
-const libraryChanged = F.makeControlledDebounce((mainWindow: BrowserWindow | null) => {
+const libraryChanged = F.makeControlledDebounce(() => {
   console.log('[SteamWatcher] Notifying renderer about Steam library changes');
   invalidateSteamInstalledCaches();
-  mainWindow?.webContents.send('steam-library-changed');
+  sendToRenderer('steam-library-changed');
 }, DEBOUNCE);
 
 /** Licensecache changes (game purchase/refund). */
-const ownedGamesChanged = F.makeControlledDebounce((mainWindow: BrowserWindow | null) => {
+const ownedGamesChanged = F.makeControlledDebounce(() => {
   const currentSize = getLicensecacheSize();
   const lastKnownSize = getLastKnownLicensecacheSize();
 
@@ -38,27 +38,24 @@ const ownedGamesChanged = F.makeControlledDebounce((mainWindow: BrowserWindow | 
     );
     updateLastKnownLicensecacheSize(currentSize);
     invalidateSteamLibraryAppIdsCache();
-    mainWindow?.webContents.send('steam-library-changed');
+    sendToRenderer('steam-library-changed');
   }
 }, DEBOUNCE);
 
 // libraryfolders.vdf also stores per-library app lists and sizes, so most rewrites leave the folder list as is
-const libraryFoldersChanged = F.makeControlledDebounce(
-  (mainWindow: BrowserWindow | null) => {
-    const steamPath = getSteamPath();
-    if (
-      !steamPath ||
-      getSteamLibraryFolders(steamPath).join('|') === watchedLibraryFolders
-    ) {
-      return;
-    }
-    console.log('[SteamWatcher] Steam library folders changed, restarting watchers');
-    invalidateSteamInstalledCaches();
-    startSteamWatcher(mainWindow);
-    mainWindow?.webContents.send('steam-library-changed');
-  },
-  DEBOUNCE
-);
+const libraryFoldersChanged = F.makeControlledDebounce(() => {
+  const steamPath = getSteamPath();
+  if (
+    !steamPath ||
+    getSteamLibraryFolders(steamPath).join('|') === watchedLibraryFolders
+  ) {
+    return;
+  }
+  console.log('[SteamWatcher] Steam library folders changed, restarting watchers');
+  invalidateSteamInstalledCaches();
+  startSteamWatcher();
+  sendToRenderer('steam-library-changed');
+}, DEBOUNCE);
 
 /**
  * Get all Steam library folders from libraryfolders.vdf
@@ -90,10 +87,7 @@ function getSteamLibraryFolders(steamPath: string): string[] {
 /**
  * Start watching a steamapps folder for appmanifest changes
  */
-function watchSteamappsFolder(
-  steamappsPath: string,
-  mainWindow: BrowserWindow | null
-): fs.FSWatcher | null {
+function watchSteamappsFolder(steamappsPath: string): fs.FSWatcher | null {
   if (!fs.existsSync(steamappsPath)) {
     return null;
   }
@@ -102,13 +96,13 @@ function watchSteamappsFolder(
     const watcher = fs.watch(steamappsPath, (eventType, filename) => {
       // Watched through its directory: Steam replaces the file, which silences a watcher on the file itself
       if (filename === LIBRARY_FOLDERS_FILE) {
-        libraryFoldersChanged.schedule(mainWindow);
+        libraryFoldersChanged.schedule();
         return;
       }
       // Only react to appmanifest_*.acf file changes (game install/uninstall)
       if (filename && filename.startsWith('appmanifest_') && filename.endsWith('.acf')) {
         console.log(`[SteamWatcher] Appmanifest changed: ${filename} (${eventType})`);
-        libraryChanged.schedule(mainWindow);
+        libraryChanged.schedule();
       }
     });
 
@@ -122,7 +116,7 @@ function watchSteamappsFolder(
 /**
  * Start watching licensecache for owned games changes (purchase/refund)
  */
-function watchLicensecache(mainWindow: BrowserWindow | null): fs.FSWatcher | null {
+function watchLicensecache(): fs.FSWatcher | null {
   const licensecachePath = getLicensecachePath();
   if (!licensecachePath || !fs.existsSync(licensecachePath)) {
     console.log('[SteamWatcher] licensecache not found, skipping watcher');
@@ -141,7 +135,7 @@ function watchLicensecache(mainWindow: BrowserWindow | null): fs.FSWatcher | nul
     const watcher = fs.watch(path.dirname(licensecachePath), (_eventType, filename) => {
       if (filename === licensecacheName) {
         console.log('[SteamWatcher] licensecache changed');
-        ownedGamesChanged.schedule(mainWindow);
+        ownedGamesChanged.schedule();
       }
     });
 
@@ -157,7 +151,7 @@ function watchLicensecache(mainWindow: BrowserWindow | null): fs.FSWatcher | nul
  * Start watching Steam library for changes
  * Watches both libraryfolders.vdf and steamapps folders for appmanifest changes
  */
-export function startSteamWatcher(mainWindow: BrowserWindow | null): void {
+export function startSteamWatcher(): void {
   // Close any existing watchers first to prevent EMFILE errors
   stopSteamWatcher();
 
@@ -172,14 +166,14 @@ export function startSteamWatcher(mainWindow: BrowserWindow | null): void {
   watchedLibraryFolders = libraryFolders.join('|');
 
   for (const steamappsPath of libraryFolders) {
-    const watcher = watchSteamappsFolder(steamappsPath, mainWindow);
+    const watcher = watchSteamappsFolder(steamappsPath);
     if (watcher) {
       steamappsWatchers.push(watcher);
     }
   }
 
   // Watch licensecache for owned games changes (purchase/refund)
-  licensecacheWatcher = watchLicensecache(mainWindow);
+  licensecacheWatcher = watchLicensecache();
 
   console.log(
     `[SteamWatcher] Watching ${steamappsWatchers.length} steamapps folder(s) + libraryfolders.vdf` +
