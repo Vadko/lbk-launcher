@@ -2,6 +2,7 @@ import { fetchNoCors, type Plugin } from '@decky/api';
 import pageScript from '@lbk/bridge-core/achievement-page.iife.js?raw';
 import { type BridgeStatus, browserEnv, createBridge } from '@lbk/bridge-core/bridge';
 import { createPageInjector } from '@lbk/bridge-core/page-injector';
+import { uk } from '@lbk/i18n/uk';
 import { BridgeIcon } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 
@@ -34,18 +35,16 @@ bridge.events.addEventListener('achievements', () =>
   pages.setHint(bridge.achievementApps())
 );
 
-const WAITING = 'Очікування LBK Launcher';
-
 const STATUS_TEXT: Record<BridgeStatus, string> = {
-  idle: WAITING,
-  waiting: WAITING,
-  connecting: WAITING,
-  connected: 'Підключено до LBK Launcher',
-  disposed: WAITING,
+  idle: uk.deckyPlugin.waiting,
+  waiting: uk.deckyPlugin.waiting,
+  connecting: uk.deckyPlugin.waiting,
+  connected: uk.deckyPlugin.connected,
+  disposed: uk.deckyPlugin.waiting,
 };
 
 const statusText = (): string =>
-  bridge.state.idle ? 'Працює через Millennium' : STATUS_TEXT[bridge.state.status];
+  bridge.state.idle ? uk.deckyPlugin.viaMillennium : STATUS_TEXT[bridge.state.status];
 
 const subscribe = (onChange: () => void): (() => void) => {
   bridge.events.addEventListener('change', onChange);

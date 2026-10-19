@@ -1,3 +1,4 @@
+import { t } from '@/shared/i18n/i18n';
 import type {
   AchievementsDelivery,
   MillenniumUnsupportedReason,
@@ -5,7 +6,6 @@ import type {
 } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
 import type { ModalAction } from '../store/useModalStore';
-import { BRIDGE_UPDATE_TEXT } from './pluginHostEntries';
 import { type OfferTarget, successOffer } from './pluginHostOffer';
 import { runSteamRestart } from './steamBridge';
 import { millenniumUnsupportedText } from './steamPluginHost';
@@ -30,20 +30,16 @@ const DELIVERY_TEXT: Record<
   (reason: MillenniumUnsupportedReason | null) => string
 > = {
   'plugin-live': () => '',
-  'plugin-next-start': () =>
-    "\n\nПереклад досягнень з'явиться після наступного запуску Steam.",
+  'plugin-next-start': () => `\n\n${t('installSuccess.pluginNextStart')}`,
   'needs-millennium': (reason) =>
     reason === null
-      ? '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium — лаунчер може встановити його сам.'
-      : '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium.',
-  'needs-decky-plugin': () =>
-    '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, встановіть плагін «LBK Bridge» для Decky Loader.',
-  'needs-decky': () =>
-    '\n\nПереклад досягнень збережено. На Steam Deck його показує плагін «LBK Bridge» для Decky Loader — лаунчер може встановити Decky Loader сам.',
+      ? `\n\n${t('installSuccess.needsMillenniumInstallable')}`
+      : `\n\n${t('installSuccess.needsMillennium')}`,
+  'needs-decky-plugin': () => `\n\n${t('installSuccess.needsDeckyPlugin')}`,
+  'needs-decky': () => `\n\n${t('installSuccess.needsDecky')}`,
   unavailable: (reason) =>
-    `\n\nПереклад досягнень збережено, але на цій системі Steam не може його показати: ${millenniumUnsupportedText(reason)}`,
-  disabled: () =>
-    '\n\nПереклад досягнень збережено. Щоб бачити його в Steam, увімкніть у налаштуваннях «Швидке застосування параметрів запуску Steam».',
+    `\n\n${t('installSuccess.unavailable', { reason: millenniumUnsupportedText(reason) })}`,
+  disabled: () => `\n\n${t('installSuccess.disabled')}`,
 };
 
 function restartHelps(
@@ -80,18 +76,17 @@ function unsupportedReason(
 export function installSuccessMessage(base: string, input: InstallSuccessInput): string {
   let message = base;
   if (input.launchOptionsQueued) {
-    message +=
-      '\n\nПараметри запуску застосуються автоматично, щойно ви закриєте Steam. Лаунчер має бути відкритим — його можна згорнути в трей.';
+    message += `\n\n${t('installSuccess.launchOptionsQueued')}`;
   }
   // Files are in place, but without its launch options the translation runs unmodded.
   if (input.launchOptionsError) {
-    message += `\n\nНе вдалося налаштувати параметри запуску Steam: ${input.launchOptionsError}`;
+    message += `\n\n${t('installSuccess.launchOptionsError', { error: input.launchOptionsError })}`;
   }
   if (input.delivery) {
     message += DELIVERY_TEXT[input.delivery](unsupportedReason(input));
   }
   if (bridgeUpdatePending(input)) {
-    message += `\n\n${BRIDGE_UPDATE_TEXT}`;
+    message += `\n\n${t('pluginEntries.bridgeUpdate')}`;
   }
   return message;
 }
@@ -101,14 +96,14 @@ export function installSuccessActions(
   handlers: InstallSuccessHandlers
 ): ModalAction[] {
   const actions: ModalAction[] = [
-    { label: 'Зрозуміло', onClick: () => undefined, variant: 'primary' },
+    { label: t('installSuccess.ok'), onClick: () => undefined, variant: 'primary' },
   ];
   if (
     (restartHelps(input) || bridgeUpdatePending(input)) &&
     input.status?.canRestartSteam === true
   ) {
     actions.push({
-      label: 'Перезапустити Steam зараз',
+      label: t('installSuccess.restartSteamNow'),
       onClick: handlers.restart,
       keepOpen: true,
       variant: 'secondary',
@@ -136,9 +131,9 @@ export function restartSteamAfterInstall(game: Game, launchOptionsQueued: boolea
   if (launchOptionsQueued) {
     void runSteamRestart(() => window.electronAPI.applyPendingLaunchOptions(game), {
       launchOptions: true,
-      failureTitle: 'Параметри запуску не застосовано',
-      successTitle: 'Параметри запуску застосовано',
-      successMessage: 'Параметри запуску записано. Можна запускати гру.',
+      failureTitle: t('installSuccess.restartFailureTitle'),
+      successTitle: t('installSuccess.restartSuccessTitle'),
+      successMessage: t('installSuccess.restartSuccessMessage'),
     });
     return;
   }

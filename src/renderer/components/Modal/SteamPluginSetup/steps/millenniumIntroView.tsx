@@ -6,6 +6,7 @@ import {
   WrenchIcon,
 } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { PluginHostState } from '@/shared/plugin-host-types';
 import type { SteamPluginSetupSource } from '../../../../store/useSteamPluginSetupStore';
 import {
@@ -13,7 +14,7 @@ import {
   millenniumUnsupportedText,
   openMillenniumSite,
 } from '../../../../utils/steamPluginHost';
-import { EXTERNAL_TEXT, introMode, queuedParagraphs } from '../millenniumSetup';
+import { introMode, queuedParagraphs } from '../millenniumSetup';
 import {
   OfferDismissButtons,
   SetupButton,
@@ -25,8 +26,6 @@ import {
 } from '../SetupParts';
 import { closeFooter, setupView } from './setupView';
 
-export const MILLENNIUM_TITLE = 'Millennium і плагін «LBK Bridge»';
-
 export const millenniumSiteButton = (): React.ReactNode => (
   <SetupButton
     tone="primary"
@@ -34,36 +33,32 @@ export const millenniumSiteButton = (): React.ReactNode => (
     gamepad="confirm"
     icon={<ExternalLinkIcon size={16} />}
   >
-    Відкрити сайт Millennium
+    {t('millenniumSetup.openSite')}
   </SetupButton>
 );
 
 function offerParagraphs(): string[] {
   const os = hostOs();
-  const paragraphs = [
-    'Millennium — безкоштовний сторонній мод клієнта Steam (не від Valve). Лаунчер може встановити його разом із плагіном «LBK Bridge».',
+  const paragraphs: string[] = [
+    t('millenniumSetup.offer.intro'),
     os === 'macos'
-      ? 'Що це дасть:\n• перекладені досягнення в бібліотеці, сповіщеннях і оверлеї Steam.'
-      : 'Що це дасть:\n• перекладені досягнення в бібліотеці, сповіщеннях і оверлеї Steam;\n• лаунчер працюватиме зі Steam без відкритого порту налагодження і без запитів перезапустити Steam.',
-    'Що працює й без Millennium: параметри запуску, підписки в Майстерні, колекція «З українізаторами», ярлик лаунчера та обкладинки в Steam — через порт налагодження Steam (після одного перезапуску Steam).',
+      ? t('millenniumSetup.offer.benefitsMac')
+      : t('millenniumSetup.offer.benefits'),
+    t('millenniumSetup.offer.withoutMillennium'),
     os === 'macos'
-      ? 'Файли завантажуються з нашої збірки Millennium на GitHub.'
-      : 'Файли Millennium завантажуються з офіційної сторінки проєкту на GitHub.',
+      ? t('millenniumSetup.offer.sourceMac')
+      : t('millenniumSetup.offer.source'),
     os === 'windows'
-      ? 'Зважте: після оновлень Steam Millennium іноді тимчасово не працює, доки не вийде його оновлення. Антивірус може помилково заблокувати його файли.'
-      : 'Зважте: після оновлень Steam Millennium іноді тимчасово не працює, доки не вийде його оновлення.',
+      ? t('millenniumSetup.offer.caveatWindows')
+      : t('millenniumSetup.offer.caveat'),
   ];
   if (os === 'linux') {
-    paragraphs.push(
-      'Millennium буде встановлено лише для вашого користувача, без пароля адміністратора. Якщо запускати Steam не з лаунчера, Millennium запрацює після повторного входу в систему.'
-    );
+    paragraphs.push(t('millenniumSetup.offer.linux'));
   }
   if (os === 'macos') {
-    paragraphs.push(
-      'На macOS лаунчер встановлює власну збірку Millennium. Вона працює, лише коли Steam запущено через «Steam Millennium» у теці «Програми» вашого користувача — лаунчер сам запускає Steam саме так.'
-    );
+    paragraphs.push(t('millenniumSetup.offer.macos'));
   }
-  paragraphs.push('Для встановлення Steam потрібно буде закрити й запустити знову.');
+  paragraphs.push(t('millenniumSetup.offer.restart'));
   return paragraphs;
 }
 
@@ -90,18 +85,20 @@ export function millenniumIntroView({
   switch (mode) {
     case 'loading':
       return setupView(
-        MILLENNIUM_TITLE,
-        <SetupProgress text="Перевірка системи…" percent={null} />,
+        t('millenniumSetup.title'),
+        <SetupProgress text={t('common.checkingSystem')} percent={null} />,
         closeFooter(onClose)
       );
     case 'unsupported':
     case 'external': {
       const reason = state?.millennium.unsupportedReason ?? null;
       return setupView(
-        MILLENNIUM_TITLE,
+        t('millenniumSetup.title'),
         <SetupText
           paragraphs={[
-            mode === 'external' ? EXTERNAL_TEXT : millenniumUnsupportedText(reason),
+            mode === 'external'
+              ? t('millenniumSetup.external')
+              : millenniumUnsupportedText(reason),
           ]}
         />,
         <SetupFooter>
@@ -112,7 +109,7 @@ export function millenniumIntroView({
     }
     case 'pending':
       return setupView(
-        MILLENNIUM_TITLE,
+        t('millenniumSetup.title'),
         <SetupText paragraphs={queuedParagraphs()} />,
         <SetupFooter>
           {state?.steamRunning && state.canRestartSteam && (
@@ -123,7 +120,7 @@ export function millenniumIntroView({
               gamepad="confirm"
               icon={<RotateCwIcon size={16} />}
             >
-              Перезапустити Steam зараз
+              {t('common.restartSteamNow')}
             </SetupButton>
           )}
           <SetupCloseButton onClose={onClose} />
@@ -132,13 +129,17 @@ export function millenniumIntroView({
     case 'update':
     case 'repair':
       return setupView(
-        mode === 'update' ? 'Оновлення Millennium' : 'Відновлення Millennium',
+        mode === 'update'
+          ? t('millenniumSetup.updateTitle')
+          : t('millenniumSetup.repairTitle'),
         <SetupText
           paragraphs={[
             mode === 'update'
-              ? `Доступне оновлення Millennium: ${state?.millennium.update?.version ?? ''}.`
-              : 'Файли Millennium у теці Steam пошкоджено або видалено.',
-            'Для цього Steam потрібно буде закрити й запустити знову.',
+              ? t('millenniumSetup.updateAvailable', {
+                  version: state?.millennium.update?.version ?? '',
+                })
+              : t('millenniumSetup.filesBroken'),
+            t('millenniumSetup.restartNeeded'),
           ]}
         />,
         <SetupFooter>
@@ -155,16 +156,18 @@ export function millenniumIntroView({
               )
             }
           >
-            {mode === 'update' ? 'Оновити Millennium' : 'Відновити Millennium'}
+            {mode === 'update'
+              ? t('millenniumSetup.update')
+              : t('millenniumSetup.repair')}
           </SetupButton>
           <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
-            Скасувати
+            {t('common.cancel')}
           </SetupButton>
         </SetupFooter>
       );
     case 'offer':
       return setupView(
-        MILLENNIUM_TITLE,
+        t('millenniumSetup.title'),
         <SetupText paragraphs={offerParagraphs()} />,
         <SetupFooter>
           <SetupButton
@@ -174,7 +177,7 @@ export function millenniumIntroView({
             gamepad="confirm"
             icon={<DownloadIcon size={16} />}
           >
-            Встановити
+            {t('millenniumSetup.install')}
           </SetupButton>
           <OfferDismissButtons source={source} onClose={onClose} onDecline={onDecline} />
         </SetupFooter>

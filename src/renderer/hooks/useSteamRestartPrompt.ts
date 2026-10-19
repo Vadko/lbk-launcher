@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useModalStore } from '../store/useModalStore';
 import { runSteamRestart } from '../utils/steamBridge';
 
@@ -10,14 +11,12 @@ export function useSteamRestartPrompt(): void {
     }
     return window.electronAPI.onSteamRestartRequired(() => {
       useModalStore.getState().showModal({
-        title: 'Перезапустіть Steam',
-        message:
-          'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
-          'Можна зробити це пізніше — налаштування вже збережено.',
+        title: t('steamRestartPrompt.title'),
+        message: t('steamRestartPrompt.message'),
         type: 'info',
         actions: [
           {
-            label: 'Перезапустити Steam',
+            label: t('steamRestartPrompt.restartAction'),
             onClick: () => {
               void runSteamRestart(() => window.electronAPI.restartSteam(), {
                 launchOptions: false,

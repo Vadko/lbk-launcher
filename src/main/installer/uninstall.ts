@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../shared/types';
 import { syncAchievementsToPlugin } from '../achievements';
 import { removeInstalledAchievements } from '../achievements/install';
@@ -38,7 +39,7 @@ export async function uninstallTranslation(game: Game): Promise<void> {
 
     const installInfo = await checkInstallation(game);
     if (!installInfo) {
-      throw new Error('Українізатор не встановлено');
+      throw new Error(t('uninstall.notInstalled'));
     }
 
     const gamePath = installInfo.gamePath;
@@ -122,7 +123,9 @@ export async function uninstallTranslation(game: Game): Promise<void> {
   } catch (error) {
     console.error('[Installer] Uninstall error:', error);
     throw new Error(
-      `Помилка видалення: ${error instanceof Error ? error.message : 'Невідома помилка'}`
+      t('uninstall.failed', {
+        error: error instanceof Error ? error.message : t('common.unknownError'),
+      })
     );
   }
 }
@@ -140,7 +143,7 @@ export async function removeComponents(
 
     const installInfo = await checkInstallation(game);
     if (!installInfo) {
-      throw new Error('Українізатор не встановлено');
+      throw new Error(t('uninstall.notInstalled'));
     }
 
     const gamePath = installInfo.gamePath;
@@ -175,7 +178,9 @@ export async function removeComponents(
   } catch (error) {
     console.error('[Installer] Error removing components:', error);
     throw new Error(
-      `Помилка видалення компонентів: ${error instanceof Error ? error.message : 'Невідома помилка'}`
+      t('uninstall.removeComponentsFailed', {
+        error: error instanceof Error ? error.message : t('common.unknownError'),
+      })
     );
   }
 }

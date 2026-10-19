@@ -1,5 +1,6 @@
 import { LoaderCircle } from 'lucide';
 import React, { useEffect } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { SteamPluginSetupSource } from '../../../store/useSteamPluginSetupStore';
 import { AppActionIcon } from '../../ui/AppActionIcon';
 import { AppNumberFlow } from '../../ui/AppNumberFlow';
@@ -155,13 +156,13 @@ interface SetupCloseProps {
 
 export const SetupCloseButton: React.FC<SetupCloseProps> = ({ onClose }) => (
   <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
-    Закрити
+    {t('common.close')}
   </SetupButton>
 );
 
 export const SetupDoneButton: React.FC<SetupCloseProps> = ({ onClose }) => (
   <SetupButton tone="primary" onClick={onClose} gamepad="confirm">
-    Зрозуміло
+    {t('common.ok')}
   </SetupButton>
 );
 
@@ -179,11 +180,11 @@ export const OfferDismissButtons: React.FC<OfferDismissButtonsProps> = ({
 }) => (
   <>
     <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
-      {source === 'offer' ? 'Не зараз' : 'Скасувати'}
+      {source === 'offer' ? t('common.notNow') : t('common.cancel')}
     </SetupButton>
     {source === 'offer' && onDecline && (
       <SetupButton tone="secondary" onClick={onDecline}>
-        Більше не пропонувати
+        {t('common.dontOfferAgain')}
       </SetupButton>
     )}
   </>

@@ -1,4 +1,5 @@
 import { assign, fromPromise, not, setup } from 'xstate';
+import { t } from '@/shared/i18n/i18n';
 import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
@@ -30,8 +31,10 @@ type DeckySetupEvent =
 
 const savedMessage = (result: SaveZipResult): string =>
   result.success && result.path
-    ? `Файл збережено: ${result.path}`
-    : `Не вдалося зберегти файл${result.error ? `: ${result.error}` : '.'}`;
+    ? t('deckySetup.saved', { path: result.path })
+    : result.error
+      ? t('deckySetup.saveFailedWithError', { error: result.error })
+      : t('deckySetup.saveFailed');
 
 // The plugin dir appearing (pushed by main's Decky watcher) is the only success signal: Decky's install call returns before the user confirms.
 export const deckySetupMachine = setup({

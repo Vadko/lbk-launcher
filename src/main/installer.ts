@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import { formatBytes, parseSizeToBytes } from '../shared/formatters';
 import { isExeInstaller } from '../shared/installer-kind';
 import type { AchievementsDelivery } from '../shared/plugin-host-types';
@@ -114,10 +115,7 @@ export async function installTranslation(
       console.error(
         `[Installer] Manual selection not allowed for license-only game: ${game.id}`
       );
-      throw new Error(
-        `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-          `Ручний вибір папки заборонено.`
-      );
+      throw new Error(t('installSteps.licenseOnlyManual'));
     }
 
     let gamePath: ReturnType<typeof getFirstAvailableGamePath>;
@@ -144,15 +142,13 @@ export async function installTranslation(
 
       // If license_only, show a different error message
       if (game.license_only) {
-        throw new Error(
-          `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через офіційний магазин (Steam, GOG, Epic Games, Ubisoft Connect, EA App тощо).`
-        );
+        throw new Error(t('installSteps.licenseOnlyNotFound'));
       }
 
       throw new ManualSelectionError(
-        `Гру не знайдено\n\n` +
-          `Ми не змогли автоматично визначити шлях до папки: ${platformPath || 'не вказано'}`
+        t('installSteps.gameNotFound', {
+          path: platformPath || t('installSteps.pathNotSpecified'),
+        })
       );
     }
 
@@ -171,9 +167,7 @@ export async function installTranslation(
       !!installerFileName && isLinux() && isWindowsInstallerFile(installerFileName);
     const protons = needsProton ? findProtons() : [];
     if (needsProton && protons.length === 0) {
-      throw new Error(
-        'Цей українізатор має Windows-інсталятор, для якого потрібен Proton, але жодної версії не знайдено.\n\nВстановіть Proton у Steam і спробуйте ще раз.'
-      );
+      throw new Error(t('installSteps.protonMissing'));
     }
 
     // 3. Create temp directory on the same disk as the game (for correct disk space check and faster file operations)
@@ -223,10 +217,10 @@ export async function installTranslation(
         // Cleanup temp dir before throwing
         await cleanupDownloadDir(downloadDir);
         throw new Error(
-          `Недостатньо місця на диску.\n\n` +
-            `Необхідно: ${formatBytes(neededSpace)}\n` +
-            `Доступно: ${formatBytes(diskSpace)}\n\n` +
-            `Звільніть місце та спробуйте знову.`
+          t('installSteps.notEnoughSpace', {
+            needed: formatBytes(neededSpace),
+            available: formatBytes(diskSpace),
+          })
         );
       }
       console.log(`[Installer] ✓ Disk space check passed`);
@@ -290,8 +284,10 @@ export async function installTranslation(
             buildOs
           ];
           throw new Error(
-            `Для встановленої збірки гри (${buildLabel}) немає архіву перекладу.\n\n` +
-              `Переклад доступний лише для: ${otherVariants.join(', ')}.`
+            t('installSteps.noArchiveForBuild', {
+              build: buildLabel,
+              variants: otherVariants.join(', '),
+            })
           );
         }
       }
@@ -324,7 +320,10 @@ export async function installTranslation(
         isFirstSession,
         onDownloadProgress,
         onStatus: (status) =>
-          onStatus?.({ message: `Озвучення: ${status.message}`, phase: status.phase }),
+          onStatus?.({
+            message: t('installSteps.voiceStatus', { message: status.message }),
+            phase: status.phase,
+          }),
       });
       // Copy voice files to main extract directory
       await copyDirectory(voiceExtractDir, extractDir);
@@ -387,19 +386,19 @@ export async function installTranslation(
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
+      onStatus?.({ message: t('installSteps.copying'), phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
 
-      onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
+      onStatus?.({ message: t('installSteps.cleaning'), phase: 'install' });
       await cleanupDownloadDir(downloadDir);
 
       const installerPath = path.join(fullTargetPath, installerFileName);
       const isExeFile = isExeInstaller(installerFileName);
-      const installerLabel = isExeFile ? 'інсталятор' : 'скрипт';
+      const context = isExeFile ? 'installer' : 'script';
 
       if (onConfirmRunInstaller) {
         onStatus?.({
-          message: `Очікування підтвердження запуску ${installerLabel}а...`,
+          message: t('installSteps.awaitingConfirm', { context }),
           phase: 'install',
           tone: 'waiting',
         });
@@ -437,9 +436,7 @@ export async function installTranslation(
               ...installationInfo,
               hasInstallError: true,
             });
-            throw new Error(
-              `Встановлення скасовано: запуск ${installerLabel}а було відхилено.\n\nФайли розпаковано в папку гри — ви можете запустити ${installerLabel} пізніше кнопкою «Перевстановити».`
-            );
+            throw new Error(t('installSteps.runDeclined', { context }));
           }
           try {
             await runInstaller(
@@ -475,10 +472,7 @@ export async function installTranslation(
         additionalPath = macBundle.target;
         console.log(`[Installer] macOS .app bundle — installing into: ${additionalPath}`);
       } else if (macBundle.appBundleFound && macBundle.matchedInsideBundle > 0) {
-        throw new Error(
-          'Не вдалося визначити місце встановлення всередині macOS-бандла (.app).\n\n' +
-            'Для цієї гри потрібен окремий macOS-архів перекладу.'
-        );
+        throw new Error(t('installSteps.macBundleUnresolved'));
       }
     }
 
@@ -502,7 +496,7 @@ export async function installTranslation(
       }
 
       if (createBackup) {
-        onStatus?.({ message: 'Створення резервної копії...', phase: 'install' });
+        onStatus?.({ message: t('installSteps.backingUp'), phase: 'install' });
         await backupFiles(
           extractDir,
           fullTargetPath,
@@ -512,7 +506,7 @@ export async function installTranslation(
         );
       }
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
+      onStatus?.({ message: t('installSteps.copying'), phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
 
       // The files are already copied by this point, so a signing problem must
@@ -531,7 +525,7 @@ export async function installTranslation(
     }
 
     // 8. Cleanup
-    onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
+    onStatus?.({ message: t('installSteps.cleaning'), phase: 'install' });
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info

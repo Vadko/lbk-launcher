@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { t } from '@/shared/i18n/i18n';
 import { execFileOnHost, isFlatpak, spawnOnHost } from './host-exec';
 import { isLinux } from './platform';
 
@@ -74,8 +75,7 @@ export async function launchLutrisGame(
     console.error('[LutrisLauncher] Error launching game:', error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : 'Не вдалося запустити гру через Lutris',
+      error: error instanceof Error ? error.message : t('launch.lutrisFailed'),
     };
   }
 }

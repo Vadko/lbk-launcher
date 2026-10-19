@@ -2,23 +2,44 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "project": ["src/**/*.{ts,tsx,css}"],
+      "project": [
+        "src/**/*.{ts,tsx,css}"
+      ],
       "ignore": [
         "src/lib/database.types.ts",
         "src/renderer/queries/useTrendingGames.ts"
       ]
     },
     "packages/lbk-bridge-core": {
-      "project": ["src/**/*.ts"]
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/lbk-bridge-decky": {
-      "entry": ["src/index.tsx"],
-      "project": ["src/**/*.tsx"]
+      "entry": [
+        "src/index.tsx"
+      ],
+      "project": [
+        "src/**/*.tsx"
+      ]
+    },
+    "packages/lbk-i18n": {
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/lbk-bridge-millennium": {
-      "entry": ["frontend/index.tsx", "webkit/index.tsx"],
-      "project": ["{frontend,webkit,shared}/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@babel/preset-env", "@babel/preset-react"]
+      "entry": [
+        "frontend/index.tsx",
+        "webkit/index.tsx"
+      ],
+      "project": [
+        "{frontend,webkit,shared}/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "@babel/preset-env",
+        "@babel/preset-react"
+      ]
     }
   },
   "ignoreDependencies": [

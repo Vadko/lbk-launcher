@@ -24,7 +24,7 @@ import {
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import { showSystemNotification } from '@/main/utils/system-notification';
 import { sendToRenderer } from '@/main/window';
-import { plural } from '@/shared/plural';
+import { t } from '@/shared/i18n/i18n';
 
 export interface PendingRunResult {
   appliedGameIds: string[];
@@ -50,13 +50,15 @@ function notifyApplied(names: string[], trigger: PendingTrigger): void {
   }
   const target =
     names.length === 1
-      ? `«${names[0]}»`
-      : `${names.length} ${plural(names.length, 'гри', 'ігор', 'ігор')}`;
+      ? t('pendingLaunchOptions.gameName', { name: names[0] })
+      : t('pendingLaunchOptions.games', { count: names.length });
   const lead =
-    trigger === 'bridge-ready' ? 'Steam підключився до лаунчера' : 'Steam закрито';
+    trigger === 'bridge-ready'
+      ? t('pendingLaunchOptions.bridgeReady')
+      : t('pendingLaunchOptions.steamClosed');
   showSystemNotification({
-    title: 'Параметри запуску застосовано',
-    body: `${lead} — параметри запуску для ${target} записано. Можна запускати гру.`,
+    title: t('pendingLaunchOptions.appliedTitle'),
+    body: t('pendingLaunchOptions.appliedBody', { lead, target }),
   });
 }
 

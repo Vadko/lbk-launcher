@@ -2,6 +2,7 @@ import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { errorMessage } from '@/shared/errors';
+import { t } from '@/shared/i18n/i18n';
 import type { ApplyPendingLaunchOptionsResult } from '../../shared/plugin-host-types';
 import type {
   Game,
@@ -120,7 +121,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: false,
           error: {
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            message: error instanceof Error ? error.message : t('common.unknownError'),
             needsManualSelection: error instanceof ManualSelectionError,
             isRateLimit: error instanceof RateLimitError,
             isNetworkError: error instanceof NetworkError,
@@ -139,7 +140,7 @@ export function setupInstallerHandlers(): void {
         console.error('[Installer] Applying pending launch options failed:', error);
         return {
           success: false,
-          error: errorMessage(error, 'Невідома помилка'),
+          error: errorMessage(error, t('common.unknownError')),
         };
       }
     }
@@ -192,7 +193,7 @@ export function setupInstallerHandlers(): void {
   ipcMain.handle('show-item-in-folder', async (_, filePath: string) => {
     try {
       if (!fs.existsSync(filePath)) {
-        return { success: false, error: 'Файл не знайдено' };
+        return { success: false, error: t('installIpc.fileNotFound') };
       }
       shell.showItemInFolder(filePath);
       return { success: true };
@@ -200,7 +201,7 @@ export function setupInstallerHandlers(): void {
       console.error('Error showing item in folder:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -209,8 +210,8 @@ export function setupInstallerHandlers(): void {
     const lastFolder = readLastGameFolder();
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
-      title: 'Виберіть папку з грою',
-      buttonLabel: 'Вибрати',
+      title: t('installIpc.pickFolderTitle'),
+      buttonLabel: t('installIpc.pickFolderButton'),
       defaultPath: lastFolder && path.dirname(lastFolder),
     });
 
@@ -240,7 +241,7 @@ export function setupInstallerHandlers(): void {
       return {
         success: false,
         error: {
-          message: error instanceof Error ? error.message : 'Невідома помилка',
+          message: error instanceof Error ? error.message : t('common.unknownError'),
         },
       };
     }
@@ -257,7 +258,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: false,
           error: {
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            message: error instanceof Error ? error.message : t('common.unknownError'),
           },
         };
       }
@@ -280,12 +281,12 @@ export function setupInstallerHandlers(): void {
       if (state) {
         return { success: true, state };
       }
-      return { success: false, error: 'Немає активного завантаження для призупинення' };
+      return { success: false, error: t('installIpc.noActiveDownload') };
     } catch (error) {
       console.error('Error pausing download:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -294,7 +295,7 @@ export function setupInstallerHandlers(): void {
     try {
       const state = getPausedDownloadState(gameId);
       if (!state) {
-        return { success: false, error: 'Немає призупиненого завантаження' };
+        return { success: false, error: t('installIpc.noPausedDownload') };
       }
 
       // Resume download in background
@@ -313,7 +314,7 @@ export function setupInstallerHandlers(): void {
       ).catch((error) => {
         console.error('Error during resumed download:', error);
         getMainWindow()?.webContents.send('installation-status', gameId, {
-          message: error instanceof Error ? error.message : 'Помилка завантаження',
+          message: error instanceof Error ? error.message : t('download.failed'),
           tone: 'error',
         });
       });
@@ -323,7 +324,7 @@ export function setupInstallerHandlers(): void {
       console.error('Error resuming download:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -353,7 +354,7 @@ export function setupInstallerHandlers(): void {
       console.error('Error cancelling paused download:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -383,7 +384,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: false,
           error: {
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            message: error instanceof Error ? error.message : t('common.unknownError'),
           },
         };
       }

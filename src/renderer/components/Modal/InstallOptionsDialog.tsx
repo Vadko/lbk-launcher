@@ -9,6 +9,8 @@ import {
   Volume2Icon,
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Trans } from 'react-i18next';
+import { t } from '@/shared/i18n/i18n';
 import type {
   Game,
   GamePath,
@@ -217,8 +219,12 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     const options: SelectOption[] = [
       {
         name: firstExisting
-          ? `Автоматично (${getReadablePlatform(firstExisting.platform)})`
-          : `Ручний вибір (${getReadablePlatform(supportedPlatforms[0]?.platform)})`,
+          ? t('installOptions.platformAuto', {
+              platform: getReadablePlatform(firstExisting.platform),
+            })
+          : t('installOptions.platformManual', {
+              platform: getReadablePlatform(supportedPlatforms[0]?.platform),
+            }),
         value: 'auto',
       },
     ];
@@ -233,7 +239,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <span
               className={`ml-auto ${platform.exists ? 'text-color-main' : 'text-text-muted'}`}
             >
-              {platform.exists ? 'Знайдено' : 'Не знайдено (вибір вручну)'}
+              {platform.exists
+                ? t('installOptions.platformFound')
+                : t('installOptions.platformNotFound')}
             </span>
           </>
         ),
@@ -259,13 +267,17 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isReinstall ? 'Керування компонентами' : 'Опції встановлення'}
+      title={
+        isReinstall
+          ? t('installOptions.reinstallTitle')
+          : t('installOptions.installTitle')
+      }
     >
       <div className="flex flex-col gap-6">
         <p className="text-text-muted">
           {isReinstall
-            ? `Оберіть компоненти для "${game.name}":`
-            : `Виберіть опції для встановлення українізатора "${game.name}":`}
+            ? t('installOptions.reinstallIntro', { name: game.name })
+            : t('installOptions.installIntro', { name: game.name })}
         </p>
 
         {/* Platform selection - show if multiple platforms available */}
@@ -273,7 +285,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2">
               <MonitorIcon size={18} className="text-color-accent" />
-              <span className="font-medium text-text-main">Платформа гри</span>
+              <span className="font-medium text-text-main">
+                {t('installOptions.platformLabel')}
+              </span>
             </label>
             <SelectDropdown
               options={platformOptions}
@@ -281,7 +295,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               onSelectionChange={(value) =>
                 setSelectedPlatform(value as Platform | 'auto')
               }
-              placeholder="Оберіть платформу"
+              placeholder={t('installOptions.platformPlaceholder')}
               maxHeight={500}
             />
           </div>
@@ -314,16 +328,16 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <div className="flex items-center gap-2">
                 <ShieldIcon size={18} className="text-color-accent" />
                 <span className="font-medium text-text-main group-hover:text-color-accent transition-colors">
-                  Створити резервну копію
+                  {t('installOptions.backupTitle')}
                 </span>
               </div>
               <p className="text-sm text-text-muted mt-1">
-                Зберегти оригінальні файли гри. Рекомендовано для можливості відновлення.
+                {t('installOptions.backupDescription')}
               </p>
               {createBackup && backupSize && (
                 <p className="flex items-center gap-1 mt-1 text-color-accent text-sm">
                   <ArchiveIcon size={14} />
-                  <span>Орієнтовний розмір: {backupSize}</span>
+                  <span>{t('installOptions.backupSize', { size: backupSize })}</span>
                 </p>
               )}
             </div>
@@ -356,33 +370,33 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <div className="flex items-center gap-2">
               <FileTextIcon size={18} className="text-color-accent" />
               <span className="font-medium text-text-main group-hover:text-color-accent transition-colors">
-                Текстова локалізація
+                {t('installOptions.textTitle')}
               </span>
               {isReinstall && (
                 <span className="flex items-center gap-1 text-xs text-green-400">
                   <CheckIcon size={12} />
-                  встановлено
+                  {t('installOptions.installed')}
                 </span>
               )}
             </div>
             <div className="text-sm text-text-muted mt-1">
-              <p>Переклад текстів гри українською.</p>
+              <p>{t('installOptions.textDescription')}</p>
               {game.archive_size && (
                 <p className="flex items-center gap-1 mt-1 text-color-accent">
                   <ArchiveIcon size={14} />
-                  <span>Розмір: {game.archive_size}</span>
+                  <span>{t('installOptions.size', { size: game.archive_size })}</span>
                 </p>
               )}
               {isReinstall && installText && (
                 <p className="flex items-center gap-1 mt-1 text-green-400">
                   <ArchiveIcon size={14} />
-                  <span>Буде перевстановлено</span>
+                  <span>{t('installOptions.willReinstall')}</span>
                 </p>
               )}
               {!isReinstall && installText && (
                 <p className="flex items-center gap-1 mt-1 text-green-400">
                   <ArchiveIcon size={14} />
-                  <span>Буде встановлено</span>
+                  <span>{t('installOptions.willInstall')}</span>
                 </p>
               )}
             </div>
@@ -437,40 +451,46 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <span
                 className={`font-medium transition-colors ${hasVoiceArchive || isVoiceIntegrated ? 'text-text-main group-hover:text-purple-400' : 'text-text-muted'}`}
               >
-                Озвучення
+                {t('installOptions.voiceTitle')}
               </span>
               {!hasVoiceArchive && !isVoiceIntegrated && (
-                <span className="text-xs text-text-muted">(недоступно)</span>
+                <span className="text-xs text-text-muted">
+                  {t('installOptions.unavailable')}
+                </span>
               )}
               {isVoiceIntegrated && (
-                <span className="text-xs text-purple-400">(разом з текстовою)</span>
+                <span className="text-xs text-purple-400">
+                  {t('installOptions.voiceWithText')}
+                </span>
               )}
               {isVoiceInstalled ||
                 (isVoiceIntegrated && isReinstall && (
                   <span className="flex items-center gap-1 text-xs text-green-400">
                     <CheckIcon size={12} />
-                    встановлено
+                    {t('installOptions.installed')}
                   </span>
                 ))}
             </div>
             <div className="text-sm text-text-muted mt-1">
-              <p>Українське озвучення.</p>
+              <p>{t('installOptions.voiceDescription')}</p>
               {game.voice_archive_size && (
                 <p className="flex items-center gap-1 mt-1 text-purple-400">
                   <ArchiveIcon size={14} />
-                  <span>Розмір: {game.voice_archive_size}</span>
+                  <span>
+                    {t('installOptions.size', { size: game.voice_archive_size })}
+                  </span>
                 </p>
               )}
               {willRemoveVoice && (
                 <p className="flex items-center gap-1 mt-1 text-red-400">
                   <Trash2Icon size={14} />
-                  <span>Буде видалено</span>
+                  <span>{t('installOptions.willRemove')}</span>
                 </p>
               )}
               {willDownloadVoice && (
                 <p className="flex items-center gap-1 mt-1 text-green-400">
                   <ArchiveIcon size={14} />
-                  <span>Буде завантажено</span>
+                  <span>{t('installOptions.willDownload')}</span>
                 </p>
               )}
             </div>
@@ -494,8 +514,10 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             <TerminalIcon size={16} className="text-color-main shrink-0 mt-0.5" />
             <div className="text-text-muted">
               <p>
-                Цей переклад встановить власні{' '}
-                <span className="text-text-main">параметри запуску</span> для гри в Steam.
+                <Trans
+                  i18nKey="installOptions.launchOptions"
+                  components={{ hl: <span className="text-text-main" /> }}
+                />
               </p>
               {steamLaunchOptionsWindows && (
                 <p className="mt-1">
@@ -519,7 +541,9 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             {totalDownloadSize !== 'N/A' && (
               <div className="flex items-center gap-2 text-sm">
                 <ArchiveIcon size={16} className="text-text-muted" />
-                <span className="text-text-muted">Буде завантажено:</span>
+                <span className="text-text-muted">
+                  {t('installOptions.totalDownload')}
+                </span>
                 <span className="text-text-main font-medium">{totalDownloadSize}</span>
               </div>
             )}
@@ -527,13 +551,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
               <div className="flex items-center gap-2 text-sm">
                 <Trash2Icon size={16} className="text-red-400" />
                 <span className="text-red-400">
-                  Буде видалено:{' '}
-                  {[
-                    willRemoveVoice && 'озвучення',
-                    achievements.willRemove && 'досягнення',
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
+                  {t('installOptions.removeList', {
+                    items: [
+                      willRemoveVoice && t('installOptions.removeVoice'),
+                      achievements.willRemove && t('installOptions.removeAchievements'),
+                    ]
+                      .filter(Boolean)
+                      .join(', '),
+                  })}
                 </span>
               </div>
             )}
@@ -548,7 +573,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
             data-gamepad-modal-item
             className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
           >
-            Скасувати
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleConfirm}
@@ -561,7 +586,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
                 : 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
-            Встановити
+            {t('installOptions.confirm')}
           </button>
         </div>
       </div>

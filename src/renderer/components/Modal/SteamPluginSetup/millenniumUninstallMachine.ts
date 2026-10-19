@@ -1,5 +1,6 @@
 import { match, P } from 'ts-pattern';
 import { assign, fromCallback, fromPromise, setup } from 'xstate';
+import { t } from '@/shared/i18n/i18n';
 import type {
   MillenniumInstallResult,
   MillenniumProgress,
@@ -11,8 +12,6 @@ import {
 } from '../../../utils/steamPluginHost';
 import { type RestartChoice, restartFailedText } from './millenniumSetup';
 
-const QUEUED_TEXT = 'Millennium буде видалено, щойно ви закриєте Steam.';
-
 export interface UninstallResult {
   kind: 'done' | 'error';
   message: string;
@@ -23,26 +22,25 @@ export function outcomeStep(result: MillenniumInstallResult | null): UninstallRe
     .returnType<UninstallResult>()
     .with({ success: true }, ({ queued }) => ({
       kind: 'done',
-      message: queued ? QUEUED_TEXT : 'Millennium видалено.',
+      message: queued ? t('millenniumUninstall.queued') : t('millenniumUninstall.done'),
     }))
     .with({ reason: 'files-locked' }, () => ({
       kind: 'done',
-      message:
-        'Файли Steam ще зайняті. Millennium буде видалено після наступного закриття Steam.',
+      message: t('millenniumUninstall.filesLocked'),
     }))
     .with({ reason: 'restart-failed' }, (failure) => ({
       kind: 'error',
-      message: restartFailedText(failure, QUEUED_TEXT),
+      message: restartFailedText(failure, t('millenniumUninstall.queued')),
     }))
     .with(P.nullish, () => ({
       kind: 'error',
-      message: 'Не вдалося видалити Millennium.',
+      message: t('millenniumUninstall.failed'),
     }))
     .otherwise(({ error }) => ({
       kind: 'error',
       message: error
-        ? `Не вдалося видалити Millennium: ${error}`
-        : 'Не вдалося видалити Millennium.',
+        ? t('millenniumUninstall.failedWithError', { error })
+        : t('millenniumUninstall.failed'),
     }));
 }
 
@@ -91,7 +89,7 @@ export const millenniumUninstallMachine = setup({
     purge: false,
     steamRunning: undefined,
     restart: 'now',
-    text: 'Видалення Millennium…',
+    text: t('millenniumUninstall.progress'),
     result: outcomeStep(null),
   },
   states: {
@@ -129,7 +127,7 @@ export const millenniumUninstallMachine = setup({
       },
     },
     uninstalling: {
-      entry: assign({ text: 'Видалення Millennium…' }),
+      entry: assign({ text: t('millenniumUninstall.progress') }),
       invoke: [
         { src: 'progress' },
         {

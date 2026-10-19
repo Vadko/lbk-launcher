@@ -1,4 +1,5 @@
 import { match } from 'ts-pattern';
+import { t } from '@/shared/i18n/i18n';
 import type { PluginHostState, SteamBridgeStatus } from '@/shared/plugin-host-types';
 import {
   deckyOffer,
@@ -19,12 +20,9 @@ interface PluginHostEntries {
   actions: OfferAction[];
 }
 
-export const DECKY_PLUGIN_DISABLED_TEXT =
-  'Плагін «LBK Bridge» вимкнено в Decky Loader. Увімкніть його в налаштуваннях Decky.';
-
 const RECOMMEND_LINE: PluginHostLine = {
   key: 'recommend',
-  text: 'Порада: з Millennium лаунчер також показуватиме в Steam переклад досягнень.',
+  text: t('pluginEntries.recommend'),
 };
 
 function deckyEntries(host: PluginHostState): PluginHostEntries {
@@ -35,8 +33,8 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
         {
           key: 'no-decky',
           text: canInstallLoader
-            ? 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Лаунчер може встановити Decky Loader разом із плагіном.'
-            : 'Переклад досягнень у Steam показує плагін «LBK Bridge» для Decky Loader. Спершу встановіть Decky Loader.',
+            ? t('pluginEntries.noDeckyCanInstall')
+            : t('pluginEntries.noDecky'),
         },
       ],
       actions: canInstallLoader
@@ -44,14 +42,14 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
         : [OFFER_ACTIONS.deckyInfo],
     }))
     .with({ kind: 'plugin-disabled' }, () => ({
-      lines: [{ key: 'disabled', text: DECKY_PLUGIN_DISABLED_TEXT }],
+      lines: [{ key: 'disabled', text: t('pluginEntries.deckyPluginDisabled') }],
       actions: [],
     }))
     .with({ kind: 'plugin-missing' }, () => ({
       lines: [
         {
           key: 'decky-plugin',
-          text: 'Плагін «LBK Bridge» для Decky Loader показує в Steam перекладені досягнення.',
+          text: t('pluginEntries.deckyPlugin'),
         },
       ],
       actions: [OFFER_ACTIONS.installDeckyPlugin],
@@ -60,7 +58,7 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
       lines: [
         {
           key: 'decky-outdated',
-          text: 'Доступне оновлення плагіна «LBK Bridge» для Decky.',
+          text: t('pluginEntries.deckyOutdated'),
         },
       ],
       actions: [OFFER_ACTIONS.updateDeckyPlugin],
@@ -72,11 +70,11 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
 const PENDING_LINES: Record<'activate' | 'deactivate', PluginHostLine> = {
   activate: {
     key: 'pending-activate',
-    text: 'Millennium встановиться, щойно ви закриєте Steam.',
+    text: t('pluginEntries.pendingActivate'),
   },
   deactivate: {
     key: 'pending-deactivate',
-    text: 'Millennium буде видалено, щойно ви закриєте Steam.',
+    text: t('pluginEntries.pendingDeactivate'),
   },
 };
 
@@ -90,19 +88,19 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
     if (offer.version && !offer.needsRepair) {
       lines.push({
         key: 'installed-version',
-        text: `Встановлено Millennium ${offer.version}.`,
+        text: t('pluginEntries.installedVersion', { version: offer.version }),
       });
     }
     if (offer.needsRepair) {
       lines.push({
         key: 'repair',
-        text: 'Файли Millennium у теці Steam пошкоджено або видалено.',
+        text: t('pluginEntries.repair'),
       });
       actions.push(OFFER_ACTIONS.repairMillennium);
     } else if (offer.update) {
       lines.push({
         key: 'update',
-        text: `Доступне оновлення Millennium: ${offer.update}.`,
+        text: t('pluginEntries.update', { version: offer.update }),
       });
       actions.push(updateMillenniumAction(offer.update));
     }
@@ -128,19 +126,18 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
       ...lines,
       {
         key: 'unsupported',
-        text: `Переклад досягнень у Steam недоступний: ${millenniumUnsupportedText(offer.reason)}`,
+        text: t('pluginEntries.unsupported', {
+          reason: millenniumUnsupportedText(offer.reason),
+        }),
       },
     ],
     actions,
   };
 }
 
-export const BRIDGE_UPDATE_TEXT =
-  'Оновлення плагіна «LBK Bridge» застосується після перезапуску Steam.';
-
 const BRIDGE_UPDATE_LINE: PluginHostLine = {
   key: 'bridge-update',
-  text: BRIDGE_UPDATE_TEXT,
+  text: t('pluginEntries.bridgeUpdate'),
 };
 
 export function pluginHostEntries(

@@ -5,6 +5,7 @@ import {
   launchOptionsParamsFor,
   writeSteamLaunchOptions,
 } from '@/main/utils/steam-launch-options';
+import { t } from '@/shared/i18n/i18n';
 import type { Game, InstallationStatus, Platform } from '@/shared/types';
 
 interface SteamIntegrationTarget {
@@ -41,7 +42,7 @@ export async function applySteamIntegration(
   const launchOptions = launchOptionsParamsFor(game, target.path);
   if (launchOptions) {
     onStatus?.({
-      message: 'Налаштування параметрів запуску Steam...',
+      message: t('installSteamIntegration.launchOptions'),
       phase: 'install',
     });
 
@@ -66,20 +67,21 @@ export async function applySteamIntegration(
         launchOptionsQueued = true;
       }
       if (result.mode === 'failed' || result.mode === 'unresolved') {
-        launchOptionsError = result.reason ?? 'Невідома помилка';
+        launchOptionsError = result.reason ?? t('common.unknownError');
       }
     } catch (error) {
       console.warn('[Installer] Steam launch options failed:', error);
       // Not queued: restarting Steam cannot fix a throw that had nothing to do
       // with Steam being up, and the restart force-kills the user's session.
-      launchOptionsError = error instanceof Error ? error.message : 'Невідома помилка';
+      launchOptionsError =
+        error instanceof Error ? error.message : t('common.unknownError');
     }
   }
 
   // Never fail an install over artwork.
   if (game.capsule_path || game.banner_path || game.logo_path) {
     onStatus?.({
-      message: 'Встановлення українських обкладинок Steam...',
+      message: t('installSteamIntegration.artwork'),
       phase: 'install',
     });
     try {

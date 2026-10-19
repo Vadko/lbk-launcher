@@ -4,6 +4,7 @@ import fs from 'fs';
 import { add, extractFull } from 'node-7z';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { InstallationStatus } from '../../shared/types';
 import { getCleanEnv } from '../utils/host-exec';
 import { forCurrentOS, isLinux } from '../utils/platform';
@@ -141,7 +142,7 @@ export async function extractArchive(
       lastPercent = percent;
       console.log(`[Installer] Extraction progress: ${percent}%`);
       onStatus?.({
-        message: `Розпакування файлів... ${percent}%`,
+        message: t('installArchive.extracting', { percent }),
         progress: percent,
         phase: 'install',
       });
@@ -149,7 +150,7 @@ export async function extractArchive(
 
     stream.on('end', () => {
       console.log(`[Installer] Extracted archive to: ${extractPath}`);
-      onStatus?.({ message: 'Розпакування завершено', phase: 'install' });
+      onStatus?.({ message: t('installArchive.extracted'), phase: 'install' });
       resolve();
     });
 
@@ -160,7 +161,7 @@ export async function extractArchive(
         stderr: err.stderr,
         archivePath,
       });
-      reject(new Error(`Помилка розпакування архіву: ${errorMessage}`));
+      reject(new Error(t('installArchive.extractFailed', { error: errorMessage })));
     });
   });
 }

@@ -1,4 +1,5 @@
 import { RotateCwIcon } from 'lucide-react';
+import { t } from '@/shared/i18n/i18n';
 import type { RestartChoice } from '../millenniumSetup';
 import { SetupButton, SetupFooter, SetupText, type SetupView } from '../SetupParts';
 import { setupView } from './setupView';
@@ -32,7 +33,7 @@ export function restartChoiceView({
           gamepad="confirm"
           icon={<RotateCwIcon size={16} />}
         >
-          Перезапустити Steam зараз
+          {t('common.restartSteamNow')}
         </SetupButton>
       )}
       <SetupButton
@@ -40,11 +41,11 @@ export function restartChoiceView({
         onClick={() => onChoose('on-exit')}
         gamepad={canRestart ? undefined : 'confirm'}
       >
-        Після закриття Steam
+        {t('common.afterSteamExit')}
       </SetupButton>
       {cancellable && (
         <SetupButton tone="secondary" onClick={onClose} gamepad="cancel">
-          Не зараз
+          {t('common.notNow')}
         </SetupButton>
       )}
     </SetupFooter>

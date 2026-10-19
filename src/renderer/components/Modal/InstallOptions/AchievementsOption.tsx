@@ -1,5 +1,6 @@
 import { ArchiveIcon, CheckIcon, InfoIcon, Trash2Icon, TrophyIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { AchievementsBadge } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
 import type { AchievementsOptionState } from '../../../utils/installOptions';
@@ -7,9 +8,9 @@ import { AchievementsDeliveryBadge } from '../../ui/AchievementsDeliveryBadge';
 import { AchievementsDeliveryNote } from './AchievementsDeliveryNote';
 
 const PLANNED_CHANGES = [
-  ['willRemove', 'Буде видалено', Trash2Icon, 'text-red-400'],
-  ['willDownload', 'Буде завантажено', ArchiveIcon, 'text-green-400'],
-  ['willReinstall', 'Буде перевстановлено', ArchiveIcon, 'text-green-400'],
+  ['willRemove', t('installOptions.willRemove'), Trash2Icon, 'text-red-400'],
+  ['willDownload', t('installOptions.willDownload'), ArchiveIcon, 'text-green-400'],
+  ['willReinstall', t('installOptions.willReinstall'), ArchiveIcon, 'text-green-400'],
 ] as const;
 
 interface AchievementsOptionProps {
@@ -63,24 +64,34 @@ export const AchievementsOption: React.FC<AchievementsOptionProps> = ({
           <span
             className={`font-medium transition-colors ${option.canToggle ? 'text-text-main group-hover:text-green-400' : 'text-text-muted'}`}
           >
-            Досягнення Steam
+            {t('achievementsOption.title')}
           </span>
-          {!hasArchive && <span className="text-xs text-text-muted">(недоступно)</span>}
-          {option.checking && <span className="text-xs text-text-muted">Перевірка…</span>}
+          {!hasArchive && (
+            <span className="text-xs text-text-muted">
+              {t('installOptions.unavailable')}
+            </span>
+          )}
+          {option.checking && (
+            <span className="text-xs text-text-muted">
+              {t('achievementsOption.checking')}
+            </span>
+          )}
           {installed && (
             <span className="flex items-center gap-1 text-xs text-green-400">
               <CheckIcon size={12} />
-              встановлено
+              {t('installOptions.installed')}
             </span>
           )}
           {hasArchive && badge && <AchievementsDeliveryBadge badge={badge} />}
         </div>
         <div className="text-sm text-text-muted mt-1">
-          <p>Переклад досягнень Steam.</p>
+          <p>{t('achievementsOption.description')}</p>
           {game.achievements_archive_size && (
             <p className="flex items-center gap-1 mt-1 text-green-400">
               <ArchiveIcon size={14} />
-              <span>Розмір: {game.achievements_archive_size}</span>
+              <span>
+                {t('installOptions.size', { size: game.achievements_archive_size })}
+              </span>
             </p>
           )}
           {PLANNED_CHANGES.filter(([key]) => option[key]).map(
@@ -101,7 +112,7 @@ export const AchievementsOption: React.FC<AchievementsOptionProps> = ({
       <div className="bg-glass rounded-xl p-3 border border-border flex items-center gap-2 text-sm">
         <InfoIcon size={16} className="text-color-main shrink-0" />
         <span className="text-text-muted">
-          Автор перекладу досягнень:{' '}
+          {t('achievementsOption.thirdPartyAuthor')}{' '}
           <span className="text-text-main">{game.achievements_third_party}</span>
         </span>
       </div>

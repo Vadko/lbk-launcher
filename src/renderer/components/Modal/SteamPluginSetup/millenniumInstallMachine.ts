@@ -1,4 +1,5 @@
 import { assign, fromCallback, fromPromise, setup } from 'xstate';
+import { t } from '@/shared/i18n/i18n';
 import type {
   MillenniumInstallResult,
   MillenniumProgress,
@@ -12,16 +13,12 @@ import {
   millenniumPhaseText,
 } from '../../../utils/steamPluginHost';
 import {
-  DONE_TEXT,
-  ENV_MISSING_TEXT,
   failureStep,
   isPluginConnected,
-  OFFLINE_DONE_TEXT,
   queuedParagraphs,
   type RestartChoice,
   restartBlockedNote,
   type SetupResult,
-  STEAM_NOT_BACK_TEXT,
   setupDone,
   setupError,
 } from './millenniumSetup';
@@ -222,7 +219,9 @@ export const millenniumInstallMachine = setup({
               {
                 guard: ({ event }) => activationOutcome(event.output) === 'done-offline',
                 target: '#millenniumInstall.result',
-                actions: assign({ result: setupDone([OFFLINE_DONE_TEXT]) }),
+                actions: assign({
+                  result: setupDone([t('millenniumSetup.offlineDone')]),
+                }),
               },
               {
                 target: '#millenniumInstall.waitingPlugin',
@@ -283,7 +282,7 @@ export const millenniumInstallMachine = setup({
               {
                 guard: ({ event }) => isPluginConnected(event.output),
                 target: '#millenniumInstall.result',
-                actions: assign({ result: setupDone([DONE_TEXT]) }),
+                actions: assign({ result: setupDone([t('millenniumSetup.done')]) }),
               },
               {
                 // Two misses in a row: one poll can land while Steam swaps its processes during start-up.
@@ -292,7 +291,7 @@ export const millenniumInstallMachine = setup({
                   context.steamGoneChecks >= 1,
                 target: '#millenniumInstall.result',
                 actions: assign({
-                  result: setupError(STEAM_NOT_BACK_TEXT, 'steam-not-back'),
+                  result: setupError(t('millenniumSetup.steamNotBack'), 'steam-not-back'),
                 }),
               },
               {
@@ -301,7 +300,7 @@ export const millenniumInstallMachine = setup({
                 actions: assign({
                   result: ({ context }) =>
                     context.envMissing
-                      ? setupError(ENV_MISSING_TEXT, 'env-missing')
+                      ? setupError(t('millenniumSetup.envMissing'), 'env-missing')
                       : setupError(
                           millenniumFailureText('plugin-not-connected'),
                           'recheck'
@@ -337,7 +336,7 @@ export const millenniumInstallMachine = setup({
           {
             guard: ({ event }) => isPluginConnected(event.output),
             target: 'result',
-            actions: assign({ result: setupDone([DONE_TEXT]) }),
+            actions: assign({ result: setupDone([t('millenniumSetup.done')]) }),
           },
           { target: 'result' },
         ],

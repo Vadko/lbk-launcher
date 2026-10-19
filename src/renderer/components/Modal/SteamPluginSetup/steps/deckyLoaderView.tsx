@@ -1,5 +1,6 @@
 import { DownloadIcon, ExternalLinkIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { SteamPluginSetupSource } from '../../../../store/useSteamPluginSetupStore';
 import { openDeckySite } from '../../../../utils/steamPluginHost';
 import type { LoaderFailure } from '../deckySetupMachine';
@@ -14,35 +15,13 @@ import {
 } from '../SetupParts';
 import { closeFooter, setupView } from './setupView';
 
-export const DECKY_TITLE = 'Плагін «LBK Bridge» для Decky Loader';
-
 const LOADER_OFFER_PARAGRAPHS = [
-  'Decky Loader — безкоштовний сторонній завантажувач плагінів для Steam Deck (не від Valve). Лаунчер може встановити його разом із плагіном «LBK Bridge».',
-  'Що це дасть:\n• перекладені досягнення в бібліотеці, сповіщеннях і оверлеї Steam.',
-  'Що працює й без Decky Loader: параметри запуску, підписки в Майстерні, колекція «З українізаторами», ярлик лаунчера та обкладинки в Steam.',
-  'Лаунчер завантажить офіційний інсталятор Decky Loader з GitHub і запустить його. Пароль адміністратора (sudo) інсталятор питає у власному вікні, лаунчер його не бачить. Якщо пароля ще немає, інсталятор запропонує тимчасовий і прибере його після встановлення.',
-  'Зважте: після великих оновлень SteamOS Decky Loader іноді доводиться встановити ще раз.',
+  t('deckyLoader.offerIntro'),
+  t('deckyLoader.offerBenefits'),
+  t('deckyLoader.offerWithout'),
+  t('deckyLoader.offerInstaller'),
+  t('deckyLoader.offerCaveat'),
 ];
-const LOADER_REPAIR_TEXT =
-  'Decky Loader встановлено, але він не працює — схоже, попереднє встановлення не завершилося. Лаунчер може запустити офіційний інсталятор Decky Loader ще раз.';
-const LOADER_GAME_MODE_TEXT =
-  'Інсталятор Decky Loader працює лише в режимі робочого столу. Перейдіть у нього через меню живлення Steam, відкрийте лаунчер і натисніть «Встановити Decky Loader» ще раз.';
-const LOADER_INSTALLING_TEXT =
-  'Відкрито інсталятор Decky Loader. Введіть пароль адміністратора у вікні «Decky Installer» і оберіть «release». Якщо вікна не видно, знайдіть його на панелі завдань.';
-
-const LOADER_FAILURE_TEXT: Record<LoaderFailure, string> = {
-  'game-mode': LOADER_GAME_MODE_TEXT,
-  'download-failed':
-    "Не вдалося завантажити інсталятор Decky Loader. Перевірте з'єднання з інтернетом і спробуйте ще раз.",
-  'checksum-mismatch':
-    'Завантажений інсталятор Decky Loader не збігається з перевіреною версією. Встановлення скасовано.',
-  unsupported:
-    'На цій системі лаунчер не може встановити Decky Loader. Встановіть його за інструкцією на сайті Decky Loader.',
-  'not-running':
-    'Decky Loader встановлено, але він не запустився. Спробуйте ще раз — інсталятор перевстановить його.',
-  'not-installed':
-    'Decky Loader не встановлено. Якщо вікно інсталятора закрито або пароль не підійшов, спробуйте ще раз.',
-};
 
 const RETRYABLE: ReadonlySet<LoaderFailure> = new Set([
   'not-installed',
@@ -62,7 +41,7 @@ export const deckySiteButton = (primary: boolean): React.ReactNode => (
     gamepad={primary ? 'confirm' : undefined}
     icon={<ExternalLinkIcon size={16} />}
   >
-    Що таке Decky Loader
+    {t('deckyLoader.whatIs')}
   </SetupButton>
 );
 
@@ -94,16 +73,18 @@ export function deckyLoaderView({
 
   switch (stage.kind) {
     case 'offer': {
-      const offer = stage.repair ? [LOADER_REPAIR_TEXT] : LOADER_OFFER_PARAGRAPHS;
+      const offer = stage.repair ? [t('deckyLoader.repair')] : LOADER_OFFER_PARAGRAPHS;
       return setupView(
-        DECKY_TITLE,
+        t('deckySetup.title'),
         <SetupText
-          paragraphs={stage.gameMode ? [...offer, LOADER_GAME_MODE_TEXT] : offer}
+          paragraphs={stage.gameMode ? [...offer, t('deckyLoader.gameMode')] : offer}
         />,
         <SetupFooter>
           {!stage.gameMode &&
             installButton(
-              stage.repair ? 'Відновити Decky Loader' : 'Встановити Decky Loader'
+              stage.repair
+                ? t('deckyLoader.repairAction')
+                : t('deckyLoader.installAction')
             )}
           {deckySiteButton(stage.gameMode)}
           <OfferDismissButtons source={source} onClose={onClose} onDecline={onDecline} />
@@ -112,17 +93,23 @@ export function deckyLoaderView({
     }
     case 'installing':
       return setupView(
-        DECKY_TITLE,
-        <SetupProgress text={LOADER_INSTALLING_TEXT} percent={null} />,
+        t('deckySetup.title'),
+        <SetupProgress text={t('deckyLoader.installing')} percent={null} />,
         closeFooter(onClose)
       );
     case 'failed': {
       const retry = RETRYABLE.has(stage.reason);
       return setupView(
-        DECKY_TITLE,
-        <SetupText paragraphs={[LOADER_FAILURE_TEXT[stage.reason]]} />,
+        t('deckySetup.title'),
+        <SetupText
+          paragraphs={[
+            stage.reason === 'game-mode'
+              ? t('deckyLoader.gameMode')
+              : t(`deckyLoader.failure.${stage.reason}`),
+          ]}
+        />,
         <SetupFooter>
-          {retry && installButton('Спробувати ще раз')}
+          {retry && installButton(t('common.tryAgain'))}
           {deckySiteButton(!retry)}
           <SetupCloseButton onClose={onClose} />
         </SetupFooter>

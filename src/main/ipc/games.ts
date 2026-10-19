@@ -1,5 +1,6 @@
 import os from 'node:os';
 import { app, ipcMain } from 'electron';
+import { t } from '@/shared/i18n/i18n';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   fetchGames,
@@ -571,7 +572,7 @@ export function setupGamesHandlers(): void {
         console.error('[LaunchGame] Game not found on system');
         return {
           success: false,
-          error: "Гру не знайдено на вашому комп'ютері",
+          error: t('launch.gameNotFound'),
         };
       }
 
@@ -690,7 +691,7 @@ export function setupGamesHandlers(): void {
       console.error('[LaunchGame] Error launching game:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Не вдалося запустити гру',
+        error: error instanceof Error ? error.message : t('launch.failed'),
       };
     }
   });

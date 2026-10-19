@@ -12,6 +12,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData } from '@/main/db/banners-api';
+import { t } from '@/shared/i18n/i18n';
 import type { BannerType } from '@/shared/types.ts';
 import { AuthorsList } from '../components/MainContent/AuthorsList';
 import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
@@ -364,7 +365,7 @@ export const GamePage: React.FC = () => {
 
       if (!result.success && result.error) {
         showModal({
-          title: 'Помилка запуску',
+          title: t('launch.errorTitle'),
           message: result.error,
           type: 'error',
         });
@@ -372,8 +373,8 @@ export const GamePage: React.FC = () => {
     } catch (error) {
       console.error('Launch game error:', error);
       showModal({
-        title: 'Помилка запуску',
-        message: error instanceof Error ? error.message : 'Не вдалося запустити гру',
+        title: t('launch.errorTitle'),
+        message: error instanceof Error ? error.message : t('launch.failed'),
         type: 'error',
       });
     }
@@ -406,18 +407,15 @@ export const GamePage: React.FC = () => {
             <EyeOffIcon size={40} className="text-red-400" />
           </div>
           <h2 className="text-xl font-head font-semibold text-text-main mb-3">
-            Контент для дорослих
+            {t('adultWarning.title')}
           </h2>
-          <p className="text-text-muted mb-6">
-            Ця гра містить контент для дорослих (18+). Щоб переглянути цю гру, увімкніть
-            відповідне налаштування.
-          </p>
+          <p className="text-text-muted mb-6">{t('adultWarning.message')}</p>
           <button
             onClick={openSettingsModal}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
             <SettingsIcon size={20} />
-            Відкрити налаштування
+            {t('adultWarning.openSettings')}
           </button>
         </div>
       </div>
@@ -473,8 +471,7 @@ export const GamePage: React.FC = () => {
 
           {isTombstoned && (
             <div className="glass-card-no-motion border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
-              Цей переклад більше не доступний у каталозі. Ви можете лише видалити
-              локалізацію — повторне встановлення недоступне.
+              {t('gamePage.tombstone')}
             </div>
           )}
 
@@ -499,7 +496,7 @@ export const GamePage: React.FC = () => {
                   data-gamepad-action
                   data-gamepad-primary-action
                 >
-                  Грати
+                  {t('gameActions.play')}
                 </Button>
               )}
               {isWorkshop && (
@@ -535,9 +532,9 @@ export const GamePage: React.FC = () => {
                   }
                   title={
                     isTombstoned
-                      ? 'Переклад більше не доступний у каталозі'
+                      ? t('gameActions.removedFromCatalog')
                       : !isOnline
-                        ? 'Відсутнє підключення до Інтернету'
+                        ? t('gameActions.offline')
                         : undefined
                   }
                   data-gamepad-primary-action
@@ -558,9 +555,9 @@ export const GamePage: React.FC = () => {
                     onClick={() => void handleRerunInstaller()}
                     aria-busy={rerunPhase === 'pending'}
                     data-gamepad-action
-                    title="Запустити інсталятор/скрипт повторно"
+                    title={t('gameActions.rerunTitle')}
                   >
-                    Перевстановити
+                    {t('gameActions.rerun')}
                   </Button>
                 )}
               {!isWorkshop && installationInfo && !isInstalling && (
@@ -569,7 +566,7 @@ export const GamePage: React.FC = () => {
                   icon={<Trash2Icon size={20} />}
                   onClick={handleUninstall}
                   disabled={isUninstalling}
-                  title="Видалити українізатор"
+                  title={t('gameActions.uninstallTitle')}
                   data-gamepad-action
                 />
               )}
@@ -598,7 +595,7 @@ export const GamePage: React.FC = () => {
                     data-gamepad-action
                     className="support-button"
                   >
-                    Підтримати
+                    {t('gameActions.support')}
                   </Button>
                 )}
               {isTranslationInstalled && (
@@ -609,7 +606,7 @@ export const GamePage: React.FC = () => {
                   data-gamepad-action
                   className="support-button"
                 >
-                  Лишити відгук
+                  {t('gameActions.feedback')}
                 </Button>
               )}
             </div>
@@ -658,7 +655,7 @@ export const GamePage: React.FC = () => {
                             onClick={handleCancelDownload}
                             className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
                           >
-                            Скасувати
+                            {t('gameActions.cancel')}
                           </button>
                         </div>
                       )}
@@ -672,7 +669,7 @@ export const GamePage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm font-medium text-text-main">
-                      Видалення українізатора та відновлення оригінальних файлів...
+                      {t('gamePage.uninstalling')}
                     </span>
                   </div>
                 </div>
@@ -700,8 +697,8 @@ export const GamePage: React.FC = () => {
                   <div>
                     <div className="text-xs text-text-muted">
                       {selectedGame.team.includes(',')
-                        ? 'Автори локалізації'
-                        : 'Автор локалізації'}
+                        ? t('gameAuthors.many')
+                        : t('gameAuthors.one')}
                     </div>
                     <AuthorsList team={selectedGame.team} maxVisible={3} />
                   </div>
@@ -793,7 +790,7 @@ export const GamePage: React.FC = () => {
               className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про українізатор
+                {t('gameSections.aboutTranslation')}
               </h3>
               <MarkdownText
                 text={selectedGame.description}
@@ -837,7 +834,7 @@ export const GamePage: React.FC = () => {
               className="glass-card-no-motion min-w-0"
             >
               <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                Про гру
+                {t('gameSections.aboutGame')}
               </h3>
               <MarkdownText
                 text={selectedGame.game_description}

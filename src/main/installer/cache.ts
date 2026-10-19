@@ -2,6 +2,7 @@ import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { ConflictingTranslation, Game, InstallationInfo } from '../../shared/types';
 import { appEvents } from '../app-events';
 import { GamesRepository } from '../db/games-repository';
@@ -387,7 +388,7 @@ export async function getConflictingTranslation(
 
     return {
       gameId: info.gameId,
-      gameName: conflictingGame?.name || 'Невідома локалізація',
+      gameName: conflictingGame?.name || t('installConflict.unknownLocalization'),
       team: conflictingGame?.team || null,
       version: info.version,
       gamePath: gamePath.path,

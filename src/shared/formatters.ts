@@ -1,3 +1,4 @@
+import { t } from '@/shared/i18n/i18n';
 /**
  * Formats bytes into a readable form (B, KB, MB, GB)
  */
@@ -32,7 +33,7 @@ export function formatTime(seconds: number): string {
     return '--:--';
   }
   if (seconds < 1) {
-    return '< 1с';
+    return t('duration.underSecond');
   }
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);

@@ -6,6 +6,7 @@ import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
+import { t } from '@/shared/i18n/i18n';
 import { AppActionIcon } from '../../ui/AppActionIcon';
 import { deckySetupMachine } from './deckySetupMachine';
 import {
@@ -16,16 +17,9 @@ import {
   SetupProgress,
   type SetupView,
 } from './SetupParts';
-import { DECKY_TITLE, deckyLoaderView, type LoaderStage } from './steps/deckyLoaderView';
+import { deckyLoaderView, type LoaderStage } from './steps/deckyLoaderView';
 import { deckyPluginView } from './steps/deckyPluginView';
 import { resultView } from './steps/setupView';
-
-const WAITING_TEXT =
-  'Підтвердіть встановлення плагіна «LBK Bridge» у вікні Decky Loader. Якщо вікна не видно, натисніть кнопку Steam.';
-const FALLBACK_TEXT =
-  'Не вдалося відкрити запит Decky Loader. Збережіть плагін і встановіть його вручну: Decky → Налаштування → Розробник → Install Plugin from ZIP.';
-const DONE_TEXT =
-  "Плагін «LBK Bridge» встановлено. Переклад досягнень з'явиться в Steam.";
 
 export const DeckyPluginSetupFlow: React.FC = () => {
   const close = useSteamPluginSetupStore((s) => s.close);
@@ -82,7 +76,7 @@ export const DeckyPluginSetupFlow: React.FC = () => {
       gamepad={primary ? 'confirm' : undefined}
       icon={<AppActionIcon phase={savePhase} icon={Save} size={16} inheritColor />}
     >
-      Зберегти ZIP
+      {t('deckySetup.saveZip')}
     </SetupButton>
   );
 
@@ -117,8 +111,8 @@ export const DeckyPluginSetupFlow: React.FC = () => {
         return loaderView({ kind: 'failed', reason: loaderFailure });
       case 'waiting':
         return resultView({
-          title: DECKY_TITLE,
-          body: <SetupProgress text={WAITING_TEXT} percent={null} />,
+          title: t('deckySetup.title'),
+          body: <SetupProgress text={t('deckySetup.waiting')} percent={null} />,
           note: savedMessage,
           buttons: (
             <>
@@ -129,8 +123,8 @@ export const DeckyPluginSetupFlow: React.FC = () => {
         });
       case 'fallback':
         return resultView({
-          title: DECKY_TITLE,
-          paragraphs: [FALLBACK_TEXT],
+          title: t('deckySetup.title'),
+          paragraphs: [t('deckySetup.fallback')],
           note: savedMessage,
           buttons: (
             <>
@@ -141,8 +135,8 @@ export const DeckyPluginSetupFlow: React.FC = () => {
         });
       case 'done':
         return resultView({
-          title: DECKY_TITLE,
-          paragraphs: [DONE_TEXT],
+          title: t('deckySetup.title'),
+          paragraphs: [t('deckySetup.done')],
           buttons: <SetupDoneButton onClose={close} />,
         });
     }

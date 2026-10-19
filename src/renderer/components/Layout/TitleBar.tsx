@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { CloseIcon } from '../Icons/CloseIcon';
 import { MaximizeIcon } from '../Icons/MaximizeIcon';
 import { MinimizeIcon } from '../Icons/MinimizeIcon';
@@ -33,7 +34,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
       {isMacOS ? <div /> : <div className="text-xs text-text-muted font-medium">LBK</div>}
 
       <div className="text-[10px] absolute left-1/2 -translate-x-1/2">
-        {`v${version}${online ? '' : ' · ви оффлайн'}`}
+        {`v${version}${online ? '' : t('titleBar.offlineSuffix')}`}
       </div>
 
       {!isMacOS && (

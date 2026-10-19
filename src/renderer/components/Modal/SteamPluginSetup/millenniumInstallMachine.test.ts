@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Actor, createActor, fromCallback, fromPromise } from 'xstate';
+import { t } from '@/shared/i18n/i18n';
 import type {
   MillenniumInstallResult,
   RestartSteamResult,
@@ -8,7 +9,6 @@ import type {
 import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHost.fixture';
 import { millenniumUnsupportedText } from '../../../utils/steamPluginHost';
 import { millenniumInstallMachine } from './millenniumInstallMachine';
-import { DONE_TEXT, ENV_MISSING_TEXT, STEAM_NOT_BACK_TEXT } from './millenniumSetup';
 
 let actor: Actor<typeof millenniumInstallMachine> | null = null;
 
@@ -70,7 +70,10 @@ describe('millenniumInstallMachine', () => {
     await flush();
     expect(h.activate).toHaveBeenCalledWith('now');
     expect(state(h).matches('result')).toBe(true);
-    expect(state(h).context.result).toEqual({ kind: 'done', paragraphs: [DONE_TEXT] });
+    expect(state(h).context.result).toEqual({
+      kind: 'done',
+      paragraphs: [t('millenniumSetup.done')],
+    });
   });
 
   it('asks before restarting a running Steam and honours the choice', async () => {
@@ -123,7 +126,7 @@ describe('millenniumInstallMachine', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(state(h).context.result).toEqual({
       kind: 'error',
-      message: STEAM_NOT_BACK_TEXT,
+      message: t('millenniumSetup.steamNotBack'),
       actions: 'steam-not-back',
     });
   });
@@ -147,7 +150,7 @@ describe('millenniumInstallMachine', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(state(h).context.result).toEqual({
       kind: 'error',
-      message: ENV_MISSING_TEXT,
+      message: t('millenniumSetup.envMissing'),
       actions: 'env-missing',
     });
   });
@@ -194,7 +197,10 @@ describe('millenniumInstallMachine', () => {
     h.statuses.push(steamBridgeStatus({ code: 'ok', connected: true }));
     h.actor.send({ type: 'RESTART_STEAM' });
     await flush();
-    expect(state(h).context.result).toEqual({ kind: 'done', paragraphs: [DONE_TEXT] });
+    expect(state(h).context.result).toEqual({
+      kind: 'done',
+      paragraphs: [t('millenniumSetup.done')],
+    });
   });
 
   it('finishes on a recheck that finds the plugin', async () => {
@@ -211,6 +217,9 @@ describe('millenniumInstallMachine', () => {
     h.recheck.mockResolvedValueOnce(steamBridgeStatus({ code: 'ok', connected: true }));
     h.actor.send({ type: 'RECHECK' });
     await flush();
-    expect(state(h).context.result).toEqual({ kind: 'done', paragraphs: [DONE_TEXT] });
+    expect(state(h).context.result).toEqual({
+      kind: 'done',
+      paragraphs: [t('millenniumSetup.done')],
+    });
   });
 });

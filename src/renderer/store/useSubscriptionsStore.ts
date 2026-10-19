@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { t } from '@/shared/i18n/i18n';
 import type { FeedbackReplyPayload } from '../../shared/types';
 import {
   createNotification,
@@ -336,7 +337,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         });
 
         if (showToast) {
-          const message = `Доступна версія ${newVersion}`;
+          const message = t('notifications.versionAvailable', {
+            version: newVersion,
+          });
           const toast = createToast(notification, message);
 
           set((state) => ({
@@ -403,7 +406,9 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         });
 
         if (showToast) {
-          const message = `Доступна версія ${newVersion}`;
+          const message = t('notifications.versionAvailable', {
+            version: newVersion,
+          });
           const toast = createToast(notification, message);
 
           set((state) => ({
@@ -429,7 +434,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = `Нова локалізація від ${teamName}`;
+          const message = t('notifications.teamNewGame', { team: teamName });
           const toast = createToast(notification, message);
 
           set((state) => ({
@@ -463,7 +468,10 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => prependNotification(state.notifications, notification));
 
         if (showToast) {
-          const message = `${teamName}: стан змінено на "${newStatus}"`;
+          const message = t('notifications.teamStatusChange', {
+            team: teamName,
+            status: newStatus,
+          });
           const toast = createToast(notification, message);
 
           set((state) => ({
@@ -539,7 +547,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           playNotificationSoundIfEnabled('status-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(
-            `Відповідь на відгук: ${reply.gameName}`,
+            t('notifications.feedbackReplyTitle', { game: reply.gameName }),
             reply.message,
             reply.gameId
           );

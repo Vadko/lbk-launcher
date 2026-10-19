@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { t } from '@/shared/i18n/i18n';
 import type { MillenniumInstallResult } from '@/shared/plugin-host-types';
 import { pluginHostState, steamBridgeStatus } from '../../../utils/pluginHost.fixture';
-import {
-  failureStep,
-  introMode,
-  restartBlockedNote,
-  STEAM_NOT_BACK_TEXT,
-} from './millenniumSetup';
+import { failureStep, introMode, restartBlockedNote } from './millenniumSetup';
 
 describe('failureStep', () => {
   it.each([
@@ -32,7 +28,7 @@ describe('failureStep', () => {
       failureStep({ success: false, reason: 'restart-failed', ...extra }, null);
     expect(restart({ restartReason: 'launch-failed' })).toEqual({
       kind: 'error',
-      message: STEAM_NOT_BACK_TEXT,
+      message: t('millenniumSetup.steamNotBack'),
       actions: 'steam-not-back',
     });
     expect(restart({ restartReason: 'timeout', queued: true })).toMatchObject({

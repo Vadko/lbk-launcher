@@ -6,6 +6,7 @@ import {
   type ExtractedAchievementStrings,
   extractAchievementStrings,
 } from '@/main/utils/achievement-strings';
+import { t } from '@/shared/i18n/i18n';
 import type {
   AchievementsComponent,
   DownloadProgress,
@@ -115,7 +116,10 @@ export async function prepareAchievements(i: {
     isFirstSession: i.isFirstSession,
     onDownloadProgress: i.onDownloadProgress,
     onStatus: (status) =>
-      i.onStatus?.({ message: `Досягнення: ${status.message}`, phase: status.phase }),
+      i.onStatus?.({
+        message: t('installSteps.status', { message: status.message }),
+        phase: status.phase,
+      }),
   });
   const extracted = await readAchievementStringsFromDir(extractDir);
   if (extracted.length === 0) {

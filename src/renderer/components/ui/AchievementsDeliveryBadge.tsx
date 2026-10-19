@@ -1,5 +1,6 @@
 import { CircleCheckIcon, ClockIcon, EyeOffIcon, TriangleAlertIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { AchievementsBadge } from '@/shared/plugin-host-types';
 import { achievementsBadgeDetail } from '../../utils/steamPluginHost';
 
@@ -19,18 +20,24 @@ const TONE_ICONS: Record<BadgeTone, React.ReactNode> = {
   muted: <EyeOffIcon size={12} className="shrink-0" />,
 };
 
-const HIDDEN_VIEW = { label: 'Не покажуться в Steam', tone: 'muted' } as const;
+const HIDDEN_VIEW: { label: string; tone: BadgeTone } = {
+  label: t('achievementsBadge.hidden'),
+  tone: 'muted',
+};
 
 const BADGE_VIEWS: Record<
   AchievementsBadge['state'],
   { label: string; tone: BadgeTone }
 > = {
-  millennium: { label: 'Працюватиме через Millennium', tone: 'success' },
-  decky: { label: 'Працюватиме через Decky', tone: 'success' },
-  'after-restart': { label: "З'явиться після перезапуску Steam", tone: 'neutral' },
-  'needs-millennium': { label: 'Потрібен Millennium', tone: 'warning' },
-  'needs-decky-plugin': { label: 'Потрібен плагін для Decky', tone: 'warning' },
-  'needs-decky': { label: 'Потрібен Decky Loader', tone: 'warning' },
+  millennium: { label: t('achievementsBadge.millennium'), tone: 'success' },
+  decky: { label: t('achievementsBadge.decky'), tone: 'success' },
+  'after-restart': { label: t('achievementsBadge.afterRestart'), tone: 'neutral' },
+  'needs-millennium': { label: t('achievementsBadge.needsMillennium'), tone: 'warning' },
+  'needs-decky-plugin': {
+    label: t('achievementsBadge.needsDeckyPlugin'),
+    tone: 'warning',
+  },
+  'needs-decky': { label: t('achievementsBadge.needsDecky'), tone: 'warning' },
   unsupported: HIDDEN_VIEW,
   'setting-off': HIDDEN_VIEW,
 };

@@ -12,6 +12,7 @@ import {
   restartSteamWithStatus,
   steamBridgeStatusText,
 } from '@/renderer/utils/steamBridge';
+import { t } from '@/shared/i18n/i18n';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { OfferActionIcon } from '../ui/OfferActionIcon';
@@ -73,12 +74,7 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
   return (
     <div className="flex flex-col gap-2 p-4 rounded-xl bg-glass border border-border text-xs text-text-muted">
       {statusText && <p className="text-text-main">{statusText}</p>}
-      {status.steamElevated && (
-        <p>
-          Steam запущено від імені адміністратора, тому лаунчер не може його
-          перезапустити.
-        </p>
-      )}
+      {status.steamElevated && <p>{t('settings.bridgeCard.steamElevated')}</p>}
       {pendingCount > 0 && <p>{pendingLaunchOptionsText(pendingCount)}</p>}
       {lines.map((line) => (
         <p key={line.key}>{line.text}</p>
@@ -93,7 +89,7 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
               className="px-4! py-2! min-h-0! text-sm"
               icon={<RotateCwIcon size={16} />}
             >
-              Перезапустити Steam
+              {t('settings.bridgeCard.restart')}
             </Button>
           )}
           {showRecheck && (
@@ -105,7 +101,7 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
               className="px-4! py-2! min-h-0! text-sm aria-busy:opacity-60 aria-busy:cursor-wait"
               icon={<AppActionIcon phase={recheckPhase} icon={RefreshCw} size={16} />}
             >
-              Перевірити ще раз
+              {t('settings.bridgeCard.recheck')}
             </Button>
           )}
           {actions.map((action) => (

@@ -16,6 +16,7 @@ import { verifyBridgeAfterLaunch } from '@/main/utils/steam-bridge-lifecycle';
 import { launchOptionsParamsFor, needsGameDir } from '@/main/utils/steam-launch-options';
 import { restartSteamProcess } from '@/main/utils/steam-launcher';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
+import { t } from '@/shared/i18n/i18n';
 import type {
   ApplyPendingLaunchOptionsResult,
   RestartSteamResult,
@@ -62,7 +63,11 @@ async function orchestrate(verifyBridge: boolean): Promise<OrchestratedRestart> 
       console.warn('[Steam] Steam did not come back after the restart');
       // The renderer's launch-failed copy ("start Steam yourself") is what fits here.
       return {
-        result: { success: false, reason: 'launch-failed', error: 'Steam не запустився' },
+        result: {
+          success: false,
+          reason: 'launch-failed',
+          error: t('steamRestart.steamNotStarted'),
+        },
         gap,
       };
     }
@@ -110,7 +115,7 @@ export async function applyLaunchOptionsNow(
   game: Game
 ): Promise<ApplyPendingLaunchOptionsResult> {
   if (!game.steam_app_id) {
-    return { success: false, error: 'Гра не має Steam App ID' };
+    return { success: false, error: t('launchOptions.noAppId') };
   }
 
   // The lookup walks Steam's library folders and rewrites the install cache, so it only runs for {GAME_DIR}.
@@ -132,13 +137,13 @@ export async function applyLaunchOptionsNow(
 
   const params = launchOptionsParamsFor(game, gamePath);
   if (!params) {
-    return { success: false, error: 'Для цього перекладу не задано параметрів запуску' };
+    return { success: false, error: t('launchOptions.notConfigured') };
   }
   // Knowable before Steam goes down; no point killing the user's session for a write that cannot land.
   if (needsDir && !params.gamePath) {
     return {
       success: false,
-      error: 'Не вдалося визначити теку гри для параметрів запуску',
+      error: t('launchOptions.gameDirUnresolved'),
     };
   }
 
@@ -162,7 +167,7 @@ export async function applyLaunchOptionsNow(
   }
   // Dropped as stale (game no longer installed); restarting Steam would change nothing.
   if (!isQueuedFor(game.id)) {
-    return { success: false, error: 'Не вдалося записати параметри запуску' };
+    return { success: false, error: t('launchOptions.writeFailed') };
   }
 
   const { result, gap } = await orchestrateOnce(false);
@@ -184,6 +189,6 @@ export async function applyLaunchOptionsNow(
   return {
     success: false,
     queued: isQueuedFor(game.id),
-    error: 'Не вдалося записати параметри запуску',
+    error: t('launchOptions.writeFailed'),
   };
 }

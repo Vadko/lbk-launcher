@@ -1,4 +1,5 @@
 import { match, P } from 'ts-pattern';
+import { t } from '@/shared/i18n/i18n';
 import type {
   AchievementsBadge,
   AchievementsDelivery,
@@ -46,57 +47,67 @@ function offerAction(
 export const OFFER_ACTIONS = {
   installMillennium: offerAction(
     'install',
-    'Встановити Millennium',
+    t('pluginOffer.installMillennium'),
     'download',
     'millennium-install'
   ),
   repairMillennium: offerAction(
     'repair',
-    'Відновити Millennium',
+    t('pluginOffer.repairMillennium'),
     'repair',
     'millennium-install'
   ),
   uninstallMillennium: offerAction(
     'uninstall',
-    'Видалити Millennium',
+    t('pluginOffer.uninstallMillennium'),
     'remove',
     'millennium-uninstall'
   ),
   millenniumInfo: offerAction(
     'site',
-    'Що таке Millennium',
+    t('pluginOffer.millenniumInfo'),
     'external',
     'millennium-site'
   ),
   millenniumSite: offerAction(
     'millennium-site',
-    'Відкрити сайт Millennium',
+    t('pluginOffer.millenniumSite'),
     'external',
     'millennium-site'
   ),
   installDeckyLoader: offerAction(
     'decky-loader-install',
-    'Встановити Decky Loader',
+    t('pluginOffer.installDeckyLoader'),
     'download',
     'decky-install'
   ),
   installDeckyPlugin: offerAction(
     'decky-install',
-    'Встановити плагін для Decky',
+    t('pluginOffer.installDeckyPlugin'),
     'download',
     'decky-install'
   ),
   updateDeckyPlugin: offerAction(
     'decky-update',
-    'Оновити плагін для Decky',
+    t('pluginOffer.updateDeckyPlugin'),
     'update',
     'decky-install'
   ),
-  deckyInfo: offerAction('decky-site', 'Що таке Decky Loader', 'external', 'decky-site'),
-  openSettings: offerAction('settings', 'Відкрити налаштування', 'settings', 'settings'),
+  deckyInfo: offerAction(
+    'decky-site',
+    t('pluginOffer.deckyInfo'),
+    'external',
+    'decky-site'
+  ),
+  openSettings: offerAction(
+    'settings',
+    t('pluginOffer.openSettings'),
+    'settings',
+    'settings'
+  ),
   restartSteam: offerAction(
     'steam-restart',
-    'Перезапустити Steam',
+    t('pluginOffer.restartSteam'),
     'restart',
     'steam-restart'
   ),
@@ -105,7 +116,7 @@ export const OFFER_ACTIONS = {
 export function updateMillenniumAction(version: string): OfferAction {
   return offerAction(
     'update',
-    `Оновити Millennium до ${version}`,
+    t('pluginOffer.updateMillennium', { version }),
     'update',
     'millennium-install'
   );
@@ -172,9 +183,6 @@ interface DeliveryNote {
   actions: OfferAction[];
 }
 
-const FILES_NOTE = 'Steam більше не показує перекладені досягнення зі звичайних файлів.';
-const IN_GAME_NOTE = 'У меню самої гри назви лишаться мовою розробника.';
-
 // The install buttons ignore the "don't offer again" flags: next to a disabled checkbox they are the only way to enable it.
 const DELIVERY_NOTES: Record<
   AchievementsBadge['state'],
@@ -184,26 +192,30 @@ const DELIVERY_NOTES: Record<
   decky: () => null,
   'after-restart': () => null,
   'needs-millennium': (badge) => ({
-    text: `${FILES_NOTE} Щоб встановити переклад досягнень і бачити його в бібліотеці, сповіщеннях та оверлеї Steam, потрібен Millennium. ${IN_GAME_NOTE}`,
+    text: t('achievementsNote.needsMillennium'),
     actions:
       badge.unsupportedReason === null
         ? [OFFER_ACTIONS.installMillennium, OFFER_ACTIONS.millenniumInfo]
         : [OFFER_ACTIONS.millenniumInfo],
   }),
   'needs-decky-plugin': () => ({
-    text: `${FILES_NOTE} Щоб встановити переклад досягнень і бачити його в бібліотеці, сповіщеннях та оверлеї Steam, потрібен плагін «LBK Bridge» для Decky Loader. ${IN_GAME_NOTE}`,
+    text: t('achievementsNote.needsDeckyPlugin'),
     actions: [OFFER_ACTIONS.installDeckyPlugin],
   }),
   'needs-decky': () => ({
-    text: `${FILES_NOTE} На Steam Deck переклад досягнень показує плагін «LBK Bridge» для Decky Loader, тож спершу потрібен Decky Loader. ${IN_GAME_NOTE}`,
+    text: t('achievementsNote.needsDecky'),
     actions: [OFFER_ACTIONS.installDeckyLoader, OFFER_ACTIONS.deckyInfo],
   }),
   'setting-off': (badge) => ({
-    text: `Переклад досягнень недоступний, поки вимкнено інтеграцію зі Steam. ${achievementsBadgeDetail(badge) ?? ''}`,
+    text: t('achievementsNote.settingOff', {
+      detail: achievementsBadgeDetail(badge) ?? '',
+    }),
     actions: [OFFER_ACTIONS.openSettings],
   }),
   unsupported: (badge) => ({
-    text: `Переклад досягнень недоступний: на цій системі Steam не може його показати. ${achievementsBadgeDetail(badge) ?? ''}`,
+    text: t('achievementsNote.unsupported', {
+      detail: achievementsBadgeDetail(badge) ?? '',
+    }),
     actions:
       badge.unsupportedReason === 'millennium-v2' ? [OFFER_ACTIONS.millenniumSite] : [],
   }),

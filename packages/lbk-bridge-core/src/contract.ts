@@ -1,5 +1,5 @@
 // Shared by both plugin builds, the CDP ops bundle and LBK's main process.
-export const BRIDGE_VERSION = '1.5.3';
+export const BRIDGE_VERSION = '1.5.4';
 export const BRIDGE_PLUGIN_NAME = 'lbk-bridge';
 export const BRIDGE_PROTOCOL = 1;
 export const BRIDGE_WS_PATH = '/lbk-bridge';
@@ -42,7 +42,7 @@ export interface SharedSteamOps {
     result: true;
   };
   syncCollection: {
-    args: { appIds: number[]; recordedId: string | null };
+    args: { name: string; appIds: number[]; recordedId: string | null };
     result: CollectionSyncAnswer;
   };
   findShortcut: {

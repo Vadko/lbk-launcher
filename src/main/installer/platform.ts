@@ -3,6 +3,7 @@ import { clipboard } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { enumerateKeysSafe, HKEY } from 'registry-js';
+import { t } from '@/shared/i18n/i18n';
 import type { Game, InstallationStatus } from '../../shared/types';
 import { getTransliteratedPath } from '../utils/files';
 import type { GameBuildOs } from '../utils/game-build';
@@ -88,7 +89,7 @@ export function checkPlatformCompatibility(game: Game): string | null {
 
   // Windows: needs Windows installer
   if (isWindowsOS && !hasWindowsInstaller) {
-    return 'Цей українізатор доступний тільки для Linux. Встановлення на Windows неможливе.';
+    return t('installPlatform.linuxOnly');
   }
 
   // macOS runs the Linux file directly, so it must not be a Windows binary in disguise.
@@ -97,7 +98,7 @@ export function checkPlatformCompatibility(game: Game): string | null {
     (!game.installation_file_linux_path ||
       isWindowsInstallerFile(game.installation_file_linux_path))
   ) {
-    return 'Цей українізатор доступний тільки для Windows. Встановлення на macOS неможливе.';
+    return t('installPlatform.windowsOnly');
   }
 
   return null;
@@ -162,9 +163,7 @@ function spawnWindowsInstaller(
     return spawn(installerPath, args, options);
   }
   if (!isCmdSafePath(installerPath)) {
-    throw new Error(
-      `шлях містить символи, небезпечні для командного рядка: ${installerPath}`
-    );
+    throw new Error(t('installPlatform.unsafeCmdPath', { path: installerPath }));
   }
 
   const command = [`"${installerPath}"`, ...args].join(' ');
@@ -173,13 +172,15 @@ function spawnWindowsInstaller(
 
 function formatInstallerExitError(code: number, stderrLines: string[]): string {
   const knownCodes: Record<number, string> = {
-    1: 'Встановлення завершилось з помилкою або було скасовано',
-    2: 'Встановлення скасовано',
+    1: t('installPlatform.exitFailedOrCancelled'),
+    2: t('installPlatform.exitCancelled'),
   };
 
-  const description = knownCodes[code] ?? `Інсталятор завершився з кодом ${code}`;
+  const description = knownCodes[code] ?? t('installPlatform.exitCode', { code });
   const stderr =
-    stderrLines.length > 0 ? `\n\nВивід інсталятора:\n${stderrLines.join('\n')}` : '';
+    stderrLines.length > 0
+      ? t('installPlatform.installerOutput', { output: stderrLines.join('\n') })
+      : '';
   return `${description}${stderr}`;
 }
 
@@ -196,7 +197,9 @@ export async function runInstaller(
     const installerPath = path.join(extractDir, installerFileName);
 
     if (!fs.existsSync(installerPath)) {
-      throw new Error(`файл інсталятора не знайдено: ${installerPath}`);
+      throw new Error(
+        t('installPlatform.installerFileNotFound', { path: installerPath })
+      );
     }
 
     console.log(`[Installer] Running installer: ${installerPath}`);
@@ -214,7 +217,7 @@ export async function runInstaller(
       await makeExecutable(installerPath);
     }
 
-    onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
+    onStatus?.({ message: t('installPlatform.launching'), phase: 'install' });
 
     if (platform === 'linux' && protonPath) {
       // Use Proton on Linux - Wine registry tracking is handled inside runProton
@@ -228,7 +231,7 @@ export async function runInstaller(
           console.warn('[Installer] Failed to copy install path:', error)
         );
 
-      onStatus?.({ message: 'Налаштування та запуск Proton', phase: 'install' });
+      onStatus?.({ message: t('installPlatform.protonSetup'), phase: 'install' });
 
       const args = [
         `/installpath=${installPath}`,
@@ -244,19 +247,21 @@ export async function runInstaller(
       if (exitCode !== null) {
         console.log(`[Installer] Installer exited with code: ${exitCode}`);
         if (exitCode === 1) {
-          throw new Error('встановлення не було завершене');
+          throw new Error(t('installPlatform.notCompleted'));
         }
       }
     } else if (platform === 'linux' || platform === 'macos') {
       if (isWindowsInstallerFile(installerPath)) {
         throw new Error(
-          `Windows інсталятор (${WINDOWS_INSTALLER_EXTENSIONS.join('/')}) потребує Proton.`
+          t('installPlatform.windowsNeedsProton', {
+            extensions: WINDOWS_INSTALLER_EXTENSIONS.join('/'),
+          })
         );
       }
 
       // Execute native Linux/macOS scripts directly
       console.log(`[Installer] Executing native installer: ${installerPath}`);
-      onStatus?.({ message: 'Запуск інсталятора...', phase: 'install' });
+      onStatus?.({ message: t('installPlatform.launching'), phase: 'install' });
 
       await new Promise<void>((resolve, reject) => {
         const isAppImage = installerPath.toLowerCase().endsWith('.appimage');
@@ -293,7 +298,7 @@ export async function runInstaller(
 
         child.on('exit', (code) => {
           if (code !== 0 && code !== null) {
-            reject(new Error(`Інсталятор завершився з кодом ${code}`));
+            reject(new Error(t('installPlatform.exitCode', { code })));
           } else {
             resolve();
           }
@@ -362,7 +367,9 @@ export async function runInstaller(
   } catch (error) {
     console.error('[Installer] Error running installer:', error);
     throw new Error(
-      `Не вдалося запустити інсталятор: ${error instanceof Error ? error.message : 'Unknown error'}`
+      t('installPlatform.runFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     );
   }
 }
@@ -460,9 +467,9 @@ export async function runUninstaller(
   } catch (error) {
     console.error('[Uninstaller] Error running uninstaller:', error);
     throw new Error(
-      `Не вдалося запустити деінсталятор: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`
+      t('installPlatform.uninstallerFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     );
   }
 }
@@ -481,7 +488,9 @@ export async function rerunInstaller(
         installerPath = enFilePath;
         console.log(`[Installer] Found transliterated installer file: ${installerPath}`);
       } else {
-        throw new Error(`файл інсталятора не знайдено: ${installerPath}`);
+        throw new Error(
+          t('installPlatform.installerFileNotFound', { path: installerPath })
+        );
       }
     }
 
@@ -499,7 +508,7 @@ export async function rerunInstaller(
   } catch (error) {
     console.error('[Installer] Error re-running installer:', error);
     throw new Error(
-      error instanceof Error ? error.message : 'Повторний запуск інсталятора не вдався'
+      error instanceof Error ? error.message : t('installPlatform.rerunFailed')
     );
   }
 }

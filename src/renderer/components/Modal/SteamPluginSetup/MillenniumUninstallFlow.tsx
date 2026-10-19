@@ -3,6 +3,7 @@ import { CheckIcon, Trash2Icon } from 'lucide-react';
 import React from 'react';
 import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
+import { t } from '@/shared/i18n/i18n';
 import { millenniumUninstallMachine } from './millenniumUninstallMachine';
 import {
   SetupButton,
@@ -15,8 +16,6 @@ import {
 import { restartChoiceView } from './steps/restartChoiceView';
 import { resultView, setupView } from './steps/setupView';
 
-const TITLE = 'Видалення Millennium';
-
 export const MillenniumUninstallFlow: React.FC = () => {
   const close = useSteamPluginSetupStore((s) => s.close);
   const state = useSteamPluginHost(true);
@@ -27,12 +26,10 @@ export const MillenniumUninstallFlow: React.FC = () => {
     if (snapshot.matches('confirmRestart')) {
       const canRestart = state?.canRestartSteam === true;
       return restartChoiceView({
-        title: TITLE,
+        title: t('millenniumUninstall.title'),
         paragraphs: [
-          'Щоб видалити Millennium, Steam потрібно закрити й запустити знову.',
-          ...(canRestart
-            ? []
-            : ['Лаунчер не може перезапустити Steam зараз. Закрийте Steam самостійно.']),
+          t('millenniumUninstall.restartNeeded'),
+          ...(canRestart ? [] : [t('millenniumUninstall.cannotRestart')]),
         ],
         canRestart,
         onChoose: (restart) => send({ type: 'CHOOSE', restart }),
@@ -42,7 +39,7 @@ export const MillenniumUninstallFlow: React.FC = () => {
     }
     if (snapshot.matches('uninstalling')) {
       return {
-        title: TITLE,
+        title: t('millenniumUninstall.title'),
         dismissable: false,
         body: <SetupProgress text={text} percent={null} />,
         footer: null,
@@ -51,7 +48,7 @@ export const MillenniumUninstallFlow: React.FC = () => {
     if (snapshot.matches('result')) {
       const done = result.kind === 'done';
       return resultView({
-        title: TITLE,
+        title: t('millenniumUninstall.title'),
         paragraphs: [result.message],
         buttons: (
           <SetupButton
@@ -59,19 +56,15 @@ export const MillenniumUninstallFlow: React.FC = () => {
             onClick={close}
             gamepad="confirm"
           >
-            {done ? 'Зрозуміло' : 'Закрити'}
+            {done ? t('common.ok') : t('common.close')}
           </SetupButton>
         ),
       });
     }
     return setupView(
-      TITLE,
+      t('millenniumUninstall.title'),
       <div className="flex flex-col gap-4">
-        <SetupText
-          paragraphs={[
-            'Millennium буде видалено з теки Steam. Плагіни й теми Millennium залишаться, якщо не позначити «Видалити також плагіни й налаштування Millennium».',
-          ]}
-        />
+        <SetupText paragraphs={[t('millenniumUninstall.confirm')]} />
         <button
           type="button"
           role="checkbox"
@@ -89,9 +82,7 @@ export const MillenniumUninstallFlow: React.FC = () => {
           >
             {purge && <CheckIcon size={14} />}
           </span>
-          <span className="min-w-0">
-            Видалити також плагіни й налаштування Millennium
-          </span>
+          <span className="min-w-0">{t('millenniumUninstall.purge')}</span>
         </button>
       </div>,
       <SetupFooter>
@@ -102,10 +93,10 @@ export const MillenniumUninstallFlow: React.FC = () => {
           gamepad="confirm"
           icon={<Trash2Icon size={16} />}
         >
-          Видалити Millennium
+          {t('millenniumUninstall.action')}
         </SetupButton>
         <SetupButton tone="secondary" onClick={close} gamepad="cancel">
-          Скасувати
+          {t('common.cancel')}
         </SetupButton>
       </SetupFooter>
     );

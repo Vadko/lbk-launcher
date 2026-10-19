@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import { errorMessage } from '@/shared/errors';
+import { t } from '@/shared/i18n/i18n';
 import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
@@ -111,7 +112,7 @@ export function setupPluginHostHandlers(): void {
     async () => (await restartSteamOrchestrated({ verifyBridge: true })).result,
     (error): RestartSteamResult => ({
       success: false,
-      error: errorMessage(error, 'Не вдалося перезапустити Steam'),
+      error: errorMessage(error, t('steamRestart.failed')),
     })
   );
 

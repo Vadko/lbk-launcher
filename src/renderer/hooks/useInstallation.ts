@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type {
   ConflictingTranslation,
   DownloadProgress,
@@ -170,11 +171,10 @@ export function useInstallation({
         // For emulator, always require manual folder selection
         if (platform === 'emulator' && !customGamePath) {
           showConfirm({
-            title: 'Виберіть папку з грою',
-            message:
-              'Для емуляторів потрібно вручну вказати папку з грою.\n\nВиберіть папку з грою?',
-            confirmText: 'Вибрати папку',
-            cancelText: 'Скасувати',
+            title: t('installEmulator.title'),
+            message: t('installEmulator.message'),
+            confirmText: t('common.selectFolder'),
+            cancelText: t('common.cancel'),
             onConfirm: async () => {
               const selectedFolder = await window.electronAPI.selectGameFolder();
               if (selectedFolder) {
@@ -219,10 +219,12 @@ export function useInstallation({
           if (!result.success && result.error) {
             if (result.error.needsManualSelection) {
               showConfirm({
-                title: 'Гру не знайдено',
-                message: `${result.error.message}\n\nСпробуйте вибрати папку гри самостійно`,
-                confirmText: 'Вибрати папку',
-                cancelText: 'Скасувати',
+                title: t('installGameNotFound.title'),
+                message: t('installGameNotFound.message', {
+                  error: result.error.message,
+                }),
+                confirmText: t('common.selectFolder'),
+                cancelText: t('common.cancel'),
                 onConfirm: async () => {
                   const selectedFolder = await window.electronAPI.selectGameFolder();
                   if (selectedFolder) {
@@ -232,7 +234,7 @@ export function useInstallation({
               });
             } else if (result.error.isRateLimit) {
               showModal({
-                title: 'Ліміт завантажень',
+                title: t('install.rateLimitTitle'),
                 message: result.error.message,
                 type: 'info',
               });
@@ -241,15 +243,12 @@ export function useInstallation({
               if (networkRetryRef.current?.autoRetried) {
                 networkRetryRef.current = null;
                 showModal({
-                  title: "З'єднання перервано",
-                  message:
-                    'Не вдалося відновити завантаження автоматично.\n\n' +
-                    'Перевірте підключення до Інтернету та спробуйте знову.\n' +
-                    'Прогрес завантаження збережено.',
+                  title: t('installNetwork.interruptedTitle'),
+                  message: t('installNetwork.interruptedMessage'),
                   type: 'error',
                   actions: [
                     {
-                      label: 'Спробувати знову',
+                      label: t('installNetwork.retry'),
                       onClick: () => {
                         void run(customGamePath, effectiveOptions);
                       },
@@ -269,15 +268,14 @@ export function useInstallation({
                   isInstalling: true,
                   isWaitingForNetwork: true,
                   downloadProgress: null,
-                  statusMessage:
-                    "З'єднання втрачено. Завантаження продовжиться автоматично після відновлення з'єднання...",
+                  statusMessage: t('installNetwork.waiting'),
                   statusTone: 'waiting',
                 });
               }
               return;
             } else {
               showModal({
-                title: 'Помилка встановлення',
+                title: t('common.installError'),
                 message: result.error.message,
                 type: 'error',
               });
@@ -336,8 +334,11 @@ export function useInstallation({
           };
           const message = installSuccessMessage(
             isUpdateAvailable
-              ? `Українізатор ${selectedGame.name} успішно оновлено до версії ${selectedGame.version}!`
-              : `Українізатор ${selectedGame.name} успішно встановлено!`,
+              ? t('installSuccess.updatedMessage', {
+                  name: selectedGame.name,
+                  version: String(selectedGame.version),
+                })
+              : t('installSuccess.installedMessage', { name: selectedGame.name }),
             successInput
           );
           const actions = installSuccessActions(successInput, {
@@ -347,8 +348,8 @@ export function useInstallation({
 
           showModal({
             title: isUpdateAvailable
-              ? 'Українізатор оновлено'
-              : 'Українізатор встановлено',
+              ? t('installSuccess.updatedTitle')
+              : t('installSuccess.installedTitle'),
             message,
             type: 'success',
             actions,
@@ -367,8 +368,8 @@ export function useInstallation({
         } catch (error) {
           console.error('Installation error:', error);
           showModal({
-            title: 'Помилка встановлення',
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            title: t('common.installError'),
+            message: error instanceof Error ? error.message : t('common.unknownError'),
             type: 'error',
           });
           clearInstallationProgress(selectedGame.id);
@@ -404,7 +405,7 @@ export function useInstallation({
       console.log('[useInstallation] Auto-retrying download for:', selectedGame.id);
       setInstallationProgress(selectedGame.id, {
         isWaitingForNetwork: false,
-        statusMessage: 'Відновлення завантаження...',
+        statusMessage: t('installNetwork.resuming'),
       });
       performInstallation(retryContext.customGamePath, retryContext.options);
     }, 2000);
@@ -427,15 +428,18 @@ export function useInstallation({
 
     const unsubscribe = window.electronAPI.onRequestRunInstallerConfirm(
       ({ gameId, installerPath, isExe, protons }) => {
-        const label = isExe ? 'інсталятор' : 'скрипт';
         const message = protons
-          ? `Українізатор завантажено та розпаковано. ${isExe ? 'Інсталятор' : 'Скрипт'} для Windows буде запущено через вибрану версію Proton.\n\nШлях до папки буде скопійовано в буфер.`
-          : `Українізатор завантажено та розпаковано.\n\nЗапустити ${label} зараз?`;
+          ? isExe
+            ? t('runInstaller.exeProtonMessage')
+            : t('runInstaller.scriptProtonMessage')
+          : isExe
+            ? t('runInstaller.exeAskMessage')
+            : t('runInstaller.scriptAskMessage');
 
         // «Ні» keeps protonPath too — «Перевстановити» and uninstall reuse it.
         const show = (protonPath?: string) => {
           showModal({
-            title: `Запуск ${isExe ? 'інсталятора' : 'скрипта'}`,
+            title: isExe ? t('runInstaller.exeTitle') : t('runInstaller.scriptTitle'),
             message,
             type: 'info',
             mandatory: true,
@@ -447,18 +451,18 @@ export function useInstallation({
                     protonSelectionRef.current = value;
                     show(value);
                   },
-                  placeholder: 'Оберіть версію Proton',
+                  placeholder: t('runInstaller.protonPlaceholder'),
                 }
               : undefined,
             actions: [
               {
-                label: 'Відкрити папку',
+                label: t('runInstaller.openFolder'),
                 onClick: () => window.electronAPI.showItemInFolder(installerPath),
                 variant: 'secondary',
                 keepOpen: true,
               },
               {
-                label: 'Так, запустити',
+                label: t('runInstaller.run'),
                 onClick: () =>
                   window.electronAPI.respondRunInstaller(gameId, {
                     run: true,
@@ -467,7 +471,7 @@ export function useInstallation({
                 variant: 'primary',
               },
               {
-                label: 'Ні',
+                label: t('runInstaller.skip'),
                 onClick: () =>
                   window.electronAPI.respondRunInstaller(gameId, {
                     run: false,
@@ -494,10 +498,14 @@ export function useInstallation({
       new Promise((resolve) => {
         const teamInfo = conflict.team ? ` (${conflict.team})` : '';
         showConfirm({
-          title: 'Інша локалізація вже встановлена',
-          message: `У папці гри вже встановлено іншу локалізацію:\n\n"${conflict.gameName}"${teamInfo}\nВерсія: ${conflict.version}\n\nЩоб встановити нову локалізацію, потрібно спочатку видалити попередню.\n\nВидалити попередню локалізацію?`,
-          confirmText: 'Видалити і продовжити',
-          cancelText: 'Скасувати',
+          title: t('installConflict.title'),
+          message: t('installConflict.message', {
+            name: conflict.gameName,
+            team: teamInfo,
+            version: conflict.version,
+          }),
+          confirmText: t('installConflict.confirm'),
+          cancelText: t('common.cancel'),
           onConfirm: async () => {
             try {
               // Get conflicting game info
@@ -507,8 +515,8 @@ export function useInstallation({
 
               if (!conflictingGame) {
                 showModal({
-                  title: 'Помилка',
-                  message: 'Не вдалося знайти інформацію про встановлену локалізацію.',
+                  title: t('common.error'),
+                  message: t('installConflict.infoNotFound'),
                   type: 'error',
                 });
                 resolve(false);
@@ -521,9 +529,8 @@ export function useInstallation({
 
               if (!result.success) {
                 showModal({
-                  title: 'Помилка видалення',
-                  message:
-                    result.error?.message || 'Не вдалося видалити попередню локалізацію.',
+                  title: t('common.uninstallError'),
+                  message: result.error?.message || t('installConflict.removeFailed'),
                   type: 'error',
                 });
                 resolve(false);
@@ -545,11 +552,11 @@ export function useInstallation({
             } catch (error) {
               console.error('Error removing conflicting translation:', error);
               showModal({
-                title: 'Помилка',
+                title: t('common.error'),
                 message:
                   error instanceof Error
                     ? error.message
-                    : 'Не вдалося видалити попередню локалізацію.',
+                    : t('installConflict.removeFailed'),
                 type: 'error',
               });
               resolve(false);
@@ -581,8 +588,8 @@ export function useInstallation({
 
       if (!isOnline) {
         showModal({
-          title: 'Немає підключення',
-          message: 'Перевірте підключення до Інтернету та спробуйте ще раз.',
+          title: t('installNetwork.offlineTitle'),
+          message: t('installNetwork.offlineMessage'),
           type: 'error',
         });
         return;
@@ -590,8 +597,8 @@ export function useInstallation({
 
       if (!window.electronAPI) {
         showModal({
-          title: 'Недоступно',
-          message: 'Встановлення доступне тільки в десктопній версії застосунку',
+          title: t('installUnavailable.title'),
+          message: t('installUnavailable.message'),
           type: 'error',
         });
         return;
@@ -651,7 +658,7 @@ export function useInstallation({
         try {
           setInstallationProgress(selectedGame.id, {
             isInstalling: true,
-            statusMessage: 'Видалення компонентів...',
+            statusMessage: t('installComponents.removing'),
           });
 
           const result = await window.electronAPI.removeComponents(selectedGame, {
@@ -661,8 +668,8 @@ export function useInstallation({
 
           if (!result.success) {
             showModal({
-              title: 'Помилка видалення',
-              message: result.error?.message || 'Не вдалося видалити компоненти',
+              title: t('common.uninstallError'),
+              message: result.error?.message || t('installComponents.removeFailed'),
               type: 'error',
             });
             clearInstallationProgress(selectedGame.id);
@@ -673,8 +680,8 @@ export function useInstallation({
         } catch (error) {
           console.error('Error removing components:', error);
           showModal({
-            title: 'Помилка видалення',
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            title: t('common.uninstallError'),
+            message: error instanceof Error ? error.message : t('common.unknownError'),
             type: 'error',
           });
           clearInstallationProgress(selectedGame.id);
@@ -697,8 +704,8 @@ export function useInstallation({
       ) {
         clearInstallationProgress(selectedGame.id);
         showModal({
-          title: 'Компоненти видалено',
-          message: 'Вибрані компоненти успішно видалено.',
+          title: t('installComponents.removedTitle'),
+          message: t('installComponents.removedMessage'),
           type: 'success',
         });
         return;
@@ -712,11 +719,10 @@ export function useInstallation({
       if (hasInstaller) {
         // Which file runs (and whether via Proton) is known only after extraction.
         showConfirm({
-          title: 'Запуск інсталятора',
-          message:
-            'Після завантаження та розпакування українізатора буде запущено його інсталятор або скрипт.\n\nПродовжити встановлення?',
-          confirmText: 'Продовжити',
-          cancelText: 'Скасувати',
+          title: t('runInstaller.exeTitle'),
+          message: t('runInstaller.confirmMessage'),
+          confirmText: t('runInstaller.confirm'),
+          cancelText: t('common.cancel'),
           onConfirm: () => {
             void performInstallation(pendingInstallPath, installOptions);
           },
@@ -746,14 +752,14 @@ export function useInstallation({
 
     const hasBackup = installationInfo.hasBackup !== false;
     const backupWarning = !hasBackup
-      ? '\n\nУВАГА: Резервну копію не було створено при встановленні. Оригінальні файли НЕ будуть відновлені!'
-      : '\n\nОригінальні файли гри будуть відновлені з резервної копії.';
+      ? t('uninstall.noBackupWarning')
+      : t('uninstall.backupWarning');
 
     showConfirm({
-      title: 'Видалення українізатора',
-      message: `Ви впевнені, що хочете видалити українізатор для "${selectedGame.name}"?${backupWarning}`,
-      confirmText: 'Видалити',
-      cancelText: 'Скасувати',
+      title: t('uninstall.title'),
+      message: t('uninstall.message', { name: selectedGame.name, backupWarning }),
+      confirmText: t('uninstall.confirm'),
+      cancelText: t('common.cancel'),
       onConfirm: async () => {
         try {
           setInstallationProgress(selectedGame.id, {
@@ -765,7 +771,7 @@ export function useInstallation({
 
           if (!result.success && result.error) {
             showModal({
-              title: 'Помилка видалення',
+              title: t('common.uninstallError'),
               message: result.error.message,
               type: 'error',
             });
@@ -784,15 +790,15 @@ export function useInstallation({
           useSubscriptionsStore.getState().clearNotifiedVersion(selectedGame.id);
 
           showModal({
-            title: 'Українізатор видалено',
-            message: `Українізатор "${selectedGame.name}" успішно видалено!`,
+            title: t('uninstall.doneTitle'),
+            message: t('uninstall.doneMessage', { name: selectedGame.name }),
             type: 'success',
           });
         } catch (error) {
           console.error('Uninstall error:', error);
           showModal({
-            title: 'Помилка видалення',
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            title: t('common.uninstallError'),
+            message: error instanceof Error ? error.message : t('common.unknownError'),
             type: 'error',
           });
         } finally {
@@ -823,12 +829,12 @@ export function useInstallation({
     if (result.success) {
       setInstallationProgress(selectedGame.id, {
         isPaused: true,
-        statusMessage: 'Завантаження призупинено',
+        statusMessage: t('download.paused'),
       });
     } else {
       showModal({
-        title: 'Помилка',
-        message: result.error || 'Не вдалося призупинити завантаження',
+        title: t('common.error'),
+        message: result.error || t('download.pauseFailed'),
         type: 'error',
       });
     }
@@ -846,15 +852,15 @@ export function useInstallation({
 
     setInstallationProgress(selectedGame.id, {
       isPaused: false,
-      statusMessage: 'Продовження завантаження...',
+      statusMessage: t('download.resuming'),
     });
 
     const result = await window.electronAPI.resumeDownload(selectedGame.id);
 
     if (!result.success) {
       showModal({
-        title: 'Помилка',
-        message: result.error || 'Не вдалося продовжити завантаження',
+        title: t('common.error'),
+        message: result.error || t('download.resumeFailed'),
         type: 'error',
       });
       clearInstallationProgress(selectedGame.id);
@@ -889,28 +895,28 @@ export function useInstallation({
   // The label is phase-independent: the icon and the progress card show how the install is going
   const getInstallButtonText = useCallback((): string => {
     if (!isOnline) {
-      return 'Немає інтернету';
+      return t('installButton.offline');
     }
     if (isPlanned) {
-      return 'Заплановано';
+      return t('installButton.planned');
     }
     if (isTechImprovement) {
-      return 'Технічна доробка';
+      return t('installButton.techImprovement');
     }
     if (
       installationInfo?.hasInstallError &&
       isUpdateAvailable &&
       !isCheckingInstallation
     ) {
-      return `Перезавантажити (v${selectedGame?.version})`;
+      return t('installButton.reload', { version: String(selectedGame?.version) });
     }
     if (isUpdateAvailable && !isCheckingInstallation) {
-      return `Оновити до v${selectedGame?.version}`;
+      return t('installButton.update', { version: String(selectedGame?.version) });
     }
     if (installationInfo) {
-      return `Перезавантажити (v${installationInfo.version})`;
+      return t('installButton.reload', { version: installationInfo.version });
     }
-    return 'Встановити українізатор';
+    return t('installButton.install');
   }, [
     isOnline,
     isPlanned,
@@ -940,24 +946,24 @@ export function useInstallation({
 
       if (result.success) {
         showModal({
-          title: 'Інсталятор завершено',
-          message: 'Інсталятор успішно завершив роботу',
+          title: t('runInstaller.finishedTitle'),
+          message: t('runInstaller.finishedMessage'),
           type: 'success',
         });
 
         await checkInstallationStatus(selectedGame.id, selectedGame);
       } else {
         showModal({
-          title: 'Помилка',
-          message: result.error?.message || 'Не вдалося запустити інсталятор',
+          title: t('common.error'),
+          message: result.error?.message || t('runInstaller.failed'),
           type: 'error',
         });
       }
     } catch (error) {
       console.error('[useInstallation] Error re-running installer:', error);
       showModal({
-        title: 'Помилка',
-        message: 'Не вдалося запустити інсталятор',
+        title: t('common.error'),
+        message: t('runInstaller.failed'),
         type: 'error',
       });
     }

@@ -8,6 +8,7 @@ import { useSteamPluginHost } from '@/renderer/hooks/useSteamPluginHost';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useSteamPluginSetupStore } from '@/renderer/store/useSteamPluginSetupStore';
 import { millenniumPhaseText } from '@/renderer/utils/steamPluginHost';
+import { t } from '@/shared/i18n/i18n';
 import { AppActionIcon } from '../../ui/AppActionIcon';
 import { millenniumInstallMachine } from './millenniumInstallMachine';
 import { type ErrorActions, isPluginConnected } from './millenniumSetup';
@@ -20,11 +21,7 @@ import {
   SetupProgress,
   type SetupView,
 } from './SetupParts';
-import {
-  MILLENNIUM_TITLE,
-  millenniumIntroView,
-  millenniumSiteButton,
-} from './steps/millenniumIntroView';
+import { millenniumIntroView, millenniumSiteButton } from './steps/millenniumIntroView';
 import { restartChoiceView } from './steps/restartChoiceView';
 import { resultView } from './steps/setupView';
 
@@ -73,7 +70,7 @@ export const MillenniumInstallFlow: React.FC = () => {
           gamepad="confirm"
           icon={<RotateCwIcon size={16} />}
         >
-          Спробувати ще раз
+          {t('common.tryAgain')}
         </SetupButton>
       ),
       site: millenniumSiteButton(),
@@ -85,14 +82,14 @@ export const MillenniumInstallFlow: React.FC = () => {
             gamepad="confirm"
             icon={<PlayIcon size={16} />}
           >
-            Запустити Steam
+            {t('millenniumSetup.startSteam')}
           </SetupButton>
           <SetupButton
             tone="danger"
             onClick={() => openSetup('millennium-uninstall', source)}
             icon={<Trash2Icon size={16} />}
           >
-            Видалити Millennium
+            {t('millenniumSetup.uninstall')}
           </SetupButton>
         </>
       ),
@@ -103,7 +100,7 @@ export const MillenniumInstallFlow: React.FC = () => {
           gamepad="confirm"
           icon={<RotateCwIcon size={16} />}
         >
-          Перезапустити Steam
+          {t('millenniumSetup.restartSteam')}
         </SetupButton>
       ),
       recheck: (
@@ -116,7 +113,7 @@ export const MillenniumInstallFlow: React.FC = () => {
             <AppActionIcon phase={recheckPhase} icon={RefreshCw} size={16} inheritColor />
           }
         >
-          Перевірити ще раз
+          {t('millenniumSetup.recheck')}
         </SetupButton>
       ),
       none: null,
@@ -137,7 +134,7 @@ export const MillenniumInstallFlow: React.FC = () => {
     }
     if (snapshot.matches('working')) {
       return {
-        title: MILLENNIUM_TITLE,
+        title: t('millenniumSetup.title'),
         dismissable: false,
         body: <SetupProgress text={work.text} percent={work.percent} />,
         footer: work.cancellable ? (
@@ -147,7 +144,7 @@ export const MillenniumInstallFlow: React.FC = () => {
               onClick={() => void window.electronAPI.cancelMillennium()}
               gamepad="cancel"
             >
-              Скасувати
+              {t('common.cancel')}
             </SetupButton>
           </SetupFooter>
         ) : null,
@@ -155,9 +152,9 @@ export const MillenniumInstallFlow: React.FC = () => {
     }
     if (snapshot.matches('confirmRestart')) {
       return restartChoiceView({
-        title: MILLENNIUM_TITLE,
+        title: t('millenniumSetup.title'),
         paragraphs: [
-          'Щоб завершити встановлення, Steam потрібно закрити й запустити знову.',
+          t('millenniumSetup.restartToFinish'),
           ...(restartChoice.note ? [restartChoice.note] : []),
         ],
         canRestart: restartChoice.canRestart,
@@ -168,7 +165,7 @@ export const MillenniumInstallFlow: React.FC = () => {
     }
     if (snapshot.matches('waitingPlugin')) {
       return resultView({
-        title: MILLENNIUM_TITLE,
+        title: t('millenniumSetup.title'),
         body: (
           <SetupProgress
             text={millenniumPhaseText('wait-plugin', 'install')}
@@ -180,13 +177,13 @@ export const MillenniumInstallFlow: React.FC = () => {
     }
     if (result.kind === 'done') {
       return resultView({
-        title: MILLENNIUM_TITLE,
+        title: t('millenniumSetup.title'),
         paragraphs: result.paragraphs,
         buttons: <SetupDoneButton onClose={close} />,
       });
     }
     return resultView({
-      title: MILLENNIUM_TITLE,
+      title: t('millenniumSetup.title'),
       paragraphs: [result.message],
       buttons: (
         <>

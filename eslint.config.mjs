@@ -120,6 +120,11 @@ export default tseslint.config(
     rules: { 'max-lines': 'off' },
   },
   {
+    // The whole Ukrainian dictionary stays in one file so a key is found in one place.
+    files: ['packages/lbk-i18n/src/uk.ts'],
+    rules: { 'max-lines': 'off' },
+  },
+  {
     // Decky imports the bundle once; there is no fast refresh to keep working.
     files: ['packages/lbk-bridge-decky/src/**'],
     rules: { 'react-refresh/only-export-components': 'off' },

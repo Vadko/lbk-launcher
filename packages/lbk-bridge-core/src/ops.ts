@@ -4,7 +4,6 @@ import type { LibraryApp, SteamApps, SteamGlobals } from './steam-globals';
 
 const NON_STEAM_APPID_MIN = 2147483648;
 const SHORTCUT_NAME = 'LBK Launcher';
-const COLLECTION_NAME = 'З українізаторами';
 const SEMVER = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 // Decky opens the path as root, so only our own cache zip for exactly this version is accepted.
 const DECKY_ZIP_URL = new RegExp(
@@ -124,6 +123,7 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
       if (!G.isArray(args.appIds) || args.appIds.length > 20000) {
         fail('appIds');
       }
+      const name = textArg(args.name, 128) || fail('name');
       const targetIds = new Set(args.appIds.map(appIdArg));
       const recordedId = args.recordedId == null ? null : textArg(args.recordedId, 128);
       try {
@@ -134,16 +134,16 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
         }
         const owned = library.filter((x) => targetIds.has(x.appid));
         const wantedIds = new Set(owned.map((x) => x.appid));
-        const byName = store.GetUserCollectionsByName(COLLECTION_NAME) || [];
+        const byName = store.GetUserCollectionsByName(name) || [];
         const coll =
           (recordedId && byName.find((c) => c.id === recordedId)) || byName[0] || null;
         if (!coll) {
           if (owned.length === 0) {
             return 'no-matches';
           }
-          const fresh = store.NewUnsavedCollection(COLLECTION_NAME, null, owned);
+          const fresh = store.NewUnsavedCollection(name, null, owned);
           await store.SaveCollection(fresh);
-          const saved = store.GetUserCollectionsByName(COLLECTION_NAME) || [];
+          const saved = store.GetUserCollectionsByName(name) || [];
           return {
             created: true,
             collectionId: saved[0]?.id || fresh.id || null,

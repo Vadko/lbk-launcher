@@ -11,6 +11,7 @@ import {
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
 import pTimeout from 'p-timeout';
+import { t } from '@/shared/i18n/i18n';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { invalidateSteamLibraryCache } from '../steam-library-api';
 import { getLogFileDirectory } from '../utils/logger';
@@ -37,8 +38,8 @@ function createTray() {
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Відкрити', click: showMainWindow },
-    { label: 'Вийти', click: () => app.quit() },
+    { label: t('tray.open'), click: showMainWindow },
+    { label: t('tray.quit'), click: () => app.quit() },
   ]);
   tray.setContextMenu(contextMenu);
 

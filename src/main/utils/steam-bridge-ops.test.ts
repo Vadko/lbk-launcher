@@ -137,8 +137,18 @@ describe('validators', () => {
     ['clearArtwork', 'invalid int', { appId: 10, assetType: 5 }],
     ['updateShortcut', 'invalid shortcut appId', shortcut],
     ['setLaunchOptions', 'invalid args', null],
-    ['syncCollection', 'invalid appId', { appIds: [1.5], recordedId: null }],
-    ['syncCollection', 'invalid appIds', { appIds: 'x', recordedId: null }],
+    [
+      'syncCollection',
+      'invalid appId',
+      { name: COLLECTION_NAME, appIds: [1.5], recordedId: null },
+    ],
+    ['syncCollection', 'invalid text', { appIds: [10], recordedId: null }],
+    ['syncCollection', 'invalid name', { name: '', appIds: [10], recordedId: null }],
+    [
+      'syncCollection',
+      'invalid appIds',
+      { name: COLLECTION_NAME, appIds: 'x', recordedId: null },
+    ],
   ])('%s fails with "%s" without touching Steam (#%#)', async (op, error, args) => {
     await expect(ops[op](args)).rejects.toThrow(`lbk-ops: ${error}`);
     for (const call of Object.values(steam.Apps)) {
@@ -265,20 +275,24 @@ describe('ops against stubbed Steam', () => {
 describe('syncCollection', () => {
   it('reports an unavailable library, then no-matches when nothing is owned', async () => {
     await expect(
-      loadOps().syncCollection({ appIds: [10], recordedId: null })
+      loadOps().syncCollection({ name: COLLECTION_NAME, appIds: [10], recordedId: null })
     ).resolves.toBe('library-unavailable');
     const store = makeCollectionStore(library, []);
     const ops = loadOps({ collectionStore: store });
-    await expect(ops.syncCollection({ appIds: [99], recordedId: null })).resolves.toBe(
-      'no-matches'
-    );
+    await expect(
+      ops.syncCollection({ name: COLLECTION_NAME, appIds: [99], recordedId: null })
+    ).resolves.toBe('no-matches');
     expect(store.SaveCollection).not.toHaveBeenCalled();
   });
 
   it('creates a manual collection with the owned games', async () => {
     const store = makeCollectionStore(library, []);
     const ops = loadOps({ collectionStore: store });
-    const result = await ops.syncCollection({ appIds: [10, 20, 99], recordedId: null });
+    const result = await ops.syncCollection({
+      name: COLLECTION_NAME,
+      appIds: [10, 20, 99],
+      recordedId: null,
+    });
     expect(result).toEqual({
       created: true,
       collectionId: 'uc-new',
@@ -296,7 +310,11 @@ describe('syncCollection', () => {
     const coll = { id: 'uc-1', allApps: [{ appid: 10 }, { appid: 30 }] };
     const store = makeCollectionStore(library, [{ id: 'uc-other', allApps: [] }, coll]);
     const ops = loadOps({ collectionStore: store });
-    const result = await ops.syncCollection({ appIds: [10, 20], recordedId: 'uc-1' });
+    const result = await ops.syncCollection({
+      name: COLLECTION_NAME,
+      appIds: [10, 20],
+      recordedId: 'uc-1',
+    });
     expect(result).toEqual({
       created: false,
       collectionId: 'uc-1',
@@ -313,7 +331,11 @@ describe('syncCollection', () => {
       { id: 'uc-2', allApps: [{ appid: 30 }] },
     ]);
     const ops = loadOps({ collectionStore: store });
-    const result = await ops.syncCollection({ appIds: [10, 30], recordedId: null });
+    const result = await ops.syncCollection({
+      name: COLLECTION_NAME,
+      appIds: [10, 30],
+      recordedId: null,
+    });
     expect(result).toEqual({
       created: false,
       collectionId: 'uc-2',
@@ -328,7 +350,11 @@ describe('syncCollection', () => {
       { id: 'uc-3', allApps: [{ appid: 30 }, { appid: 555 }] },
     ]);
     const ops = loadOps({ collectionStore: store });
-    const result = await ops.syncCollection({ appIds: [10], recordedId: null });
+    const result = await ops.syncCollection({
+      name: COLLECTION_NAME,
+      appIds: [10],
+      recordedId: null,
+    });
     expect(result).toEqual({
       created: false,
       collectionId: null,
@@ -345,7 +371,7 @@ describe('syncCollection', () => {
     store.AddOrRemoveApp.mockRejectedValueOnce(new Error('steam said no'));
     const ops = loadOps({ collectionStore: store });
     await expect(
-      ops.syncCollection({ appIds: [10], recordedId: 'uc-4' })
+      ops.syncCollection({ name: COLLECTION_NAME, appIds: [10], recordedId: 'uc-4' })
     ).resolves.toEqual({
       error: 'steam said no',
     });

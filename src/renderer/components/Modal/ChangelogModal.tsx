@@ -1,5 +1,6 @@
 import { ChevronDownIcon, ExternalLinkIcon, SparklesIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { REPO_RELEASES_URL } from '../../../shared/repo';
 import type { ChangelogEntry } from '../../../shared/types';
 import { compareVersions } from '../../../shared/version';
@@ -39,13 +40,15 @@ export const ChangelogModal: React.FC = () => {
   const [current, ...older] = entries.slice(upcomingCount);
 
   return (
-    <Modal isOpen={isOpen} onClose={closeModal} title="Що нового" usePortal>
+    <Modal isOpen={isOpen} onClose={closeModal} title={t('changelog.title')} usePortal>
       <div className="flex flex-col gap-6">
         {upcoming.length > 0 && (
           <div className="flex flex-col gap-4 p-4 rounded-xl border border-color-accent bg-color-accent/10">
             <div className="flex items-center gap-2">
               <SparklesIcon size={16} className="text-color-main" />
-              <h3 className="text-sm font-semibold text-color-main">Буде в оновленні</h3>
+              <h3 className="text-sm font-semibold text-color-main">
+                {t('changelog.upcoming')}
+              </h3>
             </div>
             {upcoming.map((entry) => (
               <Entry key={entry.version} entry={entry} />
@@ -56,7 +59,7 @@ export const ChangelogModal: React.FC = () => {
         {current && (
           <div className="flex flex-col gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Ваша версія — v{APP_VERSION}
+              {t('changelog.yourVersion', { version: APP_VERSION })}
             </h3>
             <Entry entry={current} />
           </div>
@@ -73,7 +76,7 @@ export const ChangelogModal: React.FC = () => {
                 size={16}
                 className={`transition-transform duration-200 ${showOlder ? 'rotate-180' : ''}`}
               />
-              Попередні версії ({older.length})
+              {t('changelog.olderVersions', { total: older.length })}
             </button>
             {showOlder &&
               older.map((entry) => (
@@ -90,7 +93,7 @@ export const ChangelogModal: React.FC = () => {
           className="flex items-center gap-2 text-xs text-text-muted hover:text-text-main transition-colors"
         >
           <ExternalLinkIcon size={14} />
-          Повний список змін на GitHub
+          {t('changelog.fullList')}
         </button>
       </div>
     </Modal>

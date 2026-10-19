@@ -1,4 +1,5 @@
 import { match, P } from 'ts-pattern';
+import { t } from '@/shared/i18n/i18n';
 import type {
   MillenniumInstallResult,
   MillenniumUnsupportedReason,
@@ -12,20 +13,6 @@ import {
   millenniumFailureText,
   millenniumUnsupportedText,
 } from '../../../utils/steamPluginHost';
-
-export const DONE_TEXT =
-  'Millennium встановлено. Steam підключився до лаунчера через плагін «LBK Bridge».';
-export const OFFLINE_DONE_TEXT =
-  'Millennium встановлено. Плагін «LBK Bridge» підключиться, щойно ви запустите Steam.';
-const QUEUED_TEXT =
-  'Millennium встановиться, щойно ви закриєте Steam. Якщо лаунчер на той момент буде закритий — під час його наступного запуску, коли Steam не працюватиме.';
-const MAC_QUEUED_TEXT = 'Потім запускайте Steam з лаунчера або через «Steam Millennium».';
-export const STEAM_NOT_BACK_TEXT =
-  'Steam не запустився після встановлення Millennium. Можливо, ця версія Millennium ще не підтримує ваш Steam.';
-export const ENV_MISSING_TEXT =
-  'Steam запущено не з лаунчера, тому Millennium не активний. Перезапустіть Steam з лаунчера або повторно увійдіть у систему.';
-export const EXTERNAL_TEXT =
-  'Millennium уже встановлено — лаунчер сам додасть до нього плагін «LBK Bridge».';
 
 export type RestartChoice = 'now' | 'on-exit';
 
@@ -55,7 +42,9 @@ export const setupError = (message: string, actions: ErrorActions): SetupResult 
 });
 
 export function queuedParagraphs(): string[] {
-  return hostOs() === 'macos' ? [QUEUED_TEXT, MAC_QUEUED_TEXT] : [QUEUED_TEXT];
+  return hostOs() === 'macos'
+    ? [t('millenniumSetup.queued'), t('millenniumSetup.macQueued')]
+    : [t('millenniumSetup.queued')];
 }
 
 export function restartFailedText(
@@ -73,7 +62,7 @@ export function failureStep(
   return match(result)
     .returnType<SetupResult>()
     .with({ reason: 'unsupported', error: 'external' }, () =>
-      setupError(EXTERNAL_TEXT, 'none')
+      setupError(t('millenniumSetup.external'), 'none')
     )
     .with({ reason: 'unsupported' }, () =>
       setupError(millenniumUnsupportedText(unsupportedReason), 'none')
@@ -88,10 +77,10 @@ export function failureStep(
       setupDone([millenniumFailureText(reason)])
     )
     .with({ reason: 'restart-failed', restartReason: 'launch-failed' }, () =>
-      setupError(STEAM_NOT_BACK_TEXT, 'steam-not-back')
+      setupError(t('millenniumSetup.steamNotBack'), 'steam-not-back')
     )
     .with({ reason: 'restart-failed' }, (failure) =>
-      setupError(restartFailedText(failure, QUEUED_TEXT), 'none')
+      setupError(restartFailedText(failure, t('millenniumSetup.queued')), 'none')
     )
     .with(
       {

@@ -1,7 +1,7 @@
 /**
  * Syncs the Steam library collection «З українізаторами» through the Steam
  * bridge — the same path `steam-workshop.ts` uses to subscribe to the Workshop.
- * The in-page body is the `syncCollection` op in `packages/lbk-bridge-core/src/ops.ts`, which pins the name.
+ * The in-page body is the `syncCollection` op in `packages/lbk-bridge-core/src/ops.ts`.
  *
  * The steps were reverse-engineered against `collectionStore` in SharedJSContext
  * (the same JS store the Steam library uses for drag-and-drop between collections):
@@ -35,9 +35,9 @@ import {
   writeSteamAccountValue,
 } from '@/main/utils/store-storage';
 import { errorMessage } from '@/shared/errors';
+import { t } from '@/shared/i18n/i18n';
 import type { SteamCollectionSyncFailure } from '@/shared/types';
 
-const COLLECTION_NAME = 'З українізаторами';
 const RECORD_KEY = 'steam-collection';
 const MAX_APP_ID = 4294967295;
 
@@ -70,7 +70,11 @@ export async function syncTranslatedGamesCollection(
   const recordedId = typeof stored === 'string' && stored.length <= 128 ? stored : null;
 
   try {
-    const result = await bridge.invoke('syncCollection', { appIds: valid, recordedId });
+    const result = await bridge.invoke('syncCollection', {
+      name: t('steamCollection.name'),
+      appIds: valid,
+      recordedId,
+    });
 
     if (result === 'library-unavailable' || result === 'no-matches') {
       return { ok: false, reason: result };
@@ -88,7 +92,7 @@ export async function syncTranslatedGamesCollection(
     }
 
     console.log(
-      `[SteamCollections] "${COLLECTION_NAME}": ${result.created ? 'created' : 'updated'}, total=${result.total}, +${result.added}/-${result.removed}`
+      `[SteamCollections] ${result.created ? 'created' : 'updated'}, total=${result.total}, +${result.added}/-${result.removed}`
     );
     return { ok: true, total: result.total };
   } catch (error) {
