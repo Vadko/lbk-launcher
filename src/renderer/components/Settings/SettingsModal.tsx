@@ -462,15 +462,6 @@ export const SettingsModal: React.FC = () => {
         isOpen={isSettingsModalOpen}
         onClose={closeSettingsModal}
         title={t('settings.title')}
-        footer={
-          <button
-            onClick={closeSettingsModal}
-            data-gamepad-cancel
-            className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
-          >
-            {t('settings.close')}
-          </button>
-        }
       >
         <div className="space-y-4">
           {/* Feedback link */}
