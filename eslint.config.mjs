@@ -154,4 +154,36 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Steam web pages run the achievement page bundle (achievement-page-entry.ts and everything it imports).
+    files: [
+      'packages/lbk-bridge-core/src/achievement-page*.ts',
+      'packages/lbk-bridge-core/src/achievement-query-cache.ts',
+      'packages/lbk-bridge-core/src/achievement-text-memory.ts',
+    ],
+    ignores: ['**/*.test.ts', '**/*.fixture.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@mobily/ts-belt',
+              allowImportNames: ['G'],
+              allowTypeImports: true,
+              message: 'esbuild bundles a whole ts-belt namespace: G costs 2 KB, A 45 KB.',
+            },
+          ],
+          patterns: [
+            {
+              regex: '^(?!\\./|@mobily/ts-belt$|p-wait-for$)',
+              allowTypeImports: true,
+              message:
+                'The achievement page bundle may only import sibling modules, G from ts-belt and p-wait-for (no zod).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

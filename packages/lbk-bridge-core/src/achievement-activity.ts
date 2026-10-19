@@ -1,5 +1,6 @@
 import { G, R } from '@mobily/ts-belt';
-import { type AchLookup, type AchText, createTextMemory } from './achievement-text';
+import type { AchLookup, AchText } from './achievement-text';
+import { createTextMemory } from './achievement-text-memory';
 import { type AnyFn, isFn, type SteamGlobals } from './steam-globals';
 
 interface HasValues {

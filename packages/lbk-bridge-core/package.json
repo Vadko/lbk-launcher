@@ -6,11 +6,12 @@
   "license": "GPL-3.0-or-later",
   "exports": {
     "./steam-ops.iife.js": "./dist/steam-ops.iife.js",
+    "./achievement-page.iife.js": "./dist/achievement-page.iife.js",
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "build": "esbuild src/ops-cdp.ts --bundle --format=iife --global-name=__lbkOps --target=es2020 --log-level=warning --outfile=dist/steam-ops.iife.js",
-    "watch": "esbuild src/ops-cdp.ts --bundle --format=iife --global-name=__lbkOps --target=es2020 --outfile=dist/steam-ops.iife.js --watch"
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
   },
   "dependencies": {
     "@mobily/ts-belt": "3.13.1",

@@ -1,5 +1,6 @@
 import { G } from '@mobily/ts-belt';
-import { type AchLookup, type AchText, createTextMemory } from './achievement-text';
+import type { AchLookup, AchText } from './achievement-text';
+import { createTextMemory } from './achievement-text-memory';
 import { isFn } from './steam-globals';
 
 interface Query {
@@ -8,7 +9,7 @@ interface Query {
   setState(state: { data: unknown }): void;
 }
 
-interface QueryClient {
+export interface QueryClient {
   getQueryCache(): {
     getAll(): unknown[];
     subscribe(listener: (event: unknown) => void): () => void;
@@ -23,7 +24,7 @@ export interface AchievementQueries {
   dispose(): void;
 }
 
-const FIELDS: readonly (readonly [string, keyof AchText])[] = [
+export const QUERY_TEXT_FIELDS: readonly (readonly [string, keyof AchText])[] = [
   ['name', 'name'],
   ['description', 'desc'],
 ];
@@ -48,7 +49,7 @@ export function achievementQueryAppId(key: unknown): unknown {
 }
 
 // Copy-on-write over every { api_name, ... } record; untouched branches stay shared.
-function mapRecords(data: unknown, fn: (rec: Rec) => Rec, depth = 0): unknown {
+export function mapRecords(data: unknown, fn: (rec: Rec) => Rec, depth = 0): unknown {
   if (depth > 6) {
     return data;
   }
@@ -97,7 +98,7 @@ export function hookAchievementQueries(
     const next = mapRecords(q.state.data, (rec) => {
       const t = translate ? lookup(appid, rec.api_name) : undefined;
       let out = rec;
-      for (const [key, field] of FIELDS) {
+      for (const [key, field] of QUERY_TEXT_FIELDS) {
         const current = rec[key];
         if (!G.isString(current)) {
           continue;
