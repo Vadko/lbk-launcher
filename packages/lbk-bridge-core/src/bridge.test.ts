@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 function makeSteam(bridgeJson: unknown = null, localStorage = makeStorage()) {
-  const timers = new Map<number, TimerHandler>();
+  const timers = new Map<number, { fn: TimerHandler; ms: number | undefined }>();
   let nextTimer = 0;
   let fetches = 0;
   const steam: SteamGlobals = { localStorage };
@@ -57,9 +57,9 @@ function makeSteam(bridgeJson: unknown = null, localStorage = makeStorage()) {
       });
     },
     crypto: globalThis.crypto,
-    setTimeout: (fn) => {
+    setTimeout: (fn, ms) => {
       nextTimer++;
-      timers.set(nextTimer, fn);
+      timers.set(nextTimer, { fn, ms });
       return nextTimer;
     },
     clearTimeout: (handle) => {
@@ -77,10 +77,11 @@ function makeSteam(bridgeJson: unknown = null, localStorage = makeStorage()) {
       loaded.push(bridge);
       return bridge;
     },
+    pendingTimers: () => [...timers.values()].map(({ ms }) => ms),
     runTimers() {
       const pending = [...timers.values()];
       timers.clear();
-      for (const fn of pending) {
+      for (const { fn } of pending) {
         if (typeof fn === 'function') {
           fn();
         }
@@ -228,6 +229,45 @@ describe('LBK Bridge transport', () => {
       { t: 'res', id: 1, ok: false, error: 'timed out after 30000ms' },
       { t: 'res', id: 2, ok: true, value: { ok: true } },
     ]);
+  });
+});
+
+describe('LBK Bridge reconnect backoff', () => {
+  const nextWaits = async (steam: ReturnType<typeof makeSteam>) => {
+    await settle();
+    const waits = steam.pendingTimers();
+    steam.runTimers();
+    return waits;
+  };
+
+  it('doubles the wait from 2 s up to 10 s while bridge.json is missing', async () => {
+    const steam = makeSteam();
+    steam.load('decky').start();
+    const waits: (number | undefined)[] = [];
+    for (let i = 0; i < 5; i++) {
+      waits.push(...(await nextWaits(steam)));
+    }
+    expect(waits).toEqual([2000, 4000, 8000, 10000, 10000]);
+  });
+
+  it('starts over at 2 s once an authenticated session closes', async () => {
+    const secret = '78'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50004, secret });
+    steam.load('millennium').start();
+    const waits: (number | undefined)[] = [];
+    for (const authed of [false, false, true]) {
+      await settle();
+      const ws = FakeSocket.instances[FakeSocket.instances.length - 1];
+      if (authed) {
+        await authenticate(ws, secret);
+      }
+      ws.onclose?.(new CloseEvent('close'));
+      waits.push(...(await nextWaits(steam)));
+    }
+    waits.push(...(await nextWaits(steam)), ...(await nextWaits(steam)));
+    expect(waits).toEqual([2000, 4000, 2000, 4000, 8000]);
+    expect(FakeSocket.instances).toHaveLength(3);
   });
 });
 

@@ -27,6 +27,7 @@ function achievementsEnvReady(g: SteamGlobals, minimal: boolean): boolean {
 interface AchievementsDeps {
   steam: SteamGlobals;
   readJson: (name: string) => Promise<unknown>;
+  delay: (ms: number) => Promise<void>;
   signal: AbortSignal;
   errText: (e: unknown) => string;
 }
@@ -48,23 +49,18 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
   const runs = pLimit(1);
   const busy = () => runs.activeCount + runs.pendingCount > 0;
 
-  const loadAchievementsFile = (): Promise<AchievementsPayload | null> => {
-    let attempt = 0;
-    return pWaitFor(
-      async () => {
-        try {
-          const raw = await deps.readJson('achievements.json');
-          return pWaitFor.resolveWith(sanitizeAchievements(raw));
-        } catch (e) {
-          attempt++;
-          if (attempt >= ACH_FILE_ATTEMPTS) {
-            throw e;
-          }
-          return false;
+  const loadAchievementsFile = async (): Promise<AchievementsPayload | null> => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return sanitizeAchievements(await deps.readJson('achievements.json'));
+      } catch (e) {
+        if (attempt >= ACH_FILE_ATTEMPTS) {
+          throw e;
         }
-      },
-      { interval: ACH_FILE_RETRY_MS, signal: deps.signal }
-    );
+      }
+      await deps.delay(ACH_FILE_RETRY_MS);
+      deps.signal.throwIfAborted();
+    }
   };
 
   const applyAchievements = (payload: AchievementsPayload | null): void => {

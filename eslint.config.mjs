@@ -125,22 +125,27 @@ export default tseslint.config(
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
-    // LBK sends the whole ops bundle with every CDP call.
-    files: ['packages/lbk-bridge-core/src/ops*.ts'],
+    // LBK sends the whole ops bundle (ops-cdp.ts and everything it imports) with every CDP call.
+    files: [
+      'packages/lbk-bridge-core/src/ops*.ts',
+      'packages/lbk-bridge-core/src/steam-globals.ts',
+    ],
     rules: {
-      'no-restricted-imports': [
+      '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           paths: [
             {
               name: '@mobily/ts-belt',
               allowImportNames: ['G'],
+              allowTypeImports: true,
               message: 'esbuild bundles a whole ts-belt namespace: G costs 2 KB, A 45 KB.',
             },
           ],
           patterns: [
             {
               regex: '^(?!\\./|@mobily/ts-belt$)',
+              allowTypeImports: true,
               message:
                 'The CDP ops bundle may only import sibling modules and G from ts-belt (no zod).',
             },

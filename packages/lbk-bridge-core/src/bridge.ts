@@ -43,7 +43,7 @@ export interface BridgeSocket {
   onclose: ((ev: CloseEvent) => void) | null;
 }
 
-// The timers go to p-timeout as customTimers, so every delay and timeout runs on env's clock.
+// Reconnect backoff, achievements.json retries and the handshake and op timeouts run on env's clock via p-timeout.
 export interface BridgeEnv
   extends Pick<WindowOrWorkerGlobalScope, 'setTimeout' | 'clearTimeout'> {
   steam: SteamGlobals;
@@ -89,6 +89,9 @@ export function browserEnv(): BridgeEnv {
   };
 }
 
+// Wrapped in p-timeout, a promise that never settles is a timer on env's clock that can be cleared or aborted.
+const neverSettles = (): Promise<void> => new Promise<void>(F.ignore);
+
 // SteamClient rejects with plain objects like {result, message}; keep them readable like the CDP transport does.
 function errText(e: unknown): string {
   if (G.isError(e)) {
@@ -106,9 +109,9 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
   const requests = pLimit(1);
   let socket: BridgeSocket | null = null;
 
-  // A p-timeout over a promise that never settles: a timer on env's clock that dispose cancels.
+  // Resolves after ms, or at once on dispose.
   const delay = (ms: number): Promise<void> =>
-    pTimeout(new Promise<void>(F.ignore), {
+    pTimeout(neverSettles(), {
       milliseconds: ms,
       message: false,
       customTimers: env,
@@ -145,6 +148,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
   const achievements = createAchievements({
     steam: env.steam,
     readJson,
+    delay,
     signal: life.signal,
     errText,
   });
@@ -190,7 +194,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
       const proof = (message: string) => hmacHex(env.crypto.subtle, cfg.secret, message);
       let sn: string | null = null;
       let authed = false;
-      const handshake = pTimeout(new Promise<void>(F.ignore), {
+      const handshake = pTimeout(neverSettles(), {
         milliseconds: HANDSHAKE_TIMEOUT_MS,
         customTimers: env,
         fallback: () => ws.close(4000, 'handshake timeout'),

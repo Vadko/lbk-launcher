@@ -13,23 +13,37 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function load(steam: SteamGlobals, readJson: (name: string) => Promise<unknown>) {
+function load(
+  steam: SteamGlobals,
+  readJson: (name: string) => Promise<unknown>,
+  delay: (ms: number) => Promise<void> = () => Promise.resolve()
+) {
   const life = new AbortController();
   lives.push(life);
-  return createAchievements({ steam, readJson, signal: life.signal, errText: String });
+  return createAchievements({
+    steam,
+    readJson,
+    delay,
+    signal: life.signal,
+    errText: String,
+  });
 }
 
 const withApps = (): SteamGlobals => ({ SteamClient: { Apps: {} as SteamApps } });
 
+function withSteamUi(): SteamGlobals {
+  const steam: SteamGlobals = {
+    ...withApps(),
+    appDetailsStore: {},
+    appDetailsCache: {},
+    webpackChunksteamui: [],
+  };
+  steam.window = steam;
+  return steam;
+}
+
 describe('achievements startup', () => {
   it('reads achievements.json once more for any number of reloads during a pass', async () => {
-    const steam: SteamGlobals = {
-      ...withApps(),
-      appDetailsStore: {},
-      appDetailsCache: {},
-      webpackChunksteamui: [],
-    };
-    steam.window = steam;
     let release: (file: unknown) => void = () => undefined;
     const readJson = vi
       .fn<(name: string) => Promise<unknown>>()
@@ -39,7 +53,7 @@ describe('achievements startup', () => {
         })
       )
       .mockResolvedValue(NO_TRANSLATIONS);
-    const achievements = load(steam, readJson);
+    const achievements = load(withSteamUi(), readJson);
 
     achievements.start();
     await vi.waitFor(() => expect(readJson).toHaveBeenCalledOnce());
@@ -73,5 +87,21 @@ describe('achievements startup', () => {
     );
     await vi.waitFor(() => expect(apps.report().state).toBe('ok'));
     expect(readJson).toHaveBeenCalledOnce();
+  });
+
+  it('reads achievements.json three times 2 s apart before it reports the error', async () => {
+    const readJson = vi.fn(() => Promise.reject(new Error('fetch failed')));
+    const delay = vi.fn<(ms: number) => Promise<void>>().mockResolvedValue(undefined);
+    const achievements = load(withSteamUi(), readJson, delay);
+
+    achievements.start();
+    await vi.waitFor(() =>
+      expect(achievements.report()).toMatchObject({
+        state: 'failed',
+        error: 'Error: fetch failed',
+      })
+    );
+    expect(readJson).toHaveBeenCalledTimes(3);
+    expect(delay.mock.calls).toEqual([[2000], [2000]]);
   });
 });
