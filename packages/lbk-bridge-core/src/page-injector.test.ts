@@ -92,6 +92,9 @@ describe('page injector: finding Steam CEF', () => {
   });
 });
 
+// What Steam's main window shows while the library is open.
+const LIBRARY = 'data:text/html,<html><body></body></html><!--tracking:library-->';
+
 describe('page injector: targets', () => {
   it.each([
     ['a community page', true, 'page', COMMUNITY],
@@ -106,6 +109,7 @@ describe('page injector: targets', () => {
     ['checkout', false, 'page', 'https://checkout.steampowered.com/checkout/'],
     ['Steam UI', false, 'page', 'https://steamloopback.host/routes/library/home'],
     ['an about:blank popup', false, 'page', 'about:blank?createflags=274'],
+    ['the library placeholder', false, 'page', LIBRARY],
     ['an out-of-process iframe', false, 'iframe', COMMUNITY],
     ['a service worker', false, 'service_worker', 'https://store.steampowered.com/sw.js'],
   ])('on %s attaches: %s', async (_label, attaches, type, url) => {
@@ -142,16 +146,25 @@ describe('page injector: targets', () => {
     ['Steam UI', 'https://steamloopback.host/routes/library/home', true],
     ['another site', 'https://example.com/', true],
     ['about:blank', 'about:blank', false],
+    ['the library placeholder', LIBRARY, false],
     ['the store', 'https://store.steampowered.com/app/620/Portal_2/', false],
-  ])('when a page moves to %s detaches: %s', async (_label, url, detaches) => {
+    ['the games list of a profile', 'https://steamcommunity.com/id/x/games', false],
+  ])('when a page moves to %s and back detaches: %s', async (_label, url, detaches) => {
     const steam = setUp();
     const ws = await steam.connect();
     const sessionId = await steam.attach('T1');
-    ws.emit('Target.targetInfoChanged', {
-      targetInfo: { targetId: 'T1', type: 'page', url },
-    });
+    const sent = ws.sent.length;
+    for (const next of [url, COMMUNITY]) {
+      ws.emit('Target.targetInfoChanged', {
+        targetInfo: { targetId: 'T1', type: 'page', url: next },
+      });
+    }
     expect(ws.find('Target.detachFromTarget').map((c) => c.params)).toEqual(
       detaches ? [{ sessionId }] : []
+    );
+    // A kept session's document-start script already covers the next achievements page.
+    expect(ws.sent.slice(sent).map((c) => c.method)).toEqual(
+      detaches ? ['Target.detachFromTarget', 'Target.attachToTarget'] : []
     );
   });
 

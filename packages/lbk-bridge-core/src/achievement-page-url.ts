@@ -27,18 +27,25 @@ export interface AchievementPageMatch {
   appid: string;
 }
 
+const parseUrl = (href: string): URL | undefined => {
+  try {
+    return new URL(href);
+  } catch {
+    return undefined;
+  }
+};
+
 // The origin of an execution context or a target, as CDP reports it, that may show an achievements page.
 export const isAchievementPageOrigin = (origin: string): boolean =>
   PAGE_URLS.some(({ host }) => origin === `https://${host}`);
 
+// Any document on those origins: their apps reach an achievements page by client-side navigation too.
+export const isAchievementSiteUrl = (href: string): boolean =>
+  isAchievementPageOrigin(parseUrl(href)?.origin ?? '');
+
 export function matchAchievementPage(href: string): AchievementPageMatch | undefined {
-  let url: URL;
-  try {
-    url = new URL(href);
-  } catch {
-    return undefined;
-  }
-  if (url.protocol !== 'https:') {
+  const url = parseUrl(href);
+  if (url?.protocol !== 'https:') {
     return undefined;
   }
   for (const { kind, host, path } of PAGE_URLS) {

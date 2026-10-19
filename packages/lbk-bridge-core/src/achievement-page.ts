@@ -8,10 +8,12 @@ import {
   queryClientAbove,
   reactRootFiber,
 } from './achievement-page-fiber';
+import { type NavWindow, watchSameDocumentUrl } from './achievement-page-nav';
 import { buildSourceMap, toAppStrings } from './achievement-page-sources';
 import {
   type AchievementPageKind,
   type AchievementPageMatch,
+  isAchievementSiteUrl,
   isAppId,
   matchAchievementPage,
   PAGE_GLOBAL_KEY,
@@ -26,7 +28,7 @@ import { isFn } from './steam-globals';
 
 const PAGE_KEY = Symbol.for(PAGE_GLOBAL_KEY);
 // A newer copy started in the same document disposes an older one.
-const PAGE_VERSION = 1;
+const PAGE_VERSION = 2;
 const POLL_MS = 50;
 // Valve reports a failed hydration after 15 s; until then React may still claim any server-rendered node.
 const HYDRATE_MS = 15_000;
@@ -39,8 +41,7 @@ const PUSH_WAIT_MS = 10_000;
 // Strings for one app, or undefined when it has none; a host that answers later pushes them through provide().
 export type StringsProvider = (appid: string) => Promise<unknown>;
 
-export interface PageWindow {
-  location: { href: string };
+export interface PageWindow extends NavWindow {
   document?: Document;
   SSR?: unknown;
 }
@@ -159,12 +160,12 @@ function hideFor(win: PageWindow, css: string): () => void {
   return show;
 }
 
+// Undefined when the document neither shows an achievements page nor can follow its own navigations to one.
 function createPage(
   win: PageWindow,
-  page: AchievementPageMatch,
+  opened: AchievementPageMatch | undefined,
   { provider, hint }: AchievementPageOptions
-): AchievementPage {
-  const behavior = PAGE_KINDS[page.kind];
+): AchievementPage | undefined {
   const abort = new AbortController();
   const data = new Map<string, AppStrings>();
   const asks = new Map<string, Promise<void>>();
@@ -175,6 +176,8 @@ function createPage(
   let dom: DomTranslation | undefined;
   let domAllowed = false;
   let show: (() => void) | undefined;
+  let page: AchievementPageMatch | undefined;
+  let unwatch: (() => void) | undefined;
 
   const lookup: AchLookup = (appid, id) =>
     G.isString(id) ? data.get(String(appid))?.[id] : undefined;
@@ -182,14 +185,15 @@ function createPage(
   const refreshDom = (): void => {
     dom?.dispose();
     dom = undefined;
-    const strings = data.get(page.appid);
+    const current = page;
+    const strings = current && data.get(current.appid);
     const context = ssrState(win)?.renderContext;
-    if (!domAllowed || !win.document || !strings) {
+    if (!domAllowed || !win.document || !current || !strings) {
       return;
     }
     const sources = buildSourceMap(
       G.isObject(context) ? context.queryData : undefined,
-      page.appid,
+      current.appid,
       strings
     );
     if (sources.size > 0) {
@@ -215,7 +219,7 @@ function createPage(
       data.delete(appid);
     }
     safely(() => queries?.sync(new Set([appid])));
-    if (appid === page.appid) {
+    if (appid === page?.appid) {
       safely(refreshDom);
     }
   };
@@ -264,15 +268,15 @@ function createPage(
   };
 
   // At most once per document, and only before anything was written.
-  const hideWhileParsing = (): void => {
-    const css = behavior.hide?.(page.appid);
+  const hideWhileParsing = ({ kind, appid }: AchievementPageMatch): void => {
+    const css = PAGE_KINDS[kind].hide?.(appid);
     const waiting = !show && !queries && !domAllowed && !abort.signal.aborted;
     if (css && waiting && isParsing(win) && !isHydrated(win)) {
       show = hideFor(win, css);
     }
   };
 
-  const run = async (): Promise<void> => {
+  const run = async (behavior: PageBehavior): Promise<void> => {
     const client = await findClient(win, behavior, abort.signal);
     if (abort.signal.aborted) {
       return;
@@ -308,6 +312,7 @@ function createPage(
         return;
       }
       abort.abort();
+      unwatch?.();
       show?.();
       safely(() => queries?.dispose());
       safely(() => dom?.dispose());
@@ -320,29 +325,52 @@ function createPage(
     },
   };
 
-  if (hint?.has(page.appid)) {
-    hideWhileParsing();
-  }
-  const ownAnswer = ask(page.appid).then(() => {
-    if (data.has(page.appid)) {
-      hideWhileParsing();
-    } else {
-      show?.();
-    }
-  });
-  Promise.all([run(), ownAnswer]).then(
-    () => setTimeout(() => show?.(), SETTLE_MS),
-    (e: unknown) => {
-      if (!abort.signal.aborted) {
-        warn(e);
+  // Once per document; a client-side navigation lands in a painted, hydrated document, where a hide would only flash the rows.
+  const begin = (match: AchievementPageMatch, atDocumentStart: boolean): void => {
+    page = match;
+    const hide = (): void => {
+      if (atDocumentStart) {
+        hideWhileParsing(match);
       }
-      show?.();
+    };
+    if (hint?.has(match.appid)) {
+      hide();
     }
-  );
-  return api;
+    const ownAnswer = ask(match.appid).then(() => {
+      if (data.has(match.appid)) {
+        hide();
+      } else {
+        show?.();
+      }
+    });
+    Promise.all([run(PAGE_KINDS[match.kind]), ownAnswer]).then(
+      () => setTimeout(() => show?.(), SETTLE_MS),
+      (e: unknown) => {
+        if (!abort.signal.aborted) {
+          warn(e);
+        }
+        show?.();
+      }
+    );
+  };
+
+  if (opened) {
+    begin(opened, true);
+    return api;
+  }
+  const follow = (): void => {
+    const match = matchAchievementPage(win.location.href);
+    if (match && !page && !abort.signal.aborted) {
+      unwatch?.();
+      unwatch = undefined;
+      begin(match, false);
+    }
+  };
+  unwatch = watchSameDocumentUrl(win, () => safely(follow));
+  return unwatch ? api : undefined;
 }
 
-// Translates the achievements on a Steam page once per document; returns undefined anywhere else.
+// Translates the achievements on a Steam page once per document, from its start or from the first client-side navigation to one; returns undefined off the achievements sites.
 export function startAchievementPage(
   options: AchievementPageOptions = {}
 ): AchievementPage | undefined {
@@ -351,15 +379,18 @@ export function startAchievementPage(
   if (isPage(prev) && prev.version >= PAGE_VERSION) {
     return prev;
   }
-  const page = matchAchievementPage(win.location.href);
-  if (!page) {
+  const href = win.location.href;
+  const opened = matchAchievementPage(href);
+  if (!opened && !isAchievementSiteUrl(href)) {
     return undefined;
   }
   const disposePrev = G.isObject(prev) ? prev.dispose : undefined;
   if (isFn(disposePrev)) {
     safely(() => disposePrev.call(prev));
   }
-  const api = createPage(win, page, options);
-  Object.defineProperty(win, PAGE_KEY, { value: api, configurable: true });
+  const api = createPage(win, opened, options);
+  if (api) {
+    Object.defineProperty(win, PAGE_KEY, { value: api, configurable: true });
+  }
   return api;
 }

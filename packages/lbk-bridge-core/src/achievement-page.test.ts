@@ -318,9 +318,98 @@ describe('startAchievementPage', () => {
     page?.dispose();
 
     const other: PageWindow = {
-      location: { href: 'https://steamcommunity.com/id/someone/' },
+      location: { href: 'https://help.steampowered.com/en/' },
+      navigation: new EventTarget(),
     };
     expect(startAchievementPage({ win: other })).toBeUndefined();
     expect(Reflect.get(other, PAGE_KEY)).toBeUndefined();
+  });
+});
+
+const GAMES_URL = 'https://steamcommunity.com/id/someone/games/?tab=all';
+
+// A hydrated community document that the app's own router moves to another URL.
+function routedWindow(href: string, client: QueryClient) {
+  const navigation = new EventTarget();
+  const win: PageWindow = { ...ssrWindow(href, client), navigation };
+  const navigate = (next: string) => {
+    win.location.href = next;
+    navigation.dispatchEvent(new Event('currententrychange'));
+  };
+  return { win, navigation, navigate };
+}
+
+describe('startAchievementPage on a client-side navigation', () => {
+  it('waits on another page of the site and starts once, on the first achievements page', async () => {
+    const client = hydratedClient();
+    const provider = vi.fn((appid: string) => Promise.resolve(STRINGS[appid]));
+    const { win, navigation, navigate } = routedWindow(GAMES_URL, client);
+    const listen = vi.spyOn(navigation, 'addEventListener');
+    const unlisten = vi.spyOn(navigation, 'removeEventListener');
+    const page = startAchievementPage({ provider, win });
+    expect(startAchievementPage({ provider, win })).toBe(page);
+    expect(Reflect.get(win, PAGE_KEY)).toBe(page);
+
+    navigate('https://steamcommunity.com/id/someone/games/?tab=recent');
+    navigate('https://steamcommunity.com/id/someone/achievements/620/compare');
+    expect(provider).not.toHaveBeenCalled();
+    navigate(PROFILE_URL);
+    expect(provider.mock.calls).toEqual([['620']]);
+    expect(listen).toHaveBeenCalledOnce();
+    expect(unlisten).toHaveBeenCalledWith('currententrychange', listen.mock.calls[0][1]);
+    await vi.waitFor(() =>
+      expect(shown(client.getQueryData(SCHEMA_620))).toEqual(translated)
+    );
+
+    // Another game's page comes through the query cache, as it does for a document that opened on one.
+    navigate('https://steamcommunity.com/id/someone/achievements/400');
+    await client.fetchQuery({
+      queryKey: SCHEMA_400,
+      queryFn: () => structuredClone(fixture.portalSchema),
+    });
+    await vi.waitFor(() => expect(provider.mock.calls).toEqual([['620'], ['400']]));
+    page?.dispose();
+    expect(shown(client.getQueryData(SCHEMA_620))).toEqual(english);
+  });
+
+  it('asks a host that pushes strings once the navigation reaches an achievements page', async () => {
+    const client = hydratedClient();
+    const { win, navigate } = routedWindow(GAMES_URL, client);
+    const page = startAchievementPage({ hint: new Set(['620']), win });
+    const wanted = vi.fn();
+    page?.onWanted(wanted);
+    expect(page?.wanted()).toEqual([]);
+
+    navigate(GLOBAL_URL);
+    expect(wanted.mock.calls).toEqual([['620']]);
+    page?.provide('620', PORTAL2);
+    await vi.waitFor(() =>
+      expect(shown(client.getQueryData(SCHEMA_620))).toEqual(translated)
+    );
+    expect(page?.wanted()).toEqual([]);
+    page?.dispose();
+  });
+
+  it('stops waiting on dispose', () => {
+    const provider = vi.fn((appid: string) => Promise.resolve(STRINGS[appid]));
+    const { win, navigate } = routedWindow(GAMES_URL, hydratedClient());
+    startAchievementPage({ provider, win })?.dispose();
+    navigate(GLOBAL_URL);
+    expect(provider).not.toHaveBeenCalled();
+    expect(Reflect.get(win, PAGE_KEY)).toBeUndefined();
+  });
+
+  it.each([
+    ['another origin', 'https://store.steampowered.com.evil.test/app/620', true],
+    ['a document that cannot follow its navigations', GAMES_URL, false],
+  ])('stays out of %s', (_label, href, routed) => {
+    const navigation = new EventTarget();
+    const listen = vi.spyOn(navigation, 'addEventListener');
+    const win: PageWindow = routed
+      ? { location: { href }, navigation }
+      : { location: { href } };
+    expect(startAchievementPage({ win })).toBeUndefined();
+    expect(listen).not.toHaveBeenCalled();
+    expect(Reflect.get(win, PAGE_KEY)).toBeUndefined();
   });
 });

@@ -5,6 +5,7 @@ import type { AppStrings } from './achievement-text';
 import { steamCommunityAchievements as fixture } from './steam-community-achievements.fixture';
 
 const GLOBAL_URL = 'https://steamcommunity.com/achievements/620';
+const GAMES_URL = 'https://steamcommunity.com/id/someone/games/?tab=all';
 const SCHEMA_620 = ['achievements', 620, 'schema'];
 const [WAKE] = fixture.portal2Schema.groups[0].achievements;
 const PORTAL2: AppStrings = { [WAKE.api_name]: { name: 'Підйом' } };
@@ -35,6 +36,8 @@ interface PageSetup {
   readyState?: DocumentReadyState;
   // Push mode, as the Decky injector starts it: apps with strings known at document start, answers through provide().
   hint?: string[];
+  // Where the document opened; the app's router can take it to the achievements page later.
+  href?: string;
 }
 
 // A community page whose root carries the QueryClient next to one Suspense boundary.
@@ -44,6 +47,7 @@ function communityPage({
   dehydratedBoundary = false,
   readyState = 'loading',
   hint,
+  href = GLOBAL_URL,
 }: PageSetup = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity, gcTime: Infinity } },
@@ -59,10 +63,12 @@ function communityPage({
     readyState,
     adoptedStyleSheets: [],
   };
+  const navigation = new EventTarget();
   const win: PageWindow = {
-    location: { href: GLOBAL_URL },
+    location: { href },
     document: doc as Document,
     SSR: ssr,
+    navigation,
   };
   const page = hint
     ? startAchievementPage({ hint: new Set(hint), win })
@@ -73,6 +79,10 @@ function communityPage({
     boundary,
     hidden: () => doc.adoptedStyleSheets.length,
     translated: () => JSON.stringify(client.getQueryData(SCHEMA_620)).includes('Підйом'),
+    navigate: (next: string) => {
+      win.location.href = next;
+      navigation.dispatchEvent(new Event('currententrychange'));
+    },
   };
 }
 
@@ -206,6 +216,27 @@ describe('achievements page: hide from document start (Decky hint)', () => {
     const steam = communityPage(setup);
     await advance(0);
     expect(steam.hidden()).toBe(0);
+    steam.page?.dispose();
+  });
+});
+
+describe('achievements page: client-side start', () => {
+  // Even in a document state where a start would hide: the router only runs in a painted, hydrated document.
+  it.each<[string, PageSetup]>([
+    ['strings from a provider', {}],
+    ['a host push for an app in the hint', { hint: ['620'] }],
+  ])('never hides the rows, with %s', async (_label, setup) => {
+    const steam = communityPage({ ...setup, href: GAMES_URL });
+    await advance(0);
+    steam.navigate(GLOBAL_URL);
+    if (setup.hint) {
+      steam.page?.provide('620', PORTAL2);
+    }
+    await advance(1000);
+    steam.ssr.hydrated = true;
+    await advance(50);
+    expect(steam.translated()).toBe(true);
+    expect(hideRules).toEqual([]);
     steam.page?.dispose();
   });
 });

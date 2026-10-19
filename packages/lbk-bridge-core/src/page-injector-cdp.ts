@@ -1,5 +1,5 @@
 import { G, R } from '@mobily/ts-belt';
-import { isAchievementPageOrigin } from './achievement-page-url';
+import { isAchievementSiteUrl } from './achievement-page-url';
 
 // Steam's CEF remote debugging port, the one Decky Loader itself injects through.
 export const CDP_HOST = '127.0.0.1:8080';
@@ -33,9 +33,11 @@ export const toTargetInfo = (v: unknown): TargetInfo | undefined =>
 
 // Other sites never get the binding, the script or Runtime events, which would stream their console into Steam's UI thread.
 export const isAchievementSite = ({ type, url }: TargetInfo): boolean =>
-  type === 'page' && isAchievementPageOrigin(parseUrl(url)?.origin ?? '');
-export const isBlank = ({ url }: TargetInfo): boolean =>
-  parseUrl(url)?.protocol === 'about:';
+  type === 'page' && isAchievementSiteUrl(url);
+
+// Steam's main window shows about:blank, or a data: page while the library is open, between two web pages.
+const PLACEHOLDER = /^(?:about|data):/i;
+export const isPlaceholder = ({ url }: TargetInfo): boolean => PLACEHOLDER.test(url);
 
 export const contextOf = (
   params: CdpParams

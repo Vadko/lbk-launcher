@@ -1,10 +1,10 @@
 import { startAchievementPage } from '@lbk/bridge-core/achievement-page';
 import { appStringsInFile } from '@lbk/bridge-core/achievement-page-sources';
-import { matchAchievementPage } from '@lbk/bridge-core/achievement-page-url';
+import { isAchievementSiteUrl } from '@lbk/bridge-core/achievement-page-url';
 import { F, O } from '@mobily/ts-belt';
 import { ownScriptUrl, scriptPath } from '../shared/own-script-url';
 
-// Read at most once per document; LBK rewrites the file whenever installed translations change.
+// Read at most once per document, when its first achievements page asks; LBK rewrites the file whenever installed translations change.
 const achievementsFile = (scriptUrl: string) =>
   F.once((): Promise<unknown> => {
     const url = new URL('achievements.json', scriptUrl);
@@ -14,9 +14,9 @@ const achievementsFile = (scriptUrl: string) =>
       .catch(() => null);
   });
 
-// Millennium runs this in every Steam web page, so anything but an achievements page leaves at once.
+// Millennium runs this in every Steam web page: any other origin leaves at once, other pages of the achievements sites wait for a client-side navigation to one.
 export default function WebkitMain(): void {
-  if (!matchAchievementPage(window.location.href)) {
+  if (!isAchievementSiteUrl(window.location.href)) {
     return;
   }
   O.match(

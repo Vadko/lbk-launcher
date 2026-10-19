@@ -89,7 +89,7 @@ describe('achievement page bundle', () => {
     );
 
     const ctx = runInPage('https://steamcommunity.com/achievements/620');
-    expect(vm.runInContext(`${PAGE}.version`, ctx)).toBe(1);
+    expect(vm.runInContext(`${PAGE}.version`, ctx)).toBe(2);
     expect(vm.runInContext(`${PAGE}.wanted()`, ctx)).toEqual(['620']);
     vm.runInContext(`${PAGE}.dispose()`, ctx);
     expect(vm.runInContext(PAGE, ctx)).toBe(undefined);
@@ -170,47 +170,60 @@ describe('achievement page bundle under the Decky page injector', () => {
     injector.dispose();
   });
 
-  it('asks for its app through the CDP binding and applies the answer', async () => {
-    const { cdp, injector, registered } = await injectInto();
-    const page = pageContext(targetInfo.url);
-    const asked: unknown[] = [];
-    const binding = String(cdp.last('Runtime.addBinding').params.name);
-    page[binding] = (payload: unknown) => {
-      asked.push(payload);
+  // The profile's games list links every game's achievements page, and Steam's router opens it without a new document.
+  it.each([
+    ['opened on it', targetInfo.url, null],
+    ['routed to it', 'https://steamcommunity.com/id/x/games/?tab=all', targetInfo.url],
+  ])(
+    'asks for its app through the CDP binding and applies the answer when %s',
+    async (_label, opened, routedTo) => {
+      const { cdp, injector, registered } = await injectInto();
+      const navigation = new EventTarget();
+      const page = pageContext(opened, { navigation });
+      const asked: unknown[] = [];
+      const binding = String(cdp.last('Runtime.addBinding').params.name);
+      page[binding] = (payload: unknown) => {
+        asked.push(payload);
+        cdp.deliver({
+          method: 'Runtime.bindingCalled',
+          params: { name: binding, payload, executionContextId: 3 },
+          sessionId: 'S',
+        });
+      };
       cdp.deliver({
-        method: 'Runtime.bindingCalled',
-        params: { name: binding, payload, executionContextId: 3 },
+        method: 'Runtime.executionContextCreated',
+        params: {
+          context: { id: 3, origin: 'https://steamcommunity.com', uniqueId: 'u3' },
+        },
         sessionId: 'S',
       });
-    };
-    cdp.deliver({
-      method: 'Runtime.executionContextCreated',
-      params: {
-        context: { id: 3, origin: 'https://steamcommunity.com', uniqueId: 'u3' },
-      },
-      sessionId: 'S',
-    });
-    vm.runInContext(registered, page);
-    expect(asked).toEqual(['620']);
-    expect(vm.runInContext(`${PAGE}.wanted()`, page)).toEqual(['620']);
+      vm.runInContext(registered, page);
+      if (routedTo) {
+        expect(asked).toEqual([]);
+        vm.runInContext(`location.href = ${JSON.stringify(routedTo)}`, page);
+        navigation.dispatchEvent(new Event('currententrychange'));
+      }
+      expect(asked).toEqual(['620']);
+      expect(vm.runInContext(`${PAGE}.wanted()`, page)).toEqual(['620']);
 
-    await settle();
-    const answer = cdp.last('Runtime.callFunctionOn');
-    expect(answer.params).toMatchObject({
-      uniqueContextId: 'u3',
-      arguments: [{ value: '620' }, { value: STRINGS }],
-    });
-    const provide: unknown = vm.runInContext(
-      `(${String(answer.params.functionDeclaration)})`,
-      page
-    );
-    const args = answer.params.arguments;
-    if (typeof provide === 'function' && Array.isArray(args)) {
-      provide(...args.map((arg: { value: unknown }) => arg.value));
+      await settle();
+      const answer = cdp.last('Runtime.callFunctionOn');
+      expect(answer.params).toMatchObject({
+        uniqueContextId: 'u3',
+        arguments: [{ value: '620' }, { value: STRINGS }],
+      });
+      const provide: unknown = vm.runInContext(
+        `(${String(answer.params.functionDeclaration)})`,
+        page
+      );
+      const args = answer.params.arguments;
+      if (typeof provide === 'function' && Array.isArray(args)) {
+        provide(...args.map((arg: { value: unknown }) => arg.value));
+      }
+      expect(vm.runInContext(`${PAGE}.wanted()`, page)).toEqual([]);
+
+      vm.runInContext(`${PAGE}.dispose()`, page);
+      injector.dispose();
     }
-    expect(vm.runInContext(`${PAGE}.wanted()`, page)).toEqual([]);
-
-    vm.runInContext(`${PAGE}.dispose()`, page);
-    injector.dispose();
-  });
+  );
 });

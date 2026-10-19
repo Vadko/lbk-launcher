@@ -9,7 +9,7 @@ import {
   type CdpParams,
   contextOf,
   isAchievementSite,
-  isBlank,
+  isPlaceholder,
   type TargetInfo,
   toTargetInfo,
 } from './page-injector-cdp';
@@ -220,12 +220,12 @@ export function createPageInjector({
       };
       rehint = rehintSessions;
 
-      // A session kept through about:blank still runs the script in the next achievements page; any other page ends it.
+      // A session kept through Steam's placeholders still runs the script in the next achievements page; any other page ends it.
       const consider = (info: TargetInfo): void => {
         const known = targets.has(info.targetId);
         if (!known && isAchievementSite(info)) {
           attach(info.targetId);
-        } else if (known && !isAchievementSite(info) && !isBlank(info)) {
+        } else if (known && !isAchievementSite(info) && !isPlaceholder(info)) {
           detach(info.targetId);
         }
       };
