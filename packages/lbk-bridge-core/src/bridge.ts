@@ -72,7 +72,7 @@ type ObservedState = Pick<BridgeState, 'status' | 'idle' | 'connectedAt' | 'last
 
 export interface Bridge {
   state: BridgeState;
-  // Dispatches 'change' whenever a field of ObservedState changes.
+  // Dispatches 'change' whenever a field of ObservedState changes, never after 'disposed'.
   events: EventTarget;
   start(): void;
   dispose(): void;
@@ -175,6 +175,10 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
 
   const events = new EventTarget();
   const update = (patch: Partial<ObservedState>): void => {
+    // Disposed is final: closing a still-connecting socket fires onerror later.
+    if (state.status === 'disposed') {
+      return;
+    }
     const changed = A.some(D.keys(patch), (key) => state[key] !== patch[key]);
     Object.assign(state, patch);
     if (changed) {

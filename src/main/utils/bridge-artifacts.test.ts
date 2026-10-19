@@ -9,10 +9,11 @@ import {
   PLUGIN_ONLY_OPS,
   SHARED_STEAM_OPS,
 } from '@lbk/bridge-core/contract';
+import { hmacHex } from '@lbk/bridge-core/protocol';
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const PACKAGES = path.resolve(__dirname, '../../../packages');
 const MILLENNIUM_DIR = path.join(PACKAGES, 'lbk-bridge-millennium');
@@ -30,8 +31,9 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
 class FakeSocket {
   static instances: FakeSocket[] = [];
   readyState = 1;
-  sent: unknown[] = [];
+  sent: Record<string, unknown>[] = [];
   onopen: (() => void) | null = null;
+  onmessage: ((ev: { data: string }) => void) | null = null;
   constructor(readonly url: string) {
     FakeSocket.instances.push(this);
   }
@@ -153,10 +155,46 @@ describe('Millennium bundle', () => {
   });
 });
 
+interface ExternalStore {
+  subscribe: (onChange: () => void) => () => void;
+  getSnapshot: () => string;
+}
+
 describe('Decky bundle', () => {
+  let store: ExternalStore | undefined;
+  beforeEach(() => {
+    store = undefined;
+    vi.stubGlobal('SP_REACT', {
+      ...React,
+      // Steam renders on the client; renderToStaticMarkup also needs a server snapshot.
+      useSyncExternalStore: (
+        subscribe: ExternalStore['subscribe'],
+        getSnapshot: ExternalStore['getSnapshot']
+      ) => {
+        store = { subscribe, getSnapshot };
+        return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+      },
+    });
+    vi.stubGlobal('SP_JSX', jsxRuntime);
+  });
   afterEach(() => {
     vi.unstubAllGlobals();
   });
+
+  const render = (node: unknown) =>
+    React.isValidElement(node) ? renderToStaticMarkup(node) : null;
+  const loadPlugin = async (query = '') => {
+    const plugin: unknown = (await import(`${pathToFileURL(DECKY_INDEX).href}${query}`))
+      .default;
+    return typeof plugin === 'function' ? plugin() : null;
+  };
+  const dismount = (plugin: unknown) => {
+    const onDismount = isRecord(plugin) ? plugin.onDismount : undefined;
+    expect(onDismount).toBeTypeOf('function');
+    if (typeof onDismount === 'function') {
+      onDismount();
+    }
+  };
 
   it('has exactly the manifest fields Decky reads without defaults', () => {
     expect(readJson(path.join(DECKY_DIR, 'plugin.json'))).toEqual({
@@ -176,24 +214,16 @@ describe('Decky bundle', () => {
   it('starts from its default export, reads ../data/bridge.json and dials LBK', async () => {
     FakeSocket.instances = [];
     const fetched: string[] = [];
-    vi.stubGlobal('SP_REACT', {
-      ...React,
-      // Steam renders on the client; renderToStaticMarkup also needs a server snapshot.
-      useSyncExternalStore: (subscribe: () => () => void, snapshot: () => string) =>
-        React.useSyncExternalStore(subscribe, snapshot, snapshot),
-    });
-    vi.stubGlobal('SP_JSX', jsxRuntime);
+    const secret = 'cd'.repeat(32);
     vi.stubGlobal('WebSocket', FakeSocket);
     vi.stubGlobal('fetch', (url: string) => {
       fetched.push(url);
-      const body = { v: 1, port: 50011, secret: 'cd'.repeat(32) };
+      const body = { v: 1, port: 50011, secret };
       return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
     });
-    const plugin: unknown = (await import(pathToFileURL(DECKY_INDEX).href)).default();
+    const plugin = await loadPlugin();
 
     expect(plugin).toMatchObject({ name: 'LBK Bridge' });
-    const render = (node: unknown) =>
-      React.isValidElement(node) ? renderToStaticMarkup(node) : null;
     const { icon, content } = isRecord(plugin) ? plugin : {};
     expect(render(icon)).toMatch(/^<svg [^>]*width="1em" height="1em"/);
     expect(render(content)).toContain('>Очікування LBK Launcher</div>');
@@ -211,12 +241,34 @@ describe('Decky bundle', () => {
     expect(ws.sent[0]).toMatchObject({ t: 'hello', host: 'decky', pv: BRIDGE_VERSION });
     expect(ws.sent[0]).toHaveProperty('ops', [...SHARED_STEAM_OPS, ...PLUGIN_ONLY_OPS]);
 
-    const onDismount = isRecord(plugin) ? plugin.onDismount : undefined;
-    expect(onDismount).toBeTypeOf('function');
-    if (typeof onDismount === 'function') {
-      onDismount();
-    }
+    const onChange = vi.fn();
+    const unsubscribe = store?.subscribe(onChange);
+    const cn = String(ws.sent[0].cn);
+    const sn = 'ef'.repeat(16);
+    const sp = await hmacHex(globalThis.crypto.subtle, secret, `server|${cn}|${sn}`);
+    ws.onmessage?.({ data: JSON.stringify({ t: 'challenge', sn, sp }) });
+    await settle();
+    ws.onmessage?.({ data: JSON.stringify({ t: 'ready' }) });
+    expect(onChange).toHaveBeenCalled();
+    expect(store?.getSnapshot()).toBe('Підключено до LBK Launcher');
+
+    unsubscribe?.();
+    const calls = onChange.mock.calls.length;
+    dismount(plugin);
+    expect(onChange).toHaveBeenCalledTimes(calls);
     expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toBeUndefined();
     expect(ws.readyState).toBe(3);
+  });
+
+  it('stays idle next to a running Millennium copy and leaves it alone', async () => {
+    const millennium = { host: 'millennium', dispose: vi.fn() };
+    vi.stubGlobal('__LBK_BRIDGE__', millennium);
+    const plugin = await loadPlugin('?idle');
+
+    const { content } = isRecord(plugin) ? plugin : {};
+    expect(render(content)).toContain('>Працює через Millennium</div>');
+    dismount(plugin);
+    expect(millennium.dispose).not.toHaveBeenCalled();
+    expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toBe(millennium);
   });
 });

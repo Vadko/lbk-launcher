@@ -17,7 +17,7 @@ const fromScriptTag = (): Option<string> =>
 const fromStack = (): Option<string> =>
   O.fromNullable(ENTRY_IN_STACK.exec(new Error().stack ?? '')?.[1]);
 
-const ownScriptUrl = (): Option<string> => O.match(fromScriptTag(), O.Some, fromStack);
+const ownScriptUrl = (): Option<string> => fromScriptTag() ?? fromStack();
 
 export default function PluginMain(): void {
   O.match(

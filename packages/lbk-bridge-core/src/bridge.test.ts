@@ -252,6 +252,37 @@ describe('LBK Bridge events', () => {
     bridge.dispose();
     expect(seen).toEqual(['connecting', 'connected', 'waiting', 'disposed']);
   });
+
+  it('dispatches once when a Decky copy goes idle next to Millennium', () => {
+    const steam = makeSteam();
+    steam.load('millennium').start();
+    const decky = steam.load('decky');
+    const seen: boolean[] = [];
+    decky.events.addEventListener('change', () => seen.push(decky.state.idle));
+    decky.start();
+    expect(seen).toEqual([true]);
+  });
+
+  it('dispatches a repeated socket error once and nothing once disposed', async () => {
+    const errorsSeen = async (disposeFirst: boolean) => {
+      FakeSocket.instances = [];
+      const steam = makeSteam({ v: 1, port: 50006, secret: 'bc'.repeat(32) });
+      const bridge = steam.load('millennium');
+      bridge.start();
+      await settle();
+      if (disposeFirst) {
+        bridge.dispose();
+      }
+      const seen: (string | null)[] = [];
+      bridge.events.addEventListener('change', () => seen.push(bridge.state.lastError));
+      const ws = FakeSocket.instances[0];
+      ws.onerror?.(new Event('error'));
+      ws.onerror?.(new Event('error'));
+      return seen;
+    };
+    expect(await errorsSeen(false)).toEqual(['socket error']);
+    expect(await errorsSeen(true)).toEqual([]);
+  });
 });
 
 describe('LBK Bridge reconnect backoff', () => {
