@@ -6,8 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 const PAGE = "globalThis[Symbol.for('lbk.achievementPage')]";
 
-function pageContext(href: string): vm.Context {
+function pageContext(href: string, extra: object = {}): vm.Context {
   return vm.createContext({
+    ...extra,
     location: { href },
     console,
     setTimeout,
@@ -107,38 +108,70 @@ describe('achievement page bundle', () => {
   });
 });
 
-describe('achievement page bundle under the Decky page injector', () => {
-  it('asks for its app through the CDP binding and applies the answer', async () => {
-    const cdp = new FakeCdp();
-    const strings = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'Підйом' } };
-    const injector = createPageInjector({
-      env: {
-        fetchJson: () =>
-          Promise.resolve({
-            webSocketDebuggerUrl: 'ws://127.0.0.1:8080/devtools/browser/x',
-          }),
-        openSocket: () => cdp,
-        setTimeout,
-        clearTimeout,
-      },
-      script: source,
-      strings: (appid) => Promise.resolve(appid === '620' ? strings : undefined),
-    });
-    injector.start();
-    await settle();
-    cdp.onopen?.(new Event('open'));
-    cdp.replyAll();
-    const targetInfo = {
-      targetId: 'T',
-      type: 'page',
-      url: 'https://steamcommunity.com/achievements/620',
-    };
-    cdp.deliver({ method: 'Target.targetCreated', params: { targetInfo } });
-    cdp.replyAll({ sessionId: 'S' });
-    await settle();
-    cdp.replyAll();
-    await settle();
+const STRINGS = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'Підйом' } };
+const targetInfo = {
+  targetId: 'T',
+  type: 'page',
+  url: 'https://steamcommunity.com/achievements/620',
+};
 
+// Attaches the injector to one achievements page target and returns what it registered for new documents.
+async function injectInto(hint: string[] = []) {
+  const cdp = new FakeCdp();
+  const injector = createPageInjector({
+    env: {
+      fetchJson: () =>
+        Promise.resolve({
+          webSocketDebuggerUrl: 'ws://127.0.0.1:8080/devtools/browser/x',
+        }),
+      openSocket: () => cdp,
+      setTimeout,
+      clearTimeout,
+    },
+    script: source,
+    strings: (appid) => Promise.resolve(appid === '620' ? STRINGS : undefined),
+  });
+  injector.setHint(hint);
+  injector.start();
+  await settle();
+  cdp.onopen?.(new Event('open'));
+  cdp.replyAll();
+  cdp.deliver({ method: 'Target.targetCreated', params: { targetInfo } });
+  cdp.replyAll({ sessionId: 'S' });
+  await settle();
+  cdp.replyAll({ identifier: '1' });
+  await settle();
+  const registered = String(
+    cdp.last('Page.addScriptToEvaluateOnNewDocument').params.source
+  );
+  return { cdp, injector, registered };
+}
+
+class FakeSheet {
+  css = '';
+  replaceSync(css: string): void {
+    this.css = css;
+  }
+}
+
+describe('achievement page bundle under the Decky page injector', () => {
+  it('hides the rows at document start when the hint names the app, and leaves no hint on the page', async () => {
+    const { injector, registered } = await injectInto(['620']);
+    const document = { readyState: 'loading', adoptedStyleSheets: [] };
+    const page = pageContext(targetInfo.url, { document, CSSStyleSheet: FakeSheet });
+    vm.runInContext(registered, page);
+
+    expect(document.adoptedStyleSheets).toHaveLength(1);
+    expect(Object.getOwnPropertySymbols(page).map(String)).toEqual([
+      'Symbol(lbk.achievementPage)',
+    ]);
+    vm.runInContext(`${PAGE}.dispose()`, page);
+    expect(document.adoptedStyleSheets).toHaveLength(0);
+    injector.dispose();
+  });
+
+  it('asks for its app through the CDP binding and applies the answer', async () => {
+    const { cdp, injector, registered } = await injectInto();
     const page = pageContext(targetInfo.url);
     const asked: unknown[] = [];
     const binding = String(cdp.last('Runtime.addBinding').params.name);
@@ -157,10 +190,7 @@ describe('achievement page bundle under the Decky page injector', () => {
       },
       sessionId: 'S',
     });
-    vm.runInContext(
-      String(cdp.last('Page.addScriptToEvaluateOnNewDocument').params.source),
-      page
-    );
+    vm.runInContext(registered, page);
     expect(asked).toEqual(['620']);
     expect(vm.runInContext(`${PAGE}.wanted()`, page)).toEqual(['620']);
 
@@ -168,7 +198,7 @@ describe('achievement page bundle under the Decky page injector', () => {
     const answer = cdp.last('Runtime.callFunctionOn');
     expect(answer.params).toMatchObject({
       uniqueContextId: 'u3',
-      arguments: [{ value: '620' }, { value: strings }],
+      arguments: [{ value: '620' }, { value: STRINGS }],
     });
     const provide: unknown = vm.runInContext(
       `(${String(answer.params.functionDeclaration)})`,

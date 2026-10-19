@@ -1,46 +1,27 @@
 import { F, G, R } from '@mobily/ts-belt';
+import pLimit, { type LimitFunction } from 'p-limit';
 import pTimeout from 'p-timeout';
-import {
-  isAchievementPageOrigin,
-  isAppId,
-  PAGE_GLOBAL_KEY,
-} from './achievement-page-url';
+import { isAchievementPageOrigin, isAppId } from './achievement-page-url';
 import type { AppStrings } from './achievement-text';
+import {
+  browserUrl,
+  CDP_HOST,
+  type CdpParams,
+  contextOf,
+  isAchievementSite,
+  isBlank,
+  type TargetInfo,
+  toTargetInfo,
+} from './page-injector-cdp';
+import { BINDING, documentSource, PROVIDE } from './page-injector-scripts';
 import { abortableDelay, type BridgeSocket, SOCKET_OPEN } from './socket';
 
-// Steam's CEF remote debugging port, the one Decky Loader itself injects through.
-const CDP_HOST = '127.0.0.1:8080';
-const BROWSER_PATH = /^\/devtools\/browser\/[\w-]{1,128}$/;
-const BINDING = '__lbkAchievementStrings';
 const COMMAND_TIMEOUT_MS = 10_000;
 const RETRY_MIN_MS = 2000;
 // Every retry reads /json/version through Decky's proxy, which logs each request.
 const RETRY_MAX_MS = 120_000;
 // The page module asks once per app and document; more than this is not the page module.
 const MAX_ASKS_PER_CONTEXT = 16;
-const PAGE_GLOBAL = `globalThis[Symbol.for('${PAGE_GLOBAL_KEY}')]`;
-
-// Runs in the page after the page module: forwards every app it waits for to the binding, read per call because a reconnect installs a new one.
-const HOOKUP = `;(() => {
-  const page = ${PAGE_GLOBAL};
-  if (page && typeof page.onWanted === 'function') {
-    page.onWanted((appid) => {
-      const ask = globalThis.${BINDING};
-      if (typeof ask === 'function') {
-        ask(appid);
-      }
-    });
-  }
-})();
-//# sourceURL=lbk-achievement-page.js`;
-
-// Called with CDP arguments, so the strings reach the page as values and never as source text.
-const PROVIDE = `function (appid, strings) {
-  const page = ${PAGE_GLOBAL};
-  if (page && typeof page.provide === 'function') {
-    page.provide(appid, strings);
-  }
-}`;
 
 // The timers are typed as p-timeout takes them, so the injector also type-checks under Node's typings.
 export interface PageInjectorEnv
@@ -59,16 +40,10 @@ interface PageInjectorOptions {
 
 export interface PageInjector {
   start(): void;
+  // Apps with strings: a document of theirs hides its achievement rows from its start until they are translated.
+  setHint(appids: Iterable<string>): void;
   dispose(): void;
 }
-
-interface TargetInfo {
-  targetId: string;
-  type: string;
-  url: string;
-}
-
-type CdpParams = Record<string, unknown>;
 
 // The main world of an achievements page and the apps it asked for.
 interface PageContext {
@@ -80,37 +55,15 @@ interface PageContext {
 interface Session {
   targetId: string;
   contexts: Map<number, PageContext>;
+  // The document-start script Chrome holds for this session, swapped one at a time.
+  script: { identifier: string; source: string } | null;
+  scripts: LimitFunction;
 }
 
 // One attach attempt; a newer attempt or a detach replaces it in the target map.
 interface Attachment {
   sessionId: string | null;
 }
-
-const parseUrl = (url: string): URL | undefined =>
-  R.toUndefined(R.fromExecution(() => new URL(url)));
-
-const toTargetInfo = (v: unknown): TargetInfo | undefined =>
-  G.isObject(v) && G.isString(v.targetId) && G.isString(v.type) && G.isString(v.url)
-    ? { targetId: v.targetId, type: v.type, url: v.url }
-    : undefined;
-
-// Other sites never get the binding, the script or Runtime events, which would stream their console into Steam's UI thread.
-const isAchievementSite = ({ type, url }: TargetInfo): boolean =>
-  type === 'page' && isAchievementPageOrigin(parseUrl(url)?.origin ?? '');
-const isBlank = ({ url }: TargetInfo): boolean => parseUrl(url)?.protocol === 'about:';
-
-const contextOf = (
-  params: CdpParams
-): { id: number; origin: string; uniqueId: string } | undefined => {
-  const context = params.context;
-  return G.isObject(context) &&
-    G.isNumber(context.id) &&
-    G.isString(context.origin) &&
-    G.isString(context.uniqueId)
-    ? { id: context.id, origin: context.origin, uniqueId: context.uniqueId }
-    : undefined;
-};
 
 // Decky's host for the page module (Millennium has webkit.js): evaluates it in every document on the achievements sites over CDP and answers its asks.
 export function createPageInjector({
@@ -119,7 +72,9 @@ export function createPageInjector({
   strings,
 }: PageInjectorOptions): PageInjector {
   const life = new AbortController();
-  const source = `${script}\n${HOOKUP}`;
+  let source = documentSource(script, []);
+  // Re-registers the document-start script on the live connection's sessions.
+  let rehint: (() => void) | null = null;
   const warned = new Set<string>();
   let started = false;
   let socket: BridgeSocket | null = null;
@@ -132,14 +87,6 @@ export function createPageInjector({
   };
 
   const delay = abortableDelay(env, life.signal);
-
-  // Only the path comes from the answer, so whatever holds the port gets no other host to dial.
-  const browserUrl = async (): Promise<string | undefined> => {
-    const version = await env.fetchJson(`http://${CDP_HOST}/json/version`);
-    const raw = G.isObject(version) ? version.webSocketDebuggerUrl : undefined;
-    const path = G.isString(raw) ? parseUrl(raw)?.pathname : undefined;
-    return path && BROWSER_PATH.test(path) ? `ws://${CDP_HOST}${path}` : undefined;
-  };
 
   // Resolves once the socket closes, with whether target discovery started on it.
   const connect = (url: string): Promise<boolean> =>
@@ -187,6 +134,33 @@ export function createPageInjector({
         }
       };
 
+      // Remove before add: Chrome runs every registered script in order, and the page module keeps the first hint it reads.
+      const register = (sessionId: string, session: Session): Promise<void> =>
+        session.scripts(async () => {
+          const wanted = source;
+          if (session.script?.source === wanted || sessions.get(sessionId) !== session) {
+            return;
+          }
+          if (session.script) {
+            const { identifier } = session.script;
+            await send(
+              'Page.removeScriptToEvaluateOnNewDocument',
+              { identifier },
+              sessionId
+            );
+            session.script = null;
+          }
+          const res = await send(
+            'Page.addScriptToEvaluateOnNewDocument',
+            { source: wanted },
+            sessionId
+          );
+          if (!G.isObject(res) || !G.isString(res.identifier)) {
+            throw new Error('no script identifier');
+          }
+          session.script = { identifier: res.identifier, source: wanted };
+        });
+
       const setUp = async (targetId: string, attempt: Attachment): Promise<void> => {
         const res = await send('Target.attachToTarget', { targetId, flatten: true });
         const sessionId =
@@ -199,30 +173,51 @@ export function createPageInjector({
           return;
         }
         attempt.sessionId = sessionId;
-        sessions.set(sessionId, { targetId, contexts: new Map() });
+        const session: Session = {
+          targetId,
+          contexts: new Map(),
+          script: null,
+          scripts: pLimit(1),
+        };
+        sessions.set(sessionId, session);
         // New contexts get the binding only while Runtime is enabled.
         await Promise.all([
           send('Runtime.enable', {}, sessionId),
           send('Runtime.addBinding', { name: BINDING }, sessionId),
           send('Page.enable', {}, sessionId),
-          send('Page.addScriptToEvaluateOnNewDocument', { source }, sessionId),
+          register(sessionId, session),
         ]);
         // The document already open; it may be gone by now.
         await send('Runtime.evaluate', { expression: source }, sessionId).catch(F.ignore);
       };
 
-      const attach = (targetId: string): void => {
-        const attempt: Attachment = { sessionId: null };
-        targets.set(targetId, attempt);
-        setUp(targetId, attempt).catch((e: unknown) => {
+      const failed =
+        (targetId: string, attempt: Attachment, kind: string) => (e: unknown) => {
           if (ws.readyState === SOCKET_OPEN) {
-            warnOnce('attach failed', e);
+            warnOnce(kind, e);
           }
           if (targets.get(targetId) === attempt) {
             detach(targetId);
           }
-        });
+        };
+
+      const attach = (targetId: string): void => {
+        const attempt: Attachment = { sessionId: null };
+        targets.set(targetId, attempt);
+        setUp(targetId, attempt).catch(failed(targetId, attempt, 'attach failed'));
       };
+
+      const rehintSessions = (): void => {
+        for (const [sessionId, session] of sessions) {
+          const attempt = targets.get(session.targetId);
+          if (attempt?.sessionId === sessionId) {
+            register(sessionId, session).catch(
+              failed(session.targetId, attempt, 'hint update failed')
+            );
+          }
+        }
+      };
+      rehint = rehintSessions;
 
       // A session kept through about:blank still runs the script in the next achievements page; any other page ends it.
       const consider = (info: TargetInfo): void => {
@@ -367,6 +362,9 @@ export function createPageInjector({
         if (socket === ws) {
           socket = null;
         }
+        if (rehint === rehintSessions) {
+          rehint = null;
+        }
         for (const reply of replies.values()) {
           reply.fail(new Error('socket closed'));
         }
@@ -401,7 +399,7 @@ export function createPageInjector({
   const run = async (): Promise<void> => {
     let retryMs = RETRY_MIN_MS;
     while (!life.signal.aborted) {
-      const url = await browserUrl().catch((e: unknown) => {
+      const url = await browserUrl(env.fetchJson).catch((e: unknown) => {
         warnOnce('cannot read /json/version', e);
         return null;
       });
@@ -423,6 +421,13 @@ export function createPageInjector({
       if (!started && !life.signal.aborted) {
         started = true;
         void run();
+      }
+    },
+    setHint(appids) {
+      const next = documentSource(script, appids);
+      if (next !== source) {
+        source = next;
+        rehint?.();
       }
     },
     dispose() {

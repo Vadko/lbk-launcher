@@ -1,65 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { pageHintSource } from './achievement-page-hint';
 import type { AppStrings } from './achievement-text';
-import { createPageInjector, type PageInjector } from './page-injector';
-import type { BridgeSocket } from './socket';
-
-const BROWSER = 'ws://127.0.0.1:8080/devtools/browser/0a1b-2c3d';
-const SCRIPT = '/* the page module */';
-const PORTAL2: AppStrings = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'Підйом' } };
-const COMMUNITY = 'https://steamcommunity.com/achievements/620';
-
-interface Sent {
-  id: number;
-  method: string;
-  params: Record<string, unknown>;
-  sessionId?: string;
-}
-
-class FakeCdp implements BridgeSocket {
-  readyState = 0;
-  sent: Sent[] = [];
-  onopen: ((ev: Event) => void) | null = null;
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onerror: ((ev: Event) => void) | null = null;
-  onclose: ((ev: CloseEvent) => void) | null = null;
-  constructor(readonly url: string) {}
-  send(data: string): void {
-    this.sent.push(JSON.parse(data));
-  }
-  close(): void {
-    this.readyState = 3;
-  }
-  open(): void {
-    this.readyState = 1;
-    this.onopen?.(new Event('open'));
-  }
-  drop(): void {
-    this.readyState = 3;
-    this.onclose?.(new CloseEvent('close'));
-  }
-  emit(method: string, params: object, sessionId?: string): void {
-    const data = JSON.stringify(
-      sessionId ? { method, params, sessionId } : { method, params }
-    );
-    this.onmessage?.(new MessageEvent('message', { data }));
-  }
-  methods(sessionId?: string): string[] {
-    return this.sent.filter((c) => c.sessionId === sessionId).map((c) => c.method);
-  }
-  find(method: string, sessionId?: string): Sent[] {
-    return this.sent.filter((c) => c.method === method && c.sessionId === sessionId);
-  }
-  // Answers every command of this kind still waiting for a reply.
-  reply(method: string, result: object = {}, sessionId?: string): void {
-    for (const { id } of this.find(method, sessionId)) {
-      this.onmessage?.(
-        new MessageEvent('message', { data: JSON.stringify({ id, result }) })
-      );
-    }
-  }
-}
-
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+import type { PageInjector } from './page-injector';
+import {
+  BROWSER,
+  COMMUNITY,
+  type FakeCdp,
+  injectorHarness,
+  PORTAL2,
+  SCRIPT,
+  settle,
+} from './page-injector.fixture';
 
 const running: PageInjector[] = [];
 afterEach(() => {
@@ -69,85 +20,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function setUp(version: unknown = { webSocketDebuggerUrl: BROWSER }) {
-  const sockets: FakeCdp[] = [];
-  const timers = new Map<number, { fn: TimerHandler; ms: number | undefined }>();
-  let nextTimer = 0;
-  const fetchJson = vi.fn((_url: string) => Promise.resolve(version));
-  const strings = vi.fn((appid: string) =>
-    Promise.resolve(appid === '620' ? PORTAL2 : undefined)
-  );
-  const injector = createPageInjector({
-    env: {
-      fetchJson,
-      openSocket: (url) => {
-        const socket = new FakeCdp(url);
-        sockets.push(socket);
-        return socket;
-      },
-      setTimeout: (fn, ms) => {
-        nextTimer++;
-        timers.set(nextTimer, { fn, ms });
-        return nextTimer;
-      },
-      clearTimeout: (handle) => {
-        if (handle !== undefined) {
-          timers.delete(handle);
-        }
-      },
-    },
-    script: SCRIPT,
-    strings,
-  });
-  running.push(injector);
-  const cdp = () => {
-    const socket = sockets.at(-1);
-    if (!socket) {
-      throw new Error('no CDP socket');
-    }
-    return socket;
-  };
-  // pTimeout arms a timer for every CDP command; the retry delay is the one longer than a second.
-  const retries = () =>
-    [...timers.values()].map(({ ms }) => ms).filter((ms) => ms !== 10_000);
-  return {
-    injector,
-    fetchJson,
-    strings,
-    sockets,
-    cdp,
-    retries,
-    async runRetry() {
-      for (const [id, { fn, ms }] of timers) {
-        if (ms !== 10_000 && typeof fn === 'function') {
-          timers.delete(id);
-          fn();
-        }
-      }
-      await settle();
-    },
-    async connect() {
-      injector.start();
-      await settle();
-      cdp().open();
-      cdp().reply('Target.setDiscoverTargets');
-      await settle();
-      return cdp();
-    },
-    // Announces a target and plays Chrome's side of the attach and the session set-up.
-    async attach(targetId: string, url = COMMUNITY, type = 'page') {
-      const ws = cdp();
-      ws.emit('Target.targetCreated', { targetInfo: { targetId, type, url } });
-      ws.reply('Target.attachToTarget', { sessionId: `S${targetId}` });
-      await settle();
-      const sessionId = `S${targetId}`;
-      for (const method of ws.methods(sessionId)) {
-        ws.reply(method, {}, sessionId);
-      }
-      await settle();
-      return sessionId;
-    },
-  };
+function setUp(version?: unknown) {
+  const steam = injectorHarness(version);
+  running.push(steam.injector);
+  return steam;
 }
 
 describe('page injector: finding Steam CEF', () => {
@@ -257,7 +133,7 @@ describe('page injector: targets', () => {
     const [script] = ws.find('Page.addScriptToEvaluateOnNewDocument', sessionId);
     const [evaluate] = ws.find('Runtime.evaluate', sessionId);
     const source = String(script.params.source);
-    expect(source.startsWith(`${SCRIPT}\n`)).toBe(true);
+    expect(source.startsWith(`${pageHintSource([])}\n${SCRIPT}\n`)).toBe(true);
     expect(source).toContain(`globalThis.${String(binding.params.name)}`);
     expect(evaluate.params).toEqual({ expression: source });
   });
@@ -413,5 +289,114 @@ describe('page injector: asks from pages', () => {
       await page.ask({ payload: String(appid) });
     }
     expect(page.strings).toHaveBeenCalledTimes(16);
+  });
+});
+
+describe('page injector: document-start hint', () => {
+  const ADD = 'Page.addScriptToEvaluateOnNewDocument';
+  const REMOVE = 'Page.removeScriptToEvaluateOnNewDocument';
+  const sources = (ws: FakeCdp, sessionId: string) =>
+    ws.find(ADD, sessionId).map((c) => String(c.params.source));
+  const withHint = (appids: string[]) => `${pageHintSource(appids)}\n${SCRIPT}\n`;
+
+  it('registers the current hint for a session attached later, and runs it in the open document', async () => {
+    const steam = setUp();
+    steam.injector.setHint(['620', '400']);
+    const ws = await steam.connect();
+    const sessionId = await steam.attach('T1');
+
+    const [source] = sources(ws, sessionId);
+    expect(source.startsWith(withHint(['400', '620']))).toBe(true);
+    expect(ws.find('Runtime.evaluate', sessionId)[0].params).toEqual({
+      expression: source,
+    });
+  });
+
+  it('swaps the script on every live session: removes the old one, then adds the new one', async () => {
+    const steam = setUp();
+    const ws = await steam.connect();
+    const sessions = [await steam.attach('T1'), await steam.attach('T2')];
+    const before = sessions.map((sessionId) => ws.find(ADD, sessionId)[0].id);
+
+    steam.injector.setHint(['620']);
+    await settle();
+    for (const [i, sessionId] of sessions.entries()) {
+      expect(ws.find(REMOVE, sessionId).map((c) => c.params)).toEqual([
+        { identifier: `script-${before[i]}` },
+      ]);
+      expect(sources(ws, sessionId)).toHaveLength(1);
+      ws.reply(REMOVE, {}, sessionId);
+    }
+    await settle();
+    for (const sessionId of sessions) {
+      expect(sources(ws, sessionId)[1].startsWith(withHint(['620']))).toBe(true);
+    }
+  });
+
+  it('sends nothing when the apps did not change', async () => {
+    const steam = setUp();
+    steam.injector.setHint(['620']);
+    const ws = await steam.connect();
+    const sessionId = await steam.attach('T1');
+    const sent = ws.sent.length;
+
+    steam.injector.setHint(['620', '0620']);
+    await settle();
+    expect(ws.sent).toHaveLength(sent);
+    expect(ws.methods(sessionId)).not.toContain(REMOVE);
+  });
+
+  it('swaps a script whose registration was still on its way when the hint changed', async () => {
+    const steam = setUp();
+    const ws = await steam.connect();
+    ws.emit('Target.targetCreated', {
+      targetInfo: { targetId: 'T1', type: 'page', url: COMMUNITY },
+    });
+    ws.reply('Target.attachToTarget', { sessionId: 'ST1' });
+    await settle();
+    steam.injector.setHint(['620']);
+    await settle();
+    expect(ws.methods('ST1').filter((m) => m === ADD || m === REMOVE)).toEqual([ADD]);
+
+    ws.reply(ADD, {}, 'ST1');
+    await settle();
+    ws.reply(REMOVE, {}, 'ST1');
+    await settle();
+    expect(ws.methods('ST1').filter((m) => m === ADD || m === REMOVE)).toEqual([
+      ADD,
+      REMOVE,
+      ADD,
+    ]);
+    expect(sources(ws, 'ST1')[1].startsWith(withHint(['620']))).toBe(true);
+  });
+
+  it('detaches a session whose script could not be swapped', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const steam = setUp();
+    const ws = await steam.connect();
+    const sessionId = await steam.attach('T1');
+
+    steam.injector.setHint(['620']);
+    await settle();
+    ws.fail(REMOVE, sessionId);
+    await settle();
+    expect(ws.find('Target.detachFromTarget').map((c) => c.params)).toEqual([
+      { sessionId },
+    ]);
+  });
+
+  it('keeps the hint across a reconnect', async () => {
+    const steam = setUp();
+    const first = await steam.connect();
+    steam.injector.setHint(['620']);
+    first.drop();
+    await settle();
+    await steam.runRetry();
+    const ws = steam.cdp();
+    ws.open();
+    ws.reply('Target.setDiscoverTargets');
+    await settle();
+    const sessionId = await steam.attach('T1');
+    expect(sources(ws, sessionId)[0].startsWith(withHint(['620']))).toBe(true);
   });
 });

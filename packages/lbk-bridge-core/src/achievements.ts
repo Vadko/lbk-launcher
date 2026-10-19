@@ -1,4 +1,4 @@
-import { F, G } from '@mobily/ts-belt';
+import { A, D, F, G, pipe } from '@mobily/ts-belt';
 import pLimit from 'p-limit';
 import pWaitFor from 'p-wait-for';
 import {
@@ -34,6 +34,7 @@ interface AchievementsDeps {
   delay: (ms: number) => Promise<void>;
   signal: AbortSignal;
   errText: (e: unknown) => string;
+  onAppsChange?: () => void;
 }
 
 export interface Achievements {
@@ -41,6 +42,8 @@ export interface Achievements {
   report(): AchievementsHookReport;
   // One app of the last achievements.json read, for Steam web pages.
   strings(appid: string): Promise<AppStrings | undefined>;
+  // The apps of that read that have strings, sorted.
+  apps(): readonly string[];
   ops: OpHandlers<PluginOnlySteamOps>;
   dispose(): void;
 }
@@ -52,6 +55,7 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
   let error: string | null = null;
   let hook: AchievementsHook | null = null;
   let latest: AchievementsPayload | null = null;
+  let withStrings: readonly string[] = [];
   let pageRead: Promise<AchievementsPayload | null> | null = null;
   // A reload asked for during a run queues at most one more run.
   const runs = pLimit(1);
@@ -77,6 +81,15 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
     }
     latest = payload;
     const apps = payload ? payload.apps : {};
+    const next = pipe(
+      D.toPairs(apps),
+      A.filterMap(([appid, strings]) => (D.keys(strings).length > 0 ? appid : undefined)),
+      A.sortBy(Number)
+    );
+    if (!A.eq(next, withStrings, (a, b) => a === b)) {
+      withStrings = next;
+      deps.onAppsChange?.();
+    }
     // No translations, no hooks: leave Steam untouched until there is something to show.
     if (!hook && Object.keys(apps).length === 0) {
       return;
@@ -189,5 +202,5 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
     }
   };
 
-  return { start, report, strings, ops, dispose };
+  return { start, report, strings, apps: () => withStrings, ops, dispose };
 }

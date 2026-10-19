@@ -55,6 +55,8 @@ export interface AchievementPage {
 
 export interface AchievementPageOptions {
   provider?: StringsProvider;
+  // Apps a document-start host knows to have strings, so their rows can be hidden before the first paint.
+  hint?: ReadonlySet<string>;
   win?: PageWindow;
 }
 
@@ -160,7 +162,7 @@ function hideFor(win: PageWindow, css: string): () => void {
 function createPage(
   win: PageWindow,
   page: AchievementPageMatch,
-  provider: StringsProvider | undefined
+  { provider, hint }: AchievementPageOptions
 ): AchievementPage {
   const behavior = PAGE_KINDS[page.kind];
   const abort = new AbortController();
@@ -261,14 +263,16 @@ function createPage(
     return data.has(id);
   };
 
+  // At most once per document, and only before anything was written.
+  const hideWhileParsing = (): void => {
+    const css = behavior.hide?.(page.appid);
+    const waiting = !show && !queries && !domAllowed && !abort.signal.aborted;
+    if (css && waiting && isParsing(win) && !isHydrated(win)) {
+      show = hideFor(win, css);
+    }
+  };
+
   const run = async (): Promise<void> => {
-    const hide = behavior.hide;
-    void ask(page.appid).then(() => {
-      const waiting = !queries && !domAllowed && !abort.signal.aborted;
-      if (hide && waiting && data.has(page.appid) && isParsing(win) && !isHydrated(win)) {
-        show = hideFor(win, hide(page.appid));
-      }
-    });
     const client = await findClient(win, behavior, abort.signal);
     if (abort.signal.aborted) {
       return;
@@ -316,13 +320,25 @@ function createPage(
     },
   };
 
-  run()
-    .catch((e) => {
+  if (hint?.has(page.appid)) {
+    hideWhileParsing();
+  }
+  const ownAnswer = ask(page.appid).then(() => {
+    if (data.has(page.appid)) {
+      hideWhileParsing();
+    } else {
+      show?.();
+    }
+  });
+  Promise.all([run(), ownAnswer]).then(
+    () => setTimeout(() => show?.(), SETTLE_MS),
+    (e: unknown) => {
       if (!abort.signal.aborted) {
         warn(e);
       }
-    })
-    .finally(() => setTimeout(() => show?.(), SETTLE_MS));
+      show?.();
+    }
+  );
   return api;
 }
 
@@ -343,7 +359,7 @@ export function startAchievementPage(
   if (isFn(disposePrev)) {
     safely(() => disposePrev.call(prev));
   }
-  const api = createPage(win, page, options.provider);
+  const api = createPage(win, page, options);
   Object.defineProperty(win, PAGE_KEY, { value: api, configurable: true });
   return api;
 }

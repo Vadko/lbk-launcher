@@ -6,6 +6,8 @@ import {
 } from './achievement-query-cache';
 import type { AchText, AppStrings } from './achievement-text';
 
+// The bound on apps in achievements.json, shared by sanitizeAchievements() and the Decky page hint.
+export const ACH_MAX_APPS = 5000;
 // The only bounds on achievements.json text: sanitizeAchievements() and both page hosts go through toAppStrings().
 const MAX_ID = 256;
 const MAX_TEXT: Record<keyof AchText, number> = { name: 2048, desc: 4096 };

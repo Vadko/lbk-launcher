@@ -1,8 +1,7 @@
 import { A, D, G, O, pipe } from '@mobily/ts-belt';
 import * as z from 'zod/mini';
-import { toAppStrings } from './achievement-page-sources';
+import { ACH_MAX_APPS, toAppStrings } from './achievement-page-sources';
 
-const ACH_MAX_APPS = 5000;
 const ACH_ORIG = '__lbkOrig';
 const APP_ID = /^\d{1,10}$/;
 

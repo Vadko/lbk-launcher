@@ -16,7 +16,8 @@ afterEach(() => {
 function load(
   steam: SteamGlobals,
   readJson: (name: string) => Promise<unknown>,
-  delay: (ms: number) => Promise<void> = () => Promise.resolve()
+  delay: (ms: number) => Promise<void> = () => Promise.resolve(),
+  onAppsChange?: () => void
 ) {
   const life = new AbortController();
   lives.push(life);
@@ -26,6 +27,7 @@ function load(
     delay,
     signal: life.signal,
     errText: String,
+    onAppsChange,
   });
 }
 
@@ -141,5 +143,31 @@ describe('achievement strings for Steam web pages', () => {
     readJson.mockClear();
     await expect(achievements.strings('620')).resolves.toEqual(FILE.apps[620]);
     expect(readJson).not.toHaveBeenCalled();
+  });
+});
+
+describe('apps with strings for the Decky page hint', () => {
+  const WAKE = { 'ACH.WAKE_UP': { name: 'Підйом' } };
+
+  it('lists the apps of the hook read that have strings and reports each change once', async () => {
+    const readJson = vi
+      .fn<(name: string) => Promise<unknown>>()
+      .mockResolvedValueOnce({ v: 1, apps: { 620: WAKE, 400: {}, 70: WAKE } })
+      .mockResolvedValueOnce({ v: 1, apps: { 70: WAKE, 620: WAKE } })
+      .mockResolvedValue(NO_TRANSLATIONS);
+    const onAppsChange = vi.fn();
+    const achievements = load(withSteamUi(), readJson, undefined, onAppsChange);
+    expect(achievements.apps()).toEqual([]);
+
+    achievements.start();
+    await vi.waitFor(() => expect(achievements.report().state).toBe('ok'));
+    expect(achievements.apps()).toEqual(['70', '620']);
+    expect(onAppsChange).toHaveBeenCalledOnce();
+
+    await achievements.ops.achievementsReload({});
+    expect(onAppsChange).toHaveBeenCalledOnce();
+    await achievements.ops.achievementsReload({});
+    expect(achievements.apps()).toEqual([]);
+    expect(onAppsChange).toHaveBeenCalledTimes(2);
   });
 });

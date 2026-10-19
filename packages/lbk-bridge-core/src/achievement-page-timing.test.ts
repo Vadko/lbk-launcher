@@ -33,6 +33,8 @@ interface PageSetup {
   hydrated?: boolean;
   dehydratedBoundary?: boolean;
   readyState?: DocumentReadyState;
+  // Push mode, as the Decky injector starts it: apps with strings known at document start, answers through provide().
+  hint?: string[];
 }
 
 // A community page whose root carries the QueryClient next to one Suspense boundary.
@@ -41,6 +43,7 @@ function communityPage({
   hydrated = false,
   dehydratedBoundary = false,
   readyState = 'loading',
+  hint,
 }: PageSetup = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity, gcTime: Infinity } },
@@ -61,7 +64,9 @@ function communityPage({
     document: doc as Document,
     SSR: ssr,
   };
-  const page = startAchievementPage({ provider: () => Promise.resolve(strings), win });
+  const page = hint
+    ? startAchievementPage({ hint: new Set(hint), win })
+    : startAchievementPage({ provider: () => Promise.resolve(strings), win });
   return {
     page,
     ssr,
@@ -129,6 +134,75 @@ describe('achievements page: hide while waiting', () => {
     ['the page is already hydrated', { hydrated: true }],
     ['the rows are already parsed', { readyState: 'interactive' }],
   ])('never hides when %s', async (_label, setup) => {
+    const steam = communityPage(setup);
+    await advance(0);
+    expect(steam.hidden()).toBe(0);
+    steam.page?.dispose();
+  });
+});
+
+describe('achievements page: hide from document start (Decky hint)', () => {
+  it('hides the rows at once, before any answer', () => {
+    const steam = communityPage({ hint: ['620'] });
+    expect(steam.hidden()).toBe(1);
+    expect(steam.page?.wanted()).toEqual(['620']);
+    steam.page?.dispose();
+  });
+
+  it.each<[string, (steam: ReturnType<typeof communityPage>) => Promise<unknown>]>([
+    [
+      'at once when the answer has no strings',
+      async (steam) => {
+        steam.page?.provide('620', {});
+        await advance(0);
+      },
+    ],
+    [
+      '1 s after it hid them, with no answer',
+      async (steam) => {
+        await advance(999);
+        expect(steam.hidden()).toBe(1);
+        await advance(1);
+      },
+    ],
+    [
+      '50 ms after the strings translated the cache',
+      async (steam) => {
+        steam.page?.provide('620', PORTAL2);
+        steam.ssr.hydrated = true;
+        await advance(50);
+        expect(steam.translated()).toBe(true);
+        expect(steam.hidden()).toBe(1);
+        await advance(50);
+      },
+    ],
+    [
+      '50 ms after strings that land once the cache is hooked',
+      async (steam) => {
+        steam.ssr.hydrated = true;
+        await advance(100);
+        expect(steam.hidden()).toBe(1);
+        steam.page?.provide('620', PORTAL2);
+        await advance(0);
+        expect(steam.translated()).toBe(true);
+        expect(steam.hidden()).toBe(1);
+        await advance(50);
+      },
+    ],
+    ['on dispose', (steam) => Promise.resolve(steam.page?.dispose())],
+  ])('shows the rows %s', async (_label, settle) => {
+    const steam = communityPage({ hint: ['620'] });
+    expect(steam.hidden()).toBe(1);
+    await settle(steam);
+    expect(steam.hidden()).toBe(0);
+    steam.page?.dispose();
+  });
+
+  it.each<[string, PageSetup]>([
+    ['the app is not in the hint', { hint: ['400'] }],
+    ['the rows are already parsed', { hint: ['620'], readyState: 'interactive' }],
+    ['the page is already hydrated', { hint: ['620'], hydrated: true }],
+  ])('hides nothing at document start when %s', async (_label, setup) => {
     const steam = communityPage(setup);
     await advance(0);
     expect(steam.hidden()).toBe(0);

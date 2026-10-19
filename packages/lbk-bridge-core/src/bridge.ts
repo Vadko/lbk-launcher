@@ -63,12 +63,14 @@ type ObservedState = Pick<BridgeState, 'status' | 'idle' | 'connectedAt' | 'last
 
 export interface Bridge {
   state: BridgeState;
-  // Dispatches 'change' whenever a field of ObservedState changes, never after 'disposed'.
+  // Dispatches 'change' whenever a field of ObservedState changes and 'achievements' whenever achievementApps() does, never after 'disposed'.
   events: EventTarget;
   start(): void;
   dispose(): void;
   // Public strings of one app for a Steam web page; never anything that reaches LBK.
   achievementStrings(appid: string): Promise<AppStrings | undefined>;
+  // The apps that have such strings, for the Decky page injector's document-start hint.
+  achievementApps(): readonly string[];
 }
 
 interface BridgeOptions {
@@ -134,12 +136,14 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     env.steam.localStorage?.setItem(SPENT_KEY, JSON.stringify(list));
   };
 
+  const events = new EventTarget();
   const achievements = createAchievements({
     steam: env.steam,
     readJson,
     delay,
     signal: life.signal,
     errText,
+    onAppsChange: () => events.dispatchEvent(new Event('achievements')),
   });
   const handlers = new Map<string, (args: unknown) => Promise<unknown>>(
     D.toPairs({ ...createOps(env.steam), ...achievements.ops })
@@ -156,7 +160,6 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     dispose: () => dispose(),
   };
 
-  const events = new EventTarget();
   const update = (patch: Partial<ObservedState>): void => {
     // Disposed is final: closing a still-connecting socket fires onerror later.
     if (state.status === 'disposed') {
@@ -343,5 +346,12 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     void transport();
   };
 
-  return { state, events, start, dispose, achievementStrings: achievements.strings };
+  return {
+    state,
+    events,
+    start,
+    dispose,
+    achievementStrings: achievements.strings,
+    achievementApps: achievements.apps,
+  };
 }

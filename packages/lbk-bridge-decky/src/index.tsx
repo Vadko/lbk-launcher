@@ -30,6 +30,9 @@ bridge.events.addEventListener('change', () => {
     pages.dispose();
   }
 });
+bridge.events.addEventListener('achievements', () =>
+  pages.setHint(bridge.achievementApps())
+);
 
 const WAITING = 'Очікування LBK Launcher';
 
