@@ -11,8 +11,22 @@ vi.mock('../utils/platform', () => ({
   isWindows: () => false,
 }));
 
+const libraryReads = vi.hoisted(() => ({ count: 0 }));
+
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof fs>();
+  return {
+    ...actual,
+    readFileSync: (...args: Parameters<typeof actual.readFileSync>) => {
+      if (String(args[0]).endsWith('gog_library.json')) {
+        libraryReads.count++;
+      }
+      return actual.readFileSync(...args);
+    },
+  };
+});
+
 let home: string;
-let originalHome: string | undefined;
 
 const gamesDir = () => path.join(home, 'Games/Heroic');
 const heroicConfig = () => path.join(home, '.config/heroic');
@@ -30,9 +44,10 @@ function makeGameDirs(...names: string[]): void {
 }
 
 beforeEach(() => {
-  originalHome = process.env.HOME;
   home = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-heroic-'));
-  process.env.HOME = home;
+  vi.stubEnv('HOME', home);
+  // os.homedir() reads USERPROFILE on Windows.
+  vi.stubEnv('USERPROFILE', home);
   makeGameDirs('witcher3', 'Hades', 'Prefixes');
   writeJson('store_cache/gog_library.json', {
     games: [{ app_name: '1207664643', title: 'The Witcher 3: Wild Hunt' }],
@@ -40,7 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  process.env.HOME = originalHome;
+  vi.unstubAllEnvs();
   fs.rmSync(home, { recursive: true, force: true });
 });
 
@@ -81,6 +96,12 @@ describe.each([
     expect(findGOGGame('The Witcher 3 Wild Hunt')).toBe(
       path.join(gamesDir(), 'witcher3')
     );
+  });
+
+  it('parses gog_library.json once for a lookup that misses', () => {
+    libraryReads.count = 0;
+    expect(findGOGGame('Hades')).toBeNull();
+    expect(libraryReads.count).toBe(1);
   });
 
   it('attributes a Heroic folder to the store that installed it', () => {

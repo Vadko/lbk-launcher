@@ -2,46 +2,25 @@ import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { ConflictingTranslation, Game, InstallationInfo } from '../../shared/types';
+import { appEvents } from '../app-events';
 import { GamesRepository } from '../db/games-repository';
 import { getFirstAvailableGamePath } from '../game-detector';
 import { getWorkshopInstalledGameIds } from '../utils/store-storage';
+import { findInstallationInfoFile, INSTALLATION_INFO_FILE } from './installation-info';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
 
-const INSTALLATION_INFO_FILE = '.lbk-translation.json';
-
 // Cache for installed game IDs
 let installedGameIdsCache: string[] | null = null;
 
-/**
- * Find the installation info file path, supporting both new and legacy formats.
- * If old format is found, attempts to rename it to the new format.
- * @param gamePath The path to the game installation directory.
- * @returns The path to the installation info file.
- */
-export function findInstallationInfoFile(gamePath: string) {
-  const oldFormatPath = path.join(gamePath, '.littlebit-translation.json');
-  const newFormatPath = path.join(gamePath, INSTALLATION_INFO_FILE);
-
-  if (fs.existsSync(oldFormatPath)) {
-    try {
-      // Try to rename old format to new format
-      fs.renameSync(oldFormatPath, newFormatPath);
-      return newFormatPath;
-    } catch (error) {
-      // If rename fails, return path to old format
-      console.warn(
-        '[Installer] Failed to rename old format file, using old path:',
-        error
-      );
-      return oldFormatPath;
-    }
-  }
-
-  return newFormatPath;
+// Data kept outside the game folder (achievement strings) must go with the record.
+async function removeRecordFile(filePath: string, gameId: string): Promise<void> {
+  await unlink(filePath);
+  appEvents.emit('install-record-removed', gameId);
 }
 
 /**
@@ -205,7 +184,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
               console.log(
                 `[Installer] Different translation now installed (${actualInfo.gameId}), clearing cache for ${game.id}`
               );
-              await unlink(previousInstallInfoPath);
+              await removeRecordFile(previousInstallInfoPath, game.id);
               return null;
             }
           } catch {
@@ -213,7 +192,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
             console.log(
               '[Installer] Cannot read actual installation file, cache is stale'
             );
-            await unlink(previousInstallInfoPath);
+            await removeRecordFile(previousInstallInfoPath, game.id);
             return null;
           }
 
@@ -227,7 +206,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
         // Cache is stale - game folder or translation was removed
         console.log('[Installer] Cache is stale, removing cached installation info');
         try {
-          await unlink(previousInstallInfoPath);
+          await removeRecordFile(previousInstallInfoPath, game.id);
         } catch {
           // Ignore deletion errors
         }
@@ -294,7 +273,7 @@ export async function removeOrphanedInstallationMetadata(
       const metadataPath = path.join(installInfoDir, `${gameId}.json`);
 
       if (fs.existsSync(metadataPath)) {
-        await unlink(metadataPath);
+        await removeRecordFile(metadataPath, gameId);
         console.log(`[Installer] Removed metadata for game: ${gameId}`);
       }
     } catch (error) {
@@ -409,7 +388,7 @@ export async function getConflictingTranslation(
 
     return {
       gameId: info.gameId,
-      gameName: conflictingGame?.name || 'Невідома локалізація',
+      gameName: conflictingGame?.name || t('installConflict.unknownLocalization'),
       team: conflictingGame?.team || null,
       version: info.version,
       gamePath: gamePath.path,

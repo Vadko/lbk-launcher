@@ -1,5 +1,6 @@
 import os from 'node:os';
 import { app, ipcMain } from 'electron';
+import { t } from '@/shared/i18n/i18n';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   fetchGames,
@@ -19,6 +20,7 @@ import {
   type ImpressionType,
   recordBannerImpression,
 } from '../db/banners-api';
+import { findDeepLinkGameId } from '../db/deep-link-game';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
@@ -58,14 +60,13 @@ import {
   trackWorkshopOpen,
   uploadFileToSignedUrl,
 } from '../tracking';
-import { setCefDebuggingEnabled } from '../utils/cef-flag-file';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { removeAllSteamArtwork } from '../utils/steam-artwork';
 import { syncTranslatedGamesCollection } from '../utils/steam-collections';
-import { launchSteamGame, restartSteam } from '../utils/steam-launcher';
+import { launchSteamGame } from '../utils/steam-launcher';
 import { addLbkLauncherToSteamLibrary } from '../utils/steam-self-shortcut';
 import {
   installedWorkshopGameIds,
@@ -141,9 +142,16 @@ export function setupGamesHandlers(): void {
   );
 
   // Detection: which Workshop translations are already installed when the cache is empty or reset
-  ipcMain.handle('list-installed-workshop-games', async () =>
-    installedWorkshopGameIds(GamesRepository.getInstance().getWorkshopTargets())
-  );
+  ipcMain.handle('list-installed-workshop-games', async () => {
+    try {
+      return await installedWorkshopGameIds(
+        GamesRepository.getInstance().getWorkshopTargets()
+      );
+    } catch (error) {
+      console.error('[Main] Listing installed Workshop games failed:', error);
+      return null;
+    }
+  });
 
   ipcMain.handle(
     'is-workshop-item-downloaded',
@@ -236,6 +244,15 @@ export function setupGamesHandlers(): void {
       }
     }
   );
+
+  ipcMain.handle('find-deep-link-game-id', (_, slug: string, team: string) => {
+    try {
+      return findDeepLinkGameId(slug, team);
+    } catch (error) {
+      console.error('[DeepLink] Error finding game:', error);
+      return null;
+    }
+  });
 
   // Fetch recommended games for game page (dynamically by Steam tag overlap)
   ipcMain.handle('fetch-recommended-games', (_, gameId: string, limit = 3) => {
@@ -555,7 +572,7 @@ export function setupGamesHandlers(): void {
         console.error('[LaunchGame] Game not found on system');
         return {
           success: false,
-          error: "Гру не знайдено на вашому комп'ютері",
+          error: t('launch.gameNotFound'),
         };
       }
 
@@ -674,18 +691,10 @@ export function setupGamesHandlers(): void {
       console.error('[LaunchGame] Error launching game:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Не вдалося запустити гру',
+        error: error instanceof Error ? error.message : t('launch.failed'),
       };
     }
   });
-
-  // Restart Steam
-  ipcMain.handle('restart-steam', () => restartSteam());
-
-  // Toggle Steam CEF remote debugging (creates/removes the flag file)
-  ipcMain.handle('set-steam-cef-debugging', (_event, enabled: boolean) =>
-    setCefDebuggingEnabled(enabled)
-  );
 
   // Switching off reverts covers already installed, not just future ones.
   ipcMain.handle('set-steam-custom-artwork', async (_event, enabled: boolean) => {

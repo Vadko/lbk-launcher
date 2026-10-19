@@ -128,6 +128,7 @@ if (isLinux()) {
   }
 }
 
+import { startAchievements } from './achievements';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
@@ -148,20 +149,29 @@ import {
 import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
+import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { startMillenniumInstall } from './millennium-install';
 import {
   calculatePlaytimeDeltas,
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
+import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
+import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import {
+  deleteStaleBridgeData,
+  shutdownSteamBridgeServer,
+} from './steam-bridge-server/bridge-server';
+import { startPendingSteamActions } from './steam-pending-actions';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
 import {
   startStoreLibraryWatcher,
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
-import { bootstrapCefDebugging } from './utils/cef-flag-file';
-import { createMainWindow, getMainWindow } from './window';
+import { startSteamBridge } from './utils/steam-bridge-lifecycle';
+import { createMainWindow, getMainWindow, showMainWindow } from './window';
 
 // Global managers
 let syncManager: SyncManager | null = null;
@@ -247,6 +257,7 @@ if (!gotTheLock) {
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
+  setupPluginHostHandlers();
 
   // IPC handler for getting current sync status
   ipcMain.handle('get-sync-status', () => currentSyncStatus);
@@ -261,6 +272,12 @@ if (!gotTheLock) {
 
   // App lifecycle
   app.whenReady().then(async () => {
+    try {
+      deleteStaleBridgeData();
+    } catch (error) {
+      console.warn('[Main] Stale bridge.json cleanup failed:', error);
+    }
+
     if (isWindows() || isLinux()) {
       const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
       if (deepLinkUrl) {
@@ -382,9 +399,9 @@ if (!gotTheLock) {
       });
 
     setImmediate(() => {
-      startSteamWatcher(getMainWindow());
+      startSteamWatcher();
       startStoreLibraryWatcher();
-      startInstallationWatcher(getMainWindow(), () => {
+      startInstallationWatcher(() => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
         });
@@ -394,23 +411,19 @@ if (!gotTheLock) {
           console.error('[Main] Failed to process pending deletions:', err);
         });
       });
+      startSteamBridge();
+      startPendingSteamActions();
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });
-    });
-
-    app.on('activate', async () => {
-      // macOS: show the window if hidden, or create a new one if there isn't one
-      const mainWindow = getMainWindow();
-      if (mainWindow) {
-        if (!mainWindow.isVisible()) {
-          mainWindow.show();
-        }
-        mainWindow.focus();
-      } else {
-        await createMainWindow();
+      startAchievements();
+      startMillenniumInstall();
+      if (isLinux()) {
+        watchDeckyPlugins();
       }
     });
+
+    app.on('activate', showMainWindow);
   });
 
   // Track session end and playtime before quit
@@ -419,8 +432,26 @@ if (!gotTheLock) {
   let isQuitting = false;
   let skipQuitTracking = false;
 
+  // macOS keeps the app alive after its last window closes, so services stop only on a real quit.
+  const stopBackgroundServices = () => {
+    stopUpdateCheck();
+    stopSteamWatcher();
+    stopDeckyWatcher();
+    stopStoreLibraryWatcher();
+    stopInstallationWatcher();
+    realtimeManager?.unsubscribe();
+    closeDatabase();
+  };
+
   ipcMain.on('skip-quit-tracking', () => {
     skipQuitTracking = true;
+  });
+
+  // Deletes bridge.json so the Millennium plugin stops dialing a dead port.
+  app.on('before-quit', () => {
+    shutdownSteamBridgeServer().catch((err) => {
+      console.warn('[Main] Steam bridge server stop failed:', err);
+    });
   });
 
   app.on('will-quit', (event) => {
@@ -453,23 +484,13 @@ if (!gotTheLock) {
       }
 
       console.log('[Main] Tracking complete, quitting app');
-      app.quit();
+      stopBackgroundServices();
+      // Without real awaits this runs inside the will-quit emit, where Electron ignores a second quit.
+      setImmediate(() => app.quit());
     })();
   });
 
   app.on('window-all-closed', () => {
-    // Cleanup
-    stopUpdateCheck();
-    stopSteamWatcher();
-    stopStoreLibraryWatcher();
-    stopInstallationWatcher();
-
-    // Unsubscribe from realtime updates (games + feedback replies)
-    realtimeManager?.unsubscribe();
-
-    // Close the database
-    closeDatabase();
-
     if (!isMacOS()) {
       app.quit();
     }

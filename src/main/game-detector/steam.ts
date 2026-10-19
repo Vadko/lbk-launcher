@@ -14,13 +14,9 @@ import {
   steam3ToSteam64,
   writeSteamLibraryCache,
 } from '../steam-library-api';
-import { forCurrentOS, getPlatform } from '../utils/platform';
+import { forCurrentOS, getPlatform, isWindows } from '../utils/platform';
 import { getRegistryString } from '../utils/registry';
-import {
-  evaluateInSharedJsContext,
-  isCefUsable,
-  libraryAppsGuard,
-} from '../utils/steam-cef';
+import { getSteamBridge } from '../utils/steam-bridge';
 import {
   parseAppManifest,
   parseLibraryFolders,
@@ -109,7 +105,33 @@ export function getSteamPath(): string | null {
   return null;
 }
 
+const STEAM_USER_KEY = 'Software\\Valve\\Steam';
+
+// HKCU values are written by the Steam client itself, lowercased and with forward slashes ("c:/program files (x86)/steam").
+function toWindowsPath(value: string): string {
+  const normalized = path.win32.normalize(value.replace(/\//g, '\\'));
+  // The on-disk casing keeps it equal to the libraryfolders.vdf entry for the same folder.
+  try {
+    return fs.realpathSync.native(normalized);
+  } catch {
+    return normalized;
+  }
+}
+
 function detectSteamPathWindows(): string | null {
+  const userSteamPath = getRegistryString(
+    HKEY.HKEY_CURRENT_USER,
+    STEAM_USER_KEY,
+    'SteamPath'
+  );
+  if (userSteamPath) {
+    const steamPath = toWindowsPath(userSteamPath);
+    if (isValidSteamPath(steamPath)) {
+      console.log('[Steam] Found at (HKCU):', steamPath);
+      return steamPath;
+    }
+  }
+
   for (const key of ['SOFTWARE\\WOW6432Node\\Valve\\Steam', 'SOFTWARE\\Valve\\Steam']) {
     const steamPath = getRegistryString(HKEY.HKEY_LOCAL_MACHINE, key, 'InstallPath');
     if (steamPath && isValidSteamPath(steamPath)) {
@@ -118,7 +140,8 @@ function detectSteamPathWindows(): string | null {
     }
   }
 
-  // Fallback to default paths
+  console.warn('[Steam] Registry lookup found nothing, trying default paths...');
+
   const defaultPaths = [
     'C:\\Program Files (x86)\\Steam',
     'C:\\Program Files\\Steam',
@@ -130,6 +153,34 @@ function detectSteamPathWindows(): string | null {
     if (fs.existsSync(defaultPath) && isValidSteamPath(defaultPath)) {
       console.log('[Steam] Found at default location:', defaultPath);
       return defaultPath;
+    }
+  }
+
+  return null;
+}
+
+export function getSteamExePath(): string | null {
+  if (!isWindows()) {
+    return null;
+  }
+
+  const fromRegistry = getRegistryString(
+    HKEY.HKEY_CURRENT_USER,
+    STEAM_USER_KEY,
+    'SteamExe'
+  );
+  if (fromRegistry) {
+    const exePath = toWindowsPath(fromRegistry);
+    if (fs.existsSync(exePath)) {
+      return exePath;
+    }
+  }
+
+  const steamPath = getSteamPath();
+  if (steamPath) {
+    const exePath = path.join(steamPath, 'steam.exe');
+    if (fs.existsSync(exePath)) {
+      return exePath;
     }
   }
 
@@ -163,6 +214,7 @@ function detectSteamPathLinux(): string | null {
     path.join(home, '.local/share/Steam'),
     path.join(home, '.local/share/steam'),
     // Flatpak Steam
+    path.join(home, '.var/app/com.valvesoftware.Steam/data/Steam'),
     path.join(home, '.var/app/com.valvesoftware.Steam/.steam/steam'),
     path.join(home, '.var/app/com.valvesoftware.Steam/.steam/Steam'),
     path.join(home, '.var/app/com.valvesoftware.Steam/.local/share/Steam'),
@@ -629,39 +681,31 @@ export function getInstalledSteamGamePaths(): string[] {
 /** How long a CEF snapshot is considered fresh while there's nothing to verify it against. */
 const CEF_SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Non-Steam shortcuts have the high bit set — these aren't library games. */
-const NON_STEAM_APPID_MIN = 2147483648;
-
 function isCefSnapshotFresh(cachedAt: string): boolean {
   const age = Date.now() - new Date(cachedAt).getTime();
   return Number.isFinite(age) && age >= 0 && age < CEF_SNAPSHOT_TTL_MS;
 }
 
 /**
- * Read owned apps straight from the running client's library store via CEF —
+ * Read owned apps straight from the running client's library store via the Steam bridge —
  * no network call, no rate limit, and (unlike the Web API path) it includes
  * family-shared games. `null` means the bridge isn't usable right now and the
  * caller should fall through to the API/file-cache chain.
  */
 async function getSteamLibraryAppIdsFromCef(): Promise<number[] | null> {
-  if (!(await isCefUsable())) {
+  const bridge = await getSteamBridge();
+  if (!bridge) {
     return null;
   }
 
   try {
-    const result = await evaluateInSharedJsContext<number[] | 'unavailable'>(
-      `(() => {${libraryAppsGuard("'unavailable'")}
-        return apps
-          .map((a) => a.appid)
-          .filter((id) => Number.isInteger(id) && id > 0 && id < ${NON_STEAM_APPID_MIN});
-      })()`
-    );
+    const result = await bridge.invoke('libraryAppIds', {});
     if (result === 'unavailable') {
       return null;
     }
     return Array.isArray(result) && result.length > 0 ? result : null;
   } catch (error) {
-    console.error('[Steam] CEF library read failed:', error);
+    console.error(`[Steam] Library read via ${bridge.transport} failed:`, error);
     return null;
   }
 }

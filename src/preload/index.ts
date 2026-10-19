@@ -6,6 +6,11 @@ Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
 import type {
+  MillenniumProgress,
+  PluginHostState,
+  SteamBridgeStatus,
+} from '../shared/plugin-host-types';
+import type {
   DownloadProgress,
   ElectronAPI,
   FeedbackReplyPayload,
@@ -251,6 +256,36 @@ const electronAPI: ElectronAPI = {
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   applyPendingLaunchOptions: (game: Game) =>
     ipcRenderer.invoke('apply-pending-launch-options', game),
+  getSteamBridgeStatus: () => ipcRenderer.invoke('get-steam-bridge-status'),
+  recheckSteamBridge: () => ipcRenderer.invoke('recheck-steam-bridge'),
+  onSteamBridgeStatusChanged: (callback) => {
+    const handler = (_: unknown, status: SteamBridgeStatus) => callback(status);
+    ipcRenderer.on('steam-bridge-status-changed', handler);
+    return () => ipcRenderer.removeListener('steam-bridge-status-changed', handler);
+  },
+  onSteamPendingActionsApplied: (callback) => {
+    const handler = (_: unknown, payload: { gameIds: string[] }) => callback(payload);
+    ipcRenderer.on('steam-pending-actions-applied', handler);
+    return () => ipcRenderer.removeListener('steam-pending-actions-applied', handler);
+  },
+  getPluginHostState: () => ipcRenderer.invoke('plugin-host:get-state'),
+  prepareMillennium: () => ipcRenderer.invoke('millennium:prepare'),
+  activateMillennium: (opts) => ipcRenderer.invoke('millennium:activate', opts),
+  uninstallMillennium: (opts) => ipcRenderer.invoke('millennium:uninstall', opts),
+  cancelMillennium: () => ipcRenderer.invoke('millennium:cancel'),
+  requestDeckyPluginInstall: () => ipcRenderer.invoke('decky:request-plugin-install'),
+  installDeckyLoader: () => ipcRenderer.invoke('decky:install-loader'),
+  saveDeckyPluginZip: () => ipcRenderer.invoke('decky:save-plugin-zip'),
+  onMillenniumProgress: (callback) => {
+    const handler = (_: unknown, progress: MillenniumProgress) => callback(progress);
+    ipcRenderer.on('millennium:progress', handler);
+    return () => ipcRenderer.removeListener('millennium:progress', handler);
+  },
+  onPluginHostStateChanged: (callback) => {
+    const handler = (_: unknown, state: PluginHostState) => callback(state);
+    ipcRenderer.on('plugin-host:state-changed', handler);
+    return () => ipcRenderer.removeListener('plugin-host:state-changed', handler);
+  },
   /**
    * Fires when the Settings CEF toggle was turned on but the debug port isn't
    * open yet — the user needs to restart Steam for it to take effect.
@@ -318,6 +353,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
+  findDeepLinkGameId: (slug: string, team: string) =>
+    ipcRenderer.invoke('find-deep-link-game-id', slug, team),
   notifyReady: () => ipcRenderer.send('renderer-ready'),
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {

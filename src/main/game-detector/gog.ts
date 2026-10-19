@@ -2,6 +2,7 @@
  * GOG Galaxy Detection
  */
 
+import { F } from '@mobily/ts-belt';
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -246,7 +247,7 @@ const isHeroicGogGame = (value: unknown): value is HeroicGogGame =>
   typeof value === 'object' && value !== null;
 
 // Heroic writes gog_store/installed.json as { installed: [...] } (older versions: a bare array) and leaves out titles
-function readHeroicGogInstalled(withTitles = false): HeroicGogGame[] {
+function readHeroicGogInstalled(): HeroicGogGame[] {
   const installed: HeroicGogGame[] = [];
   for (const root of getHeroicConfigPaths()) {
     const configPath = path.join(root, 'gog_store/installed.json');
@@ -265,9 +266,12 @@ function readHeroicGogInstalled(withTitles = false): HeroicGogGame[] {
       console.warn(`[GOG] Error reading ${configPath}:`, error);
     }
   }
+  return installed;
+}
 
-  // gog_library.json can be several MB, so titles are only joined in for the callers that match by title
-  if (!withTitles || installed.every((game) => game.title)) {
+// gog_library.json can be several MB, so titles are only joined in for the callers that match by title
+function withHeroicGogTitles(installed: HeroicGogGame[]): HeroicGogGame[] {
+  if (installed.every((game) => game.title)) {
     return installed;
   }
   const titles = readHeroicGogTitles();
@@ -321,7 +325,10 @@ export function getHeroicGogInstallFolders(): string[] {
  * Find GOG game by folder name
  */
 export function findGOGGame(gameFolderName: string): string | null {
-  // Linux (Heroic) support
+  // One lookup parses gog_library.json at most once, shared by the title match and the fallback scan
+  const installed = readHeroicGogInstalled();
+  const titled = F.once(() => withHeroicGogTitles(installed));
+
   if (isLinux()) {
     // Helper to normalize strings for comparison (remove special chars, lowercase)
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -334,10 +341,8 @@ export function findGOGGame(gameFolderName: string): string | null {
         (path.basename(g.install_path) === gameFolderName ||
           normalize(path.basename(g.install_path)) === targetFolder);
       const game =
-        readHeroicGogInstalled().find(matchesFolder) ??
-        readHeroicGogInstalled(true).find(
-          (g) => !!g.title && normalize(g.title) === targetFolder
-        );
+        installed.find(matchesFolder) ??
+        titled().find((g) => !!g.title && normalize(g.title) === targetFolder);
 
       if (game?.install_path && fs.existsSync(game.install_path)) {
         console.log(`[GOG] ✓ Game found via installed.json: ${game.install_path}`);
@@ -349,12 +354,8 @@ export function findGOGGame(gameFolderName: string): string | null {
 
     // Lutris GOG directories (fuzzy match)
     for (const dir of getLutrisGOGDirs()) {
-      if (!fs.existsSync(dir)) {
-        continue;
-      }
       try {
-        const subdirs = fs.readdirSync(dir);
-        for (const subdir of subdirs) {
+        for (const subdir of fs.readdirSync(dir)) {
           if (normalize(subdir) === targetFolder) {
             const fullPath = path.join(dir, subdir);
             if (fs.statSync(fullPath).isDirectory()) {
@@ -369,8 +370,7 @@ export function findGOGGame(gameFolderName: string): string | null {
     }
   }
 
-  // Get all installed GOG games with their full paths
-  const installedGames = getAllInstalledGOGGames();
+  const installedGames = getAllInstalledGOGGames(titled());
 
   // Search through all installed games by folder name
   for (const [, gamePath] of installedGames) {
@@ -395,15 +395,11 @@ export function getInstalledGOGGamePaths(): string[] {
     // Linux (Heroic) support
     if (isLinux()) {
       // Get game folders from Lutris directories (each subdir in drive_c/GOG Games is a game installation)
-      const lutrisDirs = getLutrisGOGDirs();
-      for (const dir of lutrisDirs) {
-        if (fs.existsSync(dir)) {
-          try {
-            const subdirs = fs.readdirSync(dir);
-            paths.push(...subdirs);
-          } catch (e) {
-            // ignore
-          }
+      for (const dir of getLutrisGOGDirs()) {
+        try {
+          paths.push(...fs.readdirSync(dir));
+        } catch {
+          // Safe to ignore
         }
       }
 
@@ -442,32 +438,26 @@ export function getInstalledGOGGamePaths(): string[] {
  * Returns Map<title, installationPath>
  * Similar to getAllInstalledSteamGames()
  */
-function getAllInstalledGOGGames(): Map<string, string> {
+function getAllInstalledGOGGames(heroicGames: HeroicGogGame[]): Map<string, string> {
   const gamesMap = new Map<string, string>();
 
-  // Linux: Use Heroic launcher data
   if (isLinux()) {
-    for (const game of readHeroicGogInstalled(true)) {
+    for (const game of heroicGames) {
       if (game.title && game.install_path && fs.existsSync(game.install_path)) {
         gamesMap.set(getCleanTitle(game.title).toLowerCase(), game.install_path);
       }
     }
 
     // Include Lutris GOG installations mapped via db directly (we can leverage fuzzy matching folders too)
-    const lutrisDirs = getLutrisGOGDirs();
-    for (const dir of lutrisDirs) {
-      if (!fs.existsSync(dir)) {
-        continue;
-      }
+    for (const dir of getLutrisGOGDirs()) {
       try {
-        const subdirs = fs.readdirSync(dir);
-        for (const subdir of subdirs) {
+        for (const subdir of fs.readdirSync(dir)) {
           const gamePath = path.join(dir, subdir);
           if (fs.statSync(gamePath).isDirectory()) {
             gamesMap.set(getCleanTitle(subdir).toLowerCase(), gamePath);
           }
         }
-      } catch (e) {
+      } catch {
         // Safe to ignore
       }
     }

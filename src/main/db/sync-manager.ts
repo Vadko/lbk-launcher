@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
 import { getLocallyInstalledGameIds } from '../installer/cache';
 import { createTimer } from '../utils/logger';
-import { getMainWindow } from '../window';
+import { getMainWindow, sendToRenderer } from '../window';
 import { getDatabase } from './database';
 import { upsertTagNames } from './db-queries';
 import { dbWorkerClient } from './db-worker-client';
@@ -420,7 +420,14 @@ export class SyncManager {
     console.log(
       `[SyncManager] Handling realtime update for game: ${game.name} (${game.id})`
     );
+    const wasVisible = this.gamesRepo.isGameVisible(game.id);
     this.gamesRepo.upsertGame(game);
+    // The broadcast carries hidden rows too; only the stored row knows user_unlocked
+    if (this.gamesRepo.isGameVisible(game.id)) {
+      sendToRenderer('game-updated', game);
+    } else if (wasVisible) {
+      notifyGamesRemoved([game.id]);
+    }
   }
 
   /**

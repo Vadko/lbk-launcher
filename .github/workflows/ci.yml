@@ -42,6 +42,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # type-check, tests and knip read the generated bundles.
+      - name: Build LBK Bridge
+        run: pnpm build:bridge
+
       - name: TypeScript check
         run: pnpm type-check
 

@@ -1,15 +1,16 @@
 import { F } from '@mobily/ts-belt';
-import { app, type BrowserWindow } from 'electron';
+import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { invalidateInstalledGameIdsCache } from './installer/cache';
+import { sendToRenderer } from './window';
 
 let watcher: fs.FSWatcher | null = null;
 const pendingChanges = new Set<string>();
 
 // Batches the rapid writes of one install into a single refresh
 const flushChanges = F.makeControlledDebounce(
-  (mainWindow: BrowserWindow | null, onChange?: () => void) => {
+  (onChange?: () => void) => {
     if (pendingChanges.size === 0) {
       return;
     }
@@ -23,7 +24,7 @@ const flushChanges = F.makeControlledDebounce(
     invalidateInstalledGameIdsCache();
 
     // Notify renderer to refresh installed games list
-    mainWindow?.webContents.send('installed-games-changed');
+    sendToRenderer('installed-games-changed');
 
     // Optional callback (e.g. process server-side tombstoned games
     // that became uninstalled and can now be removed locally)
@@ -35,10 +36,7 @@ const flushChanges = F.makeControlledDebounce(
 /**
  * Start watching installation-cache directory for changes
  */
-export function startInstallationWatcher(
-  mainWindow: BrowserWindow | null,
-  onChange?: () => void
-): void {
+export function startInstallationWatcher(onChange?: () => void): void {
   // Close any existing watcher first to prevent EMFILE errors
   if (watcher) {
     console.log('[InstallationWatcher] Closing existing watcher before starting new one');
@@ -60,7 +58,7 @@ export function startInstallationWatcher(
   watcher = fs.watch(installInfoDir, (_eventType, filename) => {
     if (filename && filename.endsWith('.json')) {
       pendingChanges.add(filename);
-      flushChanges.schedule(mainWindow, onChange);
+      flushChanges.schedule(onChange);
     }
   });
 }

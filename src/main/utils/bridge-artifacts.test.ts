@@ -1,0 +1,319 @@
+import { webcrypto } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import vm from 'node:vm';
+import {
+  BRIDGE_PLUGIN_NAME,
+  BRIDGE_VERSION,
+  PLUGIN_ONLY_OPS,
+  SHARED_STEAM_OPS,
+} from '@lbk/bridge-core/contract';
+import { hmacHex } from '@lbk/bridge-core/protocol';
+import * as React from 'react';
+import * as jsxRuntime from 'react/jsx-runtime';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const PACKAGES = path.resolve(__dirname, '../../../packages');
+const MILLENNIUM_DIR = path.join(PACKAGES, 'lbk-bridge-millennium');
+const MILLENNIUM_INDEX = path.join(MILLENNIUM_DIR, '.millennium/Dist/index.js');
+const MILLENNIUM_WEBKIT = path.join(MILLENNIUM_DIR, '.millennium/Dist/webkit.js');
+const DECKY_DIR = path.join(PACKAGES, 'lbk-bridge-decky');
+const DECKY_INDEX = path.join(DECKY_DIR, 'dist/index.js');
+const SCRIPT_URL =
+  'https://steamloopback.host/plugins/lbk-bridge/.millennium/Dist/index.js';
+
+const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, 'utf8'));
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null;
+const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+class FakeSocket {
+  static instances: FakeSocket[] = [];
+  readyState = 1;
+  sent: Record<string, unknown>[] = [];
+  onopen: (() => void) | null = null;
+  onmessage: ((ev: { data: string }) => void) | null = null;
+  constructor(readonly url: string) {
+    FakeSocket.instances.push(this);
+  }
+  send(data: string): void {
+    this.sent.push(JSON.parse(data));
+  }
+  close(): void {
+    this.readyState = 3;
+  }
+}
+
+function disposeBridge(owner: Record<string, unknown>): void {
+  const handle = owner.__LBK_BRIDGE__;
+  if (isRecord(handle) && typeof handle.dispose === 'function') {
+    handle.dispose();
+  }
+}
+
+// Steam's CSP may forbid eval; zod/mini never compiles validators, and the full zod would.
+it.each([
+  ['Millennium', MILLENNIUM_INDEX],
+  ['Millennium webkit', MILLENNIUM_WEBKIT],
+  ['Decky', DECKY_INDEX],
+])('the %s bundle compiles no code at runtime', (_host, file) => {
+  expect(fs.readFileSync(file, 'utf8')).not.toMatch(/\bFunction\b|\beval\(/);
+});
+
+describe('Millennium bundle', () => {
+  const source = fs.readFileSync(MILLENNIUM_INDEX, 'utf8');
+
+  it('ships a manifest Millennium loads without a backend', () => {
+    expect(readJson(path.join(MILLENNIUM_DIR, 'plugin.json'))).toMatchObject({
+      name: BRIDGE_PLUGIN_NAME,
+      version: BRIDGE_VERSION,
+      useBackend: false,
+    });
+  });
+
+  // ttc inlines every key of a .env next to it; an IIFE has no import.meta of its own.
+  it('is a plain script with no injected environment or base URL guess', () => {
+    expect(() => new vm.Script(source)).not.toThrow();
+    for (const needle of [
+      'process.env',
+      'document.baseURI',
+      'SENTRY_',
+      'VITE_',
+      'CSC_',
+    ]) {
+      expect(source).not.toContain(needle);
+    }
+  });
+
+  const loadInSteam = (scripts: { src: string }[], filename: string) => {
+    const fetched: string[] = [];
+    const sandbox: Record<string, unknown> = {
+      console,
+      URL,
+      TextEncoder,
+      AbortController,
+      AbortSignal,
+      EventTarget,
+      Event,
+      crypto: webcrypto,
+      WebSocket: FakeSocket,
+      MILLENNIUM_BACKEND_IPC: { postMessage: () => undefined },
+      document: { scripts },
+      fetch: (url: string) => {
+        fetched.push(url);
+        const body = url.includes('/bridge.json')
+          ? { v: 1, port: 50010, secret: 'ab'.repeat(32) }
+          : null;
+        return Promise.resolve({ ok: body !== null, json: () => Promise.resolve(body) });
+      },
+      setTimeout: () => 0,
+      clearTimeout: () => undefined,
+    };
+    sandbox.window = sandbox;
+    vm.runInContext(source, vm.createContext(sandbox), { filename });
+    return { sandbox, fetched };
+  };
+  const BRIDGE_JSON_URL =
+    /^https:\/\/steamloopback\.host\/plugins\/lbk-bridge\/\.millennium\/Dist\/bridge\.json\?t=\d+$/;
+
+  it('finds bridge.json next to its own script and dials LBK', async () => {
+    FakeSocket.instances = [];
+    const { sandbox, fetched } = loadInSteam(
+      [{ src: 'https://steamloopback.host/x.js' }, { src: SCRIPT_URL }],
+      'evaluated-by-tag.js'
+    );
+    await settle();
+
+    expect(fetched[0]).toMatch(BRIDGE_JSON_URL);
+    expect(sandbox.__LBK_BRIDGE__).toMatchObject({
+      host: 'millennium',
+      version: BRIDGE_VERSION,
+    });
+    const ws = FakeSocket.instances[0];
+    expect(ws.url).toBe('ws://127.0.0.1:50010/lbk-bridge');
+    ws.onopen?.();
+    expect(ws.sent[0]).toMatchObject({
+      t: 'hello',
+      host: 'millennium',
+      pv: BRIDGE_VERSION,
+    });
+    expect(ws.sent[0]).toHaveProperty('ops', [...SHARED_STEAM_OPS, ...PLUGIN_ONLY_OPS]);
+    disposeBridge(sandbox);
+  });
+
+  it.each([
+    'https://steamloopback.host/plugins/lbk-bridge',
+    'https://x/C:/Program%20Files%20(x86)/Steam/plugins/lbk-bridge',
+  ])('falls back to its own URL in the stack under %s', async (pluginDir) => {
+    const { sandbox, fetched } = loadInSteam(
+      [],
+      `${pluginDir}/.millennium/Dist/index.js`
+    );
+    await settle();
+    expect(fetched[0]?.split('?')[0]).toBe(`${pluginDir}/.millennium/Dist/bridge.json`);
+    disposeBridge(sandbox);
+  });
+});
+
+interface ExternalStore {
+  subscribe: (onChange: () => void) => () => void;
+  getSnapshot: () => string;
+}
+
+const CDP_BROWSER = 'ws://127.0.0.1:8080/devtools/browser/5f1e';
+
+describe('Decky bundle', () => {
+  let store: ExternalStore | undefined;
+  const fetchNoCors = vi.fn((_url: string, _init?: RequestInit) =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ webSocketDebuggerUrl: CDP_BROWSER }),
+    })
+  );
+  beforeEach(() => {
+    store = undefined;
+    fetchNoCors.mockClear();
+    // @decky/api connects to the loader when the bundle is imported.
+    vi.stubGlobal('window', globalThis);
+    vi.stubGlobal(
+      '__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit',
+      {
+        connect: () => ({ _version: 2, fetchNoCors }),
+      }
+    );
+    vi.stubGlobal('SP_REACT', {
+      ...React,
+      // Steam renders on the client; renderToStaticMarkup also needs a server snapshot.
+      useSyncExternalStore: (
+        subscribe: ExternalStore['subscribe'],
+        getSnapshot: ExternalStore['getSnapshot']
+      ) => {
+        store = { subscribe, getSnapshot };
+        return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+      },
+    });
+    vi.stubGlobal('SP_JSX', jsxRuntime);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const render = (node: unknown) =>
+    React.isValidElement(node) ? renderToStaticMarkup(node) : null;
+  const loadPlugin = async (query = '') => {
+    const plugin: unknown = (await import(`${pathToFileURL(DECKY_INDEX).href}${query}`))
+      .default;
+    return typeof plugin === 'function' ? plugin() : null;
+  };
+  const dismount = (plugin: unknown) => {
+    const onDismount = isRecord(plugin) ? plugin.onDismount : undefined;
+    expect(onDismount).toBeTypeOf('function');
+    if (typeof onDismount === 'function') {
+      onDismount();
+    }
+  };
+
+  it('has exactly the manifest fields Decky reads without defaults', () => {
+    expect(readJson(path.join(DECKY_DIR, 'plugin.json'))).toEqual({
+      name: 'LBK Bridge',
+      author: 'LBK Team',
+      flags: [],
+    });
+    expect(fs.existsSync(path.join(DECKY_DIR, 'main.py'))).toBe(false);
+  });
+
+  it('takes React from Decky instead of bundling a copy', () => {
+    expect(fs.readFileSync(DECKY_INDEX, 'utf8')).not.toMatch(
+      /^import\b|['"]react(-dom)?(\/[\w-]+)?['"]|react\.(transitional\.)?element/m
+    );
+  });
+
+  it('starts from its default export, reads ../data/bridge.json and dials LBK', async () => {
+    FakeSocket.instances = [];
+    const fetched: string[] = [];
+    const secret = 'cd'.repeat(32);
+    vi.stubGlobal('WebSocket', FakeSocket);
+    vi.stubGlobal('fetch', (url: string) => {
+      fetched.push(url);
+      const body = { v: 1, port: 50011, secret };
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    });
+    const plugin = await loadPlugin();
+
+    expect(plugin).toMatchObject({ name: 'LBK Bridge' });
+    const { icon, content } = isRecord(plugin) ? plugin : {};
+    expect(render(icon)).toMatch(/^<svg [^>]*width="1em" height="1em"/);
+    expect(render(content)).toContain('>Очікування LBK Launcher</div>');
+    expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toMatchObject({
+      host: 'decky',
+      version: BRIDGE_VERSION,
+    });
+    expect(fetched[0]).toMatch(
+      /\/packages\/lbk-bridge-decky\/data\/bridge\.json\?t=\d+$/
+    );
+    await settle();
+    const socket = (url: string) => FakeSocket.instances.find((s) => s.url === url);
+    const ws = socket('ws://127.0.0.1:50011/lbk-bridge');
+    if (!ws) {
+      throw new Error('the bridge did not dial LBK');
+    }
+    ws.onopen?.();
+    expect(ws.sent[0]).toMatchObject({ t: 'hello', host: 'decky', pv: BRIDGE_VERSION });
+    expect(ws.sent[0]).toHaveProperty('ops', [...SHARED_STEAM_OPS, ...PLUGIN_ONLY_OPS]);
+
+    const onChange = vi.fn();
+    const unsubscribe = store?.subscribe(onChange);
+    const cn = String(ws.sent[0].cn);
+    const sn = 'ef'.repeat(16);
+    const sp = await hmacHex(globalThis.crypto.subtle, secret, `server|${cn}|${sn}`);
+    ws.onmessage?.({ data: JSON.stringify({ t: 'challenge', sn, sp }) });
+    await settle();
+    ws.onmessage?.({ data: JSON.stringify({ t: 'ready' }) });
+    expect(onChange).toHaveBeenCalled();
+    expect(store?.getSnapshot()).toBe('Підключено до LBK Launcher');
+
+    unsubscribe?.();
+    const calls = onChange.mock.calls.length;
+    dismount(plugin);
+    expect(onChange).toHaveBeenCalledTimes(calls);
+    expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toBeUndefined();
+    expect(ws.readyState).toBe(3);
+    expect(socket(CDP_BROWSER)?.readyState).toBe(3);
+  });
+
+  // CEF's /json endpoints send no CORS headers; the page injector reads them through Decky.
+  it('opens Steam web pages over CEF remote debugging found through fetchNoCors', async () => {
+    FakeSocket.instances = [];
+    vi.stubGlobal('WebSocket', FakeSocket);
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: false, json: () => null }));
+    const plugin = await loadPlugin('?pages');
+    await settle();
+
+    expect(fetchNoCors).toHaveBeenCalledWith('http://127.0.0.1:8080/json/version', {
+      cache: 'no-store',
+    });
+    const cdp = FakeSocket.instances.find((s) => s.url === CDP_BROWSER);
+    cdp?.onopen?.();
+    expect(cdp?.sent).toEqual([
+      { id: 1, method: 'Target.setDiscoverTargets', params: { discover: true } },
+    ]);
+    dismount(plugin);
+    expect(cdp?.readyState).toBe(3);
+  });
+
+  it('stays idle next to a running Millennium copy and leaves it alone', async () => {
+    const millennium = { host: 'millennium', dispose: vi.fn() };
+    vi.stubGlobal('__LBK_BRIDGE__', millennium);
+    const plugin = await loadPlugin('?idle');
+
+    const { content } = isRecord(plugin) ? plugin : {};
+    expect(render(content)).toContain('>Працює через Millennium</div>');
+    await settle();
+    expect(fetchNoCors).not.toHaveBeenCalled();
+    dismount(plugin);
+    expect(millennium.dispose).not.toHaveBeenCalled();
+    expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toBe(millennium);
+  });
+});
