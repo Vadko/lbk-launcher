@@ -107,23 +107,39 @@ describe('achievements startup', () => {
 });
 
 describe('achievement strings for Steam web pages', () => {
-  it('waits for the first read of achievements.json, then gives one app at a time', async () => {
-    let release: (file: unknown) => void = () => undefined;
-    const readJson = vi.fn(
-      () =>
-        new Promise<unknown>((resolve) => {
-          release = resolve;
-        })
-    );
+  const FILE = { v: 1, apps: { 620: { 'ACH.WAKE_UP': { name: 'Підйом' } } } };
+
+  it.each([
+    ['620', { 'ACH.WAKE_UP': { name: 'Підйом' } }],
+    ['400', undefined],
+    ['constructor', undefined],
+  ])(
+    'reads achievements.json itself while the Steam UI never gets ready: %s',
+    async (appid, expected) => {
+      const readJson = vi.fn(() => Promise.resolve<unknown>(FILE));
+      const achievements = load({}, readJson);
+      achievements.start();
+      await expect(achievements.strings(appid)).resolves.toEqual(expected);
+      expect(readJson).toHaveBeenCalledWith('achievements.json');
+    }
+  );
+
+  it('shares one read between asks and answers nothing when it fails', async () => {
+    const readJson = vi.fn(() => Promise.reject(new Error('fetch failed')));
+    const achievements = load({}, readJson);
+    await expect(
+      Promise.all([achievements.strings('620'), achievements.strings('400')])
+    ).resolves.toEqual([undefined, undefined]);
+    expect(readJson).toHaveBeenCalledOnce();
+  });
+
+  it("gives the hook's read once it has one", async () => {
+    const readJson = vi.fn(() => Promise.resolve<unknown>(FILE));
     const achievements = load(withSteamUi(), readJson);
-
     achievements.start();
-    const asked = achievements.strings('620');
-    await vi.waitFor(() => expect(readJson).toHaveBeenCalledOnce());
-    release({ v: 1, apps: { 620: { 'ACH.WAKE_UP': { name: 'Підйом' } } } });
-
-    await expect(asked).resolves.toEqual({ 'ACH.WAKE_UP': { name: 'Підйом' } });
-    await expect(achievements.strings('400')).resolves.toBeUndefined();
-    await expect(achievements.strings('constructor')).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(achievements.report().state).toBe('ok'));
+    readJson.mockClear();
+    await expect(achievements.strings('620')).resolves.toEqual(FILE.apps[620]);
+    expect(readJson).not.toHaveBeenCalled();
   });
 });

@@ -12,7 +12,9 @@ import { buildSourceMap, toAppStrings } from './achievement-page-sources';
 import {
   type AchievementPageKind,
   type AchievementPageMatch,
+  isAppId,
   matchAchievementPage,
+  PAGE_GLOBAL_KEY,
 } from './achievement-page-url';
 import {
   type AchievementQueries,
@@ -22,10 +24,9 @@ import {
 import type { AchLookup, AppStrings } from './achievement-text';
 import { isFn } from './steam-globals';
 
-const PAGE_KEY = Symbol.for('lbk.achievementPage');
+const PAGE_KEY = Symbol.for(PAGE_GLOBAL_KEY);
 // A newer copy started in the same document disposes an older one.
 const PAGE_VERSION = 1;
-const APP_ID = /^[1-9]\d{0,9}$/;
 const POLL_MS = 50;
 // Valve reports a failed hydration after 15 s; until then React may still claim any server-rendered node.
 const HYDRATE_MS = 15_000;
@@ -68,6 +69,8 @@ interface PageBehavior {
 
 const ssrState = (win: PageWindow) => (G.isObject(win.SSR) ? win.SSR : undefined);
 const isHydrated = (win: PageWindow): boolean => ssrState(win)?.hydrated === true;
+// Rows already on screen switch in place; blanking them would only add a flash.
+const isParsing = (win: PageWindow): boolean => win.document?.readyState === 'loading';
 const ssrRoot = (win: PageWindow): unknown =>
   reactRootFiber(ssrState(win)?.reactRoot) ??
   (win.document && containerRootFiber(win.document));
@@ -251,7 +254,7 @@ function createPage(
   // Called for every achievements query the cache reports, so apps reached later get asked too.
   const has = (appid: unknown): boolean => {
     const id = G.isNumber(appid) || G.isString(appid) ? String(appid) : '';
-    if (!APP_ID.test(id)) {
+    if (!isAppId(id)) {
       return false;
     }
     void ask(id);
@@ -262,7 +265,7 @@ function createPage(
     const hide = behavior.hide;
     void ask(page.appid).then(() => {
       const waiting = !queries && !domAllowed && !abort.signal.aborted;
-      if (hide && waiting && data.has(page.appid) && !isHydrated(win)) {
+      if (hide && waiting && data.has(page.appid) && isParsing(win) && !isHydrated(win)) {
         show = hideFor(win, hide(page.appid));
       }
     });
@@ -282,7 +285,7 @@ function createPage(
   const api: AchievementPage = {
     version: PAGE_VERSION,
     provide: (appid, strings) => {
-      if (APP_ID.test(appid)) {
+      if (isAppId(appid)) {
         apply(appid, strings);
       }
     },

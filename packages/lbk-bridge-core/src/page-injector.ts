@@ -1,23 +1,24 @@
 import { F, G, R } from '@mobily/ts-belt';
 import pTimeout from 'p-timeout';
-import { isAchievementPageOrigin } from './achievement-page-url';
+import {
+  isAchievementPageOrigin,
+  isAppId,
+  PAGE_GLOBAL_KEY,
+} from './achievement-page-url';
 import type { AppStrings } from './achievement-text';
-import type { BridgeSocket } from './socket';
+import { abortableDelay, type BridgeSocket, SOCKET_OPEN } from './socket';
 
 // Steam's CEF remote debugging port, the one Decky Loader itself injects through.
 const CDP_HOST = '127.0.0.1:8080';
 const BROWSER_PATH = /^\/devtools\/browser\/[\w-]{1,128}$/;
-const STEAM_UI_HOST = 'steamloopback.host';
 const BINDING = '__lbkAchievementStrings';
-const APP_ID = /^[1-9]\d{0,9}$/;
 const COMMAND_TIMEOUT_MS = 10_000;
 const RETRY_MIN_MS = 2000;
 // Every retry reads /json/version through Decky's proxy, which logs each request.
 const RETRY_MAX_MS = 120_000;
 // The page module asks once per app and document; more than this is not the page module.
 const MAX_ASKS_PER_CONTEXT = 16;
-const SOCKET_OPEN = 1;
-const PAGE_GLOBAL = "globalThis[Symbol.for('lbk.achievementPage')]";
+const PAGE_GLOBAL = `globalThis[Symbol.for('${PAGE_GLOBAL_KEY}')]`;
 
 // Runs in the page after the page module: forwards every app it waits for to the binding, read per call because a reconnect installs a new one.
 const HOOKUP = `;(() => {
@@ -69,18 +70,22 @@ interface TargetInfo {
 
 type CdpParams = Record<string, unknown>;
 
+// The main world of an achievements page and the apps it asked for.
+interface PageContext {
+  // Chrome reuses context ids across renderer processes; this one names a single document.
+  uniqueId: string;
+  asked: Set<string>;
+}
+
 interface Session {
   targetId: string;
-  // Main worlds of achievements pages by execution context id, with the apps each asked for.
-  contexts: Map<number, Set<string>>;
+  contexts: Map<number, PageContext>;
 }
 
 // One attach attempt; a newer attempt or a detach replaces it in the target map.
 interface Attachment {
   sessionId: string | null;
 }
-
-const neverSettles = (): Promise<void> => new Promise<void>(F.ignore);
 
 const parseUrl = (url: string): URL | undefined =>
   R.toUndefined(R.fromExecution(() => new URL(url)));
@@ -90,24 +95,24 @@ const toTargetInfo = (v: unknown): TargetInfo | undefined =>
     ? { targetId: v.targetId, type: v.type, url: v.url }
     : undefined;
 
-// Steam's own UI is served from steamloopback.host (the plugin's SharedJSContext included) or lives in about:blank popups.
-const isWebPage = ({ type, url }: TargetInfo): boolean => {
-  const parsed = parseUrl(url);
-  return (
-    type === 'page' && parsed?.protocol === 'https:' && parsed.hostname !== STEAM_UI_HOST
-  );
-};
-const isSteamUi = ({ url }: TargetInfo): boolean =>
-  parseUrl(url)?.hostname === STEAM_UI_HOST;
+// Other sites never get the binding, the script or Runtime events, which would stream their console into Steam's UI thread.
+const isAchievementSite = ({ type, url }: TargetInfo): boolean =>
+  type === 'page' && isAchievementPageOrigin(parseUrl(url)?.origin ?? '');
+const isBlank = ({ url }: TargetInfo): boolean => parseUrl(url)?.protocol === 'about:';
 
-const contextOf = (params: CdpParams): { id: number; origin: string } | undefined => {
+const contextOf = (
+  params: CdpParams
+): { id: number; origin: string; uniqueId: string } | undefined => {
   const context = params.context;
-  return G.isObject(context) && G.isNumber(context.id) && G.isString(context.origin)
-    ? { id: context.id, origin: context.origin }
+  return G.isObject(context) &&
+    G.isNumber(context.id) &&
+    G.isString(context.origin) &&
+    G.isString(context.uniqueId)
+    ? { id: context.id, origin: context.origin, uniqueId: context.uniqueId }
     : undefined;
 };
 
-// Decky's host for the page module (Millennium has webkit.js): evaluates it in every document of Steam's web pages over CDP and answers its asks.
+// Decky's host for the page module (Millennium has webkit.js): evaluates it in every document on the achievements sites over CDP and answers its asks.
 export function createPageInjector({
   env,
   script,
@@ -126,13 +131,7 @@ export function createPageInjector({
     }
   };
 
-  const delay = (ms: number): Promise<void> =>
-    pTimeout(neverSettles(), {
-      milliseconds: ms,
-      message: false,
-      customTimers: env,
-      signal: life.signal,
-    }).catch(F.ignore);
+  const delay = abortableDelay(env, life.signal);
 
   // Only the path comes from the answer, so whatever holds the port gets no other host to dial.
   const browserUrl = async (): Promise<string | undefined> => {
@@ -225,43 +224,55 @@ export function createPageInjector({
         });
       };
 
-      // Only Steam UI ends a session: one kept through about:blank still runs the script in the next web page.
+      // A session kept through about:blank still runs the script in the next achievements page; any other page ends it.
       const consider = (info: TargetInfo): void => {
         const known = targets.has(info.targetId);
-        if (!known && isWebPage(info)) {
+        if (!known && isAchievementSite(info)) {
           attach(info.targetId);
-        } else if (known && isSteamUi(info)) {
+        } else if (known && !isAchievementSite(info) && !isBlank(info)) {
           detach(info.targetId);
         }
       };
 
       const answer = (sessionId: string, session: Session, params: CdpParams): void => {
         const { name, payload, executionContextId: contextId } = params;
-        const asked = G.isNumber(contextId) ? session.contexts.get(contextId) : undefined;
         if (
           name !== BINDING ||
-          !asked ||
+          !G.isNumber(contextId) ||
           !G.isString(payload) ||
-          !APP_ID.test(payload) ||
-          asked.has(payload) ||
-          asked.size >= MAX_ASKS_PER_CONTEXT
+          !isAppId(payload)
         ) {
           return;
         }
-        asked.add(payload);
+        const context = session.contexts.get(contextId);
+        if (
+          !context ||
+          context.asked.has(payload) ||
+          context.asked.size >= MAX_ASKS_PER_CONTEXT
+        ) {
+          return;
+        }
+        context.asked.add(payload);
         strings(payload)
-          .then((found) =>
-            send(
+          .then((found) => {
+            // strings() can take a while; the document that asked may be gone by then.
+            if (
+              sessions.get(sessionId) !== session ||
+              session.contexts.get(contextId) !== context
+            ) {
+              return undefined;
+            }
+            return send(
               'Runtime.callFunctionOn',
               {
                 functionDeclaration: PROVIDE,
-                executionContextId: contextId,
+                uniqueContextId: context.uniqueId,
                 arguments: [{ value: payload }, { value: found ?? null }],
                 returnByValue: true,
               },
               sessionId
-            )
-          )
+            );
+          })
           .catch(F.ignore);
       };
 
@@ -278,7 +289,10 @@ export function createPageInjector({
             const context = contextOf(params);
             // Only an achievements page's own origin gets strings, so another site in Steam's browser cannot list them.
             if (context && isAchievementPageOrigin(context.origin)) {
-              session.contexts.set(context.id, new Set());
+              session.contexts.set(context.id, {
+                uniqueId: context.uniqueId,
+                asked: new Set(),
+              });
             }
             break;
           }

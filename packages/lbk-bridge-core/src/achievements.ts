@@ -14,9 +14,6 @@ const ACH_POLL_MS = 1000;
 const ACH_READY_TIMEOUT_MS = 5 * 60 * 1000;
 const ACH_FILE_ATTEMPTS = 3;
 const ACH_FILE_RETRY_MS = 2000;
-const PAGE_STRINGS_POLL_MS = 250;
-// A page module applies strings that arrive late, so a page asking during startup can wait for the first read.
-const PAGE_STRINGS_WAIT_MS = 30_000;
 
 function achievementsEnvReady(g: SteamGlobals, minimal: boolean): boolean {
   const hasApps = G.isObject(g.SteamClient) && G.isObject(g.SteamClient.Apps);
@@ -55,6 +52,7 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
   let error: string | null = null;
   let hook: AchievementsHook | null = null;
   let latest: AchievementsPayload | null = null;
+  let pageRead: Promise<AchievementsPayload | null> | null = null;
   // A reload asked for during a run queues at most one more run.
   const runs = pLimit(1);
   const busy = () => runs.activeCount + runs.pendingCount > 0;
@@ -143,13 +141,20 @@ export function createAchievements(deps: AchievementsDeps): Achievements {
     return out;
   };
 
+  // Pages need only achievements.json, not Steam's stores, so until the hook has read it they read it themselves.
+  const pageFile = (): Promise<AchievementsPayload | null> => {
+    pageRead ??= deps
+      .readJson('achievements.json')
+      .then(sanitizeAchievements, () => null)
+      .finally(() => {
+        pageRead = null;
+      });
+    return pageRead;
+  };
+
   const strings = async (appid: string): Promise<AppStrings | undefined> => {
-    await pWaitFor(() => state !== 'not-ready', {
-      interval: PAGE_STRINGS_POLL_MS,
-      timeout: { milliseconds: PAGE_STRINGS_WAIT_MS, fallback: F.ignore },
-      signal: deps.signal,
-    });
-    return latest && Object.hasOwn(latest.apps, appid) ? latest.apps[appid] : undefined;
+    const file = state === 'ok' ? latest : await pageFile();
+    return file && Object.hasOwn(file.apps, appid) ? file.apps[appid] : undefined;
   };
 
   const ops: OpHandlers<PluginOnlySteamOps> = {

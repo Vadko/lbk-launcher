@@ -22,7 +22,7 @@ import {
   serverFrameSchema,
   toHex,
 } from './protocol';
-import type { BridgeSocket } from './socket';
+import { abortableDelay, type BridgeSocket, neverSettles, SOCKET_OPEN } from './socket';
 import { type BridgeHandle, type SteamGlobals, steamGlobals } from './steam-globals';
 
 const RETRY_MIN_MS = 2000;
@@ -30,7 +30,6 @@ const RETRY_MIN_MS = 2000;
 const RETRY_MAX_MS = 10000;
 const HANDSHAKE_TIMEOUT_MS = 5000;
 const OP_TIMEOUT_MS = 30000;
-const SOCKET_OPEN = 1;
 // localStorage outlives a Steam restart: after an LBK crash the stale bridge.json still holds a secret whose session ended.
 const SPENT_KEY = 'lbk-bridge-spent-secrets';
 const SPENT_MAX = 8;
@@ -89,9 +88,6 @@ export function browserEnv(): BridgeEnv {
   };
 }
 
-// Wrapped in p-timeout, a promise that never settles is a timer on env's clock that can be cleared or aborted.
-const neverSettles = (): Promise<void> => new Promise<void>(F.ignore);
-
 // SteamClient rejects with plain objects like {result, message}; keep them readable like the CDP transport does.
 function errText(e: unknown): string {
   if (G.isError(e)) {
@@ -109,14 +105,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
   const requests = pLimit(1);
   let socket: BridgeSocket | null = null;
 
-  // Resolves after ms, or at once on dispose.
-  const delay = (ms: number): Promise<void> =>
-    pTimeout(neverSettles(), {
-      milliseconds: ms,
-      message: false,
-      customTimers: env,
-      signal: life.signal,
-    }).catch(F.ignore);
+  const delay = abortableDelay(env, life.signal);
 
   const readJson = async (name: string): Promise<unknown> => {
     const url = new URL(name, dataBase);

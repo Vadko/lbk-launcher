@@ -220,7 +220,14 @@ describe('page injector: targets', () => {
   it.each([
     ['a community page', true, 'page', COMMUNITY],
     ['a store page', true, 'page', 'https://store.steampowered.com/app/620/Portal_2/'],
-    ['another site in the overlay browser', true, 'page', 'https://example.com/'],
+    ['another site in the overlay browser', false, 'page', 'https://example.com/'],
+    [
+      'a Valve site without achievements',
+      false,
+      'page',
+      'https://help.steampowered.com/',
+    ],
+    ['checkout', false, 'page', 'https://checkout.steampowered.com/checkout/'],
     ['Steam UI', false, 'page', 'https://steamloopback.host/routes/library/home'],
     ['an about:blank popup', false, 'page', 'about:blank?createflags=274'],
     ['an out-of-process iframe', false, 'iframe', COMMUNITY],
@@ -255,23 +262,26 @@ describe('page injector: targets', () => {
     expect(evaluate.params).toEqual({ expression: source });
   });
 
-  it('detaches when a page turns into Steam UI, keeps it through about:blank, and forgets destroyed targets', async () => {
+  it.each([
+    ['Steam UI', 'https://steamloopback.host/routes/library/home', true],
+    ['another site', 'https://example.com/', true],
+    ['about:blank', 'about:blank', false],
+    ['the store', 'https://store.steampowered.com/app/620/Portal_2/', false],
+  ])('when a page moves to %s detaches: %s', async (_label, url, detaches) => {
     const steam = setUp();
     const ws = await steam.connect();
     const sessionId = await steam.attach('T1');
-    const change = (url: string) =>
-      ws.emit('Target.targetInfoChanged', {
-        targetInfo: { targetId: 'T1', type: 'page', url },
-      });
+    ws.emit('Target.targetInfoChanged', {
+      targetInfo: { targetId: 'T1', type: 'page', url },
+    });
+    expect(ws.find('Target.detachFromTarget').map((c) => c.params)).toEqual(
+      detaches ? [{ sessionId }] : []
+    );
+  });
 
-    change('about:blank');
-    change(COMMUNITY);
-    expect(ws.find('Target.detachFromTarget')).toEqual([]);
-    change('https://steamloopback.host/routes/library/home');
-    expect(ws.find('Target.detachFromTarget').map((c) => c.params)).toEqual([
-      { sessionId },
-    ]);
-
+  it('attaches again to a target that came back after it was destroyed', async () => {
+    const steam = setUp();
+    const ws = await steam.connect();
     ws.emit('Target.targetCreated', {
       targetInfo: { targetId: 'T2', type: 'page', url: COMMUNITY },
     });
@@ -290,10 +300,15 @@ describe('page injector: asks from pages', () => {
     const steam = setUp();
     const ws = await steam.connect();
     const sessionId = await steam.attach('T1');
-    const context = (id: number, origin: string) =>
-      ws.emit('Runtime.executionContextCreated', { context: { id, origin } }, sessionId);
+    const context = (id: number, origin: string, uniqueId: string | null = `u${id}`) =>
+      ws.emit(
+        'Runtime.executionContextCreated',
+        { context: uniqueId === null ? { id, origin } : { id, origin, uniqueId } },
+        sessionId
+      );
     context(7, 'https://steamcommunity.com');
     context(8, 'https://example.com');
+    context(10, 'https://steamcommunity.com', null);
     const [binding] = ws.find('Runtime.addBinding', sessionId);
     const ask = async (overrides: Record<string, unknown> = {}) => {
       ws.emit(
@@ -322,7 +337,7 @@ describe('page injector: asks from pages', () => {
     expect(page.answers()).toEqual([
       {
         functionDeclaration: expect.stringContaining('.provide(appid, strings)'),
-        executionContextId: 7,
+        uniqueContextId: 'u7',
         arguments: [{ value: '620' }, { value: PORTAL2 }],
         returnByValue: true,
       },
@@ -338,6 +353,7 @@ describe('page injector: asks from pages', () => {
     ['another binding', { name: 'devtoolsBinding' }],
     ['a context that never appeared', { executionContextId: 99 }],
     ['another site', { executionContextId: 8 }],
+    ['a context Chrome gave no unique id', { executionContextId: 10 }],
   ])('ignores an ask with %s', async (_label, overrides) => {
     const page = await onAchievementsPage();
     await page.ask(overrides);
@@ -362,8 +378,34 @@ describe('page injector: asks from pages', () => {
       page.sessionId
     );
     await page.ask({ executionContextId: 9 });
-    expect(page.answers().map((a) => a.executionContextId)).toEqual([7, 9]);
+    expect(page.answers().map((a) => a.uniqueContextId)).toEqual(['u7', 'u9']);
   });
+
+  it.each([
+    ['the document was replaced', 'Runtime.executionContextsCleared', true],
+    ['the target was detached', 'Target.detachedFromTarget', false],
+  ])(
+    'drops a late answer when %s, even with the context id reused',
+    async (_label, event, inSession) => {
+      const page = await onAchievementsPage();
+      let release: (strings: AppStrings) => void = () => undefined;
+      page.strings.mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = resolve;
+        })
+      );
+      await page.ask();
+      page.ws.emit(
+        event,
+        { sessionId: page.sessionId },
+        inSession ? page.sessionId : undefined
+      );
+      page.context(7, 'https://steamcommunity.com', 'u7-next');
+      release(PORTAL2);
+      await settle();
+      expect(page.answers()).toEqual([]);
+    }
+  );
 
   it('stops answering past 16 apps in one document', async () => {
     const page = await onAchievementsPage();

@@ -1,5 +1,6 @@
 import { A, D, G, O, pipe } from '@mobily/ts-belt';
 import * as z from 'zod/mini';
+import { toAppStrings } from './achievement-page-sources';
 
 const ACH_MAX_APPS = 5000;
 const ACH_ORIG = '__lbkOrig';
@@ -19,10 +20,6 @@ export interface AchievementsPayload {
 
 export type AchLookup = (appid: unknown, id: unknown) => AchText | undefined;
 
-// Parsed field by field, not with z.catch: the Decky build keeps its source comment, which fails bridge-artifacts.test.ts.
-const boundedText = (max: number) => z.string().check(z.minLength(1), z.maxLength(max));
-const nameSchema = boundedText(2048);
-const descSchema = boundedText(4096);
 const stampSchema = z.union([z.string(), z.number()]);
 
 const achievementsFileSchema = z.object({
@@ -37,23 +34,9 @@ function nullProto<T>(pairs: Iterable<readonly [string, T]>): Record<string, T> 
   return Object.assign(out, Object.fromEntries(pairs));
 }
 
-const achEntry = ([api, raw]: readonly [string, unknown]) => {
-  if (api.length > 256 || !G.isObject(raw)) {
-    return O.None;
-  }
-  // A blank or oversized string drops only its own field.
-  const text: AchText = D.filter(
-    {
-      name: nameSchema.safeParse(raw.name).data,
-      desc: descSchema.safeParse(raw.desc).data,
-    },
-    G.isNotNullable
-  );
-  return text.name || text.desc ? O.Some([api, text] as const) : O.None;
-};
-
+// The page hosts check one app with the same toAppStrings(); an app without valid entries stays as {}.
 const appStrings = (src: Record<string, unknown>): AppStrings =>
-  nullProto(A.filterMap(D.toPairs(src), achEntry));
+  toAppStrings(src) ?? nullProto([]);
 
 export function sanitizeAchievements(raw: unknown): AchievementsPayload | null {
   const file = achievementsFileSchema.safeParse(raw).data;

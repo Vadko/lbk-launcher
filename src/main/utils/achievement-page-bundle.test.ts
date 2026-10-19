@@ -152,7 +152,9 @@ describe('achievement page bundle under the Decky page injector', () => {
     };
     cdp.deliver({
       method: 'Runtime.executionContextCreated',
-      params: { context: { id: 3, origin: 'https://steamcommunity.com' } },
+      params: {
+        context: { id: 3, origin: 'https://steamcommunity.com', uniqueId: 'u3' },
+      },
       sessionId: 'S',
     });
     vm.runInContext(
@@ -165,7 +167,7 @@ describe('achievement page bundle under the Decky page injector', () => {
     await settle();
     const answer = cdp.last('Runtime.callFunctionOn');
     expect(answer.params).toMatchObject({
-      executionContextId: 3,
+      uniqueContextId: 'u3',
       arguments: [{ value: '620' }, { value: strings }],
     });
     const provide: unknown = vm.runInContext(

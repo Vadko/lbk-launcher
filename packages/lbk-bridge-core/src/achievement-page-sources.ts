@@ -6,14 +6,14 @@ import {
 } from './achievement-query-cache';
 import type { AchText, AppStrings } from './achievement-text';
 
-// The same bounds sanitizeAchievements() applies to achievements.json, without zod.
+// The only bounds on achievements.json text: sanitizeAchievements() and both page hosts go through toAppStrings().
 const MAX_ID = 256;
 const MAX_TEXT: Record<keyof AchText, number> = { name: 2048, desc: 4096 };
 
 const boundedText = (value: unknown, max: number): string | undefined =>
   G.isString(value) && value.length > 0 && value.length <= max ? value : undefined;
 
-// Strings for one app from a host, as untrusted as anything else the page holds.
+// One app's strings from achievements.json or a host push, as untrusted as anything else the page holds.
 export function toAppStrings(raw: unknown): AppStrings | undefined {
   if (!G.isObject(raw)) {
     return undefined;

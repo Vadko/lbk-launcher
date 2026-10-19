@@ -14,11 +14,11 @@ import {
   buildSourceMap,
   toAppStrings,
 } from './achievement-page-sources';
-import { matchAchievementPage } from './achievement-page-url';
+import { matchAchievementPage, PAGE_GLOBAL_KEY } from './achievement-page-url';
 import { type AppStrings, sanitizeAchievements } from './achievement-text';
 import { steamCommunityAchievements as fixture } from './steam-community-achievements.fixture';
 
-const PAGE_KEY = Symbol.for('lbk.achievementPage');
+const PAGE_KEY = Symbol.for(PAGE_GLOBAL_KEY);
 const GLOBAL_URL = 'https://steamcommunity.com/achievements/620';
 const PROFILE_URL = 'https://steamcommunity.com/id/someone/achievements/620/?tab=all';
 const SCHEMA_620 = ['achievements', 620, 'schema'];
@@ -141,17 +141,43 @@ describe('buildSourceMap', () => {
 });
 
 describe('toAppStrings', () => {
-  it('keeps bounded text only, in an object without a prototype', () => {
-    const strings = toAppStrings({
-      A: { name: 'Так', desc: '' },
-      B: { name: 5 },
-      C: 'Ні',
-      ['x'.repeat(257)]: { name: 'Довге' },
-      D: { desc: 'Опис', extra: 1 },
-    });
-    expect(strings).toEqual({ A: { name: 'Так' }, D: { desc: 'Опис' } });
-    expect(strings?.constructor).toBeUndefined();
-    expect(toAppStrings({ A: {} })).toBeUndefined();
+  const long = (n: number) => 'я'.repeat(n);
+
+  it.each<[string, unknown, AppStrings | undefined]>([
+    ['a blank desc', { A: { name: 'Так', desc: '' } }, { A: { name: 'Так' } }],
+    [
+      'a name that is not a string',
+      { A: { name: 5, desc: 'Опис' } },
+      { A: { desc: 'Опис' } },
+    ],
+    ['an entry that is a string', { A: 'Ні' }, undefined],
+    ['an extra key', { A: { desc: 'Опис', extra: 1 } }, { A: { desc: 'Опис' } }],
+    ['an entry without text', { A: {} }, undefined],
+    ['strings that are not an object', 'Так', undefined],
+    [
+      'a name of 2048 characters',
+      { A: { name: long(2048) } },
+      { A: { name: long(2048) } },
+    ],
+    ['a name of 2049 characters', { A: { name: long(2049) } }, undefined],
+    [
+      'a desc of 4096 characters',
+      { A: { desc: long(4096) } },
+      { A: { desc: long(4096) } },
+    ],
+    ['a desc of 4097 characters', { A: { desc: long(4097) } }, undefined],
+    [
+      'an id of 256 characters',
+      { [long(256)]: { name: 'Так' } },
+      { [long(256)]: { name: 'Так' } },
+    ],
+    ['an id of 257 characters', { [long(257)]: { name: 'Так' } }, undefined],
+  ])('reads %s', (_label, raw, expected) => {
+    expect(toAppStrings(raw)).toEqual(expected);
+  });
+
+  it('returns an object without a prototype', () => {
+    expect(toAppStrings({ A: { name: 'Так' } })?.constructor).toBeUndefined();
   });
 });
 
@@ -166,6 +192,14 @@ describe('appStringsInFile', () => {
     ['apps that are not an object', file([PORTAL2]), '0'],
     ['an app with blank strings only', file({ 620: { A: { name: '' } } }), '620'],
     ['a file that is not an object', 'achievements', '620'],
+    ['a name at the limit', file({ 620: { A: { name: 'я'.repeat(2048) } } }), '620'],
+    ['a name over the limit', file({ 620: { A: { name: 'я'.repeat(2049) } } }), '620'],
+    ['a desc over the limit', file({ 620: { A: { desc: 'я'.repeat(4097) } } }), '620'],
+    [
+      'an id over the limit',
+      file({ 620: { ['я'.repeat(257)]: { name: 'Так' } } }),
+      '620',
+    ],
   ])('reads %s as sanitizeAchievements() does', (_label, raw, appid) => {
     const sanitized = sanitizeAchievements(raw)?.apps[appid];
     expect(appStringsInFile(raw, appid)).toEqual(toAppStrings(sanitized));
@@ -179,19 +213,24 @@ describe('appStringsInFile', () => {
 describe('fiber walk', () => {
   const client = new QueryClient();
 
-  it('finds the provider below a root or container and above a portalled node', () => {
-    const decoy = fiber({ client: { getQueryCache: () => null } });
-    const tree = fiber(null, fiber({}, decoy, fiber({}, fiber({ client }))));
-    const hostRoot = { stateNode: { current: tree } };
-    expect(findQueryClient(tree)).toBe(client);
-    expect(findQueryClient(reactRootFiber({ _internalRoot: hostRoot.stateNode }))).toBe(
-      client
-    );
-    expect(findQueryClient(containerRootFiber({ __reactContainer$x1: hostRoot }))).toBe(
-      client
-    );
-    const portalled = { memoizedProps: {}, return: { return: fiber({ client }) } };
-    expect(queryClientAbove({ __reactFiber$x1: portalled })).toBe(client);
+  const decoy = fiber({ client: { getQueryCache: () => null } });
+  const tree = fiber(null, fiber({}, decoy, fiber({}, fiber({ client }))));
+  const hostRoot = { stateNode: { current: tree } };
+  const portalled = { memoizedProps: {}, return: { return: fiber({ client }) } };
+
+  it.each([
+    ['below a fiber, past a decoy', () => findQueryClient(tree)],
+    [
+      'below a hydrateRoot() result',
+      () => findQueryClient(reactRootFiber({ _internalRoot: hostRoot.stateNode })),
+    ],
+    [
+      'below a container element',
+      () => findQueryClient(containerRootFiber({ __reactContainer$x1: hostRoot })),
+    ],
+    ['above a portalled node', () => queryClientAbove({ __reactFiber$x1: portalled })],
+  ])('finds the provider %s', (_label, find) => {
+    expect(find()).toBe(client);
   });
 
   it.each([
