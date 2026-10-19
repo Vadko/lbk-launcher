@@ -3,6 +3,7 @@ import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
+import { sentryMainV10Baseline } from './utils/sentry-baseline';
 import {
   isCrashDiagnosticsEnabled,
   onRendererSettingsChanged,
@@ -29,6 +30,9 @@ Sentry.init({
   enabled: sentryStartedEnabled,
   release: __SENTRY_RELEASE__,
   tracesSampleRate: 1.0,
+  // GlitchTip ignores streamed span items, so keep sending whole transactions
+  traceLifecycle: 'static',
+  ...sentryMainV10Baseline,
   integrations: [
     Sentry.captureConsoleIntegration({ levels: ['error'] }),
     Sentry.startupTracingIntegration(),
@@ -36,7 +40,6 @@ Sentry.init({
     Sentry.electronNetIntegration({ logs: true }),
     Sentry.childProcessIntegration({ logs: true }),
   ],
-  enableLogs: true,
 });
 
 // Deep link handling

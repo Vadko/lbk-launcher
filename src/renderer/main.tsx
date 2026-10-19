@@ -19,13 +19,14 @@ import './styles/animations.css';
 sentryInit(
   {
     release: __SENTRY_RELEASE__,
-    sendDefaultPii: true,
     enabled:
       !window.electronAPI?.isE2E?.() &&
       useSettingsStore.getState().crashDiagnosticsEnabled,
     integrations: [browserTracingIntegration()],
     tracesSampleRate: 1.0,
-    enableLogs: true,
+    // GlitchTip ignores streamed span items, so keep sending whole transactions
+    traceLifecycle: 'static',
+    attachStacktrace: false,
   },
   reactInit
 );
