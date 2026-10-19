@@ -28,7 +28,7 @@ import { isFn } from './steam-globals';
 
 const PAGE_KEY = Symbol.for(PAGE_GLOBAL_KEY);
 // A newer copy started in the same document disposes an older one.
-const PAGE_VERSION = 4;
+const PAGE_VERSION = 5;
 const POLL_MS = 50;
 // Valve reports a failed hydration after 15 s; until then React may still claim any server-rendered node.
 const HYDRATE_MS = 15_000;

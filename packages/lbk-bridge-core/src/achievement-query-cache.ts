@@ -81,7 +81,7 @@ export function mapRecords(data: unknown, fn: (rec: Rec) => Rec, depth = 0): unk
   return out ?? data;
 }
 
-// Fetches and setQueryData are translated inside Query.setData, before structural sharing and observers; Query.setState covers the rest and keeps Steam's timestamps, invalidation and errors.
+// Translates where React Query writes: Query.setData (fetch, setQueryData), Query.setState and QueryCache.build (hydration); sync() goes through setState and keeps Steam's timestamps, invalidation and errors.
 export function hookAchievementQueries(
   client: QueryClient,
   has: (appid: unknown) => boolean,
@@ -90,7 +90,8 @@ export function hookAchievementQueries(
 ): AchievementQueries {
   const cache = client.getQueryCache();
   const memory = createTextMemory();
-  const restores = new Map<Query, () => void>();
+  type Undo = (() => void) | null;
+  const restores = new Map<Query, [Undo, Undo]>();
   let writing = false;
   let seen = false;
   let disposed = false;
@@ -102,6 +103,7 @@ export function hookAchievementQueries(
       console.warn('[LBK] achievements query', e);
     }
   };
+  const undo = (fns: readonly Undo[]): void => fns.forEach((fn) => fn && safely(fn));
   const present = (appid: unknown, data: unknown, translate: boolean): unknown =>
     mapRecords(data, (rec) => {
       const t = translate ? lookup(appid, rec.api_name) : undefined;
@@ -119,6 +121,48 @@ export function hookAchievementQueries(
       }
       return out;
     });
+  const presentState = (appid: unknown, state: unknown): unknown => {
+    if (!G.isObject(state) || !has(appid)) {
+      return state;
+    }
+    const data = present(appid, state.data, true);
+    return data === state.data ? state : { ...state, data };
+  };
+
+  // An own wrapper that rewrites the arguments; its restore leaves a wrapper stacked on top in place.
+  const wrap = (
+    target: object,
+    name: string,
+    rewrite: (args: unknown[]) => void
+  ): Undo => {
+    const orig: unknown = Reflect.get(target, name);
+    if (!isFn(orig)) {
+      return null;
+    }
+    const hadOwn = Object.hasOwn(target, name);
+    const wrapper = function (this: unknown, ...args: unknown[]) {
+      safely(() => {
+        if (!disposed) {
+          rewrite(args);
+        }
+      });
+      return orig.apply(this, args);
+    };
+    Reflect.set(target, name, wrapper);
+    if (Reflect.get(target, name) !== wrapper) {
+      return null;
+    }
+    return () => {
+      if (Reflect.get(target, name) !== wrapper) {
+        return;
+      }
+      if (hadOwn) {
+        Reflect.set(target, name, orig);
+      } else {
+        Reflect.deleteProperty(target, name);
+      }
+    };
+  };
 
   const update = (q: Query, revert: boolean): void => {
     const appid = achievementQueryAppId(q.queryKey);
@@ -134,37 +178,22 @@ export function hookAchievementQueries(
     }
   };
   const intercept = (q: Query, appid: unknown): void => {
-    const orig: unknown = Reflect.get(q, 'setData');
-    if (restores.has(q) || !isFn(orig)) {
+    if (restores.has(q)) {
       return;
     }
-    const hadOwn = Object.hasOwn(q, 'setData');
-    const wrapper = function (this: unknown, data: unknown, ...rest: unknown[]) {
-      let next = data;
-      safely(() => {
-        if (!disposed && has(appid)) {
-          next = present(appid, data, true);
+    restores.set(q, [
+      wrap(q, 'setData', (args) => {
+        if (has(appid)) {
+          args[0] = present(appid, args[0], true);
         }
-      });
-      return orig.call(this, next, ...rest);
-    };
-    Reflect.set(q, 'setData', wrapper);
-    if (Reflect.get(q, 'setData') !== wrapper) {
-      return;
-    }
-    restores.set(q, () => {
-      if (Reflect.get(q, 'setData') !== wrapper) {
-        return;
-      }
-      if (hadOwn) {
-        Reflect.set(q, 'setData', orig);
-      } else {
-        Reflect.deleteProperty(q, 'setData');
-      }
-    });
+      }),
+      wrap(q, 'setState', (args) => {
+        args[0] = presentState(appid, args[0]);
+      }),
+    ]);
   };
   const release = (q: Query): void => {
-    safely(() => restores.get(q)?.());
+    undo(restores.get(q) ?? []);
     restores.delete(q);
   };
   const eachQuery = (fn: (q: Query, appid: unknown) => void): void => {
@@ -186,6 +215,16 @@ export function hookAchievementQueries(
       }
     });
 
+  // Hydration builds a new query from its dehydrated state, which then never passes setData or setState.
+  const unbuild = wrap(cache, 'build', (args) => {
+    const options = args[1];
+    const appid = G.isObject(options)
+      ? achievementQueryAppId(options.queryKey)
+      : undefined;
+    if (appid !== undefined) {
+      args[2] = presentState(appid, args[2]);
+    }
+  });
   eachQuery(intercept);
   const unsubscribe = cache.subscribe((event) => {
     if (!G.isObject(event) || !isQuery(event.query)) {
@@ -213,7 +252,7 @@ export function hookAchievementQueries(
     const delivered =
       event.type === 'added' ||
       (event.type === 'updated' &&
-        (action === 'setState' || (action === 'success' && !restores.has(q))));
+        (action === 'setState' || (action === 'success' && !restores.get(q)?.[0])));
     if (delivered && has(appid)) {
       // Outside the dispatch that delivered the data; React Query notifies observers on a later task.
       schedule(() => safely(() => update(q, false)));
@@ -226,7 +265,8 @@ export function hookAchievementQueries(
     dispose() {
       disposed = true;
       unsubscribe();
-      restores.forEach(safely);
+      undo([unbuild]);
+      restores.forEach(undo);
       restores.clear();
       updateAll(null, true);
     },

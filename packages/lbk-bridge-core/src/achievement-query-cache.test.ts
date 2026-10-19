@@ -1,4 +1,4 @@
-import { QueryClient, QueryObserver } from '@tanstack/query-core';
+import { dehydrate, hydrate, QueryClient, QueryObserver } from '@tanstack/query-core';
 import { describe, expect, it } from 'vitest';
 import { achievementQueryAppId, hookAchievementQueries } from './achievement-query-cache';
 import type { AchText } from './achievement-text';
@@ -15,12 +15,14 @@ const v1: Record<string, AchText> = {
 const v2: Record<string, AchText> = { [FOOL]: { name: 'Тричі обдурений' } };
 
 const schemaKey = ['achievements', JACKBOX, 'schema'];
+const otherApp = ['achievements', 10, 'schema'];
 const byStatusKey = ['achievements', JACKBOX, 'by_status', '<steamid>', 1, 2, 3];
 const steamText = fixture.schema.groups[0].achievements.map((a) => [
   a.api_name,
   a.name,
   a.description,
 ]);
+const translated = [FOOL, v1[FOOL].name, v1[FOOL].desc];
 
 // [api_name, name, description] of every achievement record in a query's data.
 const shown = (data: unknown): unknown[][] => {
@@ -64,6 +66,30 @@ function setup(client = steamClient()) {
       queries.sync(new Set([String(JACKBOX)]));
     },
   };
+}
+
+// First record of every result an observer receives.
+function watch(client: QueryClient, queryKey: unknown[]) {
+  const observer = new QueryObserver(client, {
+    queryKey,
+    queryFn: () => structuredClone(fixture.schema),
+  });
+  const results: unknown[] = [];
+  const unsubscribe = observer.subscribe(({ data }) => {
+    if (data !== undefined) {
+      results.push(shown(data)[0]);
+    }
+  });
+  return { observer, results, unsubscribe };
+}
+
+// What a server render hands the page: Steam's text, stamped as of dataUpdatedAt.
+async function dehydrated(queryKey: unknown[], dataUpdatedAt: number) {
+  const server = steamClient();
+  await server.fetchQuery({ queryKey, queryFn: () => structuredClone(fixture.schema) });
+  const state = dehydrate(server);
+  state.queries[0].state.dataUpdatedAt = dataUpdatedAt;
+  return { state, data: state.queries[0].state.data };
 }
 
 function steamClient() {
@@ -211,24 +237,6 @@ describe('hookAchievementQueries', () => {
 });
 
 describe('hookAchievementQueries data written through Query.setData', () => {
-  const otherApp = ['achievements', 10, 'schema'];
-  const translated = [FOOL, v1[FOOL].name, v1[FOOL].desc];
-
-  // First record of every result an observer receives.
-  function watch(client: QueryClient, queryKey: unknown[]) {
-    const observer = new QueryObserver(client, {
-      queryKey,
-      queryFn: () => structuredClone(fixture.schema),
-    });
-    const results: unknown[] = [];
-    const unsubscribe = observer.subscribe(({ data }) => {
-      if (data !== undefined) {
-        results.push(shown(data)[0]);
-      }
-    });
-    return { observer, results, unsubscribe };
-  }
-
   it.each([
     ['a translated app', schemaKey, translated],
     ['an untranslated app', otherApp, steamText[0]],
@@ -296,5 +304,77 @@ describe('hookAchievementQueries data written through Query.setData', () => {
     expect(query?.setData).not.toBe(wrapped);
     next.queries.dispose();
     expect(Object.hasOwn(query ?? {}, 'setData')).toBe(false);
+  });
+});
+
+describe('hookAchievementQueries data hydrated into the cache', () => {
+  const rows: [string, unknown[], unknown[]][] = [
+    ['a translated app', schemaKey, translated],
+    ['an untranslated app', otherApp, steamText[0]],
+  ];
+
+  it.each(rows)(
+    'builds %s hydrated into an empty client as shown',
+    async (_, key, first) => {
+      const { client } = setup();
+      const added: unknown[] = [];
+      client.getQueryCache().subscribe((event) => {
+        if (event.type === 'added') {
+          added.push(shown(event.query.state.data)[0]);
+        }
+      });
+      hydrate(client, (await dehydrated(key, Date.now())).state);
+      expect(added).toEqual([first]);
+    }
+  );
+
+  it.each(rows)(
+    'hydrates newer data of %s into a cached query without a frame of Steam text',
+    async (_, key, first) => {
+      const { client, load } = setup();
+      await load(key, fixture.schema);
+      const { observer, results, unsubscribe } = watch(client, key);
+      const newer = (client.getQueryState(key)?.dataUpdatedAt ?? 0) + 1;
+      hydrate(client, (await dehydrated(key, newer)).state);
+      const rendered = shown(observer.getCurrentResult().data)[0];
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      unsubscribe();
+
+      expect(client.getQueryState(key)?.dataUpdatedAt).toBe(newer);
+      expect(rendered).toEqual(first);
+      expect(results).toEqual([first]);
+    }
+  );
+
+  it.each([
+    ['an empty client', () => Promise.resolve()],
+    [
+      'a client holding it',
+      (s: ReturnType<typeof setup>) => s.load(otherApp, fixture.schema),
+    ],
+  ])('stores an untranslated app hydrated into %s as is', async (_, before) => {
+    const s = setup();
+    await before(s);
+    const { state, data } = await dehydrated(otherApp, Date.now() + 1);
+    hydrate(s.client, state);
+    expect(s.client.getQueryData(otherApp)).toBe(data);
+  });
+
+  it('gives back setState and build, under a wrapper stacked on top, and Steam text on dispose', async () => {
+    const { client, queries } = setup();
+    const cache = client.getQueryCache();
+    hydrate(client, (await dehydrated(schemaKey, Date.now())).state);
+    const query = cache.find({ queryKey: schemaKey });
+    expect(Object.hasOwn(query ?? {}, 'setState')).toBe(true);
+    const stacked = cache.build.bind(cache);
+    cache.build = stacked;
+    queries.dispose();
+
+    expect(cache.build).toBe(stacked);
+    expect(Object.hasOwn(query ?? {}, 'setState')).toBe(false);
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
+    client.clear();
+    hydrate(client, (await dehydrated(schemaKey, Date.now())).state);
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
   });
 });

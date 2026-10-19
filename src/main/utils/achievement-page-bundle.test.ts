@@ -98,7 +98,7 @@ describe('achievement page bundle', () => {
     (href, extra, wanted) => {
       const ctx = pageContext(href, extra);
       vm.runInContext(source, ctx);
-      expect(vm.runInContext(`${PAGE}.version`, ctx)).toBe(4);
+      expect(vm.runInContext(`${PAGE}.version`, ctx)).toBe(5);
       expect(vm.runInContext(`${PAGE}.wanted()`, ctx)).toEqual(wanted);
       vm.runInContext(`${PAGE}.dispose()`, ctx);
       expect(vm.runInContext(PAGE, ctx)).toBe(undefined);
