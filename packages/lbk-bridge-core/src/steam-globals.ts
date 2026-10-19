@@ -1,4 +1,5 @@
 import type { Apps } from '@decky/ui/dist/globals/steam-client/App';
+import { G } from '@mobily/ts-belt';
 
 // Decky types imageType as 'jpg' | 'png'; the setArtwork op also accepts 'jpeg'.
 export interface SteamApps
@@ -34,7 +35,7 @@ interface SteamCollection {
 }
 
 interface CollectionStore {
-  allGamesCollection?: { allApps?: unknown } | null;
+  allGamesCollection?: { allApps?: LibraryApp[] } | null;
   GetUserCollectionsByName(name: string): SteamCollection[] | null | undefined;
   NewUnsavedCollection(name: string, filter: null, apps: LibraryApp[]): SteamCollection;
   SaveCollection(collection: SteamCollection): Promise<void>;
@@ -62,7 +63,7 @@ export interface SteamGlobals {
   appDetailsCache?: object | null;
   NotificationStore?: object | null;
   appActivityStore?: unknown;
-  webpackChunksteamui?: unknown;
+  webpackChunksteamui?: unknown[];
   DeckyBackend?: DeckyBackend | null;
   localStorage?: Pick<Storage, 'getItem' | 'setItem'>;
   __LBK_BRIDGE__?: BridgeHandle;
@@ -73,12 +74,7 @@ export function steamGlobals(): SteamGlobals {
   return globalThis;
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 export type AnyFn = (this: unknown, ...args: unknown[]) => unknown;
 
-export function isFn(value: unknown): value is AnyFn {
-  return typeof value === 'function';
-}
+// G.isFunction narrows to an untyped callable; AnyFn keeps the calls typed.
+export const isFn = (value: unknown): value is AnyFn => G.isFunction(value);

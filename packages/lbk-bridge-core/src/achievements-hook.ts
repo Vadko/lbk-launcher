@@ -1,3 +1,4 @@
+import { A, D, F, G } from '@mobily/ts-belt';
 import { installActivityHooks } from './achievement-activity';
 import {
   type AchievementQueries,
@@ -9,7 +10,7 @@ import {
   type AchText,
   createTextPatcher,
 } from './achievement-text';
-import { type AnyFn, isFn, isRecord, type SteamGlobals } from './steam-globals';
+import { type AnyFn, isFn, type SteamGlobals } from './steam-globals';
 import { findWebpackExports, steamWebpackRequire } from './steam-webpack';
 
 const ACH_KEY = Symbol.for('lbk.achievementStrings');
@@ -48,22 +49,26 @@ interface ToastClass {
   prototype: Record<string, unknown>;
 }
 
-const isThenable = (v: unknown): v is PromiseLike<unknown> => isRecord(v) && isFn(v.then);
+// Any thenable: G.isPromise is only instanceof Promise.
+const isThenable = (v: unknown): v is PromiseLike<unknown> =>
+  G.isObject(v) && isFn(v.then);
 const isHook = (v: unknown): v is AchievementsHook =>
-  isRecord(v) && typeof v.version === 'number' && isFn(v.replaceData) && isFn(v.report);
+  G.isObject(v) && G.isNumber(v.version) && isFn(v.replaceData) && isFn(v.report);
 
 const isAchievementStore = (v: unknown): v is AchievementStore =>
-  isRecord(v) && isRecord(v.m_mapMyAchievements) && isFn(v.m_mapMyAchievements.delete);
+  G.isObject(v) &&
+  G.isObject(v.m_mapMyAchievements) &&
+  isFn(v.m_mapMyAchievements.delete);
 
 const isToastClass = (v: unknown): v is ToastClass =>
   isFn(v) &&
-  isRecord(v.prototype) &&
+  G.isObject(v.prototype) &&
   isFn(v.prototype.getClassName) &&
   v.prototype.getClassName() === 'CClientNotificationAchievement';
 
 // Reads a protobuf accessor such as this.appid(); a missing accessor reads as its own value.
 function readAccessor(target: unknown, key: string): unknown {
-  const value = isRecord(target) ? target[key] : undefined;
+  const value = G.isObject(target) ? target[key] : undefined;
   return isFn(value) ? value.call(target) : value;
 }
 
@@ -74,7 +79,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
     return prev;
   }
   try {
-    if (isRecord(prev) && isFn(prev.uninstall)) {
+    if (G.isObject(prev) && isFn(prev.uninstall)) {
       prev.uninstall();
     }
   } catch {
@@ -106,7 +111,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
         coverage[label] = false;
         return;
       }
-      const hadOwn = Object.prototype.hasOwnProperty.call(obj, key);
+      const hadOwn = Object.hasOwn(obj, key);
       const w = make(orig);
       Reflect.set(obj, key, w);
       if (Reflect.get(obj, key) !== w) {
@@ -155,7 +160,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       }
       const patch = (v: unknown): unknown => {
         safe(() =>
-          walk(appid, isRecord(v) && v.data !== undefined ? v.data : v, false, 0)
+          walk(appid, G.isObject(v) && v.data !== undefined ? v.data : v, false, 0)
         );
         return v;
       };
@@ -180,7 +185,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       ) {
         // Every save writes all of an app's cached keys to disk, so the cache keeps Steam's own strings and reads translate.
         let stored = value;
-        if (key === ACHIEVEMENT_MAP_KEY && typeof value === 'string') {
+        if (key === ACHIEVEMENT_MAP_KEY && G.isString(value)) {
           safe(() => {
             stored = activity.saveCache(value);
           });
@@ -208,11 +213,11 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       function (this: unknown, appid: unknown, key: unknown, ...rest: unknown[]) {
         const r = o.call(this, appid, key, ...rest);
         let out: unknown = r;
-        if (key === ACHIEVEMENT_MAP_KEY && typeof r === 'string') {
+        if (key === ACHIEVEMENT_MAP_KEY && G.isString(r)) {
           safe(() => {
             out = activity.readCache(r);
           });
-        } else if (key === ACHIEVEMENTS_KEY && has(appid) && isRecord(r)) {
+        } else if (key === ACHIEVEMENTS_KEY && has(appid) && G.isObject(r)) {
           safe(() => {
             out = copyTranslated(appid, r);
           });
@@ -249,7 +254,7 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       `toast.${method}`
     );
   }
-  if (!coverage['toast.name'] && isRecord(g.NotificationStore)) {
+  if (!coverage['toast.name'] && G.isObject(g.NotificationStore)) {
     // Achievement toast payloads are protobuf messages; patch them on the way in instead.
     wrap(
       g.NotificationStore,
@@ -257,8 +262,8 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       (o) =>
         function (this: unknown, notif: unknown, ...rest: unknown[]) {
           safe(() => {
-            const d = isRecord(notif) && notif.eType === 5 ? notif.data : null;
-            if (isRecord(d) && isFn(d.appid) && isFn(d.achievement_id)) {
+            const d = G.isObject(notif) && notif.eType === 5 ? notif.data : null;
+            if (G.isObject(d) && isFn(d.appid) && isFn(d.achievement_id)) {
               const t = lookup(d.appid.call(d), d.achievement_id.call(d));
               if (t?.name && isFn(d.set_name)) {
                 d.set_name.call(d, t.name);
@@ -300,12 +305,11 @@ export function installAchievementsHook(g: SteamGlobals): AchievementsHook {
       return stamp;
     },
     replaceData(p) {
-      const next = new Map(Object.entries(p?.apps || {}));
+      const next = new Map(D.toPairs(p?.apps ?? {}));
+      const ids = new Set([...data.keys(), ...next.keys()]);
       // LBK replays the whole file on every change; only apps whose strings changed are touched.
       const changed = new Set(
-        [...data.keys(), ...next.keys()].filter(
-          (id) => JSON.stringify(data.get(id)) !== JSON.stringify(next.get(id))
-        )
+        A.reject([...ids], (id) => F.equals(data.get(id), next.get(id)))
       );
       stamp = p ? p.stamp : null;
       if (changed.size === 0) {

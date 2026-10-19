@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { type BridgeEnv, type BridgeSocket, createBridge } from './bridge';
+import { afterEach, describe, expect, it } from 'vitest';
+import { type Bridge, type BridgeEnv, type BridgeSocket, createBridge } from './bridge';
 import type { BridgeHost } from './contract';
 import { hmacHex } from './protocol';
 import type { SteamGlobals } from './steam-globals';
@@ -32,8 +32,16 @@ function makeStorage(): Pick<Storage, 'getItem' | 'setItem'> {
   };
 }
 
+// Achievements poll for Steam's UI on real timers until the bridge is disposed.
+const loaded: Bridge[] = [];
+afterEach(() => {
+  for (const bridge of loaded.splice(0)) {
+    bridge.dispose();
+  }
+});
+
 function makeSteam(bridgeJson: unknown = null, localStorage = makeStorage()) {
-  const timers = new Map<number, () => void>();
+  const timers = new Map<number, TimerHandler>();
   let nextTimer = 0;
   let fetches = 0;
   const steam: SteamGlobals = { localStorage };
@@ -55,19 +63,27 @@ function makeSteam(bridgeJson: unknown = null, localStorage = makeStorage()) {
       return nextTimer;
     },
     clearTimeout: (handle) => {
-      timers.delete(handle);
+      if (handle !== undefined) {
+        timers.delete(handle);
+      }
     },
   };
   const dataBase = new URL('http://127.0.0.1:1337/plugins/LBK%20Bridge/data/');
   return {
     steam,
     fetches: () => fetches,
-    load: (host: BridgeHost) => createBridge({ host, dataBase, env }),
+    load: (host: BridgeHost) => {
+      const bridge = createBridge({ host, dataBase, env });
+      loaded.push(bridge);
+      return bridge;
+    },
     runTimers() {
       const pending = [...timers.values()];
       timers.clear();
       for (const fn of pending) {
-        fn();
+        if (typeof fn === 'function') {
+          fn();
+        }
       }
     },
   };
@@ -78,6 +94,17 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 const frame = (data: unknown) =>
   new MessageEvent('message', { data: JSON.stringify(data) });
+
+// Plays LBK's side of the handshake on a socket the bridge dialled.
+async function authenticate(ws: FakeSocket, secret: string): Promise<void> {
+  ws.onopen?.(new Event('open'));
+  const cn = String(ws.sent[0].cn);
+  const sn = 'ef'.repeat(16);
+  const sp = await hmacHex(globalThis.crypto.subtle, secret, `server|${cn}|${sn}`);
+  ws.onmessage?.(frame({ t: 'challenge', sn, sp }));
+  await settle();
+  ws.onmessage?.(frame({ t: 'ready' }));
+}
 
 describe('LBK Bridge double-load guard', () => {
   it('replaces its own earlier copy on a reload', () => {
@@ -174,6 +201,34 @@ describe('LBK Bridge transport', () => {
     ]);
     expect(cn).not.toBe(okCn);
   });
+
+  it('times out a hung op on its own clock and still answers the next request', async () => {
+    const secret = '56'.repeat(32);
+    FakeSocket.instances = [];
+    const steam = makeSteam({ v: 1, port: 50003, secret });
+    steam.steam.DeckyBackend = { call: () => new Promise(() => undefined) };
+    steam.load('decky').start();
+    await settle();
+    const ws = FakeSocket.instances[0];
+    await authenticate(ws, secret);
+    const install = {
+      artifact: 'file:///home/deck/.cache/lbk-launcher/decky/lbk-bridge-1.4.0.zip',
+      version: '1.4.0',
+      hash: 'a'.repeat(64),
+      installType: 0,
+    };
+    ws.onmessage?.(frame({ t: 'req', id: 1, op: 'deckyRequestInstall', args: install }));
+    ws.onmessage?.(frame({ t: 'req', id: 2, op: 'ping' }));
+    await settle();
+    expect(ws.sent).toHaveLength(2);
+
+    steam.runTimers();
+    await settle();
+    expect(ws.sent.slice(2)).toEqual([
+      { t: 'res', id: 1, ok: false, error: 'timed out after 30000ms' },
+      { t: 'res', id: 2, ok: true, value: { ok: true } },
+    ]);
+  });
 });
 
 describe('LBK Bridge spent secrets', () => {
@@ -187,13 +242,7 @@ describe('LBK Bridge spent secrets', () => {
     steam.load('millennium').start();
     await settle();
     const ws = FakeSocket.instances[0];
-    ws.onopen?.(new Event('open'));
-    const cn = String(ws.sent[0].cn);
-    const sn = 'ef'.repeat(16);
-    const sp = await hmacHex(globalThis.crypto.subtle, secret, `server|${cn}|${sn}`);
-    ws.onmessage?.(frame({ t: 'challenge', sn, sp }));
-    await settle();
-    ws.onmessage?.(frame({ t: 'ready' }));
+    await authenticate(ws, secret);
     ws.onclose?.(new CloseEvent('close'));
     await settle();
 

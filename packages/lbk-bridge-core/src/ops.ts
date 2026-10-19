@@ -1,10 +1,6 @@
+import { G } from '@mobily/ts-belt';
 import type { OpHandlers, SharedSteamOps } from './contract';
-import {
-  isRecord,
-  type LibraryApp,
-  type SteamApps,
-  type SteamGlobals,
-} from './steam-globals';
+import type { LibraryApp, SteamApps, SteamGlobals } from './steam-globals';
 
 const NON_STEAM_APPID_MIN = 2147483648;
 const SHORTCUT_NAME = 'LBK Launcher';
@@ -21,7 +17,7 @@ function fail(what: string): never {
   throw new Error(`lbk-ops: invalid ${what}`);
 }
 
-const isInt = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v);
+const isInt = (v: unknown): v is number => G.isNumber(v) && Number.isInteger(v);
 const appIdArg = (v: unknown): number =>
   isInt(v) && v > 0 && v <= 4294967295 ? v : fail('appId');
 const isShortcutId = (v: unknown): v is number =>
@@ -29,15 +25,16 @@ const isShortcutId = (v: unknown): v is number =>
 const shortcutIdArg = (v: unknown): number =>
   isShortcutId(v) ? v : fail('shortcut appId');
 const digitsArg = (v: unknown): string =>
-  typeof v === 'string' && /^\d{1,20}$/.test(v) ? v : fail('id');
+  G.isString(v) && /^\d{1,20}$/.test(v) ? v : fail('id');
 const textArg = (v: unknown, max: number): string =>
-  typeof v === 'string' && v.length <= max ? v : fail('text');
-const boolArg = (v: unknown): boolean => (typeof v === 'boolean' ? v : fail('flag'));
+  G.isString(v) && v.length <= max ? v : fail('text');
+const boolArg = (v: unknown): boolean => (G.isBoolean(v) ? v : fail('flag'));
 const intArg = (v: unknown, min: number, max: number): number =>
   isInt(v) && v >= min && v <= max ? v : fail('int');
-const argsObj = (a: unknown): Record<string, unknown> => (isRecord(a) ? a : fail('args'));
+const argsObj = (a: unknown): Record<string, unknown> =>
+  G.isObject(a) ? a : fail('args');
 const matchArg = (v: unknown, re: RegExp, what: string): string =>
-  typeof v === 'string' && re.test(v) ? v : fail(what);
+  G.isString(v) && re.test(v) ? v : fail(what);
 
 export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
   const apps = (): SteamApps => {
@@ -49,7 +46,7 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
   };
   const libraryApps = (): LibraryApp[] | null => {
     const all = g.collectionStore?.allGamesCollection?.allApps;
-    return Array.isArray(all) && all.length > 0 ? all : null;
+    return G.isArray(all) && all.length > 0 ? all : null;
   };
 
   return {
@@ -73,7 +70,7 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
 
     workshopDownloaded: async (a: unknown) => {
       const args = argsObj(a);
-      if (!Array.isArray(args.targets) || args.targets.length > 5000) {
+      if (!G.isArray(args.targets) || args.targets.length > 5000) {
         fail('targets');
       }
       const targets = args.targets.map((t: unknown) => {
@@ -85,10 +82,10 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
         };
       });
       const steamApps = g.SteamClient?.Apps;
-      if (typeof steamApps?.GetDownloadedWorkshopItems !== 'function') {
+      if (!G.isFunction(steamApps?.GetDownloadedWorkshopItems)) {
         return 'unknown';
       }
-      const byApp = new Map<number, unknown[]>();
+      const byApp = new Map<number, readonly unknown[]>();
       const found: string[] = [];
       for (const t of targets) {
         let items = byApp.get(t.appId);
@@ -99,13 +96,13 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
           } catch {
             return 'unknown';
           }
-          if (!Array.isArray(fetched)) {
+          if (!G.isArray(fetched)) {
             return 'unknown';
           }
           items = fetched;
           byApp.set(t.appId, items);
         }
-        if (items.some((i) => isRecord(i) && String(i.publishedfileid) === t.itemId)) {
+        if (items.some((i) => G.isObject(i) && String(i.publishedfileid) === t.itemId)) {
           found.push(t.id);
         }
       }
@@ -124,7 +121,7 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
 
     syncCollection: async (a: unknown) => {
       const args = argsObj(a);
-      if (!Array.isArray(args.appIds) || args.appIds.length > 20000) {
+      if (!G.isArray(args.appIds) || args.appIds.length > 20000) {
         fail('appIds');
       }
       const targetIds = new Set(args.appIds.map(appIdArg));
@@ -174,7 +171,7 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
           removed: toRemove.length,
         };
       } catch (e) {
-        return { error: String((isRecord(e) && e.message) || e) };
+        return { error: String((G.isObject(e) && e.message) || e) };
       }
     },
 
@@ -257,7 +254,7 @@ export function createOps(g: SteamGlobals): OpHandlers<SharedSteamOps> {
       const hash = matchArg(args.hash, /^[0-9a-f]{64}$/, 'hash');
       const installType = intArg(args.installType, 0, 2);
       const backend = g.window?.DeckyBackend;
-      if (!backend || typeof backend.call !== 'function') {
+      if (!G.isFunction(backend?.call)) {
         return 'no-decky';
       }
       await backend.call(

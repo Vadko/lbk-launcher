@@ -1,3 +1,6 @@
+import { A, D, F, G, pipe, R } from '@mobily/ts-belt';
+import pLimit from 'p-limit';
+import pTimeout from 'p-timeout';
 import { createAchievements } from './achievements';
 import {
   type AchievementsHookReport,
@@ -9,22 +12,16 @@ import {
 } from './contract';
 import { createOps } from './ops';
 import {
+  type BridgeConfig,
   bridgeConfigSchema,
-  challengeFrameSchema,
   hmacHex,
   type PluginFrame,
-  pingFrameSchema,
-  readyFrameSchema,
-  requestFrameSchema,
+  type RequestFrame,
   safeEqual,
+  serverFrameSchema,
   toHex,
 } from './protocol';
-import {
-  type BridgeHandle,
-  isRecord,
-  type SteamGlobals,
-  steamGlobals,
-} from './steam-globals';
+import { type BridgeHandle, type SteamGlobals, steamGlobals } from './steam-globals';
 
 const RETRY_MIN_MS = 2000;
 // LBK often starts long after Steam, and until the plugin dials in every bridge op waits or fails.
@@ -46,7 +43,9 @@ export interface BridgeSocket {
   onclose: ((ev: CloseEvent) => void) | null;
 }
 
-export interface BridgeEnv {
+// The timers go to p-timeout as customTimers, so every delay and timeout runs on env's clock.
+export interface BridgeEnv
+  extends Pick<WindowOrWorkerGlobalScope, 'setTimeout' | 'clearTimeout'> {
   steam: SteamGlobals;
   openSocket(url: string): BridgeSocket;
   fetch(
@@ -54,8 +53,6 @@ export interface BridgeEnv {
     init: RequestInit
   ): Promise<{ ok: boolean; json(): Promise<unknown> }>;
   crypto: Pick<Crypto, 'getRandomValues' | 'subtle'>;
-  setTimeout(fn: () => void, ms: number): number;
-  clearTimeout(handle: number): void;
 }
 
 interface BridgeState extends BridgeHandle {
@@ -94,15 +91,11 @@ export function browserEnv(): BridgeEnv {
 
 // SteamClient rejects with plain objects like {result, message}; keep them readable like the CDP transport does.
 function errText(e: unknown): string {
-  if (e instanceof Error) {
+  if (G.isError(e)) {
     return e.message || String(e);
   }
-  if (e && typeof e === 'object') {
-    try {
-      return JSON.stringify(e);
-    } catch {
-      return String(e);
-    }
+  if (G.isObject(e) || G.isArray(e)) {
+    return R.toUndefined(R.fromExecution(() => JSON.stringify(e))) ?? String(e);
   }
   return String(e);
 }
@@ -110,33 +103,17 @@ function errText(e: unknown): string {
 export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
   const life = new AbortController();
   const disposed = () => life.signal.aborted;
+  const requests = pLimit(1);
   let socket: BridgeSocket | null = null;
 
-  const later = (fn: () => void, ms: number): (() => void) => {
-    const cancel = () => {
-      env.clearTimeout(handle);
-      life.signal.removeEventListener('abort', cancel);
-    };
-    const handle = env.setTimeout(() => {
-      cancel();
-      if (!disposed()) {
-        fn();
-      }
-    }, ms);
-    life.signal.addEventListener('abort', cancel);
-    return cancel;
-  };
-  const sleep = (ms: number) =>
-    new Promise<void>((resolve) => {
-      env.setTimeout(resolve, ms);
-    });
-  const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T> =>
-    Promise.race([
-      p,
-      sleep(ms).then(() => {
-        throw new Error(`timed out after ${ms}ms`);
-      }),
-    ]);
+  // A p-timeout over a promise that never settles: a timer on env's clock that dispose cancels.
+  const delay = (ms: number): Promise<void> =>
+    pTimeout(new Promise<void>(F.ignore), {
+      milliseconds: ms,
+      message: false,
+      customTimers: env,
+      signal: life.signal,
+    }).catch(F.ignore);
 
   const readJson = async (name: string): Promise<unknown> => {
     const url = new URL(name, dataBase);
@@ -146,36 +123,33 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
   };
 
   const spentDigest = (secret: string) => hmacHex(env.crypto.subtle, secret, 'spent');
-  const readSpent = (): string[] => {
-    try {
-      const list: unknown = JSON.parse(
-        env.steam.localStorage?.getItem(SPENT_KEY) || '[]'
-      );
-      return Array.isArray(list) ? list.filter((d) => typeof d === 'string') : [];
-    } catch {
-      return [];
-    }
+  const readSpent = (): readonly string[] => {
+    const list = R.toUndefined(
+      R.fromExecution((): unknown =>
+        JSON.parse(env.steam.localStorage?.getItem(SPENT_KEY) || '[]')
+      )
+    );
+    return G.isArray(list) ? A.filter(list, G.isString) : [];
   };
   const rememberSpent = async (secret: string): Promise<void> => {
-    try {
-      const digest = await spentDigest(secret);
-      const list = readSpent().filter((d) => d !== digest);
-      list.push(digest);
-      env.steam.localStorage?.setItem(SPENT_KEY, JSON.stringify(list.slice(-SPENT_MAX)));
-    } catch {
-      // No localStorage: the in-memory guard still covers this Steam session.
-    }
+    const digest = await spentDigest(secret);
+    const list = pipe(
+      readSpent(),
+      A.reject((d) => d === digest),
+      A.append(digest),
+      A.sliceToEnd(-SPENT_MAX)
+    );
+    env.steam.localStorage?.setItem(SPENT_KEY, JSON.stringify(list));
   };
 
   const achievements = createAchievements({
     steam: env.steam,
     readJson,
-    sleep,
-    isDisposed: disposed,
+    signal: life.signal,
     errText,
   });
   const handlers = new Map<string, (args: unknown) => Promise<unknown>>(
-    Object.entries({ ...createOps(env.steam), ...achievements.ops })
+    D.toPairs({ ...createOps(env.steam), ...achievements.ops })
   );
 
   const state: BridgeState = {
@@ -189,62 +163,72 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     dispose: () => dispose(),
   };
 
-  const startTransport = (): void => {
-    let retryMs = RETRY_MIN_MS;
-    let chain = Promise.resolve();
-    // LBK writes a new secret whenever a session ends; a stale one means LBK is gone and its port may belong to someone else.
-    let spentSecret: string | null = null;
-    const schedule = (): void => {
-      if (disposed()) {
-        return;
-      }
-      state.status = 'waiting';
-      later(() => void connect(), retryMs);
-      retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
-    };
+  const answer = async ({ id, op, args }: RequestFrame): Promise<PluginFrame> => {
+    const handler = handlers.get(op);
+    if (!handler) {
+      return { t: 'res', id, ok: false, error: 'unknown op' };
+    }
+    try {
+      const value = await pTimeout(handler(args || {}), {
+        milliseconds: OP_TIMEOUT_MS,
+        message: `timed out after ${OP_TIMEOUT_MS}ms`,
+        customTimers: env,
+      });
+      return { t: 'res', id, ok: true, value: value ?? null };
+    } catch (e) {
+      return { t: 'res', id, ok: false, error: errText(e) };
+    }
+  };
 
-    async function connect(): Promise<void> {
-      let raw: unknown = null;
-      try {
-        raw = await readJson('bridge.json');
-      } catch (e) {
-        state.lastError = errText(e);
-      }
-      if (disposed()) {
-        return;
-      }
-      const cfg = bridgeConfigSchema.safeParse(raw).data;
-      if (!cfg || cfg.secret === spentSecret) {
-        schedule();
-        return;
-      }
-      if (readSpent().includes(await spentDigest(cfg.secret))) {
-        if (!disposed()) {
-          schedule();
-        }
-        return;
-      }
-
+  // Resolves once the socket closes, with whether LBK proved the secret first.
+  const runSession = (cfg: BridgeConfig): Promise<boolean> =>
+    new Promise<boolean>((resolve) => {
       state.status = 'connecting';
-      let ws: BridgeSocket;
-      try {
-        ws = env.openSocket(`ws://127.0.0.1:${cfg.port}${BRIDGE_WS_PATH}`);
-      } catch (e) {
-        state.lastError = errText(e);
-        schedule();
-        return;
-      }
+      const ws = env.openSocket(`ws://127.0.0.1:${cfg.port}${BRIDGE_WS_PATH}`);
       socket = ws;
       const cn = toHex(env.crypto.getRandomValues(new Uint8Array(16)));
+      const proof = (message: string) => hmacHex(env.crypto.subtle, cfg.secret, message);
       let sn: string | null = null;
       let authed = false;
-      const cancelHandshakeTimeout = later(
-        () => ws.close(4000, 'handshake timeout'),
-        HANDSHAKE_TIMEOUT_MS
-      );
+      const handshake = pTimeout(new Promise<void>(F.ignore), {
+        milliseconds: HANDSHAKE_TIMEOUT_MS,
+        customTimers: env,
+        fallback: () => ws.close(4000, 'handshake timeout'),
+      });
       const send = (frame: PluginFrame): void => {
         if (ws.readyState === SOCKET_OPEN) {
           ws.send(JSON.stringify(frame));
+        }
+      };
+
+      const onFrame = async (msg: unknown): Promise<void> => {
+        if (!G.isObject(msg)) {
+          ws.close(4001, 'bad message');
+          return;
+        }
+        const frame = serverFrameSchema.safeParse(msg).data;
+        if (authed) {
+          if (frame?.t === 'ping') {
+            send({ t: 'pong', id: frame.id });
+          } else if (frame?.t === 'req') {
+            void requests(async () => send(await answer(frame)));
+          }
+          return;
+        }
+        if (frame?.t === 'challenge' && sn === null) {
+          if (!safeEqual(await proof(`server|${cn}|${frame.sn}`), frame.sp)) {
+            ws.close(4003, 'server auth failed');
+            return;
+          }
+          sn = frame.sn;
+          send({ t: 'auth', cp: await proof(`client|${sn}|${cn}`) });
+        } else if (frame?.t === 'ready' && sn !== null) {
+          authed = true;
+          handshake.clear();
+          state.status = 'connected';
+          state.connectedAt = Date.now();
+        } else {
+          ws.close(4002, 'unexpected message before auth');
         }
       };
 
@@ -258,96 +242,57 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
           ops: [...handlers.keys()],
           cn,
         });
-
-      ws.onmessage = async (ev) => {
-        let msg: unknown;
-        try {
-          msg = JSON.parse(ev.data);
-        } catch {
-          ws.close(4001, 'bad json');
-          return;
-        }
-        if (!isRecord(msg)) {
-          ws.close(4001, 'bad message');
-          return;
-        }
-        if (!authed) {
-          const challenge =
-            sn === null ? challengeFrameSchema.safeParse(msg).data : undefined;
-          if (challenge) {
-            const expected = await hmacHex(
-              env.crypto.subtle,
-              cfg.secret,
-              `server|${cn}|${challenge.sn}`
-            );
-            if (!safeEqual(expected, challenge.sp)) {
-              ws.close(4003, 'server auth failed');
-              return;
-            }
-            sn = challenge.sn;
-            send({
-              t: 'auth',
-              cp: await hmacHex(env.crypto.subtle, cfg.secret, `client|${sn}|${cn}`),
-            });
-            return;
-          }
-          if (sn !== null && readyFrameSchema.safeParse(msg).success) {
-            authed = true;
-            cancelHandshakeTimeout();
-            retryMs = RETRY_MIN_MS;
-            state.status = 'connected';
-            state.connectedAt = Date.now();
-            return;
-          }
-          ws.close(4002, 'unexpected message before auth');
-          return;
-        }
-        const ping = pingFrameSchema.safeParse(msg).data;
-        if (ping) {
-          send({ t: 'pong', id: ping.id });
-          return;
-        }
-        const req = requestFrameSchema.safeParse(msg).data;
-        if (!req) {
-          return;
-        }
-        chain = chain.then(async () => {
-          const handler = handlers.get(req.op);
-          if (!handler) {
-            send({ t: 'res', id: req.id, ok: false, error: 'unknown op' });
-            return;
-          }
-          try {
-            const value = await withTimeout(handler(req.args || {}), OP_TIMEOUT_MS);
-            send({
-              t: 'res',
-              id: req.id,
-              ok: true,
-              value: value === undefined ? null : value,
-            });
-          } catch (e) {
-            send({ t: 'res', id: req.id, ok: false, error: errText(e) });
-          }
-        });
-      };
-
+      ws.onmessage = (ev) =>
+        R.match(
+          R.fromExecution((): unknown => JSON.parse(ev.data)),
+          (msg) => void onFrame(msg),
+          () => ws.close(4001, 'bad json')
+        );
       ws.onerror = () => {
         state.lastError = 'socket error';
       };
       ws.onclose = () => {
-        cancelHandshakeTimeout();
-        if (authed) {
-          spentSecret = cfg.secret;
-          void rememberSpent(cfg.secret);
-        }
+        handshake.clear();
         if (socket === ws) {
           socket = null;
         }
-        schedule();
+        resolve(authed);
       };
-    }
+    }).catch((e: unknown) => {
+      state.lastError = errText(e);
+      return false;
+    });
 
-    void connect();
+  const transport = async (): Promise<void> => {
+    // LBK writes a new secret whenever a session ends; a stale one means LBK is gone and its port may belong to someone else.
+    let spentSecret: string | null = null;
+    const readConfig = async (): Promise<BridgeConfig | null> => {
+      const cfg = bridgeConfigSchema.safeParse(await readJson('bridge.json')).data;
+      if (!cfg || cfg.secret === spentSecret) {
+        return null;
+      }
+      return A.includes(readSpent(), await spentDigest(cfg.secret)) ? null : cfg;
+    };
+
+    let retryMs = RETRY_MIN_MS;
+    while (!disposed()) {
+      const cfg = await readConfig().catch((e: unknown) => {
+        state.lastError = errText(e);
+        return null;
+      });
+      if (cfg && !disposed() && (await runSession(cfg))) {
+        spentSecret = cfg.secret;
+        // Without localStorage the in-memory spentSecret still covers this Steam session.
+        void rememberSpent(cfg.secret).catch(F.ignore);
+        retryMs = RETRY_MIN_MS;
+      }
+      if (disposed()) {
+        return;
+      }
+      state.status = 'waiting';
+      await delay(retryMs);
+      retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
+    }
   };
 
   function dispose(): void {
@@ -389,8 +334,8 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
       }
     }
     env.steam.__LBK_BRIDGE__ = state;
-    void achievements.start();
-    startTransport();
+    achievements.start();
+    void transport();
   };
 
   return { state, start, dispose };

@@ -1,3 +1,4 @@
+import { G } from '@mobily/ts-belt';
 import * as z from 'zod/mini';
 import { BRIDGE_PROTOCOL } from './contract';
 
@@ -10,25 +11,36 @@ export const bridgeConfigSchema = z.object({
   secret: hex(64),
 });
 
-export const challengeFrameSchema = z.object({
+export type BridgeConfig = z.infer<typeof bridgeConfigSchema>;
+
+const challengeFrameSchema = z.object({
   t: z.literal('challenge'),
   sn: hex(32),
   sp: z.optional(z.unknown()),
 });
 
-export const readyFrameSchema = z.object({ t: z.literal('ready') });
+const readyFrameSchema = z.object({ t: z.literal('ready') });
 
-export const pingFrameSchema = z.object({
+const pingFrameSchema = z.object({
   t: z.literal('ping'),
   id: z.optional(z.unknown()),
 });
 
-export const requestFrameSchema = z.object({
+const requestFrameSchema = z.object({
   t: z.literal('req'),
   id: z.int(),
   op: z.string(),
   args: z.optional(z.unknown()),
 });
+
+export const serverFrameSchema = z.union([
+  challengeFrameSchema,
+  readyFrameSchema,
+  pingFrameSchema,
+  requestFrameSchema,
+]);
+
+export type RequestFrame = z.infer<typeof requestFrameSchema>;
 
 export type PluginFrame =
   | {
@@ -70,7 +82,7 @@ export async function hmacHex(
 }
 
 export function safeEqual(a: unknown, b: unknown): boolean {
-  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) {
+  if (!G.isString(a) || !G.isString(b) || a.length !== b.length) {
     return false;
   }
   let diff = 0;

@@ -1,4 +1,5 @@
-import { isFn, isRecord, type SteamGlobals } from './steam-globals';
+import { G } from '@mobily/ts-belt';
+import { isFn, type SteamGlobals } from './steam-globals';
 
 interface WebpackRequire {
   (id: string): unknown;
@@ -9,7 +10,7 @@ interface WebpackRequire {
 export function steamWebpackRequire(g: SteamGlobals): WebpackRequire | null {
   let req: WebpackRequire | null = null;
   const chunks = g.window?.webpackChunksteamui;
-  if (!Array.isArray(chunks)) {
+  if (!G.isArray(chunks)) {
     throw new TypeError('webpackChunksteamui is not an array');
   }
   chunks.push([
@@ -30,7 +31,7 @@ interface ExportSpec<T> {
 type FoundExports<S> = { [K in keyof S]?: S[K] extends ExportSpec<infer T> ? T : never };
 
 function matchingExport(mod: unknown, pred: (v: unknown) => boolean): unknown {
-  const exports = isRecord(mod) || isFn(mod) ? mod : {};
+  const exports = G.isObject(mod) || isFn(mod) ? mod : {};
   for (const k of Object.keys(exports)) {
     try {
       const value: unknown = Reflect.get(exports, k);

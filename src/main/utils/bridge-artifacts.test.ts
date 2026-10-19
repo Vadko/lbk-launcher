@@ -87,6 +87,7 @@ describe('Millennium bundle', () => {
       URL,
       TextEncoder,
       AbortController,
+      AbortSignal,
       crypto: webcrypto,
       WebSocket: FakeSocket,
       MILLENNIUM_BACKEND_IPC: { postMessage: () => undefined },

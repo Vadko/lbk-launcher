@@ -131,10 +131,18 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: '@mobily/ts-belt',
+              allowImportNames: ['G'],
+              message: 'esbuild bundles a whole ts-belt namespace: G costs 2 KB, A 45 KB.',
+            },
+          ],
           patterns: [
             {
-              regex: '^(?!\\./)',
-              message: 'The CDP ops bundle may only import sibling modules (no zod).',
+              regex: '^(?!\\./|@mobily/ts-belt$)',
+              message:
+                'The CDP ops bundle may only import sibling modules and G from ts-belt (no zod).',
             },
           ],
         },

@@ -1,5 +1,6 @@
+import { G } from '@mobily/ts-belt';
 import { type AchLookup, type AchText, createTextMemory } from './achievement-text';
-import { isFn, isRecord } from './steam-globals';
+import { isFn } from './steam-globals';
 
 interface Query {
   queryKey: unknown;
@@ -28,13 +29,13 @@ const FIELDS: readonly (readonly [string, keyof AchText])[] = [
 ];
 
 export const isQueryClient = (v: unknown): v is QueryClient =>
-  isRecord(v) && isFn(v.getQueryCache) && isFn(v.setQueryData) && isFn(v.getQueryData);
+  G.isObject(v) && isFn(v.getQueryCache) && isFn(v.setQueryData) && isFn(v.getQueryData);
 
 const isQuery = (v: unknown): v is Query =>
-  isRecord(v) && 'queryKey' in v && isRecord(v.state) && isFn(v.setState);
+  G.isObject(v) && 'queryKey' in v && G.isObject(v.state) && isFn(v.setState);
 
 const isPlainObject = (v: unknown): v is Rec => {
-  if (!isRecord(v)) {
+  if (!G.isObject(v)) {
     return false;
   }
   const proto: unknown = Object.getPrototypeOf(v);
@@ -43,7 +44,7 @@ const isPlainObject = (v: unknown): v is Rec => {
 
 // The grouped achievements UI keys all of an app's data as ['achievements', appid, ...].
 export function achievementQueryAppId(key: unknown): unknown {
-  return Array.isArray(key) && key[0] === 'achievements' ? key[1] : undefined;
+  return G.isArray(key) && key[0] === 'achievements' ? key[1] : undefined;
 }
 
 // Copy-on-write over every { api_name, ... } record; untouched branches stay shared.
@@ -51,7 +52,7 @@ function mapRecords(data: unknown, fn: (rec: Rec) => Rec, depth = 0): unknown {
   if (depth > 6) {
     return data;
   }
-  if (Array.isArray(data)) {
+  if (G.isArray(data)) {
     let out: unknown[] | null = null;
     data.forEach((item, i) => {
       const next = mapRecords(item, fn, depth + 1);
@@ -65,7 +66,7 @@ function mapRecords(data: unknown, fn: (rec: Rec) => Rec, depth = 0): unknown {
   if (!isPlainObject(data)) {
     return data;
   }
-  if (typeof data.api_name === 'string') {
+  if (G.isString(data.api_name)) {
     return fn(data);
   }
   let out: Rec | null = null;
@@ -98,7 +99,7 @@ export function hookAchievementQueries(
       let out = rec;
       for (const [key, field] of FIELDS) {
         const current = rec[key];
-        if (typeof current !== 'string') {
+        if (!G.isString(current)) {
           continue;
         }
         const text = memory.show(appid, rec.api_name, field, current, t?.[field]);
@@ -143,7 +144,7 @@ export function hookAchievementQueries(
   };
 
   const unsubscribe = client.getQueryCache().subscribe((event) => {
-    if (writing || !isRecord(event) || !isQuery(event.query)) {
+    if (writing || !G.isObject(event) || !isQuery(event.query)) {
       return;
     }
     const q = event.query;
@@ -152,7 +153,7 @@ export function hookAchievementQueries(
       return;
     }
     seen = true;
-    const action = isRecord(event.action) ? event.action.type : undefined;
+    const action = G.isObject(event.action) ? event.action.type : undefined;
     const delivered =
       event.type === 'added' ||
       (event.type === 'updated' && (action === 'success' || action === 'setState'));
