@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { formatBytes } from '../shared/formatters';
+import { formatBytes, parseSizeToBytes } from '../shared/formatters';
 import { isExeInstaller } from '../shared/installer-kind';
 import type { AchievementsDelivery } from '../shared/plugin-host-types';
 import type {
@@ -25,7 +25,7 @@ import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
 import { refreshXboxRootsForGame } from './game-detector/xbox';
 import { backupFiles } from './installer/backup';
 import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
-import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
+import { checkDiskSpace } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
