@@ -2,6 +2,7 @@ import { exec, spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import { isMacOS, isWindows } from './utils/platform';
 
 const execAsync = promisify(exec);
@@ -156,7 +157,7 @@ export async function launchGameExecutable(gamePath: string): Promise<void> {
     }
 
     if (executables.length === 0) {
-      throw new Error('Не вдалося знайти виконуваний файл гри');
+      throw new Error(t('gameLaunch.executableNotFound'));
     }
 
     // Prefer executables with certain names

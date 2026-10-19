@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDownIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 
 export interface SelectOption {
   name: string;
@@ -23,7 +24,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
     options,
     selectedValue,
     onSelectionChange,
-    placeholder = 'Оберіть варіант',
+    placeholder = t('selectDropdown.placeholder'),
     className = '',
     maxHeight: customMaxHeight = 300, // Default 300px instead of 120px
   }) => {
@@ -158,7 +159,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
                   </div>
                 ) : options.length === 0 ? (
                   <div className="text-center text-text-muted py-4 text-sm">
-                    Немає варіантів
+                    {t('selectDropdown.empty')}
                   </div>
                 ) : (
                   options.map((option) => {

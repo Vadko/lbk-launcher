@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 import { useGamepadType } from '../../hooks/useGamepadType';
 import {
   type GamepadHintContext,
@@ -20,53 +21,55 @@ const buildHints = (
   g: Glyphs,
   page: { isHome: boolean; isGame: boolean }
 ): Hint[] => {
-  const help: Hint = { glyphs: [g.view], label: 'Усі кнопки' };
+  const help: Hint = { glyphs: [g.view], label: t('gamepadHints.allButtons') };
   switch (context) {
     case 'text-input':
-      return [{ glyphs: [g.b], label: 'Завершити введення' }];
+      return [{ glyphs: [g.b], label: t('gamepadHints.finishInput') }];
     case 'search-input':
       return [
-        { glyphs: [g.y], label: 'Очистити' },
-        { glyphs: [g.b], label: 'Завершити введення' },
+        { glyphs: [g.y], label: t('gamepadHints.clear') },
+        { glyphs: [g.b], label: t('gamepadHints.finishInput') },
       ];
     case 'dropdown':
       return [
-        { glyphs: [g.a], label: 'Вибрати' },
-        { glyphs: [g.upDown], label: 'Пункти' },
-        { glyphs: [g.b], label: 'Закрити' },
+        { glyphs: [g.a], label: t('gamepadHints.select') },
+        { glyphs: [g.upDown], label: t('gamepadHints.items') },
+        { glyphs: [g.b], label: t('common.close') },
       ];
     case 'modal':
       return [
-        { glyphs: [g.a], label: 'Вибрати' },
-        { glyphs: [g.dpad], label: 'Навігація' },
-        { glyphs: [g.rs], label: 'Прокрутка' },
-        { glyphs: [g.b], label: 'Закрити' },
+        { glyphs: [g.a], label: t('gamepadHints.select') },
+        { glyphs: [g.dpad], label: t('gamepadHints.navigation') },
+        { glyphs: [g.rs], label: t('gamepadHints.scroll') },
+        { glyphs: [g.b], label: t('common.close') },
       ];
     case 'header':
       return [
-        { glyphs: [g.a], label: 'Відкрити' },
-        { glyphs: [g.leftRight], label: 'Меню' },
-        { glyphs: [g.down, g.b], label: 'До ігор' },
+        { glyphs: [g.a], label: t('gamepadHints.open') },
+        { glyphs: [g.leftRight], label: t('gamepadHints.menu') },
+        { glyphs: [g.down, g.b], label: t('gamepadHints.toGames') },
         help,
       ];
     case 'games':
       return [
-        { glyphs: [g.a], label: 'Відкрити' },
-        { glyphs: [g.leftRight], label: 'Ігри' },
-        { glyphs: [g.up], label: 'Меню' },
-        { glyphs: [g.down], label: 'Сторінка' },
-        { glyphs: [g.x], label: 'Пошук' },
-        { glyphs: page.isHome ? [g.y] : [g.y, g.b], label: 'Головна' },
+        { glyphs: [g.a], label: t('gamepadHints.open') },
+        { glyphs: [g.leftRight], label: t('gamepadHints.games') },
+        { glyphs: [g.up], label: t('gamepadHints.menu') },
+        { glyphs: [g.down], label: t('gamepadHints.page') },
+        { glyphs: [g.x], label: t('gamepadHints.search') },
+        { glyphs: page.isHome ? [g.y] : [g.y, g.b], label: t('gamepadHints.home') },
         help,
       ];
     case 'main-content':
       return [
-        { glyphs: [g.a], label: 'Вибрати' },
-        { glyphs: [g.dpad], label: 'Навігація' },
-        { glyphs: [g.rs], label: 'Прокрутка' },
-        ...(page.isGame ? [{ glyphs: [g.lb, g.rb], label: 'Сусідній переклад' }] : []),
-        { glyphs: [g.b], label: 'До ігор' },
-        ...(page.isHome ? [] : [{ glyphs: [g.y], label: 'Головна' }]),
+        { glyphs: [g.a], label: t('gamepadHints.select') },
+        { glyphs: [g.dpad], label: t('gamepadHints.navigation') },
+        { glyphs: [g.rs], label: t('gamepadHints.scroll') },
+        ...(page.isGame
+          ? [{ glyphs: [g.lb, g.rb], label: t('gamepadHints.adjacentTranslation') }]
+          : []),
+        { glyphs: [g.b], label: t('gamepadHints.toGames') },
+        ...(page.isHome ? [] : [{ glyphs: [g.y], label: t('gamepadHints.home') }]),
         help,
       ];
   }

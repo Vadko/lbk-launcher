@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import {
   matchesAuthors,
   matchesContentTypes,
@@ -315,7 +316,7 @@ export function useGames({
 
         console.error('[useGames] Error loading games:', error);
         const errorMessage =
-          error instanceof Error ? error.message : 'Помилка завантаження ігор';
+          error instanceof Error ? error.message : t('gameList.loadFailed');
         setError(errorMessage);
         setGames([]);
         setTotal(0);

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type {
   DownloadProgress,
   Game,
@@ -62,13 +63,13 @@ export async function downloadAndExtractArchive(
   } = params;
 
   if (!archivePath) {
-    throw new Error(`Архів ${type} не знайдено`);
+    throw new Error(t('archiveDownload.archiveNotFound', { type }));
   }
 
   const archiveExt = path.extname(archivePath) || '.zip';
   const archiveFilePath = path.join(downloadDir, `${game.id}_${type}${archiveExt}`);
 
-  onStatus?.({ message: 'Отримання посилання для завантаження...', phase: 'download' });
+  onStatus?.({ message: t('archiveDownload.fetchingUrl'), phase: 'download' });
   const urlResult = await getSignedDownloadUrl({
     gameId: game.id,
     archivePath,
@@ -84,7 +85,7 @@ export async function downloadAndExtractArchive(
         urlResult.maxAllowed
       );
     }
-    throw new Error(`Не вдалося отримати посилання: ${urlResult.error}`);
+    throw new Error(t('archiveDownload.urlFailed', { error: urlResult.error }));
   }
 
   const abortController = new AbortController();
@@ -121,13 +122,13 @@ export async function downloadAndExtractArchive(
   }
 
   if (archiveHash) {
-    onStatus?.({ message: 'Перевірка цілісності файлу...', phase: 'install' });
+    onStatus?.({ message: t('archiveDownload.verifying'), phase: 'install' });
     const isValid = await verifyFileHash(archiveFilePath, archiveHash);
     if (!isValid) {
       if (fs.existsSync(archiveFilePath)) {
         await unlink(archiveFilePath);
       }
-      throw new Error('Файл пошкоджено. Спробуйте завантажити ще раз.');
+      throw new Error(t('archiveDownload.corrupted'));
     }
   }
 

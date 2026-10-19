@@ -1,5 +1,6 @@
 import { Download } from 'lucide';
 import { useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -123,8 +124,10 @@ export const UpdateNotification = () => {
     <>
       <p className="text-gray-400 text-sm mb-3">
         {updateDownloaded
-          ? 'Оновлення завантажено та готове до встановлення'
-          : `Версія ${pendingVersion || 'нова'} доступна для завантаження`}
+          ? t('updateNotice.downloaded')
+          : pendingVersion
+            ? t('updateNotice.versionAvailable', { version: pendingVersion })
+            : t('updateNotice.newVersionAvailable')}
       </p>
       {pendingEntry && (
         <div className="mb-3">
@@ -150,7 +153,7 @@ export const UpdateNotification = () => {
       {downloading && (
         <div className="mb-3">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span>Завантаження...</span>
+            <span>{t('updateNotice.downloading')}</span>
             <span>
               <AppNumberFlow value={progress} suffix="%" />
             </span>
@@ -174,7 +177,7 @@ export const UpdateNotification = () => {
           data-gamepad-confirm
           className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-black rounded-lg transition-colors"
         >
-          Скачати нову версію
+          {t('updateNotice.openDownloadPage')}
         </button>
       ) : updateDownloaded ? (
         <button
@@ -182,7 +185,7 @@ export const UpdateNotification = () => {
           data-gamepad-confirm
           className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-black rounded-lg transition-colors"
         >
-          Перезапустити
+          {t('updateNotice.restart')}
         </button>
       ) : (
         <button
@@ -191,7 +194,7 @@ export const UpdateNotification = () => {
           data-gamepad-confirm
           className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-white rounded-lg transition-colors aria-busy:opacity-60 aria-busy:cursor-wait"
         >
-          Завантажити
+          {t('updateNotice.download')}
         </button>
       )}
       {!updateDownloaded && (
@@ -200,7 +203,7 @@ export const UpdateNotification = () => {
           data-gamepad-cancel
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
         >
-          Пізніше
+          {t('updateNotice.later')}
         </button>
       )}
     </div>
@@ -212,7 +215,11 @@ export const UpdateNotification = () => {
       <Modal
         isOpen={true}
         onClose={() => setUpdateAvailable(false)}
-        title={updateDownloaded ? 'Оновлення готове!' : 'Доступне оновлення'}
+        title={
+          updateDownloaded
+            ? t('updateNotice.readyTitle')
+            : t('updateNotice.availableTitle')
+        }
         footer={buttons}
         showCloseButton={!updateDownloaded}
       >
@@ -236,7 +243,9 @@ export const UpdateNotification = () => {
         </div>
         <div className="flex-1">
           <h3 className="text-white font-semibold mb-1">
-            {updateDownloaded ? 'Оновлення готове!' : 'Доступне оновлення'}
+            {updateDownloaded
+              ? t('updateNotice.readyTitle')
+              : t('updateNotice.availableTitle')}
           </h3>
           {content}
           {buttons}

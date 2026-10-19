@@ -2,6 +2,7 @@ import { Pause, Play } from 'lucide';
 import { XIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { useModalStore } from '@/renderer/store/useModalStore';
+import { t } from '@/shared/i18n/i18n';
 import { formatBytes, formatTime } from '../../../shared/formatters';
 import type { DownloadProgress } from '../../../shared/types';
 import { AppActionIcon } from '../ui/AppActionIcon';
@@ -37,9 +38,11 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
     } catch (error) {
       console.error('[DownloadProgressCard] pause/resume failed:', error);
       showModal({
-        title: 'Помилка',
+        title: t('common.error'),
         message:
-          error instanceof Error ? error.message : 'Не вдалося змінити стан завантаження',
+          error instanceof Error
+            ? error.message
+            : t('downloadProgress.pauseResumeFailed'),
         type: 'error',
       });
     } finally {
@@ -57,9 +60,9 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
     } catch (error) {
       console.error('[DownloadProgressCard] cancel failed:', error);
       showModal({
-        title: 'Помилка',
+        title: t('common.error'),
         message:
-          error instanceof Error ? error.message : 'Не вдалося скасувати завантаження',
+          error instanceof Error ? error.message : t('downloadProgress.cancelFailed'),
         type: 'error',
       });
     } finally {
@@ -71,7 +74,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
     <>
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium text-text-main">
-          {isPaused ? 'Завантаження призупинено' : 'Завантаження файлів...'}
+          {isPaused ? t('download.paused') : t('downloadProgress.downloadingFiles')}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-color-accent">
@@ -87,7 +90,9 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
                   ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
                   : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400'
               }`}
-              title={isPaused ? 'Продовжити' : 'Пауза'}
+              title={
+                isPaused ? t('downloadProgress.resume') : t('downloadProgress.pause')
+              }
             >
               <AppActionIcon phase="idle" icon={isPaused ? Play : Pause} size={16} />
             </button>
@@ -95,7 +100,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
               onClick={handleCancel}
               aria-busy={isCancelling}
               className="inline-flex items-center justify-center p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors aria-busy:opacity-60 aria-busy:cursor-wait"
-              title="Скасувати"
+              title={t('common.cancel')}
             >
               <XIcon size={16} />
             </button>
@@ -119,7 +124,7 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       </div>
       <div className="space-y-1.5 text-xs">
         <div className="flex justify-between">
-          <span className="text-text-muted">Завантажено:</span>
+          <span className="text-text-muted">{t('downloadProgress.downloaded')}</span>
           <span className="text-text-main font-medium">
             {formatBytes(downloadProgress.downloadedBytes)} /{' '}
             {formatBytes(downloadProgress.totalBytes)}
@@ -128,13 +133,15 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
         {!isPaused && (
           <>
             <div className="flex justify-between">
-              <span className="text-text-muted">Швидкість:</span>
+              <span className="text-text-muted">{t('downloadProgress.speed')}</span>
               <span className="text-color-accent font-medium">
-                {formatBytes(downloadProgress.bytesPerSecond)}/с
+                {t('downloadProgress.speedValue', {
+                  speed: formatBytes(downloadProgress.bytesPerSecond),
+                })}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-text-muted">Залишилось часу:</span>
+              <span className="text-text-muted">{t('downloadProgress.timeLeft')}</span>
               <span className="text-color-main font-medium">
                 {formatTime(downloadProgress.timeRemaining)}
               </span>

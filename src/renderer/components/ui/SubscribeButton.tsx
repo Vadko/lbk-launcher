@@ -1,5 +1,6 @@
 import { Bell, BellOff } from 'lucide';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
@@ -38,13 +39,15 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
       className={`flex items-center gap-2 ${className}`}
       title={
         subscribed
-          ? `Ви отримуєте сповіщення про "${gameName}"`
-          : `Отримувати сповіщення про "${gameName}"`
+          ? t('gameSubscribe.subscribedTitle', { game: gameName })
+          : t('gameSubscribe.subscribeTitle', { game: gameName })
       }
       {...rest}
     >
       <AppActionIcon phase="idle" icon={subscribed ? BellOff : Bell} size={16} />
-      <span>{subscribed ? 'Вимкнути сповіщення' : 'Отримувати сповіщення'}</span>
+      <span>
+        {subscribed ? t('gameSubscribe.unsubscribe') : t('gameSubscribe.subscribe')}
+      </span>
     </Button>
   );
 };

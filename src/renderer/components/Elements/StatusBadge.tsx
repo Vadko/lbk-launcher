@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 
 interface StatusBadgeProps {
   status: 'completed' | 'in-progress' | 'planned' | 'tech-improvement';
@@ -13,27 +14,27 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 }) => {
   const badgeConfig = {
     completed: {
-      textLabel: 'Завершено',
+      textLabel: t('gameStatus.completed'),
       capsuleColor: 'bg-[rgba(168,207,150,0.25)]',
       textColor: 'text-color-main',
     },
     'in-progress': {
-      textLabel: 'Ранній доступ',
+      textLabel: t('gameStatus.inProgress'),
       capsuleColor: 'bg-[rgba(255,164,122,0.25)]',
       textColor: 'text-color-accent',
     },
     planned: {
-      textLabel: 'Заплановано',
+      textLabel: t('gameStatus.planned'),
       capsuleColor: 'bg-[rgba(239,238,173,0.25)]',
       textColor: 'text-color-mixed',
     },
     'tech-improvement': {
-      textLabel: 'Технічна доробка',
+      textLabel: t('gameStatus.techImprovement'),
       capsuleColor: 'bg-[rgba(148,163,184,0.25)]',
       textColor: 'text-white',
     },
     unknown: {
-      textLabel: 'Невідомо',
+      textLabel: t('statusBadge.unknown'),
       capsuleColor: 'bg-[rgba(255,164,122,0.25)]',
       textColor: 'text-color-accent',
     },

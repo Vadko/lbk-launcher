@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { Button } from '../ui/Button';
 import { TrendGamesSection } from './TrendsGamesSection';
 
@@ -26,13 +27,13 @@ export const TrendingGamesPage: React.FC<TrendingGamesPageProps> = ({ onBack }) 
         className="flex items-center gap-2 sticky"
       >
         <ArrowLeftIcon size={24} />
-        Назад
+        {t('homeSections.back')}
       </Button>
     </div>
 
     {/* Reuse GamesSection with higher limit */}
     <TrendGamesSection
-      title="Популярне у гравців"
+      title={t('homeSections.popular')}
       showDownloadCounter={true}
       showLimit={30}
     />

@@ -3,6 +3,7 @@ import { CheckIcon, UsersIcon, XIcon } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
@@ -75,7 +76,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
                 <h3 className="text-base font-semibold text-text-main">
-                  Оберіть переклад
+                  {t('translationPicker.title')}
                 </h3>
                 <p className="text-sm text-text-muted truncate">{gameName}</p>
               </div>
@@ -100,7 +101,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                   game.status !== 'planned' && game.status !== 'tech-improvement';
 
                 const variant = variantById?.get(game.id);
-                const teamLabel = game.team || 'Невідомий автор';
+                const teamLabel = game.team || t('translationPicker.unknownAuthor');
 
                 return (
                   <button

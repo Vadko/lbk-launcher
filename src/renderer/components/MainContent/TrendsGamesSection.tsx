@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
+import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useTrendingGames } from '../../queries/useTrendingGames';
 import { GameListItem } from '../Sidebar/GameListItem';
@@ -45,7 +46,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
         {onViewAll && (
           <Button variant="ghost" onClick={onViewAll} data-gamepad-action>
-            Переглянути всі
+            {t('homeSections.viewAll')}
             <ArrowRightIcon size={24} />
           </Button>
         )}
@@ -72,7 +73,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="text-center text-text-muted py-8"
             >
-              <p>Ігор не знайдено</p>
+              <p>{t('homeSections.noGames')}</p>
             </motion.div>
           ) : (
             visibleGames.map((game, index) => (

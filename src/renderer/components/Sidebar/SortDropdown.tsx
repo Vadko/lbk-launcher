@@ -8,6 +8,7 @@ import {
   UsersIcon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
 import { SORT_OPTIONS } from './types';
@@ -59,7 +60,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
   return (
     <div className="relative" ref={menuRef}>
       <Button
-        title="Сортування"
+        title={t('filterBar.sort')}
         variant="filter"
         onClick={() => setIsOpen((open) => !open)}
         {...headerItemProps}
@@ -79,11 +80,11 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
           >
             <div className="py-1">
               {SORT_OPTIONS.map((option) => {
-                const selected = sortOrder === option.value;
+                const selected = sortOrder === option;
                 return (
                   <button
-                    key={option.value}
-                    onClick={() => handleSelect(option.value)}
+                    key={option}
+                    onClick={() => handleSelect(option)}
                     data-gamepad-dropdown-item
                     data-gamepad-dropdown-selected={selected || undefined}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
@@ -92,8 +93,8 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
                         : 'text-text-muted hover:bg-glass hover:text-text-main'
                     }`}
                   >
-                    {selected ? <CheckIcon size={14} /> : SORT_ICONS[option.value]}
-                    <span className="flex-1">{option.label}</span>
+                    {selected ? <CheckIcon size={14} /> : SORT_ICONS[option]}
+                    <span className="flex-1">{t(`filterOptions.sort.${option}`)}</span>
                   </button>
                 );
               })}

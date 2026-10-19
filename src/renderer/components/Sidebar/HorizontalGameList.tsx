@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useEffect, useMemo } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
@@ -85,7 +86,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     if (totalGames === 0) {
       return (
         <div className="flex items-center justify-center h-32 text-text-muted">
-          <p>Ігор не знайдено</p>
+          <p>{t('homeSections.noGames')}</p>
         </div>
       );
     }
@@ -95,9 +96,13 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
         {virtualizer.getVirtualItems().map((virtualCol) => {
           const group = gameGroups[virtualCol.index];
           const primaryGame = group.translations[0];
-          const isSelected = group.translations.some((t) => selectedGameId === t.id);
-          const hasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
-          const detected = group.translations.some((t) => isGameDetected(t.id));
+          const isSelected = group.translations.some(
+            (game) => selectedGameId === game.id
+          );
+          const hasUpdate = group.translations.some((game) =>
+            gamesWithUpdates.has(game.id)
+          );
+          const detected = group.translations.some((game) => isGameDetected(game.id));
 
           const handleClick = () => {
             if (group.translations.length > 1) {

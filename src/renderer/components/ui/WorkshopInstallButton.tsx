@@ -1,6 +1,7 @@
 import { Download, Trash2 } from 'lucide';
 import { ExternalLinkIcon } from 'lucide-react';
 import { useEffect } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useWorkshopInstallsStore } from '../../store/useWorkshopInstallsStore';
 import { openWorkshopPage } from '../../utils/workshopPage';
@@ -71,13 +72,13 @@ export function WorkshopInstallButton({
   };
 
   const hint = isTombstoned
-    ? 'Переклад більше не доступний у каталозі'
+    ? t('workshopButton.tombstoned')
     : !isOnline
-      ? 'Відсутнє підключення до Інтернету'
+      ? t('workshopButton.offline')
       : !isGameInstalledOnSystem
-        ? 'Гру не встановлено на цьому пристрої'
+        ? t('workshopButton.gameNotInstalled')
         : pending === 'downloading'
-          ? 'Прогрес показано в клієнті Steam'
+          ? t('workshopButton.progressInSteam')
           : null;
 
   return (
@@ -101,7 +102,7 @@ export function WorkshopInstallButton({
             data-gamepad-primary-action
             data-gamepad-action
           >
-            Встановити зі Steam
+            {t('workshopButton.install')}
           </Button>
         </Tooltip>
       )}
@@ -109,10 +110,10 @@ export function WorkshopInstallButton({
         variant="secondary"
         icon={<ExternalLinkIcon size={20} />}
         onClick={() => void openWorkshopPage(workshopId)}
-        title="Відкрити сторінку в Майстерні"
+        title={t('workshopButton.openPageTitle')}
         data-gamepad-action
       >
-        Майстерня
+        {t('workshopButton.openPage')}
       </Button>
       {installed && (
         <Button
@@ -122,7 +123,7 @@ export function WorkshopInstallButton({
           aria-busy={removePhase === 'pending'}
           disabled={isPending}
           className="aria-busy:cursor-wait"
-          title="Скасувати підписку в Steam"
+          title={t('workshopButton.unsubscribeTitle')}
           data-gamepad-action
         />
       )}

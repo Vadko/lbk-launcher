@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { Modal } from './Modal';
 
@@ -24,14 +25,14 @@ export const ConfirmModal: React.FC = () => {
             data-gamepad-cancel
             className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
           >
-            {config.cancelText || 'Скасувати'}
+            {config.cancelText || t('common.cancel')}
           </button>
           <button
             onClick={confirm}
             data-gamepad-confirm
             className="flex-1 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
-            {config.confirmText || 'Підтвердити'}
+            {config.confirmText || t('confirmModal.confirm')}
           </button>
         </div>
       </div>

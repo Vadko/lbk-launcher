@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 import type { ToastNotification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -72,25 +73,6 @@ const getToastBorder = (type: ToastNotification['type']) => {
   }
 };
 
-const getToastTitle = (type: ToastNotification['type']) => {
-  switch (type) {
-    case 'status-change':
-      return 'Зміна стану';
-    case 'version-update':
-      return 'Доступне оновлення';
-    case 'app-update':
-      return 'Оновлення застосунку';
-    case 'first-favorite':
-      return 'Додано в улюблені';
-    case 'progress-change':
-      return 'Оновлення прогресу';
-    case 'feedback-reply':
-      return 'Відповідь на відгук';
-    default:
-      return 'Сповіщення';
-  }
-};
-
 export const ToastNotifications: React.FC = () => {
   const navigate = useNavigate();
   const toasts = useSubscriptionsStore((state) => state.toasts);
@@ -144,7 +126,7 @@ export const ToastNotifications: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-semibold text-white mb-1">
-                  {getToastTitle(toast.type)}
+                  {t(`notificationToast.${toast.type}`)}
                 </h4>
                 <p className="text-xs text-text-muted">
                   {toast.gameName} • {toast.message}

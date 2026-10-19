@@ -1,17 +1,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
+import { t } from '@/shared/i18n/i18n';
 import type { NewsFeedFilter } from '@/shared/types';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
-const feedTabs: { label: string; filter: NewsFeedFilter }[] = [
-  { label: 'Ігри по знижці', filter: 'sales' },
-  { label: 'Ігри за 80', filter: 'games-80' },
-  { label: 'Новини', filter: 'news' },
-];
+const FEED_FILTERS: NewsFeedFilter[] = ['sales', 'games-80', 'news'];
 
 const formatDate = (date?: string) => {
   if (!date) {
@@ -68,21 +65,23 @@ export const NewsFeedSection: React.FC = () => {
   return (
     <section>
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-4xl font-head font-semibold text-text-main">Новини</h2>
+        <h2 className="text-4xl font-head font-semibold text-text-main">
+          {t('newsFeed.title')}
+        </h2>
         <div className="glass-card-no-motion p-2! flex gap-2">
-          {feedTabs.map((tab) => (
+          {FEED_FILTERS.map((filter) => (
             <button
-              key={tab.filter}
+              key={filter}
               type="button"
-              onClick={() => setActiveFilter(tab.filter)}
+              onClick={() => setActiveFilter(filter)}
               data-gamepad-action
               className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                activeFilter === tab.filter
+                activeFilter === filter
                   ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
                   : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
               }`}
             >
-              {tab.label}
+              {t(`newsFeed.tab.${filter}`)}
             </button>
           ))}
         </div>
@@ -110,7 +109,7 @@ export const NewsFeedSection: React.FC = () => {
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="col-span-2 text-center text-text-muted py-8"
             >
-              <p>Новин не знайдено</p>
+              <p>{t('newsFeed.empty')}</p>
             </motion.div>
           ) : (
             <React.Fragment>
@@ -147,13 +146,13 @@ export const NewsFeedSection: React.FC = () => {
 
                     <Button
                       data-gamepad-action
-                      aria-label="Відкрити новину"
-                      title="Відкрити новину"
+                      aria-label={t('newsFeed.open')}
+                      title={t('newsFeed.open')}
                       variant="secondary"
                       onClick={() => openInTelegram(item.url)}
                       className="w-fit px-3! py-2! text-sm"
                     >
-                      Обговорити в Telegram
+                      {t('newsFeed.discuss')}
                     </Button>
                   </motion.article>
                 );

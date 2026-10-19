@@ -1,5 +1,6 @@
 import { Bell, BellOff } from 'lucide';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
@@ -24,6 +25,7 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
     useSubscriptionsStore();
   const subscribed = isSubscribedToTeam(teamName);
   const isMultiple = multipleAuthors ?? teamName.includes(',');
+  const labelContext = showTeamName ? 'team' : isMultiple ? 'multiple' : 'single';
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -41,16 +43,19 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
       className={`flex items-center gap-2 ${className}`}
       title={
         subscribed
-          ? `Ви підписані на оновлення від "${teamName}"`
-          : `Слідкувати за ${isMultiple ? 'авторами' : 'автором'} "${teamName}"`
+          ? t('teamSubscribe.subscribedTitle', { team: teamName })
+          : t('teamSubscribe.followTitle', {
+              context: isMultiple ? 'multiple' : 'single',
+              team: teamName,
+            })
       }
       {...rest}
     >
       <AppActionIcon phase="idle" icon={subscribed ? BellOff : Bell} size={16} />
       <span>
         {subscribed
-          ? `Відписатися від ${showTeamName ? teamName : isMultiple ? 'авторів' : 'автора'}`
-          : `Слідкувати за ${showTeamName ? teamName : isMultiple ? 'авторами' : 'автором'}`}
+          ? t('teamSubscribe.unfollow', { context: labelContext, team: teamName })
+          : t('teamSubscribe.follow', { context: labelContext, team: teamName })}
       </span>
     </Button>
   );

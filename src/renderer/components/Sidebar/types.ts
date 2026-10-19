@@ -17,72 +17,49 @@ export interface GameGroup {
 // Status type for multi-select filter
 type StatusType = Database['public']['Enums']['game_status'];
 
-interface StatusFilterOption {
-  label: string;
-  value: StatusType;
-}
-
-interface SpecialFilterOption {
-  label: string;
-  value: SpecialFilterType;
-}
-
-interface ContentTypeFilterOption {
-  label: string;
-  value: ContentTypeFilterType;
-}
-
-interface TranslationTypeFilterOption {
-  label: string;
-  value: TranslationTypeFilterType;
-}
-
 // Status options for multi-select
-export const STATUS_OPTIONS: StatusFilterOption[] = [
-  { label: 'Заплановано', value: 'planned' },
-  { label: 'Ранній доступ', value: 'in-progress' },
-  { label: 'Готово', value: 'completed' },
-  { label: 'Технічна доробка', value: 'tech-improvement' },
+export const STATUS_OPTIONS: StatusType[] = [
+  'planned',
+  'in-progress',
+  'completed',
+  'tech-improvement',
 ];
 
 // Special filter options (single-select, separate from statuses)
-export const SPECIAL_FILTER_OPTIONS: SpecialFilterOption[] = [
-  { label: 'Улюблені українізатори', value: 'favorite-translations' },
-  { label: 'Встановлені українізатори', value: 'installed-translations' },
-  { label: 'Встановлені ігри', value: 'installed-games' },
-  { label: 'Доступно зі Steam', value: 'available-in-steam' },
-  { label: 'Доступно з GOG', value: 'owned-gog-games' },
-  { label: 'Доступно з Epic', value: 'owned-epic-games' },
-  { label: 'Встановлено з Xbox app', value: 'installed-xbox-games' },
+const SPECIAL_FILTER_OPTIONS: SpecialFilterType[] = [
+  'favorite-translations',
+  'installed-translations',
+  'installed-games',
+  'available-in-steam',
+  'owned-gog-games',
+  'owned-epic-games',
+  'installed-xbox-games',
 ];
 
 // Same field as SPECIAL_FILTER_OPTIONS, minus the two options exposed as
 // standalone quick-filter buttons on the sidebar panel (favorites, installed
 // translations) - shown in the filters modal's "Бібліотека" section instead.
-export const LIBRARY_FILTER_OPTIONS: SpecialFilterOption[] =
-  SPECIAL_FILTER_OPTIONS.filter(
-    (option) =>
-      option.value !== 'favorite-translations' &&
-      option.value !== 'installed-translations'
-  );
+export const LIBRARY_FILTER_OPTIONS: SpecialFilterType[] = SPECIAL_FILTER_OPTIONS.filter(
+  (option) => option !== 'favorite-translations' && option !== 'installed-translations'
+);
 
 // Content-type options (multi-select, AND'ed together - e.g. can require both)
-export const CONTENT_TYPE_OPTIONS: ContentTypeFilterOption[] = [
-  { label: 'З перекладом досягнень', value: 'with-achievements' },
-  { label: 'З озвученням', value: 'with-voice' },
-  { label: 'З Майстерні Steam', value: 'from-workshop' },
+export const CONTENT_TYPE_OPTIONS: ContentTypeFilterType[] = [
+  'with-achievements',
+  'with-voice',
+  'from-workshop',
 ];
 
 // Translation-type options (multi-select, OR'ed together - a game matches one of them)
-export const TRANSLATION_TYPE_OPTIONS: TranslationTypeFilterOption[] = [
-  { label: 'Ручний переклад', value: 'manual' },
-  { label: 'ШІ переклад', value: 'ai' },
-  { label: 'ШІ + редагування', value: 'ai-edited' },
+export const TRANSLATION_TYPE_OPTIONS: TranslationTypeFilterType[] = [
+  'manual',
+  'ai',
+  'ai-edited',
 ];
 
-export const SORT_OPTIONS: { label: string; value: SortOrderType }[] = [
-  { label: 'За назвою', value: 'name' },
-  { label: 'За популярністю', value: 'downloads' },
-  { label: 'За кількістю підписників', value: 'subscribers' },
-  { label: 'За новизною', value: 'newest' },
-];
+export const SORT_OPTIONS = [
+  'name',
+  'downloads',
+  'subscribers',
+  'newest',
+] as const satisfies readonly SortOrderType[];

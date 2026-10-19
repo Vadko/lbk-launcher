@@ -1,6 +1,6 @@
 import { BellIcon, StarIcon, UsersIcon } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
-import { plural } from '@/shared/plural';
+import { t } from '@/shared/i18n/i18n';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -86,7 +86,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Слідкувати за авторами">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('authorSubscription.title')}>
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -97,17 +97,17 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             <p className="text-text-main font-medium">{gameName}</p>
             <p className="text-sm text-text-muted">
               {authors.length === 1
-                ? 'Автор локалізації'
-                : `${authors.length} ${plural(authors.length, 'автор', 'автори', 'авторів')} локалізації`}
+                ? t('authorSubscription.singleAuthor')
+                : t('authorSubscription.authorsCount', { count: authors.length })}
             </p>
           </div>
         </div>
 
         {/* Description */}
         <p className="text-text-muted">
-          Хочете отримувати сповіщення про нові локалізації від{' '}
-          {authors.length === 1 ? 'цього автора' : 'цих авторів'}? Ви зможете змінити
-          підписки в будь-який момент.
+          {t('authorSubscription.description', {
+            context: authors.length === 1 ? 'single' : 'multiple',
+          })}
         </p>
 
         {/* Authors list */}
@@ -172,7 +172,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     {isAlreadySubscribed && (
                       <span className="flex items-center gap-1 text-xs text-green-400 shrink-0">
                         <BellIcon size={12} />
-                        підписано
+                        {t('authorSubscription.subscribed')}
                       </span>
                     )}
                   </div>
@@ -190,7 +190,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             data-gamepad-modal-item
             className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
           >
-            Пропустити
+            {t('authorSubscription.skip')}
           </button>
           <button
             onClick={handleSubscribe}
@@ -205,8 +205,10 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
           >
             <BellIcon size={18} />
             {selectedAuthors.size > 0
-              ? `Підписатись (${selectedAuthors.size})`
-              : 'Підписатись'}
+              ? t('authorSubscription.subscribeSelected', {
+                  selected: selectedAuthors.size,
+                })
+              : t('authorSubscription.subscribe')}
           </button>
         </div>
       </div>

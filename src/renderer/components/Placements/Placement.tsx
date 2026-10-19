@@ -2,7 +2,9 @@ import kuli from '@resources/kuli.png';
 import team from '@resources/team.svg';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useCallback, useEffect, useRef } from 'react';
+import { Trans } from 'react-i18next';
 import type { BannerData } from '@/main/db/banners-api';
+import { t } from '@/shared/i18n/i18n';
 import type { BannerType } from '@/shared/types';
 import { Button } from '../ui/Button';
 
@@ -68,15 +70,17 @@ export const Placement: React.FC<PlacementProps> = ({
         {isNarrowType && (
           <>
             <div>
-              <p>Переклад наявний за підтримки KULI</p>{' '}
+              <p>{t('kuliPlacement.supported')}</p>{' '}
               <p className="text-color-mixed">
-                Будь <span className="font-semibold">першим</span>, хто зіграє з
-                перекладом!
+                <Trans
+                  i18nKey="kuliPlacement.beFirst"
+                  components={{ b: <span className="font-semibold" /> }}
+                />
               </p>
             </div>
 
             <Button variant="primary" className="shrink-0">
-              Перейти на KULI →
+              {t('kuliPlacement.goToKuli')}
             </Button>
           </>
         )}

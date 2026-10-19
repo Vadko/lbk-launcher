@@ -15,7 +15,9 @@ import {
   XIcon,
 } from 'lucide-react';
 import React, { useState } from 'react';
+import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 import type { Notification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -86,7 +88,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) {
-      return 'Щойно';
+      return t('notificationCenter.justNow');
     }
     if (minutes < 60) {
       return RELATIVE_TIME.format(-minutes, 'minute');
@@ -146,44 +148,51 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const getNotificationText = (notification: Notification) => {
     switch (notification.type) {
       case 'status-change':
-        return (
-          <>
-            Стан змінено з "{notification.oldValue}" на "{notification.newValue}"
-          </>
-        );
+        return t('notificationCenter.statusChange', {
+          from: notification.oldValue ?? '',
+          to: notification.newValue ?? '',
+        });
       case 'version-update':
-        return (
-          <>
-            Оновлення версії з {notification.oldValue} до {notification.newValue}
-          </>
-        );
+        return t('notificationCenter.versionUpdate', {
+          from: notification.oldValue ?? '',
+          to: notification.newValue ?? '',
+        });
       case 'app-update':
-        return <>Доступна нова версія застосунку: {notification.newValue}</>;
+        return t('notificationCenter.appUpdate', {
+          version: notification.newValue ?? '',
+        });
       case 'progress-change':
         return <>{notification.newValue}</>;
       case 'team-new-game':
         return (
-          <>
-            Нова локалізація від{' '}
-            <span className="text-yellow-400">{notification.teamName}</span>
-          </>
+          <Trans
+            i18nKey="notificationCenter.teamNewGame"
+            components={{
+              team: <span className="text-yellow-400">{notification.teamName}</span>,
+            }}
+          />
         );
       case 'team-status-change':
         return (
-          <>
-            <span className="text-cyan-400">{notification.teamName}</span>: стан змінено
-            на "{notification.newValue}"
-          </>
+          <Trans
+            i18nKey="notificationCenter.teamStatusChange"
+            components={{
+              team: <span className="text-cyan-400">{notification.teamName}</span>,
+              status: <>{notification.newValue}</>,
+            }}
+          />
         );
       case 'feedback-reply':
         return (
           <>
-            <span className="text-color-main">Відповідь на ваш відгук:</span>{' '}
+            <span className="text-color-main">
+              {t('notificationCenter.feedbackReply')}
+            </span>{' '}
             {notification.message}
           </>
         );
       default:
-        return <>Нове сповіщення</>;
+        return t('notificationCenter.fallback');
     }
   };
 
@@ -203,7 +212,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <BellIcon className="w-6 h-6 text-color-accent" />
             )}
             <h2 className="text-2xl font-bold text-text-main">
-              {showSettings ? 'Налаштування сповіщень' : 'Сповіщення'}
+              {showSettings
+                ? t('notificationCenter.settingsTitle')
+                : t('notificationCenter.title')}
             </h2>
             {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
               <span className="px-2 py-1 bg-color-accent text-text-dark text-xs font-bold rounded-full">
@@ -216,7 +227,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <button
                 onClick={() => setShowSettings(true)}
                 className="p-2 hover:bg-glass rounded-lg transition-colors"
-                title="Налаштування сповіщень"
+                title={t('notificationCenter.settingsTitle')}
                 data-gamepad-skip={showConfirmClear || undefined}
               >
                 <SettingsIcon className="w-5 h-5 text-text-muted" />
@@ -246,10 +257,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
                   <h4 className="text-sm font-semibold text-text-main mb-1">
-                    Оновлення застосунку
+                    {t('notificationCenter.appUpdatesTitle')}
                   </h4>
                   <p className="text-xs text-text-muted">
-                    Сповіщення про нові версії LBK Launcher
+                    {t('notificationCenter.appUpdatesDescription')}
                   </p>
                 </div>
                 <Switch
@@ -262,10 +273,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
                   <h4 className="text-sm font-semibold text-text-main mb-1">
-                    Оновлення українізаторів
+                    {t('notificationCenter.gameUpdatesTitle')}
                   </h4>
                   <p className="text-xs text-text-muted">
-                    Сповіщення про нові версії встановлених українізаторів
+                    {t('notificationCenter.gameUpdatesDescription')}
                   </p>
                 </div>
                 <Switch
@@ -287,11 +298,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               {notifications.length === 0 ? (
                 <div className="text-center py-12">
                   <BellIcon className="w-16 h-16 text-text-muted mx-auto mb-4 opacity-30" />
-                  <p className="text-text-muted">Сповіщень немає</p>
+                  <p className="text-text-muted">{t('notificationCenter.empty')}</p>
                   <p className="text-sm text-text-muted mt-2">
-                    Підпишіться на українізатори зі станом "Заплановано",
-                    <br />
-                    щоб отримувати сповіщення про зміни стану
+                    <Trans
+                      i18nKey="notificationCenter.emptyHint"
+                      components={{ br: <br /> }}
+                    />
                   </p>
                 </div>
               ) : (
@@ -305,7 +317,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       data-gamepad-skip={showConfirmClear || undefined}
                     >
                       <CheckCircleIcon className="w-4 h-4 mr-2" />
-                      Прочитати всі
+                      {t('notificationCenter.markAllRead')}
                     </Button>
                     <Button
                       variant="glass"
@@ -314,7 +326,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       data-gamepad-skip={showConfirmClear || undefined}
                     >
                       <Trash2Icon className="w-4 h-4 mr-2" />
-                      Очистити всі
+                      {t('notificationCenter.clearAll')}
                     </Button>
                   </div>
 
@@ -396,11 +408,11 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     <Trash2Icon className="w-5 h-5 text-red-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-text-main">
-                    Видалити всі сповіщення?
+                    {t('notificationCenter.clearConfirmTitle')}
                   </h3>
                 </div>
                 <p className="text-sm text-text-muted mb-6">
-                  Цю дію неможливо скасувати. Всі сповіщення будуть видалені назавжди.
+                  {t('notificationCenter.clearConfirmBody')}
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -410,7 +422,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     data-gamepad-modal-item
                     className="flex-1"
                   >
-                    Скасувати
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     variant="primary"
@@ -422,7 +434,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     data-gamepad-modal-item
                     className="flex-1 bg-red-500! hover:bg-red-600!"
                   >
-                    Видалити
+                    {t('notificationCenter.delete')}
                   </Button>
                 </div>
               </motion.div>
