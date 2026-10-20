@@ -15,11 +15,11 @@ test.afterAll(async () => {
 });
 
 test('home screen shows "Новинки" and either "Знайдено встановлені ігри" or "Популярне у гравців"', async () => {
-  // "Новинки" завжди відображається
+  // "Новинки" is always rendered
   await expect(page.getByText('Новинки')).toBeVisible();
   
-  // Хоча б одна з цих секцій має бути видимою
-  // (всі 3 секції можуть не поміститися на екрані одночасно)
+  // At least one of these sections must be visible
+  // (all 3 sections may not fit on screen at once)
   const installedSection = page.getByText('Знайдено встановлені ігри');
   const trendingSection = page.getByText('Популярне у гравців');
   

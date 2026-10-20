@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import React from 'react';
 import { Input } from '../ui/Input';
 
@@ -13,6 +13,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange }) => (
     onChange={onChange}
     placeholder="Пошук гри..."
     type="search"
-    icon={<Search size={18} className="text-text-muted" />}
+    icon={<SearchIcon size={18} className="text-text-muted" />}
   />
 );

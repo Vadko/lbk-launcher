@@ -1,13 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Users, X } from 'lucide-react';
+import { CheckIcon, UsersIcon, XIcon } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
-import type { Game } from '../../types/game';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { StatusIcons } from '../Elements/StatusIcons';
@@ -35,7 +35,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
 
   const handleSelect = (game: Game) => {
-    // Навігуємо на сторінку вибраної гри замість setSelectedGame
+    // Navigate to the selected game's page instead of setSelectedGame
     navigate(`/game/${game.id}`);
     onClose();
     // Switch to main content after selection in gamepad mode
@@ -84,7 +84,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                 data-gamepad-cancel
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-glass-hover transition-colors"
               >
-                <X size={18} className="text-text-muted" />
+                <XIcon size={18} className="text-text-muted" />
               </button>
             </div>
 
@@ -119,7 +119,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                     `}
                   >
                     {/* Team logo */}
-                    <div className="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden bg-glass">
+                    <div className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden bg-glass">
                       {logoUrl ? (
                         <img
                           src={logoUrl}
@@ -136,7 +136,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                       <div
                         className={`absolute inset-0 flex items-center justify-center ${logoUrl ? 'hidden' : ''}`}
                       >
-                        <Users size={20} className="text-text-muted" />
+                        <UsersIcon size={20} className="text-text-muted" />
                       </div>
                     </div>
 
@@ -172,24 +172,13 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
 
                     {/* Selected indicator */}
                     {isSelected && (
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-color-accent flex items-center justify-center">
-                        <Check size={14} className="text-white" />
+                      <div className="shrink-0 w-6 h-6 rounded-full bg-color-accent flex items-center justify-center">
+                        <CheckIcon size={14} className="text-white" />
                       </div>
                     )}
                   </button>
                 );
               })}
-            </div>
-
-            {/* Footer hint */}
-            <div className="p-3 border-t border-border text-center text-xs text-text-muted">
-              <span className="inline-flex items-center gap-2">
-                <kbd className="px-1.5 py-0.5 bg-glass rounded text-[10px]">A</kbd>
-                Обрати
-                <span className="mx-1">•</span>
-                <kbd className="px-1.5 py-0.5 bg-glass rounded text-[10px]">B</kbd>
-                Закрити
-              </span>
             </div>
           </motion.div>
         </div>

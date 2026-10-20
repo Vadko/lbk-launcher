@@ -1,4 +1,4 @@
-import { BookmarkCheck } from 'lucide-react';
+import { BookmarkCheckIcon } from 'lucide-react';
 import React from 'react';
 import { CheckIcon } from '@/renderer/components/Icons/CheckIcon';
 import { DownloadIcon } from '@/renderer/components/Icons/DownloadIcon';
@@ -76,7 +76,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
   if (isFavorite && !floatPosition) {
     favoriteIcon = (
       <div title="В улюбленому">
-        <BookmarkCheck size={18} className="text-color-accent" />
+        <BookmarkCheckIcon size={18} className="text-color-accent" />
       </div>
     );
   }

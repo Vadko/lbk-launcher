@@ -239,8 +239,8 @@ export function killProcessOnPort(port: number): void {
         } catch { /* already dead */ }
       }
     } else {
-      // macOS / Linux: lsof to find PIDs, kill -9
-      const output = execSync(`lsof -ti tcp:${port}`, { encoding: 'utf-8' });
+      // Listeners only: without -sTCP:LISTEN lsof also lists our own worker's CDP/fetch connections
+      const output = execSync(`lsof -ti tcp:${port} -sTCP:LISTEN`, { encoding: 'utf-8' });
       const pids = output.trim().split('\n').filter(Boolean);
       for (const pid of pids) {
         try {

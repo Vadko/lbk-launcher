@@ -1,7 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../shared/types';
+import { syncAchievementsToPlugin } from '../achievements';
+import { removeInstalledAchievements } from '../achievements/install';
 import { removeSteamArtwork } from '../utils/steam-artwork';
 import {
   BACKUP_DIR_NAME,
@@ -15,12 +18,12 @@ import {
 import {
   checkInstallation,
   deleteCachedInstallationInfo,
-  findInstallationInfoFile,
   saveInstallationInfo,
 } from './cache';
 import { deleteDirectory } from './files';
+import { findInstallationInfoFile } from './installation-info';
 import { resignMacBundles } from './mac-codesign';
-import { getSteamAchievementsPath, runUninstaller } from './platform';
+import { runUninstaller } from './platform';
 
 const unlink = promisify(fs.unlink);
 const readdir = promisify(fs.readdir);
@@ -36,12 +39,13 @@ export async function uninstallTranslation(game: Game): Promise<void> {
 
     const installInfo = await checkInstallation(game);
     if (!installInfo) {
-      throw new Error('Українізатор не встановлено');
+      throw new Error(t('uninstall.notInstalled'));
     }
 
     const gamePath = installInfo.gamePath;
 
-    if (installInfo.installerPath && fs.existsSync(installInfo.installerPath)) {
+    // No existsSync here: runUninstaller resolves the transliterated name itself.
+    if (installInfo.installerPath) {
       console.log(`[Uninstaller] Running uninstaller: ${installInfo.installerPath}`);
       try {
         await runUninstaller(installInfo.installerPath, installInfo.protonPath);
@@ -63,15 +67,13 @@ export async function uninstallTranslation(game: Game): Promise<void> {
       if (installInfo.components.voice?.installed) {
         allFilesToDelete.push(...installInfo.components.voice.files);
       }
-      // Achievement files live in Steam's appcache, not the game dir.
+      // Achievements live in userData (legacy installs: Steam's appcache), not the game dir.
       if (installInfo.components.achievements?.installed) {
-        const achievementsPath = await getSteamAchievementsPath();
-        if (achievementsPath) {
-          for (const achievementFile of installInfo.components.achievements.files) {
-            const fullPath = path.join(achievementsPath, achievementFile);
-            await restoreOrDeleteFile(fullPath);
-          }
-        }
+        await removeInstalledAchievements(
+          installInfo.gameId,
+          installInfo.components.achievements
+        );
+        void syncAchievementsToPlugin();
       }
     } else if (installInfo.installedFiles?.length) {
       allFilesToDelete = installInfo.installedFiles;
@@ -121,7 +123,9 @@ export async function uninstallTranslation(game: Game): Promise<void> {
   } catch (error) {
     console.error('[Installer] Uninstall error:', error);
     throw new Error(
-      `Помилка видалення: ${error instanceof Error ? error.message : 'Невідома помилка'}`
+      t('uninstall.failed', {
+        error: error instanceof Error ? error.message : t('common.unknownError'),
+      })
     );
   }
 }
@@ -139,7 +143,7 @@ export async function removeComponents(
 
     const installInfo = await checkInstallation(game);
     if (!installInfo) {
-      throw new Error('Українізатор не встановлено');
+      throw new Error(t('uninstall.notInstalled'));
     }
 
     const gamePath = installInfo.gamePath;
@@ -161,13 +165,11 @@ export async function removeComponents(
       componentsToRemove.achievements &&
       installInfo.components?.achievements?.installed
     ) {
-      const achievementsPath = await getSteamAchievementsPath();
-      if (achievementsPath) {
-        for (const achievementFile of installInfo.components.achievements.files) {
-          const fullPath = path.join(achievementsPath, achievementFile);
-          await restoreOrDeleteFile(fullPath);
-        }
-      }
+      await removeInstalledAchievements(
+        installInfo.gameId,
+        installInfo.components.achievements
+      );
+      void syncAchievementsToPlugin();
       installInfo.components.achievements = { installed: false, files: [] };
     }
 
@@ -176,7 +178,9 @@ export async function removeComponents(
   } catch (error) {
     console.error('[Installer] Error removing components:', error);
     throw new Error(
-      `Помилка видалення компонентів: ${error instanceof Error ? error.message : 'Невідома помилка'}`
+      t('uninstall.removeComponentsFailed', {
+        error: error instanceof Error ? error.message : t('common.unknownError'),
+      })
     );
   }
 }

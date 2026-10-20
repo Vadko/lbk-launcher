@@ -1,12 +1,13 @@
 import type Database from 'better-sqlite3';
 import Chance from 'chance';
+import { LRUCache } from 'lru-cache';
 import { getDatabase } from './database';
 import { parseTagIds, VISIBLE_GAMES_SQL } from './db-queries';
 
 /**
- * Динамічні рекомендації за перетином Steam-тегів (games.steam_tag_ids,
- * синкається з адмінки): 2 популярні + 1 андердог, ротація раз на 3 дні.
- * ШІ-переклади рекомендуються, доки юзер не ввімкнув «Приховати ШІ-переклади».
+ * Dynamic recommendations based on Steam tag overlap (games.steam_tag_ids,
+ * synced from the admin panel): 2 popular + 1 underdog, rotating every 3 days.
+ * AI translations are recommended until the user enables "Hide AI translations".
  */
 
 const OVERLAP_THRESHOLD = 0.5;
@@ -37,9 +38,8 @@ interface Candidate {
   score: number;
 }
 
-// Кешуємо лише непорожні результати на період ротації.
-// Інакше добірка отримана до синхронізації, лишиться порожньою.
-const memo = new Map<string, { epoch: number; ids: string[] }>();
+// Only non-empty picks are cached, so a lookup made before the first sync is retried; the epoch in the key rotates them
+const memo = new LRUCache<string, string[]>({ max: 500 });
 
 function parseTags(json: string): Set<number> {
   return new Set(parseTagIds(json) ?? []);
@@ -145,10 +145,10 @@ export function getRecommendedGameIds(
   }
 
   const epoch = Math.floor(Date.now() / ROTATION_WINDOW_MS);
-  const memoKey = `${gameId}:${limit}:${hideAiTranslations ? 1 : 0}`;
+  const memoKey = `${gameId}:${limit}:${hideAiTranslations ? 1 : 0}:${epoch}`;
   const cached = memo.get(memoKey);
-  if (cached && cached.epoch === epoch) {
-    return cached.ids;
+  if (cached) {
+    return cached;
   }
 
   const db = getDatabase();
@@ -170,6 +170,6 @@ export function getRecommendedGameIds(
   }
 
   const ids = pickWithRotation(pool, `${gameId}:${epoch}`, limit);
-  memo.set(memoKey, { epoch, ids });
+  memo.set(memoKey, ids);
   return ids;
 }

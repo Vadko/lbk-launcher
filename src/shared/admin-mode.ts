@@ -1,14 +1,14 @@
 /**
- * Прапорець адмінської збірки.
+ * Admin build flag.
  *
- * Значення інлайниться Vite під час білда: у звичайних збірках `VITE_ADMIN_MODE`
- * не задано, тому адмінські гілки коду відпадають при tree-shaking і в публічний
- * реліз не потрапляють.
+ * The value is inlined by Vite at build time: in regular builds `VITE_ADMIN_MODE`
+ * is unset, so admin-only branches are tree-shaken away and never reach a public
+ * release.
  *
- * Вмикається в `.github/workflows/tg-build.yml` (крок «Build application»),
- * локально - через `VITE_ADMIN_MODE=true pnpm build`.
+ * Enabled in `.github/workflows/tg-build.yml` (the «Build application» step),
+ * locally via `VITE_ADMIN_MODE=true pnpm build`.
  *
- * Що змінює: приховані переклади (`hide = 1`) видно без коду розблокування
- * (див. `VISIBLE_GAMES_SQL` у `src/main/db/db-queries.ts`).
+ * What it changes: hidden translations (`hide = 1`) are visible without an unlock
+ * code (see `VISIBLE_GAMES_SQL` in `src/main/db/db-queries.ts`).
  */
 export const IS_ADMIN_BUILD = import.meta.env.VITE_ADMIN_MODE === 'true';

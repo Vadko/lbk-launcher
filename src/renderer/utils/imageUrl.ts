@@ -2,8 +2,8 @@ import { getImageUrl } from '../../lib/api';
 
 /**
  * Get full URL for game images from R2 Storage
- * @param imagePath - шлях до зображення
- * @param updatedAt - timestamp останнього оновлення для cache-busting
+ * @param imagePath - path to the image
+ * @param updatedAt - last update timestamp, for cache-busting
  */
 export function getGameImageUrl(
   imagePath: string | null,

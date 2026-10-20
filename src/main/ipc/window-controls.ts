@@ -10,38 +10,18 @@ import {
   Tray,
 } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
+import pTimeout from 'p-timeout';
+import { t } from '@/shared/i18n/i18n';
 import { closeDatabase, deleteDatabaseFile } from '../db/database';
 import { invalidateSteamLibraryCache } from '../steam-library-api';
 import { getLogFileDirectory } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
 import { clearStore } from '../utils/store-storage';
+import { showSystemNotification } from '../utils/system-notification';
 import { getIcon } from '../utils/theme';
-import { getMainWindow } from '../window';
-
-// Get the app icon path for notifications
-function getNotificationIcon(): string | undefined {
-  if (isMacOS()) {
-    // macOS uses the app icon automatically
-    return undefined;
-  }
-  return getIcon('notification');
-}
+import { getMainWindow, sendToRenderer, showMainWindow } from '../window';
 
 let tray: Tray | null = null;
-
-/**
- * Show and focus the main window
- */
-function showAndFocusWindow(): void {
-  const window = getMainWindow();
-  if (window) {
-    window.show();
-    if (window.isMinimized()) {
-      window.restore();
-    }
-    window.focus();
-  }
-}
 
 function createTray() {
   if (tray) {
@@ -50,7 +30,7 @@ function createTray() {
 
   const icon = nativeImage.createFromPath(getIcon('tray'));
 
-  // На macOS потрібно встановити що це Template іконка
+  // On macOS this needs to be marked as a Template icon
   if (isMacOS()) {
     icon.setTemplateImage(true);
   }
@@ -58,16 +38,16 @@ function createTray() {
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Відкрити', click: showAndFocusWindow },
-    { label: 'Вийти', click: () => app.quit() },
+    { label: t('tray.open'), click: showMainWindow },
+    { label: t('tray.quit'), click: () => app.quit() },
   ]);
   tray.setContextMenu(contextMenu);
 
   // Linux (including Steam Deck) uses single click, others use double-click
   if (isLinux()) {
-    tray.on('click', showAndFocusWindow);
+    tray.on('click', showMainWindow);
   } else {
-    tray.on('double-click', showAndFocusWindow);
+    tray.on('double-click', showMainWindow);
   }
 
   return tray;
@@ -84,6 +64,10 @@ export function initTray(): void {
 }
 
 export function setupWindowControls(): void {
+  if (isMacOS()) {
+    Notification.isSupported();
+  }
+
   ipcMain.on('window:minimize', () => {
     const window = getMainWindow();
     window?.hide();
@@ -116,35 +100,16 @@ export function setupWindowControls(): void {
   // Show system notification (used when app is in tray)
   ipcMain.handle(
     'show-system-notification',
-    (_, options: { title: string; body: string; gameId?: string }) => {
-      if (!Notification.isSupported()) {
-        console.log('[Notification] System notifications not supported');
-        return false;
-      }
-
-      const iconPath = getNotificationIcon();
-      const notification = new Notification({
+    (_, options: { title: string; body: string; gameId?: string }) =>
+      showSystemNotification({
         title: options.title,
         body: options.body,
-        icon: iconPath,
-        silent: false,
-      });
-
-      // Click on notification opens the app and navigates to game
-      notification.on('click', () => {
-        showAndFocusWindow();
-        // If gameId is provided, send it to renderer to navigate to the game
-        if (options.gameId) {
-          const mainWindow = getMainWindow();
-          if (mainWindow) {
-            mainWindow.webContents.send('navigate-to-game', options.gameId);
+        onClick: () => {
+          if (options.gameId) {
+            sendToRenderer('navigate-to-game', options.gameId);
           }
-        }
-      });
-
-      notification.show();
-      return true;
-    }
+        },
+      })
   );
 
   // Guard against multiple clear cache calls (user spamming the button)
@@ -163,8 +128,8 @@ export function setupWindowControls(): void {
 
       // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
-      // 'shadercache' навмисно НЕ чистимо: це кеш скомпільованих GPU-пайплайнів,
-      // без нього наступний запуск ловить шторм компіляції шейдерів (лаги анімацій)
+      // 'shadercache' is deliberately NOT cleared: it's the compiled GPU pipeline
+      // cache, without it the next launch hits a shader compilation storm (animation lag)
       await session.defaultSession.clearStorageData({
         storages: ['cookies', 'filesystem', 'cachestorage'],
       });
@@ -207,13 +172,12 @@ export function setupWindowControls(): void {
       // Clear session data first (async) while DB is still open
       await session.defaultSession.clearCache();
       await session.defaultSession.clearStorageData({
-        // 'shadercache' навмисно не входить — див. коментар у clear-cache-only
+        // 'shadercache' is deliberately excluded — see the comment in clear-cache-only
         storages: [
           'cookies',
           'filesystem',
           'indexdb',
           'localstorage',
-          'websql',
           'serviceworkers',
           'cachestorage',
         ],
@@ -249,10 +213,10 @@ export function setupWindowControls(): void {
       if (!existsSync(logsDir)) {
         mkdirSync(logsDir, { recursive: true });
       }
-      const result = await Promise.race([
-        shell.openPath(logsDir),
-        new Promise<string>((resolve) => setTimeout(() => resolve(''), 3000)),
-      ]);
+      const result = await pTimeout(shell.openPath(logsDir), {
+        milliseconds: 3000,
+        fallback: () => '',
+      });
       // shell.openPath returns an empty string on success, or an error message
       if (result) {
         console.error('[Logger] Failed to open logs folder:', result);

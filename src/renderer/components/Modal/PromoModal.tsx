@@ -1,5 +1,5 @@
 import supportBox from '@resources/images/promo-support-box.svg';
-import { Heart } from 'lucide-react';
+import { HeartIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
 import { usePromoModalStore } from '../../store/usePromoModalStore';
@@ -59,7 +59,7 @@ const SupportContent: React.FC<SupportContentProps> = ({
     <div className="flex gap-6 justify-center">
       <Button
         variant="primary"
-        icon={<Heart size={20} />}
+        icon={<HeartIcon size={20} />}
         onClick={onDonateClick}
         data-gamepad-action
       >
@@ -99,22 +99,23 @@ export const PromoModal: React.FC = () => {
   }, []);
 
   // Record banner impression
+  const bannerId = banner?.id;
   const recordImpression = useCallback(
     async (impressionType: 'view' | 'click') => {
-      if (!banner?.id || !window.electronAPI?.recordPromoBannerImpression) {
+      if (!bannerId || !window.electronAPI?.recordPromoBannerImpression) {
         return;
       }
 
       try {
         await window.electronAPI.recordPromoBannerImpression({
-          campaignId: banner.id,
+          campaignId: bannerId,
           impressionType,
         });
       } catch (error) {
         console.error('[PromoModal] Error recording impression:', error);
       }
     },
-    [banner?.id]
+    [bannerId]
   );
 
   // Promo modal initialization - runs only once on mount

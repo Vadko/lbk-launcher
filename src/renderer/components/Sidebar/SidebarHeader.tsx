@@ -1,5 +1,5 @@
 import logo from '@resources/logo.svg';
-import { BookOpenText, Home, Medal, Newspaper } from 'lucide-react';
+import { BookOpenTextIcon, HomeIcon, MedalIcon, NewspaperIcon } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,28 +29,28 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити посібники та інструменти"
             >
-              <BookOpenText size={20} />
+              <BookOpenTextIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/site/donaters')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити сторінку донаторів"
             >
-              <Medal size={20} />
+              <MedalIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/news')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити новини"
             >
-              <Newspaper size={20} />
+              <NewspaperIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
               title="Відкрити головну сторінку"
             >
-              <Home size={20} />
+              <HomeIcon size={20} />
             </button>
           </div>
         )}

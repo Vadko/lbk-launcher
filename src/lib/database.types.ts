@@ -609,6 +609,64 @@ export type Database = {
           },
         ]
       }
+      game_hide_reasons: {
+        Row: {
+          game_id: string
+          hidden_at: string | null
+          hidden_by: string | null
+          reason: string
+          reason_code: string | null
+          reason_comment: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          game_id: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          reason: string
+          reason_code?: string | null
+          reason_comment?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          game_id?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          reason?: string
+          reason_code?: string | null
+          reason_comment?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_hide_reasons_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_hidden_by_fkey"
+            columns: ["hidden_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_updated_by_fkey"
+            columns: ["updated_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_owners: {
         Row: {
           game_id: string
@@ -2552,6 +2610,7 @@ export type Database = {
       }
       users: {
         Row: {
+          analytics_enabled: boolean
           approved: boolean
           approved_at: string | null
           approved_by: string | null
@@ -2575,6 +2634,7 @@ export type Database = {
           verified_user: boolean
         }
         Insert: {
+          analytics_enabled?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -2598,6 +2658,7 @@ export type Database = {
           verified_user?: boolean
         }
         Update: {
+          analytics_enabled?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -2666,6 +2727,14 @@ export type Database = {
           p_version_id: string
         }
         Returns: undefined
+      }
+      can_read_game_archive: {
+        Args: { object_name: string; object_owner: string }
+        Returns: boolean
+      }
+      can_upload_game_archive: {
+        Args: { object_name: string }
+        Returns: boolean
       }
       check_download_rate_limit: {
         Args: {
@@ -2937,6 +3006,32 @@ export type Database = {
           name: string
         }[]
       }
+      set_game_hidden: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_hide: boolean
+          p_reason?: string
+          p_reason_code?: string
+          p_reason_comment?: string
+        }
+        Returns: {
+          game_name: string
+          game_slug: string
+          game_team: string
+          was_hidden: boolean
+        }[]
+      }
+      set_game_hide_reason: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_reason: string
+          p_reason_code?: string
+          p_reason_comment?: string
+        }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
@@ -2992,12 +3087,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3021,11 +3116,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3046,11 +3141,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3071,11 +3166,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3088,11 +3183,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

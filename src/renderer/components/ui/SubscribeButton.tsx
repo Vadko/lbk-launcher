@@ -1,6 +1,7 @@
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff } from 'lucide';
 import React from 'react';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
 
 interface SubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -42,17 +43,8 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
       }
       {...rest}
     >
-      {subscribed ? (
-        <>
-          <BellOff className="w-4 h-4" />
-          <span>Вимкнути сповіщення</span>
-        </>
-      ) : (
-        <>
-          <Bell className="w-4 h-4" />
-          <span>Отримувати сповіщення</span>
-        </>
-      )}
+      <AppActionIcon phase="idle" icon={subscribed ? BellOff : Bell} size={16} />
+      <span>{subscribed ? 'Вимкнути сповіщення' : 'Отримувати сповіщення'}</span>
     </Button>
   );
 };

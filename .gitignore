@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 dist/
+packages/*/.millennium/
 dist-electron/
 out/
 build/
@@ -49,3 +50,4 @@ spellfix.obj
 .claude/*
 perf-artifacts/
 e2e/results.json
+.wireit/

@@ -6,8 +6,8 @@ import {
 import { useStore } from '../store/useStore';
 
 /**
- * Wrapper для useQuery який автоматично чекає завершення sync з Supabase.
- * Використовуй цей хук замість useQuery для запитів до локальної бази даних.
+ * Wrapper for useQuery that automatically waits for the Supabase sync to finish.
+ * Use this hook instead of useQuery for queries against the local database.
  */
 export function useSyncAwareQuery<
   TQueryFnData = unknown,
@@ -19,7 +19,7 @@ export function useSyncAwareQuery<
 
   return useQuery({
     ...options,
-    // Комбінуємо з існуючим enabled якщо він є
+    // Combine with the existing enabled if present
     enabled: isSyncReady && (options.enabled ?? true),
   });
 }

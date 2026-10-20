@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface SelectOption {
@@ -125,9 +125,9 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
           <span className="text-text-main truncate" title={displayText}>
             {displayText}
           </span>
-          <ChevronDown
+          <ChevronDownIcon
             size={16}
-            className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+            className={`text-text-muted transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
@@ -140,7 +140,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
               transition={{ duration: 0.15 }}
               className={`absolute left-0 right-0 ${
                 dropdownPosition === 'below' ? 'top-full mt-1' : 'bottom-full mb-1'
-              } bg-bg-dark border border-border rounded-lg shadow-xl z-[60] overflow-hidden`}
+              } bg-bg-dark border border-border rounded-lg shadow-xl z-60 overflow-hidden`}
               data-gamepad-dropdown
             >
               <div
@@ -154,7 +154,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
               >
                 {!isReady ? (
                   <div className="py-4 px-3">
-                    <div className="w-full h-4 bg-glass animate-pulse rounded"></div>
+                    <div className="w-full h-4 bg-glass animate-pulse rounded-sm"></div>
                   </div>
                 ) : options.length === 0 ? (
                   <div className="text-center text-text-muted py-4 text-sm">
@@ -172,6 +172,7 @@ export const SelectDropdown: React.FC<SelectDropdownProps> = React.memo(
                             : () => handleOptionSelect(option.value)
                         }
                         data-gamepad-dropdown-item
+                        data-gamepad-dropdown-selected={isSelected || undefined}
                         disabled={option.isDisabled}
                         className={`w-full flex items-center px-3 py-2 text-sm gap-1 text-left transition-colors ${
                           isSelected

@@ -4,26 +4,30 @@
 
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
+import { LRUCache } from 'lru-cache';
 import * as os from 'os';
 import * as path from 'path';
 import { isLinux } from '../utils/platform';
 import { getCleanTitle } from './game-titles';
 
+/** Lutris database locations (native + Flatpak), whether or not Lutris is installed */
+export function getLutrisDBCandidatePaths(): string[] {
+  if (!isLinux()) {
+    return [];
+  }
+
+  const home = os.homedir();
+  return [
+    path.join(home, '.local/share/lutris/pga.db'),
+    path.join(home, '.var/app/net.lutris.Lutris/data/lutris/pga.db'),
+  ];
+}
+
 /**
  * Get Lutris database paths (native + Flatpak)
  */
 function getLutrisDBPath(): string | null {
-  if (!isLinux()) {
-    return null;
-  }
-
-  const home = os.homedir();
-  const possiblePaths = [
-    path.join(home, '.local/share/lutris/pga.db'),
-    path.join(home, '.var/app/net.lutris.Lutris/data/lutris/pga.db'),
-  ];
-
-  for (const dbPath of possiblePaths) {
+  for (const dbPath of getLutrisDBCandidatePaths()) {
     if (fs.existsSync(dbPath)) {
       return dbPath;
     }
@@ -32,114 +36,26 @@ function getLutrisDBPath(): string | null {
   return null;
 }
 
-/**
- * Lutris Database Manager - cached database connection management
- */
-class LutrisDBManager {
-  private static instance: LutrisDBManager | null = null;
-  private db: Database.Database | null = null;
-  private dbPath: string | null = null;
-  private lastChecked = 0;
-  private readonly CHECK_INTERVAL = 60000; // 1 minute
+// max: 1, so a DB found at another path evicts and closes the previous handle
+const connections = new LRUCache<string, Database.Database>({
+  max: 1,
+  memoMethod: (dbPath) => new Database(dbPath, { readonly: true, fileMustExist: true }),
+  dispose: (db) => db.close(),
+});
 
-  private constructor() {
-    // Singleton pattern implementation
+function query<T>(sql: string): T[] {
+  const dbPath = getLutrisDBPath();
+  if (!dbPath) {
+    connections.clear();
+    return [];
   }
-
-  static getInstance(): LutrisDBManager {
-    if (!this.instance) {
-      this.instance = new LutrisDBManager();
-    }
-    return this.instance;
-  }
-
-  /**
-   * Get active database connection or create new one
-   */
-  private getConnection(): Database.Database | null {
-    const now = Date.now();
-
-    // Check if we need to update database path
-    if (!this.dbPath || now - this.lastChecked > this.CHECK_INTERVAL) {
-      const newDbPath = getLutrisDBPath();
-
-      // Close old connection if path changed
-      if (this.db && this.dbPath && newDbPath !== this.dbPath) {
-        this.close();
-      }
-
-      this.dbPath = newDbPath;
-      this.lastChecked = now;
-    }
-
-    if (!this.dbPath) {
-      return null;
-    }
-
-    // Create new connection if needed
-    if (!this.db) {
-      try {
-        this.db = new Database(this.dbPath, { readonly: true, fileMustExist: true });
-      } catch (error) {
-        console.error('[Lutris] Error opening database:', error);
-        return null;
-      }
-    }
-
-    return this.db;
-  }
-
-  /**
-   * Execute database query
-   */
-  query<T = Record<string, unknown>>(sql: string): T[] {
-    const db = this.getConnection();
-    if (!db) {
-      return [];
-    }
-
-    try {
-      return db.prepare(sql).all() as T[];
-    } catch (error) {
-      console.error(`[Lutris] Database query failed: ${sql}`, error);
-      return [];
-    }
-  }
-
-  /**
-   * Close database connection
-   */
-  close(): void {
-    if (this.db) {
-      try {
-        this.db.close();
-      } catch (error) {
-        console.warn('[Lutris] Error closing database:', error);
-      }
-      this.db = null;
-    }
-  }
-
-  /**
-   * Validate JSON and safely parse it
-   */
-  static parseJSON(jsonString: string): Record<string, unknown> | null {
-    try {
-      const parsed = JSON.parse(jsonString);
-      return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch {
-      return null;
-    }
+  try {
+    return connections.memo(dbPath).prepare(sql).all() as T[];
+  } catch (error) {
+    console.error(`[Lutris] Database query failed: ${sql}`, error);
+    return [];
   }
 }
-
-// Global database manager instance
-const dbManager = LutrisDBManager.getInstance();
-
-// Close database on process termination
-process.on('exit', () => dbManager.close());
-process.on('SIGINT', () => dbManager.close());
-process.on('SIGTERM', () => dbManager.close());
 
 interface LutrisGame {
   name: string;
@@ -158,11 +74,13 @@ interface EpicGameDetails extends Record<string, unknown> {
   };
 }
 
-/**
- * Type guard to check if parsed JSON matches Epic game details structure
- */
-function isEpicGameDetails(obj: Record<string, unknown> | null): obj is EpicGameDetails {
-  return obj !== null && typeof obj === 'object';
+function parseEpicDetails(json: string): EpicGameDetails | null {
+  try {
+    const parsed: unknown = JSON.parse(json);
+    return parsed && typeof parsed === 'object' ? (parsed as EpicGameDetails) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -176,8 +94,7 @@ function getLutrisGOGInstallations(): Array<{
 }> {
   const results: Array<{ path: string; appName: string; slug: string }> = [];
 
-  // Get all GOG games using the cached DB connection
-  const dbGames = dbManager.query<LutrisGame>(
+  const dbGames = query<LutrisGame>(
     `SELECT name, directory, service_id, slug FROM games WHERE service='gog'`
   );
 
@@ -219,8 +136,7 @@ function getLutrisEpicInstallations(): Array<{
 }> {
   const results: Array<{ path: string; appName: string; slug: string }> = [];
 
-  // Get all Epic games with their details using cached DB connection
-  const dbGames = dbManager.query<LutrisGame>(`
+  const dbGames = query<LutrisGame>(`
     SELECT g.name, g.directory, g.service_id, g.slug, sg.details
     FROM games g
     LEFT JOIN service_games sg ON g.service_id = sg.appid
@@ -229,13 +145,12 @@ function getLutrisEpicInstallations(): Array<{
 
   for (const game of dbGames) {
     if (game.directory && game.details) {
-      const parsedDetails = LutrisDBManager.parseJSON(game.details);
-      if (!isEpicGameDetails(parsedDetails)) {
+      const details = parseEpicDetails(game.details);
+      if (!details) {
         console.warn(`[Lutris] Invalid JSON in details for ${game.name}`);
         continue;
       }
 
-      const details = parsedDetails as EpicGameDetails;
       // Epic details often have 'FolderName', or 'appName'
       let folderName = details.customAttributes?.FolderName?.value;
       // E.g 'DarkestDungeon'
@@ -273,8 +188,7 @@ export function getLutrisGOGDirs(): string[] {
   // e.g. /home/user/Games/gog/game_prefix/drive_c/GOG Games
   const dirs = new Set<string>();
 
-  // Get directories using cached DB connection
-  const dbGames = dbManager.query<{ directory: string }>(
+  const dbGames = query<{ directory: string }>(
     `SELECT directory FROM games WHERE service='gog'`
   );
 
@@ -308,10 +222,7 @@ export function getLutrisSlug(gamePath: string): string | null {
 export function getLutrisGogLibrary(): string[] {
   const titles = new Set<string>();
 
-  // Get GOG library using cached DB connection
-  const dbGames = dbManager.query<{ name: string }>(
-    `SELECT name FROM games WHERE service='gog'`
-  );
+  const dbGames = query<{ name: string }>(`SELECT name FROM games WHERE service='gog'`);
 
   for (const game of dbGames) {
     if (game.name) {
@@ -329,7 +240,7 @@ export function getLutrisEpicLibrary(): string[] {
   const titles = new Set<string>();
 
   // Use UNION DISTINCT to prevent duplicates from both tables
-  const dbGames = dbManager.query<{ name: string }>(`
+  const dbGames = query<{ name: string }>(`
     SELECT DISTINCT name FROM (
       SELECT name FROM games WHERE service='egs'
       UNION

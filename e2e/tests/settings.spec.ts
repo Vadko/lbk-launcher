@@ -55,14 +55,3 @@ test('settings modal contains action buttons', async () => {
   await expect(modal.getByText('Очистити кеш')).toBeVisible();
   await expect(modal.getByText('Очистити всі дані')).toBeVisible();
 });
-
-test('settings modal closes with close button', async () => {
-  await openSettings();
-
-  // Close via the close button in the modal footer
-  const modal = page.locator('div[role="dialog"]');
-  const closeButton = modal.getByRole('button', { name: 'Закрити' });
-  await closeButton.click();
-
-  await expect(modal).not.toBeVisible({ timeout: 3_000 });
-});

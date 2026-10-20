@@ -1,6 +1,5 @@
 import * as Sentry from '@sentry/electron/main';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
-import windowStateKeeper from 'electron-window-state';
 import { join } from 'path';
 import { registerRoute } from '../lib/electron-router-dom';
 import {
@@ -9,7 +8,7 @@ import {
   removeLiquidGlass,
 } from './liquid-glass';
 import { openExternalUrl } from './utils/open-external';
-import { isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
+import { isLinux, isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
 import { readRendererSetting } from './utils/store-storage';
 import { getIcon } from './utils/theme';
 
@@ -30,22 +29,16 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();
 
-  // Запам'ятовує розмір/позицію/maximized-стан вікна між запусками
-  // (у т.ч. на якому моніторі воно було закрите)
-  const windowState = windowStateKeeper({
-    defaultWidth: 1400,
-    defaultHeight: 900,
-  });
-
   mainWindow = new BrowserWindow({
-    x: windowState.x,
-    y: windowState.y,
-    width: windowState.width,
-    height: windowState.height,
+    name: 'main',
+    windowStatePersistence: true,
+    width: 1400,
+    height: 900,
     minWidth: 1200,
     minHeight: 700,
     resizable: true,
     frame: false,
+    roundedCorners: !isLinux(),
     show: false, // Don't show until liquid glass is applied
     transparent: isSupported, // Enable transparency for liquid glass on macOS 26+
     backgroundColor: isSupported ? undefined : '#050b14', // No background color when transparent
@@ -61,12 +54,10 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     },
   });
 
-  // Show window buttons on macOS for liquid glass
-  if (isSupported) {
+  // The frameless window hides the traffic lights; macOS keeps its own window controls on every version.
+  if (isMacOS()) {
     mainWindow.setWindowButtonVisibility(true);
   }
-
-  windowState.manage(mainWindow);
 
   // Register electron-router-dom route
   // This automatically handles loadURL/loadFile for both dev and production
@@ -136,7 +127,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     mainWindow = null;
   });
 
-  // Відправляти стан maximize в renderer
+  // Send maximize state to the renderer
   mainWindow.on('maximize', () => {
     mainWindow?.webContents.send('window:maximized', true);
   });
@@ -183,6 +174,27 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
+}
+
+export function showMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    // macOS outlives its last window; the tray and notifications reopen it like the Dock.
+    createMainWindow().catch((error) => {
+      console.error('[Window] Failed to recreate main window:', error);
+    });
+    return;
+  }
+  mainWindow.show();
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.focus();
+}
+
+export function sendToRenderer(channel: string, payload?: unknown): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, payload);
+  }
 }
 
 // IPC handler for toggling liquid glass

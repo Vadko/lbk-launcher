@@ -1,13 +1,13 @@
 /**
- * Централізований модуль для трекінгу подій
- * - Завантаження
- * - Підписки
- * - Кліки на "Підтримати"
- * - Сесії лаунчера
- * - Видалення українізаторів
+ * Centralized module for event tracking
+ * - Downloads
+ * - Subscriptions
+ * - Clicks on "Support"
+ * - Launcher sessions
+ * - Translation uninstalls
  *
- * Використовує Supabase Edge Functions через supabase.functions.invoke().
- * Machine ID використовується для ідентифікації користувача
+ * Uses Supabase Edge Functions via supabase.functions.invoke().
+ * Machine ID is used to identify the user
  */
 
 import { app } from 'electron';
@@ -18,6 +18,10 @@ import type { TrackingResponse } from '../shared/api-config';
 import { readFunctionsErrorBody } from './db/functions-error';
 import { getSupabaseClient } from './db/supabase-client';
 import { getLogFileDirectory } from './utils/logger';
+import {
+  isLocalizationAnalyticsEnabled,
+  isProductAnalyticsEnabled,
+} from './utils/store-storage';
 
 type ArchiveType = 'text' | 'voice' | 'achievements';
 
@@ -61,7 +65,7 @@ type GetSignedUrlResponse = SignedUrlResult | SignedUrlRateLimitError | SignedUr
 let cachedMachineId: string | null = null;
 
 /**
- * Отримати machine ID (з кешуванням)
+ * Get the machine ID (cached)
  */
 export function getMachineId(): string | null {
   if (cachedMachineId) {
@@ -80,10 +84,35 @@ export function getMachineId(): string | null {
 type TrackPayload = Record<string, unknown>;
 type TrackResult = TrackingResponse & { sessionId?: string; isFirstLaunch?: boolean };
 
+const PRODUCT_ANALYTICS_EVENTS = new Set(['session_start', 'session_end']);
+const LOCALIZATION_ANALYTICS_EVENTS = new Set([
+  'support_click',
+  'failed_search',
+  'uninstall',
+  'playtime',
+]);
+
+function isEventEnabled(type: unknown): boolean {
+  if (typeof type !== 'string') {
+    return true;
+  }
+  if (PRODUCT_ANALYTICS_EVENTS.has(type)) {
+    return isProductAnalyticsEnabled();
+  }
+  if (LOCALIZATION_ANALYTICS_EVENTS.has(type)) {
+    return isLocalizationAnalyticsEnabled();
+  }
+  return true;
+}
+
 /**
- * Викликати edge function `track` з заданим payload.
+ * Call the `track` edge function with the given payload.
  */
 async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
+  if (!isEventEnabled(body['type'])) {
+    return { success: false, error: 'analytics_disabled' };
+  }
+
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.functions.invoke<TrackResult>('track', { body });
 
@@ -96,8 +125,8 @@ async function invokeTrack(body: TrackPayload): Promise<TrackResult> {
 }
 
 /**
- * Отримати signed URL для завантаження архіву
- * Edge Function перевіряє rate-limit і генерує тимчасовий URL
+ * Get a signed URL for downloading the archive
+ * The edge function checks the rate limit and generates a temporary URL
  */
 export async function getSignedDownloadUrl(
   params: GetSignedDownloadUrlParams
@@ -106,6 +135,7 @@ export async function getSignedDownloadUrl(
     return { success: false, error: 'E2E mode' };
   }
   const { gameId, archivePath, archiveType = 'text', isFirstSession = false } = params;
+  const reportFirstSession = isFirstSession && isProductAnalyticsEnabled();
 
   // Get machine ID for unique downloads tracking (not for rate limiting)
   const machineId = getMachineId();
@@ -127,7 +157,7 @@ export async function getSignedDownloadUrl(
         archivePath,
         archiveType,
         machineId, // For unique downloads statistics
-        isFirstSession, // For first session conversion tracking
+        isFirstSession: reportFirstSession, // For first session conversion tracking
       },
     });
 
@@ -169,7 +199,7 @@ export async function getSignedDownloadUrl(
 }
 
 /**
- * Трекінг підписки на гру
+ * Track a game subscription
  */
 export async function trackSubscription(
   gameId: string,
@@ -221,8 +251,8 @@ export async function trackSupportClick(gameId: string): Promise<TrackingRespons
 }
 
 /**
- * Перехід у Майстерню замінює завантаження архіву, тож рахується тим самим
- * лічильником. Сервер зараховує лише перший перехід з цієї машини.
+ * Navigating to the Workshop replaces the archive download, so it's counted by
+ * the same counter. The server counts only the first navigation from this machine.
  */
 export async function trackWorkshopOpen(
   gameId: string,
@@ -502,7 +532,7 @@ export async function submitLogs(
       });
 
       if (urlResult?.success && urlResult.signedUrl) {
-        // Upload the file (PUT напряму на signed URL Storage — не edge function)
+        // Upload the file (PUT directly to the signed Storage URL — not an edge function)
         const fileBuffer = readFileSync(logFilePath);
         const uploadResponse = await fetch(urlResult.signedUrl, {
           method: 'PUT',
