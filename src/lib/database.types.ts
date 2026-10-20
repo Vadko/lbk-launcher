@@ -502,6 +502,37 @@ export type Database = {
           },
         ]
       }
+      game_counters_touched: {
+        Row: {
+          broadcast_pending: boolean
+          game_id: string
+          touched_at: string
+        }
+        Insert: {
+          broadcast_pending?: boolean
+          game_id: string
+          touched_at?: string
+        }
+        Update: {
+          broadcast_pending?: boolean
+          game_id?: string
+          touched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_counters_touched_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_counters_touched_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       game_downloads: {
         Row: {
           downloaded_at: string | null
@@ -664,6 +695,40 @@ export type Database = {
             columns: ["updated_by"]
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_likes: {
+        Row: {
+          created_at: string
+          game_id: string
+          ip: string | null
+          machine_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          ip?: string | null
+          machine_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          ip?: string | null
+          machine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_likes_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_likes_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
           },
         ]
       }
@@ -1311,6 +1376,7 @@ export type Database = {
           last_download_milestone: number
           last_subscriber_milestone: number
           license_only: boolean
+          likes: number
           logo_path: string | null
           name: string
           name_fts: unknown
@@ -1420,6 +1486,7 @@ export type Database = {
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
+          likes?: number
           logo_path?: string | null
           name: string
           name_fts?: unknown
@@ -1529,6 +1596,7 @@ export type Database = {
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
+          likes?: number
           logo_path?: string | null
           name?: string
           name_fts?: unknown
@@ -2753,6 +2821,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      broadcast_game_counters: { Args: never; Returns: undefined }
       can_read_game_archive: {
         Args: { object_name: string; object_owner: string }
         Returns: boolean
@@ -2875,6 +2944,16 @@ export type Database = {
           conversion_rate: number
           first_session_downloads: number
           total_first_launches: number
+        }[]
+      }
+      get_game_counters: {
+        Args: { p_since?: string }
+        Returns: {
+          downloads: number
+          game_id: string
+          likes: number
+          subscriptions: number
+          touched_at: string
         }[]
       }
       get_landing_stats: {
@@ -3056,6 +3135,15 @@ export type Database = {
           p_reason_comment?: string
         }
         Returns: string
+      }
+      set_game_like: {
+        Args: {
+          p_game_id: string
+          p_ip?: string
+          p_liked: boolean
+          p_machine_id: string
+        }
+        Returns: number
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
