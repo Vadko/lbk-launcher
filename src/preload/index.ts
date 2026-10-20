@@ -149,11 +149,6 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('fetch-news-feed', filter, before),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   selectGameFolder: () => ipcRenderer.invoke('select-game-folder'),
-  onInstallProgress: (callback: (progress: number) => void) => {
-    const handler = (_: unknown, progress: number) => callback(progress);
-    ipcRenderer.on('install-progress', handler);
-    return () => ipcRenderer.removeListener('install-progress', handler);
-  },
   onDownloadProgress: (callback) => {
     const handler = (_: unknown, gameId: string, progress: DownloadProgress) =>
       callback(gameId, progress);
@@ -206,7 +201,7 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('game-updated', handler);
   },
   onGameCountersUpdated: (callback) => {
-    const handler = (_: unknown, game: Game) => callback(game);
+    const handler = (_: unknown, games: Game[]) => callback(games);
     ipcRenderer.on('game-counters-updated', handler);
     return () => ipcRenderer.removeListener('game-counters-updated', handler);
   },
@@ -318,9 +313,14 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
-  // Track like/unlike events
-  trackLike: (gameId: string, action: 'like' | 'unlike') =>
-    ipcRenderer.invoke('track-like', gameId, action),
+  getLikedGameIds: () => ipcRenderer.invoke('likes:get'),
+  setLike: (gameId: string, liked: boolean) =>
+    ipcRenderer.invoke('likes:set', gameId, liked),
+  onLikedGamesChanged: (callback) => {
+    const handler = (_: unknown, gameIds: string[]) => callback(gameIds);
+    ipcRenderer.on('liked-games-changed', handler);
+    return () => ipcRenderer.removeListener('liked-games-changed', handler);
+  },
   // Subscribe to a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,

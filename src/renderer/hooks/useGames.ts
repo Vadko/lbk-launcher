@@ -460,16 +460,13 @@ export function useGames({
 
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
     const unsubscribeCounters = window.electronAPI.onGameCountersUpdated?.(
-      (updatedGame: Game) => {
-        setGames((prevGames) => {
-          const index = prevGames.findIndex((g) => g.id === updatedGame.id);
-          if (index === -1) {
-            return prevGames;
-          }
-          const newGames = [...prevGames];
-          newGames[index] = updatedGame;
-          return newGames;
-        });
+      (updatedGames: Game[]) => {
+        const byId = new Map(updatedGames.map((game) => [game.id, game]));
+        setGames((prevGames) =>
+          prevGames.some((game) => byId.has(game.id))
+            ? prevGames.map((game) => byId.get(game.id) ?? game)
+            : prevGames
+        );
       }
     );
     return () => {

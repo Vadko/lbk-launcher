@@ -54,7 +54,6 @@ import {
   submitFeedback,
   submitLogs,
   trackFailedSearch,
-  trackLike,
   trackSubscription,
   trackSupportClick,
   trackUninstall,
@@ -112,7 +111,7 @@ export function setupGamesHandlers(): void {
           repo.setSubscriptions(gameId, result.subscriptions);
           const updatedGame = repo.getGameById(gameId);
           if (updatedGame) {
-            getMainWindow()?.webContents.send('game-counters-updated', updatedGame);
+            getMainWindow()?.webContents.send('game-counters-updated', [updatedGame]);
           }
         } catch (err) {
           console.error('[Games] Failed to update local subscriptions count:', err);
@@ -120,11 +119,6 @@ export function setupGamesHandlers(): void {
       }
       return result;
     }
-  );
-
-  // Track like/unlike
-  ipcMain.handle('track-like', async (_, gameId: string, action: 'like' | 'unlike') =>
-    trackLike(gameId, action)
   );
 
   // Track support click

@@ -3,7 +3,7 @@ import type { Game } from '@/shared/types';
 
 const { send, repo } = vi.hoisted(() => ({
   send: vi.fn(),
-  repo: { isGameVisible: vi.fn(), upsertGame: vi.fn() },
+  repo: { isGameVisible: vi.fn(), upsertGame: vi.fn(), getGameById: vi.fn() },
 }));
 
 vi.mock('@/main/window', () => ({
@@ -25,20 +25,22 @@ vi.mock('@/main/utils/logger', () => ({ createTimer: vi.fn() }));
 
 const { SyncManager } = await import('./sync-manager');
 
-const game = { id: 'g1', name: 'Hidden', approved: true, hide: true } as Game;
+const game = { id: 'g1', name: 'Hidden', approved: true, hide: true, likes: 0 } as Game;
+const stored = { ...game, likes: 5 };
 
 beforeEach(() => {
   send.mockReset();
   repo.isGameVisible.mockReset();
   repo.upsertGame.mockReset();
+  repo.getGameById.mockReturnValue(stored);
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
 });
 
 describe('handleRealtimeUpdate', () => {
   it.each([
     ['a new or still hidden game', false, false, []],
-    ['a game the user unlocked', true, true, [['game-updated', game]]],
-    ['a hidden game made visible', false, true, [['game-updated', game]]],
+    ['a game the user unlocked', true, true, [['game-updated', stored]]],
+    ['a hidden game made visible', false, true, [['game-updated', stored]]],
     ['a visible game hidden', true, false, [['game-removed', 'g1']]],
   ])('%s', (_, before, after, events) => {
     repo.isGameVisible.mockReturnValueOnce(before).mockReturnValueOnce(after);

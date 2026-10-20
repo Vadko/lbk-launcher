@@ -33,7 +33,7 @@ interface GetSignedDownloadUrlParams {
 }
 
 // Disable all tracking during E2E tests
-const IS_E2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
+export const IS_E2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
 
 // Session ID for current launcher session
 let currentSessionId: string | null = null;
@@ -340,34 +340,6 @@ export async function trackSessionEnd(): Promise<TrackingResponse> {
   console.log('[Tracking] Session end response:', result);
 
   currentSessionId = null;
-  return result;
-}
-
-/**
- * Track game like/unlike
- */
-export async function trackLike(
-  gameId: string,
-  action: 'like' | 'unlike'
-): Promise<TrackingResponse> {
-  if (IS_E2E) {
-    return { success: false, error: 'E2E mode' } as TrackingResponse;
-  }
-  const machineId = getMachineId();
-  if (!machineId) {
-    console.warn('[Tracking] Could not get machine ID, skipping like tracking');
-    return { success: false, error: 'Machine ID not available' };
-  }
-
-  console.log(`[Tracking] Tracking ${action} for game:`, gameId);
-
-  const result = await invokeTrack({
-    type: 'like',
-    gameId,
-    userIdentifier: machineId,
-    action,
-  });
-  console.log('[Tracking] Like tracking response:', result);
   return result;
 }
 

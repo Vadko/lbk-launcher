@@ -191,9 +191,9 @@ export function showMainWindow(): void {
   mainWindow.focus();
 }
 
-export function sendToRenderer(channel: string, payload?: unknown): void {
+export function sendToRenderer(channel: string, ...args: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, payload);
+    mainWindow.webContents.send(channel, ...args);
   }
 }
 

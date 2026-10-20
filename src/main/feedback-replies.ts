@@ -1,15 +1,18 @@
+import { z } from 'zod';
 import type { FeedbackReplyPayload } from '../shared/types';
+import { createDeltaStream } from './db/delta-stream';
 import { getSupabaseClient } from './db/supabase-client';
-import type { BroadcastSubscription } from './db/supabase-realtime';
-import { getSyncMetadata, setSyncMetadata } from './db/sync-metadata';
+import { keysetPages } from './db/sync-cursor';
 import { getMachineId } from './tracking';
-import { getMainWindow } from './window';
+import { sendToRenderer } from './window';
 
-const WATERMARK_KEY = 'last_feedback_reply_sync';
-
-function deliverReply(reply: FeedbackReplyPayload, live: boolean): void {
-  getMainWindow()?.webContents.send('feedback-reply', reply, live);
-}
+const replySchema = z.object({
+  replyId: z.string(),
+  gameId: z.string(),
+  gameName: z.string(),
+  message: z.string(),
+  createdAt: z.string(),
+});
 
 async function fetchReplyBatch(
   machineId: string,
@@ -25,52 +28,45 @@ async function fetchReplyBatch(
   return data?.replies ?? [];
 }
 
-export async function syncFeedbackReplies(): Promise<void> {
-  const machineId = getMachineId();
-  if (!machineId) {
-    return;
-  }
-
-  let since = getSyncMetadata(WATERMARK_KEY);
-  if (!since) {
-    setSyncMetadata(WATERMARK_KEY, new Date().toISOString());
-    return;
-  }
-
-  try {
-    let batch = await fetchReplyBatch(machineId, since);
-    while (batch.length > 0) {
-      for (const reply of batch) {
-        deliverReply(reply, false);
-      }
-      since = batch[batch.length - 1].createdAt;
-      setSyncMetadata(WATERMARK_KEY, since);
-      batch = await fetchReplyBatch(machineId, since);
+const replies = createDeltaStream({
+  name: 'FeedbackReplies',
+  watermarkKey: 'last_feedback_reply_sync',
+  async *fetchSince(since) {
+    const machineId = getMachineId();
+    if (!machineId) {
+      return;
     }
-  } catch (error) {
-    console.error('[FeedbackReplies] Catch-up failed:', error);
-  }
-}
+    if (!since) {
+      yield { items: [], watermark: new Date().toISOString() };
+      return;
+    }
+    const pages = keysetPages(
+      (last: FeedbackReplyPayload | undefined) =>
+        fetchReplyBatch(machineId, last?.createdAt ?? since),
+      (page) => page.length === 0
+    );
+    for await (const batch of pages) {
+      yield { items: batch, watermark: batch.at(-1)?.createdAt };
+    }
+  },
+  apply: (items: FeedbackReplyPayload[], live) => {
+    for (const reply of items) {
+      sendToRenderer('feedback-reply', reply, live);
+    }
+  },
+  realtime: () => {
+    const machineId = getMachineId();
+    if (!machineId) {
+      return null;
+    }
+    return {
+      topic: `feedback-replies:machine:${machineId}`,
+      event: 'INSERT',
+      schema: replySchema,
+      toItems: (reply) => [reply],
+    };
+  },
+});
 
-export function createFeedbackReplyBroadcastSubscription(): BroadcastSubscription | null {
-  const machineId = getMachineId();
-  if (!machineId) {
-    return null;
-  }
-
-  return {
-    topic: `feedback-replies:machine:${machineId}`,
-    handlers: [
-      {
-        event: 'INSERT',
-        handler: (message) => {
-          const reply = message.payload as FeedbackReplyPayload;
-          if (reply?.replyId) {
-            deliverReply(reply, true);
-          }
-        },
-      },
-    ],
-    onResubscribe: () => void syncFeedbackReplies(),
-  };
-}
+export const syncFeedbackReplies = replies.catchUp;
+export const createFeedbackReplyBroadcastSubscription = replies.subscription;

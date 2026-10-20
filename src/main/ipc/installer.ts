@@ -97,7 +97,7 @@ export function setupInstallerHandlers(): void {
             repo.incrementDownloads(game.id);
             const updatedGame = repo.getGameById(game.id);
             if (updatedGame) {
-              getMainWindow()?.webContents.send('game-counters-updated', updatedGame);
+              getMainWindow()?.webContents.send('game-counters-updated', [updatedGame]);
             }
           } catch (err) {
             console.error('[Installer] Failed to update local downloads count:', err);

@@ -7,7 +7,6 @@ import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
-import { useLikesStore } from '../../store/useLikesStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -53,9 +52,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
     const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
     const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
-    const likesCount = useLikesStore((state) =>
-      state.getDisplayedCount(game.id, game.likes_count)
-    );
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
@@ -173,7 +169,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   isFavorite={isFavorite}
                 />
                 <InfoIcons
-                  likesCount={likesCount}
+                  likesCount={game.likes}
                   downloadsCount={game.downloads}
                   floatPosition="default"
                 />

@@ -4,12 +4,6 @@ import { Share2Icon } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { Bookmark, BookmarkCheck, Share2, ThumbsUp } from 'lucide-react';
-import {
-  useHasEverInstalledTranslation,
-  useIsTranslationInstalledForGame,
-} from '@/renderer/hooks/useInstalledTranslations';
-import { useLikesStore } from '@/renderer/store/useLikesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { t } from '@/shared/i18n/i18n';
 import { teamToSlug } from '@/shared/search-utils';
@@ -20,6 +14,7 @@ import { PencilIcon } from '../Icons/PencilIcon';
 import { ShareModal } from '../Modal/ShareModal';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
+import { LikeButton } from '../ui/LikeButton';
 
 interface GameHeroProps {
   game: Game;
@@ -72,19 +67,6 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
       toggleFavoriteGame(game.id, game.name);
     }
   }, [game, toggleFavoriteGame]);
-
-  const isTranslationInstalled = useIsTranslationInstalledForGame(game.id);
-  const hasEverInstalled = useHasEverInstalledTranslation(game.id);
-  const canRate = isTranslationInstalled || hasEverInstalled;
-  const isLiked = useLikesStore((state) => state.isLiked(game.id));
-  const likesCount = useLikesStore((state) =>
-    state.getDisplayedCount(game.id, game.likes_count)
-  );
-  const handleLike = useCallback(() => {
-    if (game && canRate) {
-      useLikesStore.getState().toggleLike(game.id, game.likes_count);
-    }
-  }, [game, canRate]);
 
   // Reset state when game changes
   const [prevGameId, setPrevGameId] = useState(game.id);
@@ -213,24 +195,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           </motion.div>
         )}
         <div className="absolute bottom-4 right-4 flex gap-2">
-          <div className="hidden sm:block w-0 h-10 my-auto border-l border-border-hover mx-2 last:hidden first:hidden" />
-          <Button
-            variant="secondary"
-            icon={<ThumbsUp size={20} className={isLiked ? 'fill-current' : undefined} />}
-            onClick={handleLike}
-            disabled={!canRate}
-            data-gamepad-action
-            className="!px-4 !gap-1"
-            title={
-              canRate
-                ? isLiked
-                  ? 'Зняти оцінку'
-                  : 'Оцінити'
-                : 'Встановіть переклад, щоб оцінити'
-            }
-          >
-            {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
-          </Button>
+          <LikeButton gameId={game.id} likes={game.likes} />
           {hasShareButton && (
             <>
               <ShareModal

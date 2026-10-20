@@ -214,7 +214,7 @@ class DatabaseManager {
         search_keywords TEXT,
         steam_tag_ids TEXT, -- JSON array of Steam tag ids
         source_language TEXT,
-        likes_count INTEGER NOT NULL DEFAULT 0,
+        likes INTEGER NOT NULL DEFAULT 0,
         user_unlocked INTEGER NOT NULL DEFAULT 0 -- Local-only, never synced from Supabase
       );
 
@@ -229,6 +229,12 @@ class DatabaseManager {
       CREATE TABLE IF NOT EXISTS steam_tag_names (
         tagid INTEGER PRIMARY KEY,
         name TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS my_likes (
+        game_id TEXT PRIMARY KEY,
+        liked INTEGER NOT NULL,
+        server_liked INTEGER NOT NULL DEFAULT 0
       );
 
       -- FTS5 virtual table for full-text search
