@@ -11,6 +11,7 @@ import {
 } from '@/renderer/hooks/useInstalledTranslations';
 import { useLikesStore } from '@/renderer/store/useLikesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
+import { t } from '@/shared/i18n/i18n';
 import { teamToSlug } from '@/shared/search-utils';
 import type { Game } from '../../../shared/types';
 import { getGameImageUrl } from '../../utils/imageUrl';
@@ -205,7 +206,9 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           >
             {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
             <span className="">
-              {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+              {game.ai === 'edited'
+                ? t('aiTranslationBadge.edited')
+                : t('aiTranslationBadge.ai')}
             </span>
           </motion.div>
         )}
@@ -245,7 +248,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
                 data-nav-group="main-links"
                 data-gamepad-action
                 className="px-4!"
-                title="Поділитися"
+                title={t('gameHero.share')}
               />
             </>
           )}
@@ -261,7 +264,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             onClick={handleToggleFavorite}
             data-gamepad-action
             className="px-4!"
-            title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+            title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
           />
         </div>
       </AnimatePresence>

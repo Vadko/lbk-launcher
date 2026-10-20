@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ListFilterIcon } from 'lucide-react';
 import React, { useMemo } from 'react';
+import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useIsTranslationInstalled } from '@/renderer/hooks/useInstalledTranslations';
@@ -12,6 +13,7 @@ import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { getGameGroupKey } from '@/shared/game-filters';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '@/shared/types';
 import { WarningFillIcon } from '../Icons/WarningFillIcon';
 import { GameListItem } from '../Sidebar/GameListItem';
@@ -24,7 +26,7 @@ interface InstalledGamesSectionProps {
 }
 
 export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
-  title = 'Знайдено встановлені ігри',
+  title = t('homeSections.installedGames'),
   showLimit = 3,
 }) => {
   const navigate = useNavigate();
@@ -121,29 +123,25 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
                 {hasInstalledGames ? (
                   <>
                     <h3 className="text-2xl font-head font-bold text-color-mixed mb-1">
-                      Не знайшли перекладів для ваших ігор
+                      {t('installedGamesBanner.noTranslationsTitle')}
                     </h3>
                     <p className="text-sm">
-                      От халепа... Ми знайшли ваші ігри, але перекладів для них поки
-                      немає.
-                      <br />
-                      Завантажте гру з нашого каталогу — відкрийте меню фільтрування, щоб
-                      переглянути доступні переклади.
+                      <Trans
+                        i18nKey="installedGamesBanner.noTranslationsText"
+                        components={{ br: <br /> }}
+                      />
                     </p>
                   </>
                 ) : (
                   <>
                     <h3 className="text-2xl font-head font-bold text-color-mixed mb-1">
-                      Не можемо знайти ваші ігри
+                      {t('installedGamesBanner.noGamesTitle')}
                     </h3>
                     <p className="text-sm">
-                      От халепа... Ми не змогли знайти у вас встановлені ігри, для яких є
-                      переклад.
-                      <br />
-                      Переконайтеся, що маєте хоча б одну гру з нашого каталогу у
-                      лаунчерах — Steam, GOG, EGS, Ubisoft Connect, EA App. А ще можна
-                      відкрити меню фільтрування й переглянути ігри, які ще не
-                      встановлені.
+                      <Trans
+                        i18nKey="installedGamesBanner.noGamesText"
+                        components={{ br: <br /> }}
+                      />
                     </p>
                   </>
                 )}
@@ -167,7 +165,7 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
             data-gamepad-primary-action
             onClick={handleViewAll}
           >
-            Переглянути всі
+            {t('homeSections.viewAll')}
             <ListFilterIcon size={14} />
           </Button>
         )}

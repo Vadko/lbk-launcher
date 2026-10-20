@@ -2,6 +2,7 @@ import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
@@ -72,7 +73,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
-    const teamLabel = game.team || 'Невідомий автор';
+    const teamLabel = game.team || t('gameCard.unknownAuthor');
     const gameTeamTitle = showTeamName
       ? variant
         ? `${teamLabel} ${variant}`
@@ -201,13 +202,13 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                     />
                   )
                 }
-                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+                title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
               />
             </div>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">
                 <PopularIcon />
-                <span>Завантажено гравцями</span>
+                <span>{t('gameCard.downloadedByPlayers')}</span>
                 <span className="ml-auto">
                   <AppNumberFlow
                     value={
@@ -319,7 +320,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
             <div className="text-text-muted text-xs">
               {(game.ai === 'edited' || game.ai === 'non-edited') && (
-                <p>{game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}</p>
+                <p>
+                  {game.ai === 'edited'
+                    ? t('aiTranslationBadge.edited')
+                    : t('aiTranslationBadge.ai')}
+                </p>
               )}
               {showTeamName && <p className="truncate">{averageProgress}%</p>}
             </div>

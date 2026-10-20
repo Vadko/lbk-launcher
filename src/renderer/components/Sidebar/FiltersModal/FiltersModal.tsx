@@ -2,6 +2,7 @@ import { NumberFlowGroup } from '@number-flow/react';
 import { EyeIcon } from 'lucide-react';
 import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
 import type { OptionCount } from '@/shared/game-counter';
+import { t } from '@/shared/i18n/i18n';
 import type {
   ContentTypeFilterType,
   SpecialFilterType,
@@ -15,7 +16,6 @@ import { AppNumberFlow } from '../../ui/AppNumberFlow';
 import {
   CONTENT_TYPE_OPTIONS,
   LIBRARY_FILTER_OPTIONS,
-  SPECIAL_FILTER_OPTIONS,
   STATUS_OPTIONS,
   TRANSLATION_TYPE_OPTIONS,
 } from '../types';
@@ -195,14 +195,14 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const toggleContentType = (value: string) => {
     const type = value as ContentTypeFilterType;
     setStagedContentTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type]
     );
   };
 
   const toggleTranslationType = (value: string) => {
     const type = value as TranslationTypeFilterType;
     setStagedTranslationTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type]
     );
   };
 
@@ -221,7 +221,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const toggleTag = useCallback((id: string | number) => {
     const tagId = id as number;
     setStagedTagIds((prev) =>
-      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
+      prev.includes(tagId) ? prev.filter((item) => item !== tagId) : [...prev, tagId]
     );
   }, []);
 
@@ -249,7 +249,8 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     const result: { key: string; label: string; onRemove: () => void }[] = [];
 
     for (const status of stagedStatuses) {
-      const label = STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status;
+      const option = STATUS_OPTIONS.find((o) => o === status);
+      const label = option ? t(`filterOptions.status.${option}`) : status;
       result.push({
         key: `status-${status}`,
         label,
@@ -258,31 +259,27 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     }
 
     for (const type of stagedContentTypes) {
-      const label = CONTENT_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
       result.push({
         key: `content-${type}`,
-        label,
-        onRemove: () => setStagedContentTypes((prev) => prev.filter((t) => t !== type)),
+        label: t(`filterOptions.contentType.${type}`),
+        onRemove: () =>
+          setStagedContentTypes((prev) => prev.filter((item) => item !== type)),
       });
     }
 
     for (const type of stagedTranslationTypes) {
-      const label = TRANSLATION_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type;
       result.push({
         key: `translation-${type}`,
-        label,
+        label: t(`filterOptions.translationType.${type}`),
         onRemove: () =>
-          setStagedTranslationTypes((prev) => prev.filter((t) => t !== type)),
+          setStagedTranslationTypes((prev) => prev.filter((item) => item !== type)),
       });
     }
 
     if (stagedSpecialFilter) {
-      const label =
-        SPECIAL_FILTER_OPTIONS.find((o) => o.value === stagedSpecialFilter)?.label ??
-        stagedSpecialFilter;
       result.push({
         key: `special-${stagedSpecialFilter}`,
-        label,
+        label: t(`filterOptions.library.${stagedSpecialFilter}`),
         onRemove: () => setStagedSpecialFilter(null),
       });
     }
@@ -296,11 +293,11 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     }
 
     for (const tagId of stagedTagIds) {
-      const label = tags.find((t) => t.tagid === tagId)?.name ?? String(tagId);
+      const label = tags.find((tag) => tag.tagid === tagId)?.name ?? String(tagId);
       result.push({
         key: `tag-${tagId}`,
         label,
-        onRemove: () => setStagedTagIds((prev) => prev.filter((t) => t !== tagId)),
+        onRemove: () => setStagedTagIds((prev) => prev.filter((item) => item !== tagId)),
       });
     }
 
@@ -318,14 +315,14 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const visibleContentTypeOptions = CONTENT_TYPE_OPTIONS.filter(
     (option) =>
       !globalCounts ||
-      globalCounts.contentTypes[option.value] !== 0 ||
-      stagedContentTypes.includes(option.value)
+      globalCounts.contentTypes[option] !== 0 ||
+      stagedContentTypes.includes(option)
   );
   const visibleLibraryOptions = LIBRARY_FILTER_OPTIONS.filter(
     (option) =>
       !globalCounts ||
-      globalCounts.specialFilters[option.value] !== 0 ||
-      stagedSpecialFilter === option.value
+      globalCounts.specialFilters[option] !== 0 ||
+      stagedSpecialFilter === option
   );
 
   return (
@@ -333,7 +330,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       <Modal
         isOpen={isOpen}
         onClose={handleClose}
-        title="Фільтри та сортування"
+        title={t('catalogFilters.title')}
         usePortal
         footer={
           <button
@@ -343,7 +340,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
             className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg text-sm font-medium bg-color-main text-text-dark hover:opacity-90 transition-opacity"
           >
             <EyeIcon size={16} />
-            <span>Переглянути</span>
+            <span>{t('catalogFilters.apply')}</span>
             {counts && (
               <span className="tabular-nums opacity-70">
                 <AppNumberFlow value={counts.total} />
@@ -355,19 +352,19 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
         <div className="flex flex-col gap-6">
           {chips.length > 0 && (
             <div>
-              <p className={SECTION_TITLE_CLASS}>Активні фільтри</p>
+              <p className={SECTION_TITLE_CLASS}>{t('catalogFilters.activeFilters')}</p>
               <ActiveFilterChips chips={chips} />
             </div>
           )}
 
           <div>
-            <p className={SECTION_TITLE_CLASS}>Статус</p>
+            <p className={SECTION_TITLE_CLASS}>{t('catalogFilters.statusSection')}</p>
             <FilterPillGroup
               options={STATUS_OPTIONS.map((o) => ({
-                label: o.label,
-                value: o.value,
-                ...(counts && (counts.statuses.get(o.value) ?? NO_GAMES)),
-                icon: STATUS_ICONS[o.value],
+                label: t(`filterOptions.status.${o}`),
+                value: o,
+                ...(counts && (counts.statuses.get(o) ?? NO_GAMES)),
+                icon: STATUS_ICONS[o],
               }))}
               isSelected={(value) => stagedStatuses.includes(value)}
               onToggle={toggleStatus}
@@ -376,13 +373,15 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
 
           {visibleContentTypeOptions.length > 0 && (
             <div>
-              <p className={SECTION_TITLE_CLASS}>Тип контенту</p>
+              <p className={SECTION_TITLE_CLASS}>
+                {t('catalogFilters.contentTypeSection')}
+              </p>
               <FilterPillGroup
                 options={visibleContentTypeOptions.map((o) => ({
-                  label: o.label,
-                  value: o.value,
-                  count: counts?.contentTypes[o.value],
-                  icon: CONTENT_TYPE_ICONS[o.value],
+                  label: t(`filterOptions.contentType.${o}`),
+                  value: o,
+                  count: counts?.contentTypes[o],
+                  icon: CONTENT_TYPE_ICONS[o],
                 }))}
                 isSelected={(value) =>
                   stagedContentTypes.includes(value as ContentTypeFilterType)
@@ -394,13 +393,15 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
 
           {!hideAiTranslations && (
             <div>
-              <p className={SECTION_TITLE_CLASS}>Тип перекладу</p>
+              <p className={SECTION_TITLE_CLASS}>
+                {t('catalogFilters.translationTypeSection')}
+              </p>
               <FilterPillGroup
                 options={TRANSLATION_TYPE_OPTIONS.map((o) => ({
-                  label: o.label,
-                  value: o.value,
-                  ...counts?.translationTypes.get(o.value),
-                  icon: TRANSLATION_TYPE_ICONS[o.value],
+                  label: t(`filterOptions.translationType.${o}`),
+                  value: o,
+                  ...counts?.translationTypes.get(o),
+                  icon: TRANSLATION_TYPE_ICONS[o],
                 }))}
                 isSelected={(value) =>
                   stagedTranslationTypes.includes(value as TranslationTypeFilterType)
@@ -412,13 +413,13 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
 
           {visibleLibraryOptions.length > 0 && (
             <div>
-              <p className={SECTION_TITLE_CLASS}>Бібліотека</p>
+              <p className={SECTION_TITLE_CLASS}>{t('catalogFilters.librarySection')}</p>
               <FilterPillGroup
                 options={visibleLibraryOptions.map((o) => ({
-                  label: o.label,
-                  value: o.value,
-                  count: counts?.specialFilters[o.value],
-                  icon: LIBRARY_ICONS[o.value],
+                  label: t(`filterOptions.library.${o}`),
+                  value: o,
+                  count: counts?.specialFilters[o],
+                  icon: LIBRARY_ICONS[o],
                 }))}
                 isSelected={(value) => stagedSpecialFilter === value}
                 onToggle={toggleLibraryFilter}
@@ -428,26 +429,26 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className={SECTION_TITLE_CLASS}>Автори</p>
+              <p className={SECTION_TITLE_CLASS}>{t('catalogFilters.authorsSection')}</p>
               <SearchableFilterList
                 items={authorItems}
                 selectedIds={stagedAuthors}
                 onToggle={toggleAuthor}
                 isLoading={authorsLoading}
-                searchPlaceholder="Пошук автора..."
-                emptyLabel="Автора не знайдено"
+                searchPlaceholder={t('catalogFilters.searchAuthor')}
+                emptyLabel={t('catalogFilters.authorNotFound')}
               />
             </div>
 
             <div>
-              <p className={SECTION_TITLE_CLASS}>Теги</p>
+              <p className={SECTION_TITLE_CLASS}>{t('catalogFilters.tagsSection')}</p>
               <SearchableFilterList
                 items={tagItems}
                 selectedIds={stagedTagIds}
                 onToggle={toggleTag}
                 isLoading={tagsLoading}
-                searchPlaceholder="Пошук категорії..."
-                emptyLabel="Категорію не знайдено"
+                searchPlaceholder={t('catalogFilters.searchTag')}
+                emptyLabel={t('catalogFilters.tagNotFound')}
               />
             </div>
           </div>

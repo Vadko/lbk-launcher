@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import { isMacOS, isWindows } from '../utils/platform';
 
 const mkdir = promisify(fs.mkdir);
@@ -83,7 +84,9 @@ export async function copyDirectory(source: string, destination: string): Promis
     console.log(`Copied files from ${source} to ${destination}`);
   } catch (error) {
     throw new Error(
-      `Помилка копіювання файлів: ${error instanceof Error ? error.message : 'Unknown error'}`
+      t('installFailure.copyFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     );
   }
 }

@@ -2,6 +2,7 @@ import { Copy } from 'lucide';
 import React, { useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { trackEvent } from '@/renderer/utils/analytics';
+import { t } from '@/shared/i18n/i18n';
 import {
   FacebookIcon,
   RedditIcon,
@@ -110,7 +111,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const copyPhase = useActionPhase({ minPendingMs: 0 });
   const copied = copyPhase.phase === 'done';
   const shareUrl = `https://lbklauncher.com/open/${gameSlug}/${teamSlug}`;
-  const shareText = `${gameName} з українською локалізацією від ${teamName} можна зручно встановити у LBK Launcher`;
+  const shareText = t('shareModal.text', { game: gameName, team: teamName });
   const socialPlatforms = createSocialPlatforms();
 
   const handleCopy = () => {
@@ -150,13 +151,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Поділитися"
+      title={t('shareModal.title')}
       classNames="max-w-[514px]!"
       usePortal
     >
       <div className="space-y-14">
         <div>
-          <p className="text-sm text-text-muted mb-3">Поділитися в:</p>
+          <p className="text-sm text-text-muted mb-3">{t('shareModal.shareIn')}</p>
           <div className="flex flex-wrap gap-3">
             {socialPlatforms.map((platform) => (
               <button
@@ -171,9 +172,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </div>
         </div>
         <div>
-          <p className="text-sm text-text-muted mb-3">
-            Або скопіюйте посилання чи текст:
-          </p>
+          <p className="text-sm text-text-muted mb-3">{t('shareModal.copyHint')}</p>
           <div className="flex gap-4">
             <input
               type="text"
@@ -201,13 +200,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             >
               <span style={{ display: 'grid', textAlign: 'center' }}>
                 <span style={GHOST_LABEL_STYLE} aria-hidden="true">
-                  Копіювати текст
+                  {t('shareModal.copyText')}
                 </span>
                 <span style={GHOST_LABEL_STYLE} aria-hidden="true">
-                  Скопійовано!
+                  {t('shareModal.copied')}
                 </span>
                 <span style={STACKED_LABEL_STYLE}>
-                  {copied ? 'Скопійовано!' : 'Копіювати текст'}
+                  {copied ? t('shareModal.copied') : t('shareModal.copyText')}
                 </span>
               </span>
             </Button>

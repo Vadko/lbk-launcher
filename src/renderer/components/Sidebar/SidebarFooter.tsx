@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
@@ -52,7 +53,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити посібники та інструменти"
+              title={t('sidebarNav.guides')}
             >
               <BookOpenTextIcon size={20} className="mx-auto text-text-muted" />
             </button>
@@ -61,7 +62,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити сторінку донаторів"
+              title={t('sidebarNav.donators')}
             >
               <MedalIcon size={20} className="mx-auto text-text-muted" />
             </button>
@@ -70,7 +71,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити новини"
+              title={t('sidebarNav.news')}
             >
               <NewspaperIcon size={20} className="mx-auto text-text-muted" />
             </button>
@@ -79,7 +80,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title="Відкрити головну сторінку"
+              title={t('sidebarNav.home')}
             >
               <HomeIcon size={20} className="mx-auto text-text-muted" />
             </button>
@@ -90,8 +91,8 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title={
                 gamepadSoundsEnabled
-                  ? 'Вимкнути звуки геймпада'
-                  : 'Увімкнути звуки геймпада'
+                  ? t('sidebarNav.gamepadSoundsOff')
+                  : t('sidebarNav.gamepadSoundsOn')
               }
             >
               <AppActionIcon
@@ -108,7 +109,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
           className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
-          title="Сповіщення"
+          title={t('sidebarNav.notifications')}
         >
           <AppActionIcon
             phase="idle"
@@ -133,7 +134,7 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
           className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
-          title="Налаштування"
+          title={t('sidebarNav.settings')}
         >
           <SettingsIcon size={20} className="mx-auto text-text-muted" />
         </button>

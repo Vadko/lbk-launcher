@@ -2407,6 +2407,34 @@ export type Database = {
           },
         ]
       }
+      support_message_links: {
+        Row: {
+          created_at: string
+          group_message_id: number
+          user_id: number
+          user_message_id: number
+        }
+        Insert: {
+          created_at?: string
+          group_message_id: number
+          user_id: number
+          user_message_id: number
+        }
+        Update: {
+          created_at?: string
+          group_message_id?: number
+          user_id?: number
+          user_message_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_message_links_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "user_threads"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       telegram_channel_queue: {
         Row: {
           content_type: string

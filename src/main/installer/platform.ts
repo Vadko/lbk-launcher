@@ -57,12 +57,14 @@ function checkNewUninstallRegistryKeys(before: Set<string>): void {
     const displayName = getRegistryString(entry.hive, entry.key, 'DisplayName');
     const uninstallString = getRegistryString(entry.hive, entry.key, 'UninstallString');
     const name = displayName?.toLowerCase() ?? '';
+    /* eslint-disable no-restricted-syntax -- words matched in installers' DisplayName, not UI text */
     if (
       name.includes('українізатор') ||
       name.includes('українською') ||
       name.includes('localization') ||
       name.includes('ukrainizator')
     ) {
+      /* eslint-enable no-restricted-syntax */
       console.log('[Installer] New Uninstall registry key detected:', entry.id);
       console.log('[Installer]   DisplayName:', displayName ?? '(not found)');
       console.log('[Installer]   UninstallString:', uninstallString ?? '(not found)');

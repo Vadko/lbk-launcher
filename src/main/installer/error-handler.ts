@@ -1,3 +1,4 @@
+import { t } from '@/shared/i18n/i18n';
 import { ManualSelectionError, NetworkError, RateLimitError } from './errors';
 
 /**
@@ -22,28 +23,20 @@ export function handleInstallationError(error: unknown): never {
       message.includes('enotfound') ||
       message.includes('econnrefused')
     ) {
-      throw new Error(
-        'Не вдалося підключитися до сервера.\n\nПеревірте підключення до Інтернету.'
-      );
+      throw new Error(t('installFailure.network'));
     }
     if (message.includes('eacces') || message.includes('eperm')) {
-      throw new Error(
-        'Недостатньо прав для встановлення.\n\nЗапустіть застосунок від імені адміністратора.'
-      );
+      throw new Error(t('installFailure.permission'));
     }
     if (message.includes('enospc')) {
-      throw new Error(
-        'Недостатньо місця на диску.\n\nЗвільніть місце та спробуйте знову.'
-      );
+      throw new Error(t('installFailure.diskSpace'));
     }
     if (message.includes('enoent')) {
-      throw new Error(
-        'Файл або папку не знайдено.\n\nПереконайтеся, що гра встановлена.'
-      );
+      throw new Error(t('installFailure.notFound'));
     }
 
     throw new Error(error.message);
   }
 
-  throw new Error('Невідома помилка встановлення.\n\nСпробуйте ще раз.');
+  throw new Error(t('installFailure.unknown'));
 }

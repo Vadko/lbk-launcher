@@ -1,6 +1,7 @@
 import { Send } from 'lucide';
 import React, { useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
+import { t } from '@/shared/i18n/i18n';
 import { trackEvent } from '../../utils/analytics';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
@@ -57,15 +58,15 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
         });
         closeWhenSettledRef.current = true;
       } else if (result.error === 'rate_limit') {
-        setError('Зачекайте кілька хвилин перед наступною відправкою');
+        setError(t('sendLogs.rateLimit'));
         trackEvent('Tech Log Rate Limited');
       } else {
-        setError(result.error || 'Не вдалося надіслати логи');
+        setError(result.error || t('sendLogs.sendFailed'));
         trackEvent('Tech Log Error', { Error: result.error });
       }
     } catch (err) {
       console.error('Failed to send logs:', err);
-      setError('Помилка мережі. Спробуйте пізніше');
+      setError(t('sendLogs.networkError'));
     }
   };
 
@@ -73,7 +74,7 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={crashReason ? 'Звіт про помилку' : 'Відправити логи'}
+      title={crashReason ? t('sendLogs.titleCrash') : t('sendLogs.title')}
       classNames="max-w-[520px]!"
       footer={
         <div className="grid gap-4">
@@ -85,11 +86,9 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
             className="w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark bg-color-main hover:opacity-90 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <AppActionIcon phase={phase} icon={Send} size={18} inheritColor />
-            Надіслати логи
+            {t('sendLogs.submit')}
           </button>
-          <p className="text-xs text-text-muted">
-            Надіславши логи, ви погоджуєтеся на обробку ваших персональних даних.
-          </p>
+          <p className="text-xs text-text-muted">{t('sendLogs.consent')}</p>
         </div>
       }
     >
@@ -97,7 +96,9 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
         {/* Crash reason */}
         {crashReason && (
           <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-xs font-medium text-red-400 mb-1">Причина помилки:</p>
+            <p className="text-xs font-medium text-red-400 mb-1">
+              {t('sendLogs.crashReason')}
+            </p>
             <p className="text-xs text-red-300 font-mono break-all">{crashReason}</p>
           </div>
         )}
@@ -108,13 +109,13 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
             htmlFor="log-message"
             className="block text-sm font-medium text-text-muted mb-3"
           >
-            Опис (необов'язково)
+            {t('sendLogs.descriptionLabel')}
           </label>
           <textarea
             id="log-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Опишіть що сталося, щоб ми могли швидше розібратися..."
+            placeholder={t('sendLogs.placeholder')}
             rows={4}
             maxLength={500}
             disabled={isPending}
