@@ -13,6 +13,7 @@ import { logIfChanged } from './log-if-changed';
 import { findRockstarGame } from './rockstar';
 import {
   findSteamGame,
+  findSteamGameByAppId,
   getInstalledSteamGamePaths,
   getInstalledSteamGames,
 } from './steam';
@@ -34,8 +35,17 @@ export function detectGamePath(
   installPath: InstallPath | null | undefined,
   steamAppId?: number | null
 ): GamePath | null {
-  if (!installPath || !installPath.type || !installPath.path) {
+  if (!installPath || !installPath.type) {
     return null;
+  }
+
+  if (!installPath.path) {
+    // A Workshop translation stores a Steam entry without a folder; Steam resolves it by app id.
+    if (installPath.type !== 'steam' || steamAppId == null) {
+      return null;
+    }
+    const folder = findSteamGameByAppId(steamAppId);
+    return { platform: 'steam', path: folder || '', exists: !!folder };
   }
 
   let foundPath: string | null = null;

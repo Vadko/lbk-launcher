@@ -620,6 +620,15 @@ export function findSteamGame(
   return null;
 }
 
+/** Steam game folder by app id alone, for entries stored without a folder name. */
+export function findSteamGameByAppId(steamAppId: number): string | null {
+  const steamPath = getSteamPath();
+  if (!steamPath) {
+    return null;
+  }
+  return resolveSteamGameByAppId(getSteamLibraryFolders(steamPath), steamAppId);
+}
+
 /**
  * Get all installed Steam games as a Map
  */
