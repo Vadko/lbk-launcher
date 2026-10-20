@@ -1,5 +1,6 @@
 import { CheckCircleIcon, InfoIcon, XCircleIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useModalStore } from '../../store/useModalStore';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Modal } from './Modal';
@@ -42,7 +43,7 @@ export const GlobalModal: React.FC = () => {
         {config.selectConfig && (
           <div className="w-full space-y-2">
             <label className="block text-sm font-medium text-text-main text-left">
-              {config.selectConfig.placeholder || 'Оберіть варіант'}:
+              {config.selectConfig.placeholder || t('selectDropdown.placeholder')}:
             </label>
             <SelectDropdown
               options={config.selectConfig.options}
@@ -82,7 +83,7 @@ export const GlobalModal: React.FC = () => {
                   onClick={closeModal}
                   className="w-full px-6 py-3 rounded-xl bg-glass-heavy text-text-muted font-semibold hover:opacity-90 transition-opacity"
                 >
-                  Скасувати
+                  {t('common.cancel')}
                 </button>
               )}
             </>
@@ -92,7 +93,7 @@ export const GlobalModal: React.FC = () => {
               data-gamepad-confirm
               className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
             >
-              Зрозуміло
+              {t('common.ok')}
             </button>
           )}
         </div>

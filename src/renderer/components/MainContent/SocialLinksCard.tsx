@@ -1,5 +1,6 @@
 import { BookIcon, GlobeIcon, SendIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import {
   DiscordIcon,
@@ -118,7 +119,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
       data-nav-group="main-links"
       data-gamepad-action="true"
       className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border ${config.hoverColor} hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 ease-out`}
-      title={`Відкрити в ${config.title}`}
+      title={t('gameLinks.openIn', { store: config.title })}
       href={config.url}
       target="_blank"
     >
@@ -139,7 +140,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
 const WEBSITE_KINDS = [
   {
     match: 'steamcommunity.com/sharedfiles/filedetails',
-    label: 'Steam посібник',
+    label: t('gameLinks.steamGuide'),
     color: 'text-color-accent',
     icon: <BookIcon size={18} />,
   },
@@ -162,7 +163,7 @@ function describeWebsite(url: string): Omit<SocialLinkProps, 'url'> {
   const kind = WEBSITE_KINDS.find((candidate) => lowerUrl.includes(candidate.match));
   return {
     icon: kind?.icon ?? <GlobeIcon size={18} />,
-    label: kind?.label ?? 'Вебсайт',
+    label: kind?.label ?? t('gameLinks.website'),
     color: kind?.color ?? 'text-color-accent',
   };
 }
@@ -230,11 +231,13 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
   return (
     (stores.length > 0 || links.length > 0) && (
       <div className="glass-card-no-motion">
-        <h3 className="text-lg font-head font-semibold text-text-main mb-4">Посилання</h3>
+        <h3 className="text-lg font-head font-semibold text-text-main mb-4">
+          {t('gameLinks.title')}
+        </h3>
         {stores.length > 0 && (
           <>
             <p className="text-base font-head font-semibold text-text-muted mb-2">
-              Крамниці
+              {t('gameLinks.stores')}
             </p>
             <div className="flex flex-wrap items-center gap-3 mb-3">
               {stores.map((link, index) => (
@@ -246,7 +249,9 @@ export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
 
         {links.length > 0 && (
           <>
-            <p className="text-base font-head font-semibold text-text-muted mb-2">Інше</p>
+            <p className="text-base font-head font-semibold text-text-muted mb-2">
+              {t('gameLinks.other')}
+            </p>
             <div className="flex flex-wrap items-center gap-3">
               {links.map((link, index) => (
                 <SocialLink key={index} {...link} />

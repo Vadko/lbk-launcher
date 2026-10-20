@@ -1,5 +1,6 @@
 import { AlertTriangleIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { InstallationStatusTone } from '../../../shared/types';
 
 interface InstallationStatusMessageProps {
@@ -44,15 +45,15 @@ export const InstallationStatusMessage: React.FC<InstallationStatusMessageProps>
         <span className={`text-sm font-medium ${tone?.text ?? 'text-white'}`}>
           {statusMessage ||
             (isUpdateAvailable
-              ? 'Оновлення українізатора...'
-              : 'Встановлення українізатора...')}
+              ? t('installStatus.updating')
+              : t('installStatus.installing'))}
         </span>
       </div>
       {!isOnline && isInstalling && (
         <div className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
           <p className="text-xs text-red-400 flex items-center gap-1.5">
             <AlertTriangleIcon size={14} className="shrink-0" />
-            Відсутнє підключення до Інтернету. Завантаження призупинено.
+            {t('installStatus.offlinePaused')}
           </p>
         </div>
       )}

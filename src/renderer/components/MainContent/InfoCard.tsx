@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
@@ -87,13 +88,15 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   return (
     <div ref={cardRef} className="glass-card-no-motion">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-head font-semibold text-text-main">Інформація</h3>
+        <h3 className="text-lg font-head font-semibold text-text-main">
+          {t('gameInfo.title')}
+        </h3>
         <div className="flex items-center gap-2">
           {featuredInfo && (
             <Tooltip content={featuredInfo.description} align="left">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 rounded-sm text-amber-400 text-xs cursor-help">
                 <AwardIcon size={12} />
-                <span>Відзнака</span>
+                <span>{t('gameInfo.award')}</span>
               </div>
             </Tooltip>
           )}
@@ -107,7 +110,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
         <motion.div layout transition={{ duration: 0.2 }}>
           <InfoItem
             icon={<Gamepad2Icon size={18} />}
-            label="Платформи"
+            label={t('gameInfo.platforms')}
             value={platformsText}
             compact={compact}
           />
@@ -116,7 +119,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<CalendarIcon size={18} />}
-              label="Версія"
+              label={t('gameInfo.version')}
               value={game.version}
               compact={compact}
             />
@@ -126,7 +129,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<HardDriveIcon size={18} />}
-              label="Розмір"
+              label={t('gameInfo.size')}
               value={game.archive_size}
               compact={compact}
             />
@@ -136,7 +139,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<Volume2Icon size={18} />}
-              label="Озвучення"
+              label={t('gameInfo.voice')}
               value={game.voice_archive_size}
               compact={compact}
             />
@@ -151,13 +154,17 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
               <div
                 className={`flex gap-1 transition-all duration-200 ${compact ? 'items-center flex-row' : 'flex-col'}`}
               >
-                <div className="text-xs text-text-muted">Досягнення</div>
+                <div className="text-xs text-text-muted">
+                  {t('gameInfo.achievements')}
+                </div>
                 <div className="text-sm font-medium text-text-main">
                   {game.achievements_archive_size}
                 </div>
                 {game.achievements_third_party && (
                   <div className="text-xs text-text-muted mt-0.5">
-                    від {game.achievements_third_party}
+                    {t('gameInfo.achievementsBy', {
+                      author: game.achievements_third_party,
+                    })}
                   </div>
                 )}
               </div>
@@ -168,7 +175,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<BellIcon size={18} />}
-              label="Підписників"
+              label={t('gameInfo.subscribers')}
               // Key by game: switching games isn't a value change, so there's nothing to animate
               value={<AppNumberFlow key={game.id} value={game.subscriptions!} />}
               compact={compact}
@@ -179,10 +186,10 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<DownloadIcon size={18} />}
-              label="Завантажень"
+              label={t('gameInfo.downloads')}
               value={
                 !game.downloads || game.downloads < 20 ? (
-                  'до 20'
+                  t('gameInfo.downloadsUnder20')
                 ) : (
                   <AppNumberFlow key={game.id} value={game.downloads} />
                 )
@@ -195,7 +202,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<CalendarPlusIcon size={18} />}
-              label="Створено"
+              label={t('gameInfo.created')}
               value={formatDate(game.created_at)}
               compact={compact}
             />
@@ -205,7 +212,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
           <motion.div layout transition={{ duration: 0.2 }}>
             <InfoItem
               icon={<CalendarClockIcon size={18} />}
-              label="Оновлено"
+              label={t('gameInfo.updated')}
               value={formatDate(game.translation_updated_at)}
               compact={compact}
             />

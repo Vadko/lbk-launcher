@@ -2,6 +2,7 @@ import { PlayIcon } from 'lucide-react';
 import React from 'react';
 import LiteYouTubeEmbed from 'react-lite-youtube-embed';
 import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css';
+import { t } from '@/shared/i18n/i18n';
 
 interface VideoCardProps {
   videoUrl: string;
@@ -34,7 +35,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
     // If not a YouTube URL or can't extract ID, show a button to open link
     return (
       <div className="glass-card-no-motion">
-        <h3 className="text-lg font-head font-semibold text-text-main mb-3">Відео</h3>
+        <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+          {t('gameVideo.title')}
+        </h3>
         <a
           href={videoUrl}
           target="_blank"
@@ -43,7 +46,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
           className="flex items-center gap-2 px-4 py-3 rounded-lg bg-linear-to-r/srgb from-color-accent/20 to-color-main/20 border border-color-accent/30 hover:border-color-accent/60 transition-all duration-300 text-white hover:shadow-[0_0_20px_rgba(255,164,122,0.3)]"
         >
           <PlayIcon size={20} className="text-color-accent" />
-          <span className="font-medium">Переглянути відео</span>
+          <span className="font-medium">{t('gameVideo.watch')}</span>
         </a>
       </div>
     );
@@ -52,14 +55,14 @@ export const VideoCard: React.FC<VideoCardProps> = ({ videoUrl }) => {
   return (
     <div className="glass-card-no-motion">
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-        Трейлер українізації
+        {t('gameVideo.trailer')}
       </h3>
       <div className="max-w-3xl mx-auto">
         <div className="rounded-lg overflow-hidden">
           <LiteYouTubeEmbed
             id={videoId}
-            title="Трейлер українізації"
-            announce="Відтворити"
+            title={t('gameVideo.trailer')}
+            announce={t('gameVideo.play')}
             poster="hqdefault"
             cookie={false}
           />

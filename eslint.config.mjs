@@ -4,6 +4,21 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import unusedImports from 'eslint-plugin-unused-imports';
 import tseslint from 'typescript-eslint';
 
+const noUnknownCast = {
+  selector: "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
+  message: 'Parse untrusted values with a zod schema instead of `as unknown as`.',
+};
+
+const CYRILLIC = '/[А-Яа-яЁёҐґЄєІіЇї]/';
+const noUkrainianLiterals = [
+  `Literal[value=${CYRILLIC}]`,
+  `TemplateElement[value.raw=${CYRILLIC}]`,
+  `JSXText[value=${CYRILLIC}]`,
+].map((selector) => ({
+  selector,
+  message: "Put user-visible text into packages/lbk-i18n/src/uk.ts and read it with t('…').",
+}));
+
 export default tseslint.config(
   {
     ignores: [
@@ -80,14 +95,7 @@ export default tseslint.config(
         },
       ],
 
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector:
-            "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
-          message: 'Parse untrusted values with a zod schema instead of `as unknown as`.',
-        },
-      ],
+      'no-restricted-syntax': ['error', noUnknownCast, ...noUkrainianLiterals],
 
       'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
       'no-console': 'off',
@@ -118,6 +126,20 @@ export default tseslint.config(
     // Supabase codegen output.
     files: ['src/lib/database.types.ts'],
     rules: { 'max-lines': 'off' },
+  },
+  {
+    // Tests assert the rendered text, and these sources match Ukrainian catalog data rather than show it.
+    files: [
+      '**/*.test.ts',
+      '**/*.fixture.ts',
+      'e2e/**',
+      'packages/lbk-i18n/src/uk.ts',
+      'src/main/game-detector/game-titles.ts',
+      'src/renderer/constants/specialTranslators.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': ['error', noUnknownCast],
+    },
   },
   {
     // The whole Ukrainian dictionary stays in one file so a key is found in one place.

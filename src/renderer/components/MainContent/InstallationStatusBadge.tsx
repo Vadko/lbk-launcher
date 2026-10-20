@@ -1,5 +1,6 @@
 import { CircleCheck, CircleX, Zap } from 'lucide';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { AppActionIcon } from '../ui/AppActionIcon';
 
 interface InstallationStatusBadgeProps {
@@ -13,17 +14,14 @@ const STATUS = {
   error: {
     icon: CircleX,
     className: 'text-red-500 animate-pulse',
-    text: 'Помилка встановлення',
   },
   update: {
     icon: Zap,
     className: 'text-color-accent animate-pulse',
-    text: 'Доступне оновлення:',
   },
   installed: {
     icon: CircleCheck,
     className: 'text-color-main',
-    text: 'Українізатор встановлено:',
   },
 };
 
@@ -33,8 +31,8 @@ export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = (
   hasInstallError,
   newVersion,
 }) => {
-  const status =
-    STATUS[hasInstallError ? 'error' : isUpdateAvailable ? 'update' : 'installed'];
+  const kind = hasInstallError ? 'error' : isUpdateAvailable ? 'update' : 'installed';
+  const status = STATUS[kind];
 
   return (
     <div className="flex items-center gap-1.5">
@@ -44,7 +42,7 @@ export const InstallationStatusBadge: React.FC<InstallationStatusBadgeProps> = (
         size={16}
         className={status.className}
       />
-      <div className="text-text-main">{status.text}</div>
+      <div className="text-text-main">{t(`installStatus.${kind}`)}</div>
       {!hasInstallError && (
         <div className="text-sm text-text-muted mt-0.5">
           v{installedVersion} {isUpdateAvailable ? `→ v${newVersion}` : ''}

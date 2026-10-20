@@ -1,5 +1,6 @@
 import { DollarSignIcon, ExternalLinkIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 
 const UAH_FORMAT = {
@@ -51,14 +52,16 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <DollarSignIcon size={20} className="text-neon-green" />
-          <h3 className="text-lg font-head font-semibold text-text-main">Збір коштів</h3>
+          <h3 className="text-lg font-head font-semibold text-text-main">
+            {t('fundraising.title')}
+          </h3>
         </div>
         {isClickable && <ExternalLinkIcon size={16} className="text-text-muted" />}
       </div>
 
       <div className="space-y-3">
         <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">Зібрано</span>
+          <span className="text-text-muted">{t('fundraising.raised')}</span>
           <span className="text-text-main font-semibold">
             <AppNumberFlow value={current} format={UAH_FORMAT} />
           </span>
@@ -72,7 +75,7 @@ export const FundraisingProgressCard: React.FC<FundraisingProgressCardProps> = (
         </div>
 
         <div className="flex justify-between items-center text-sm">
-          <span className="text-text-muted">Ціль</span>
+          <span className="text-text-muted">{t('fundraising.goal')}</span>
           <span className="text-text-muted">
             <AppNumberFlow value={goal} format={UAH_FORMAT} />
           </span>

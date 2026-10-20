@@ -1,5 +1,6 @@
 import { StarIcon } from 'lucide-react';
 import React, { useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -81,7 +82,9 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
               ref={popoverRef}
               className="absolute left-0 bottom-full mb-2 z-100 min-w-[200px] p-3 rounded-xl bg-bg-dark border border-border shadow-2xl"
             >
-              <div className="text-xs text-text-muted mb-2">Інші автори:</div>
+              <div className="text-xs text-text-muted mb-2">
+                {t('authorsList.others')}
+              </div>
               <div className="space-y-1">
                 {hiddenAuthors.map((author) => {
                   const specialInfo = getSpecialTranslatorInfo(author);

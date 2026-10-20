@@ -1,5 +1,7 @@
 import { SettingsIcon, TerminalSquareIcon } from 'lucide-react';
 import React from 'react';
+import { Trans } from 'react-i18next';
+import { t } from '@/shared/i18n/i18n';
 import { isExeInstaller } from '@/shared/installer-kind';
 import type { Game } from '@/shared/types';
 import { getLanguageHint } from '../../helpers/getLanguageHint';
@@ -30,7 +32,7 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
           ) : (
             <TerminalSquareIcon size={16} className="shrink-0" />
           )}
-          {isExe ? 'Інсталятор' : 'Скрипт'}
+          {t('gameNotice.kind', { context: isExe ? 'installer' : 'script' })}
         </span>
       )}
       <div className="divider w-0 h-auto border-l border-border-hover last:hidden first:hidden" />
@@ -38,8 +40,11 @@ export const ImportantNotice: React.FC<ImportantNoticeProps> = ({ game }) => {
       {langHint && (
         <div className="flex items-center gap-2">
           <span className="text-text-muted">
-            В налаштуваннях гри оберіть{' '}
-            <span className="text-color-accent font-medium">{langHint} мову</span>
+            <Trans
+              i18nKey="gameNotice.language"
+              values={{ language: langHint }}
+              components={{ accent: <span className="text-color-accent font-medium" /> }}
+            />
           </span>
         </div>
       )}

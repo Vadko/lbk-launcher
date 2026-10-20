@@ -1,5 +1,6 @@
 import { BookmarkIcon, DownloadIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
 import { SortDropdown } from './SortDropdown';
@@ -38,7 +39,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <Button
           variant="filter"
           onClick={onOpenFilters}
-          title="Фільтри"
+          title={t('filterBar.filters')}
           {...headerItemProps}
           className={`
             min-w-0 transition-[color,background-color,border-color]!
@@ -49,7 +50,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <span
             className={`truncate ${hasModalFilters ? '[@container(max-width:296px)]:hidden' : ''}`}
           >
-            Фільтри
+            {t('filterBar.filters')}
           </span>
           {hasModalFilters && (
             <span className="flex shrink-0 items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-color-accent text-text-dark text-xs font-semibold">
@@ -64,7 +65,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onClick={onClearAll}
             {...headerItemProps}
             className="rounded-l-none shrink-0"
-            title="Очистити всі фільтри"
+            title={t('filterBar.clearAll')}
           >
             <XIcon size={14} />
           </Button>
@@ -80,9 +81,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex-1 justify-end flex gap-2 shrink-0">
         <Button
           variant="filter"
-          title={`${
-            isInstalledQuickActive ? 'Приховати' : 'Показати'
-          } завантажені переклади`}
+          title={
+            isInstalledQuickActive
+              ? t('filterBar.hideInstalled')
+              : t('filterBar.showInstalled')
+          }
           onClick={onToggleInstalledQuick}
           {...headerItemProps}
           className={
@@ -95,7 +98,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </Button>
         <Button
           variant="filter"
-          title={`${isFavoriteQuickActive ? 'Приховати' : 'Показати'} улюблене`}
+          title={
+            isFavoriteQuickActive
+              ? t('filterBar.hideFavorites')
+              : t('filterBar.showFavorites')
+          }
           onClick={onToggleFavoriteQuick}
           {...headerItemProps}
           className={

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useNewGames, useUpdatedGames } from '@/renderer/queries/useHomePageGames';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
+import { t } from '@/shared/i18n/i18n';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
@@ -120,7 +121,7 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="text-center text-text-muted py-8"
             >
-              <p>Ігор не знайдено</p>
+              <p>{t('homeSections.noGames')}</p>
             </motion.div>
           ) : (
             <React.Fragment key={`games-${activeTabSortOrder}`}>
