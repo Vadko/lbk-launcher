@@ -3,6 +3,7 @@
  * Detects installed games from various platforms (Steam, Epic, GOG, Rockstar, Xbox)
  */
 
+import { G } from '@mobily/ts-belt';
 import type { DetectedGame, InstallPath } from '../../shared/types';
 import { fetchGames } from '../api';
 import { normalizeInstalledFolder } from '../utils/install-path';
@@ -34,7 +35,7 @@ export function detectGamePath(
   installPath: InstallPath | null | undefined,
   steamAppId?: number | null
 ): GamePath | null {
-  if (!installPath || !installPath.type || !installPath.path) {
+  if (!installPath || !installPath.type) {
     return null;
   }
 
@@ -42,6 +43,9 @@ export function detectGamePath(
 
   switch (installPath.type) {
     case 'steam':
+      if (!installPath.path && G.isNullable(steamAppId)) {
+        return null;
+      }
       foundPath = findSteamGame(installPath.path, steamAppId);
       return {
         platform: 'steam',
@@ -50,6 +54,9 @@ export function detectGamePath(
       };
 
     case 'gog':
+      if (!installPath.path) {
+        return null;
+      }
       foundPath = findGOGGame(installPath.path);
       return {
         platform: 'gog',
@@ -58,6 +65,9 @@ export function detectGamePath(
       };
 
     case 'epic':
+      if (!installPath.path) {
+        return null;
+      }
       foundPath = findEpicGame(installPath.path);
       return {
         platform: 'epic',
@@ -66,6 +76,9 @@ export function detectGamePath(
       };
 
     case 'rockstar':
+      if (!installPath.path) {
+        return null;
+      }
       foundPath = findRockstarGame(installPath.path);
       return {
         platform: 'rockstar',
@@ -74,6 +87,9 @@ export function detectGamePath(
       };
 
     case 'xbox':
+      if (!installPath.path) {
+        return null;
+      }
       foundPath = findXboxGame(installPath.path);
       return {
         platform: 'xbox',
@@ -82,6 +98,9 @@ export function detectGamePath(
       };
 
     case 'uplay':
+      if (!installPath.path) {
+        return null;
+      }
       foundPath = findUplayGame(installPath.path);
       return {
         platform: 'uplay',
@@ -90,6 +109,9 @@ export function detectGamePath(
       };
 
     case 'ea':
+      if (!installPath.path) {
+        return null;
+      }
       foundPath = findEAGame(installPath.path);
       return {
         platform: 'ea',
@@ -99,6 +121,9 @@ export function detectGamePath(
 
     case 'emulator':
     case 'other':
+      if (!installPath.path) {
+        return null;
+      }
       // These platforms require manual path selection
       return {
         platform: installPath.type,

@@ -556,21 +556,12 @@ function resolveSteamGameByAppId(
  * Find Steam game by folder name
  */
 export function findSteamGame(
-  gameFolderName: string,
+  gameFolderName: string | null,
   steamAppId?: number | null
 ): string | null {
   console.log(
-    `[Steam] Searching for game: "${gameFolderName}"${steamAppId != null ? ` (appid ${steamAppId})` : ''}`
+    `[Steam] Searching for game: "${gameFolderName ?? ''}"${steamAppId != null ? ` (appid ${steamAppId})` : ''}`
   );
-
-  // Normalize the folder name
-  const normalizedFolderName = gameFolderName
-    .replace(/^steamapps[/\\]common[/\\]/i, '')
-    .replace(/^common[/\\]/i, '');
-
-  if (normalizedFolderName !== gameFolderName) {
-    console.log(`[Steam] Normalized: "${gameFolderName}" -> "${normalizedFolderName}"`);
-  }
 
   const steamPath = getSteamPath();
   if (!steamPath) {
@@ -590,6 +581,24 @@ export function findSteamGame(
       console.log(`[Steam] ✓ Game found via appid ${steamAppId}: ${pathByAppId}`);
       return pathByAppId;
     }
+  }
+
+  const normalizedFolderName = gameFolderName
+    ?.replace(/^steamapps[/\\]common[/\\]/i, '')
+    .replace(/^common[/\\]/i, '');
+
+  // Without a real name the folder fallbacks would match steamapps/common or steamapps itself.
+  if (
+    !normalizedFolderName ||
+    normalizedFolderName === '.' ||
+    normalizedFolderName === '..'
+  ) {
+    console.warn(`[Steam] ✗ Game "${gameFolderName ?? ''}" not found`);
+    return null;
+  }
+
+  if (normalizedFolderName !== gameFolderName) {
+    console.log(`[Steam] Normalized: "${gameFolderName}" -> "${normalizedFolderName}"`);
   }
 
   const installedGames = getAllSteamGames(libraryFolders).byFolder;
