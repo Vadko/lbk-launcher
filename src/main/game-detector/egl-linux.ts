@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { isPathInside, readTextOrNull } from '../utils/fs-safe';
 import { isFlatpak } from '../utils/host-exec';
 import { readJsonFile } from '../utils/json-file';
+import { parseLaunchCommand } from '../utils/launch-command';
 import { isLinux } from '../utils/platform';
 
 // One line of EGLv2's append-only install log; the header line has no installationId
@@ -97,15 +98,20 @@ function getEglProtonDir(root: string): string | null {
     : null;
 }
 
+function findEglInstall(gameDir: string): EglInstall | undefined {
+  return getEglInstalls().find(({ dir }) => dir === gameDir);
+}
+
 // The Windows deep-link id; EGLv2 0.100 resolves it, and a bare manifest AppName it does not
 export function getEglDeepLink(gameDir: string): string | null {
-  const install = getEglInstalls().find(({ dir }) => dir === gameDir);
+  const install = findEglInstall(gameDir);
   return install?.namespace && install.itemId && install.artifactId
     ? `com.epicgames.launcher://apps/${[install.namespace, install.itemId, install.artifactId].map(encodeURIComponent).join('%3A')}?action=launch&silent=true`
     : null;
 }
 
 export interface EglLaunchTarget {
+  gameDir: string;
   executable: string;
   args: string[];
   prefix: string;
@@ -114,10 +120,17 @@ export interface EglLaunchTarget {
 
 export function getEglLaunchTarget(gameDir: string): EglLaunchTarget | null {
   const root = getEglDataRoot();
-  const install = getEglInstalls().find(({ dir }) => dir === gameDir);
+  const install = findEglInstall(gameDir);
   const protonDir = root && getEglProtonDir(root);
   if (!root || !install?.artifactId || !install.launchExecutable || !protonDir) {
     return null;
+  }
+  const launchCommand = parseLaunchCommand(install.launchCommand ?? '');
+  if (!launchCommand) {
+    console.warn(
+      '[EGL] Launch command needs a shell, launching without it:',
+      install.launchCommand
+    );
   }
   const executable = path.join(gameDir, install.launchExecutable.replaceAll('\\', '/'));
   const compatData = path.join(root, 'compat/compatdata');
@@ -126,8 +139,9 @@ export function getEglLaunchTarget(gameDir: string): EglLaunchTarget | null {
     isPathInside(compatData, prefix) &&
     fs.existsSync(executable)
     ? {
+        gameDir,
         executable,
-        args: install.launchCommand?.split(/\s+/).filter(Boolean) ?? [],
+        args: launchCommand?.args ?? [],
         prefix,
         protonDir,
       }

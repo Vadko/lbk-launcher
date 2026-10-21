@@ -184,6 +184,7 @@ describe('EGLv2 installations on Linux', () => {
     const runtime = pinProton('GE-Proton10-34');
 
     expect(getEglLaunchTarget(dir)).toEqual({
+      gameDir: dir,
       executable: path.join(dir, 'Doki Doki Literature Club Plus.exe'),
       args: [],
       prefix: path.join(
@@ -194,12 +195,12 @@ describe('EGLv2 installations on Linux', () => {
     });
   });
 
-  it('passes the launch command and turns Windows separators into folders', () => {
+  it('passes the quoted launch command and turns Windows separators into folders', () => {
     const dir = setUpHome((gameDir) => [
       ddlcRecord(gameDir, {
         complete: true,
         launchExecutable: 'Game\\Binaries\\Win64\\Game.exe',
-        launchCommand: ' -SaveToUserDir  -nosplash ',
+        launchCommand: ' -SaveToUserDir  -name "Two Words" ',
       }),
     ]);
     fs.mkdirSync(path.join(dir, 'Game/Binaries/Win64'), { recursive: true });
@@ -208,7 +209,7 @@ describe('EGLv2 installations on Linux', () => {
 
     expect(getEglLaunchTarget(dir)).toMatchObject({
       executable: path.join(dir, 'Game/Binaries/Win64/Game.exe'),
-      args: ['-SaveToUserDir', '-nosplash'],
+      args: ['-SaveToUserDir', '-name', 'Two Words'],
     });
   });
 

@@ -6,25 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { launchEglGame } from './egl-launcher';
 
 const mocks = vi.hoisted(() => ({
-  spawn: vi.fn(),
   spawnOnHost: vi.fn(),
   listLinuxProcesses: vi.fn(),
-  resolveUmuRun: vi.fn(),
   getEglDeepLink: vi.fn(),
   getEglLaunchTarget: vi.fn(),
 }));
 
-vi.mock('node:child_process', () => ({ spawn: mocks.spawn }));
 vi.mock('./host-exec', () => ({ spawnOnHost: mocks.spawnOnHost }));
 vi.mock('../steam-process/list-linux', () => ({
   listLinuxProcesses: mocks.listLinuxProcesses,
-}));
-vi.mock('../installer/proton', () => ({
-  resolveUmuRun: mocks.resolveUmuRun,
-  getUmuEnv: (protonDir: string, prefix: string) => ({
-    PROTONPATH: protonDir,
-    WINEPREFIX: prefix,
-  }),
 }));
 vi.mock('../game-detector/egl-linux', () => ({
   getEglDeepLink: mocks.getEglDeepLink,
@@ -35,7 +25,8 @@ const GAME_DIR = '/home/deck/Games/DokiDokiLitClubPlus';
 const LINK =
   'com.epicgames.launcher://apps/ns%3Aitem%3Aartifact?action=launch&silent=true';
 const TARGET = {
-  executable: `${GAME_DIR}/Doki Doki Literature Club Plus.exe`,
+  gameDir: GAME_DIR,
+  executable: `${GAME_DIR}/Binaries/Game.exe`,
   args: ['-nosplash'],
   prefix: '/egl/compat/compatdata/artifact',
   protonDir: '/egl/compat/runtime/GE-Proton10-34',
@@ -57,8 +48,7 @@ beforeEach(() => {
   mocks.listLinuxProcesses.mockResolvedValue([]);
   mocks.getEglDeepLink.mockReturnValue(LINK);
   mocks.getEglLaunchTarget.mockReturnValue(TARGET);
-  mocks.resolveUmuRun.mockReturnValue('/lbk/resources/umu/umu-run');
-  mocks.spawn.mockImplementation(() => childThat('spawn'));
+  mocks.spawnOnHost.mockImplementation(() => childThat('spawn'));
 });
 
 afterEach(() => {
@@ -87,7 +77,7 @@ describe('launchEglGame', () => {
       '/home/deck/My Apps/EpicGamesLauncher-x86_64.appimage',
       [LINK]
     );
-    expect(mocks.spawn).not.toHaveBeenCalled();
+    expect(mocks.spawnOnHost).toHaveBeenCalledOnce();
   });
 
   it('cold-starts EGL from where AppImages are kept when it is not running', async () => {
@@ -106,36 +96,45 @@ describe('launchEglGame', () => {
     );
   });
 
-  it('runs the game through umu on EGL Proton when there is no EGL AppImage', async () => {
+  it('runs the game the way EGL does, its Proton on the host, when there is no AppImage', async () => {
     await expect(launchEglGame(GAME_DIR)).resolves.toBe(true);
 
-    expect(mocks.spawnOnHost).not.toHaveBeenCalled();
-    expect(mocks.spawn).toHaveBeenCalledWith(
-      '/lbk/resources/umu/umu-run',
-      [TARGET.executable, '-nosplash'],
-      expect.objectContaining({
-        cwd: GAME_DIR,
-        detached: true,
-        env: expect.objectContaining({
-          PROTONPATH: TARGET.protonDir,
-          WINEPREFIX: TARGET.prefix,
-          STORE: 'egs',
-        }),
-      })
+    expect(mocks.spawnOnHost).toHaveBeenCalledOnce();
+    expect(mocks.spawnOnHost).toHaveBeenCalledWith(
+      `${TARGET.protonDir}/proton`,
+      ['waitforexitandrun', TARGET.executable, '-nosplash'],
+      {
+        STEAM_COMPAT_CLIENT_INSTALL_PATH: TARGET.protonDir,
+        STEAM_COMPAT_DATA_PATH: TARGET.prefix,
+        STEAM_COMPAT_INSTALL_PATH: GAME_DIR,
+        WINEPREFIX: `${TARGET.prefix}/pfx`,
+      },
+      `${GAME_DIR}/Binaries`
     );
   });
 
-  it('fails when neither the link nor a direct run is possible', async () => {
+  it('fails when nothing can be launched or the launch does not spawn', async () => {
     mocks.getEglDeepLink.mockReturnValue(null);
     mocks.getEglLaunchTarget.mockReturnValue(null);
     await expect(launchEglGame(GAME_DIR)).resolves.toBe(false);
 
     mocks.getEglLaunchTarget.mockReturnValue(TARGET);
-    mocks.resolveUmuRun.mockReturnValue(null);
+    mocks.spawnOnHost.mockImplementation(() => childThat('error'));
     await expect(launchEglGame(GAME_DIR)).resolves.toBe(false);
 
-    mocks.resolveUmuRun.mockReturnValue('/lbk/resources/umu/umu-run');
-    mocks.spawn.mockImplementation(() => childThat('error'));
+    mocks.getEglDeepLink.mockReturnValue(LINK);
+    mocks.listLinuxProcesses.mockResolvedValue([
+      {
+        pid: 2,
+        ppid: 1,
+        comm: 'EpicGamesLaunch',
+        args: '/apps/EpicGamesLauncher.appimage',
+      },
+    ]);
     await expect(launchEglGame(GAME_DIR)).resolves.toBe(false);
+    expect(mocks.spawnOnHost).toHaveBeenLastCalledWith(
+      '/apps/EpicGamesLauncher.appimage',
+      [LINK]
+    );
   });
 });

@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { constants, promises as fsp } from 'node:fs';
 import * as os from 'node:os';
@@ -8,7 +8,6 @@ import {
   getEglDeepLink,
   getEglLaunchTarget,
 } from '../game-detector/egl-linux';
-import { getUmuEnv, resolveUmuRun } from '../installer/proton';
 import { listLinuxProcesses } from '../steam-process/list-linux';
 import { spawnOnHost } from './host-exec';
 
@@ -49,29 +48,32 @@ async function findEglAppImage(): Promise<string | undefined> {
   return executable.find((file) => file !== undefined);
 }
 
-// No EGL to hand the link to: run the game on EGL's own Proton and prefix, without Epic auth
-async function launchWithUmu(target: EglLaunchTarget): Promise<boolean> {
-  const umuRun = resolveUmuRun();
-  if (!umuRun) {
-    console.error('[EglLauncher] umu-run not found');
-    return false;
-  }
-  console.log(`[EglLauncher] Launching ${target.executable} with ${target.protonDir}`);
-  const child = spawn(umuRun, [target.executable, ...target.args], {
-    cwd: path.dirname(target.executable),
-    detached: true,
-    stdio: 'ignore',
-    // STORE lets protonfixes look the title up as an Epic game
-    env: { ...process.env, ...getUmuEnv(target.protonDir, target.prefix), STORE: 'egs' },
-  });
-  child.unref();
+async function spawned(child: ChildProcess, what: string): Promise<boolean> {
   try {
     await once(child, 'spawn');
     return true;
   } catch (error) {
-    console.error('[EglLauncher] Error spawning umu-run:', error);
+    console.error(`[EglLauncher] Error spawning ${what}:`, error);
     return false;
   }
+}
+
+// No EGL to hand the link to: run what EGL itself runs, its GE-Proton on the host, without Epic auth
+function launchWithProton(target: EglLaunchTarget): Promise<boolean> {
+  const proton = path.join(target.protonDir, 'proton');
+  console.log(`[EglLauncher] Launching ${target.executable} with ${proton}`);
+  const child = spawnOnHost(
+    proton,
+    ['waitforexitandrun', target.executable, ...target.args],
+    {
+      STEAM_COMPAT_CLIENT_INSTALL_PATH: target.protonDir,
+      STEAM_COMPAT_DATA_PATH: target.prefix,
+      STEAM_COMPAT_INSTALL_PATH: target.gameDir,
+      WINEPREFIX: path.join(target.prefix, 'pfx'),
+    },
+    path.dirname(target.executable)
+  );
+  return spawned(child, proton);
 }
 
 // EGL registers no URL handler on Linux, but its AppImage takes the link as an argument, cold or running
@@ -80,13 +82,12 @@ export async function launchEglGame(gameDir: string): Promise<boolean> {
   const appImage = link ? await findEglAppImage() : undefined;
   if (link && appImage) {
     console.log(`[EglLauncher] Launching ${link} through ${appImage}`);
-    spawnOnHost(appImage, [link]);
-    return true;
+    return spawned(spawnOnHost(appImage, [link]), appImage);
   }
   const target = getEglLaunchTarget(gameDir);
   if (!target) {
     console.warn('[EglLauncher] No EGL launch target for:', gameDir);
     return false;
   }
-  return launchWithUmu(target);
+  return launchWithProton(target);
 }
