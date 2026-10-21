@@ -1,20 +1,54 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "src/main/index.ts",
-    "src/main/db/db-worker.ts",
-    "src/preload/index.ts",
-    "src/renderer/main.tsx",
-    "electron.vite.config.ts"
-  ],
-  "project": ["src/**/*.{ts,tsx}"],
-  "ignore": [
-    "src/lib/database.types.ts",
-    "src/renderer/queries/index.ts",
-    "src/renderer/queries/useTrendingGames.ts"
-  ],
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "project": [
+        "src/**/*.{ts,tsx,css}"
+      ],
+      "ignore": [
+        "src/lib/database.types.ts",
+        "src/renderer/queries/useTrendingGames.ts"
+      ]
+    },
+    "packages/lbk-bridge-core": {
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/lbk-bridge-decky": {
+      "entry": [
+        "src/index.tsx"
+      ],
+      "project": [
+        "src/**/*.tsx"
+      ]
+    },
+    "packages/lbk-i18n": {
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/lbk-bridge-millennium": {
+      "entry": [
+        "frontend/index.tsx",
+        "webkit/index.tsx"
+      ],
+      "project": [
+        "{frontend,webkit,shared}/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "@babel/preset-env",
+        "@babel/preset-react"
+      ]
+    }
+  },
   "ignoreDependencies": [
     "7zip-bin-full",
     "playwright-core"
+  ],
+  "ignoreBinaries": [
+    "flatpak-spawn",
+    "lutris",
+    "xdg-open"
   ]
 }

@@ -3,7 +3,10 @@ import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
+import { sentryMainV10Baseline } from './utils/sentry-baseline';
 import {
+  isCrashDiagnosticsEnabled,
+  onRendererSettingsChanged,
   onWorkshopInstallsChanged,
   setupStoreStorageHandlers,
 } from './utils/store-storage';
@@ -18,16 +21,25 @@ if (isE2E) {
   app.commandLine.appendSwitch('remote-debugging-port', '19222');
 }
 
+// Integrations are only installed when init runs enabled, so this also decides
+// whether the toggle can turn reporting back on without a restart
+const sentryStartedEnabled = app.isPackaged && !isE2E && isCrashDiagnosticsEnabled();
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
-  enabled: app.isPackaged && !isE2E,
+  enabled: sentryStartedEnabled,
   release: __SENTRY_RELEASE__,
   tracesSampleRate: 1.0,
+  // GlitchTip ignores streamed span items, so keep sending whole transactions
+  traceLifecycle: 'static',
+  ...sentryMainV10Baseline,
   integrations: [
     Sentry.captureConsoleIntegration({ levels: ['error'] }),
     Sentry.startupTracingIntegration(),
+    Sentry.electronBreadcrumbsIntegration({ logs: true }),
+    Sentry.electronNetIntegration({ logs: true }),
+    Sentry.childProcessIntegration({ logs: true }),
   ],
-  enableLogs: true,
 });
 
 // Deep link handling
@@ -119,14 +131,16 @@ if (isLinux()) {
   }
 }
 
+import { startAchievements } from './achievements';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
+import { createGameCountersSubscription, syncGameCounters } from './db/game-counters';
 import { createGamesBroadcastSubscription } from './db/games-realtime';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
   fetchAllGamesFromSupabase,
-  fetchDeletedGameIdsFromSupabase,
+  fetchDeletedGamesFromSupabase,
   fetchTagNamesFromSupabase,
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
@@ -139,18 +153,33 @@ import {
 import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
+import { setupLikesHandlers } from './ipc/likes';
+import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { syncLikes } from './likes';
+import { startMillenniumInstall } from './millennium-install';
 import {
   calculatePlaytimeDeltas,
   recordPlaytimeAtSessionStart,
 } from './playtime-tracker';
+import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
+import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import {
+  deleteStaleBridgeData,
+  shutdownSteamBridgeServer,
+} from './steam-bridge-server/bridge-server';
+import { startPendingSteamActions } from './steam-pending-actions';
 import { startSteamWatcher, stopSteamWatcher } from './steam-watcher';
+import {
+  startStoreLibraryWatcher,
+  stopStoreLibraryWatcher,
+} from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
-import { bootstrapCefDebugging } from './utils/cef-flag-file';
-import { createMainWindow, getMainWindow } from './window';
+import { startSteamBridge } from './utils/steam-bridge-lifecycle';
+import { createMainWindow, getMainWindow, showMainWindow } from './window';
 
-// Глобальні менеджери
+// Global managers
 let syncManager: SyncManager | null = null;
 let realtimeManager: SupabaseRealtimeManager | null = null;
 let currentSyncStatus: 'syncing' | 'ready' | 'error' = 'syncing';
@@ -219,13 +248,23 @@ if (!gotTheLock) {
 
   // Setup all IPC handlers
   setupStoreStorageHandlers();
+
+  // `_isEnabled()` reads this option on every send, so the toggle takes effect mid-session
+  onRendererSettingsChanged(() => {
+    const client = Sentry.getClient();
+    if (client) {
+      client.getOptions().enabled = sentryStartedEnabled && isCrashDiagnosticsEnabled();
+    }
+  });
   setupWindowControls();
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
+  setupLikesHandlers();
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
+  setupPluginHostHandlers();
 
   // IPC handler for getting current sync status
   ipcMain.handle('get-sync-status', () => currentSyncStatus);
@@ -240,6 +279,12 @@ if (!gotTheLock) {
 
   // App lifecycle
   app.whenReady().then(async () => {
+    try {
+      deleteStaleBridgeData();
+    } catch (error) {
+      console.warn('[Main] Stale bridge.json cleanup failed:', error);
+    }
+
     if (isWindows() || isLinux()) {
       const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
       if (deepLinkUrl) {
@@ -257,7 +302,7 @@ if (!gotTheLock) {
       }
     }
 
-    // Ініціалізувати локальну базу даних
+    // Initialize the local database
     console.log('[Main] Initializing local database...');
     initDatabase();
 
@@ -272,11 +317,11 @@ if (!gotTheLock) {
       callback({ requestHeaders: details.requestHeaders });
     });
 
-    // Створити вікно ПЕРЕД синхронізацією, щоб показати лоадер
+    // Create the window BEFORE syncing, so the loader shows
     await createMainWindow();
     initTray();
 
-    // Відправити статус синхронізації в renderer
+    // Send sync status to the renderer
     const sendSyncStatus = (status: 'syncing' | 'ready' | 'error') => {
       currentSyncStatus = status;
       const mainWindow = getMainWindow();
@@ -285,7 +330,7 @@ if (!gotTheLock) {
       }
     };
 
-    // Запустити синхронізацію з retry та загальним таймаутом
+    // Start sync with retry and an overall timeout
     console.log('[Main] Starting sync with Supabase...');
     syncManager = SyncManager.getInstance();
 
@@ -294,7 +339,7 @@ if (!gotTheLock) {
       await syncManager.sync(
         fetchAllGamesFromSupabase,
         fetchUpdatedGamesFromSupabase,
-        fetchDeletedGameIdsFromSupabase
+        fetchDeletedGamesFromSupabase
       );
 
       try {
@@ -323,18 +368,27 @@ if (!gotTheLock) {
     realtimeManager = new SupabaseRealtimeManager();
     const gamesChannel = createGamesBroadcastSubscription(
       (game) => {
-        // Оновити локальну БД через SyncManager
+        // Update the local DB via SyncManager
         syncManager?.handleRealtimeUpdate(game);
       },
       (gameId) => {
-        // Видалити з локальної БД через SyncManager
+        // Delete from the local DB via SyncManager
         syncManager?.handleRealtimeDelete(gameId).catch((err) => {
           console.error('[Main] Realtime delete failed:', err);
         });
       }
     );
     const feedbackChannel = createFeedbackReplyBroadcastSubscription();
-    realtimeManager.subscribe([gamesChannel, feedbackChannel]);
+    realtimeManager.subscribe([
+      gamesChannel,
+      feedbackChannel,
+      createGameCountersSubscription(),
+    ]);
+
+    void syncGameCounters();
+    syncLikes().catch((err) => {
+      console.error('[Main] Likes sync failed:', err);
+    });
 
     checkForUpdates();
 
@@ -361,8 +415,9 @@ if (!gotTheLock) {
       });
 
     setImmediate(() => {
-      startSteamWatcher(getMainWindow());
-      startInstallationWatcher(getMainWindow(), () => {
+      startSteamWatcher();
+      startStoreLibraryWatcher();
+      startInstallationWatcher(() => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
         });
@@ -372,23 +427,19 @@ if (!gotTheLock) {
           console.error('[Main] Failed to process pending deletions:', err);
         });
       });
+      startSteamBridge();
+      startPendingSteamActions();
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });
-    });
-
-    app.on('activate', async () => {
-      // macOS: показати вікно якщо воно заховане або створити нове якщо немає
-      const mainWindow = getMainWindow();
-      if (mainWindow) {
-        if (!mainWindow.isVisible()) {
-          mainWindow.show();
-        }
-        mainWindow.focus();
-      } else {
-        await createMainWindow();
+      startAchievements();
+      startMillenniumInstall();
+      if (isLinux()) {
+        watchDeckyPlugins();
       }
     });
+
+    app.on('activate', showMainWindow);
   });
 
   // Track session end and playtime before quit
@@ -397,8 +448,26 @@ if (!gotTheLock) {
   let isQuitting = false;
   let skipQuitTracking = false;
 
+  // macOS keeps the app alive after its last window closes, so services stop only on a real quit.
+  const stopBackgroundServices = () => {
+    stopUpdateCheck();
+    stopSteamWatcher();
+    stopDeckyWatcher();
+    stopStoreLibraryWatcher();
+    stopInstallationWatcher();
+    realtimeManager?.unsubscribe();
+    closeDatabase();
+  };
+
   ipcMain.on('skip-quit-tracking', () => {
     skipQuitTracking = true;
+  });
+
+  // Deletes bridge.json so the Millennium plugin stops dialing a dead port.
+  app.on('before-quit', () => {
+    shutdownSteamBridgeServer().catch((err) => {
+      console.warn('[Main] Steam bridge server stop failed:', err);
+    });
   });
 
   app.on('will-quit', (event) => {
@@ -431,22 +500,13 @@ if (!gotTheLock) {
       }
 
       console.log('[Main] Tracking complete, quitting app');
-      app.quit();
+      stopBackgroundServices();
+      // Without real awaits this runs inside the will-quit emit, where Electron ignores a second quit.
+      setImmediate(() => app.quit());
     })();
   });
 
   app.on('window-all-closed', () => {
-    // Cleanup
-    stopUpdateCheck();
-    stopSteamWatcher();
-    stopInstallationWatcher();
-
-    // Відписатися від realtime оновлень (ігри + відповіді на відгуки)
-    realtimeManager?.unsubscribe();
-
-    // Закрити базу даних
-    closeDatabase();
-
     if (!isMacOS()) {
       app.quit();
     }

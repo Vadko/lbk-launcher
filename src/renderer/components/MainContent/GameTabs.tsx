@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 
 export type GameTab = 'info' | 'recommended' | 'reviews';
 
@@ -7,11 +8,7 @@ interface GameTabsProps {
   onChange: (tab: GameTab) => void;
 }
 
-const tabs: { id: GameTab; label: string }[] = [
-  { id: 'info', label: 'Інфо' },
-  { id: 'recommended', label: 'Рекомендовані' },
-  { id: 'reviews', label: 'Відгуки' },
-];
+const tabs: GameTab[] = ['info', 'recommended', 'reviews'];
 
 export const GameTabs: React.FC<GameTabsProps> = ({ activeTab, onChange }) => (
   <div
@@ -20,19 +17,19 @@ export const GameTabs: React.FC<GameTabsProps> = ({ activeTab, onChange }) => (
   >
     {tabs.map((tab) => (
       <button
-        key={tab.id}
+        key={tab}
         type="button"
         role="tab"
-        aria-selected={activeTab === tab.id}
-        onClick={() => onChange(tab.id)}
+        aria-selected={activeTab === tab}
+        onClick={() => onChange(tab)}
         data-gamepad-action
         className={`px-6 py-2 rounded-xl font-medium transition-all ${
-          activeTab === tab.id
+          activeTab === tab
             ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
             : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
         }`}
       >
-        {tab.label}
+        {t(`gameTabs.${tab}`)}
       </button>
     ))}
   </div>

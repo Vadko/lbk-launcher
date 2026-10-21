@@ -1,5 +1,6 @@
-import { Download, RefreshCw } from 'lucide-react';
+import { Download } from 'lucide';
 import { useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -8,6 +9,8 @@ import {
   useSubscriptionsStore,
 } from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
+import { AppActionIcon } from '../ui/AppActionIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 
 interface UpdateInfo {
   version?: string;
@@ -44,7 +47,7 @@ export const UpdateNotification = () => {
         setUpdateAvailable(true);
         setUpdateInfo(update);
 
-        // Додати в історію сповіщень (тільки один раз для кожної версії)
+        // Add to notification history (only once per version)
         if (newVersion && notifiedVersionRef.current !== newVersion) {
           notifiedVersionRef.current = newVersion;
 
@@ -83,6 +86,9 @@ export const UpdateNotification = () => {
   }, []);
 
   const handleDownload = async () => {
+    if (downloading) {
+      return;
+    }
     setDownloading(true);
     try {
       await window.electronAPI.downloadUpdate();
@@ -118,8 +124,10 @@ export const UpdateNotification = () => {
     <>
       <p className="text-gray-400 text-sm mb-3">
         {updateDownloaded
-          ? 'Оновлення завантажено та готове до встановлення'
-          : `Версія ${pendingVersion || 'нова'} доступна для завантаження`}
+          ? t('updateNotice.downloaded')
+          : pendingVersion
+            ? t('updateNotice.versionAvailable', { version: pendingVersion })
+            : t('updateNotice.newVersionAvailable')}
       </p>
       {pendingEntry && (
         <div className="mb-3">
@@ -145,8 +153,10 @@ export const UpdateNotification = () => {
       {downloading && (
         <div className="mb-3">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span>Завантаження...</span>
-            <span>{progress}%</span>
+            <span>{t('updateNotice.downloading')}</span>
+            <span>
+              <AppNumberFlow value={progress} suffix="%" />
+            </span>
           </div>
           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
             <div
@@ -167,7 +177,7 @@ export const UpdateNotification = () => {
           data-gamepad-confirm
           className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-black rounded-lg transition-colors"
         >
-          Скачати нову версію
+          {t('updateNotice.openDownloadPage')}
         </button>
       ) : updateDownloaded ? (
         <button
@@ -175,16 +185,16 @@ export const UpdateNotification = () => {
           data-gamepad-confirm
           className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-black rounded-lg transition-colors"
         >
-          Перезапустити
+          {t('updateNotice.restart')}
         </button>
       ) : (
         <button
           onClick={handleDownload}
-          disabled={downloading}
+          aria-busy={downloading}
           data-gamepad-confirm
-          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="flex-1 px-4 py-2 bg-color-main hover:brightness-110 text-white rounded-lg transition-colors aria-busy:opacity-60 aria-busy:cursor-wait"
         >
-          {downloading ? 'Завантаження...' : 'Завантажити'}
+          {t('updateNotice.download')}
         </button>
       )}
       {!updateDownloaded && (
@@ -193,7 +203,7 @@ export const UpdateNotification = () => {
           data-gamepad-cancel
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
         >
-          Пізніше
+          {t('updateNotice.later')}
         </button>
       )}
     </div>
@@ -205,7 +215,11 @@ export const UpdateNotification = () => {
       <Modal
         isOpen={true}
         onClose={() => setUpdateAvailable(false)}
-        title={updateDownloaded ? 'Оновлення готове!' : 'Доступне оновлення'}
+        title={
+          updateDownloaded
+            ? t('updateNotice.readyTitle')
+            : t('updateNotice.availableTitle')
+        }
         footer={buttons}
         showCloseButton={!updateDownloaded}
       >
@@ -218,16 +232,20 @@ export const UpdateNotification = () => {
   return (
     <div className="fixed bottom-4 right-4 glass-panel notification-toast border border-color-accent rounded-xl p-4 shadow-xl max-w-sm z-50">
       <div className="flex items-start gap-3">
-        <div className="p-2 bg-blue-500/20 rounded-lg">
-          {downloading ? (
-            <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
-          ) : (
-            <Download className="w-5 h-5 text-blue-400" />
-          )}
+        <div className="flex items-center justify-center p-2 bg-blue-500/20 rounded-lg">
+          <AppActionIcon
+            phase={downloading ? 'pending' : updateDownloaded ? 'done' : 'idle'}
+            icon={Download}
+            size={20}
+            className="text-blue-400"
+            inheritColor
+          />
         </div>
         <div className="flex-1">
           <h3 className="text-white font-semibold mb-1">
-            {updateDownloaded ? 'Оновлення готове!' : 'Доступне оновлення'}
+            {updateDownloaded
+              ? t('updateNotice.readyTitle')
+              : t('updateNotice.availableTitle')}
           </h3>
           {content}
           {buttons}

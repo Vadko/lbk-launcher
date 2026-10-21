@@ -1,5 +1,6 @@
-import { CheckCircle, Info, XCircle } from 'lucide-react';
+import { CheckCircleIcon, InfoIcon, XCircleIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useModalStore } from '../../store/useModalStore';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Modal } from './Modal';
@@ -14,12 +15,12 @@ export const GlobalModal: React.FC = () => {
   const getIcon = () => {
     switch (config.type) {
       case 'success':
-        return <CheckCircle size={48} className="text-color-main" />;
+        return <CheckCircleIcon size={48} className="text-color-main" />;
       case 'error':
-        return <XCircle size={48} className="text-red-400" />;
+        return <XCircleIcon size={48} className="text-red-400" />;
       case 'info':
       default:
-        return <Info size={48} className="text-color-accent" />;
+        return <InfoIcon size={48} className="text-color-accent" />;
     }
   };
 
@@ -34,7 +35,7 @@ export const GlobalModal: React.FC = () => {
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-glass">
           {getIcon()}
         </div>
-        <p className="text-text-muted whitespace-pre-line break-words">
+        <p className="text-text-muted whitespace-pre-line wrap-break-word">
           {config.message}
         </p>
 
@@ -42,7 +43,7 @@ export const GlobalModal: React.FC = () => {
         {config.selectConfig && (
           <div className="w-full space-y-2">
             <label className="block text-sm font-medium text-text-main text-left">
-              {config.selectConfig.placeholder || 'Оберіть варіант'}:
+              {config.selectConfig.placeholder || t('selectDropdown.placeholder')}:
             </label>
             <SelectDropdown
               options={config.selectConfig.options}
@@ -71,7 +72,7 @@ export const GlobalModal: React.FC = () => {
                       ? 'bg-red-500/80 text-white'
                       : action.variant === 'secondary'
                         ? 'bg-glass-heavy text-white'
-                        : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
+                        : 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
                   }`}
                 >
                   {action.label}
@@ -82,7 +83,7 @@ export const GlobalModal: React.FC = () => {
                   onClick={closeModal}
                   className="w-full px-6 py-3 rounded-xl bg-glass-heavy text-text-muted font-semibold hover:opacity-90 transition-opacity"
                 >
-                  Скасувати
+                  {t('common.cancel')}
                 </button>
               )}
             </>
@@ -90,9 +91,9 @@ export const GlobalModal: React.FC = () => {
             <button
               onClick={closeModal}
               data-gamepad-confirm
-              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+              className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
             >
-              Зрозуміло
+              {t('common.ok')}
             </button>
           )}
         </div>

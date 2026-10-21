@@ -1,5 +1,6 @@
-import { X } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
 
 interface ActiveFilterChip {
   key: string;
@@ -27,10 +28,10 @@ export const ActiveFilterChips: React.FC<ActiveFilterChipsProps> = ({ chips }) =
           <button
             onClick={chip.onRemove}
             data-gamepad-modal-item
-            title="Зняти фільтр"
-            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-glass text-text-muted hover:text-text-main flex-shrink-0"
+            title={t('catalogFilters.removeFilter')}
+            className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-glass text-text-muted hover:text-text-main shrink-0"
           >
-            <X size={12} />
+            <XIcon size={12} />
           </button>
         </span>
       ))}

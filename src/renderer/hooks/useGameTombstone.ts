@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Керує "tombstone" станом сторінки гри:
- * - повертає `isTombstoned` (видалено з каталогу, але встановлено локально)
- * - реактивно оновлюється через 'game-tombstoned' event
- * - якщо гру дефакто видалили з локальної БД (через sync/realtime/post-uninstall) —
- *   перенаправляє на головну, щоб не показувати stale дані
+ * Drives the "tombstone" state of a game page:
+ * - returns `isTombstoned` (removed from the catalog but installed locally)
+ * - updates reactively through the 'game-tombstoned' event
+ * - if the game is actually gone from the local DB (via sync/realtime/post-uninstall) —
+ *   redirects home so stale data is never shown
  */
 export function useGameTombstone(gameId: string | undefined): boolean {
   const navigate = useNavigate();

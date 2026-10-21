@@ -1,6 +1,6 @@
 /**
- * Клієнт для комунікації з DB Worker
- * Надає async API для виконання SQLite операцій у worker thread
+ * Client for communicating with the DB Worker
+ * Provides an async API for running SQLite operations on the worker thread
  */
 
 import { app } from 'electron';
@@ -25,19 +25,19 @@ class DbWorkerClient {
   private readyPromise: Promise<void> | null = null;
 
   /**
-   * Ініціалізувати worker
+   * Initialize the worker
    */
   async init(): Promise<void> {
     if (this.worker) {
       return;
     }
 
-    // Шлях до скомпільованого worker файлу
+    // Path to the compiled worker file
     const workerPath = app.isPackaged
       ? path.join(process.resourcesPath, 'app.asar', 'out', 'main', 'db-worker.js')
       : path.join(__dirname, 'db-worker.js');
 
-    // Шлях до бази даних
+    // Path to the database
     const dbPath = path.join(app.getPath('userData'), 'lbk.db');
     const spellfixPath = getSpellfixPath();
 
@@ -90,7 +90,7 @@ class DbWorkerClient {
   }
 
   /**
-   * Дочекатись готовності worker
+   * Wait for the worker to become ready
    */
   private async ensureReady(): Promise<void> {
     if (this.isReady) {
@@ -104,7 +104,7 @@ class DbWorkerClient {
   }
 
   /**
-   * Відправити повідомлення worker і дочекатись відповіді
+   * Send a message to the worker and wait for the response
    */
   private async sendMessage(message: object): Promise<void> {
     await this.ensureReady();
@@ -122,28 +122,28 @@ class DbWorkerClient {
   }
 
   /**
-   * Batch upsert ігор (async, не блокує main thread)
+   * Batch upsert games (async, does not block the main thread)
    */
   async upsertGames(games: Game[]): Promise<void> {
     await this.sendMessage({ type: 'upsertGames', games });
   }
 
   /**
-   * Видалити гру
+   * Delete a game
    */
   async deleteGame(gameId: string): Promise<void> {
     await this.sendMessage({ type: 'deleteGame', gameId });
   }
 
   /**
-   * Видалити декілька ігор
+   * Delete several games
    */
   async deleteGames(gameIds: string[]): Promise<void> {
     await this.sendMessage({ type: 'deleteGames', gameIds });
   }
 
   /**
-   * Завершити worker
+   * Terminate the worker
    */
   async terminate(): Promise<void> {
     if (this.worker) {

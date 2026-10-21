@@ -1,6 +1,6 @@
-import { Bell, Star, Users } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
-import { plural } from '@/shared/plural';
+import { BellIcon, StarIcon, UsersIcon } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -40,17 +40,16 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   const [selectedAuthors, setSelectedAuthors] = useState<Set<string>>(new Set());
 
   // Initialize selection when modal opens
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
-  useEffect(() => {
-    if (isOpen && authors.length > 0) {
-      // Select all authors that user is not already subscribed to
-      const initialSelection = new Set(
-        authors.filter((author) => !isSubscribedToTeam(author))
+  const selectionKey = isOpen ? authors.join('|') : null;
+  const [prevSelectionKey, setPrevSelectionKey] = useState(selectionKey);
+  if (prevSelectionKey !== selectionKey) {
+    setPrevSelectionKey(selectionKey);
+    if (selectionKey) {
+      setSelectedAuthors(
+        new Set(authors.filter((author) => !isSubscribedToTeam(author)))
       );
-      setSelectedAuthors(initialSelection);
     }
-  }, [isOpen, authors, isSubscribedToTeam]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }
 
   // Count how many authors are not yet subscribed
   const unsubscribedCount = useMemo(
@@ -87,28 +86,28 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Слідкувати за авторами">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('authorSubscription.title')}>
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-color-accent/20 flex items-center justify-center">
-            <Users size={24} className="text-color-accent" />
+            <UsersIcon size={24} className="text-color-accent" />
           </div>
           <div>
             <p className="text-text-main font-medium">{gameName}</p>
             <p className="text-sm text-text-muted">
               {authors.length === 1
-                ? 'Автор локалізації'
-                : `${authors.length} ${plural(authors.length, 'автор', 'автори', 'авторів')} локалізації`}
+                ? t('authorSubscription.singleAuthor')
+                : t('authorSubscription.authorsCount', { count: authors.length })}
             </p>
           </div>
         </div>
 
         {/* Description */}
         <p className="text-text-muted">
-          Хочете отримувати сповіщення про нові локалізації від{' '}
-          {authors.length === 1 ? 'цього автора' : 'цих авторів'}? Ви зможете змінити
-          підписки в будь-який момент.
+          {t('authorSubscription.description', {
+            context: authors.length === 1 ? 'single' : 'multiple',
+          })}
         </p>
 
         {/* Authors list */}
@@ -137,7 +136,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     disabled={isAlreadySubscribed}
                     onChange={() => !isAlreadySubscribed && toggleAuthor(author)}
                     data-gamepad-modal-item
-                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-none ${
+                    className={`appearance-none w-5 h-5 rounded-md bg-glass border border-border checked:bg-color-main checked:border-color-main transition-colors focus:ring-2 focus:ring-color-main/50 focus:outline-hidden ${
                       isAlreadySubscribed ? 'cursor-default' : 'cursor-pointer'
                     }`}
                   />
@@ -164,16 +163,16 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                     </span>
                     {isSpecial && specialInfo && (
                       <Tooltip content={specialInfo.description}>
-                        <Star
+                        <StarIcon
                           size={14}
-                          className="text-yellow-400 fill-yellow-400 cursor-help flex-shrink-0"
+                          className="text-yellow-400 fill-yellow-400 cursor-help shrink-0"
                         />
                       </Tooltip>
                     )}
                     {isAlreadySubscribed && (
-                      <span className="flex items-center gap-1 text-xs text-green-400 flex-shrink-0">
-                        <Bell size={12} />
-                        підписано
+                      <span className="flex items-center gap-1 text-xs text-green-400 shrink-0">
+                        <BellIcon size={12} />
+                        {t('authorSubscription.subscribed')}
                       </span>
                     )}
                   </div>
@@ -191,7 +190,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             data-gamepad-modal-item
             className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
           >
-            Пропустити
+            {t('authorSubscription.skip')}
           </button>
           <button
             onClick={handleSubscribe}
@@ -201,13 +200,15 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
             className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity flex items-center justify-center gap-2 ${
               selectedAuthors.size === 0
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-color-accent to-color-main text-text-dark hover:opacity-90'
+                : 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark hover:opacity-90'
             }`}
           >
-            <Bell size={18} />
+            <BellIcon size={18} />
             {selectedAuthors.size > 0
-              ? `Підписатись (${selectedAuthors.size})`
-              : 'Підписатись'}
+              ? t('authorSubscription.subscribeSelected', {
+                  selected: selectedAuthors.size,
+                })
+              : t('authorSubscription.subscribe')}
           </button>
         </div>
       </div>

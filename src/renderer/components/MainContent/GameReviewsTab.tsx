@@ -1,5 +1,6 @@
-import { FileEdit, Info } from 'lucide-react';
+import { FileEditIcon, InfoIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import type { GameReview, GameReviewReply } from '@/shared/types';
 import { useGameReviews } from '../../queries/useGameReviews';
 import { Button } from '../ui/Button';
@@ -24,30 +25,15 @@ function formatReviewDate(iso: string): string {
   );
 
   if (daysAgo === 0) {
-    return `Сьогодні, ${time}`;
+    return t('gameReviews.today', { time });
   }
   if (daysAgo === 1) {
-    return `Вчора, ${time}`;
+    return t('gameReviews.yesterday', { time });
   }
   const day = date
     .toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
     .replace('.', '');
   return `${day}, ${time}`;
-}
-
-function formatCommentsCount(count: number): string {
-  const lastTwo = count % 100;
-  const last = count % 10;
-  if (lastTwo >= 11 && lastTwo <= 14) {
-    return `${count} коментарів`;
-  }
-  if (last === 1) {
-    return `${count} коментар`;
-  }
-  if (last >= 2 && last <= 4) {
-    return `${count} коментарі`;
-  }
-  return `${count} коментарів`;
 }
 
 const AuthorReply: React.FC<{ reply: GameReviewReply; isLast: boolean }> = ({
@@ -60,7 +46,7 @@ const AuthorReply: React.FC<{ reply: GameReviewReply; isLast: boolean }> = ({
     <span className="absolute left-0 top-0 h-[22px] w-5 border-l border-b border-color-main rounded-bl-xl" />
     <div className="flex items-center gap-2">
       <span className="px-2 py-0.5 rounded-md bg-color-main/15 text-xs font-semibold text-color-main">
-        Відповідь автора
+        {t('gameReviews.authorReply')}
       </span>
       <span className="text-sm text-text-muted">{formatReviewDate(reply.createdAt)}</span>
     </div>
@@ -101,28 +87,28 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
         <div className="flex flex-col gap-3">
           <h3 className="text-lg font-head font-semibold text-text-main">
-            Відгуки спільноти
+            {t('gameReviews.title')}
           </h3>
           <p className="min-h-[18px] text-sm text-text-muted">
-            {data && formatCommentsCount(data.total)}
+            {data && t('gameReviews.count', { count: data.total })}
           </p>
         </div>
         {canLeaveFeedback && (
           <Button
             variant="secondary"
-            icon={<FileEdit size={20} />}
+            icon={<FileEditIcon size={20} />}
             onClick={onLeaveFeedback}
             data-gamepad-action
           >
-            Лишити відгук
+            {t('gameReviews.leave')}
           </Button>
         )}
       </div>
 
       {!canLeaveFeedback && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-color-main/30 bg-color-main/10 text-sm text-text-main">
-          <Info size={18} className="shrink-0 text-color-main" />
-          Залишити відгук можна лише після встановлення перекладу.
+          <InfoIcon size={18} className="shrink-0 text-color-main" />
+          {t('gameReviews.installRequired')}
         </div>
       )}
 
@@ -133,10 +119,10 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
           </div>
         ) : isError || !data ? (
           <p className="text-center text-text-muted py-12">
-            Не вдалося завантажити відгуки. Спробуйте пізніше.
+            {t('gameReviews.loadFailed')}
           </p>
         ) : data.items.length === 0 ? (
-          <p className="text-sm text-text-muted">Поки що немає відгуків.</p>
+          <p className="text-sm text-text-muted">{t('gameReviews.empty')}</p>
         ) : (
           <div
             className={`flex flex-col gap-4 transition-opacity ${isPlaceholderData ? 'opacity-60' : ''}`}

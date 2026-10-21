@@ -1,11 +1,17 @@
-import { FileText } from 'lucide-react';
+import { FileTextIcon } from 'lucide-react';
 import React from 'react';
+import { Trans } from 'react-i18next';
+import { t } from '@/shared/i18n/i18n';
 import { Modal } from './Modal';
 
 interface TermsOfServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const LINK_CLASS = 'text-color-accent hover:text-color-main transition-colors underline';
+
+const markup = { b: <strong className="text-text-main" /> };
 
 export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
   isOpen,
@@ -14,128 +20,136 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
   <Modal
     isOpen={isOpen}
     onClose={onClose}
-    title="Умови використання"
+    title={t('termsOfService.title')}
     footer={
       <button
         onClick={onClose}
         data-gamepad-confirm
-        className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+        className="w-full px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
       >
-        Зрозуміло
+        {t('common.ok')}
       </button>
     }
   >
     <div className="space-y-4 text-text-main">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-          <FileText size={24} className="text-white" />
+        <div className="w-12 h-12 rounded-xl bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
+          <FileTextIcon size={24} className="text-white" />
         </div>
         <div>
           <h3 className="text-lg font-semibold">LBK Launcher</h3>
-          <p className="text-sm text-text-muted">Умови використання послуги</p>
+          <p className="text-sm text-text-muted">{t('termsOfService.subtitle')}</p>
         </div>
       </div>
 
       <section className="space-y-3">
         <p className="text-sm text-text-muted leading-relaxed">
-          Ці Умови регулюють використання сайту
-          <a
-            href="https://lbklauncher.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-color-accent hover:text-color-main transition-colors underline ml-1"
-          >
-            lbklauncher.com
-          </a>{' '}
-          та десктопного клієнта <strong className="text-text-main">LBK Launcher</strong>.
+          <Trans
+            i18nKey="termsOfService.intro"
+            components={{
+              ...markup,
+              site: (
+                <a
+                  href="https://lbklauncher.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${LINK_CLASS} ml-1`}
+                />
+              ),
+            }}
+          />
         </p>
         <p className="text-sm text-text-muted leading-relaxed">
-          <strong className="text-text-main">Сторони:</strong> LBK Team (GameGlobe
-          Localization та Little Bit) та Користувач "ви", продуктів LBK Team - сайту та
-          десктоп клієнту (ланчеру).
+          <Trans i18nKey="termsOfService.parties" components={markup} />
         </p>
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-base font-semibold mb-2">Визначення та ключові терміни</h4>
-        <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
-          <li>
-            <strong className="text-text-main">Країна:</strong> країна, де розташована LBK
-            Team або її власники/засновники, у цьому випадку — Україна.
-          </li>
-          <li>
-            <strong className="text-text-main">Сервіс:</strong> послуга, яку надає
-            GameGlobe Localization (вул. Металістів, 4, Київ, 02000) та Little Bit, як
-            описано у відповідних умовах (якщо доступно) та на цій платформі.
-          </li>
-          <li>
-            <strong className="text-text-main">Вебсайт:</strong> сайт GameGlobe
-            Localization, доступний за URL:
-            <a
-              href="https://ggloc.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-color-accent hover:text-color-main transition-colors underline ml-1"
-            >
-              https://ggloc.org/
-            </a>
-            .
-          </li>
-          <li>
-            <strong className="text-text-main">Ви:</strong> особа або організація, що
-            користуються сервісами від GameGlobe Localization та Little Bit для
-            використання Сервісів.
-          </li>
-        </ul>
-      </section>
-
-      <section className="space-y-3">
-        <h4 className="text-base font-semibold mb-2">
-          Ліцензування та інтелектуальна власність
+        <h4 className="text-base font-semibold">
+          {t('termsOfService.sections.definitions.title')}
         </h4>
         <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
           <li>
-            <strong className="text-text-main">Front-end клієнта:</strong> Вихідний код
-            графічного інтерфейсу та клієнтської частини є відкритим і поширюється під
-            ліцензією <strong className="text-text-main">GNU GPL v3</strong>. Ви маєте
-            право модифікувати та поширювати його згідно з умовами цієї ліцензії.
+            <Trans
+              i18nKey="termsOfService.sections.definitions.country"
+              components={markup}
+            />
           </li>
           <li>
-            <strong className="text-text-main">Back-end та API:</strong> Вся серверна
-            частина, бази даних та логіка API є виключною інтелектуальною власністю{' '}
-            <strong className="text-text-main">LBK Team</strong>. Будь-які спроби
-            несанкціонованого доступу, брутфорсу, реверс-інжинірингу серверних протоколів
-            або втручання в роботу серверної інфраструктури{' '}
-            <strong className="text-text-main">суворо заборонені</strong>.
+            <Trans
+              i18nKey="termsOfService.sections.definitions.service"
+              components={markup}
+            />
           </li>
           <li>
-            <strong className="text-text-main">Контент (Переклади):</strong> Усі
-            локалізації, доступні в лаунчері, за ліцензією для кінцевого користувача з
-            обмеженням лише для некомерційного приватного використання. Вони призначені
-            виключно для особистого ознайомлення та некомерційного використання. Ви не
-            маєте права перепродавати або використовувати ці файли у комерційних продуктах
-            без дозволу правовласників.
+            <Trans
+              i18nKey="termsOfService.sections.definitions.website"
+              components={{
+                ...markup,
+                site: (
+                  <a
+                    href="https://ggloc.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${LINK_CLASS} ml-1`}
+                  />
+                ),
+              }}
+            />
+          </li>
+          <li>
+            <Trans
+              i18nKey="termsOfService.sections.definitions.you"
+              components={markup}
+            />
           </li>
         </ul>
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-base font-semibold mb-2">Обмеження відповідальності</h4>
+        <h4 className="text-base font-semibold">
+          {t('termsOfService.sections.licensing.title')}
+        </h4>
+        <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
+          <li>
+            <Trans
+              i18nKey="termsOfService.sections.licensing.frontend"
+              components={markup}
+            />
+          </li>
+          <li>
+            <Trans
+              i18nKey="termsOfService.sections.licensing.backend"
+              components={markup}
+            />
+          </li>
+          <li>
+            <Trans
+              i18nKey="termsOfService.sections.licensing.content"
+              components={markup}
+            />
+          </li>
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <h4 className="text-base font-semibold">
+          {t('termsOfService.sections.liability.title')}
+        </h4>
         <p className="text-sm text-text-muted leading-relaxed">
-          Програмне забезпечення надається за принципом "as is" (як є). LBK Team не несе
-          відповідальності за можливі конфлікти з античитами ігор, технічні збої або
-          втрату ігрового прогресу, спричинені встановленням перекладів.
+          {t('termsOfService.sections.liability.text')}
         </p>
         <p className="text-sm text-text-main font-semibold leading-relaxed">
-          ВИ ВИКОРИСТОВУЄТЕ ЛАУНЧЕР НА ВЛАСНИЙ РИЗИК. МИ НЕ ГАРАНТУЄМО ВІДСУТНІСТЬ БАНІВ В
-          ОНЛАЙН-ІГРАХ
+          {t('termsOfService.sections.liability.risk')}
         </p>
       </section>
 
       <section className="space-y-3">
-        <h4 className="text-base font-semibold mb-2">Контакти</h4>
-        <p className="text-sm text-text-muted leading-relaxed mb-2">
-          Якщо у вас є будь-які питання, звертайтесь:
+        <h4 className="text-base font-semibold">
+          {t('termsOfService.sections.contacts.title')}
+        </h4>
+        <p className="text-sm text-text-muted leading-relaxed">
+          {t('termsOfService.sections.contacts.intro')}
         </p>
         <ul className="list-disc list-inside text-sm text-text-muted space-y-1 ml-2">
           <li>
@@ -144,7 +158,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
               target="_blank"
               href="mailto:pr@gameglobe-localisation.com"
               rel="noopener noreferrer"
-              className="text-color-accent hover:text-color-main transition-colors underline"
+              className={LINK_CLASS}
             >
               pr@gameglobe-localisation.com
             </a>
@@ -155,7 +169,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
               href="https://t.me/lbk_launcher_bot"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-color-accent hover:text-color-main transition-colors underline"
+              className={LINK_CLASS}
             >
               https://t.me/lbk_launcher_bot
             </a>
@@ -163,9 +177,11 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
         </ul>
       </section>
 
-      <div className="mt-6 p-4 rounded-lg bg-glass border border-border">
+      <div className="p-4 rounded-lg bg-glass border border-border">
         <p className="text-xs text-text-muted text-center">
-          Останнє оновлення: {new Date().toLocaleDateString('uk-UA')}
+          {t('termsOfService.lastUpdated', {
+            date: new Date().toLocaleDateString('uk-UA'),
+          })}
         </p>
       </div>
     </div>

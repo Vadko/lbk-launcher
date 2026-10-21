@@ -1,21 +1,19 @@
+import { FolderOpen, Gamepad, Library, LockOpen, RefreshCw } from 'lucide';
 import {
-  BrushCleaning,
-  FileText,
-  FolderOpen,
-  Gamepad,
-  Heart,
-  Library,
-  MessageCircle,
-  Play,
-  RefreshCw,
-  Settings2,
-  Shield,
-  Sparkles,
-  Trash2,
+  BrushCleaningIcon,
+  FileTextIcon,
+  HeartIcon,
+  MessageCircleIcon,
+  PlayIcon,
+  Settings2Icon,
+  ShieldIcon,
+  SparklesIcon,
+  Trash2Icon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useModalStore } from '@/renderer/store/useModalStore';
-import { plural } from '@/shared/plural';
+import { t } from '@/shared/i18n/i18n';
 import type { SteamCollectionSyncFailure } from '@/shared/types';
 import { APP_VERSION } from '../../constants/appVersion';
 import { SPECIAL_TRANSLATORS } from '../../constants/specialTranslators';
@@ -33,9 +31,11 @@ import { Modal } from '../Modal/Modal';
 import { PrivacyPolicyModal } from '../Modal/PrivacyPolicyModal';
 import { SendLogsModal } from '../Modal/SendLogsModal';
 import { TermsOfServiceModal } from '../Modal/TermsOfServiceModal';
+import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
+import { SteamBridgeStatusCard } from './SteamBridgeStatusCard';
 
 const SettingItem = React.memo<{
   id: string;
@@ -61,24 +61,28 @@ const SettingItem = React.memo<{
 
 SettingItem.displayName = 'SettingItem';
 
+const STEAM_ACTION_ERRORS: Record<
+  SteamCollectionSyncFailure,
+  (purpose: string) => string
+> = {
+  'steam-not-running': () => t('steamActionErrors.steamNotRunning'),
+  'cef-unavailable': (purpose) => t('steamActionErrors.cefUnavailable', { purpose }),
+  'cef-blocked': (purpose) => t('steamActionErrors.cefBlocked', { purpose }),
+  'millennium-plugin-pending': (purpose) =>
+    t('steamActionErrors.millenniumPluginPending', { purpose }),
+  'millennium-outdated': (purpose) =>
+    t('steamActionErrors.millenniumOutdated', { purpose }),
+  'library-unavailable': () => t('steamActionErrors.libraryUnavailable'),
+  'no-translated-games': () => t('steamActionErrors.noTranslatedGames'),
+  'no-matches': () => t('steamActionErrors.noMatches'),
+  failed: () => t('steamActionErrors.failed'),
+};
+
 function steamActionErrorMessage(
   reason: SteamCollectionSyncFailure,
   purpose: string
 ): string {
-  switch (reason) {
-    case 'steam-not-running':
-      return 'Steam не запущено. Запустіть Steam і спробуйте ще раз.';
-    case 'cef-unavailable':
-      return `Увімкніть налаштування «Швидке застосування параметрів запуску Steam» і перезапустіть Steam, щоб лаунчер міг ${purpose}.`;
-    case 'library-unavailable':
-      return 'Бібліотека Steam ще завантажується. Спробуйте за кілька секунд.';
-    case 'no-translated-games':
-      return 'У каталозі немає перекладів до ігор Steam. Якщо каталог ще синхронізується, спробуйте за хвилину.';
-    case 'no-matches':
-      return 'Серед ваших ігор у бібліотеці Steam немає жодної з перекладом.';
-    default:
-      return 'Спробуйте ще раз пізніше.';
-  }
+  return STEAM_ACTION_ERRORS[reason](purpose);
 }
 
 export const SettingsModal: React.FC = () => {
@@ -122,6 +126,24 @@ export const SettingsModal: React.FC = () => {
   const toggleSteamCustomArtwork = useSettingsStore(
     (state) => state.toggleSteamCustomArtwork
   );
+  const productAnalyticsEnabled = useSettingsStore(
+    (state) => state.productAnalyticsEnabled
+  );
+  const toggleProductAnalytics = useSettingsStore(
+    (state) => state.toggleProductAnalytics
+  );
+  const localizationAnalyticsEnabled = useSettingsStore(
+    (state) => state.localizationAnalyticsEnabled
+  );
+  const toggleLocalizationAnalytics = useSettingsStore(
+    (state) => state.toggleLocalizationAnalytics
+  );
+  const crashDiagnosticsEnabled = useSettingsStore(
+    (state) => state.crashDiagnosticsEnabled
+  );
+  const toggleCrashDiagnostics = useSettingsStore(
+    (state) => state.toggleCrashDiagnostics
+  );
 
   // Promo modal dev settings
   const { devMode, setDevMode } = usePromoModalStore();
@@ -134,9 +156,37 @@ export const SettingsModal: React.FC = () => {
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSendLogsModalOpen, setIsSendLogsModalOpen] = useState(false);
   const unhideTranslationInputRef = useRef<HTMLInputElement>(null);
-  const [isTranslationUnlocked, setIsTranslationUnlocked] = useState(false);
-  const [isSyncingSteamCollection, setIsSyncingSteamCollection] = useState(false);
-  const [isTogglingLbkShortcut, setIsTogglingLbkShortcut] = useState(false);
+  const {
+    phase: steamCollectionPhase,
+    isPending: isSyncingSteamCollection,
+    run: runSteamCollectionSync,
+  } = useActionPhase();
+  const {
+    phase: lbkShortcutPhase,
+    isPending: isTogglingLbkShortcut,
+    run: runLbkShortcut,
+  } = useActionPhase();
+  const {
+    phase: kurinSyncPhase,
+    isPending: isSyncingKurin,
+    isBusy: isKurinSyncBusy,
+    run: runKurinSync,
+  } = useActionPhase();
+
+  const kurinSyncResultRef = useRef<string[] | null>(null);
+  const {
+    phase: unlockPhase,
+    isPending: isUnlockingTranslation,
+    run: runUnlockTranslation,
+  } = useActionPhase();
+
+  const [isTogglingSteamCef, setIsTogglingSteamCef] = useState(false);
+  const [isTogglingSteamArtwork, setIsTogglingSteamArtwork] = useState(false);
+  const {
+    phase: logsFolderPhase,
+    isPending: isOpeningLogsFolder,
+    run: runOpenLogsFolder,
+  } = useActionPhase();
 
   useEffect(() => {
     // Check if liquid glass is supported on this system
@@ -152,114 +202,175 @@ export const SettingsModal: React.FC = () => {
     await window.liquidGlassAPI?.toggle(newValue);
   };
 
-  const handleToggleSteamCefDebugging = () => {
+  const handleToggleSteamCefDebugging = async () => {
+    if (isTogglingSteamCef) {
+      return;
+    }
     const newValue = !steamCefDebuggingEnabled;
     toggleSteamCefDebugging();
-    // Fire-and-forget — the enable path can probe Steam for ~1.5s.
-    window.electronAPI?.setSteamCefDebugging(newValue).catch(console.error);
+
+    setIsTogglingSteamCef(true);
+    try {
+      await window.electronAPI.setSteamCefDebugging(newValue);
+    } catch (error) {
+      console.error('[Settings] Steam CEF debugging toggle failed:', error);
+      toggleSteamCefDebugging();
+    } finally {
+      setIsTogglingSteamCef(false);
+    }
   };
 
-  const handleToggleSteamCustomArtwork = () => {
+  const handleToggleSteamCustomArtwork = async () => {
+    if (isTogglingSteamArtwork) {
+      return;
+    }
     const newValue = !steamCustomArtworkEnabled;
     toggleSteamCustomArtwork();
-    // Fire-and-forget — switching off walks every app we've touched.
-    window.electronAPI?.setSteamCustomArtwork(newValue).catch(console.error);
+    setIsTogglingSteamArtwork(true);
+    try {
+      await window.electronAPI.setSteamCustomArtwork(newValue);
+    } catch (error) {
+      console.error('[Settings] Steam custom artwork toggle failed:', error);
+      toggleSteamCustomArtwork();
+    } finally {
+      setIsTogglingSteamArtwork(false);
+    }
   };
 
   const handleSyncSteamCollection = useCallback(async () => {
     if (isSyncingSteamCollection) {
       return;
     }
-    setIsSyncingSteamCollection(true);
     try {
-      const result = await window.electronAPI.syncSteamTranslatedCollection();
+      const result = await runSteamCollectionSync(
+        () => window.electronAPI.syncSteamTranslatedCollection(),
+        { isSuccess: (r) => r.ok }
+      );
       if (result.ok) {
         showModal({
-          title: 'Колекція оновлена',
+          title: t('settings.collection.updatedTitle'),
           message:
             result.total === 0
-              ? 'У колекції «З українізаторами» тепер немає ігор.'
-              : `У колекції «З українізаторами» тепер ${result.total} ${plural(result.total, 'гра', 'гри', 'ігор')}.`,
+              ? t('settings.collection.updatedEmpty')
+              : t('settings.collection.updated', { count: result.total }),
           type: 'info',
         });
       } else {
         showModal({
-          title: 'Не вдалося оновити колекцію',
-          message: steamActionErrorMessage(result.reason, 'керувати колекціями'),
+          title: t('settings.collection.failedTitle'),
+          message: steamActionErrorMessage(
+            result.reason,
+            t('steamActionPurposes.manageCollections')
+          ),
           type: 'error',
         });
       }
     } catch (error) {
       console.error('[Settings] Steam collection sync failed:', error);
       showModal({
-        title: 'Не вдалося оновити колекцію',
-        message: 'Сталася непередбачена помилка.',
+        title: t('settings.collection.failedTitle'),
+        message: t('settings.unexpectedError'),
         type: 'error',
       });
-    } finally {
-      setIsSyncingSteamCollection(false);
     }
-  }, [showModal, isSyncingSteamCollection]);
+  }, [showModal, isSyncingSteamCollection, runSteamCollectionSync]);
 
   const handleAddLbkToSteamLibrary = useCallback(async () => {
     if (isTogglingLbkShortcut) {
       return;
     }
-    setIsTogglingLbkShortcut(true);
     try {
-      const result = await window.electronAPI.addLbkLauncherToSteamLibrary();
+      const result = await runLbkShortcut(
+        () => window.electronAPI.addLbkLauncherToSteamLibrary(),
+        { isSuccess: (r) => r.ok }
+      );
       if (result.ok) {
         showModal({
-          title: 'Готово',
-          message: 'LBK Launcher додано в бібліотеку Steam.',
+          title: t('settings.lbkShortcut.addedTitle'),
+          message: t('settings.lbkShortcut.addedMessage'),
           type: 'info',
         });
       } else {
         showModal({
-          title: 'Не вдалося додати в Steam',
-          message: steamActionErrorMessage(result.reason, 'додати ярлик у бібліотеку'),
+          title: t('settings.lbkShortcut.failedTitle'),
+          message: steamActionErrorMessage(
+            result.reason,
+            t('steamActionPurposes.addShortcut')
+          ),
           type: 'error',
         });
       }
     } catch (error) {
       console.error('[Settings] Adding LBK to Steam library failed:', error);
       showModal({
-        title: 'Сталася помилка',
-        message: 'Спробуйте ще раз пізніше.',
+        title: t('settings.lbkShortcut.errorTitle'),
+        message: t('settings.lbkShortcut.errorMessage'),
         type: 'error',
       });
-    } finally {
-      setIsTogglingLbkShortcut(false);
     }
-  }, [showModal, isTogglingLbkShortcut]);
+  }, [showModal, isTogglingLbkShortcut, runLbkShortcut]);
 
   const handleKurinSync = useCallback(async () => {
-    closeSettingsModal();
-    const syncedGameNames = await window.electronAPI?.syncKurinGames();
-    if (syncedGameNames && syncedGameNames.length > 0) {
-      showModal({
-        title: 'Синхронізація завершена',
-        message: `Синхронізовано ${syncedGameNames.length} ${plural(syncedGameNames.length, 'гру', 'гри', 'ігор')}: ${syncedGameNames.join(', ')}`,
-        type: 'info',
-      });
-    } else {
-      showModal({
-        title: 'Синхронізація завершена',
-        message: 'Не знайдено ігор, встановлених через Kurin, або Kurin не встановлено.',
-        type: 'info',
-      });
+    if (isSyncingKurin) {
+      return;
     }
-  }, [showModal, closeSettingsModal]);
+    kurinSyncResultRef.current = null;
+    let syncedGameNames: string[];
+    try {
+      syncedGameNames = await runKurinSync(() => window.electronAPI.syncKurinGames());
+    } catch (error) {
+      console.error('[Settings] Kurin sync failed:', error);
+      showModal({
+        title: t('settings.kurin.failedTitle'),
+        message: t('settings.unexpectedError'),
+        type: 'error',
+      });
+      return;
+    }
+    kurinSyncResultRef.current = syncedGameNames;
+  }, [showModal, isSyncingKurin, runKurinSync]);
+
+  const showKurinSyncResult = useCallback((synced: string[]) => {
+    useModalStore.getState().showModal({
+      title: t('settings.kurin.doneTitle'),
+      message:
+        synced.length > 0
+          ? t('settings.kurin.synced', { count: synced.length, games: synced.join(', ') })
+          : t('settings.kurin.none'),
+      type: 'info',
+    });
+  }, []);
+
+  useEffect(() => {
+    const synced = kurinSyncResultRef.current;
+    if (synced === null || isKurinSyncBusy) {
+      return;
+    }
+    kurinSyncResultRef.current = null;
+    closeSettingsModal();
+    showKurinSyncResult(synced);
+  }, [isKurinSyncBusy, closeSettingsModal, showKurinSyncResult]);
+
+  useEffect(
+    () => () => {
+      const synced = kurinSyncResultRef.current;
+      if (synced === null) {
+        return;
+      }
+      kurinSyncResultRef.current = null;
+      showKurinSyncResult(synced);
+    },
+    [showKurinSyncResult]
+  );
 
   const handleClearCacheOnly = useCallback(() => {
     showModal({
-      title: 'Очистити кеш',
-      message:
-        'Буде видалено тимчасові файли та базу даних. Налаштування збережуться. Застосунок перезапуститься.',
+      title: t('settings.clearCache.title'),
+      message: t('settings.clearCache.confirmMessage'),
       type: 'info',
       actions: [
         {
-          label: 'Очистити',
+          label: t('settings.clearCache.confirmAction'),
           variant: 'primary',
           onClick: () => window.api?.clearCacheOnly(),
         },
@@ -269,13 +380,12 @@ export const SettingsModal: React.FC = () => {
 
   const handleClearAllData = useCallback(() => {
     showModal({
-      title: 'Очистити всі дані',
-      message:
-        'Буде видалено всі дані, включаючи налаштування та підписки. Застосунок перезапуститься.',
+      title: t('settings.clearAll.title'),
+      message: t('settings.clearAll.confirmMessage'),
       type: 'error',
       actions: [
         {
-          label: 'Видалити все',
+          label: t('settings.clearAll.confirmAction'),
           variant: 'danger',
           onClick: () => window.api?.clearAllData(),
         },
@@ -284,8 +394,38 @@ export const SettingsModal: React.FC = () => {
   }, [showModal]);
 
   const handleOpenLogsFolder = useCallback(async () => {
-    await window.loggerAPI?.openLogsFolder();
-  }, []);
+    if (isOpeningLogsFolder) {
+      return;
+    }
+    try {
+      const result = await runOpenLogsFolder(() => window.loggerAPI.openLogsFolder(), {
+        isSuccess: (r) => r.success,
+      });
+      if (!result.success) {
+        console.error('[Settings] Opening logs folder failed:', result.error);
+      }
+    } catch (error) {
+      console.error('[Settings] Opening logs folder failed:', error);
+    }
+  }, [isOpeningLogsFolder, runOpenLogsFolder]);
+
+  const handleUnlockTranslation = useCallback(async () => {
+    const translationId = unhideTranslationInputRef.current?.value;
+    if (!translationId || isUnlockingTranslation) {
+      return;
+    }
+    try {
+      const success = await runUnlockTranslation(
+        () => window.electronAPI.setGameVisibility(translationId, false),
+        { isSuccess: (ok) => ok }
+      );
+      if (success && unhideTranslationInputRef.current) {
+        unhideTranslationInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('[Settings] Unlocking hidden translation failed:', error);
+    }
+  }, [isUnlockingTranslation, runUnlockTranslation]);
 
   const handleOpenTermsModal = useCallback(() => {
     setIsTermsModalOpen(true);
@@ -321,16 +461,7 @@ export const SettingsModal: React.FC = () => {
       <Modal
         isOpen={isSettingsModalOpen}
         onClose={closeSettingsModal}
-        title="Налаштування"
-        footer={
-          <button
-            onClick={closeSettingsModal}
-            data-gamepad-cancel
-            className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
-          >
-            Закрити
-          </button>
-        }
+        title={t('settings.title')}
       >
         <div className="space-y-4">
           {/* Feedback link */}
@@ -341,22 +472,26 @@ export const SettingsModal: React.FC = () => {
             data-gamepad-modal-item
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0088cc] to-[#00aaff] flex items-center justify-center flex-shrink-0">
-              <MessageCircle size={20} color="#ffffff" />
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-[#0088cc] to-[#00aaff] flex items-center justify-center shrink-0">
+              <MessageCircleIcon size={20} color="#ffffff" />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-text-main">Зворотний зв'язок</h4>
-              <p className="text-xs text-text-muted">Написати нам у Telegram</p>
+              <h4 className="text-sm font-semibold text-text-main">
+                {t('settings.feedback.title')}
+              </h4>
+              <p className="text-xs text-text-muted">
+                {t('settings.feedback.description')}
+              </p>
             </div>
           </a>
 
           <SettingItem
             id="performance-mode"
-            title="Режим продуктивності"
+            title={t('settings.performance.title')}
             description={
               isHardwareWeak
-                ? 'Увімкнено: на цьому пристрої недостатньо ресурсів для плавних анімацій, тому режим продуктивності не можна вимкнути'
-                : 'Вимикає анімації і блюр в інтерфейсі для кращої продуктивності'
+                ? t('settings.performance.weakHardware')
+                : t('settings.performance.description')
             }
             enabled={!animationsEnabled}
             onChange={toggleAnimations}
@@ -367,11 +502,11 @@ export const SettingsModal: React.FC = () => {
           {isLiquidGlassSupported && (
             <SettingItem
               id="liquid-glass"
-              title="Liquid Glass тема"
+              title={t('settings.liquidGlass.title')}
               description={
                 isHardwareWeak
-                  ? 'Вимкнено: на цьому пристрої недостатньо ресурсів для ефекту прозорості'
-                  : 'Увімкнути ефект прозорості та розмиття для вікон (macOS 26+)'
+                  ? t('settings.liquidGlass.weakHardware')
+                  : t('settings.liquidGlass.description')
               }
               enabled={liquidGlassEnabled}
               onChange={handleToggleLiquidGlass}
@@ -380,44 +515,47 @@ export const SettingsModal: React.FC = () => {
           )}
           <SettingItem
             id="backup"
-            title="Створювати резервну копію"
-            description="Зберігати оригінальні файли гри перед встановленням українізатора"
+            title={t('settings.backup.title')}
+            description={t('settings.backup.description')}
             enabled={createBackupBeforeInstall}
             onChange={toggleCreateBackup}
           />
           <SettingItem
             id="steam-cef-debugging"
-            title="Швидке застосування параметрів запуску Steam"
-            description="Створює файл .cef-enable-remote-debugging у теці Steam, щоб застосовувати параметри запуску без перезапуску Steam (після увімкнення потрібен один перезапуск). Якщо вимкнено, файл буде видалено — зверніть увагу: цей самий файл використовує Decky Loader — а параметри запуску оновлюватимуться лише коли Steam закрито"
+            title={t('settings.steamCef.title')}
+            description={t('settings.steamCef.description')}
             enabled={steamCefDebuggingEnabled}
             onChange={handleToggleSteamCefDebugging}
+            disabled={isTogglingSteamCef}
           />
+          <SteamBridgeStatusCard isOpen={isSettingsModalOpen} />
           <SettingItem
             id="steam-custom-artwork"
-            title="Українські обкладинки в Steam"
-            description="Замінювати банер, логотип і горизонтальну обкладинку гри в бібліотеці Steam на українські версії з українізатора. Вертикальна обкладинка залишається оригінальною. Оригінали повертаються при видаленні українізатора або коли вимкнути цей перемикач"
+            title={t('settings.steamArtwork.title')}
+            description={t('settings.steamArtwork.description')}
             enabled={steamCustomArtworkEnabled}
             onChange={handleToggleSteamCustomArtwork}
+            disabled={isTogglingSteamArtwork}
           />
 
           <SettingItem
             id="adult-games"
-            title="Показувати ігри з порнографічним вмістом"
-            description="Дозволити відображення ігор з порнографічним/еротичним контентом (hentai, візуальні новели для дорослих тощо)"
+            title={t('settings.adultGames.title')}
+            description={t('settings.adultGames.description')}
             enabled={showAdultGames}
             onChange={toggleShowAdultGames}
           />
           <SettingItem
             id="ai-translations"
-            title="Приховати ШІ-переклади"
-            description="Сховати переклади, створені за допомогою штучного інтелекту"
+            title={t('settings.aiTranslations.title')}
+            description={t('settings.aiTranslations.description')}
             enabled={hideAiTranslations}
             onChange={toggleHideAiTranslations}
           />
           <SettingItem
             id="recommendations"
-            title="Рекомендації ігор"
-            description="Показувати блок «Вас може зацікавити» на сторінці гри"
+            title={t('settings.recommendations.title')}
+            description={t('settings.recommendations.description')}
             enabled={showRecommendations}
             onChange={() => {
               trackEvent('Toggle recommendations', { Enabled: !showRecommendations });
@@ -426,18 +564,42 @@ export const SettingsModal: React.FC = () => {
           />
           <SettingItem
             id="notification-sounds"
-            title="Звуки сповіщень"
-            description="Відтворювати звуки при отриманні сповіщень про оновлення"
+            title={t('settings.notificationSounds.title')}
+            description={t('settings.notificationSounds.description')}
             enabled={notificationSoundsEnabled}
             onChange={toggleNotificationSounds}
           />
 
           <SettingItem
             id="gamepad-sounds"
-            title="Звуки геймпада"
-            description="Відтворювати звуки при навігації геймпадом"
+            title={t('settings.gamepadSounds.title')}
+            description={t('settings.gamepadSounds.description')}
             enabled={gamepadSoundsEnabled}
             onChange={toggleGamepadSounds}
+          />
+
+          <SettingItem
+            id="product-analytics"
+            title={t('settings.productAnalytics.title')}
+            description={t('settings.productAnalytics.description')}
+            enabled={productAnalyticsEnabled}
+            onChange={toggleProductAnalytics}
+          />
+
+          <SettingItem
+            id="localization-analytics"
+            title={t('settings.localizationAnalytics.title')}
+            description={t('settings.localizationAnalytics.description')}
+            enabled={localizationAnalyticsEnabled}
+            onChange={toggleLocalizationAnalytics}
+          />
+
+          <SettingItem
+            id="crash-diagnostics"
+            title={t('settings.crashDiagnostics.title')}
+            description={t('settings.crashDiagnostics.description')}
+            enabled={crashDiagnosticsEnabled}
+            onChange={toggleCrashDiagnostics}
           />
 
           {/* Steam collection sync */}
@@ -446,17 +608,21 @@ export const SettingsModal: React.FC = () => {
             aria-busy={isSyncingSteamCollection}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-mixed flex items-center justify-center flex-shrink-0">
-              <Library size={20} className="text-text-dark" />
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-main to-color-mixed flex items-center justify-center shrink-0">
+              <AppActionIcon
+                phase={steamCollectionPhase}
+                icon={Library}
+                size={20}
+                className="text-text-dark"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
-                Колекція «З українізаторами» в Steam
+                {t('settings.collection.title')}
               </h4>
               <p className="text-xs text-text-muted">
-                {isSyncingSteamCollection
-                  ? 'Оновлення...'
-                  : 'Створити або оновити колекцію бібліотеки Steam з іграми, на які є переклад'}
+                {t('settings.collection.description')}
               </p>
             </div>
           </button>
@@ -464,18 +630,23 @@ export const SettingsModal: React.FC = () => {
           {/* Kurin sync */}
           <button
             onClick={handleKurinSync}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+            aria-busy={isSyncingKurin}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center flex-shrink-0">
-              <RefreshCw size={20} className="text-text-dark" />
+            <div className="w-10 h-10 rounded-lg bg-color-main flex items-center justify-center shrink-0">
+              <AppActionIcon
+                phase={kurinSyncPhase}
+                icon={RefreshCw}
+                size={20}
+                className="text-text-dark"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
-                Синхронізація з Kurin`
+                {t('settings.kurin.title')}
               </h4>
-              <p className="text-xs text-text-muted">
-                Знайти встановлені ігри, додані через Kurin`, та імпортувати їх
-              </p>
+              <p className="text-xs text-text-muted">{t('settings.kurin.description')}</p>
             </div>
           </button>
 
@@ -485,15 +656,21 @@ export const SettingsModal: React.FC = () => {
             aria-busy={isTogglingLbkShortcut}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-              <Gamepad size={20} className="text-text-dark" />
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
+              <AppActionIcon
+                phase={lbkShortcutPhase}
+                icon={Gamepad}
+                size={20}
+                className="text-text-dark"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
-                LBK Launcher в бібліотеці Steam
+                {t('settings.lbkShortcut.title')}
               </h4>
               <p className="text-xs text-text-muted">
-                {isTogglingLbkShortcut ? 'Додавання...' : 'Додати лаунчер як гру в Steam'}
+                {t('settings.lbkShortcut.description')}
               </p>
             </div>
           </button>
@@ -503,13 +680,15 @@ export const SettingsModal: React.FC = () => {
             onClick={handleClearCacheOnly}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center flex-shrink-0">
-              <BrushCleaning size={20} className="text-text-dark" />
+            <div className="w-10 h-10 rounded-lg bg-color-mixed flex items-center justify-center shrink-0">
+              <BrushCleaningIcon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-text-main">Очистити кеш</h4>
+              <h4 className="text-sm font-semibold text-text-main">
+                {t('settings.clearCache.title')}
+              </h4>
               <p className="text-xs text-text-muted">
-                Видалити тимчасові файли (зберігає налаштування)
+                {t('settings.clearCache.description')}
               </p>
             </div>
           </button>
@@ -519,13 +698,15 @@ export const SettingsModal: React.FC = () => {
             onClick={handleClearAllData}
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-red-500/50 transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center flex-shrink-0">
-              <Trash2 size={20} className="text-text-dark" />
+            <div className="w-10 h-10 rounded-lg bg-color-accent flex items-center justify-center shrink-0">
+              <Trash2Icon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-text-main">Очистити всі дані</h4>
+              <h4 className="text-sm font-semibold text-text-main">
+                {t('settings.clearAll.title')}
+              </h4>
               <p className="text-xs text-text-muted">
-                Видалити налаштування, підписки та всі дані
+                {t('settings.clearAll.description')}
               </p>
             </div>
           </button>
@@ -534,95 +715,101 @@ export const SettingsModal: React.FC = () => {
           {import.meta.env.DEV && (
             <div className="p-4 rounded-xl bg-glass border border-border">
               <div className="flex items-center gap-2 mb-3">
-                <Settings2 size={18} className="text-color-accent" />
-                <h4 className="text-sm font-semibold text-text-main">Dev налаштування</h4>
+                <Settings2Icon size={18} className="text-color-accent" />
+                <h4 className="text-sm font-semibold text-text-main">
+                  {t('settings.dev.title')}
+                </h4>
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-text-muted mb-2">Звуки сповіщень:</p>
+                  <p className="text-xs text-text-muted mb-2">
+                    {t('settings.dev.notificationSounds')}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {[
                       {
                         type: 'status-change' as const,
-                        label: 'Стан',
+                        label: t('settings.dev.soundStatus'),
                         color: 'from-green-500 to-green-600',
                       },
                       {
                         type: 'version-update' as const,
-                        label: 'Версія',
+                        label: t('settings.dev.soundVersion'),
                         color: 'from-color-accent to-color-main',
                       },
                       {
                         type: 'app-update' as const,
-                        label: 'Застосунок',
+                        label: t('settings.dev.soundApp'),
                         color: 'from-color-main to-color-mixed',
                       },
                       {
                         type: 'progress-change' as const,
-                        label: 'Прогрес',
+                        label: t('settings.dev.soundProgress'),
                         color: 'from-amber-500 to-orange-500',
                       },
                       {
                         type: 'team-new-game' as const,
-                        label: 'Нова гра',
+                        label: t('settings.dev.soundNewGame'),
                         color: 'from-yellow-500 to-yellow-600',
                       },
                       {
                         type: 'team-status-change' as const,
-                        label: 'Команда',
+                        label: t('settings.dev.soundTeam'),
                         color: 'from-cyan-500 to-cyan-600',
                       },
                     ].map(({ type, label, color }) => (
                       <button
                         key={type}
                         onClick={() => playNotificationSound(type)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb ${color} text-white text-xs font-medium hover:opacity-90 transition-opacity`}
                       >
-                        <Play size={12} />
+                        <PlayIcon size={12} />
                         {label}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-text-muted mb-2">Звуки геймпада:</p>
+                  <p className="text-xs text-text-muted mb-2">
+                    {t('settings.dev.gamepadSounds')}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => playNavigateSound({ ignoreSettings: true })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb from-gray-500 to-gray-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
-                      Навігація
+                      <PlayIcon size={12} />
+                      {t('settings.dev.navigate')}
                     </button>
                     <button
                       onClick={() => playConfirmSound({ ignoreSettings: true })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb from-green-500 to-green-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
-                      Підтвердити
+                      <PlayIcon size={12} />
+                      {t('settings.dev.confirm')}
                     </button>
                     <button
                       onClick={() => playBackSound({ ignoreSettings: true })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-linear-to-r/srgb from-red-500 to-red-600 text-white text-xs font-medium hover:opacity-90 transition-opacity"
                     >
-                      <Play size={12} />
-                      Назад
+                      <PlayIcon size={12} />
+                      {t('settings.dev.back')}
                     </button>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs text-text-muted mb-2">
-                    Режим показу промо банера:
+                    {t('settings.dev.promoMode')}
                   </p>
                   <SelectDropdown
                     options={[
-                      { name: 'Звичайний (24 год + галочка)', value: 'normal' },
-                      { name: 'Завжди показувати', value: 'always' },
-                      { name: 'Ніколи не показувати', value: 'never' },
+                      { name: t('settings.dev.promoNormal'), value: 'normal' },
+                      { name: t('settings.dev.promoAlways'), value: 'always' },
+                      { name: t('settings.dev.promoNever'), value: 'never' },
                     ]}
                     selectedValue={devMode}
                     onSelectionChange={(value) => setDevMode(value as DevModeType)}
-                    placeholder="Оберіть режим"
+                    placeholder={t('settings.dev.promoPlaceholder')}
                   />
                 </div>
               </div>
@@ -632,74 +819,76 @@ export const SettingsModal: React.FC = () => {
           {/* Logging */}
           <button
             onClick={handleOpenLogsFolder}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+            aria-busy={isOpeningLogsFolder}
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-              <FolderOpen size={20} className="text-white" />
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-yellow-500 to-orange-500 flex items-center justify-center shrink-0">
+              <AppActionIcon
+                phase={logsFolderPhase}
+                icon={FolderOpen}
+                size={20}
+                className="text-white"
+                inheritColor
+              />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
-                Відкрити папку з логами
+                {t('settings.logs.title')}
               </h4>
-              <p className="text-xs text-text-muted">Переглянути збережені файли логів</p>
+              <p className="text-xs text-text-muted">{t('settings.logs.description')}</p>
             </div>
             <Button
               onClick={handleOpenSendLogsModal}
               variant="secondary"
-              className="flex-shrink-0 !border-color-accent !text-color-accent"
+              className="shrink-0 border-color-accent! text-color-accent!"
             >
-              Відправити файл
+              {t('settings.logs.send')}
             </Button>
           </button>
 
           <div className="flex flex-col gap-2 p-4 rounded-xl bg-glass border border-border">
             <h4 className="text-sm font-semibold text-text-main">
-              Розблокувати прихований переклад
+              {t('settings.unlock.title')}
             </h4>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Код перекладу"
-                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-none focus:border-color-accent transition-colors duration-300 ${
-                  isTranslationUnlocked ? '!border-color-main' : ''
+                placeholder={t('settings.unlock.placeholder')}
+                className={`flex-1 bg-glass border border-border rounded-lg px-3 py-2 text-sm text-text-main focus:outline-hidden focus:border-color-accent transition-colors duration-200 ${
+                  unlockPhase === 'done'
+                    ? 'border-color-main!'
+                    : unlockPhase === 'error'
+                      ? 'border-red-400!'
+                      : ''
                 }`}
                 ref={unhideTranslationInputRef}
-                onChange={() => setIsTranslationUnlocked(false)}
               />
               <Button
-                onClick={async () => {
-                  const translationId = unhideTranslationInputRef.current?.value;
-                  if (translationId) {
-                    const success = await window.electronAPI.setGameVisibility(
-                      translationId,
-                      false
-                    );
-                    if (success) {
-                      if (unhideTranslationInputRef.current) {
-                        unhideTranslationInputRef.current.value = '';
-                      }
-                      setIsTranslationUnlocked(true);
-                    }
-                  }
-                }}
+                onClick={handleUnlockTranslation}
+                aria-busy={isUnlockingTranslation}
                 variant="secondary"
-                className="flex-shrink-0"
+                className="shrink-0 aria-busy:opacity-60 aria-busy:cursor-wait"
+                icon={<AppActionIcon phase={unlockPhase} icon={LockOpen} size={16} />}
               >
-                Розблокувати
+                {t('settings.unlock.action')}
               </Button>
             </div>
           </div>
 
           <button
             onClick={handleOpenChangelogModal}
-            className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
+            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center flex-shrink-0">
-              <Sparkles size={20} className="text-white" />
+            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center shrink-0">
+              <SparklesIcon size={20} className="text-white" />
             </div>
             <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-text-main">Що нового</h4>
-              <p className="text-xs text-text-muted">Історія оновлень · v{APP_VERSION}</p>
+              <h4 className="text-sm font-semibold text-text-main">
+                {t('settings.changelog.title')}
+              </h4>
+              <p className="text-xs text-text-muted">
+                {t('settings.changelog.description', { version: APP_VERSION })}
+              </p>
             </div>
           </button>
 
@@ -709,12 +898,12 @@ export const SettingsModal: React.FC = () => {
               onClick={handleOpenTermsModal}
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-color-accent to-color-main flex items-center justify-center flex-shrink-0">
-                <FileText size={20} className="text-white" />
+              <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
+                <FileTextIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">
-                  Умови використання
+                  {t('settings.legal.terms')}
                 </h4>
               </div>
             </button>
@@ -723,12 +912,12 @@ export const SettingsModal: React.FC = () => {
               onClick={handleOpenPrivacyModal}
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                <Shield size={20} className="text-white" />
+              <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
+                <ShieldIcon size={20} className="text-white" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">
-                  Політика конфіденційності
+                  {t('settings.legal.privacy')}
                 </h4>
               </div>
             </button>
@@ -744,12 +933,13 @@ export const SettingsModal: React.FC = () => {
             }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Heart size={18} className="text-pink-500" />
-              <h4 className="text-sm font-semibold text-pink-500">Подяки</h4>
+              <HeartIcon size={18} className="text-pink-500" />
+              <h4 className="text-sm font-semibold text-pink-500">
+                {t('settings.credits.title')}
+              </h4>
             </div>
             <p className="text-xs text-text-muted mb-3">
-              Особлива подяка перекладачам, які долучились до тестування з перших днів і
-              допомогають робити цей лаунчер таким, яким він є:
+              {t('settings.credits.description')}
             </p>
             <div className="flex flex-wrap gap-2">
               {SPECIAL_TRANSLATORS.map((translator) => (

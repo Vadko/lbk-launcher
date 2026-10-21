@@ -60,8 +60,8 @@ export async function resolveMacBundleTarget(
 
   for (const bundle of appBundles) {
     const bundleFiles = (await getAllFiles(bundle)).map(toPosix);
-    // APFS дефолтно case-insensitive — зіставляємо в нижньому регістрі,
-    // оригінальні шляхи зберігаємо для результату
+    // APFS is case-insensitive by default — we match in lowercase,
+    // but keep the original paths for the result
     const bundleSetLower = new Set(bundleFiles.map((f) => f.toLowerCase()));
 
     // A bundle file ending with an anchor implies the install root is that

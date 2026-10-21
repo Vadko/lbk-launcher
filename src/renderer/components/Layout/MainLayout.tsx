@@ -1,5 +1,5 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
@@ -11,13 +11,16 @@ import { useConfirmStore } from '../../store/useConfirmStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSteamPluginSetupStore } from '../../store/useSteamPluginSetupStore';
 import { useStore } from '../../store/useStore';
 import { AppLoader } from '../AppLoader/AppLoader';
+import { GamepadHelpOverlay } from '../GamepadHints/GamepadHelpOverlay';
 import { GamepadHints } from '../GamepadHints/GamepadHints';
 import { ChangelogModal } from '../Modal/ChangelogModal';
 import { ConfirmModal } from '../Modal/ConfirmModal';
 import { GlobalModal } from '../Modal/GlobalModal';
 import { PromoModal } from '../Modal/PromoModal';
+import { SteamPluginSetupModal } from '../Modal/SteamPluginSetup/SteamPluginSetupModal';
 import { NotificationModal } from '../Notifications/NotificationModal';
 import { ToastNotifications } from '../Notifications/ToastNotifications';
 import { SettingsModal } from '../Settings/SettingsModal';
@@ -53,23 +56,30 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const globalModalOpen = useModalStore((s) => s.isOpen);
   const settingsModalOpen = useSettingsStore((s) => s.isSettingsModalOpen);
   const changelogModalOpen = useChangelogStore((s) => s.isOpen);
+  const steamPluginSetupOpen = useSteamPluginSetupStore((s) => s.open);
 
   const openHistory = useCallback(() => setShowNotificationHistory(true), []);
   const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
 
-  // Обробка deep link для навігації до перекладу
+  // Handle deep link navigation to a translation
   useDeepLink();
 
-  // Обробка навігації з системних нотифікацій
+  // Handle navigation from system notifications
   useNavigateFromNotifications();
 
-  // Геймпад навігація (потребує Router context)
+  // Gamepad navigation (needs Router context)
   useGamepadModeNavigation(isGamepadMode);
 
   // Пам'ятаємо переклади, які колись встановлювались, для лайків/відгуків
   useTrackEverInstalledTranslations();
+  // On <html> too, so the gamepad focus styles reach modals portaled outside this layout
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-gamepad-mode', isGamepadMode);
+  }, [isGamepadMode]);
 
   const isLiquidGlassActive = liquidGlassSupported && liquidGlassEnabled;
+  const bgImageClass =
+    'absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none';
 
   return (
     <MotionConfig reducedMotion={animationsEnabled ? 'never' : 'always'}>
@@ -89,18 +99,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           /* Gamepad layout: Header + Games strip on top, MainContent below */
           <div className="flex flex-col h-full pt-8 relative z-10">
             {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
+            <img src={mainBg} alt="" className={bgImageClass} aria-hidden="true" />
             {/* Sidebar - hides when in main-content mode */}
             <div
               className={`transition-all duration-300 ease-in-out relative z-20 ${
                 navigationArea === 'main-content'
                   ? 'max-h-0 opacity-0 overflow-hidden'
-                  : 'max-h-[300px] opacity-100'
+                  : 'max-h-75 opacity-100'
               }`}
             >
               <Sidebar onOpenHistory={openHistory} isHorizontal={true} />
@@ -113,12 +118,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           /* Normal layout: Vertical sidebar on left, MainContent on right */
           <div className="relative flex h-full pt-8 px-2 pb-2 gap-2 z-10">
             {/* Background image */}
-            <img
-              src={mainBg}
-              alt=""
-              className="absolute inset-0 w-full h-auto top-0 left-0 object-cover object-top -z-10 pointer-events-none"
-              aria-hidden="true"
-            />
+            <img src={mainBg} alt="" className={bgImageClass} aria-hidden="true" />
             <Sidebar onOpenHistory={openHistory} isHorizontal={false} />
             <Outlet />
           </div>
@@ -135,6 +135,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {confirmOpen && <ConfirmModal />}
         {settingsModalOpen && <SettingsModal />}
         {globalModalOpen && <GlobalModal />}
+        {steamPluginSetupOpen && <SteamPluginSetupModal />}
         {changelogModalOpen && <ChangelogModal />}
         {showNotificationHistory && (
           <NotificationModal isOpen={showNotificationHistory} onClose={closeHistory} />
@@ -143,6 +144,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
         {/* Gamepad hints */}
         <GamepadHints />
+        <GamepadHelpOverlay />
       </div>
     </MotionConfig>
   );

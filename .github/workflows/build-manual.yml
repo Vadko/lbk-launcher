@@ -48,19 +48,23 @@ jobs:
 
       - name: Build matrix
         id: matrix
+        env:
+          INPUT_WINDOWS: ${{ github.event.inputs.windows }}
+          INPUT_LINUX: ${{ github.event.inputs.linux }}
+          INPUT_MACOS: ${{ github.event.inputs.macos }}
         run: |
           MATRIX='{"include":['
           FIRST=true
-          if [ "${{ github.event.inputs.windows }}" = "true" ]; then
+          if [ "$INPUT_WINDOWS" = "true" ]; then
             MATRIX="${MATRIX}{\"os\":\"windows-latest\",\"platform\":\"windows\"}"
             FIRST=false
           fi
-          if [ "${{ github.event.inputs.linux }}" = "true" ]; then
+          if [ "$INPUT_LINUX" = "true" ]; then
             [ "$FIRST" = false ] && MATRIX="${MATRIX},"
             MATRIX="${MATRIX}{\"os\":\"ubuntu-latest\",\"platform\":\"linux\"}"
             FIRST=false
           fi
-          if [ "${{ github.event.inputs.macos }}" = "true" ]; then
+          if [ "$INPUT_MACOS" = "true" ]; then
             [ "$FIRST" = false ] && MATRIX="${MATRIX},"
             MATRIX="${MATRIX}{\"os\":\"macos-26\",\"platform\":\"macos\"}"
           fi
@@ -101,7 +105,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.20.0'
+          node-version: '24.21.0'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

@@ -1,17 +1,10 @@
-import { spawn } from 'child_process';
 import * as fs from 'fs';
+import { isFlatpak, spawnOnHost } from './host-exec';
 import { isLinux } from './platform';
 
 interface HeroicLaunchResult {
   success: boolean;
   error?: string;
-}
-
-/**
- * Check if running inside Flatpak
- */
-function isRunningInFlatpak(): boolean {
-  return !!process.env.FLATPAK_ID;
 }
 
 /**
@@ -38,34 +31,18 @@ export async function launchHeroicGame(
     // We can try to launch it via flatpak run from host or from within flatpak
 
     // If we are IN a flatpak (LittleBit is flatpak'd), we need to use flatpak-spawn --host
-    if (isRunningInFlatpak()) {
+    if (isFlatpak()) {
       // We assume the user has com.heroicgameslauncher.hgl installed
-      // Command: flatpak-spawn --host flatpak run com.heroicgameslauncher.hgl --no-gui --no-sandbox "URI"
-
       console.log(
         '[HeroicLauncher] Launching via flatpak-spawn (Flatpak -> Host Flatpak)...'
       );
-
-      const child = spawn(
-        'flatpak-spawn',
-        [
-          '--host',
-          'flatpak',
-          'run',
-          'com.heroicgameslauncher.hgl',
-          '--no-gui',
-          '--no-sandbox',
-          heroicUri,
-        ],
-        {
-          detached: true,
-          stdio: 'ignore',
-        }
-      );
-      child.on('error', (err) => {
-        console.error('[HeroicLauncher] Error spawning flatpak-spawn:', err);
-      });
-      child.unref();
+      spawnOnHost('flatpak', [
+        'run',
+        'com.heroicgameslauncher.hgl',
+        '--no-gui',
+        '--no-sandbox',
+        heroicUri,
+      ]);
       return { success: true };
     }
 
@@ -93,33 +70,19 @@ export async function launchHeroicGame(
       console.log(
         '[HeroicLauncher] Launching via flatpak run (Native -> Host Flatpak)...'
       );
-      const child = spawn(
-        'flatpak',
-        ['run', 'com.heroicgameslauncher.hgl', '--no-gui', '--no-sandbox', heroicUri],
-        {
-          detached: true,
-          stdio: 'ignore',
-        }
-      );
-      child.on('error', (err) => {
-        console.error('[HeroicLauncher] Error spawning flatpak:', err);
-      });
-      child.unref();
+      spawnOnHost('flatpak', [
+        'run',
+        'com.heroicgameslauncher.hgl',
+        '--no-gui',
+        '--no-sandbox',
+        heroicUri,
+      ]);
       return { success: true };
     }
 
     // 2. Fallback to Native Heroic command
     console.log('[HeroicLauncher] Launching via native command...');
-    const child = spawn('heroic', ['--no-gui', '--no-sandbox', heroicUri], {
-      detached: true,
-      stdio: 'ignore',
-    });
-
-    child.on('error', (err) => {
-      console.error('[HeroicLauncher] Failed to launch native heroic:', err);
-    });
-
-    child.unref();
+    spawnOnHost('heroic', ['--no-gui', '--no-sandbox', heroicUri]);
     return { success: true };
   } catch (error) {
     console.error('[HeroicLauncher] Error launching game:', error);

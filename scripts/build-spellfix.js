@@ -125,11 +125,12 @@ function build() {
 
   let cmd;
   let env;
+  const cc = process.env.CC || 'cc';
 
   if (platform === 'darwin') {
-    cmd = `cc -dynamiclib -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
+    cmd = `${cc} -dynamiclib -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
   } else if (platform === 'linux') {
-    cmd = `cc -shared -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
+    cmd = `${cc} -shared -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
   } else if (platform === 'win32') {
     const msvc = findMsvcEnv();
     const allInclude = [headersDir, ...msvc.includePaths].join(';');
@@ -156,4 +157,13 @@ function build() {
   console.log(`[build-spellfix] Success: ${outFile}`);
 }
 
-build();
+try {
+  build();
+} catch (err) {
+  // Release packaging needs the binary as extraResources; locally the app only loses typo-tolerant search
+  if (process.env.CI) {
+    throw err;
+  }
+  console.warn(`[build-spellfix] Skipped: ${err.message}`);
+  console.warn('[build-spellfix] Search will work without typo tolerance (spellfix).');
+}

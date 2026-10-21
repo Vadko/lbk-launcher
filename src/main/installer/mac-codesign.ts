@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { InstallationStatus } from '../../shared/types';
 import { isMacOS } from '../utils/platform';
 
@@ -119,7 +120,7 @@ export async function resignMacBundles(
       continue;
     }
 
-    onStatus?.({ message: 'Підписання застосунку...', phase: 'install' });
+    onStatus?.({ message: t('installFailure.signing'), phase: 'install' });
 
     // 7-Zip restores Finder info and resource forks from archives authored on
     // macOS, and codesign refuses to sign a bundle carrying them ("resource

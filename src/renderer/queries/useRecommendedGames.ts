@@ -1,4 +1,4 @@
-import type { Game } from '../types/game';
+import type { Game } from '../../shared/types';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const FIVE_MINUTES = 5 * 60 * 1000;

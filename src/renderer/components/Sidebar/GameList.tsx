@@ -1,10 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useMemo } from 'react';
+import { t } from '@/shared/i18n/i18n';
+import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useListCompositionKey } from '../../hooks/useListCompositionKey';
-import type { Game } from '../../types/game';
 import { Loader } from '../ui/Loader';
 import { GAME_LIST_ROW_ESTIMATE } from './constants';
 import { GameGroupItem } from './GameGroupItem';
@@ -70,7 +71,7 @@ export const GameList: React.FC<GameListProps> = React.memo(
     if (totalGames === 0) {
       return (
         <div className="text-center text-text-muted py-8">
-          <p>Ігор не знайдено</p>
+          <p>{t('homeSections.noGames')}</p>
         </div>
       );
     }

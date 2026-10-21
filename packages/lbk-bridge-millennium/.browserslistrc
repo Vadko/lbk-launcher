@@ -1,0 +1,2 @@
+# ttc runs Babel's preset-env over webkit.js; without a target it lowers it to ES5, whose class helpers read Function.
+chrome >= 100

@@ -1,5 +1,11 @@
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+} from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
+import { t } from '@/shared/i18n/i18n';
 
 interface ReviewsPaginationProps {
   page: number;
@@ -63,7 +69,7 @@ export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
   return (
     <nav
       ref={navRef}
-      aria-label="Сторінки відгуків"
+      aria-label={t('gameReviews.pagination')}
       className="flex items-center justify-center gap-2 py-3 rounded-lg bg-white/5"
     >
       <button
@@ -71,20 +77,20 @@ export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
         className={controlClass}
         disabled={page === 1}
         onClick={() => onChange(1)}
-        aria-label="Перша сторінка"
+        aria-label={t('gameReviews.firstPage')}
         data-gamepad-action
       >
-        <ChevronsLeft size={16} />
+        <ChevronsLeftIcon size={16} />
       </button>
       <button
         type="button"
         className={controlClass}
         disabled={page === 1}
         onClick={() => onChange(page - 1)}
-        aria-label="Попередня сторінка"
+        aria-label={t('gameReviews.previousPage')}
         data-gamepad-action
       >
-        <ChevronLeft size={16} />
+        <ChevronLeftIcon size={16} />
       </button>
       {getPageItems(page, totalPages).map((item, i, items) =>
         item === 'ellipsis' ? (
@@ -116,20 +122,20 @@ export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
         className={controlClass}
         disabled={page === totalPages}
         onClick={() => onChange(page + 1)}
-        aria-label="Наступна сторінка"
+        aria-label={t('gameReviews.nextPage')}
         data-gamepad-action
       >
-        <ChevronRight size={16} />
+        <ChevronRightIcon size={16} />
       </button>
       <button
         type="button"
         className={controlClass}
         disabled={page === totalPages}
         onClick={() => onChange(totalPages)}
-        aria-label="Остання сторінка"
+        aria-label={t('gameReviews.lastPage')}
         data-gamepad-action
       >
-        <ChevronsRight size={16} />
+        <ChevronsRightIcon size={16} />
       </button>
     </nav>
   );

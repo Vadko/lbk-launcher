@@ -1,7 +1,8 @@
 import supportBox from '@resources/images/promo-support-box.svg';
-import { Heart } from 'lucide-react';
+import { HeartIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BannerData } from '@/main/db/banners-api';
+import { t } from '@/shared/i18n/i18n';
 import { usePromoModalStore } from '../../store/usePromoModalStore';
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
@@ -23,24 +24,16 @@ const SupportContent: React.FC<SupportContentProps> = ({
   <>
     {/* Image */}
     <div className="flex justify-center">
-      <img
-        src={supportBox}
-        alt="Підтримайте український лаунчер!"
-        width={190}
-        height={184}
-      />
+      <img src={supportBox} alt={t('promoModal.imageAlt')} width={190} height={184} />
     </div>
 
     {/* Text content - use fallback if no banner */}
     <div className="text-center space-y-3">
       <h2 className="text-4xl font-head font-semibold text-text-main">
-        Трохи підтримки для лаунчера?
+        {t('promoModal.title')}
       </h2>
-      <p>
-        Ми розвиваємо цей лаунчер, щоб вам було зручно знаходити та завантажувати
-        переклади. Покращуємо швидкість, стабільність і додаємо нові функції.
-      </p>
-      <div className="text-text-muted">Навіть маленький внесок має значення ✨</div>
+      <p>{t('promoModal.body')}</p>
+      <div className="text-text-muted">{t('promoModal.everyBitCounts')}</div>
     </div>
 
     {/* Checkbox */}
@@ -51,7 +44,7 @@ const SupportContent: React.FC<SupportContentProps> = ({
         onCheckedChange={setDontShowAgain}
       />
       <label htmlFor="dont-show-again" className="text-sm text-text-muted cursor-pointer">
-        Більше не показувати
+        {t('promoModal.dontShowAgain')}
       </label>
     </div>
 
@@ -59,11 +52,11 @@ const SupportContent: React.FC<SupportContentProps> = ({
     <div className="flex gap-6 justify-center">
       <Button
         variant="primary"
-        icon={<Heart size={20} />}
+        icon={<HeartIcon size={20} />}
         onClick={onDonateClick}
         data-gamepad-action
       >
-        Задонатити
+        {t('promoModal.donate')}
       </Button>
     </div>
   </>
@@ -99,22 +92,23 @@ export const PromoModal: React.FC = () => {
   }, []);
 
   // Record banner impression
+  const bannerId = banner?.id;
   const recordImpression = useCallback(
     async (impressionType: 'view' | 'click') => {
-      if (!banner?.id || !window.electronAPI?.recordPromoBannerImpression) {
+      if (!bannerId || !window.electronAPI?.recordPromoBannerImpression) {
         return;
       }
 
       try {
         await window.electronAPI.recordPromoBannerImpression({
-          campaignId: banner.id,
+          campaignId: bannerId,
           impressionType,
         });
       } catch (error) {
         console.error('[PromoModal] Error recording impression:', error);
       }
     },
-    [banner?.id]
+    [bannerId]
   );
 
   // Promo modal initialization - runs only once on mount

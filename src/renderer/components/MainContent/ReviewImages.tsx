@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getGameImageUrl } from '@/renderer/utils/imageUrl';
+import { t } from '@/shared/i18n/i18n';
 
 interface ReviewImagesProps {
   images: string[];
@@ -58,7 +59,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
           >
             <img
               src={url}
-              alt={`Скриншот ${index + 1}`}
+              alt={t('gameReviews.screenshotAlt', { number: String(index + 1) })}
               loading="lazy"
               className="w-full h-full object-cover"
             />
@@ -80,7 +81,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
               data-gamepad-cancel
               className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <X size={22} className="text-white" />
+              <XIcon size={22} className="text-white" />
             </button>
             {urls.length > 1 && (
               <>
@@ -92,7 +93,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
                     step(-1);
                   }}
                 >
-                  <ChevronLeft size={26} className="text-white" />
+                  <ChevronLeftIcon size={26} className="text-white" />
                 </button>
                 <button
                   type="button"
@@ -102,13 +103,13 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
                     step(1);
                   }}
                 >
-                  <ChevronRight size={26} className="text-white" />
+                  <ChevronRightIcon size={26} className="text-white" />
                 </button>
               </>
             )}
             <img
               src={urls[openIndex]}
-              alt={`Скриншот ${openIndex + 1}`}
+              alt={t('gameReviews.screenshotAlt', { number: String(openIndex + 1) })}
               className="max-w-[90vw] max-h-[95vh] object-contain rounded-lg cursor-default"
               onClick={(e) => e.stopPropagation()}
             />

@@ -1,8 +1,7 @@
-import { type ChildProcess, exec, spawn } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
+import { t } from '@/shared/i18n/i18n';
+import { execFileOnHost, isFlatpak, spawnOnHost } from './host-exec';
 import { isLinux } from './platform';
-
-const execAsync = promisify(exec);
 
 const FLATPAK_LUTRIS_ID = 'net.lutris.Lutris';
 
@@ -11,33 +10,12 @@ const FLATPAK_LUTRIS_ID = 'net.lutris.Lutris';
  */
 async function isFlatpakLutrisInstalled(): Promise<boolean> {
   try {
-    const { stdout } = await execAsync(
-      `flatpak-spawn --host flatpak info ${FLATPAK_LUTRIS_ID}`
-    );
+    const { stdout } = await execFileOnHost('flatpak', ['info', FLATPAK_LUTRIS_ID]);
     return stdout.includes(FLATPAK_LUTRIS_ID);
   } catch (error) {
     // Expected to throw if Flatpak wrapper isn't installed
     return false;
   }
-}
-
-/**
- * Spawn a process on the host system when running inside Flatpak
- */
-function spawnOnHost(command: string, args: string[] = []): ChildProcess {
-  console.log(`[LutrisLauncher] Spawning on host: ${command} ${args.join(' ')}`);
-  const child = spawn('flatpak-spawn', ['--host', command, ...args], {
-    detached: true,
-    stdio: 'ignore',
-  });
-
-  child.on('error', (err) => {
-    console.error(`[LutrisLauncher] Error spawning ${command} on host:`, err);
-  });
-
-  // Unref to let the parent process exit while this child keeps running
-  child.unref();
-  return child;
 }
 
 /**
@@ -51,10 +29,9 @@ export async function launchLutrisGame(
   }
 
   try {
-    const isFlatpakMode = process.env.FLATPAK_ID !== undefined;
     const lutrisUri = `lutris:rungame/${gameSlug}`;
 
-    if (isFlatpakMode) {
+    if (isFlatpak()) {
       console.log(
         `[LutrisLauncher] Launching via flatpak-spawn (Flatpak -> Host Flatpak) ${lutrisUri}...`
       );
@@ -98,8 +75,7 @@ export async function launchLutrisGame(
     console.error('[LutrisLauncher] Error launching game:', error);
     return {
       success: false,
-      error:
-        error instanceof Error ? error.message : 'Не вдалося запустити гру через Lutris',
+      error: error instanceof Error ? error.message : t('launch.lutrisFailed'),
     };
   }
 }

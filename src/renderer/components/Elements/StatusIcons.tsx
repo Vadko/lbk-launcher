@@ -1,8 +1,9 @@
-import { BookmarkCheck } from 'lucide-react';
+import { BookmarkCheckIcon } from 'lucide-react';
 import React from 'react';
 import { CheckIcon } from '@/renderer/components/Icons/CheckIcon';
 import { DownloadIcon } from '@/renderer/components/Icons/DownloadIcon';
 import { RefreshIcon } from '@/renderer/components/Icons/RefreshIcon';
+import { t } from '@/shared/i18n/i18n';
 import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';
 
@@ -34,7 +35,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
       <RefreshIcon
         size={floatPosition === 'default' ? 20 : 18}
         className={floatPosition ? 'text-text-dark' : 'text-color-accent'}
-        title="Є оновлення перекладу"
+        title={t('translationStatusIcons.updateAvailable')}
       />
     );
   } else if (isInstalled) {
@@ -42,7 +43,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
       <CheckIcon
         size={floatPosition === 'default' ? 20 : 18}
         className={floatPosition ? 'text-text-dark' : 'text-color-main'}
-        title="Переклад актуальний"
+        title={t('translationStatusIcons.upToDate')}
       />
     );
   } else if (isGameDetected && isTranslationAvailable) {
@@ -50,7 +51,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
       <DownloadIcon
         size={floatPosition === 'default' ? 20 : 18}
         className={floatPosition ? 'text-text-dark' : ''}
-        title="Переклад доступний для встановлення"
+        title={t('translationStatusIcons.availableToInstall')}
       />
     );
   }
@@ -60,7 +61,7 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
       <PencilIcon
         size={floatPosition === 'default' ? 20 : 18}
         className={floatPosition ? 'text-text-dark' : 'text-color-main'}
-        title="ШІ + редактура людиною"
+        title={t('translationStatusIcons.aiEdited')}
       />
     );
   } else if (aiType === 'non-edited') {
@@ -68,15 +69,15 @@ export const StatusIcons: React.FC<StatusIconsProps> = ({
       <AiIcon
         size={floatPosition === 'default' ? 20 : 18}
         className={floatPosition ? 'text-text-dark' : 'text-color-main'}
-        title="Переклад ШІ"
+        title={t('translationStatusIcons.aiOnly')}
       />
     );
   }
 
   if (isFavorite && !floatPosition) {
     favoriteIcon = (
-      <div title="В улюбленому">
-        <BookmarkCheck size={18} className="text-color-accent" />
+      <div title={t('translationStatusIcons.favorite')}>
+        <BookmarkCheckIcon size={18} className="text-color-accent" />
       </div>
     );
   }

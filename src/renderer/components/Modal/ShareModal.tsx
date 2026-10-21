@@ -1,6 +1,8 @@
-import { Check, Copy } from 'lucide-react';
+import { Copy } from 'lucide';
 import React, { useState } from 'react';
+import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { trackEvent } from '@/renderer/utils/analytics';
+import { t } from '@/shared/i18n/i18n';
 import {
   FacebookIcon,
   RedditIcon,
@@ -11,6 +13,7 @@ import {
   XIcon,
 } from '../Icons/BrandIcons';
 
+import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
@@ -90,6 +93,12 @@ const createSocialPlatforms = (): SocialPlatform[] => [
   },
 ];
 
+const STACKED_LABEL_STYLE: React.CSSProperties = { gridArea: '1 / 1' };
+const GHOST_LABEL_STYLE: React.CSSProperties = {
+  ...STACKED_LABEL_STYLE,
+  visibility: 'hidden',
+};
+
 export const ShareModal: React.FC<ShareModalProps> = ({
   isOpen,
   onClose,
@@ -98,23 +107,25 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   gameName,
   teamName,
 }) => {
-  const [copied, setCopied] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
+  const copyPhase = useActionPhase({ minPendingMs: 0 });
+  const copied = copyPhase.phase === 'done';
   const shareUrl = `https://lbklauncher.com/open/${gameSlug}/${teamSlug}`;
-  const shareText = `${gameName} з українською локалізацією від ${teamName} можна зручно встановити у LBK Launcher`;
+  const shareText = t('shareModal.text', { game: gameName, team: teamName });
   const socialPlatforms = createSocialPlatforms();
 
   const handleCopy = () => {
-    const textArea = document.createElement('textarea');
-    textArea.value = `${shareText}\n${shareUrl}`;
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    void copyPhase.run(() => {
+      const textArea = document.createElement('textarea');
+      textArea.value = `${shareText}\n${shareUrl}`;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return Promise.resolve();
+    });
   };
 
   const handleCopyUrl = (e: React.MouseEvent<HTMLInputElement>) => {
@@ -140,19 +151,19 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Поділитися"
-      classNames="!max-w-[514px]"
+      title={t('shareModal.title')}
+      classNames="max-w-[514px]!"
       usePortal
     >
       <div className="space-y-14">
         <div>
-          <p className="text-sm text-text-muted mb-3">Поділитися в:</p>
+          <p className="text-sm text-text-muted mb-3">{t('shareModal.shareIn')}</p>
           <div className="flex flex-wrap gap-3">
             {socialPlatforms.map((platform) => (
               <button
                 key={platform.key}
                 onClick={() => handleShare(platform)}
-                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 text-[#939296] hover:border-[#939296] hover:bg-white/15 ${platform.color}`}
+                className={`w-14 h-14 flex items-center justify-center rounded-xl bg-glass border border-border hover:border-border-hover transition-all duration-200 text-[#939296] hover:bg-white/15 ${platform.color}`}
                 title={platform.name}
               >
                 {platform.icon}
@@ -161,15 +172,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </div>
         </div>
         <div>
-          <p className="text-sm text-text-muted mb-3">
-            Або скопіюйте посилання чи текст:
-          </p>
+          <p className="text-sm text-text-muted mb-3">{t('shareModal.copyHint')}</p>
           <div className="flex gap-4">
             <input
               type="text"
               value={shareUrl}
               readOnly
-              className={`flex-1 px-4 py-3 bg-glass border rounded-xl text-sm text-text-main focus:outline-none cursor-text transition-colors duration-300 ${
+              className={`flex-1 px-4 py-3 bg-glass border rounded-xl text-sm text-text-main focus:outline-hidden cursor-text transition-colors duration-200 ${
                 urlCopied
                   ? 'border-color-main focus:border-color-main'
                   : 'border-border focus:border-border-hover'
@@ -179,10 +188,27 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             <Button
               onClick={handleCopy}
               variant={copied ? 'accent' : 'primary'}
-              icon={copied ? <Check size={18} /> : <Copy size={18} />}
-              className="min-w-[140px] !px-4 !py-3 !text-sm"
+              icon={
+                <AppActionIcon
+                  phase={copyPhase.phase}
+                  icon={Copy}
+                  size={18}
+                  inheritColor
+                />
+              }
+              className="px-4! py-3! text-sm!"
             >
-              {copied ? 'Скопійовано!' : 'Копіювати текст'}
+              <span style={{ display: 'grid', textAlign: 'center' }}>
+                <span style={GHOST_LABEL_STYLE} aria-hidden="true">
+                  {t('shareModal.copyText')}
+                </span>
+                <span style={GHOST_LABEL_STYLE} aria-hidden="true">
+                  {t('shareModal.copied')}
+                </span>
+                <span style={STACKED_LABEL_STYLE}>
+                  {copied ? t('shareModal.copied') : t('shareModal.copyText')}
+                </span>
+              </span>
             </Button>
           </div>
         </div>

@@ -1,20 +1,19 @@
+import { keepPreviousData, skipToken, useQuery } from '@tanstack/react-query';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { Download, Play, RefreshCw, ReplaceAll } from 'lucide';
 import {
-  Download,
-  EyeOff,
-  FileEdit,
-  Heart,
-  Play,
-  RefreshCw,
-  ReplaceAllIcon,
-  Settings,
-  Trash2,
-  Users,
+  EyeOffIcon,
+  FileEditIcon,
+  HeartIcon,
+  SettingsIcon,
+  Trash2Icon,
+  UsersIcon,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { BannerData, GameBannersResult } from '@/main/db/banners-api';
-import type { BannerType, LaunchGameResult } from '@/shared/types.ts';
+import type { BannerData } from '@/main/db/banners-api';
+import { t } from '@/shared/i18n/i18n';
+import type { BannerType } from '@/shared/types.ts';
 import { AuthorsList } from '../components/MainContent/AuthorsList';
 import { DownloadProgressCard } from '../components/MainContent/DownloadProgressCard';
 import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
@@ -33,13 +32,16 @@ import { VideoCard } from '../components/MainContent/VideoCard';
 import { AuthorSubscriptionModal } from '../components/Modal/AuthorSubscriptionModal';
 import { FeedbackModal } from '../components/Modal/FeedbackModal';
 import { InstallOptionsDialog } from '../components/Modal/InstallOptionsDialog';
-import { Placement } from '../components/Placements';
+import { Placement } from '../components/Placements/Placement';
+
+import { AppActionIcon } from '../components/ui/AppActionIcon';
 import { Button } from '../components/ui/Button';
 import { MarkdownText } from '../components/ui/MarkdownText';
 import { SubscribeButton } from '../components/ui/SubscribeButton';
 import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
 import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
+import { type ActionPhase, useActionPhase } from '../hooks/useActionPhase';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
 import {
@@ -54,9 +56,26 @@ import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
 
+interface BannerInfo {
+  data: BannerData | null;
+  isKuli: boolean;
+  support_url: string | null;
+  placementType: BannerType | null;
+}
+
+const EMPTY_BANNER_INFO: BannerInfo = {
+  data: null,
+  isKuli: false,
+  support_url: null,
+  placementType: null,
+};
+
+// Short on purpose: the server caps banner impressions per machine_id, so a later visit asks again
+const BANNER_GC_TIME = 5 * 60 * 1000;
+
 /**
- * Сторінка детальної інформації про гру
- * Відображає всю інформацію, банери, кнопки встановлення тощо
+ * Detailed game information page
+ * Displays all info, banners, install buttons, etc.
  */
 export const GamePage: React.FC = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -75,13 +94,15 @@ export const GamePage: React.FC = () => {
   const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
     useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
-  const [isLaunching, setIsLaunching] = useState(false);
+  const {
+    phase: launchPhase,
+    isPending: isLaunching,
+    run: runLaunch,
+    reset: resetLaunch,
+  } = useActionPhase();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [bannerData, setBannerData] = useState<GameBannersResult | null>(null);
-  const [loadedBannerGameId, setLoadedBannerGameId] = useState<string | null>(null);
-  const bannerCacheRef = useRef<Map<string, GameBannersResult>>(new Map());
   const isTombstoned = useGameTombstone(gameId);
   const [tabState, setTabState] = useState<{ gameId: string; tab: GameTab }>({
     gameId: gameId ?? '',
@@ -89,12 +110,16 @@ export const GamePage: React.FC = () => {
   });
   const activeTab: GameTab = tabState.gameId === gameId ? tabState.tab : 'info';
 
+  useEffect(() => {
+    resetLaunch();
+  }, [gameId, resetLaunch]);
+
   const installationInfo = selectedGame
     ? installedTranslations.get(selectedGame.id)
     : undefined;
-  const isCheckingInstallation = selectedGame
-    ? isCheckingInstallationStatus(selectedGame.id)
-    : false;
+
+  const isCheckingInstallation =
+    !installationInfo && !!selectedGame && isCheckingInstallationStatus(selectedGame.id);
 
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
   const isTranslationInstalled = useIsTranslationInstalledForGame(selectedGame?.id);
@@ -112,7 +137,7 @@ export const GamePage: React.FC = () => {
     : false;
   const isAdultBlurred = selectedGame?.is_adult && !showAdultGames;
 
-  // Завантажити гру якщо її ще немає в selectedGame
+  // Load the game if it's not already in selectedGame
   useEffect(() => {
     if (!gameId) {
       navigate('/');
@@ -122,13 +147,13 @@ export const GamePage: React.FC = () => {
     let isCancelled = false; // Race condition protection
 
     const loadGame = async () => {
-      // Якщо вже є вибрана гра з правильним ID, не треба перезавантажувати
+      // If a game with the right ID is already selected, no need to reload
       if (selectedGame?.id === gameId) {
         return;
       }
 
-      // Очищаємо selectedGame якщо змінився gameId (щоб не показувати стару гру)
-      // Я хз нашо додавав але здається це викликає проблеми з геймпадом і зміною ігр
+      // Clear selectedGame if gameId changed (so the old game isn't shown)
+      // Not sure why this was added, but it seems to cause issues with the gamepad and switching games
       // if (selectedGame?.id && selectedGame.id !== gameId) {
       //   setSelectedGame(null);
       // }
@@ -136,27 +161,27 @@ export const GamePage: React.FC = () => {
       try {
         const games = await window.electronAPI.fetchGamesByIds([gameId]);
 
-        // Перевірка чи не відмінено запит (користувач перейшов на іншу гру)
+        // Check whether the request was cancelled (user navigated to another game)
         if (isCancelled) {
           console.log('[GamePage] Request cancelled, not updating selectedGame');
           return;
         }
 
         if (games.length > 0) {
-          // Додаткова перевірка: чи все ще той самий gameId в URL
-          // (захист від швидких кліків на різні ігри)
+          // Extra check: is it still the same gameId in the URL
+          // (protection against rapid clicks on different games)
           if (games[0].id === gameId) {
             setSelectedGame(games[0]);
           } else {
             console.log('[GamePage] Game ID mismatch, skipping setSelectedGame');
           }
         } else {
-          // Гру не знайдено, повертаємось на головну
+          // Game not found, navigating back to the home page
           navigate('/');
         }
       } catch (error) {
         console.error('[GamePage] Failed to load game:', error);
-        // Не навігуємо якщо запит відмінено
+        // Don't navigate if the request was cancelled
         if (!isCancelled) {
           navigate('/');
         }
@@ -165,124 +190,44 @@ export const GamePage: React.FC = () => {
 
     loadGame();
 
-    // Cleanup: позначити запит як скасований при розмонтуванні або зміні gameId
+    // Cleanup: mark the request as cancelled on unmount or gameId change
     return () => {
       isCancelled = true;
     };
   }, [gameId, selectedGame, setSelectedGame, navigate]);
 
-  // Load banner data for selected game with delay to prevent flickering
-  useEffect(() => {
-    let isMounted = true;
+  const selectedGameId = selectedGame?.id;
+  const selectedGameSlug = selectedGame?.slug;
 
-    const loadBannerData = async () => {
-      if (!selectedGame?.id) {
-        setBannerData(null);
-        setLoadedBannerGameId(null);
-        return;
-      }
+  const { data: banners, isError: bannersFailed } = useQuery({
+    queryKey: ['game-banners', selectedGameId, selectedGameSlug],
+    queryFn:
+      selectedGameId && selectedGameSlug !== undefined
+        ? () => window.electronAPI.fetchBannersForGame(selectedGameId, selectedGameSlug)
+        : skipToken,
+    staleTime: Infinity,
+    gcTime: BANNER_GC_TIME,
+    placeholderData: keepPreviousData,
+  });
 
-      // Check cache first - show immediately from cache
-      const cachedData = bannerCacheRef.current.get(selectedGame.id);
-      if (cachedData) {
-        setBannerData(cachedData);
-        setLoadedBannerGameId(selectedGame.id);
-        return;
-      }
-
-      try {
-        const result = await window.electronAPI.fetchBannersForGame(
-          selectedGame.id,
-          selectedGame.slug
-        );
-        if (!isMounted) {
-          return;
-        }
-
-        // Cache the result
-        bannerCacheRef.current.set(selectedGame.id, result);
-
-        if (isMounted) {
-          setBannerData(result);
-          setLoadedBannerGameId(selectedGame.id);
-        }
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-        console.error('Error loading banner data:', error);
-        setBannerData(null);
-        setLoadedBannerGameId(selectedGame.id);
-      }
-    };
-
-    loadBannerData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedGame?.id, selectedGame?.slug]);
-
-  const prevBannerInfoRef = useRef<{
-    data: BannerData | null;
-    isKuli: boolean;
-    support_url: string | null;
-    placementType: BannerType | null;
-  }>({ data: null, isKuli: false, support_url: null, placementType: null });
-
-  const bannerInfo = useMemo(() => {
-    if (!selectedGame) {
-      prevBannerInfoRef.current = {
-        data: null,
-        isKuli: false,
-        support_url: null,
-        placementType: null,
-      };
-      return prevBannerInfoRef.current;
-    }
-
-    // Check cache directly to avoid flickering when switching between cached games
-    const cachedData = bannerCacheRef.current.get(selectedGame.id);
-
-    // If we have cached data for this game, use it immediately
-    if (cachedData) {
-      const type =
-        cachedData.banner?.type ??
-        (cachedData.isKuli ? 'narrow' : null) ??
-        (selectedGame.support_url ? 'small_square' : null) ??
-        null;
-
-      const info = {
-        data: cachedData.banner || null,
-        isKuli: cachedData.isKuli || false,
-        support_url: selectedGame?.support_url || null,
-        placementType: type,
-      };
-      prevBannerInfoRef.current = info;
-      return info;
-    }
-
-    // If not in cache and not loaded for this game yet,
-    // keep previous banner to avoid flicker
-    if (loadedBannerGameId !== selectedGame.id) {
-      return prevBannerInfoRef.current;
+  const bannerInfo = useMemo((): BannerInfo => {
+    if (!selectedGame || (!banners && !bannersFailed)) {
+      return EMPTY_BANNER_INFO;
     }
 
     const type =
-      bannerData?.banner?.type ??
-      (bannerData?.isKuli ? 'narrow' : null) ??
+      banners?.banner?.type ??
+      (banners?.isKuli ? 'narrow' : null) ??
       (selectedGame.support_url ? 'small_square' : null) ??
       null;
 
-    const info = {
-      data: bannerData?.banner || null,
-      isKuli: bannerData?.isKuli || false,
-      support_url: selectedGame?.support_url || null,
+    return {
+      data: banners?.banner || null,
+      isKuli: banners?.isKuli || false,
+      support_url: selectedGame.support_url || null,
       placementType: type,
     };
-    prevBannerInfoRef.current = info;
-    return info;
-  }, [selectedGame, bannerData, loadedBannerGameId]);
+  }, [selectedGame, banners, bannersFailed]);
 
   // Record banner impression: Mixpanel + Supabase together
   const trackBannerImpression = useCallback(
@@ -315,18 +260,19 @@ export const GamePage: React.FC = () => {
   }, [trackBannerImpression]);
 
   // Callback for first install - show subscription modal
+  const selectedGameTeam = selectedGame?.team;
   const handleFirstInstallComplete = useCallback(() => {
-    if (selectedGame?.team && selectedGame?.id && !isGamePrompted(selectedGame.id)) {
+    if (selectedGameTeam && selectedGameId && !isGamePrompted(selectedGameId)) {
       setShowAuthorSubscriptionModal(true);
     }
-  }, [selectedGame?.team, selectedGame?.id, isGamePrompted]);
+  }, [selectedGameTeam, selectedGameId, isGamePrompted]);
 
   const handleCloseAuthorSubscriptionModal = useCallback(() => {
     setShowAuthorSubscriptionModal(false);
-    if (selectedGame?.id) {
-      markGameAsPrompted(selectedGame.id);
+    if (selectedGameId) {
+      markGameAsPrompted(selectedGameId);
     }
-  }, [selectedGame?.id, markGameAsPrompted]);
+  }, [selectedGameId, markGameAsPrompted]);
 
   // Use installation hook
   const {
@@ -338,6 +284,7 @@ export const GamePage: React.FC = () => {
     installProgress,
     downloadProgress,
     statusMessage,
+    statusTone,
     handleInstall,
     handleInstallOptionsConfirm,
     handleUninstall,
@@ -346,8 +293,10 @@ export const GamePage: React.FC = () => {
     handleResumeDownload,
     handleCancelDownload,
     getInstallButtonText,
+    installPhase,
+    rerunPhase,
     showInstallOptions,
-    setShowInstallOptions,
+    closeInstallOptions,
     pendingInstallPath,
     availablePlatforms,
   } = useInstallation({
@@ -359,12 +308,14 @@ export const GamePage: React.FC = () => {
     onFirstInstallComplete: handleFirstInstallComplete,
   });
 
-  // Check installation status when game changes
+  const selectedGameUpdatedAt = selectedGame?.updated_at;
+  // Keyed on updated_at, which counters (likes, downloads) leave alone, so a counter push does not re-read the disk
   useEffect(() => {
-    if (selectedGame && selectedGame.kind !== 'workshop') {
-      checkInstallationStatus(selectedGame.id, selectedGame);
+    const game = useStore.getState().selectedGame;
+    if (game && game.kind !== 'workshop') {
+      checkInstallationStatus(game.id, game);
     }
-  }, [selectedGame, checkInstallationStatus]);
+  }, [selectedGameId, selectedGameUpdatedAt, checkInstallationStatus]);
 
   // Track online/offline status
   useEffect(() => {
@@ -420,14 +371,15 @@ export const GamePage: React.FC = () => {
       return;
     }
 
-    setIsLaunching(true);
     try {
       console.log(`[UI] Launching game: ${selectedGame.name} (${selectedGame.id})`);
-      const result: LaunchGameResult = await window.electronAPI.launchGame(selectedGame);
+      const result = await runLaunch(() => window.electronAPI.launchGame(selectedGame), {
+        isSuccess: (r) => r.success,
+      });
 
       if (!result.success && result.error) {
         showModal({
-          title: 'Помилка запуску',
+          title: t('launch.errorTitle'),
           message: result.error,
           type: 'error',
         });
@@ -435,24 +387,28 @@ export const GamePage: React.FC = () => {
     } catch (error) {
       console.error('Launch game error:', error);
       showModal({
-        title: 'Помилка запуску',
-        message: error instanceof Error ? error.message : 'Не вдалося запустити гру',
+        title: t('launch.errorTitle'),
+        message: error instanceof Error ? error.message : t('launch.failed'),
         type: 'error',
       });
-    } finally {
-      setIsLaunching(false);
     }
   }, [
     selectedGame,
     isLaunching,
+    runLaunch,
     isGameInstalledOnSystem,
     isTranslationInstalled,
     showModal,
   ]);
-  // Майстерню ставить Steam: ні архіву, ні встановлення на диск у нас немає
+  // Steam handles Workshop installs: we have neither an archive nor an install to disk
   const isWorkshop = selectedGame?.kind === 'workshop';
 
-  // Early return якщо немає гри (після всіх хуків!)
+  const installButtonPhase: ActionPhase =
+    isInstalling && !isPaused ? 'pending' : installPhase;
+  const installVariant =
+    isGameInstalledOnSystem && isTranslationInstalled ? 'secondary' : 'primary';
+
+  // Early return if there's no game (after all hooks!)
   if (!selectedGame) {
     return null;
   }
@@ -461,22 +417,19 @@ export const GamePage: React.FC = () => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
         <div className="glass-card-no-motion max-w-md p-8">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500/20 to-pink-500/20 flex items-center justify-center">
-            <EyeOff size={40} className="text-red-400" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-linear-to-br/srgb from-red-500/20 to-pink-500/20 flex items-center justify-center">
+            <EyeOffIcon size={40} className="text-red-400" />
           </div>
           <h2 className="text-xl font-head font-semibold text-text-main mb-3">
-            Контент для дорослих
+            {t('adultWarning.title')}
           </h2>
-          <p className="text-text-muted mb-6">
-            Ця гра містить контент для дорослих (18+). Щоб переглянути цю гру, увімкніть
-            відповідне налаштування.
-          </p>
+          <p className="text-text-muted mb-6">{t('adultWarning.message')}</p>
           <button
             onClick={openSettingsModal}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
           >
-            <Settings size={20} />
-            Відкрити налаштування
+            <SettingsIcon size={20} />
+            {t('adultWarning.openSettings')}
           </button>
         </div>
       </div>
@@ -489,7 +442,7 @@ export const GamePage: React.FC = () => {
       {selectedGame && (
         <InstallOptionsDialog
           isOpen={showInstallOptions}
-          onClose={() => setShowInstallOptions(false)}
+          onClose={closeInstallOptions}
           onConfirm={handleInstallOptionsConfirm}
           game={selectedGame}
           defaultCreateBackup={createBackupBeforeInstall}
@@ -532,8 +485,7 @@ export const GamePage: React.FC = () => {
 
           {isTombstoned && (
             <div className="glass-card-no-motion border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-100">
-              Цей переклад більше не доступний у каталозі. Ви можете лише видалити
-              локалізацію — повторне встановлення недоступне.
+              {t('gamePage.tombstone')}
             </div>
           )}
 
@@ -544,22 +496,26 @@ export const GamePage: React.FC = () => {
               {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
                 <Button
                   variant="primary"
-                  icon={<Play size={20} />}
-                  onClick={handleLaunchGame}
-                  disabled={
-                    isLaunching ||
-                    isInstalling ||
-                    isUninstalling ||
-                    isWorkshopChangePending
+                  icon={
+                    <AppActionIcon
+                      phase={launchPhase}
+                      icon={Play}
+                      size={20}
+                      inheritColor
+                    />
                   }
+                  onClick={handleLaunchGame}
+                  aria-busy={isLaunching}
+                  disabled={isInstalling || isUninstalling || isWorkshopChangePending}
                   data-gamepad-action
                   data-gamepad-primary-action
                 >
-                  Грати
+                  {t('gameActions.play')}
                 </Button>
               )}
-              {isWorkshop ? (
+              {isWorkshop && (
                 <WorkshopInstallButton
+                  key={selectedGame.id}
                   gameId={selectedGame.id}
                   workshopId={selectedGame.workshop_id ?? ''}
                   steamAppId={selectedGame.steam_app_id}
@@ -567,60 +523,66 @@ export const GamePage: React.FC = () => {
                   isOnline={isOnline}
                   isTombstoned={isTombstoned}
                 />
-              ) : (
-                <>
+              )}
+              {!isWorkshop && (
+                <Button
+                  variant={installVariant}
+                  icon={
+                    <AppActionIcon
+                      phase={installButtonPhase}
+                      icon={isUpdateAvailable ? RefreshCw : Download}
+                      size={20}
+                      inheritColor={installVariant === 'primary'}
+                    />
+                  }
+                  onClick={() => void handleInstall()}
+                  aria-busy={installButtonPhase === 'pending'}
+                  disabled={
+                    isInstalling ||
+                    isUninstalling ||
+                    !isInstallable ||
+                    !isOnline ||
+                    isTombstoned
+                  }
+                  title={
+                    isTombstoned
+                      ? t('gameActions.removedFromCatalog')
+                      : !isOnline
+                        ? t('gameActions.offline')
+                        : undefined
+                  }
+                  data-gamepad-primary-action
+                  data-gamepad-action
+                >
+                  {getInstallButtonText()}
+                </Button>
+              )}
+              {!isWorkshop &&
+                installationInfo?.installerPath &&
+                !isInstalling &&
+                !isUninstalling && (
                   <Button
-                    variant={
-                      isGameInstalledOnSystem && isTranslationInstalled
-                        ? 'secondary'
-                        : 'primary'
-                    }
+                    variant="secondary"
                     icon={
-                      isUpdateAvailable ? <RefreshCw size={20} /> : <Download size={20} />
+                      <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
                     }
-                    onClick={() => handleInstall()}
-                    disabled={
-                      isInstalling ||
-                      isUninstalling ||
-                      !isInstallable ||
-                      !isOnline ||
-                      isTombstoned
-                    }
-                    title={
-                      isTombstoned
-                        ? 'Переклад більше не доступний у каталозі'
-                        : !isOnline
-                          ? 'Відсутнє підключення до Інтернету'
-                          : undefined
-                    }
-                    data-gamepad-primary-action
+                    onClick={() => void handleRerunInstaller()}
+                    aria-busy={rerunPhase === 'pending'}
                     data-gamepad-action
+                    title={t('gameActions.rerunTitle')}
                   >
-                    {getInstallButtonText()}
+                    {t('gameActions.rerun')}
                   </Button>
-                  {installationInfo?.installerPath &&
-                    !isInstalling &&
-                    !isUninstalling && (
-                      <Button
-                        variant="secondary"
-                        icon={<ReplaceAllIcon size={20} />}
-                        onClick={handleRerunInstaller}
-                        data-gamepad-action
-                        title="Запустити інсталятор/скрипт повторно"
-                      >
-                        Перевстановити
-                      </Button>
-                    )}
-                  {installationInfo && !isInstalling && (
-                    <Button
-                      variant="secondary"
-                      icon={<Trash2 size={20} />}
-                      onClick={handleUninstall}
-                      disabled={isUninstalling}
-                      data-gamepad-action
-                    ></Button>
-                  )}
-                </>
+                )}
+              {!isWorkshop && installationInfo && !isInstalling && (
+                <Button
+                  variant="secondary"
+                  icon={<Trash2Icon size={20} />}
+                  onClick={handleUninstall}
+                  disabled={isUninstalling}
+                  title={t('gameActions.uninstallTitle')}
+                  data-gamepad-action
+                />
               )}
               {/* Separator */}
               <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
@@ -642,29 +604,29 @@ export const GamePage: React.FC = () => {
                 ) && (
                   <Button
                     variant="accent"
-                    icon={<Heart size={20} />}
+                    icon={<HeartIcon size={20} />}
                     onClick={handleSupport}
                     data-gamepad-action
                     className="support-button"
                   >
-                    Підтримати
+                    {t('gameActions.support')}
                   </Button>
                 )}
               {canLeaveFeedback && (
                 <Button
                   variant="secondary"
-                  icon={<FileEdit size={20} />}
+                  icon={<FileEditIcon size={20} />}
                   onClick={() => setShowFeedbackModal(true)}
                   data-gamepad-action
                   className="support-button"
                 >
-                  Лишити відгук
+                  {t('gameActions.feedback')}
                 </Button>
               )}
             </div>
 
             <div className="flex gap-3 flex-wrap">
-              {installationInfo && !isCheckingInstallation && !isInstalling && (
+              {installationInfo && !isInstalling && (
                 <>
                   <InstallationStatusBadge
                     isUpdateAvailable={!!isUpdateAvailable}
@@ -696,6 +658,7 @@ export const GamePage: React.FC = () => {
                     <div>
                       <InstallationStatusMessage
                         statusMessage={statusMessage}
+                        statusTone={statusTone}
                         isUpdateAvailable={!!isUpdateAvailable}
                         isOnline={isOnline}
                         isInstalling={isInstalling}
@@ -706,7 +669,7 @@ export const GamePage: React.FC = () => {
                             onClick={handleCancelDownload}
                             className="px-4 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors"
                           >
-                            Скасувати
+                            {t('gameActions.cancel')}
                           </button>
                         </div>
                       )}
@@ -720,7 +683,7 @@ export const GamePage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                     <span className="text-sm font-medium text-text-main">
-                      Видалення українізатора та відновлення оригінальних файлів...
+                      {t('gamePage.uninstalling')}
                     </span>
                   </div>
                 </div>
@@ -736,7 +699,7 @@ export const GamePage: React.FC = () => {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${isSpecialTranslator(selectedGame.team) ? 'bg-yellow-500/20' : 'bg-color-main/20'}`}
                   >
-                    <Users
+                    <UsersIcon
                       size={20}
                       className={
                         isSpecialTranslator(selectedGame.team)
@@ -748,8 +711,8 @@ export const GamePage: React.FC = () => {
                   <div>
                     <div className="text-xs text-text-muted">
                       {selectedGame.team.includes(',')
-                        ? 'Автори локалізації'
-                        : 'Автор локалізації'}
+                        ? t('gameAuthors.many')
+                        : t('gameAuthors.one')}
                     </div>
                     <AuthorsList team={selectedGame.team} maxVisible={3} />
                   </div>
@@ -797,7 +760,7 @@ export const GamePage: React.FC = () => {
               }}
               initial={false}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-x-clip flex-shrink-0 mb-auto"
+              className="overflow-x-clip shrink-0 mb-auto"
             >
               <div className="w-[320px] h-full">
                 <Placement
@@ -827,14 +790,11 @@ export const GamePage: React.FC = () => {
               onLeaveFeedback={() => setShowFeedbackModal(true)}
             />
           ) : activeTab === 'recommended' ? (
-            <>
-              {/* Recommended */}
-              <RecommendedGamesSection
-                gameId={selectedGame.id}
-                gameName={selectedGame.name}
-                showLimit={9}
-              />
-            </>
+            <RecommendedGamesSection
+              gameId={selectedGame.id}
+              gameName={selectedGame.name}
+              showLimit={9}
+            />
           ) : (
             <>
               {/* Donate */}
@@ -844,6 +804,7 @@ export const GamePage: React.FC = () => {
                   transition={{ duration: 0.2, ease: 'easeOut' }}
                 >
                   <FundraisingProgressCard
+                    key={selectedGame.id}
                     current={selectedGame.fundraising_current || 0}
                     goal={selectedGame.fundraising_goal}
                     supportUrl={selectedGame.support_url}
@@ -859,11 +820,11 @@ export const GamePage: React.FC = () => {
                   className="glass-card-no-motion min-w-0"
                 >
                   <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                    Про українізатор
+                    {t('gameSections.aboutTranslation')}
                   </h3>
                   <MarkdownText
                     text={selectedGame.description}
-                    className="text-text-muted leading-relaxed break-words"
+                    className="text-text-muted leading-relaxed wrap-break-word"
                   />
                 </motion.section>
               )}
@@ -902,15 +863,15 @@ export const GamePage: React.FC = () => {
               {selectedGame.game_description && (
                 <motion.section
                   layout="position"
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="glass-card-no-motion min-w-0"
                 >
                   <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                    Про гру
+                    {t('gameSections.aboutGame')}
                   </h3>
                   <MarkdownText
                     text={selectedGame.game_description}
-                    className="text-text-muted leading-relaxed break-words"
+                    className="text-text-muted leading-relaxed wrap-break-word"
                   />
                 </motion.section>
               )}
@@ -918,7 +879,7 @@ export const GamePage: React.FC = () => {
               {/* Links */}
               <motion.div
                 layout="position"
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
                 className="flex gap-4"
               >
                 <div className="flex-1 min-w-0">

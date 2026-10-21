@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { CheckIcon } from 'lucide-react';
 import * as React from 'react';
 
 interface CheckboxProps {
@@ -6,11 +6,10 @@ interface CheckboxProps {
   onCheckedChange: (checked: boolean) => void;
   className?: string;
   id?: string;
-  gamepadModalItem?: boolean;
 }
 
 export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
-  ({ checked, onCheckedChange, className, id, gamepadModalItem }, ref) => {
+  ({ checked, onCheckedChange, className, id }, ref) => {
     return (
       <button
         ref={ref}
@@ -18,11 +17,10 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         aria-checked={checked}
         type="button"
         id={id}
-        data-gamepad-modal-item={gamepadModalItem}
         onClick={() => onCheckedChange(!checked)}
         className={`
-          relative inline-flex h-5 w-5 items-center justify-center rounded border-2 
-          transition-colors duration-200 ease-in-out focus:outline-none 
+          relative inline-flex h-5 w-5 items-center justify-center rounded-sm border-2 
+          transition-colors duration-200 ease-in-out focus:outline-hidden 
           ${
             checked
               ? 'bg-color-accent border-color-accent text-text-dark'
@@ -31,7 +29,7 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
           ${className || ''}
         `}
       >
-        {checked && <Check size={14} className="text-current" />}
+        {checked && <CheckIcon size={14} className="text-current" />}
       </button>
     );
   }

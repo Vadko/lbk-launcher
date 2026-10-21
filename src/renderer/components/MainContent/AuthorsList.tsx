@@ -1,5 +1,6 @@
-import { Star } from 'lucide-react';
+import { StarIcon } from 'lucide-react';
 import React, { useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -42,7 +43,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
         </button>
         {isSpecial && specialInfo && (
           <Tooltip content={specialInfo.description}>
-            <Star
+            <StarIcon
               size={12}
               className="ml-1 fill-yellow-400 text-yellow-400 cursor-help inline-block"
             />
@@ -79,9 +80,11 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
           {showPopover && (
             <div
               ref={popoverRef}
-              className="absolute left-0 bottom-full mb-2 z-[100] min-w-[200px] p-3 rounded-xl bg-bg-dark border border-border shadow-2xl"
+              className="absolute left-0 bottom-full mb-2 z-100 min-w-[200px] p-3 rounded-xl bg-bg-dark border border-border shadow-2xl"
             >
-              <div className="text-xs text-text-muted mb-2">Інші автори:</div>
+              <div className="text-xs text-text-muted mb-2">
+                {t('authorsList.others')}
+              </div>
               <div className="space-y-1">
                 {hiddenAuthors.map((author) => {
                   const specialInfo = getSpecialTranslatorInfo(author);
@@ -101,7 +104,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
                       </button>
                       {isSpecial && specialInfo && (
                         <Tooltip content={specialInfo.description}>
-                          <Star
+                          <StarIcon
                             size={12}
                             className="fill-yellow-400 text-yellow-400 cursor-help"
                           />

@@ -1,3 +1,5 @@
+import { t } from '@/shared/i18n/i18n';
+
 // List of special translators to highlight in the UI
 interface SpecialTranslator {
   name: string;
@@ -5,31 +7,47 @@ interface SpecialTranslator {
   description: string;
 }
 
-const SPECIAL_DESCRIPTION = 'Допомагає розвивати LBK Launcher з перших днів';
-
 export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
-  { name: 'Владислав', team: 'Sent_DeZ', description: SPECIAL_DESCRIPTION },
-  { name: 'Вена', team: 'Ліниві ШІ', description: SPECIAL_DESCRIPTION },
-  { name: 'Євгеній', team: 'kurasagi', description: SPECIAL_DESCRIPTION },
+  {
+    name: 'Владислав',
+    team: 'Sent_DeZ',
+    description: t('specialTranslators.earlySupporter'),
+  },
+  {
+    name: 'Вена',
+    team: 'Ліниві ШІ',
+    description: t('specialTranslators.earlySupporter'),
+  },
+  {
+    name: 'Євгеній',
+    team: 'kurasagi',
+    description: t('specialTranslators.earlySupporter'),
+  },
   {
     name: 'Костянтин',
     team: 'Перекладач Патріотів (KostyanChek8)',
-    description: SPECIAL_DESCRIPTION,
+    description: t('specialTranslators.earlySupporter'),
   },
   {
     name: 'GameGlobe Localization',
     team: 'GameGlobe Localization',
-    description: 'Команда лаунчера',
+    description: t('specialTranslators.launcherTeam'),
   },
-  { name: 'Little Bit', team: 'Little Bit', description: 'Команда лаунчера' },
+  {
+    name: 'Little Bit',
+    team: 'Little Bit',
+    description: t('specialTranslators.launcherTeam'),
+  },
 ];
 
 // Get all team names for matching
-const SPECIAL_TRANSLATOR_TEAMS = SPECIAL_TRANSLATORS.filter((t) => t.team).map((t) =>
-  t.team!.toLowerCase()
-);
+const SPECIAL_TRANSLATOR_TEAMS = SPECIAL_TRANSLATORS.filter(
+  (translator) => translator.team
+).map((translator) => translator.team!.toLowerCase());
 
-const SPECIAL_TRANSLATOR_NAMES = SPECIAL_TRANSLATORS.map((t) => t.name.toLowerCase());
+const SPECIAL_TRANSLATOR_NAMES = SPECIAL_TRANSLATORS.map((translator) =>
+  translator.name.toLowerCase()
+);
 
 // Check if a team name matches any special translator
 export const isSpecialTranslator = (teamName: string): boolean => {
@@ -47,9 +65,9 @@ export const getSpecialTranslatorInfo = (
   const authorLower = authorName.toLowerCase().trim();
   return (
     SPECIAL_TRANSLATORS.find(
-      (t) =>
-        t.name.toLowerCase() === authorLower ||
-        (t.team && t.team.toLowerCase() === authorLower)
+      (translator) =>
+        translator.name.toLowerCase() === authorLower ||
+        (translator.team && translator.team.toLowerCase() === authorLower)
     ) || null
   );
 };
