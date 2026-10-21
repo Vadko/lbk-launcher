@@ -9,7 +9,9 @@ import {
   getEglLaunchTarget,
 } from '../game-detector/egl-linux';
 import { listLinuxProcesses } from '../steam-process/list-linux';
+import { readEglLaunchArgs } from './egl-game-settings';
 import { spawnOnHost } from './host-exec';
+import { parseCatalogLaunchOptions } from './launch-command';
 
 // Kernel comm is cut to 15 chars; the AppImage runtime process has the .appimage path as argv0
 const EGL_COMMS: ReadonlySet<string> = new Set(['EpicGamesLaunch']);
@@ -59,13 +61,22 @@ async function spawned(child: ChildProcess, what: string): Promise<boolean> {
 }
 
 // No EGL to hand the link to: run what EGL itself runs, its GE-Proton on the host, without Epic auth
-function launchWithProton(target: EglLaunchTarget): Promise<boolean> {
+function launchWithProton(
+  target: EglLaunchTarget,
+  catalogEnv: Record<string, string>
+): Promise<boolean> {
   const proton = path.join(target.protonDir, 'proton');
   console.log(`[EglLauncher] Launching ${target.executable} with ${proton}`);
   const child = spawnOnHost(
     proton,
-    ['waitforexitandrun', target.executable, ...target.args],
+    [
+      'waitforexitandrun',
+      target.executable,
+      ...target.args,
+      ...readEglLaunchArgs(target.gameDir),
+    ],
     {
+      ...catalogEnv,
       STEAM_COMPAT_CLIENT_INSTALL_PATH: target.protonDir,
       STEAM_COMPAT_DATA_PATH: target.prefix,
       STEAM_COMPAT_INSTALL_PATH: target.gameDir,
@@ -77,8 +88,15 @@ function launchWithProton(target: EglLaunchTarget): Promise<boolean> {
 }
 
 // EGL registers no URL handler on Linux, but its AppImage takes the link as an argument, cold or running
-export async function launchEglGame(gameDir: string): Promise<boolean> {
-  const link = getEglDeepLink(gameDir);
+export async function launchEglGame(
+  gameDir: string,
+  catalogOptions: string | null
+): Promise<boolean> {
+  // The catalog args are already in EGL's per-game settings; env has no way through EGL, so it skips EGL
+  const catalogEnv = catalogOptions
+    ? (parseCatalogLaunchOptions(catalogOptions, gameDir)?.env ?? {})
+    : {};
+  const link = Object.keys(catalogEnv).length > 0 ? null : getEglDeepLink(gameDir);
   const appImage = link ? await findEglAppImage() : undefined;
   if (link && appImage) {
     console.log(`[EglLauncher] Launching ${link} through ${appImage}`);
@@ -89,5 +107,5 @@ export async function launchEglGame(gameDir: string): Promise<boolean> {
     console.warn('[EglLauncher] No EGL launch target for:', gameDir);
     return false;
   }
-  return launchWithProton(target);
+  return launchWithProton(target, catalogEnv);
 }

@@ -28,6 +28,7 @@ import { backupFiles } from './installer/backup';
 import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
 import { checkDiskSpace } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
+import { applyEglIntegration } from './installer/egl-integration';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { isExecutableInstaller } from './installer/executable';
@@ -80,7 +81,8 @@ async function finishInstall(i: {
   await i.beforeSave?.(info);
   await saveInstallationInfo(i.gamePath.path, info);
   const steam = await applySteamIntegration(i.game, i.gamePath, i.onStatus);
-  return { ...steam, achievementsDelivery: component ? delivery : undefined };
+  const egl = applyEglIntegration(i.game, i.gamePath);
+  return { ...steam, ...egl, achievementsDelivery: component ? delivery : undefined };
 }
 
 /**

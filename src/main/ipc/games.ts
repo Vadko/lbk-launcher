@@ -607,7 +607,7 @@ export function setupGamesHandlers(): void {
 
       // EGLv2 on Linux has no appName for getEpicAppName and launches through its own AppImage
       if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
-        return (await launchEglGame(gamePath.path))
+        return (await launchEglGame(gamePath.path, game.steam_launch_options_linux))
           ? { success: true }
           : { success: false, error: t('launch.failed') };
       }

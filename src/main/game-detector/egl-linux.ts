@@ -27,7 +27,7 @@ type InstallationRecord = z.infer<typeof installationSchema>;
 
 type EglInstall = InstallationRecord & { dir: string };
 
-function getEglDataRoot(): string | null {
+export function getEglDataRoot(): string | null {
   if (!isLinux()) {
     return null;
   }
@@ -102,12 +102,21 @@ function findEglInstall(gameDir: string): EglInstall | undefined {
   return getEglInstalls().find(({ dir }) => dir === gameDir);
 }
 
-// The Windows deep-link id; EGLv2 0.100 resolves it, and a bare manifest AppName it does not
-export function getEglDeepLink(gameDir: string): string | null {
+// EGL's own app id, also the key of its per-game settings
+export function getEglAppId(gameDir: string): string | null {
   const install = findEglInstall(gameDir);
   return install?.namespace && install.itemId && install.artifactId
-    ? `com.epicgames.launcher://apps/${[install.namespace, install.itemId, install.artifactId].map(encodeURIComponent).join('%3A')}?action=launch&silent=true`
+    ? `${install.namespace}:${install.itemId}:${install.artifactId}`
     : null;
+}
+
+// The Windows deep-link id; EGLv2 0.100 resolves it, and a bare manifest AppName it does not
+export function getEglDeepLink(gameDir: string): string | null {
+  const appId = getEglAppId(gameDir);
+  return (
+    appId &&
+    `com.epicgames.launcher://apps/${appId.split(':').map(encodeURIComponent).join('%3A')}?action=launch&silent=true`
+  );
 }
 
 export interface EglLaunchTarget {
