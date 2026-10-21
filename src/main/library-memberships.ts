@@ -1,6 +1,7 @@
 import type { Game, LibraryFilterType, LibraryMemberships } from '../shared/types';
 import { GamesRepository } from './db/games-repository';
 import { getAllInstalledGamePaths } from './game-detector';
+import { getEpicLauncherInstallPaths } from './game-detector/epic-launcher-installations';
 import { getInstalledSteamAppIds, getSteamLibraryAppIds } from './game-detector/steam';
 import {
   getEpicLibrary,
@@ -43,9 +44,16 @@ export async function getLibraryMemberships(): Promise<LibraryMemberships> {
     'owned-gog-games': await resolveIds('owned-gog-games', () =>
       repo.findGamesByTitles(getGogLibrary())
     ),
-    'owned-epic-games': await resolveIds('owned-epic-games', () =>
-      repo.findGamesByTitles(getEpicLibrary())
-    ),
+    'owned-epic-games': await resolveIds('owned-epic-games', () => {
+      const byTitle = repo.findGamesByTitles(getEpicLibrary()).games;
+      const byInstallPath = repo.findGamesByInstallPaths(
+        getEpicLauncherInstallPaths()
+      ).games;
+      const gamesById = new Map(
+        [...byTitle, ...byInstallPath].map((game) => [game.id, game])
+      );
+      return { games: [...gamesById.values()] };
+    }),
     'installed-xbox-games': await resolveIds('installed-xbox-games', () =>
       repo.findGamesByXboxPaths(getInstalledXboxGamePaths())
     ),

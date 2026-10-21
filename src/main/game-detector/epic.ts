@@ -6,6 +6,10 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import {
+  getEpicLauncherAppName,
+  getEpicLauncherInstallPaths,
+} from './epic-launcher-installations';
 import { getCleanTitle } from './game-titles';
 import { getHeroicGogInstallFolders } from './gog';
 import {
@@ -157,6 +161,15 @@ export function findEpicGame(gameFolderName: string): string | null {
       console.warn('[Epic] Error checking Legendary config:', e);
     }
 
+    const epicLauncherPath = getEpicLauncherInstallPaths().find(
+      (installPath) =>
+        path.basename(installPath).toLowerCase() === gameFolderName.toLowerCase()
+    );
+    if (epicLauncherPath) {
+      console.log(`[Epic] ✓ Game found (Epic Launcher): ${epicLauncherPath}`);
+      return epicLauncherPath;
+    }
+
     // Check Lutris installations
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const targetFolder = normalize(gameFolderName);
@@ -258,6 +271,11 @@ export function getInstalledEpicGamePaths(): string[] {
 
       // Get paths from Lutris
       paths.push(...getLutrisEpicGameDirNames());
+
+      // Native Epic Launcher on Linux tracks completed installs in installations.jsonl.
+      paths.push(
+        ...getEpicLauncherInstallPaths().map((installPath) => path.basename(installPath))
+      );
     }
 
     const epicManifestPath = getEpicPath();
@@ -454,7 +472,7 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
 export function getEpicAppName(gamePath: string): string | null {
   // For Linux, use Heroic config
   if (isLinux()) {
-    return getHeroicEpicAppName(gamePath);
+    return getHeroicEpicAppName(gamePath) ?? getEpicLauncherAppName(gamePath);
   }
 
   // For Windows/macOS, use Epic manifests
