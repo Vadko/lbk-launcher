@@ -32,6 +32,7 @@ import {
   getFirstAvailableGamePath,
   getHeroicGame,
 } from '../game-detector';
+import { getEglInstallDirs } from '../game-detector/egl-linux';
 import { getEpicAppName } from '../game-detector/epic';
 import { getGOGGalaxyClientPath, getGOGGameId } from '../game-detector/gog';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -650,6 +651,11 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
+        }
+
+        // EGL registers no URL handler on Linux and its .exe needs its own Proton
+        if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
+          return { success: false, error: t('launch.eglOnly') };
         }
       }
 

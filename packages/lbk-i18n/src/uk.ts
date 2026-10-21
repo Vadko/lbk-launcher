@@ -726,6 +726,7 @@ export const uk = {
     failed: 'Не вдалося запустити гру',
     gameNotFound: "Гру не знайдено на вашому комп'ютері",
     lutrisFailed: 'Не вдалося запустити гру через Lutris',
+    eglOnly: 'Цю гру встановлено через Epic Games Launcher — запустіть її звідти',
   },
   launchOptions: {
     noAppId: 'Гра не має Steam App ID',
