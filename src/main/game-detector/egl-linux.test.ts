@@ -2,7 +2,12 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getEglInstallationsPath, getEglInstallDirs } from './egl-linux';
+import {
+  getEglDeepLink,
+  getEglInstallationsPath,
+  getEglInstallDirs,
+  getEglLaunchTarget,
+} from './egl-linux';
 import { findEpicGame, getInstalledEpicGamePaths } from './epic';
 
 vi.mock('../utils/platform', () => ({
@@ -66,6 +71,7 @@ function setUpHome(lines: (dir: string) => unknown[]) {
   vi.stubEnv('FLATPAK_ID', undefined);
   const dir = path.join(home, 'Games', 'DokiDokiLitClubPlus');
   fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'Doki Doki Literature Club Plus.exe'), '');
   const log = getEglInstallationsPath() ?? '';
   fs.mkdirSync(path.dirname(log), { recursive: true });
   fs.writeFileSync(
@@ -75,6 +81,18 @@ function setUpHome(lines: (dir: string) => unknown[]) {
       .join('\n')
   );
   return dir;
+}
+
+function pinProton(version: string, folder = version): string {
+  const runtime = path.join(
+    path.dirname(getEglInstallationsPath() ?? ''),
+    'compat/runtime'
+  );
+  fs.mkdirSync(runtime, { recursive: true });
+  fs.mkdirSync(path.join(runtime, folder), { recursive: true });
+  fs.writeFileSync(path.join(runtime, folder, 'proton'), '');
+  fs.writeFileSync(path.join(runtime, 'pin-cache.json'), JSON.stringify({ version }));
+  return runtime;
 }
 
 describe('EGLv2 installations on Linux', () => {
@@ -150,5 +168,84 @@ describe('EGLv2 installations on Linux', () => {
     expect(getEglInstallationsPath()).toBe(
       path.join(os.homedir(), '.local/share/com.epicgames.eglv2/installations.jsonl')
     );
+  });
+
+  it('builds the deep link EGL resolves from namespace, item and artifact', () => {
+    const dir = setUpHome((gameDir) => [ddlcRecord(gameDir, { complete: true })]);
+
+    expect(getEglDeepLink(dir)).toBe(
+      'com.epicgames.launcher://apps/1311a5735ed844c0b3c47027cab321f0%3Af1b123b2f48840b5b2b0322541fcbddb%3Ac5109bdceb3a453bb38c2fdc964ddee8?action=launch&silent=true'
+    );
+    expect(getEglDeepLink('/elsewhere')).toBeNull();
+  });
+
+  it('runs on the GE-Proton EGL pinned, in the prefix of the artifact', () => {
+    const dir = setUpHome((gameDir) => [ddlcRecord(gameDir, { complete: true })]);
+    const runtime = pinProton('GE-Proton10-34');
+
+    expect(getEglLaunchTarget(dir)).toEqual({
+      executable: path.join(dir, 'Doki Doki Literature Club Plus.exe'),
+      args: [],
+      prefix: path.join(
+        path.dirname(runtime),
+        'compatdata/c5109bdceb3a453bb38c2fdc964ddee8'
+      ),
+      protonDir: path.join(runtime, 'GE-Proton10-34'),
+    });
+  });
+
+  it('passes the launch command and turns Windows separators into folders', () => {
+    const dir = setUpHome((gameDir) => [
+      ddlcRecord(gameDir, {
+        complete: true,
+        launchExecutable: 'Game\\Binaries\\Win64\\Game.exe',
+        launchCommand: ' -SaveToUserDir  -nosplash ',
+      }),
+    ]);
+    fs.mkdirSync(path.join(dir, 'Game/Binaries/Win64'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'Game/Binaries/Win64/Game.exe'), '');
+    pinProton('GE-Proton10-34');
+
+    expect(getEglLaunchTarget(dir)).toMatchObject({
+      executable: path.join(dir, 'Game/Binaries/Win64/Game.exe'),
+      args: ['-SaveToUserDir', '-nosplash'],
+    });
+  });
+
+  it('cannot run a missing executable or one outside the game folder', () => {
+    const dir = setUpHome((gameDir) => [
+      ddlcRecord(gameDir, { complete: true, launchExecutable: 'Gone.exe' }),
+    ]);
+    pinProton('GE-Proton10-34');
+    expect(getEglLaunchTarget(dir)).toBeNull();
+
+    const other = setUpHome((gameDir) => [
+      ddlcRecord(gameDir, { complete: true, launchExecutable: '../Outside.exe' }),
+    ]);
+    fs.writeFileSync(path.join(path.dirname(other), 'Outside.exe'), '');
+    pinProton('GE-Proton10-34');
+    expect(getEglLaunchTarget(other)).toBeNull();
+  });
+
+  it('needs the Proton pin-cache.json names, inside the runtime folder', () => {
+    const dir = setUpHome((gameDir) => [ddlcRecord(gameDir, { complete: true })]);
+    expect(getEglLaunchTarget(dir)).toBeNull();
+
+    pinProton('../escape');
+    expect(getEglLaunchTarget(dir)).toBeNull();
+  });
+
+  it('needs the artifact for the prefix, and keeps the prefix inside compatdata', () => {
+    const dir = setUpHome((gameDir) => [
+      ddlcRecord(gameDir, { complete: true, artifactId: undefined }),
+    ]);
+    pinProton('GE-Proton10-34');
+    expect(getEglLaunchTarget(dir)).toBeNull();
+
+    const other = setUpHome((gameDir) => [
+      ddlcRecord(gameDir, { complete: true, artifactId: '../runtime' }),
+    ]);
+    pinProton('GE-Proton10-34');
+    expect(getEglLaunchTarget(other)).toBeNull();
   });
 });

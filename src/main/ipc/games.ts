@@ -61,6 +61,7 @@ import {
   trackWorkshopOpen,
   uploadFileToSignedUrl,
 } from '../tracking';
+import { launchEglGame } from '../utils/egl-launcher';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
@@ -653,9 +654,10 @@ export function setupGamesHandlers(): void {
           }
         }
 
-        // EGL registers no URL handler on Linux and its .exe needs its own Proton
         if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
-          return { success: false, error: t('launch.eglOnly') };
+          return (await launchEglGame(gamePath.path))
+            ? { success: true }
+            : { success: false, error: t('launch.failed') };
         }
       }
 

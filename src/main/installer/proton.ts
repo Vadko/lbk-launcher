@@ -261,7 +261,7 @@ function checkNewProtonUninstallKeys(
 // via extraResources (like 7z): prod reads it from resourcesPath, dev from the
 // repo's resources/. The Flatpak extracts the same AppImage resources. Falls back
 // to a system-installed umu-run.
-function resolveUmuRun(): string | null {
+export function resolveUmuRun(): string | null {
   const base = app.isPackaged
     ? path.join(process.resourcesPath || path.join(app.getAppPath(), '..'), 'umu')
     : path.join(app.getAppPath(), 'resources', 'umu');
@@ -274,6 +274,20 @@ function resolveUmuRun(): string | null {
   } catch {
     return null;
   }
+}
+
+// In Game Mode umu raises the window only with the gamescope vars plus waitforexitandrun
+export function getUmuEnv(protonDir: string, prefix: string): Record<string, string> {
+  return {
+    PROTONPATH: protonDir,
+    WINEPREFIX: prefix,
+    GAMEID: 'umu-0',
+    PROTON_VERB: 'waitforexitandrun',
+    UMU_RUNTIME_UPDATE: '0',
+    ...(isGamescopeSession()
+      ? { XDG_CURRENT_DESKTOP: 'gamescope', STEAM_MULTIPLE_XWAYLANDS: '1' }
+      : {}),
+  };
 }
 
 function ensureTempDirectory(prefix: string): void {
@@ -428,13 +442,6 @@ export function runProton({
         PROTON_LOG_DIR: protonLogDir,
       };
 
-      // Steam Deck game mode = gamescope compositor. Inside Flatpak umu only
-      // brings the Proton window to the foreground when its steammode monitor
-      // fires, which needs all three: gamescope session + STEAM_MULTIPLE_XWAYLANDS
-      // + PROTON_VERB=waitforexitandrun. Without them the installer renders
-      // off-screen. (Native AppImage doesn't need this — the window shows itself.)
-      const inGameMode = isGamescopeSession();
-
       // Prefer umu-run (in-sandbox) — required for the installer window to render
       // under gamescope in Flatpak. Fall back to launching Proton directly, which
       // works on the native AppImage where umu isn't available.
@@ -444,19 +451,7 @@ export function runProton({
       if (umuRun) {
         cmd = umuRun;
         cmdArgs = [enFilePath, ...(args ?? [])];
-        Object.assign(protonEnv, {
-          PROTONPATH: path.dirname(protonPath),
-          WINEPREFIX: prefix,
-          GAMEID: 'umu-0',
-          PROTON_VERB: 'waitforexitandrun',
-          UMU_RUNTIME_UPDATE: '0',
-        });
-        if (inGameMode) {
-          Object.assign(protonEnv, {
-            XDG_CURRENT_DESKTOP: 'gamescope',
-            STEAM_MULTIPLE_XWAYLANDS: '1',
-          });
-        }
+        Object.assign(protonEnv, getUmuEnv(path.dirname(protonPath), prefix));
       } else {
         cmd = protonPath;
         cmdArgs = ['waitforexitandrun', enFilePath, ...(args ?? [])];
