@@ -111,7 +111,7 @@ export function setupGamesHandlers(): void {
           repo.setSubscriptions(gameId, result.subscriptions);
           const updatedGame = repo.getGameById(gameId);
           if (updatedGame) {
-            getMainWindow()?.webContents.send('game-counters-updated', updatedGame);
+            getMainWindow()?.webContents.send('game-counters-updated', [updatedGame]);
           }
         } catch (err) {
           console.error('[Games] Failed to update local subscriptions count:', err);

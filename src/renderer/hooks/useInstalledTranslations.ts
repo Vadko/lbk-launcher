@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { useEverInstalledStore } from '../store/useEverInstalledStore';
 import { useStore } from '../store/useStore';
 import { useWorkshopInstallsStore } from '../store/useWorkshopInstallsStore';
 
@@ -22,6 +23,28 @@ export function useIsTranslationInstalledForGame(gameId: string | undefined): bo
   );
 
   return inWorkshop || Boolean(info && !info.hasInstallError);
+}
+
+// Раз встановлений переклад лишається "встановлюваним" для лайків/відгуків назавжди
+export function useHasEverInstalledTranslation(gameId: string | undefined): boolean {
+  return useEverInstalledStore((state) =>
+    gameId ? Boolean(state.installedAt[gameId]) : false
+  );
+}
+
+export function useTrackEverInstalledTranslations(): void {
+  const fileBased = useStore((state) => state.installedTranslations);
+  const workshop = useWorkshopInstallsStore((state) => state.installedAt);
+  const markInstalled = useEverInstalledStore((state) => state.markInstalled);
+
+  useEffect(() => {
+    fileBased.forEach((info, gameId) => {
+      if (!info.hasInstallError) {
+        markInstalled(gameId);
+      }
+    });
+    Object.keys(workshop).forEach(markInstalled);
+  }, [fileBased, workshop, markInstalled]);
 }
 
 export function useIsWorkshopChangePending(gameId: string | undefined): boolean {

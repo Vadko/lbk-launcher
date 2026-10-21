@@ -903,14 +903,10 @@ export function useInstallation({
     if (isTechImprovement) {
       return t('installButton.techImprovement');
     }
-    if (
-      installationInfo?.hasInstallError &&
-      isUpdateAvailable &&
-      !isCheckingInstallation
-    ) {
+    if (installationInfo?.hasInstallError && isUpdateAvailable) {
       return t('installButton.reload', { version: String(selectedGame?.version) });
     }
-    if (isUpdateAvailable && !isCheckingInstallation) {
+    if (isUpdateAvailable) {
       return t('installButton.update', { version: String(selectedGame?.version) });
     }
     if (installationInfo) {
@@ -922,7 +918,6 @@ export function useInstallation({
     isPlanned,
     isTechImprovement,
     isUpdateAvailable,
-    isCheckingInstallation,
     selectedGame?.version,
     installationInfo,
   ]);

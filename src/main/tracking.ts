@@ -33,7 +33,7 @@ interface GetSignedDownloadUrlParams {
 }
 
 // Disable all tracking during E2E tests
-const IS_E2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
+export const IS_E2E = process.env['LBK_E2E'] === '1' || process.argv.includes('--e2e');
 
 // Session ID for current launcher session
 let currentSessionId: string | null = null;

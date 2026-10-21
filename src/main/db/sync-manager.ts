@@ -7,11 +7,13 @@ import { getDatabase } from './database';
 import { upsertTagNames } from './db-queries';
 import { dbWorkerClient } from './db-worker-client';
 import { GamesRepository } from './games-repository';
-import type { TagNameRow } from './supabase-sync-api';
+import type { DeletedGame, TagNameRow } from './supabase-sync-api';
+import { latest, rewind } from './sync-cursor';
 import { getSyncMetadata, setSyncMetadata } from './sync-metadata';
 
 const PENDING_DELETIONS_KEY = 'pending_game_deletions';
 const TAG_NAMES_KEY = 'tag_names_synced_at';
+const DELETED_GAMES_KEY = 'deleted_games_synced_at';
 
 /**
  * Notify the renderer that games were removed from the list (sidebar/main list).
@@ -229,13 +231,75 @@ export class SyncManager {
     }
   }
 
+  // Installed games are kept and deferred instead of deleted
+  private async applyDeletions(deleted: DeletedGame[]): Promise<void> {
+    if (deleted.length === 0) {
+      return;
+    }
+    const { safe, deferred } = await this.splitDeletedIds(
+      this.storedIds(deleted.map((row) => row.game_id))
+    );
+    if (safe.length > 0) {
+      console.log(`[SyncManager] Deleting ${safe.length} games removed from server`);
+      await this.actuallyDeleteGames(safe);
+    }
+    if (deferred.length > 0) {
+      console.log(
+        `[SyncManager] Deferring deletion of ${deferred.length} installed games`
+      );
+      this.addPendingDeletions(deferred);
+    }
+    const cursor = latest(
+      getSyncMetadata(DELETED_GAMES_KEY),
+      deleted.map((row) => row.deleted_at)
+    );
+    if (cursor) {
+      setSyncMetadata(DELETED_GAMES_KEY, cursor);
+    }
+  }
+
+  // The rewind re-reads rows already applied; skipping them spares the worker upsert and the spellfix rebuild
+  private changedGames(games: Game[]): Game[] {
+    if (games.length === 0) {
+      return games;
+    }
+    const rows = this.db
+      .prepare(
+        `SELECT id, updated_at FROM games WHERE id IN (${games.map(() => '?').join(',')})`
+      )
+      .all(...games.map((game) => game.id)) as Pick<Game, 'id' | 'updated_at'>[];
+    const stored = new Map(rows.map((row) => [row.id, row.updated_at]));
+    return games.filter((game) => stored.get(game.id) !== game.updated_at);
+  }
+
+  private storedIds(ids: string[]): string[] {
+    if (ids.length === 0) {
+      return ids;
+    }
+    const rows = this.db
+      .prepare(`SELECT id FROM games WHERE id IN (${ids.map(() => '?').join(',')})`)
+      .all(...ids) as Pick<Game, 'id'>[];
+    return rows.map((row) => row.id);
+  }
+
+  // The server's own timestamps, so a skewed local clock cannot skip rows
+  private advanceGamesCursor(previous: string | null, games: Game[]): void {
+    const cursor = latest(
+      previous,
+      games.map((game) => game.updated_at)
+    );
+    if (cursor) {
+      this.setLastSyncTimestamp(cursor);
+    }
+  }
+
   /**
    * Full sync - load all games from Supabase and delete removed ones
    * Uses a Worker Thread for batch operations so the main thread isn't blocked
    */
   async fullSync(
     fetchAllGames: () => Promise<Game[]>,
-    fetchDeletedGameIds?: () => Promise<string[]>
+    fetchDeletedGames?: () => Promise<DeletedGame[]>
   ): Promise<void> {
     if (this.isSyncing) {
       console.log('[SyncManager] Sync already in progress, skipping');
@@ -264,31 +328,11 @@ export class SyncManager {
         console.log(`[SyncManager] Inserted/updated ${games.length} games via worker`);
       }
 
-      // Delete games present in deleted_games (except installed ones — those are deferred)
-      if (fetchDeletedGameIds) {
-        const deletedIds = await fetchDeletedGameIds();
-        if (deletedIds.length > 0) {
-          const { safe, deferred } = await this.splitDeletedIds(deletedIds);
-          if (safe.length > 0) {
-            console.log(
-              `[SyncManager] Deleting ${safe.length} games from deleted_games table`
-            );
-            const deleteTimer = createTimer(`Delete ${safe.length} games`);
-            await this.actuallyDeleteGames(safe);
-            deleteTimer.end();
-          }
-          if (deferred.length > 0) {
-            console.log(
-              `[SyncManager] Deferring deletion of ${deferred.length} installed games`
-            );
-            this.addPendingDeletions(deferred);
-          }
-        }
+      if (fetchDeletedGames) {
+        await this.applyDeletions(await fetchDeletedGames());
       }
 
-      // Update last_sync_timestamp
-      const now = new Date().toISOString();
-      this.setLastSyncTimestamp(now);
+      this.advanceGamesCursor(null, games);
       console.log('[SyncManager] Full sync completed successfully');
     } catch (error) {
       console.error('[SyncManager] Error during full sync:', error);
@@ -304,7 +348,7 @@ export class SyncManager {
    */
   async deltaSync(
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
-    fetchDeletedGameIds?: (since: string) => Promise<string[]>
+    fetchDeletedGames?: (since: string) => Promise<DeletedGame[]>
   ): Promise<void> {
     if (this.isSyncing) {
       console.log('[SyncManager] Sync already in progress, skipping');
@@ -326,7 +370,8 @@ export class SyncManager {
 
       console.log(`[SyncManager] Starting delta sync from ${lastSync}...`);
 
-      const updatedGames = await fetchUpdatedGames(lastSync);
+      const fetchedGames = await fetchUpdatedGames(rewind(lastSync));
+      const updatedGames = this.changedGames(fetchedGames);
       console.log(
         `[SyncManager] Fetched ${updatedGames.length} updated games from Supabase`
       );
@@ -337,29 +382,12 @@ export class SyncManager {
         console.log(`[SyncManager] Updated ${updatedGames.length} games via worker`);
       }
 
-      // Delete games that were removed on the server (except installed ones)
-      if (fetchDeletedGameIds) {
-        const deletedIds = await fetchDeletedGameIds(lastSync);
-        if (deletedIds.length > 0) {
-          const { safe, deferred } = await this.splitDeletedIds(deletedIds);
-          if (safe.length > 0) {
-            console.log(
-              `[SyncManager] Deleting ${safe.length} games removed from server`
-            );
-            await this.actuallyDeleteGames(safe);
-          }
-          if (deferred.length > 0) {
-            console.log(
-              `[SyncManager] Deferring deletion of ${deferred.length} installed games`
-            );
-            this.addPendingDeletions(deferred);
-          }
-        }
+      if (fetchDeletedGames) {
+        const deletedSince = getSyncMetadata(DELETED_GAMES_KEY) ?? lastSync;
+        await this.applyDeletions(await fetchDeletedGames(rewind(deletedSince)));
       }
 
-      // Update last_sync_timestamp
-      const now = new Date().toISOString();
-      this.setLastSyncTimestamp(now);
+      this.advanceGamesCursor(lastSync, fetchedGames);
       console.log('[SyncManager] Delta sync completed successfully');
     } catch (error) {
       console.error('[SyncManager] Error during delta sync:', error);
@@ -377,24 +405,24 @@ export class SyncManager {
   async sync(
     fetchAllGames: () => Promise<Game[]>,
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
-    fetchDeletedGameIds?: (since?: string) => Promise<string[]>
+    fetchDeletedGames?: (since?: string) => Promise<DeletedGame[]>
   ): Promise<void> {
     if (this.isFirstRun()) {
       console.log('[SyncManager] First run detected, performing full sync');
       // For fullSync, pass a function without the since parameter
       await this.fullSync(
         fetchAllGames,
-        fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
+        fetchDeletedGames ? () => fetchDeletedGames() : undefined
       );
     } else {
       console.log('[SyncManager] Performing delta sync');
       try {
-        await this.deltaSync(fetchUpdatedGames, fetchDeletedGameIds);
+        await this.deltaSync(fetchUpdatedGames, fetchDeletedGames);
       } catch (error) {
         console.log('[SyncManager] Delta sync failed, falling back to full sync');
         await this.fullSync(
           fetchAllGames,
-          fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
+          fetchDeletedGames ? () => fetchDeletedGames() : undefined
         );
       }
     }
@@ -403,13 +431,21 @@ export class SyncManager {
   async syncTagNames(
     fetchTagNames: (since?: string) => Promise<TagNameRow[]>
   ): Promise<void> {
-    const rows = await fetchTagNames(getSyncMetadata(TAG_NAMES_KEY) ?? undefined);
+    const since = getSyncMetadata(TAG_NAMES_KEY);
+    // Not rewound: the worker writes the whole set in one transaction, so nothing commits late, and a rewind would refetch all of it
+    const rows = await fetchTagNames(since ?? undefined);
     if (rows.length === 0) {
       return;
     }
 
     upsertTagNames(this.db, rows);
-    setSyncMetadata(TAG_NAMES_KEY, rows[rows.length - 1].updated_at);
+    const cursor = latest(
+      since,
+      rows.map((row) => row.updated_at)
+    );
+    if (cursor) {
+      setSyncMetadata(TAG_NAMES_KEY, cursor);
+    }
     console.log(`[SyncManager] Tag names updated: ${rows.length}`);
   }
 
@@ -424,7 +460,8 @@ export class SyncManager {
     this.gamesRepo.upsertGame(game);
     // The broadcast carries hidden rows too; only the stored row knows user_unlocked
     if (this.gamesRepo.isGameVisible(game.id)) {
-      sendToRenderer('game-updated', game);
+      // The stored row: its counters belong to game-counters.ts, not to this broadcast
+      sendToRenderer('game-updated', this.gamesRepo.getGameById(game.id) ?? game);
     } else if (wasVisible) {
       notifyGamesRemoved([game.id]);
     }

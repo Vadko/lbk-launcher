@@ -224,6 +224,7 @@ export class GamesRepository {
       tagIds = [],
       sortOrder = 'name',
       hideAiTranslations = false,
+      limit,
     } = params;
 
     const whereConditions: string[] = [VISIBLE_GAMES_SQL];
@@ -258,14 +259,21 @@ export class GamesRepository {
     const whereClause = whereConditions.join(' AND ');
     const orderClause = this.buildOrderClause(sortOrder);
 
+    // Author фільтр рахується у JS post-process, тому SQL LIMIT там урізав би рядки до фільтрації
+    const canLimitInSql = limit !== undefined && authors.length === 0;
+
     const gamesStmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereClause}
       ORDER BY ${orderClause}
+      ${canLimitInSql ? 'LIMIT ?' : ''}
     `);
 
-    const rows = gamesStmt.all(...queryParams) as Record<string, unknown>[];
+    const rows = gamesStmt.all(
+      ...queryParams,
+      ...(canLimitInSql ? [limit] : [])
+    ) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
 
     // Filter by authors (multi-select) - post-process since team is comma-separated
@@ -276,6 +284,10 @@ export class GamesRepository {
         }
         return authors.some((author) => game.team?.includes(author));
       });
+
+      if (limit !== undefined) {
+        games = games.slice(0, limit);
+      }
     }
 
     return { games, total: games.length };

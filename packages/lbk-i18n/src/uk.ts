@@ -358,6 +358,11 @@ export const uk = {
   gameHero: {
     share: 'Поділитися',
   },
+  gameLike: {
+    like: 'Оцінити',
+    unlike: 'Зняти оцінку',
+    needsInstall: 'Встановіть переклад, щоб оцінити',
+  },
   gameInfo: {
     title: 'Інформація',
     award: 'Відзнака',

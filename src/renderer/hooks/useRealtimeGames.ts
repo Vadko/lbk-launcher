@@ -23,8 +23,12 @@ export function useRealtimeGames() {
     console.log('[useRealtimeGames] Subscribing to game updates');
     const unsubscribe = window.electronAPI.onGameUpdated(handleGameUpdate);
     const unsubscribeCounters = window.electronAPI.onGameCountersUpdated?.(
-      (game: Game) => {
-        useStore.getState().syncSelectedGame(game);
+      (games: Game[]) => {
+        const { selectedGame, syncSelectedGame } = useStore.getState();
+        const updated = games.find((game) => game.id === selectedGame?.id);
+        if (updated) {
+          syncSelectedGame(updated);
+        }
       }
     );
     return () => {

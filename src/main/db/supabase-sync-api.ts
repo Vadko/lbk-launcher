@@ -1,6 +1,7 @@
 import type { Database } from '../../lib/database.types';
 import type { Game } from '../../shared/types';
 import { getSupabaseClient } from './supabase-client';
+import { afterCursor, collectPages, keysetPages } from './sync-cursor';
 
 /**
  * API for syncing with Supabase via the typed supabase-js client.
@@ -125,6 +126,7 @@ const GAME_SELECT_COLUMNS = [
   'steam_tag_ids',
   'kind',
   'workshop_id',
+  'likes',
 ] as const satisfies readonly (keyof Omit<Game, ExcludedFields>)[];
 
 function _assertNever<_T extends never>(): void {
@@ -139,36 +141,31 @@ const GAME_SELECT_STRING = GAME_SELECT_COLUMNS.join(',');
 const GAMES_PAGE_SIZE = 100;
 const TAG_NAMES_PAGE_SIZE = 500;
 
+const DELETED_GAMES_PAGE_SIZE = 1000;
+
+const isLastPage =
+  (pageSize: number) =>
+  (page: unknown[]): boolean =>
+    page.length < pageSize;
+
 /**
  * Fetch all approved games from Supabase
  */
 export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
   const supabase = getSupabaseClient();
-  const allGames: Game[] = [];
-  let offset = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const { data, error } = await supabase
-      .from('games')
-      .select(GAME_SELECT_STRING)
-      .eq('approved', true)
-      .order('name', { ascending: true })
-      .range(offset, offset + GAMES_PAGE_SIZE - 1)
+  const pages = keysetPages(async (last: Game | undefined) => {
+    const query = supabase.from('games').select(GAME_SELECT_STRING).eq('approved', true);
+    const { data, error } = await (last ? query.gt('id', last.id) : query)
+      .order('id', { ascending: true })
+      .limit(GAMES_PAGE_SIZE)
       .overrideTypes<Game[], { merge: false }>();
-
     if (error) {
       throw error;
     }
+    return data;
+  }, isLastPage(GAMES_PAGE_SIZE));
 
-    const rows = data ?? [];
-    allGames.push(...rows);
-    offset += GAMES_PAGE_SIZE;
-    hasMore = rows.length === GAMES_PAGE_SIZE;
-
-    console.log(`[SupabaseSync] Fetched ${allGames.length} games so far...`);
-  }
-
+  const allGames = await collectPages(pages);
   console.log(`[SupabaseSync] Total fetched: ${allGames.length} games`);
   return allGames;
 }
@@ -178,59 +175,63 @@ export async function fetchAllGamesFromSupabase(): Promise<Game[]> {
  */
 export async function fetchUpdatedGamesFromSupabase(since: string): Promise<Game[]> {
   const supabase = getSupabaseClient();
-  const allGames: Game[] = [];
-  let offset = 0;
-  let hasMore = true;
-
   console.log(`[SupabaseSync] Fetching games updated since ${since}`);
 
-  while (hasMore) {
-    const { data, error } = await supabase
+  const pages = keysetPages(async (last: Game | undefined) => {
+    const query = supabase
       .from('games')
       .select(GAME_SELECT_STRING)
       .eq('approved', true)
-      .gt('updated_at', since)
+      .gt('updated_at', since);
+    const { data, error } = await (last
+      ? query.or(afterCursor('updated_at', last.updated_at, 'id', last.id))
+      : query
+    )
       .order('updated_at', { ascending: true })
-      .range(offset, offset + GAMES_PAGE_SIZE - 1)
+      .order('id', { ascending: true })
+      .limit(GAMES_PAGE_SIZE)
       .overrideTypes<Game[], { merge: false }>();
-
     if (error) {
       throw error;
     }
+    return data;
+  }, isLastPage(GAMES_PAGE_SIZE));
 
-    const rows = data ?? [];
-    allGames.push(...rows);
-    offset += GAMES_PAGE_SIZE;
-    hasMore = rows.length === GAMES_PAGE_SIZE;
-  }
-
+  const allGames = await collectPages(pages);
   console.log(`[SupabaseSync] Fetched ${allGames.length} updated games`);
   return allGames;
 }
 
-/**
- * Fetch IDs of games deleted after a certain date
- * If since is not provided - returns all deleted games
- */
-export async function fetchDeletedGameIdsFromSupabase(since?: string): Promise<string[]> {
+export type DeletedGame = Pick<
+  Database['public']['Tables']['deleted_games']['Row'],
+  'id' | 'game_id' | 'deleted_at'
+>;
+
+export async function fetchDeletedGamesFromSupabase(
+  since?: string
+): Promise<DeletedGame[]> {
   const supabase = getSupabaseClient();
+  console.log(`[SupabaseSync] Fetching deleted games${since ? ` since ${since}` : ''}`);
 
-  if (since) {
-    console.log(`[SupabaseSync] Fetching deleted games since ${since}`);
-  } else {
-    console.log(`[SupabaseSync] Fetching all deleted games`);
-  }
+  const pages = keysetPages(async (last: DeletedGame | undefined) => {
+    const query = supabase.from('deleted_games').select('id,game_id,deleted_at');
+    const sinceQuery = since ? query.gt('deleted_at', since) : query;
+    const { data, error } = await (last
+      ? sinceQuery.or(afterCursor('deleted_at', last.deleted_at, 'id', last.id))
+      : sinceQuery
+    )
+      .order('deleted_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(DELETED_GAMES_PAGE_SIZE);
+    if (error) {
+      throw error;
+    }
+    return data;
+  }, isLastPage(DELETED_GAMES_PAGE_SIZE));
 
-  const query = supabase.from('deleted_games').select('game_id');
-  const { data, error } = await (since ? query.gt('deleted_at', since) : query);
-
-  if (error) {
-    throw error;
-  }
-
-  const deletedIds = (data ?? []).map((row) => row.game_id);
-  console.log(`[SupabaseSync] Fetched ${deletedIds.length} deleted game IDs`);
-  return deletedIds;
+  const rows = await collectPages(pages);
+  console.log(`[SupabaseSync] Fetched ${rows.length} deleted games`);
+  return rows;
 }
 
 /** Result row of the get_trending_games RPC */
@@ -264,29 +265,23 @@ export async function fetchTrendingGames(days = 30, limit = 10): Promise<Trendin
 
 export async function fetchTagNamesFromSupabase(since?: string): Promise<TagNameRow[]> {
   const supabase = getSupabaseClient();
-  const rows: TagNameRow[] = [];
-  let offset = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const query = supabase
-      .from('steam_tag_names')
-      .select('tagid,name,updated_at')
+  const pages = keysetPages(async (last: TagNameRow | undefined) => {
+    const query = supabase.from('steam_tag_names').select('tagid,name,updated_at');
+    const sinceQuery = since ? query.gt('updated_at', since) : query;
+    const { data, error } = await (last
+      ? sinceQuery.or(afterCursor('updated_at', last.updated_at, 'tagid', last.tagid))
+      : sinceQuery
+    )
       .order('updated_at', { ascending: true })
       .order('tagid', { ascending: true })
-      .range(offset, offset + TAG_NAMES_PAGE_SIZE - 1);
-
-    const { data, error } = await (since ? query.gt('updated_at', since) : query);
-
+      .limit(TAG_NAMES_PAGE_SIZE);
     if (error) {
       throw error;
     }
+    return data;
+  }, isLastPage(TAG_NAMES_PAGE_SIZE));
 
-    rows.push(...(data ?? []));
-    hasMore = (data?.length ?? 0) === TAG_NAMES_PAGE_SIZE;
-    offset += TAG_NAMES_PAGE_SIZE;
-  }
-
+  const rows = await collectPages(pages);
   console.log(`[SupabaseSync] Fetched ${rows.length} tag names`);
   return rows;
 }

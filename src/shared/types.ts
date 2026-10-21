@@ -197,6 +197,7 @@ export interface GetGamesParams {
   showAdultGames?: boolean;
   hideAiTranslations?: boolean;
   sortOrder?: SortOrderType;
+  limit?: number;
 }
 
 export interface GetGamesResult {
@@ -340,7 +341,6 @@ export interface ElectronAPI {
   fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
-  onInstallProgress: (callback: (progress: number) => void) => () => void;
   onDownloadProgress: (
     callback: (gameId: string, progress: DownloadProgress) => void
   ) => () => void;
@@ -370,7 +370,7 @@ export interface ElectronAPI {
   fetchChangelog: (version: string) => Promise<ChangelogEntry[] | null>;
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
-  onGameCountersUpdated: (callback: (game: Game) => void) => () => void;
+  onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
@@ -458,6 +458,9 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
+  getLikedGameIds: () => Promise<string[]>;
+  setLike: (gameId: string, liked: boolean) => Promise<string[]>;
+  onLikedGamesChanged: (callback: (gameIds: string[]) => void) => () => void;
   // Subscribe/unsubscribe from a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,

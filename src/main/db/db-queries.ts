@@ -168,6 +168,7 @@ function gameToInsertParams(game: Game): GameInsertParams {
     search_keywords: game.search_keywords ?? null,
     steam_tag_ids: game.steam_tag_ids ? JSON.stringify(game.steam_tag_ids) : null,
     source_language: game.source_language ?? null,
+    likes: game.likes ?? 0,
   };
 }
 
@@ -269,6 +270,7 @@ const SYNCED_COLUMNS = [
   'search_keywords',
   'source_language',
   'steam_tag_ids',
+  'likes',
 ] as const;
 
 function _assertNever<_T extends never>(): void {
@@ -287,6 +289,13 @@ type UnbindableColumn = {
 }[keyof GameInsertParams];
 
 _assertNever<UnbindableColumn>();
+
+// Counters are owned by game-counters.ts on update, so a games page fetched before a broadcast cannot roll them back
+const COUNTER_COLUMNS: ReadonlySet<SyncedColumn> = new Set([
+  'likes',
+  'downloads',
+  'subscriptions',
+]);
 
 /**
  * SQL for upserting a game.
@@ -307,7 +316,9 @@ const UPSERT_GAME_SQL = `
     @id, ${SYNCED_COLUMNS.map((c) => `@${c}`).join(', ')}
   )
   ON CONFLICT(id) DO UPDATE SET
-    ${SYNCED_COLUMNS.map((c) => `${c} = excluded.${c}`).join(',\n    ')}
+    ${SYNCED_COLUMNS.filter((c) => !COUNTER_COLUMNS.has(c))
+      .map((c) => `${c} = excluded.${c}`)
+      .join(',\n    ')}
 `;
 
 /**

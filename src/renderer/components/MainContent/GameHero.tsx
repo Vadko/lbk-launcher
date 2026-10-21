@@ -14,6 +14,7 @@ import { PencilIcon } from '../Icons/PencilIcon';
 import { ShareModal } from '../Modal/ShareModal';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
+import { LikeButton } from '../ui/LikeButton';
 
 interface GameHeroProps {
   game: Game;
@@ -194,6 +195,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
           </motion.div>
         )}
         <div className="absolute bottom-4 right-4 flex gap-2">
+          <LikeButton gameId={game.id} likes={game.likes} />
           {hasShareButton && (
             <>
               <ShareModal

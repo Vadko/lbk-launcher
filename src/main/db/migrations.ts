@@ -1063,6 +1063,36 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    name: 'add_likes_column',
+    up: (db) =>
+      addColumnIfMissing(
+        db,
+        'likes',
+        'ALTER TABLE games ADD COLUMN likes INTEGER NOT NULL DEFAULT 0;'
+      ),
+  },
+  {
+    name: 'resync_for_server_sync_cursor',
+    up: (db) =>
+      forceResyncOnce(
+        db,
+        'resync_for_server_sync_cursor',
+        'migration_resync_server_sync_cursor_done'
+      ),
+  },
+  {
+    name: 'add_my_likes_table',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS my_likes (
+          game_id TEXT PRIMARY KEY,
+          liked INTEGER NOT NULL,
+          server_liked INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+    },
+  },
 ];
 
 /**

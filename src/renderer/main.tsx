@@ -8,6 +8,7 @@ import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initFeedbackReplies } from './store/feedbackReplyBridge';
+import { initLikes } from './store/likesBridge';
 import { useSettingsStore } from './store/useSettingsStore';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import '@fontsource-variable/inter';
@@ -36,6 +37,9 @@ initGlobalErrorHandlers();
 
 // Bridge feedback replies (IPC) into the notification store — once, outside React.
 initFeedbackReplies();
+
+// Bridge the liked set (IPC) into the likes store — once, outside React.
+initLikes();
 
 console.log('[Renderer] Starting React application...');
 

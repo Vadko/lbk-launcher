@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import mainBg from '../../../../resources/main-bg.webp';
 import { useDeepLink } from '../../hooks/useDeepLink';
 import { useGamepadModeNavigation } from '../../hooks/useGamepadModeNavigation';
+import { useTrackEverInstalledTranslations } from '../../hooks/useInstalledTranslations';
 import { useNavigateFromNotifications } from '../../hooks/useNavigateFromNotifications';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -69,6 +70,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   // Gamepad navigation (needs Router context)
   useGamepadModeNavigation(isGamepadMode);
 
+  // Пам'ятаємо переклади, які колись встановлювались, для лайків/відгуків
+  useTrackEverInstalledTranslations();
   // On <html> too, so the gamepad focus styles reach modals portaled outside this layout
   useEffect(() => {
     document.documentElement.toggleAttribute('data-gamepad-mode', isGamepadMode);

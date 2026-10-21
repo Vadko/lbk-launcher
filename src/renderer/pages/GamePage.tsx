@@ -42,7 +42,10 @@ import { isSpecialTranslator } from '../constants/specialTranslators';
 import { type ActionPhase, useActionPhase } from '../hooks/useActionPhase';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
-import { useIsTranslationInstalledForGame } from '../hooks/useInstalledTranslations';
+import {
+  useHasEverInstalledTranslation,
+  useIsTranslationInstalledForGame,
+} from '../hooks/useInstalledTranslations';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -107,12 +110,14 @@ export const GamePage: React.FC = () => {
   const installationInfo = selectedGame
     ? installedTranslations.get(selectedGame.id)
     : undefined;
-  const isCheckingInstallation = selectedGame
-    ? isCheckingInstallationStatus(selectedGame.id)
-    : false;
+
+  const isCheckingInstallation =
+    !installationInfo && !!selectedGame && isCheckingInstallationStatus(selectedGame.id);
 
   const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
   const isTranslationInstalled = useIsTranslationInstalledForGame(selectedGame?.id);
+  const hasEverInstalledTranslation = useHasEverInstalledTranslation(selectedGame?.id);
+  const canLeaveFeedback = isTranslationInstalled || hasEverInstalledTranslation;
   const isUpdateAvailable =
     installationInfo &&
     selectedGame &&
@@ -296,12 +301,14 @@ export const GamePage: React.FC = () => {
     onFirstInstallComplete: handleFirstInstallComplete,
   });
 
-  // Check installation status when game changes
+  const selectedGameUpdatedAt = selectedGame?.updated_at;
+  // Keyed on updated_at, which counters (likes, downloads) leave alone, so a counter push does not re-read the disk
   useEffect(() => {
-    if (selectedGame && selectedGame.kind !== 'workshop') {
-      checkInstallationStatus(selectedGame.id, selectedGame);
+    const game = useStore.getState().selectedGame;
+    if (game && game.kind !== 'workshop') {
+      checkInstallationStatus(game.id, game);
     }
-  }, [selectedGame, checkInstallationStatus]);
+  }, [selectedGameId, selectedGameUpdatedAt, checkInstallationStatus]);
 
   // Track online/offline status
   useEffect(() => {
@@ -598,7 +605,7 @@ export const GamePage: React.FC = () => {
                     {t('gameActions.support')}
                   </Button>
                 )}
-              {isTranslationInstalled && (
+              {canLeaveFeedback && (
                 <Button
                   variant="secondary"
                   icon={<FileEditIcon size={20} />}
@@ -612,7 +619,7 @@ export const GamePage: React.FC = () => {
             </div>
 
             <div className="flex gap-3 flex-wrap">
-              {installationInfo && !isCheckingInstallation && !isInstalling && (
+              {installationInfo && !isInstalling && (
                 <>
                   <InstallationStatusBadge
                     isUpdateAvailable={!!isUpdateAvailable}

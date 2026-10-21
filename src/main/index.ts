@@ -135,11 +135,12 @@ import { startAchievements } from './achievements';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
+import { createGameCountersSubscription, syncGameCounters } from './db/game-counters';
 import { createGamesBroadcastSubscription } from './db/games-realtime';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
   fetchAllGamesFromSupabase,
-  fetchDeletedGameIdsFromSupabase,
+  fetchDeletedGamesFromSupabase,
   fetchTagNamesFromSupabase,
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
@@ -152,9 +153,11 @@ import {
 import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
+import { setupLikesHandlers } from './ipc/likes';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
+import { syncLikes } from './likes';
 import { startMillenniumInstall } from './millennium-install';
 import {
   calculatePlaytimeDeltas,
@@ -257,6 +260,7 @@ if (!gotTheLock) {
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
+  setupLikesHandlers();
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
@@ -335,7 +339,7 @@ if (!gotTheLock) {
       await syncManager.sync(
         fetchAllGamesFromSupabase,
         fetchUpdatedGamesFromSupabase,
-        fetchDeletedGameIdsFromSupabase
+        fetchDeletedGamesFromSupabase
       );
 
       try {
@@ -375,7 +379,16 @@ if (!gotTheLock) {
       }
     );
     const feedbackChannel = createFeedbackReplyBroadcastSubscription();
-    realtimeManager.subscribe([gamesChannel, feedbackChannel]);
+    realtimeManager.subscribe([
+      gamesChannel,
+      feedbackChannel,
+      createGameCountersSubscription(),
+    ]);
+
+    void syncGameCounters();
+    syncLikes().catch((err) => {
+      console.error('[Main] Likes sync failed:', err);
+    });
 
     checkForUpdates();
 
