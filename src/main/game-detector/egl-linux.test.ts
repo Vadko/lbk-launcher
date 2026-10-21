@@ -62,6 +62,8 @@ function setUpHome(lines: (dir: string) => unknown[]) {
   vi.stubEnv('HOME', home);
   // os.homedir() reads USERPROFILE on Windows
   vi.stubEnv('USERPROFILE', home);
+  vi.stubEnv('XDG_DATA_HOME', undefined);
+  vi.stubEnv('FLATPAK_ID', undefined);
   const dir = path.join(home, 'Games', 'DokiDokiLitClubPlus');
   fs.mkdirSync(dir, { recursive: true });
   const log = getEglInstallationsPath() ?? '';
@@ -133,5 +135,20 @@ describe('EGLv2 installations on Linux', () => {
 
     expect(getEglInstallDirs()).toEqual([]);
     expect(findEpicGame('DokiDokiLitClubPlus')).toBeNull();
+  });
+
+  it('reads the log under XDG_DATA_HOME, except inside our Flatpak', () => {
+    setUpHome(() => []);
+    vi.stubEnv('XDG_DATA_HOME', '/custom/data');
+
+    expect(getEglInstallationsPath()).toBe(
+      path.join('/custom/data', 'com.epicgames.eglv2/installations.jsonl')
+    );
+
+    vi.stubEnv('FLATPAK_ID', 'ua.lbk.Launcher');
+
+    expect(getEglInstallationsPath()).toBe(
+      path.join(os.homedir(), '.local/share/com.epicgames.eglv2/installations.jsonl')
+    );
   });
 });

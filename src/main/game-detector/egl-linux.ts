@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { z } from 'zod';
 import { readTextOrNull } from '../utils/fs-safe';
+import { isFlatpak } from '../utils/host-exec';
 import { isLinux } from '../utils/platform';
 
 // One line of EGLv2's append-only install log; the header line has no installationId
@@ -18,9 +19,14 @@ const installationSchema = z.object({
 type InstallationRecord = z.infer<typeof installationSchema>;
 
 export function getEglInstallationsPath(): string | null {
-  return isLinux()
-    ? path.join(os.homedir(), '.local/share/com.epicgames.eglv2/installations.jsonl')
-    : null;
+  if (!isLinux()) {
+    return null;
+  }
+  // Inside our Flatpak XDG_DATA_HOME points at the sandbox, not where EGL writes
+  const dataHome =
+    (!isFlatpak() && process.env.XDG_DATA_HOME) ||
+    path.join(os.homedir(), '.local/share');
+  return path.join(dataHome, 'com.epicgames.eglv2/installations.jsonl');
 }
 
 function parseRecord(line: string): InstallationRecord | undefined {
