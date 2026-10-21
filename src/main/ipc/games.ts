@@ -605,6 +605,13 @@ export function setupGamesHandlers(): void {
         }
       }
 
+      // EGLv2 on Linux has no appName for getEpicAppName and launches through its own AppImage
+      if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
+        return (await launchEglGame(gamePath.path))
+          ? { success: true }
+          : { success: false, error: t('launch.failed') };
+      }
+
       // For Epic games, try to launch via Epic protocol
       if (gamePath.platform === 'epic') {
         const epicAppId = getEpicAppName(gamePath.path);
@@ -652,12 +659,6 @@ export function setupGamesHandlers(): void {
           if (result.success) {
             return { success: true };
           }
-        }
-
-        if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
-          return (await launchEglGame(gamePath.path))
-            ? { success: true }
-            : { success: false, error: t('launch.failed') };
         }
       }
 

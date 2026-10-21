@@ -119,6 +119,7 @@ describe('launchEglGame', () => {
         env: expect.objectContaining({
           PROTONPATH: TARGET.protonDir,
           WINEPREFIX: TARGET.prefix,
+          STORE: 'egs',
         }),
       })
     );

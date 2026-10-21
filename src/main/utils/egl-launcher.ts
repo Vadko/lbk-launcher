@@ -61,7 +61,8 @@ async function launchWithUmu(target: EglLaunchTarget): Promise<boolean> {
     cwd: path.dirname(target.executable),
     detached: true,
     stdio: 'ignore',
-    env: { ...process.env, ...getUmuEnv(target.protonDir, target.prefix) },
+    // STORE lets protonfixes look the title up as an Epic game
+    env: { ...process.env, ...getUmuEnv(target.protonDir, target.prefix), STORE: 'egs' },
   });
   child.unref();
   try {
