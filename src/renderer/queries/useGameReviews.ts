@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import type { GameReviewsPage } from '@/shared/types';
+import type { GameReviewsPage } from '@/shared/game-reviews-types';
 
 const PAGE_SIZE = 10;
 const THIRTY_MINUTES = 30 * 60 * 1000;

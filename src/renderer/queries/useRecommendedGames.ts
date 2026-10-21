@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { Game } from '../../shared/types';
+import { useSettingsStore } from '../store/useSettingsStore';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -9,11 +12,11 @@ const recommendedGamesKeys = {
     [...recommendedGamesKeys.all, gameId, limit, hideAiTranslations] as const,
 };
 
-export function useRecommendedGames(
-  gameId?: string,
-  limit = 3,
-  hideAiTranslations = false,
-  enabled = true
+function useRecommendedGamesQuery(
+  gameId: string | undefined,
+  limit: number,
+  hideAiTranslations: boolean,
+  enabled: boolean
 ) {
   return useSyncAwareQuery({
     queryKey: recommendedGamesKeys.byGame(gameId ?? 'unknown', limit, hideAiTranslations),
@@ -28,4 +31,30 @@ export function useRecommendedGames(
     staleTime: FIVE_MINUTES,
     gcTime: FIVE_MINUTES,
   });
+}
+
+// The game page asks for the same limit as its section, so both share one cached query
+export function useRecommendedGames(gameId: string | undefined, limit: number) {
+  const { hideAiTranslations, showRecommendations } = useSettingsStore(
+    useShallow((state) => ({
+      hideAiTranslations: state.hideAiTranslations,
+      showRecommendations: state.showRecommendations,
+    }))
+  );
+  const { data, isLoading } = useRecommendedGamesQuery(
+    gameId,
+    limit,
+    hideAiTranslations,
+    showRecommendations
+  );
+  const games = useMemo(
+    () => (data ?? []).filter((game) => game.id !== gameId).slice(0, limit),
+    [data, gameId, limit]
+  );
+
+  return {
+    games,
+    isLoading,
+    isHidden: !showRecommendations || (!isLoading && games.length === 0),
+  };
 }

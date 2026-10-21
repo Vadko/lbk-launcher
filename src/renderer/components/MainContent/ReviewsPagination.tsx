@@ -51,14 +51,20 @@ export const ReviewsPagination: React.FC<ReviewsPaginationProps> = ({
   const navRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
 
-  // A pressed button can turn disabled (first/last page), which drops focus and makes gamepad nav jump to the hero
+  // A pressed button can turn disabled (first/last page) or unmount, which drops focus and makes gamepad nav jump to the hero
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
     }
     const active = document.activeElement;
-    if (active && active !== document.body && !navRef.current?.contains(active)) {
+    const isFocusLost =
+      !active ||
+      active === document.body ||
+      (active instanceof HTMLButtonElement &&
+        active.disabled &&
+        !!navRef.current?.contains(active));
+    if (!isFocusLost) {
       return;
     }
     navRef.current

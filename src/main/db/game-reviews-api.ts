@@ -1,4 +1,8 @@
-import type { GameReview, GameReviewReply, GameReviewsPage } from '../../shared/types';
+import type {
+  GameReview,
+  GameReviewReply,
+  GameReviewsPage,
+} from '../../shared/game-reviews-types';
 import { getSupabaseClient } from './supabase-client';
 
 interface GetGameReviewsResponse {

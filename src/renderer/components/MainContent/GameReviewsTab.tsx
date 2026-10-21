@@ -1,8 +1,15 @@
+import { RotateCcw } from 'lucide';
 import { FileEditIcon, InfoIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import type {
+  GameReview,
+  GameReviewReply,
+  GameReviewsPage,
+} from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
-import type { GameReview, GameReviewReply } from '@/shared/types';
+import { useActionPhase } from '../../hooks/useActionPhase';
 import { useGameReviews } from '../../queries/useGameReviews';
+import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 import { ReviewImages } from './ReviewImages';
@@ -18,10 +25,11 @@ const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-di
 
 function formatReviewDate(iso: string): string {
   const date = new Date(iso);
+  const now = new Date();
   const time = date.toLocaleTimeString('uk-UA', TIME_FORMAT);
   const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const daysAgo = Math.round(
-    (dayStart(new Date()).getTime() - dayStart(date).getTime()) / 86_400_000
+    (dayStart(now).getTime() - dayStart(date).getTime()) / 86_400_000
   );
 
   if (daysAgo === 0) {
@@ -31,7 +39,11 @@ function formatReviewDate(iso: string): string {
     return t('gameReviews.yesterday', { time });
   }
   const day = date
-    .toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' })
+    .toLocaleDateString('uk-UA', {
+      day: 'numeric',
+      month: 'short',
+      ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' }),
+    })
     .replace('.', '');
   return `${day}, ${time}`;
 }
@@ -50,14 +62,14 @@ const AuthorReply: React.FC<{ reply: GameReviewReply; isLast: boolean }> = ({
       </span>
       <span className="text-sm text-text-muted">{formatReviewDate(reply.createdAt)}</span>
     </div>
-    <p className="text-sm text-text-main break-words">{reply.text}</p>
+    <p className="text-sm text-text-main wrap-break-word">{reply.text}</p>
   </div>
 );
 
 const ReviewItem: React.FC<{ review: GameReview }> = ({ review }) => (
   <div className="flex flex-col gap-2.5 pb-3 border-b border-white/[0.03]">
     <p className="text-sm text-text-muted">{formatReviewDate(review.createdAt)}</p>
-    <p className="text-sm text-text-main break-words">{review.text}</p>
+    <p className="text-sm text-text-main wrap-break-word">{review.text}</p>
     <ReviewImages images={review.images} />
     {review.replies.length > 0 && (
       <div className="flex flex-col -mt-2.5 ml-3">
@@ -79,8 +91,27 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   onLeaveFeedback,
 }) => {
   const [page, setPage] = useState(1);
-  const { data, isPending, isError, isPlaceholderData } = useGameReviews(gameId, page);
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const { data, isPending, isError, isFetching, isPlaceholderData, refetch } =
+    useGameReviews(gameId, page);
+  // A failed page has no data; the last known count keeps the pagination there to leave it
+  const [summary, setSummary] = useState<Pick<GameReviewsPage, 'total' | 'pageSize'>>();
+  if (data && (data.total !== summary?.total || data.pageSize !== summary?.pageSize)) {
+    setSummary({ total: data.total, pageSize: data.pageSize });
+  }
+  const totalPages = summary
+    ? Math.max(1, Math.ceil(summary.total / summary.pageSize))
+    : 1;
+  // A retry resets the query to pending, so the phase keeps the focused button mounted until it settles
+  const retry = useActionPhase();
+  const handleRetry = () => {
+    if (!retry.isPending) {
+      void retry.run(() => refetch(), { isSuccess: (result) => !result.isError });
+    }
+  };
+  const handlePageChange = (next: number) => {
+    retry.reset();
+    setPage(next);
+  };
 
   return (
     <section className="glass-card-no-motion flex flex-col gap-5 min-w-0 min-h-[60vh] h-max">
@@ -90,7 +121,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
             {t('gameReviews.title')}
           </h3>
           <p className="min-h-[18px] text-sm text-text-muted">
-            {data && t('gameReviews.count', { count: data.total })}
+            {summary && t('gameReviews.count', { count: summary.total })}
           </p>
         </div>
         {canLeaveFeedback && (
@@ -113,14 +144,23 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       )}
 
       <div className="flex-1">
-        {isPending ? (
+        {retry.isBusy || (isError && !isFetching) ? (
+          <div className="flex flex-col items-center gap-4 py-12">
+            <p className="text-text-muted">{t('gameReviews.loadFailed')}</p>
+            <Button
+              variant="secondary"
+              icon={<AppActionIcon phase={retry.phase} icon={RotateCcw} size={20} />}
+              onClick={handleRetry}
+              aria-busy={retry.isPending}
+              data-gamepad-action
+            >
+              {t('common.tryAgain')}
+            </Button>
+          </div>
+        ) : isPending || !data ? (
           <div className="flex justify-center py-12">
             <Loader size="md" />
           </div>
-        ) : isError || !data ? (
-          <p className="text-center text-text-muted py-12">
-            {t('gameReviews.loadFailed')}
-          </p>
         ) : data.items.length === 0 ? (
           <p className="text-sm text-text-muted">{t('gameReviews.empty')}</p>
         ) : (
@@ -135,7 +175,11 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       </div>
 
       {totalPages > 1 && (
-        <ReviewsPagination page={page} totalPages={totalPages} onChange={setPage} />
+        <ReviewsPagination
+          page={page}
+          totalPages={totalPages}
+          onChange={handlePageChange}
+        />
       )}
     </section>
   );

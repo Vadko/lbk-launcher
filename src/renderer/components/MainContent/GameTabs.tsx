@@ -4,16 +4,15 @@ import { t } from '@/shared/i18n/i18n';
 export type GameTab = 'info' | 'recommended' | 'reviews';
 
 interface GameTabsProps {
+  tabs: GameTab[];
   activeTab: GameTab;
   onChange: (tab: GameTab) => void;
 }
 
-const tabs: GameTab[] = ['info', 'recommended', 'reviews'];
-
-export const GameTabs: React.FC<GameTabsProps> = ({ activeTab, onChange }) => (
+export const GameTabs: React.FC<GameTabsProps> = ({ tabs, activeTab, onChange }) => (
   <div
     role="tablist"
-    className="glass-card-no-motion !p-2 flex gap-2 w-fit justify-self-end"
+    className="glass-card-no-motion p-2! flex gap-2 w-fit justify-self-end"
   >
     {tabs.map((tab) => (
       <button
@@ -25,7 +24,7 @@ export const GameTabs: React.FC<GameTabsProps> = ({ activeTab, onChange }) => (
         data-gamepad-action
         className={`px-6 py-2 rounded-xl font-medium transition-all ${
           activeTab === tab
-            ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
+            ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
             : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
         }`}
       >

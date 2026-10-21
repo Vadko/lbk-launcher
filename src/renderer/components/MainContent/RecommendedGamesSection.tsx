@@ -1,9 +1,8 @@
 import { motion } from 'framer-motion';
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useRecommendedGames } from '@/renderer/queries/useRecommendedGames';
-import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
@@ -26,12 +25,6 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
 }) => {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
-  const { hideAiTranslations, showRecommendations } = useSettingsStore(
-    useShallow((state) => ({
-      hideAiTranslations: state.hideAiTranslations,
-      showRecommendations: state.showRecommendations,
-    }))
-  );
   const { gamesWithUpdates, isGameDetected } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
@@ -39,19 +32,13 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     }))
   );
 
-  const { data: recommendedGames = [], isLoading } = useRecommendedGames(
-    gameId,
-    showLimit,
-    hideAiTranslations,
-    showRecommendations
-  );
+  const {
+    games: visibleGames,
+    isLoading,
+    isHidden,
+  } = useRecommendedGames(gameId, showLimit);
 
-  const visibleGames = useMemo(
-    () => recommendedGames.filter((game) => game.id !== gameId).slice(0, showLimit),
-    [recommendedGames, gameId, showLimit]
-  );
-
-  if (!showRecommendations || (!isLoading && visibleGames.length === 0)) {
+  if (isHidden) {
     return null;
   }
 

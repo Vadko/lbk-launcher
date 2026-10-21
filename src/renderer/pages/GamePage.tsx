@@ -48,6 +48,7 @@ import {
   useHasEverInstalledTranslation,
   useIsTranslationInstalledForGame,
 } from '../hooks/useInstalledTranslations';
+import { useRecommendedGames } from '../queries/useRecommendedGames';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -72,6 +73,7 @@ const EMPTY_BANNER_INFO: BannerInfo = {
 
 // Short on purpose: the server caps banner impressions per machine_id, so a later visit asks again
 const BANNER_GC_TIME = 5 * 60 * 1000;
+const RECOMMENDED_LIMIT = 9;
 
 /**
  * Detailed game information page
@@ -104,11 +106,6 @@ export const GamePage: React.FC = () => {
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const isTombstoned = useGameTombstone(gameId);
-  const [tabState, setTabState] = useState<{ gameId: string; tab: GameTab }>({
-    gameId: gameId ?? '',
-    tab: 'info',
-  });
-  const activeTab: GameTab = tabState.gameId === gameId ? tabState.tab : 'info';
 
   useEffect(() => {
     resetLaunch();
@@ -198,6 +195,22 @@ export const GamePage: React.FC = () => {
 
   const selectedGameId = selectedGame?.id;
   const selectedGameSlug = selectedGame?.slug;
+
+  const { isHidden: isRecommendedHidden } = useRecommendedGames(
+    selectedGameId,
+    RECOMMENDED_LIMIT
+  );
+  const [tabState, setTabState] = useState<{ gameId?: string; tab: GameTab }>({
+    gameId: selectedGameId,
+    tab: 'info',
+  });
+  if (tabState.gameId !== selectedGameId) {
+    setTabState({ gameId: selectedGameId, tab: 'info' });
+  }
+  const gameTabs: GameTab[] = isRecommendedHidden
+    ? ['info', 'reviews']
+    : ['info', 'recommended', 'reviews'];
+  const activeTab = gameTabs.includes(tabState.tab) ? tabState.tab : 'info';
 
   const { data: banners, isError: bannersFailed } = useQuery({
     queryKey: ['game-banners', selectedGameId, selectedGameSlug],
@@ -778,6 +791,7 @@ export const GamePage: React.FC = () => {
           </div>
 
           <GameTabs
+            tabs={gameTabs}
             activeTab={activeTab}
             onChange={(tab) => setTabState({ gameId: selectedGame.id, tab })}
           />
@@ -793,7 +807,7 @@ export const GamePage: React.FC = () => {
             <RecommendedGamesSection
               gameId={selectedGame.id}
               gameName={selectedGame.name}
-              showLimit={9}
+              showLimit={RECOMMENDED_LIMIT}
             />
           ) : (
             <>
