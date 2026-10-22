@@ -62,6 +62,7 @@ import {
   uploadFileToSignedUrl,
 } from '../tracking';
 import { launchEglGame } from '../utils/egl-launcher';
+import { flushEglLaunchArgs } from '../utils/egl-windows-settings';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
@@ -614,6 +615,10 @@ export function setupGamesHandlers(): void {
 
       // For Epic games, try to launch via Epic protocol
       if (gamePath.platform === 'epic') {
+        // A closed EGL reads its settings on this start, so queued launch options go in first
+        await flushEglLaunchArgs().catch((error: unknown) => {
+          console.warn('[LaunchGame] Queued EGL launch args not written:', error);
+        });
         const epicAppId = getEpicAppName(gamePath.path);
 
         if (epicAppId) {

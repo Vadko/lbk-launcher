@@ -735,8 +735,12 @@ export const uk = {
     eglWriteFailed: 'не вдалося змінити налаштування гри в Epic Games Launcher',
     eglNeedsShell:
       'вони виконуються лише через оболонку, якою їх запускає Steam, а Epic Games Launcher так не вміє',
+    eglQueued:
+      'Параметри запуску застосуються автоматично, щойно ви вийдете з Epic Games Launcher через його значок у треї (закрите вікно лишає його працювати). LBK Launcher тим часом має бути відкритим — його можна згорнути в трей.',
+    eglEnvUnsupported:
+      'Epic Games Launcher не передає грі змінні середовища, тож без них переклад може не працювати.',
     eglEnvOnlyFromLbk:
-      'Epic Games Launcher не передає грі змінні середовища, тож переклад працюватиме, лише якщо запускати гру з лаунчера',
+      'Epic Games Launcher не передає грі змінні середовища, тож переклад працюватиме, лише якщо запускати гру кнопкою «Грати» в LBK Launcher.',
   },
   millennium: {
     deckyHost:

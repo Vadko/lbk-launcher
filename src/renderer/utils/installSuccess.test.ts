@@ -48,6 +48,20 @@ describe('installSuccessMessage', () => {
     ]);
   });
 
+  it('adds the Epic Games Launcher notes as they are', () => {
+    expect(
+      installSuccessMessage(
+        'Готово!',
+        input({ eglLaunchOptionsNotes: ['Перша.', 'Друга.'], launchOptionsError: 'boom' })
+      ).split('\n\n')
+    ).toEqual([
+      'Готово!',
+      'Перша.',
+      'Друга.',
+      'Не вдалося налаштувати параметри запуску: boom',
+    ]);
+  });
+
   it('says whether LBK can install Millennium itself', () => {
     expect(installSuccessMessage('', input({ delivery: 'needs-millennium' }))).toContain(
       'лаунчер може встановити його сам'

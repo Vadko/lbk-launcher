@@ -50,9 +50,10 @@ import { isLinux } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
 
-type InstallTranslationResult = Awaited<ReturnType<typeof applySteamIntegration>> & {
-  achievementsDelivery?: AchievementsDelivery;
-};
+type InstallTranslationResult = Awaited<ReturnType<typeof applySteamIntegration>> &
+  Awaited<ReturnType<typeof applyEglIntegration>> & {
+    achievementsDelivery?: AchievementsDelivery;
+  };
 
 // The shared tail: strings are written only once the install is about to be recorded, so a failed install leaves none behind.
 async function finishInstall(i: {
@@ -81,7 +82,7 @@ async function finishInstall(i: {
   await i.beforeSave?.(info);
   await saveInstallationInfo(i.gamePath.path, info);
   const steam = await applySteamIntegration(i.game, i.gamePath, i.onStatus);
-  const egl = applyEglIntegration(i.game, i.gamePath);
+  const egl = await applyEglIntegration(i.game, i.gamePath);
   return { ...steam, ...egl, achievementsDelivery: component ? delivery : undefined };
 }
 

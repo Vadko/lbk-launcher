@@ -7,6 +7,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
 import { getEglInstallDirs } from './egl-linux';
+import { parseEpicManifest } from './epic-manifest';
 import { getCleanTitle } from './game-titles';
 import { getHeroicGogInstallFolders } from './gog';
 import {
@@ -75,33 +76,6 @@ function getEpicPath(): string | null {
   }
 
   logIfChanged('epic-path', '[Epic] Epic Games Launcher not found', 'warn');
-  return null;
-}
-
-/**
- * Parse Epic Games manifest file
- */
-function parseEpicManifest(manifestPath: string): {
-  installLocation: string;
-  displayName: string;
-  catalogItemId?: string;
-  appName?: string;
-} | null {
-  try {
-    const content = fs.readFileSync(manifestPath, 'utf8');
-    const manifest = JSON.parse(content);
-
-    if (manifest.InstallLocation && manifest.DisplayName) {
-      return {
-        installLocation: manifest.InstallLocation,
-        displayName: manifest.DisplayName,
-        catalogItemId: manifest.CatalogItemId,
-        appName: manifest.AppName,
-      };
-    }
-  } catch (error) {
-    console.error(`[Epic] Error parsing manifest ${manifestPath}:`, error);
-  }
   return null;
 }
 
@@ -457,48 +431,49 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
   return null;
 }
 
-/**
- * Get Epic App Name / Catalog Item ID by game path (Windows/macOS)
- * Returns the app name in format suitable for epic:// protocol
- */
+function findEpicManifest(gamePath: string): ReturnType<typeof parseEpicManifest> {
+  const epicManifestPath = getEpicPath();
+  if (!epicManifestPath || !fs.existsSync(epicManifestPath)) {
+    return null;
+  }
+  try {
+    const resolvedGamePath = path.resolve(gamePath);
+    const matches = fs
+      .readdirSync(epicManifestPath)
+      .filter((f: string) => f.endsWith('.item'))
+      .map((f) => parseEpicManifest(path.join(epicManifestPath, f)))
+      .filter(
+        (manifest) =>
+          manifest?.installLocation &&
+          path.resolve(manifest.installLocation) === resolvedGamePath
+      );
+    // DLC manifests share the game's folder
+    return (
+      matches.find((m) => !m?.mainGameAppName || m.mainGameAppName === m.appName) ??
+      matches[0] ??
+      null
+    );
+  } catch (error) {
+    console.error('[Epic] Error reading Epic manifests:', error);
+    return null;
+  }
+}
+
+// The id the epic:// protocol takes for a game folder
 export function getEpicAppName(gamePath: string): string | null {
   // For Linux, use Heroic config
   if (isLinux()) {
     return getHeroicEpicAppName(gamePath);
   }
+  const manifest = findEpicManifest(gamePath);
+  // Prefer AppName: it is the ownership key Epic checks on launch.
+  return manifest?.appName || manifest?.catalogItemId || null;
+}
 
-  // For Windows/macOS, use Epic manifests
-  const epicManifestPath = getEpicPath();
-  if (!epicManifestPath || !fs.existsSync(epicManifestPath)) {
-    return null;
-  }
-
-  try {
-    const manifestFiles = fs
-      .readdirSync(epicManifestPath)
-      .filter((f: string) => f.endsWith('.item'));
-
-    for (const manifestFile of manifestFiles) {
-      const manifestFullPath = path.join(epicManifestPath, manifestFile);
-      const manifest = parseEpicManifest(manifestFullPath);
-
-      if (manifest && manifest.installLocation) {
-        const resolvedManifestPath = path.resolve(manifest.installLocation);
-        const resolvedGamePath = path.resolve(gamePath);
-
-        if (resolvedManifestPath === resolvedGamePath) {
-          // Prefer AppName: it is the ownership key Epic checks on launch.
-          const appIdentifier = manifest.appName || manifest.catalogItemId;
-          if (appIdentifier) {
-            console.log(`[Epic] Found app identifier for ${gamePath}: ${appIdentifier}`);
-            return appIdentifier;
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[Epic] Error getting Epic App Name:', error);
-  }
-
-  return null;
+// EGL's own app id, the key of its per-game settings on Windows
+export function getEpicManifestAppId(gamePath: string): string | null {
+  const manifest = findEpicManifest(gamePath);
+  return manifest?.catalogNamespace && manifest.catalogItemId && manifest.appName
+    ? `${manifest.catalogNamespace}:${manifest.catalogItemId}:${manifest.appName}`
+    : null;
 }
