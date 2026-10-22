@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { LRUCache } from 'lru-cache';
 import * as path from 'path';
 import { getInstalledEAGamePaths } from './ea';
+import { getEglInstallationsPath } from './egl-linux';
 import {
   getEpicManifestsCandidatePath,
   getInstalledEpicGamePaths,
@@ -77,7 +78,9 @@ function gogFingerprint(): string {
 
 function epicFingerprint(): string {
   const manifests = getEpicManifestsCandidatePath();
+  const eglLog = getEglInstallationsPath();
   return [
+    ...(eglLog ? [eglLog] : []),
     ...heroicFiles([
       'store_cache/legendary_library.json',
       'store_cache/legendary_install_info.json',
@@ -187,9 +190,11 @@ export function revalidateStores(force: boolean): StoreId[] {
 export function getStoreWatchDirs(): string[] {
   const galaxyDb = getGOGGalaxyDBCandidatePath();
   const manifests = getEpicManifestsCandidatePath();
+  const eglLog = getEglInstallationsPath();
   const dirs = [
     ...(galaxyDb ? [path.dirname(galaxyDb)] : []),
     ...(manifests ? [manifests] : []),
+    ...(eglLog ? [path.dirname(eglLog)] : []),
     ...getHeroicConfigPaths().flatMap((root) => [
       path.join(root, 'gog_store'),
       path.join(root, 'store_cache'),

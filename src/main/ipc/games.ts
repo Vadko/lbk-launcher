@@ -32,6 +32,7 @@ import {
   getFirstAvailableGamePath,
   getHeroicGame,
 } from '../game-detector';
+import { getEglInstallDirs } from '../game-detector/egl-linux';
 import { getEpicAppName } from '../game-detector/epic';
 import { getGOGGalaxyClientPath, getGOGGameId } from '../game-detector/gog';
 import { syncKurinGames } from '../game-detector/kurin';
@@ -60,6 +61,8 @@ import {
   trackWorkshopOpen,
   uploadFileToSignedUrl,
 } from '../tracking';
+import { launchEglGame } from '../utils/egl-launcher';
+import { flushEglLaunchArgs } from '../utils/egl-windows-settings';
 import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
@@ -603,8 +606,19 @@ export function setupGamesHandlers(): void {
         }
       }
 
+      // EGLv2 on Linux has no appName for getEpicAppName and launches through its own AppImage
+      if (gamePath.platform === 'epic' && getEglInstallDirs().includes(gamePath.path)) {
+        return (await launchEglGame(gamePath.path, game.steam_launch_options_linux))
+          ? { success: true }
+          : { success: false, error: t('launch.failed') };
+      }
+
       // For Epic games, try to launch via Epic protocol
       if (gamePath.platform === 'epic') {
+        // A closed EGL reads its settings on this start, so queued launch options go in first
+        await flushEglLaunchArgs().catch((error: unknown) => {
+          console.warn('[LaunchGame] Queued EGL launch args not written:', error);
+        });
         const epicAppId = getEpicAppName(gamePath.path);
 
         if (epicAppId) {
