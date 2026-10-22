@@ -43,8 +43,22 @@ describe('installSuccessMessage', () => {
     expect(message.split('\n\n')).toEqual([
       'Готово!',
       expect.stringContaining('Параметри запуску застосуються автоматично'),
-      'Не вдалося налаштувати параметри запуску Steam: boom',
+      'Не вдалося налаштувати параметри запуску: boom',
       "Переклад досягнень з'явиться після наступного запуску Steam.",
+    ]);
+  });
+
+  it('adds the Epic Games Launcher notes as they are', () => {
+    expect(
+      installSuccessMessage(
+        'Готово!',
+        input({ eglLaunchOptionsNotes: ['Перша.', 'Друга.'], launchOptionsError: 'boom' })
+      ).split('\n\n')
+    ).toEqual([
+      'Готово!',
+      'Перша.',
+      'Друга.',
+      'Не вдалося налаштувати параметри запуску: boom',
     ]);
   });
 

@@ -13,6 +13,7 @@ import { millenniumUnsupportedText } from './steamPluginHost';
 export interface InstallSuccessInput {
   launchOptionsQueued: boolean;
   launchOptionsError?: string;
+  eglLaunchOptionsNotes?: string[];
   // Undefined when the achievements component was not installed.
   delivery: AchievementsDelivery | undefined;
   // Fetched once, and only when needsBridgeStatus() asks for it.
@@ -77,6 +78,9 @@ export function installSuccessMessage(base: string, input: InstallSuccessInput):
   let message = base;
   if (input.launchOptionsQueued) {
     message += `\n\n${t('installSuccess.launchOptionsQueued')}`;
+  }
+  for (const note of input.eglLaunchOptionsNotes ?? []) {
+    message += `\n\n${note}`;
   }
   // Files are in place, but without its launch options the translation runs unmodded.
   if (input.launchOptionsError) {

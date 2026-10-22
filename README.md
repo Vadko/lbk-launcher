@@ -228,12 +228,12 @@ LBK Launcher:
 |---|:---:|:---:|:---:|
 | **Steam** | + | + | + |
 | **GOG Galaxy** | + | + | - |
-| **Epic Games Launcher** | + | + | - |
+| **Epic Games Launcher** | + | + | + |
 | **Rockstar Games Launcher** | + | - | - |
 | **Heroic Games Launcher** | - | - | + |
 | **Lutris** | - | - | + |
 
-> На Linux ігри GOG та Epic автоматично виявляються через Heroic Games Launcher та Lutris.
+> На Linux ігри GOG та Epic автоматично виявляються через Heroic Games Launcher, Lutris та Epic Games Launcher (EGLv2).
 
 ---
 

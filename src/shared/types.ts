@@ -159,6 +159,8 @@ export interface InstallResult {
    * runs unmodded, so it is surfaced rather than only logged.
    */
   launchOptionsError?: string;
+  // What the player should know about the args written into Epic Games Launcher.
+  eglLaunchOptionsNotes?: string[];
   // Set only when achievement strings were installed.
   achievementsDelivery?: AchievementsDelivery;
   error?: {
