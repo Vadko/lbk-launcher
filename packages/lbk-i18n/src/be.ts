@@ -1,3 +1,5 @@
+import type { Messages } from './uk';
+
 export const be = {
   achievementsBadge: {
     settingOffDetail:
@@ -711,7 +713,7 @@ export const be = {
       'Пераклад дасягненняў захаваны. Каб бачыць яго ў Steam, уключыце ў наладах «Хуткае прымяненне параметраў запуску Steam».',
     launchOptionsQueued:
       'Параметры запуску ўжывуцца аўтаматычна, як толькі вы закрыеце Steam. Лаўнчар павінен быць адкрыты — яго можна згарнуць у сістэмны трэй.',
-    launchOptionsError: 'Не ўдалося наладзіць параметры запуску Steam: {{error}}',
+    launchOptionsError: 'Не ўдалося наладзіць параметры запуску: {{error}}',
     ok: 'Зразумела',
     restartSteamNow: 'Перазапусціць Steam цяпер',
     restartFailureTitle: 'Параметры запуску не ўжытыя',
@@ -746,6 +748,15 @@ export const be = {
     notConfigured: 'Для гэтага перакладу не зададзеныя параметры запуску',
     gameDirUnresolved: 'Не ўдалося вызначыць папку гульні для параметраў запуску',
     writeFailed: 'Не ўдалося запісаць параметры запуску',
+    eglWriteFailed: 'не ўдалося змяніць налады гульні ў Epic Games Launcher',
+    eglNeedsShell:
+      'яны працуюць толькі праз абалонку, праз якую іх запускае Steam, а Epic Games Launcher так не ўмее',
+    eglQueued:
+      'Параметры запуску ўжывуцца аўтаматычна, як толькі вы выйдзеце з Epic Games Launcher праз яго значок у сістэмным трэі (закрытае акно пакідае яго працаваць). LBK Launcher тым часам павінен быць адкрыты — яго можна згарнуць у сістэмны трэй.',
+    eglEnvUnsupported:
+      'Epic Games Launcher не перадае гульні зменныя асяроддзя, таму без іх пераклад можа не працаваць.',
+    eglEnvOnlyFromLbk:
+      'Epic Games Launcher не перадае гульні зменныя асяроддзя, таму пераклад будзе працаваць, толькі калі запускаць гульню кнопкай «Гуляць» у LBK Launcher.',
   },
   millennium: {
     deckyHost:
@@ -1692,4 +1703,4 @@ export const be = {
       },
     },
   },
-} as const;
+} as const satisfies Messages;

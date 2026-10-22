@@ -1,3 +1,5 @@
+import type { Messages } from './uk';
+
 export const en = {
   achievementsBadge: {
     settingOffDetail:
@@ -709,7 +711,7 @@ export const en = {
       'Achievement translations have been saved. Enable “Apply Steam launch options instantly” in settings to display them in Steam.',
     launchOptionsQueued:
       'Launch options will be applied automatically when you close Steam. Keep the launcher running; you can minimize it to the tray.',
-    launchOptionsError: 'Could not set Steam launch options: {{error}}',
+    launchOptionsError: 'Could not set launch options: {{error}}',
     ok: 'Got it',
     restartSteamNow: 'Restart Steam now',
     restartFailureTitle: 'Launch options not applied',
@@ -744,6 +746,15 @@ export const en = {
     notConfigured: 'No launch options are set for this translation',
     gameDirUnresolved: 'Could not locate the game folder for launch options',
     writeFailed: 'Could not save launch options',
+    eglWriteFailed: 'could not change the game settings in Epic Games Launcher',
+    eglNeedsShell:
+      'they only work through the shell Steam starts them with, and Epic Games Launcher cannot do that',
+    eglQueued:
+      'Launch options will be applied automatically as soon as you quit Epic Games Launcher from its tray icon (closing the window keeps it running). Keep LBK Launcher open until then; you can minimize it to the tray.',
+    eglEnvUnsupported:
+      'Epic Games Launcher does not pass environment variables to the game, so the translation may not work without them.',
+    eglEnvOnlyFromLbk:
+      'Epic Games Launcher does not pass environment variables to the game, so the translation will only work if you start the game with the “Play” button in LBK Launcher.',
   },
   millennium: {
     deckyHost:
@@ -1688,4 +1699,4 @@ export const en = {
       },
     },
   },
-} as const;
+} as const satisfies Messages;
