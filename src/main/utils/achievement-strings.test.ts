@@ -57,6 +57,14 @@ const schema = (appKey: string, achs: Ach[], version: Buffer = int32('version', 
 
 const FILE = 'UserGameStatsSchema_1623730.bin';
 
+/* eslint-disable no-restricted-syntax -- extraction tells LBK's Ukrainian from Steam's text by Cyrillic */
+const UK_NAME = 'Авторитет Косогору';
+const UK_DESC = 'Ви здолали Зої';
+const UK_SHORT = 'Кров';
+const RUSSIAN = 'Кровь';
+const HOMOGLYPH = 'Test Сomplete';
+/* eslint-enable no-restricted-syntax */
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -66,13 +74,13 @@ describe('extractAchievementStrings', () => {
     const buf = schema('1623730', [
       {
         api: 'A',
-        name: { english: 'Авторитет', ukrainian: 'Володар пагорба' },
-        desc: { english: 'Defeat Zoe', ukrainian: 'Здолайте Зої' },
+        name: { english: UK_NAME, ukrainian: 'King of the Hill' },
+        desc: { english: 'Defeat Zoe', ukrainian: 'Beat Zoe' },
       },
     ]);
     expect(extractAchievementStrings(buf, FILE)).toEqual({
       appId: 1623730,
-      strings: { A: { name: 'Володар пагорба', desc: 'Здолайте Зої' } },
+      strings: { A: { name: 'King of the Hill', desc: 'Beat Zoe' } },
     });
   });
 
@@ -80,14 +88,14 @@ describe('extractAchievementStrings', () => {
     const buf = schema('1623730', [
       {
         api: 'A',
-        name: { english: 'Авторитет Косогору' },
-        desc: { english: 'Ви здолали Зої' },
+        name: { english: UK_NAME },
+        desc: { english: UK_DESC },
       },
-      { api: 'B', name: { english: 'Кров', ukrainian: '   ' } },
+      { api: 'B', name: { english: UK_SHORT, ukrainian: '   ' } },
     ]);
     expect(extractAchievementStrings(buf, FILE).strings).toEqual({
-      A: { name: 'Авторитет Косогору', desc: 'Ви здолали Зої' },
-      B: { name: 'Кров' },
+      A: { name: UK_NAME, desc: UK_DESC },
+      B: { name: UK_SHORT },
     });
   });
 
@@ -96,18 +104,18 @@ describe('extractAchievementStrings', () => {
       {
         api: 'ONLY_DESC',
         name: { english: 'Hillside' },
-        desc: { english: 'Здолайте Зої' },
+        desc: { english: UK_DESC },
       },
       { api: 'ENGLISH', name: { english: 'Hillside' }, desc: { english: 'Defeat Zoe' } },
-      { api: 'RUSSIAN_ONLY', name: { english: 'Blood', russian: 'Кровь' } },
+      { api: 'RUSSIAN_ONLY', name: { english: 'Blood', russian: RUSSIAN } },
     ]);
     expect(extractAchievementStrings(buf, FILE).strings).toEqual({
-      ONLY_DESC: { desc: 'Здолайте Зої' },
+      ONLY_DESC: { desc: UK_DESC },
     });
   });
 
   it('ignores single Cyrillic homoglyphs in official English text', () => {
-    const buf = schema('43160', [{ api: 'A', name: { english: 'Test Сomplete' } }]);
+    const buf = schema('43160', [{ api: 'A', name: { english: HOMOGLYPH } }]);
     expect(
       extractAchievementStrings(buf, 'UserGameStatsSchema_43160.bin').strings
     ).toEqual({});
@@ -116,50 +124,50 @@ describe('extractAchievementStrings', () => {
   it('copies no token, icon or hidden fields', () => {
     const buf = schema(
       '1623730',
-      [{ api: 'A', name: { english: 'Кров' }, hidden: str('hidden', '0') }],
+      [{ api: 'A', name: { english: UK_SHORT }, hidden: str('hidden', '0') }],
       str('version', '5')
     );
     expect(extractAchievementStrings(buf, FILE).strings.A).toStrictEqual({
-      name: 'Кров',
+      name: UK_SHORT,
     });
   });
 
   it('skips bits without an API name', () => {
-    const buf = schema('1623730', [{ name: { english: 'Кров' } }]);
+    const buf = schema('1623730', [{ name: { english: UK_SHORT } }]);
     expect(extractAchievementStrings(buf, FILE).strings).toEqual({});
   });
 
   it('accepts a bare string display name from old schemas', () => {
-    const display = obj('display', str('name', 'Кров'));
+    const display = obj('display', str('name', UK_SHORT));
     const buf = Buffer.concat([
       obj('10', obj('stats', obj('1', obj('bits', obj('0', str('name', 'A'), display))))),
       END,
     ]);
     expect(extractAchievementStrings(buf, 'UserGameStatsSchema_10.bin').strings).toEqual({
-      A: { name: 'Кров' },
+      A: { name: UK_SHORT },
     });
   });
 
   it('trims and caps strings at 1 KB without splitting a character', () => {
-    const long = 'ї'.repeat(600);
+    const long = 'é'.repeat(600);
     const buf = schema('1623730', [{ api: 'A', name: { ukrainian: `  ${long}  ` } }]);
     const name = extractAchievementStrings(buf, FILE).strings.A.name ?? '';
     // Node 26's encodeInto may stop a code point early; Electron's Node 24 fills to the byte.
     expect(Buffer.byteLength(name, 'utf8')).toBeLessThanOrEqual(1024);
     expect(name.length).toBeGreaterThanOrEqual(511);
-    expect(name).toBe('ї'.repeat(name.length));
+    expect(name).toBe('é'.repeat(name.length));
   });
 
   it('trusts the root key over the file name and warns', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const buf = schema('2623190', [{ api: 'A', name: { english: 'Кров' } }]);
+    const buf = schema('2623190', [{ api: 'A', name: { english: UK_SHORT } }]);
     expect(extractAchievementStrings(buf, FILE).appId).toBe(2623190);
     expect(warn).toHaveBeenCalledOnce();
   });
 
   it('uses the file name when the root key is not an app id', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const buf = schema('game', [{ api: 'A', name: { english: 'Кров' } }]);
+    const buf = schema('game', [{ api: 'A', name: { english: UK_SHORT } }]);
     expect(extractAchievementStrings(buf, `/x/y/${FILE}`).appId).toBe(1623730);
   });
 

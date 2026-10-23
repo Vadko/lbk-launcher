@@ -15,7 +15,7 @@ interface FakeCollection {
   allApps: FakeApp[];
 }
 
-const COLLECTION_NAME = 'З українізаторами';
+const COLLECTION_NAME = 'With Ukrainian translations';
 const SHORTCUT_ID = 3000000001;
 
 function steamCall() {

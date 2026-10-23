@@ -5,7 +5,9 @@ import type { BridgeSocket } from './socket';
 
 export const BROWSER = 'ws://127.0.0.1:8080/devtools/browser/0a1b-2c3d';
 export const SCRIPT = '/* the page module */';
-export const PORTAL2: AppStrings = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'Підйом' } };
+export const PORTAL2: AppStrings = {
+  'ACH.SURVIVE_CONTAINER_RIDE': { name: 'LBK: Rise' },
+};
 export const COMMUNITY = 'https://steamcommunity.com/achievements/620';
 const ADD_SCRIPT = 'Page.addScriptToEvaluateOnNewDocument';
 

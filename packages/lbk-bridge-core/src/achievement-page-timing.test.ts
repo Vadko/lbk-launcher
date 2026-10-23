@@ -8,7 +8,7 @@ const GLOBAL_URL = 'https://steamcommunity.com/achievements/620';
 const GAMES_URL = 'https://steamcommunity.com/id/someone/games/?tab=all';
 const SCHEMA_620 = ['achievements', 620, 'schema'];
 const [WAKE] = fixture.portal2Schema.groups[0].achievements;
-const PORTAL2: AppStrings = { [WAKE.api_name]: { name: 'Підйом' } };
+const PORTAL2: AppStrings = { [WAKE.api_name]: { name: 'LBK: Rise' } };
 
 const hideRules: string[] = [];
 class FakeSheet {
@@ -79,7 +79,8 @@ function communityPage({
     ssr,
     boundary,
     hidden: () => doc.adoptedStyleSheets.length,
-    translated: () => JSON.stringify(client.getQueryData(SCHEMA_620)).includes('Підйом'),
+    translated: () =>
+      JSON.stringify(client.getQueryData(SCHEMA_620)).includes('LBK: Rise'),
     navigate: (next: string) => {
       win.location.href = next;
       navigation.dispatchEvent(new Event('currententrychange'));

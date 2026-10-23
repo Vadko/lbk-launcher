@@ -17,6 +17,7 @@
     "sources": {
       "files": [
         "src/**/*.ts",
+        "!src/**/*.test.ts",
         "package.json"
       ],
       "packageLocks": [

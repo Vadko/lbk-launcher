@@ -2,6 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { execSync, spawn, type ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { t } from '../../src/shared/i18n/i18n';
 
 /**
  * CDP port used by our app when launched with --e2e flag.
@@ -207,7 +208,7 @@ export async function launchApp(): Promise<AppInstance> {
  */
 export async function waitForAppReady(page: Page) {
   await page
-    .getByPlaceholder('Пошук гри...')
+    .getByPlaceholder(t('gameSearch.placeholder'))
     .waitFor({ state: 'visible', timeout: 60_000 });
 
   // Wait for at least one game item to render (sync data → UI rendering may take a moment)

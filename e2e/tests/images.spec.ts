@@ -60,7 +60,7 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
     });
 
     await waitForAppReady(page);
-    await page.waitForTimeout(1500); // початкові картинки
+    await page.waitForTimeout(1500); // initial images
 
     // Sharp scroll: a scrollbar jump deep into the list plus a short flick
     await page.evaluate(async () => {
@@ -73,7 +73,7 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
         await new Promise((r) => setTimeout(r, 30));
       }
     });
-    await page.waitForTimeout(800); // isScrolling settle + фетчі видимого вікна
+    await page.waitForTimeout(800); // isScrolling settle plus the visible window fetches
 
     // Click a visible deep game → the header banner must load
     await page.locator('[data-nav-group="game-list"]:visible').first().click();
@@ -93,7 +93,7 @@ test('images: hero banner loads after deep scroll, no request pileup', async () 
       )
       .not.toBe('loading');
 
-    await page.waitForTimeout(2000); // дати хвостам завершитись
+    await page.waitForTimeout(2000); // let the trailing requests finish
 
     const list = [...reqs.values()];
     const pending = list.filter((r) => !r.done);

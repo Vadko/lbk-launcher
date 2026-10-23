@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { t } from '@/shared/i18n/i18n';
 import type {
   AchievementsBadge,
   MillenniumUnsupportedReason,
@@ -43,8 +44,8 @@ describe('millenniumUnsupportedText', () => {
 
 describe('achievementsBadgeDetail', () => {
   it('explains only the states that will not reach Steam', () => {
-    expect(achievementsBadgeDetail(badge('setting-off'))).toContain(
-      'Швидке застосування'
+    expect(achievementsBadgeDetail(badge('setting-off'))).toBe(
+      t('achievementsBadge.settingOffDetail')
     );
     expect(achievementsBadgeDetail(badge('unsupported', 'flatpak-steam'))).toBe(
       millenniumUnsupportedText('flatpak-steam')
@@ -64,8 +65,12 @@ describe('achievementsBadgeDetail', () => {
 
 describe('millenniumPhaseText', () => {
   it('says removal for the file step of an uninstall', () => {
-    expect(millenniumPhaseText('install-files', 'install')).toBe('Встановлення файлів…');
-    expect(millenniumPhaseText('install-files', 'uninstall')).toContain('Видалення');
+    expect(millenniumPhaseText('install-files', 'install')).toBe(
+      t('millennium.phase.install-files')
+    );
+    expect(millenniumPhaseText('install-files', 'uninstall')).toBe(
+      t('millennium.phase.uninstallFiles')
+    );
   });
 });
 

@@ -77,12 +77,14 @@ async function listViaHostPs(comms: ReadonlySet<string>): Promise<LinuxProcess[]
     );
     return parseLinuxPsOutput(stdout).filter((row) => comms.has(row.comm));
   } catch (error) {
-    console.warn('[Steam] ps failed:', errorMessage(error));
+    console.warn('[HostPs] ps failed:', errorMessage(error));
     return null;
   }
 }
 
-function listLinuxProcesses(comms: ReadonlySet<string>): Promise<LinuxProcess[] | null> {
+export function listLinuxProcesses(
+  comms: ReadonlySet<string>
+): Promise<LinuxProcess[] | null> {
   return isFlatpak() ? listViaHostPs(comms) : scanProc(comms);
 }
 

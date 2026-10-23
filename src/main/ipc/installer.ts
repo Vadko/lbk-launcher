@@ -108,6 +108,7 @@ export function setupInstallerHandlers(): void {
           success: true,
           launchOptionsQueued: installResult.launchOptionsQueued,
           launchOptionsError: installResult.launchOptionsError,
+          eglLaunchOptionsNotes: installResult.eglLaunchOptionsNotes,
           achievementsDelivery: installResult.achievementsDelivery,
         };
         return result;

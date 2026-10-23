@@ -11,6 +11,29 @@ interface PrivacyPolicyModalProps {
 
 const LINK_CLASS = 'text-color-accent hover:text-color-main transition-colors underline';
 
+const LEGAL_BASIS_ROWS = [
+  { purpose: 'delivery', category: 'essential', basis: 'requestOrTerms' },
+  { purpose: 'subscription', category: 'essential', basis: 'request' },
+  { purpose: 'abuse', category: 'essential', basis: 'stability' },
+  {
+    purpose: 'improve',
+    category: 'improve',
+    basis: 'legitimateInterest',
+  },
+  {
+    purpose: 'develop',
+    category: 'develop',
+    basis: 'legitimateInterest',
+  },
+  {
+    purpose: 'diagnostics',
+    category: 'diagnostics',
+    basis: 'legitimateInterest',
+  },
+  { purpose: 'feedback', category: 'userAction', basis: 'consent' },
+  { purpose: 'account', category: 'account', basis: 'requestOrTerms' },
+] as const;
+
 const markup = {
   b: <strong className="text-text-main" />,
   mail: (
@@ -441,56 +464,38 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
         <h4 className="text-base font-semibold text-text-main">
           {t('privacyPolicy.sections.legalBasis.title')}
         </h4>
-        <ul className="list-disc list-outside ml-5 text-sm text-text-muted space-y-1">
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.delivery"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.subscription"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.abuse"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.product"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.localization"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.diagnostics"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.feedback"
-              components={markup}
-            />
-          </li>
-          <li>
-            <Trans
-              i18nKey="privacyPolicy.sections.legalBasis.account"
-              components={markup}
-            />
-          </li>
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-text-muted">
+            <thead>
+              <tr>
+                <th scope="col" className="p-2">
+                  {t('privacyPolicy.sections.legalBasis.columns.purpose')}
+                </th>
+                <th scope="col" className="p-2">
+                  {t('privacyPolicy.sections.legalBasis.columns.category')}
+                </th>
+                <th scope="col" className="p-2">
+                  {t('privacyPolicy.sections.legalBasis.columns.basis')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {LEGAL_BASIS_ROWS.map((row) => (
+                <tr key={row.purpose} className="border-t border-border">
+                  <td className="p-2 align-top">
+                    {t(`privacyPolicy.sections.legalBasis.purposes.${row.purpose}`)}
+                  </td>
+                  <td className="p-2 align-top">
+                    {t(`privacyPolicy.sections.legalBasis.categories.${row.category}`)}
+                  </td>
+                  <td className="p-2 align-top">
+                    {t(`privacyPolicy.sections.legalBasis.bases.${row.basis}`)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p className="text-sm text-text-muted leading-relaxed">
           {t('privacyPolicy.sections.legalBasis.objection')}
         </p>

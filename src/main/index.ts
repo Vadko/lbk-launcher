@@ -176,6 +176,7 @@ import {
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
+import { startPendingEglLaunchArgs } from './utils/egl-windows-settings';
 import { startSteamBridge } from './utils/steam-bridge-lifecycle';
 import { createMainWindow, getMainWindow, showMainWindow } from './window';
 
@@ -429,6 +430,7 @@ if (!gotTheLock) {
       });
       startSteamBridge();
       startPendingSteamActions();
+      startPendingEglLaunchArgs();
       bootstrapCefDebugging().catch((err) => {
         console.error('[Main] CEF bootstrap failed:', err);
       });

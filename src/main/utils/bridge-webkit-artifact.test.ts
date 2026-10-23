@@ -42,7 +42,7 @@ describe('Millennium webkit bundle', () => {
       },
       fetch: (url: string, init: unknown) => {
         fetched.push({ url, init });
-        const body = { v: 1, stamp: 's', apps: { 620: { A: { name: 'Так' } } } };
+        const body = { v: 1, stamp: 's', apps: { 620: { A: { name: 'Yes' } } } };
         return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
       },
       setTimeout: () => 0,

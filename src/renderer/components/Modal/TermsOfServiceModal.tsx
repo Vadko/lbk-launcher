@@ -179,9 +179,7 @@ export const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({
 
       <div className="p-4 rounded-lg bg-glass border border-border">
         <p className="text-xs text-text-muted text-center">
-          {t('termsOfService.lastUpdated', {
-            date: new Date().toLocaleDateString('uk-UA'),
-          })}
+          {t('termsOfService.lastUpdated')}
         </p>
       </div>
     </div>

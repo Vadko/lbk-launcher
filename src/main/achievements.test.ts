@@ -89,7 +89,9 @@ const schema = (appId: number, name: string, desc: string) =>
     END,
   ]);
 
-const OURS = () => schema(400, 'Кекс для героя', 'Отримати кекс');
+// eslint-disable-next-line no-restricted-syntax -- only Cyrillic in the english key marks LBK strings
+const OURS_TEXT = { name: 'Кекс для героя', desc: 'Отримати кекс' };
+const OURS = () => schema(400, OURS_TEXT.name, OURS_TEXT.desc);
 const OFFICIAL = () => schema(400, 'The Cake', 'Get the cake');
 
 const statsDir = () => path.join(state.root, 'Steam', 'appcache', 'stats');
@@ -151,7 +153,7 @@ describe('achievement strings store', () => {
 
     beforeEach(() => {
       saveAchievementStrings(
-        [{ appId: 400, strings: { A: { name: 'Кекс' } } }],
+        [{ appId: 400, strings: { A: { name: 'Cupcake' } } }],
         'game-a',
         'h'
       );
@@ -227,7 +229,7 @@ describe('syncAchievementsToPlugin', () => {
     expect(await syncAchievementsToPlugin()).toBe('needs-millennium');
     expect(state.pluginData.at(-1)).toMatchObject({
       v: 1,
-      apps: { 400: { ACH_ONE: { name: 'Кекс для героя', desc: 'Отримати кекс' } } },
+      apps: { 400: { ACH_ONE: OURS_TEXT } },
     });
 
     state.badge = 'after-restart';
@@ -280,12 +282,12 @@ describe('startup', () => {
     fs.writeFileSync(path.join(cacheDir, 'game-a.json'), JSON.stringify(info));
     fs.writeFileSync(path.join(gamePath, '.lbk-translation.json'), JSON.stringify(info));
     saveAchievementStrings(
-      [{ appId: 500, strings: { ACH: { name: 'Сирота' } } }],
+      [{ appId: 500, strings: { ACH: { name: 'Orphan' } } }],
       'gone-game',
       'h2'
     );
     saveAchievementStrings(
-      [{ appId: 700, strings: { ACH: { name: 'Своє' } } }],
+      [{ appId: 700, strings: { ACH: { name: 'Own' } } }],
       'game-a',
       'h3'
     );
@@ -330,7 +332,7 @@ describe('commitAchievementStrings', () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     const result = await commitAchievementStrings({
-      extracted: [{ appId: 600, strings: { ACH: { name: 'Перемога' } } }],
+      extracted: [{ appId: 600, strings: { ACH: { name: 'Victory' } } }],
       gameId: 'game-b',
       archiveHash: 'h',
       component,
@@ -342,13 +344,13 @@ describe('commitAchievementStrings', () => {
 
   it('keeps the component and replaces the previous strings on success', async () => {
     saveAchievementStrings(
-      [{ appId: 700, strings: { OLD: { name: 'Старе' } } }],
+      [{ appId: 700, strings: { OLD: { name: 'Old' } } }],
       'game-b',
       'old'
     );
 
     const result = await commitAchievementStrings({
-      extracted: [{ appId: 600, strings: { ACH: { name: 'Перемога' } } }],
+      extracted: [{ appId: 600, strings: { ACH: { name: 'Victory' } } }],
       gameId: 'game-b',
       archiveHash: 'h',
       component,

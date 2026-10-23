@@ -33,16 +33,14 @@ describe('failureStep', () => {
     });
     expect(restart({ restartReason: 'timeout', queued: true })).toMatchObject({
       actions: 'none',
-      message: expect.stringContaining(
-        'Millennium встановиться, щойно ви закриєте Steam.'
-      ),
+      message: expect.stringContaining(t('millenniumSetup.queued')),
     });
   });
 
   it('names an external Millennium instead of the unsupported reason', () => {
     expect(
       failureStep({ success: false, reason: 'unsupported', error: 'external' }, 'arch')
-    ).toMatchObject({ message: expect.stringContaining('уже встановлено') });
+    ).toMatchObject({ message: t('millenniumSetup.external') });
   });
 });
 
@@ -84,11 +82,11 @@ describe('introMode', () => {
 
 describe('restartBlockedNote', () => {
   it('explains an elevated Steam or Game Mode, nothing else', () => {
-    expect(restartBlockedNote(steamBridgeStatus({ steamElevated: true }))).toContain(
-      'адміністратора'
+    expect(restartBlockedNote(steamBridgeStatus({ steamElevated: true }))).toBe(
+      t('steamRestartFailure.accessDenied.plain')
     );
-    expect(restartBlockedNote(steamBridgeStatus({ gamescope: true }))).toContain(
-      'ігровому режимі'
+    expect(restartBlockedNote(steamBridgeStatus({ gamescope: true }))).toBe(
+      t('steamRestartFailure.gamescope.plain')
     );
     expect(restartBlockedNote(steamBridgeStatus())).toBeNull();
     expect(restartBlockedNote(null)).toBeNull();

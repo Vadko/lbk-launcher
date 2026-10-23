@@ -91,7 +91,7 @@ describe('millenniumInstallMachine', () => {
     expect(state(h).context.restartChoice).toEqual({ canRestart: true, note: null });
 
     h.actor.send({ type: 'ACTIVATE', restart: 'on-exit' });
-    expect(state(h).context.work.text).toBe('Встановлення файлів…');
+    expect(state(h).context.work.text).toBe(t('millennium.phase.install-files'));
     await flush();
     expect(h.activate).toHaveBeenCalledWith('on-exit');
     expect(state(h).context.result.kind).toBe('done');
@@ -104,10 +104,12 @@ describe('millenniumInstallMachine', () => {
     h.actor.send({ type: 'INSTALL' });
     await flush();
     expect(state(h).context.restartChoice.canRestart).toBe(false);
-    expect(state(h).context.restartChoice.note).toContain('від імені адміністратора');
+    expect(state(h).context.restartChoice.note).toBe(
+      t('steamRestartFailure.accessDenied.plain')
+    );
 
     h.actor.send({ type: 'ACTIVATE', restart: 'now' });
-    expect(state(h).context.work.text).toBe('Закриття Steam…');
+    expect(state(h).context.work.text).toBe(t('millennium.phase.stop-steam'));
   });
 
   it('gives up after Steam is gone on two polls in a row', async () => {
@@ -190,7 +192,7 @@ describe('millenniumInstallMachine', () => {
     await flush();
     expect(state(h).context.result).toEqual({
       kind: 'error',
-      message: 'Закрийте гру, щоб перезапустити Steam.',
+      message: t('steamRestartFailure.gameRunning.plain'),
       actions: 'none',
     });
 

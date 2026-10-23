@@ -323,6 +323,7 @@ export function useInstallation({
           const successInput: InstallSuccessInput = {
             launchOptionsQueued,
             launchOptionsError: result.launchOptionsError,
+            eglLaunchOptionsNotes: result.eglLaunchOptionsNotes,
             delivery,
             status: needsBridgeStatus({ delivery, launchOptionsQueued })
               ? await useSteamBridgeStatusStore.getState().refresh()

@@ -46,13 +46,15 @@ export function execFileOnHost(
 export function spawnOnHost(
   command: string,
   args: string[] = [],
-  env: Record<string, string> = {}
+  env: Record<string, string> = {},
+  cwd?: string
 ): ChildProcess {
   const child = isFlatpak()
     ? spawn(
         'flatpak-spawn',
         [
           '--host',
+          ...(cwd ? [`--directory=${cwd}`] : []),
           ...Object.entries(env).map(([key, value]) => `--env=${key}=${value}`),
           command,
           ...args,
@@ -60,6 +62,7 @@ export function spawnOnHost(
         { detached: true, stdio: 'ignore' }
       )
     : spawn(command, args, {
+        cwd,
         detached: true,
         stdio: 'ignore',
         env: { ...getCleanEnv(), ...env },
