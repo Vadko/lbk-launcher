@@ -152,6 +152,7 @@ import {
 } from './installation-watcher';
 import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGamesHandlers } from './ipc/games';
+import { setupHomePicksHandlers } from './ipc/home-picks';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
@@ -261,6 +262,7 @@ if (!gotTheLock) {
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
+  setupHomePicksHandlers();
   setupLikesHandlers();
   setupFeedbackReplyHandlers();
   setupAutoUpdater();

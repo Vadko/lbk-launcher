@@ -4,6 +4,7 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type { HomePicksAPI } from './home-picks-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
@@ -253,7 +254,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI {
+export interface ElectronAPI extends HomePicksAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
