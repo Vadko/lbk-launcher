@@ -1396,7 +1396,6 @@ export const uk = {
   },
   settings: {
     title: 'Налаштування',
-    close: 'Закрити',
     feedback: {
       title: "Зворотний зв'язок",
       description: 'Написати нам у Telegram',
