@@ -507,6 +507,7 @@ export const uk = {
     popular: 'Популярне у гравців',
     installedGames: 'Знайдено встановлені ігри',
     recommended: 'Вас може зацікавити',
+    weeklyPicks: 'Добірка тижня',
     viewAll: 'Переглянути всі',
     noGames: 'Ігор не знайдено',
     back: 'Назад',

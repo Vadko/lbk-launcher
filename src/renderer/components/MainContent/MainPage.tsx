@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
+import { HomePicksSection } from './HomePicksSection';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
 import { TrendingGamesPage } from './TrendingGamesPage';
@@ -52,6 +53,7 @@ export const MainPage: React.FC = () => {
           className={`main-page grid grid-rows-auto grid-cols-1 gap-10 h-auto w-full max-w-[1564px]`}
         >
           <InstalledGamesSection showLimit={3} />
+          <HomePicksSection />
           <NewGamesSection
             title={t('homeSections.newGames')}
             tabs={newsTabsConfig}
