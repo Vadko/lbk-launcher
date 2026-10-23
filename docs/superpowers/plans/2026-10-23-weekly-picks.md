@@ -2844,7 +2844,7 @@ Run: `pnpm dev` with `.env` pointing at a Supabase that has migration 192 applie
 2. Clicking a card opens `/game/<id>`.
 3. In the admin tab save a set titled «Хелловін», then in the launcher focus the window after an hour is simulated by clearing the cache (`clear-cache-only` in Settings) or by restarting: the new title and games show.
 4. Pick an AI translation by hand, enable «Приховати ШІ-переклади» in Settings: that card disappears and the other two stay.
-5. Disconnect the network, restart: no section, no crash, one `[HomePicks]` warning in the console. Reconnect, focus the window: nothing changes until the data is an hour old; restart to see it return.
+5. Disconnect the network, restart: no section, no crash, one `[HomePicks]` warning in the console. Reconnect, or focus the window: a query that never had data counts as stale, so it refetches at once and the section appears without a restart (with good data on screen, nothing changes until it is an hour old).
 6. Use the `gamepad-drive` skill to confirm the new cards are reachable with the D-pad from the installed-games block.
 
 Record anything that fails as a new task; do not patch it silently.
