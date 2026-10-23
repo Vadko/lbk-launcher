@@ -1667,6 +1667,77 @@ export type Database = {
           },
         ]
       }
+      home_pick_games: {
+        Row: {
+          game_id: string
+          position: number
+          set_id: string
+        }
+        Insert: {
+          game_id: string
+          position: number
+          set_id: string
+        }
+        Update: {
+          game_id?: string
+          position?: number
+          set_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_pick_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_pick_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "home_pick_games_set_id_fkey"
+            columns: ["set_id"]
+            referencedRelation: "home_pick_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_pick_sets: {
+        Row: {
+          created_by: string | null
+          expires_at: string
+          id: string
+          source: string
+          starts_at: string
+          title: string | null
+        }
+        Insert: {
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          source: string
+          starts_at?: string
+          title?: string | null
+        }
+        Update: {
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          source?: string
+          starts_at?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_pick_sets_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kuli_games: {
         Row: {
           game_category_names: string[] | null
@@ -2887,6 +2958,7 @@ export type Database = {
         }[]
       }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
+      generate_auto_home_picks: { Args: { p_force?: boolean }; Returns: string }
       get_active_users: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -2954,6 +3026,15 @@ export type Database = {
           likes: number
           subscriptions: number
           touched_at: string
+        }[]
+      }
+      get_home_picks: {
+        Args: never
+        Returns: {
+          expires_at: string
+          game_ids: string[]
+          starts_at: string
+          title: string
         }[]
       }
       get_landing_stats: {
@@ -3100,6 +3181,10 @@ export type Database = {
       remove_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
+      }
+      save_home_picks: {
+        Args: { p_game_ids: string[]; p_title?: string; p_user: string }
+        Returns: string
       }
       scan_verdict_rank: { Args: { verdict: string }; Returns: number }
       search_steam_apps: {
