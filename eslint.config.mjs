@@ -133,7 +133,7 @@ export default tseslint.config(
       '**/*.test.ts',
       '**/*.fixture.ts',
       'e2e/**',
-      'packages/lbk-i18n/src/uk.ts',
+      'packages/lbk-i18n/src/{uk,en,be}.ts',
       'src/main/game-detector/game-titles.ts',
       'src/renderer/constants/specialTranslators.ts',
     ],
@@ -142,8 +142,8 @@ export default tseslint.config(
     },
   },
   {
-    // The whole Ukrainian dictionary stays in one file so a key is found in one place.
-    files: ['packages/lbk-i18n/src/uk.ts'],
+    // Each locale keeps its dictionary in one file.
+    files: ['packages/lbk-i18n/src/{uk,en,be}.ts'],
     rules: { 'max-lines': 'off' },
   },
   {

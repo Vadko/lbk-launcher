@@ -309,7 +309,7 @@ describe('Decky bundle', () => {
     const plugin = await loadPlugin('?idle');
 
     const { content } = isRecord(plugin) ? plugin : {};
-    expect(render(content)).toContain('>Працює через Millennium</div>');
+    expect(render(content)).toContain('>Підключено через Millennium</div>');
     await settle();
     expect(fetchNoCors).not.toHaveBeenCalled();
     dismount(plugin);
