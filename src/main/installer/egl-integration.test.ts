@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { t } from '@/shared/i18n/i18n';
 import type { Game } from '@/shared/types';
 import { applyEglIntegration } from './egl-integration';
 
@@ -62,9 +63,7 @@ describe('applyEglIntegration on Linux', () => {
         EPIC
       )
     ).toEqual({
-      eglLaunchOptionsNotes: [
-        'Epic Games Launcher не передає грі змінні середовища, тож переклад працюватиме, лише якщо запускати гру кнопкою «Грати» в LBK Launcher.',
-      ],
+      eglLaunchOptionsNotes: [t('launchOptions.eglEnvOnlyFromLbk')],
     });
     expect(mocks.addEglLaunchArgs).toHaveBeenCalledWith(DIR, '-load-mods');
   });
@@ -86,8 +85,7 @@ describe('applyEglIntegration on Linux', () => {
 
   it('explains options it cannot apply and a failed write', async () => {
     expect(await applyEglIntegration(game(`bash -c 'x' -- %command%`), EPIC)).toEqual({
-      launchOptionsError:
-        'вони виконуються лише через оболонку, якою їх запускає Steam, а Epic Games Launcher так не вміє',
+      launchOptionsError: t('launchOptions.eglNeedsShell'),
     });
 
     mocks.getEglInstallDirs.mockReturnValue(['/games/My Game']);
@@ -97,12 +95,12 @@ describe('applyEglIntegration on Linux', () => {
         path: '/games/My Game',
       })
     ).toEqual({
-      launchOptionsError: 'Не вдалося визначити теку гри для параметрів запуску',
+      launchOptionsError: t('launchOptions.gameDirUnresolved'),
     });
     mocks.getEglInstallDirs.mockReturnValue([DIR]);
 
     const failed = {
-      launchOptionsError: 'не вдалося змінити налаштування гри в Epic Games Launcher',
+      launchOptionsError: t('launchOptions.eglWriteFailed'),
     };
     mocks.addEglLaunchArgs.mockReturnValue(false);
     expect(await applyEglIntegration(game('-load-mods'), EPIC)).toEqual(failed);
@@ -139,21 +137,19 @@ describe('applyEglIntegration on Windows', () => {
   it('says when the args wait for EGL to quit, and when they could not be written', async () => {
     mocks.setEglWindowsLaunchArgs.mockResolvedValue('queued');
     expect(await applyEglIntegration(game(null, '-a'), WIN_EPIC)).toEqual({
-      eglLaunchOptionsNotes: [
-        expect.stringContaining('щойно ви вийдете з Epic Games Launcher'),
-      ],
+      eglLaunchOptionsNotes: [t('launchOptions.eglQueued')],
     });
     expect(await applyEglIntegration(game(null, 'FOO=1 %command% -a'), WIN_EPIC)).toEqual(
       {
         eglLaunchOptionsNotes: [
-          expect.stringContaining('щойно ви вийдете з Epic Games Launcher'),
-          expect.stringContaining('не передає грі змінні середовища'),
+          t('launchOptions.eglQueued'),
+          t('launchOptions.eglEnvUnsupported'),
         ],
       }
     );
 
     const failed = {
-      launchOptionsError: 'не вдалося змінити налаштування гри в Epic Games Launcher',
+      launchOptionsError: t('launchOptions.eglWriteFailed'),
     };
     mocks.setEglWindowsLaunchArgs.mockResolvedValue('failed');
     expect(await applyEglIntegration(game(null, '-a'), WIN_EPIC)).toEqual(failed);
@@ -164,9 +160,7 @@ describe('applyEglIntegration on Windows', () => {
   it('writes the args but warns about env assignments, which nothing on Windows passes on', async () => {
     expect(await applyEglIntegration(game(null, 'FOO=1 %command% -a'), WIN_EPIC)).toEqual(
       {
-        eglLaunchOptionsNotes: [
-          'Epic Games Launcher не передає грі змінні середовища, тож без них переклад може не працювати.',
-        ],
+        eglLaunchOptionsNotes: [t('launchOptions.eglEnvUnsupported')],
       }
     );
     expect(mocks.setEglWindowsLaunchArgs).toHaveBeenCalledWith(APP_ID, '-a');

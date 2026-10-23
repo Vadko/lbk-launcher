@@ -109,10 +109,10 @@ describe('achievements startup', () => {
 });
 
 describe('achievement strings for Steam web pages', () => {
-  const FILE = { v: 1, apps: { 620: { 'ACH.WAKE_UP': { name: 'Підйом' } } } };
+  const FILE = { v: 1, apps: { 620: { 'ACH.WAKE_UP': { name: 'LBK: Rise' } } } };
 
   it.each([
-    ['620', { 'ACH.WAKE_UP': { name: 'Підйом' } }],
+    ['620', { 'ACH.WAKE_UP': { name: 'LBK: Rise' } }],
     ['400', undefined],
     ['constructor', undefined],
   ])(
@@ -147,7 +147,7 @@ describe('achievement strings for Steam web pages', () => {
 });
 
 describe('apps with strings for the Decky page hint', () => {
-  const WAKE = { 'ACH.WAKE_UP': { name: 'Підйом' } };
+  const WAKE = { 'ACH.WAKE_UP': { name: 'LBK: Rise' } };
 
   it('lists the apps of the hook read that have strings and reports each change once', async () => {
     const readJson = vi

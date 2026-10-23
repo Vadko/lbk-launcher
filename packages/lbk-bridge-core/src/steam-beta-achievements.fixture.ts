@@ -1,4 +1,4 @@
-// Captured from the Steam beta client (October 2026), trimmed to a few achievements, account data removed.
+// Captured from the Steam beta client (October 2026), trimmed to a few achievements, account data removed, achievement text in English.
 export const steamBetaAchievements = {
   queryKeys: [
     ['achievements', 1552350, 'schema'],
@@ -90,8 +90,8 @@ export const steamBetaAchievements = {
           [
             'COMPLETE_DEFEAT_THE_WANDERING_WITCH_QUEST',
             {
-              strName: 'Майстерність проти відьомства',
-              strDescription: 'Здолати відьму в Лісі завивань',
+              strName: 'Mastery Over Witchcraft',
+              strDescription: 'Defeat the witch in the Howling Woods',
               strImage:
                 'https://shared.steamstatic.com/community_assets/images/apps/1912410/39432a2d99e39fa33e1693dbf656dffbaf2255d3.jpg',
               flAchieved: 66.69999694824219,
@@ -102,8 +102,8 @@ export const steamBetaAchievements = {
           [
             'UPGRADE_A_TALISMAN_TO_LEVEL_3',
             {
-              strName: 'Спрацювало наче талісман',
-              strDescription: 'Поліпшити талісман до рівня 3',
+              strName: 'Worked Like a Talisman',
+              strDescription: 'Upgrade a talisman to level 3',
               strImage:
                 'https://shared.steamstatic.com/community_assets/images/apps/1912410/2066c4c72ebd3f874566997eab71923026deaacc.jpg',
               flAchieved: 53.400001525878906,

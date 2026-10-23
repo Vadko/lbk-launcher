@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { t } from '@/shared/i18n/i18n';
 import {
   type InstallSuccessInput,
   installSuccessActions,
@@ -33,7 +34,7 @@ describe('needsBridgeStatus', () => {
 describe('installSuccessMessage', () => {
   it('appends launch options before achievements', () => {
     const message = installSuccessMessage(
-      'Готово!',
+      'Done!',
       input({
         launchOptionsQueued: true,
         launchOptionsError: 'boom',
@@ -41,44 +42,47 @@ describe('installSuccessMessage', () => {
       })
     );
     expect(message.split('\n\n')).toEqual([
-      'Готово!',
-      expect.stringContaining('Параметри запуску застосуються автоматично'),
-      'Не вдалося налаштувати параметри запуску: boom',
-      "Переклад досягнень з'явиться після наступного запуску Steam.",
+      'Done!',
+      t('installSuccess.launchOptionsQueued'),
+      t('installSuccess.launchOptionsError', { error: 'boom' }),
+      t('installSuccess.pluginNextStart'),
     ]);
   });
 
   it('adds the Epic Games Launcher notes as they are', () => {
     expect(
       installSuccessMessage(
-        'Готово!',
-        input({ eglLaunchOptionsNotes: ['Перша.', 'Друга.'], launchOptionsError: 'boom' })
+        'Done!',
+        input({
+          eglLaunchOptionsNotes: ['First.', 'Second.'],
+          launchOptionsError: 'boom',
+        })
       ).split('\n\n')
     ).toEqual([
-      'Готово!',
-      'Перша.',
-      'Друга.',
-      'Не вдалося налаштувати параметри запуску: boom',
+      'Done!',
+      'First.',
+      'Second.',
+      t('installSuccess.launchOptionsError', { error: 'boom' }),
     ]);
   });
 
   it('says whether LBK can install Millennium itself', () => {
     expect(installSuccessMessage('', input({ delivery: 'needs-millennium' }))).toContain(
-      'лаунчер може встановити його сам'
+      t('installSuccess.needsMillenniumInstallable')
     );
     const blocked = steamBridgeStatus({
       achievements: { state: 'needs-millennium', unsupportedReason: 'arch' },
     });
     expect(
       installSuccessMessage('', input({ delivery: 'needs-millennium', status: blocked }))
-    ).not.toContain('лаунчер може встановити його сам');
+    ).not.toContain(t('installSuccess.needsMillenniumInstallable'));
   });
 
   it('adds nothing for live strings or skipped achievements', () => {
-    expect(installSuccessMessage('Готово!', input({ delivery: 'plugin-live' }))).toBe(
-      'Готово!'
+    expect(installSuccessMessage('Done!', input({ delivery: 'plugin-live' }))).toBe(
+      'Done!'
     );
-    expect(installSuccessMessage('Готово!', input())).toBe('Готово!');
+    expect(installSuccessMessage('Done!', input())).toBe('Done!');
   });
 });
 
@@ -86,7 +90,7 @@ describe('installSuccessActions', () => {
   it('offers a restart only when it helps and Steam can be restarted', () => {
     expect(
       labels(input({ delivery: 'plugin-next-start', status: steamBridgeStatus() }))
-    ).toEqual(['Зрозуміло', 'Перезапустити Steam зараз']);
+    ).toEqual([t('installSuccess.ok'), t('installSuccess.restartSteamNow')]);
     expect(
       labels(
         input({
@@ -94,10 +98,10 @@ describe('installSuccessActions', () => {
           status: steamBridgeStatus({ canRestartSteam: false }),
         })
       )
-    ).toEqual(['Зрозуміло']);
+    ).toEqual([t('installSuccess.ok')]);
     expect(
       labels(input({ delivery: 'plugin-live', status: steamBridgeStatus() }))
-    ).toEqual(['Зрозуміло']);
+    ).toEqual([t('installSuccess.ok')]);
   });
 
   it('opens the offer target and keeps the modal open for sites', () => {
@@ -120,8 +124,6 @@ describe('installSuccessActions', () => {
 });
 
 describe('an LBK Bridge update waiting for a Steam restart', () => {
-  const RESTART = 'Перезапустити Steam зараз';
-  const HINT = 'Оновлення плагіна «LBK Bridge» застосується після перезапуску Steam.';
   const outdated = (overrides: Parameters<typeof steamBridgeStatus>[0] = {}) =>
     steamBridgeStatus({ connected: true, updateAfterRestart: true, ...overrides });
 
@@ -130,29 +132,36 @@ describe('an LBK Bridge update waiting for a Steam restart', () => {
       'live strings and an outdated plugin',
       input({ delivery: 'plugin-live', status: outdated() }),
       true,
-      ['Зрозуміло', RESTART],
+      [t('installSuccess.ok'), t('installSuccess.restartSteamNow')],
     ],
     [
       'an outdated plugin Steam cannot be restarted from here',
       input({ delivery: 'plugin-live', status: outdated({ canRestartSteam: false }) }),
       true,
-      ['Зрозуміло'],
+      [t('installSuccess.ok')],
     ],
     [
       'live strings and a current plugin',
       input({ delivery: 'plugin-live', status: steamBridgeStatus({ connected: true }) }),
       false,
-      ['Зрозуміло'],
+      [t('installSuccess.ok')],
     ],
     [
       'strings that already wait for the next Steam start',
       input({ delivery: 'plugin-next-start', status: outdated() }),
       false,
-      ['Зрозуміло', RESTART],
+      [t('installSuccess.ok'), t('installSuccess.restartSteamNow')],
     ],
-    ['skipped achievements', input({ status: outdated() }), false, ['Зрозуміло']],
+    [
+      'skipped achievements',
+      input({ status: outdated() }),
+      false,
+      [t('installSuccess.ok')],
+    ],
   ])('%s', (_label, value, hint, actions) => {
-    expect(installSuccessMessage('Готово!', value).includes(HINT)).toBe(hint);
+    expect(
+      installSuccessMessage('Done!', value).includes(t('pluginEntries.bridgeUpdate'))
+    ).toBe(hint);
     expect(labels(value)).toEqual(actions);
   });
 });

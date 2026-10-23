@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp, waitForAppReady, type AppInstance } from '../helpers/launch';
+import { t } from '../../src/shared/i18n/i18n';
 
 let instance: AppInstance;
 let page: Page;
@@ -14,14 +15,14 @@ test.afterAll(async () => {
   await instance?.close();
 });
 
-test('home screen shows "Новинки" and either "Знайдено встановлені ігри" or "Популярне у гравців"', async () => {
-  // "Новинки" is always rendered
-  await expect(page.getByText('Новинки')).toBeVisible();
+test(`home screen shows "${t('homeSections.newGames')}" and either "${t('homeSections.installedGames')}" or "${t('homeSections.popular')}"`, async () => {
+  // The new-games section is always rendered
+  await expect(page.getByText(t('homeSections.newGames'))).toBeVisible();
   
   // At least one of these sections must be visible
   // (all 3 sections may not fit on screen at once)
-  const installedSection = page.getByText('Знайдено встановлені ігри');
-  const trendingSection = page.getByText('Популярне у гравців');
+  const installedSection = page.getByText(t('homeSections.installedGames'));
+  const trendingSection = page.getByText(t('homeSections.popular'));
   
   const isInstalledVisible = await installedSection.isVisible().catch(() => false);
   const isTrendingVisible = await trendingSection.isVisible().catch(() => false);
@@ -35,7 +36,7 @@ test('clicking a game shows game details', async () => {
   await firstGame.click();
 
   // Home sections should disappear, main content area should show game details
-  await expect(page.getByText('Новинки')).not.toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText(t('homeSections.newGames'))).not.toBeVisible({ timeout: 5_000 });
   await expect(
     page.locator('[data-gamepad-main-content]'),
   ).toBeVisible();

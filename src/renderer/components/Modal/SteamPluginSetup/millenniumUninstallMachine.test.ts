@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type Actor, createActor, fromCallback, fromPromise } from 'xstate';
+import { t } from '@/shared/i18n/i18n';
 import type {
   MillenniumInstallResult,
   PluginHostState,
@@ -32,29 +33,29 @@ afterEach(() => {
 
 describe('outcomeStep', () => {
   it.each([
-    [{ success: true }, 'done', 'Millennium видалено.'],
+    [{ success: true }, 'done', t('millenniumUninstall.done')],
+    [{ success: true, queued: true }, 'done', t('millenniumUninstall.queued')],
     [
-      { success: true, queued: true },
+      { success: false, reason: 'files-locked' },
       'done',
-      'Millennium буде видалено, щойно ви закриєте Steam.',
+      t('millenniumUninstall.filesLocked'),
     ],
-    [{ success: false, reason: 'files-locked' }, 'done', 'Файли Steam ще зайняті.'],
     [
       { success: false, reason: 'restart-failed', restartReason: 'timeout' },
       'error',
-      'не закрився вчасно',
+      t('steamRestartFailure.timeout.plain'),
     ],
     [
       { success: false, reason: 'script-failed', error: 'EPERM' },
       'error',
-      'Не вдалося видалити Millennium: EPERM',
+      t('millenniumUninstall.failedWithError', { error: 'EPERM' }),
     ],
     [
       { success: false, reason: 'restart-failed', queued: true },
       'error',
-      'щойно ви закриєте Steam',
+      t('millenniumUninstall.queued'),
     ],
-    [null, 'error', 'Не вдалося видалити Millennium.'],
+    [null, 'error', t('millenniumUninstall.failed')],
   ] as const)('%o → %s', (result, kind, text) => {
     const outcome = outcomeStep(result);
     expect(outcome.kind).toBe(kind);

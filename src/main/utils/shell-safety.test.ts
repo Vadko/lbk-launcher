@@ -10,8 +10,10 @@ describe('isCmdSafePath', () => {
   });
 
   it('accepts names the project actually uses', () => {
+    /* eslint-disable no-restricted-syntax -- real Ukrainian installer folder names */
     expect(isCmdSafePath('C:\\G\\Українізатор (бета)\\install.bat')).toBe(true);
     expect(isCmdSafePath('C:\\G\\100% тексту\\100% озвучки\\install.bat')).toBe(true);
+    /* eslint-enable no-restricted-syntax */
     expect(isCmdSafePath("C:\\G\\Dev's build\\install.bat")).toBe(true);
   });
 

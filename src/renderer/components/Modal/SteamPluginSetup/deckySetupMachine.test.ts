@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type Actor, createActor, fromPromise } from 'xstate';
+import { t } from '@/shared/i18n/i18n';
 import type {
   DeckyInstallResult,
   DeckyLoaderInstallResult,
@@ -82,7 +83,7 @@ describe('deckySetupMachine', () => {
     h.actor.send({ type: 'SAVE_ZIP' });
     await flush();
     expect(h.actor.getSnapshot().context.savedMessage).toBe(
-      'Файл збережено: /tmp/lbk.zip'
+      t('deckySetup.saved', { path: '/tmp/lbk.zip' })
     );
   });
 

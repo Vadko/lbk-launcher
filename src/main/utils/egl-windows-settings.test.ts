@@ -240,8 +240,10 @@ describe('setEglWindowsLaunchArgs', () => {
     );
 
     const utf16Bom = Buffer.from([0xff, 0xfe]);
+    // eslint-disable-next-line no-restricted-syntax -- a non-ASCII value is what makes UE save UTF-16
+    const nonAscii = 'Path=C:\\Ігри';
     const utf16 = setUpSettings(
-      Buffer.concat([utf16Bom, Buffer.from(ini(ACCOUNT, 'Path=C:\\Ігри'), 'utf16le')])
+      Buffer.concat([utf16Bom, Buffer.from(ini(ACCOUNT, nonAscii), 'utf16le')])
     );
     await expect(setEglWindowsLaunchArgs(APP_ID, '-a')).resolves.toBe('written');
     expect(fs.readFileSync(utf16)).toEqual(
@@ -250,7 +252,7 @@ describe('setEglWindowsLaunchArgs', () => {
         Buffer.from(
           ini(
             ACCOUNT,
-            'Path=C:\\Ігри',
+            nonAscii,
             `${APP_ID}_AdditionalCommandsEnabled=True`,
             `${APP_ID}_AdditionalCommands=-a`
           ),

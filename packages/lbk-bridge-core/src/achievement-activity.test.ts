@@ -6,8 +6,8 @@ import { steamBetaAchievements as fixture } from './steam-beta-achievements.fixt
 const GAME = 1912410;
 const WITCH = 'COMPLETE_DEFEAT_THE_WANDERING_WITCH_QUEST';
 const strings: Record<string, Record<string, AchText>> = {
-  [GAME]: { [WITCH]: { name: 'LBK: відьма', desc: 'LBK: опис' } },
-  '42': { UPGRADE_A_TALISMAN_TO_LEVEL_3: { name: 'LBK: талісман' } },
+  [GAME]: { [WITCH]: { name: 'LBK: witch', desc: 'LBK: description' } },
+  '42': { UPGRADE_A_TALISMAN_TO_LEVEL_3: { name: 'LBK: talisman' } },
 };
 const lookup = (appid: unknown, id: unknown): AchText | undefined =>
   strings[String(appid)]?.[String(id)];
@@ -27,8 +27,8 @@ describe('achievement map cache', () => {
     expect(appid).toBe(GAME);
     expect(recs[0][1]).toMatchObject({
       strID: WITCH,
-      strName: 'LBK: відьма',
-      strDescription: 'LBK: опис',
+      strName: 'LBK: witch',
+      strDescription: 'LBK: description',
       flAchieved: records()[0][1].flAchieved,
     });
     expect(recs[1][1].strName).toBe(steamName(1));
@@ -40,7 +40,7 @@ describe('achievement map cache', () => {
     const t = createActivityTranslator(lookup);
     const other = JSON.stringify([[42, records()]]);
     const [[, recs]] = parse(t.mapJson(other, false));
-    expect(recs.map(([, r]) => r.strName)).toEqual([steamName(0), 'LBK: талісман']);
+    expect(recs.map(([, r]) => r.strName)).toEqual([steamName(0), 'LBK: talisman']);
   });
 
   it('restores what it wrote after the translation changed or went away', () => {
@@ -59,7 +59,7 @@ describe('achievement map cache', () => {
 
   it('reverts only the text it wrote', () => {
     const t = createActivityTranslator((_appid, id) =>
-      id === WITCH ? { name: 'LBK: відьма' } : undefined
+      id === WITCH ? { name: 'LBK: witch' } : undefined
     );
     t.mapJson(json, false);
     const renamed = records();
@@ -98,8 +98,8 @@ describe('activity store', () => {
     const original = recs.get(WITCH)?.strName;
 
     t.patchStore(store, new Set([String(GAME)]), false);
-    expect(recs.get(WITCH)?.strName).toBe('LBK: відьма');
-    expect(card.m_rgAchievements[0].strDescription).toBe('LBK: опис');
+    expect(recs.get(WITCH)?.strName).toBe('LBK: witch');
+    expect(card.m_rgAchievements[0].strDescription).toBe('LBK: description');
 
     t.patchStore(store, new Set([String(GAME)]), true);
     expect(recs.get(WITCH)?.strName).toBe(original);
@@ -118,6 +118,6 @@ describe('activity store', () => {
     const t = createActivityTranslator(lookup);
     const recs = new Map(records());
     t.patchMap(recs, GAME);
-    expect(recs.get(WITCH)?.strName).toBe('LBK: відьма');
+    expect(recs.get(WITCH)?.strName).toBe('LBK: witch');
   });
 });
