@@ -1049,7 +1049,6 @@ export const en = {
   },
   settings: {
     title: 'Settings',
-    close: 'Close',
     feedback: { title: 'Contact us', description: 'Message us on Telegram' },
     performance: {
       title: 'Performance mode',

@@ -1350,7 +1350,6 @@ export const be = {
   },
   settings: {
     title: 'Налады',
-    close: 'Закрыць',
     feedback: { title: 'Зваротная сувязь', description: 'Напісаць нам у Telegram' },
     performance: {
       title: 'Рэжым прадукцыйнасці',
