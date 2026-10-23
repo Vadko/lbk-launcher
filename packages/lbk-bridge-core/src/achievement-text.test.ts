@@ -14,7 +14,7 @@ describe('sanitizeAchievements', () => {
       stamp: 42,
       apps: {
         '10': {
-          ACH_A: { name: 'Перша', desc: 'Опис' },
+          ACH_A: { name: 'First', desc: 'Description' },
           ACH_B: { name: '', desc: 'x'.repeat(4097) },
           ACH_C: { name: 'y'.repeat(2048) },
           ['z'.repeat(257)]: { name: 'too long key' },
@@ -26,7 +26,7 @@ describe('sanitizeAchievements', () => {
     expect(payload?.stamp).toBe('42');
     expect(Object.keys(payload?.apps ?? {})).toEqual(['10']);
     expect({ ...payload?.apps['10'] }).toEqual({
-      ACH_A: { name: 'Перша', desc: 'Опис' },
+      ACH_A: { name: 'First', desc: 'Description' },
       ACH_C: { name: 'y'.repeat(2048) },
     });
   });

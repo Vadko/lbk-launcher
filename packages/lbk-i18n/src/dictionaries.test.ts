@@ -21,6 +21,8 @@ function placeholders(text: string) {
     .join(' ');
 }
 
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
+
 const source = flatten(uk);
 
 describe.each(Object.entries({ be, en }))('%s dictionary', (_locale, dictionary) => {
@@ -40,5 +42,24 @@ describe.each(Object.entries({ be, en }))('%s dictionary', (_locale, dictionary)
       .filter(([key, text]) => text.trim() && !translated.get(key)?.trim())
       .map(([key]) => key);
     expect(empty).toEqual([]);
+  });
+});
+
+describe.each(Object.entries({ uk, be, en }))('%s plurals', (locale, dictionary) => {
+  it('have every form the locale tells apart', () => {
+    const keys = new Set(flatten(dictionary).map(([key]) => key));
+    const bases = new Set(
+      [...keys]
+        .filter((key) => PLURAL_SUFFIX.test(key))
+        .map((key) => key.replace(PLURAL_SUFFIX, ''))
+    );
+    const missing = [...bases].flatMap((base) => {
+      const type = base.endsWith('_ordinal') ? 'ordinal' : 'cardinal';
+      return new Intl.PluralRules(locale, { type })
+        .resolvedOptions()
+        .pluralCategories.filter((form) => !keys.has(`${base}_${form}`))
+        .map((form) => `${base}_${form}`);
+    });
+    expect(missing).toEqual([]);
   });
 });

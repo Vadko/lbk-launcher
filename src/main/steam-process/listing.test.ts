@@ -50,7 +50,7 @@ describe('parseTasklistCsv', () => {
     ).toEqual([]);
     expect(
       parseTasklistCsv(
-        'ІНФОРМАЦІЯ: Немає запущених завдань, які відповідають указаним умовам.',
+        'INFORMATION: Es werden keine Tasks mit den angegebenen Kriterien ausgeführt.',
         'steam.exe'
       )
     ).toEqual([]);

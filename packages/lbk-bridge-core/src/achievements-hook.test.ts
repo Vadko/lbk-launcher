@@ -5,7 +5,7 @@ import type { SteamGlobals } from './steam-globals';
 const APP = 1912410;
 const KEY = 'achievements';
 const VERSION = 2;
-const UK = { name: 'LBK: відьма', desc: 'LBK: опис' };
+const UK = { name: 'LBK: witch', desc: 'LBK: description' };
 
 const steamAchievements = () => ({
   nTotal: 2,

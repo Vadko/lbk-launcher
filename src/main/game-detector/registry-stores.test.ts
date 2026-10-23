@@ -60,10 +60,10 @@ beforeEach(() => {
 
 describe('getRegistryString', () => {
   it('matches value names case-insensitively and returns null when missing', () => {
-    setKey('Valve\\Steam', { InstallPath: 'D:\\Ігри\\Steam' });
+    setKey('Valve\\Steam', { InstallPath: 'D:\\Games\\Steam' });
     const key = 'SOFTWARE\\Valve\\Steam';
     expect(getRegistryString(HKEY.HKEY_LOCAL_MACHINE, key, 'installpath')).toBe(
-      'D:\\Ігри\\Steam'
+      'D:\\Games\\Steam'
     );
     expect(getRegistryString(HKEY.HKEY_LOCAL_MACHINE, key, 'Missing')).toBeNull();
     expect(getRegistryString(HKEY.HKEY_CURRENT_USER, key, 'InstallPath')).toBeNull();

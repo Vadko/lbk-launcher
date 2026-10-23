@@ -6,6 +6,7 @@ import {
   killProcessOnPort,
   type AppInstance,
 } from '../helpers/launch';
+import { t } from '../../src/shared/i18n/i18n';
 
 const CDP_PORT = 19222;
 
@@ -58,7 +59,7 @@ async function waitForAppRestart(
  */
 
 async function dismissSupportPopupIfPresent(page: Page) {
-  const popupHeading = page.getByText('Трохи підтримки для лаунчера?');
+  const popupHeading = page.getByText(t('promoModal.title'));
   const visible = await popupHeading.isVisible().catch(() => false);
 
   if (!visible) {
@@ -139,7 +140,7 @@ test('clear cache restarts the app and loads games', async () => {
   const oldWsUrl = versionData.webSocketDebuggerUrl || '';
 
   // 3. Open settings
-  const settingsButton = page.locator('button[title="Налаштування"]');
+  const settingsButton = page.locator(`button[title="${t('sidebarNav.settings')}"]`);
   await settingsButton.click();
   const modal = page.locator('div[role="dialog"]');
   await expect(modal).toBeVisible({ timeout: 5_000 });
@@ -147,14 +148,14 @@ test('clear cache restarts the app and loads games', async () => {
   // 4. Dismiss support popup if it appeared above settings modal
   await dismissSupportPopupIfPresent(page);
 
-  // 5. Click "Очистити кеш" to open confirmation dialog
-  const clearCacheButton = modal.getByText('Очистити кеш');
+  // 5. Click the clear-cache button to open confirmation dialog
+  const clearCacheButton = modal.getByText(t('settings.clearCache.title'));
   await expect(clearCacheButton).toBeVisible();
   await clearCacheButton.click();
 
   // 5. Confirm in the confirmation modal — use noWaitAfter since the app will exit
   const confirmModal = page.locator('div[role="dialog"]').last();
-  const confirmButton = confirmModal.getByText('Очистити', { exact: true });
+  const confirmButton = confirmModal.getByText(t('settings.clearCache.confirmAction'), { exact: true });
   await expect(confirmButton).toBeVisible({ timeout: 5_000 });
   await confirmButton.click({ noWaitAfter: true });
 

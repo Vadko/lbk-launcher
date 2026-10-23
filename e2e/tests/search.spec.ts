@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp, waitForAppReady, type AppInstance } from '../helpers/launch';
+import { t } from '../../src/shared/i18n/i18n';
 
 let instance: AppInstance;
 let page: Page;
@@ -15,7 +16,7 @@ test.afterAll(async () => {
 });
 
 test('search bar accepts input', async () => {
-  const searchBar = page.getByPlaceholder('Пошук гри...');
+  const searchBar = page.getByPlaceholder(t('gameSearch.placeholder'));
   await searchBar.click();
   await searchBar.fill('Witcher');
 
@@ -23,7 +24,7 @@ test('search bar accepts input', async () => {
 });
 
 test('search filters the game list', async () => {
-  const searchBar = page.getByPlaceholder('Пошук гри...');
+  const searchBar = page.getByPlaceholder(t('gameSearch.placeholder'));
   const gameItems = page.locator('[data-nav-group="game-list"]');
 
   // Clear and get total count
@@ -37,8 +38,8 @@ test('search filters the game list', async () => {
   await searchBar.fill('xq9z8w7v6u5t4');
   await page.waitForTimeout(800);
 
-  // Either 0 results or "Ігор не знайдено" message appears
-  const noResultsMessage = page.getByText('Ігор не знайдено');
+  // Either 0 results or the no-games message appears
+  const noResultsMessage = page.getByText(t('homeSections.noGames'));
   const noResults = await gameItems.count();
   const hasNoResultsMessage = await noResultsMessage.isVisible().catch(() => false);
   expect(noResults === 0 || hasNoResultsMessage).toBe(true);

@@ -27,10 +27,10 @@ const SCHEMA_400 = ['achievements', 400, 'schema'];
 const [WAKE, MONSTER, LASER] = fixture.portal2Schema.groups[0].achievements;
 const [LAB_RAT] = fixture.portalSchema.groups[0].achievements;
 const PORTAL2: AppStrings = {
-  [WAKE.api_name]: { name: 'Підйом', desc: 'Переживіть ручне керування' },
-  [MONSTER.api_name]: { name: 'Ти чудовисько' },
+  [WAKE.api_name]: { name: 'LBK: Rise', desc: 'LBK: Survive manual control' },
+  [MONSTER.api_name]: { name: 'LBK: What a monster' },
 };
-const PORTAL: AppStrings = { [LAB_RAT.api_name]: { name: 'Лабораторний щур' } };
+const PORTAL: AppStrings = { [LAB_RAT.api_name]: { name: 'LBK: Lab rodent' } };
 const STRINGS: Record<string, AppStrings> = { 620: PORTAL2, 400: PORTAL };
 const english = fixture.portal2Schema.groups[0].achievements.map((a) => [
   a.api_name,
@@ -38,8 +38,8 @@ const english = fixture.portal2Schema.groups[0].achievements.map((a) => [
   a.description,
 ]);
 const translated = [
-  [WAKE.api_name, 'Підйом', 'Переживіть ручне керування'],
-  [MONSTER.api_name, 'Ти чудовисько', MONSTER.description],
+  [WAKE.api_name, 'LBK: Rise', 'LBK: Survive manual control'],
+  [MONSTER.api_name, 'LBK: What a monster', MONSTER.description],
   english[2],
 ];
 
@@ -111,9 +111,9 @@ describe('buildSourceMap', () => {
   ])('maps Steam English to translations from %s', (_label, queryData) => {
     expect(buildSourceMap(queryData, '620', PORTAL2)).toEqual(
       new Map([
-        [WAKE.name, 'Підйом'],
-        [WAKE.description, 'Переживіть ручне керування'],
-        [MONSTER.name, 'Ти чудовисько'],
+        [WAKE.name, 'LBK: Rise'],
+        [WAKE.description, 'LBK: Survive manual control'],
+        [MONSTER.name, 'LBK: What a monster'],
       ])
     );
   });
@@ -124,10 +124,10 @@ describe('buildSourceMap', () => {
     monster.name = wake.name;
     laser.description = wake.description;
     const queryData = { queries: [{ queryKey: SCHEMA_620, state: { data: schema } }] };
-    const both = { ...PORTAL2, [MONSTER.api_name]: { name: 'Підйом' } };
+    const both = { ...PORTAL2, [MONSTER.api_name]: { name: 'LBK: Rise' } };
     expect(buildSourceMap(queryData, '620', PORTAL2)).toEqual(new Map());
     expect(buildSourceMap(queryData, '620', both)).toEqual(
-      new Map([[WAKE.name, 'Підйом']])
+      new Map([[WAKE.name, 'LBK: Rise']])
     );
   });
 
@@ -141,19 +141,24 @@ describe('buildSourceMap', () => {
 });
 
 describe('toAppStrings', () => {
-  const long = (n: number) => 'я'.repeat(n);
+  // A two-byte UTF-8 letter, so the bounds count characters rather than bytes.
+  const long = (n: number) => 'é'.repeat(n);
 
   it.each<[string, unknown, AppStrings | undefined]>([
-    ['a blank desc', { A: { name: 'Так', desc: '' } }, { A: { name: 'Так' } }],
+    ['a blank desc', { A: { name: 'Yes', desc: '' } }, { A: { name: 'Yes' } }],
     [
       'a name that is not a string',
-      { A: { name: 5, desc: 'Опис' } },
-      { A: { desc: 'Опис' } },
+      { A: { name: 5, desc: 'Description' } },
+      { A: { desc: 'Description' } },
     ],
-    ['an entry that is a string', { A: 'Ні' }, undefined],
-    ['an extra key', { A: { desc: 'Опис', extra: 1 } }, { A: { desc: 'Опис' } }],
+    ['an entry that is a string', { A: 'No' }, undefined],
+    [
+      'an extra key',
+      { A: { desc: 'Description', extra: 1 } },
+      { A: { desc: 'Description' } },
+    ],
     ['an entry without text', { A: {} }, undefined],
-    ['strings that are not an object', 'Так', undefined],
+    ['strings that are not an object', 'Yes', undefined],
     [
       'a name of 2048 characters',
       { A: { name: long(2048) } },
@@ -168,16 +173,16 @@ describe('toAppStrings', () => {
     ['a desc of 4097 characters', { A: { desc: long(4097) } }, undefined],
     [
       'an id of 256 characters',
-      { [long(256)]: { name: 'Так' } },
-      { [long(256)]: { name: 'Так' } },
+      { [long(256)]: { name: 'Yes' } },
+      { [long(256)]: { name: 'Yes' } },
     ],
-    ['an id of 257 characters', { [long(257)]: { name: 'Так' } }, undefined],
+    ['an id of 257 characters', { [long(257)]: { name: 'Yes' } }, undefined],
   ])('reads %s', (_label, raw, expected) => {
     expect(toAppStrings(raw)).toEqual(expected);
   });
 
   it('returns an object without a prototype', () => {
-    expect(toAppStrings({ A: { name: 'Так' } })?.constructor).toBeUndefined();
+    expect(toAppStrings({ A: { name: 'Yes' } })?.constructor).toBeUndefined();
   });
 });
 
@@ -192,12 +197,12 @@ describe('appStringsInFile', () => {
     ['apps that are not an object', file([PORTAL2]), '0'],
     ['an app with blank strings only', file({ 620: { A: { name: '' } } }), '620'],
     ['a file that is not an object', 'achievements', '620'],
-    ['a name at the limit', file({ 620: { A: { name: 'я'.repeat(2048) } } }), '620'],
-    ['a name over the limit', file({ 620: { A: { name: 'я'.repeat(2049) } } }), '620'],
-    ['a desc over the limit', file({ 620: { A: { desc: 'я'.repeat(4097) } } }), '620'],
+    ['a name at the limit', file({ 620: { A: { name: 'é'.repeat(2048) } } }), '620'],
+    ['a name over the limit', file({ 620: { A: { name: 'é'.repeat(2049) } } }), '620'],
+    ['a desc over the limit', file({ 620: { A: { desc: 'é'.repeat(4097) } } }), '620'],
     [
       'an id over the limit',
-      file({ 620: { ['я'.repeat(257)]: { name: 'Так' } } }),
+      file({ 620: { ['é'.repeat(257)]: { name: 'Yes' } } }),
       '620',
     ],
   ])('reads %s as sanitizeAchievements() does', (_label, raw, appid) => {
@@ -271,7 +276,7 @@ describe('startAchievementPage', () => {
     });
     await vi.waitFor(() =>
       expect(shown(client.getQueryData(SCHEMA_400))).toEqual([
-        [LAB_RAT.api_name, 'Лабораторний щур', LAB_RAT.description],
+        [LAB_RAT.api_name, 'LBK: Lab rodent', LAB_RAT.description],
       ])
     );
     expect(provider.mock.calls).toEqual([['620'], ['400']]);
@@ -297,9 +302,9 @@ describe('startAchievementPage', () => {
     );
     expect(page?.wanted()).toEqual([]);
 
-    page?.provide('620', { [WAKE.api_name]: { name: 'Прокидайся' } });
+    page?.provide('620', { [WAKE.api_name]: { name: 'LBK: Wake up' } });
     expect(shown(client.getQueryData(SCHEMA_620))).toEqual([
-      [WAKE.api_name, 'Прокидайся', WAKE.description],
+      [WAKE.api_name, 'LBK: Wake up', WAKE.description],
       english[1],
       [LASER.api_name, LASER.name, LASER.description],
     ]);

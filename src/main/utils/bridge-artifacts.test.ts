@@ -14,6 +14,7 @@ import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { t } from '@/shared/i18n/i18n';
 
 const PACKAGES = path.resolve(__dirname, '../../../packages');
 const MILLENNIUM_DIR = path.join(PACKAGES, 'lbk-bridge-millennium');
@@ -245,7 +246,7 @@ describe('Decky bundle', () => {
     expect(plugin).toMatchObject({ name: 'LBK Bridge' });
     const { icon, content } = isRecord(plugin) ? plugin : {};
     expect(render(icon)).toMatch(/^<svg [^>]*width="1em" height="1em"/);
-    expect(render(content)).toContain('>Очікування LBK Launcher</div>');
+    expect(render(content)).toContain(`>${t('deckyPlugin.waiting')}</div>`);
     expect(Reflect.get(globalThis, '__LBK_BRIDGE__')).toMatchObject({
       host: 'decky',
       version: BRIDGE_VERSION,
@@ -272,7 +273,7 @@ describe('Decky bundle', () => {
     await settle();
     ws.onmessage?.({ data: JSON.stringify({ t: 'ready' }) });
     expect(onChange).toHaveBeenCalled();
-    expect(store?.getSnapshot()).toBe('Підключено до LBK Launcher');
+    expect(store?.getSnapshot()).toBe(t('deckyPlugin.connected'));
 
     unsubscribe?.();
     const calls = onChange.mock.calls.length;
@@ -309,7 +310,7 @@ describe('Decky bundle', () => {
     const plugin = await loadPlugin('?idle');
 
     const { content } = isRecord(plugin) ? plugin : {};
-    expect(render(content)).toContain('>Підключено через Millennium</div>');
+    expect(render(content)).toContain(`>${t('deckyPlugin.viaMillennium')}</div>`);
     await settle();
     expect(fetchNoCors).not.toHaveBeenCalled();
     dismount(plugin);

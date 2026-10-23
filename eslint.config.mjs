@@ -128,11 +128,23 @@ export default tseslint.config(
     rules: { 'max-lines': 'off' },
   },
   {
-    // Tests assert the rendered text, and these sources match Ukrainian catalog data rather than show it.
+    // Tests read the text from the dictionary too, including inside regexes.
+    files: ['**/*.test.{ts,tsx}', '**/*.fixture.ts', 'e2e/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        noUnknownCast,
+        ...noUkrainianLiterals,
+        {
+          selector: `Literal[regex.pattern=${CYRILLIC}]`,
+          message: noUkrainianLiterals[0].message,
+        },
+      ],
+    },
+  },
+  {
+    // These sources match Ukrainian catalog data rather than show it.
     files: [
-      '**/*.test.ts',
-      '**/*.fixture.ts',
-      'e2e/**',
       'packages/lbk-i18n/src/{uk,en,be}.ts',
       'src/main/game-detector/game-titles.ts',
       'src/renderer/constants/specialTranslators.ts',

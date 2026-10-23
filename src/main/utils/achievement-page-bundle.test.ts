@@ -119,7 +119,7 @@ describe('achievement page bundle', () => {
   );
 });
 
-const STRINGS = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'Підйом' } };
+const STRINGS = { 'ACH.SURVIVE_CONTAINER_RIDE': { name: 'LBK: Rise' } };
 const targetInfo = {
   targetId: 'T',
   type: 'page',

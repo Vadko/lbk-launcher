@@ -9,10 +9,10 @@ type Schema = typeof fixture.schema;
 const JACKBOX = 1552350;
 const [FOOL, COLORS] = fixture.schema.groups[0].achievements.map((a) => a.api_name);
 const v1: Record<string, AchText> = {
-  [FOOL]: { name: 'Обдури мене тричі', desc: 'Обдуріть одного гравця тричі за гру' },
-  [COLORS]: { name: 'Очисник палітри' },
+  [FOOL]: { name: 'LBK: Fool me thrice', desc: 'LBK: Fool one player thrice in a game' },
+  [COLORS]: { name: 'LBK: Palette cleaner' },
 };
-const v2: Record<string, AchText> = { [FOOL]: { name: 'Тричі обдурений' } };
+const v2: Record<string, AchText> = { [FOOL]: { name: 'LBK: Fooled thrice' } };
 
 const schemaKey = ['achievements', JACKBOX, 'schema'];
 const otherApp = ['achievements', 10, 'schema'];
