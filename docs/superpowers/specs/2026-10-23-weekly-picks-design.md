@@ -38,7 +38,7 @@
   - Кандидати: умови з розділу «Узгоджені рішення», без ігор з останніх 8 наборів. Дедуп за `coalesce(steam_app_id::text, 'slug:' || slug)`: з кожної групи береться один випадковий переклад. Далі `ORDER BY random() LIMIT 3`.
   - Якщо кандидатів менше 3, виключення недавніх знімається. Якщо їх і тоді менше 3, функція нічого не вставляє, пише `RAISE WARNING` і повертає `null`, а cron повторить за годину.
   - Вставляє набір `source = 'auto'`, `starts_at = now()`, `expires_at = now() + interval '7 days'`, `created_by = null`.
-- `save_home_picks(p_title text, p_game_ids uuid[], p_user uuid) returns uuid`. `EXECUTE` лише для `service_role`.
+- `save_home_picks(p_game_ids uuid[], p_user uuid, p_title text default null) returns uuid`. `EXECUTE` лише для `service_role`. Необов'язковий аргумент останній, бо Postgres забороняє необов'язковий параметр перед обов'язковими, а згенеровані типи тоді дозволяють не передавати заголовок.
   - Той самий advisory lock.
   - Перевіряє рівно 3 різні id, що всі вони існують, схвалені і не приховані. Інакше `RAISE EXCEPTION` зі стабільним кодом `invalid_home_picks`, який API мапить на 400.
   - Заголовок обрізається, порожній стає `null`.
@@ -70,7 +70,7 @@ API у `src/app/api/admin/home-picks/`. Усі з `requireAuth(request, { requir
 - `POST`: викликає `generate_auto_home_picks(true)`. Якщо повернулось `null`, відповідь 409 з повідомленням, що кандидатів замало.
 - `GET /games?search=`: від 2 символів, до 10 схвалених не прихованих ігор, фільтр через наявний `buildIlikeOrFilter(['name', 'slug', 'team'], search)`.
 
-Клієнт: `useHomePicksQuery` (ключі з фабрики `queryKeys`, мутації інвалідують `homePicks`), `useActionPhase` на кнопках, тексти в словнику `uk` пакета `@lbk/i18n` через `useTranslations`, без емодзі.
+Клієнт: `useHomePicksQuery` (ключі з фабрики `queryKeys`, мутації інвалідують `homePicks`), `useActionPhase` на кнопках, без емодзі. Тексти через `useTranslations` лежать у словниках `uk`, `be` і `en` пакета `@lbk/i18n` (`supabase/functions/_shared/i18n/`): кожен новий ключ додається в усі три, а `dictionaries.test.ts` вимагає, щоб ключ `uk` реально читався в коді.
 
 ## Лаунчер (`lbk-launcher`)
 
@@ -83,18 +83,18 @@ Main:
 
 Renderer:
 
-- `src/renderer/queries/useHomePicks.ts` через `useSyncAwareQuery`. Бере `HomePicks` з IPC, потім `fetchGamesByIds(ids, undefined, hideAiTranslations)`, зберігає серверний порядок, відкидає ігри, яких немає в локальному каталозі. Ключ містить `hideAiTranslations`. `staleTime` і `refetchInterval` по 1 годині, повторний запит при поверненні фокуса у вікно, а при невдалому оновленні лишаються останні дані.
-- Перетворення «id → впорядковані ігри» винесено в чисту функцію в `src/renderer/utils/` для тесту.
-- `src/renderer/components/MainContent/HomePicksSection.tsx` за зразком `TrendGamesSection`: `<h2>` із `title ?? t('homePicks.defaultTitle')`, три `GameListItem` (`isCardStyle`), без кнопки «Переглянути всі». Без даних компонент повертає `null`. Клік шле `trackEvent('Select game', { 'Is home pick': true, 'Home pick title': …, 'Game Id': …, 'Game Name': … })`. Тексти через `t()` з `@/shared/i18n/i18n`, ключі `homePicks.*` у `packages/lbk-i18n/src/uk.ts`.
+- `src/renderer/queries/useHomePicks.ts` через `useSyncAwareQuery`. Бере `HomePicks` з IPC, потім `fetchGamesByIds(ids, undefined, hideAiTranslations)`, зберігає серверний порядок, відкидає ігри, яких немає в локальному каталозі. Ключ містить `hideAiTranslations`, а сам фільтр ШІ виконує `fetchGamesByIds` у SQL (`ai IS NULL`). `staleTime` і `refetchInterval` по 1 годині. Застосунок глобально вимикає `refetchOnWindowFocus` (`queryClient.ts`), тож для цього запиту він вмикається явно: лаунчер днями висить у треї, і `refetchInterval` у фоні не працює. Якщо IPC повернув `null`, запит кидає помилку: React Query тоді лишає останні дані, а без жодних даних секція прихована.
+- Перетворення «id → впорядковані ігри» (`orderHomePickGames`, чиста функція в `src/renderer/utils/homePicks.ts`) зберігає серверний порядок, прибирає дублікати та ігри, яких немає в локальному каталозі.
+- `src/renderer/components/MainContent/HomePicksSection.tsx` за зразком `TrendGamesSection`: `<h2>` із `title ?? t('homePicks.defaultTitle')`, три `GameListItem` (`isCardStyle`), без кнопки «Переглянути всі». Без даних компонент повертає `null`. Клік шле `trackEvent('Select game', { 'Is home pick': true, 'Home pick title': …, 'Game Id': …, 'Game Name': … })`. Тексти через `t()` з `@/shared/i18n/i18n`: заголовок за замовчуванням це ключ `homeSections.weeklyPicks` у `packages/lbk-i18n/src/{uk,be,en}.ts`.
 - `MainPage.tsx`: секція одразу після `InstalledGamesSection` і перед `NewGamesSection`.
 
 Навігація геймпадом працює без змін: `GameListItem` уже несе потрібні атрибути.
 
 ## Тестування
 
-- SQL: PGlite-тест, що програє міграцію, за зразком `packages/scan-core/src/scan/scanSql.test.ts`. Перевіряє `generate_auto_home_picks` (пропуск, поки набір чинний; виключення ШІ, `planned`, `tech-improvement`, прихованих; дедуп за Steam-грою; виключення недавніх і його зняття; примусовий запуск), `save_home_picks` (валідація, зміщення відліку) і `get_home_picks`. Функції `pg_cron` і Vault у PGlite відсутні, тож перевіряється лише plpgsql.
+- SQL: PGlite-тест `src/lib/homePicks/homePicksSql.test.ts`, що програє міграцію, за зразком `packages/scan-core/src/scan/scanSql.test.ts`. `@electric-sql/pglite` зараз є лише в `scan-core`, тож додається в корінь як devDependency тієї самої версії. Перевіряє `generate_auto_home_picks` (пропуск, поки набір чинний; виключення ШІ, `planned`, `tech-improvement`, прихованих; дедуп за Steam-грою; виключення недавніх і його зняття; примусовий запуск), `save_home_picks` (валідація, зміщення відліку) і `get_home_picks`. Функції `pg_cron` і Vault у PGlite відсутні, тож перевіряється лише plpgsql.
 - API адмінки: тести роутів за шаблоном `requireAuth.test.ts`: ролі, валідація тіла, мапінг `invalid_home_picks` на 400 і `null` на 409.
-- Лаунчер: node-vitest для чистої функції порядку й фільтра ШІ та для `fetchHomePicks` із замоканим клієнтом (успіх, помилка, порожньо). Тестів компонентів немає, їх не додаємо.
+- Лаунчер: node-vitest для чистої функції порядку та для `fetchHomePicks` із замоканим клієнтом (успіх, помилка, порожньо). Тестів компонентів немає, їх не додаємо.
 
 ## Порядок робіт
 
