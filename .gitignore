@@ -51,3 +51,4 @@ spellfix.obj
 perf-artifacts/
 e2e/results.json
 .wireit/
+superpowers/*
