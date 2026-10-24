@@ -156,6 +156,7 @@ import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupTgNewsHandlers } from './ipc/tg-news';
+import { setupWeeklyPicksHandlers } from './ipc/weekly-picks';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import { syncLikes } from './likes';
 import { startMillenniumInstall } from './millennium-install';
@@ -261,6 +262,7 @@ if (!gotTheLock) {
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
+  setupWeeklyPicksHandlers();
   setupLikesHandlers();
   setupFeedbackReplyHandlers();
   setupAutoUpdater();
