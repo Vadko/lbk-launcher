@@ -1350,7 +1350,7 @@ export const en = {
     progressInSteam: 'Progress is shown in the Steam client',
     install: 'Install from Steam',
     openPageTitle: 'Open workshop page',
-    openPage: 'workshop',
+    openPage: 'Workshop',
     unsubscribeTitle: 'Unsubscribe in Steam',
   },
   privacyPolicy: {
@@ -1592,7 +1592,7 @@ export const en = {
         teamChannels:
           '<b>Internal team notification channels</b> — alerts about new requests so LBK Team can review and respond promptly.',
         partners:
-          'The localization catalog is synchronized with a partner service daily. No player data are shared during synchronization. Before publication, archives uploaded by translators are scanned for viruses using the external Metadefender service. No player data are sent for this scan.',
+          'The localization catalog is synchronized with a partner service daily. No player data are shared during synchronization. Before publication, archives uploaded by translators are scanned for viruses using the external MetaDefender service. No player data are sent for this scan.',
       },
       steamFallback: {
         title: '14. Steam: local library detection and server fallback',
