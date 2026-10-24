@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useWorkshopInstallsStore } from '../../store/useWorkshopInstallsStore';
-import { openWorkshopPage } from '../../utils/workshopPage';
+import { openWorkshopPage } from '../../utils/openWithFallback';
 import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';

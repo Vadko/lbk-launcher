@@ -355,6 +355,7 @@ export const be = {
     subscribers: 'Падпісчыкаў',
     downloads: 'Спампоўванняў',
     downloadsUnder20: 'да 20',
+    openInSteam: 'Адкрыць у Steam',
     created: 'Створана',
     updated: 'Абноўлена',
   },

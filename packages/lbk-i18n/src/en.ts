@@ -350,6 +350,7 @@ export const en = {
     subscribers: 'Subscribers',
     downloads: 'Downloads',
     downloadsUnder20: 'under 20',
+    openInSteam: 'Open in Steam',
     created: 'Created',
     updated: 'Updated',
   },

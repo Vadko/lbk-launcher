@@ -375,6 +375,7 @@ export const uk = {
     subscribers: 'Підписників',
     downloads: 'Завантажень',
     downloadsUnder20: 'до 20',
+    openInSteam: 'Відкрити в Steam',
     created: 'Створено',
     updated: 'Оновлено',
   },
