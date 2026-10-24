@@ -211,3 +211,40 @@ export interface ApplyPendingLaunchOptionsResult {
   queued?: boolean;
   error?: string;
 }
+
+export interface SteamPluginHostAPI {
+  restartSteam: () => Promise<RestartSteamResult>;
+  getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
+  // Clears the persisted "blocked" verdict and re-verifies.
+  recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
+  onSteamBridgeStatusChanged: (
+    callback: (status: SteamBridgeStatus) => void
+  ) => () => void;
+  onSteamPendingActionsApplied: (
+    callback: (payload: { gameIds: string[] }) => void
+  ) => () => void;
+  // Millennium / Decky plugin host
+  getPluginHostState: () => Promise<PluginHostState | null>;
+  // Download, verify and stage Millennium; touches nothing outside userData.
+  prepareMillennium: () => Promise<MillenniumInstallResult>;
+  activateMillennium: (opts: {
+    restart: 'now' | 'on-exit';
+  }) => Promise<MillenniumInstallResult>;
+  uninstallMillennium: (opts: {
+    purge: boolean;
+    restart: 'now' | 'on-exit';
+  }) => Promise<MillenniumInstallResult>;
+  cancelMillennium: () => Promise<{ success: boolean }>;
+  requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
+  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
+  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
+  saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
+  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
+  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
+  onSteamRestartRequired: (callback: () => void) => () => void;
+  /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
+  setSteamCefDebugging: (enabled: boolean) => Promise<void>;
+  /** Turning it off reverts Ukrainian library artwork already installed. */
+  setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
+}

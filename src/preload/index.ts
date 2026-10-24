@@ -14,7 +14,6 @@ import type {
   DownloadProgress,
   ElectronAPI,
   FeedbackReplyPayload,
-  FeedbackType,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -338,12 +337,7 @@ const electronAPI: ElectronAPI = {
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
   // Submit feedback for a game translation
-  submitFeedback: (
-    gameId: string,
-    type: FeedbackType,
-    message: string,
-    screenshotPaths?: string[]
-  ) => ipcRenderer.invoke('submit-feedback', gameId, type, message, screenshotPaths),
+  submitFeedback: (...args) => ipcRenderer.invoke('submit-feedback', ...args),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
   getFeedbackUploadUrls: (fileNames: string[]) =>
@@ -372,6 +366,8 @@ const electronAPI: ElectronAPI = {
   fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
   fetchBannersForGame: (gameId: string, gameSlug: string) =>
     ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
+  fetchGameReviews: (gameId: string, page: number, pageSize: number) =>
+    ipcRenderer.invoke('fetch-game-reviews', gameId, page, pageSize),
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

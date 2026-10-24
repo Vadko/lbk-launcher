@@ -4,16 +4,11 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type { GameReviewsPage } from './game-reviews-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
-  DeckyInstallResult,
-  DeckyLoaderInstallResult,
-  MillenniumInstallResult,
-  MillenniumProgress,
-  PluginHostState,
-  RestartSteamResult,
-  SteamBridgeStatus,
+  SteamPluginHostAPI,
 } from './plugin-host-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
@@ -253,7 +248,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI {
+export interface ElectronAPI extends SteamPluginHostAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
@@ -389,41 +384,7 @@ export interface ElectronAPI {
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
-  restartSteam: () => Promise<RestartSteamResult>;
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
-  getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
-  // Clears the persisted "blocked" verdict and re-verifies.
-  recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
-  onSteamBridgeStatusChanged: (
-    callback: (status: SteamBridgeStatus) => void
-  ) => () => void;
-  onSteamPendingActionsApplied: (
-    callback: (payload: { gameIds: string[] }) => void
-  ) => () => void;
-  // Millennium / Decky plugin host
-  getPluginHostState: () => Promise<PluginHostState | null>;
-  // Download, verify and stage Millennium; touches nothing outside userData.
-  prepareMillennium: () => Promise<MillenniumInstallResult>;
-  activateMillennium: (opts: {
-    restart: 'now' | 'on-exit';
-  }) => Promise<MillenniumInstallResult>;
-  uninstallMillennium: (opts: {
-    purge: boolean;
-    restart: 'now' | 'on-exit';
-  }) => Promise<MillenniumInstallResult>;
-  cancelMillennium: () => Promise<{ success: boolean }>;
-  requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
-  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
-  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
-  saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
-  onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
-  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
-  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
-  onSteamRestartRequired: (callback: () => void) => () => void;
-  /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
-  setSteamCefDebugging: (enabled: boolean) => Promise<void>;
-  /** Turning it off reverts Ukrainian library artwork already installed. */
-  setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
   /**
    * Create or update the Steam library collection «З українізаторами» (games
    * with translations) with every owned game that has a translation in the
@@ -489,7 +450,8 @@ export interface ElectronAPI {
     gameId: string,
     type: FeedbackType,
     message: string,
-    screenshotPaths?: string[]
+    screenshotPaths?: string[],
+    allowPublish?: boolean
   ) => Promise<{ success: boolean; error?: string }>;
   submitLogs: (
     message: string,
@@ -518,6 +480,11 @@ export interface ElectronAPI {
   // Banner API
   fetchPromoBanner: () => Promise<BannerData | null>;
   fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
+  fetchGameReviews: (
+    gameId: string,
+    page: number,
+    pageSize: number
+  ) => Promise<GameReviewsPage | null>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

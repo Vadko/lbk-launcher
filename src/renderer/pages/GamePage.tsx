@@ -19,6 +19,8 @@ import { DownloadProgressCard } from '../components/MainContent/DownloadProgress
 import { FundraisingProgressCard } from '../components/MainContent/FundraisingProgressCard';
 import Gallery from '../components/MainContent/Gallery';
 import { GameHero } from '../components/MainContent/GameHero';
+import { GameReviewsTab } from '../components/MainContent/GameReviewsTab';
+import { type GameTab, GameTabs } from '../components/MainContent/GameTabs';
 import { ImportantNotice } from '../components/MainContent/ImportantNotice';
 import { InfoCard } from '../components/MainContent/InfoCard';
 import { InstallationStatusBadge } from '../components/MainContent/InstallationStatusBadge';
@@ -46,6 +48,7 @@ import {
   useHasEverInstalledTranslation,
   useIsTranslationInstalledForGame,
 } from '../hooks/useInstalledTranslations';
+import { useRecommendedGames } from '../queries/useRecommendedGames';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -70,6 +73,7 @@ const EMPTY_BANNER_INFO: BannerInfo = {
 
 // Short on purpose: the server caps banner impressions per machine_id, so a later visit asks again
 const BANNER_GC_TIME = 5 * 60 * 1000;
+const RECOMMENDED_LIMIT = 9;
 
 /**
  * Detailed game information page
@@ -191,6 +195,22 @@ export const GamePage: React.FC = () => {
 
   const selectedGameId = selectedGame?.id;
   const selectedGameSlug = selectedGame?.slug;
+
+  const { isHidden: isRecommendedHidden } = useRecommendedGames(
+    selectedGameId,
+    RECOMMENDED_LIMIT
+  );
+  const [tabState, setTabState] = useState<{ gameId?: string; tab: GameTab }>({
+    gameId: selectedGameId,
+    tab: 'info',
+  });
+  if (tabState.gameId !== selectedGameId) {
+    setTabState({ gameId: selectedGameId, tab: 'info' });
+  }
+  const gameTabs: GameTab[] = isRecommendedHidden
+    ? ['info', 'reviews']
+    : ['info', 'recommended', 'reviews'];
+  const activeTab = gameTabs.includes(tabState.tab) ? tabState.tab : 'info';
 
   const { data: banners, isError: bannersFailed } = useQuery({
     queryKey: ['game-banners', selectedGameId, selectedGameSlug],
@@ -770,96 +790,118 @@ export const GamePage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Recommended */}
-          <RecommendedGamesSection
-            gameId={selectedGame.id}
-            gameName={selectedGame.name}
-            showLimit={3}
+          <GameTabs
+            tabs={gameTabs}
+            activeTab={activeTab}
+            onChange={(tab) => setTabState({ gameId: selectedGame.id, tab })}
           />
 
-          {/* Donate */}
-          {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
-              <FundraisingProgressCard
-                key={selectedGame.id}
-                current={selectedGame.fundraising_current || 0}
-                goal={selectedGame.fundraising_goal}
-                supportUrl={selectedGame.support_url}
-              />
-            </motion.div>
-          )}
+          {activeTab === 'reviews' ? (
+            <GameReviewsTab
+              key={selectedGame.id}
+              gameId={selectedGame.id}
+              canLeaveFeedback={canLeaveFeedback}
+              onLeaveFeedback={() => setShowFeedbackModal(true)}
+            />
+          ) : activeTab === 'recommended' ? (
+            <RecommendedGamesSection
+              gameId={selectedGame.id}
+              gameName={selectedGame.name}
+              showLimit={RECOMMENDED_LIMIT}
+            />
+          ) : (
+            <>
+              {/* Donate */}
+              {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
+                <motion.div
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <FundraisingProgressCard
+                    key={selectedGame.id}
+                    current={selectedGame.fundraising_current || 0}
+                    goal={selectedGame.fundraising_goal}
+                    supportUrl={selectedGame.support_url}
+                  />
+                </motion.div>
+              )}
 
-          {/* Translate description */}
-          {selectedGame.description && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="glass-card-no-motion min-w-0"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                {t('gameSections.aboutTranslation')}
-              </h3>
-              <MarkdownText
-                text={selectedGame.description}
-                className="text-text-muted leading-relaxed wrap-break-word"
-              />
-            </motion.section>
-          )}
+              {/* Translate description */}
+              {selectedGame.description && (
+                <motion.section
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="glass-card-no-motion min-w-0"
+                >
+                  <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                    {t('gameSections.aboutTranslation')}
+                  </h3>
+                  <MarkdownText
+                    text={selectedGame.description}
+                    className="text-text-muted leading-relaxed wrap-break-word"
+                  />
+                </motion.section>
+              )}
 
-          {/* Video */}
-          {selectedGame.video_url && (
-            <motion.div layout="position" transition={{ duration: 0.2, ease: 'easeOut' }}>
-              <VideoCard videoUrl={selectedGame.video_url} />
-            </motion.div>
-          )}
+              {/* Video */}
+              {selectedGame.video_url && (
+                <motion.div
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <VideoCard videoUrl={selectedGame.video_url} />
+                </motion.div>
+              )}
 
-          {/* Gallery */}
-          {selectedGame.screenshots && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-            >
-              <div className="glass-card-no-motion">
-                <Gallery
-                  slides={selectedGame.screenshots}
-                  spaceBetween={30}
-                  slidesPerView={3}
-                  pagination={false}
-                  thumbs={true}
-                  loop={true}
-                  updated_at={selectedGame.updated_at}
-                />
-              </div>
-            </motion.section>
-          )}
+              {/* Gallery */}
+              {selectedGame.screenshots && (
+                <motion.section
+                  layout="position"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <div className="glass-card-no-motion">
+                    <Gallery
+                      slides={selectedGame.screenshots}
+                      spaceBetween={30}
+                      slidesPerView={3}
+                      pagination={false}
+                      thumbs={true}
+                      loop={true}
+                      updated_at={selectedGame.updated_at}
+                    />
+                  </div>
+                </motion.section>
+              )}
 
-          {/* Game description */}
-          {selectedGame.game_description && (
-            <motion.section
-              layout="position"
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-              className="glass-card-no-motion min-w-0"
-            >
-              <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                {t('gameSections.aboutGame')}
-              </h3>
-              <MarkdownText
-                text={selectedGame.game_description}
-                className="text-text-muted leading-relaxed wrap-break-word"
-              />
-            </motion.section>
-          )}
+              {/* Game description */}
+              {selectedGame.game_description && (
+                <motion.section
+                  layout="position"
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="glass-card-no-motion min-w-0"
+                >
+                  <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                    {t('gameSections.aboutGame')}
+                  </h3>
+                  <MarkdownText
+                    text={selectedGame.game_description}
+                    className="text-text-muted leading-relaxed wrap-break-word"
+                  />
+                </motion.section>
+              )}
 
-          {/* Links */}
-          <motion.div
-            layout="position"
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="flex gap-4"
-          >
-            <div className="flex-1 min-w-0">
-              <SocialLinksCard game={selectedGame} />
-            </div>
-          </motion.div>
+              {/* Links */}
+              <motion.div
+                layout="position"
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="flex gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <SocialLinksCard game={selectedGame} />
+                </div>
+              </motion.div>
+            </>
+          )}
         </LayoutGroup>
       </div>
     </>

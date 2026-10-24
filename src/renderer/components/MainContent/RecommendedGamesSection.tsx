@@ -1,9 +1,8 @@
-import { AnimatePresence, motion } from 'framer-motion';
-import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useRecommendedGames } from '@/renderer/queries/useRecommendedGames';
-import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
@@ -26,12 +25,6 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
 }) => {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
-  const { hideAiTranslations, showRecommendations } = useSettingsStore(
-    useShallow((state) => ({
-      hideAiTranslations: state.hideAiTranslations,
-      showRecommendations: state.showRecommendations,
-    }))
-  );
   const { gamesWithUpdates, isGameDetected } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
@@ -39,19 +32,13 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     }))
   );
 
-  const { data: recommendedGames = [], isLoading } = useRecommendedGames(
-    gameId,
-    showLimit,
-    hideAiTranslations,
-    showRecommendations
-  );
+  const {
+    games: visibleGames,
+    isLoading,
+    isHidden,
+  } = useRecommendedGames(gameId, showLimit);
 
-  const visibleGames = useMemo(
-    () => recommendedGames.filter((game) => game.id !== gameId).slice(0, showLimit),
-    [recommendedGames, gameId, showLimit]
-  );
-
-  if (!showRecommendations || (!isLoading && visibleGames.length === 0)) {
+  if (isHidden) {
     return null;
   }
 
@@ -59,60 +46,57 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
     <motion.section
       layout="position"
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="glass-card-no-motion mb-6"
+      className="glass-card-no-motion min-h-[60vh] h-max"
     >
       <h3 className="text-lg font-head font-semibold text-text-main mb-3">{title}</h3>
       <div className="grid grid-cols-3 gap-8 max-w-[1564px] mx-auto">
-        <AnimatePresence mode="wait">
-          {isLoading ? (
+        {isLoading ? (
+          <motion.div
+            key="loader"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="flex items-center justify-center py-12"
+          >
+            <Loader size="md" />
+          </motion.div>
+        ) : (
+          visibleGames.map((game, index) => (
             <motion.div
-              key="loader"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="flex items-center justify-center py-12"
+              key={game.id}
+              id={`recommended-game-${game.slug}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.3,
+                delay: index * 0.05,
+                ease: 'easeInOut',
+              }}
             >
-              <Loader size="md" />
-            </motion.div>
-          ) : (
-            visibleGames.map((game, index) => (
-              <motion.div
-                key={game.id}
-                id={`recommended-game-${game.slug}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.05,
-                  ease: 'easeInOut',
+              <GameListItem
+                game={game}
+                isSelected={false}
+                isCardStyle={true}
+                hasUpdate={gamesWithUpdates.has(game.id)}
+                isGameDetected={isGameDetected(game.id)}
+                isInstalled={isInstalled(game.id)}
+                isTranslationAvailable={
+                  game.status !== 'planned' && game.status !== 'tech-improvement'
+                }
+                onClick={() => {
+                  trackEvent('Select game', {
+                    'Is recommendation': true,
+                    'Source Game Id': gameId,
+                    'Source Game Name': gameName,
+                    'Game Id': game.id,
+                    'Game Name': game.name,
+                  });
+                  navigate(`/game/${game.id}`);
                 }}
-              >
-                <GameListItem
-                  game={game}
-                  isSelected={false}
-                  isCardStyle={true}
-                  hasUpdate={gamesWithUpdates.has(game.id)}
-                  isGameDetected={isGameDetected(game.id)}
-                  isInstalled={isInstalled(game.id)}
-                  isTranslationAvailable={
-                    game.status !== 'planned' && game.status !== 'tech-improvement'
-                  }
-                  onClick={() => {
-                    trackEvent('Select game', {
-                      'Is recommendation': true,
-                      'Source Game Id': gameId,
-                      'Source Game Name': gameName,
-                      'Game Id': game.id,
-                      'Game Name': game.name,
-                    });
-                    navigate(`/game/${game.id}`);
-                  }}
-                />
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+              />
+            </motion.div>
+          ))
+        )}
       </div>
     </motion.section>
   );
