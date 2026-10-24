@@ -4,8 +4,17 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
-
-export type { Database };
+import type {
+  AchievementsDelivery,
+  ApplyPendingLaunchOptionsResult,
+  DeckyInstallResult,
+  DeckyLoaderInstallResult,
+  MillenniumInstallResult,
+  MillenniumProgress,
+  PluginHostState,
+  RestartSteamResult,
+  SteamBridgeStatus,
+} from './plugin-host-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
@@ -13,6 +22,40 @@ export type FeedbackType = Database['public']['Enums']['feedback_type'];
 export type InstallPath = Database['public']['CompositeTypes']['install_path_entry'];
 export type Game = Database['public']['Tables']['games']['Row'];
 export type SortOrderType = 'name' | 'downloads' | 'newest' | 'updated' | 'subscribers';
+
+export type SpecialFilterType =
+  | 'installed-translations'
+  | 'installed-games'
+  | 'available-in-steam'
+  | 'owned-gog-games'
+  | 'owned-epic-games'
+  | 'installed-xbox-games'
+  | 'favorite-translations';
+
+export type ContentTypeFilterType = 'with-achievements' | 'with-voice' | 'from-workshop';
+
+export type TranslationTypeFilterType = 'manual' | 'ai' | 'ai-edited';
+
+export type FacetRow = Pick<
+  Game,
+  | 'id'
+  | 'slug'
+  | 'steam_app_id'
+  | 'status'
+  | 'team'
+  | 'steam_tag_ids'
+  | 'ai'
+  | 'kind'
+  | 'achievements_archive_path'
+  | 'voice_archive_path'
+  | 'voice_progress'
+>;
+
+export type LibraryFilterType = Exclude<
+  SpecialFilterType,
+  'installed-translations' | 'favorite-translations'
+>;
+export type LibraryMemberships = Record<LibraryFilterType, string[]>;
 
 export interface NewsFeedItem {
   id: string;
@@ -40,13 +83,13 @@ export interface GamePath {
 interface InstallationComponent {
   installed: boolean;
   files: string[]; // Relative paths of installed files for this component
-  /**
-   * Source archive hash that produced these files. Used to detect whether a
-   * subsequent update actually changes the component — if the hash matches,
-   * the bytes on disk are identical and we can skip both the re-install and
-   * any "restart Steam" prompts tied to this component.
-   */
+  // Source archive hash; a match on update means the re-install can be skipped.
   archiveHash?: string;
+}
+
+// `files` is empty for new installs; legacy installs list the .bin copied into appcache/stats.
+export interface AchievementsComponent extends InstallationComponent {
+  appIds?: number[];
 }
 
 export interface InstallationInfo {
@@ -64,7 +107,7 @@ export interface InstallationInfo {
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;
-    achievements?: InstallationComponent;
+    achievements?: AchievementsComponent;
   };
 }
 
@@ -84,35 +127,42 @@ export interface DownloadProgress {
   timeRemaining: number; // in seconds
 }
 
+export type InstallationStatusTone = 'error' | 'waiting' | 'retry';
+
+export interface RunInstallerRequest {
+  gameId: string;
+  installerPath: string;
+  isExe: boolean;
+  protons?: Array<{ name: string; path: string }>;
+}
+
+export interface RunInstallerDecision {
+  run: boolean;
+  protonPath?: string;
+}
+
 export interface InstallationStatus {
   message: string;
   progress?: number;
   phase?: 'download' | 'install';
+  tone?: InstallationStatusTone;
 }
 
 export interface InstallResult {
   success: boolean;
   paused?: boolean;
-  /**
-   * Launch options for the game couldn't be applied because Steam is running
-   * and CEF isn't reachable (typically Millennium-modded Steam). Renderer can
-   * offer the user a "restart Steam to apply" prompt that calls
-   * `applyPendingLaunchOptions`.
-   */
-  launchOptionsPending?: boolean;
+  // Launch options were queued and get written on the next Steam exit.
+  launchOptionsQueued?: boolean;
   /**
    * The launch options could not be written for a reason restarting Steam
    * won't fix. The install itself succeeded; without them the translation
    * runs unmodded, so it is surfaced rather than only logged.
    */
   launchOptionsError?: string;
-  /**
-   * Whether achievement files were actually written this install. False when
-   * the user re-runs an install whose achievement archive hash matches what's
-   * already on disk — used to suppress the "restart Steam for achievements"
-   * prompt in that case.
-   */
-  achievementsChanged?: boolean;
+  // What the player should know about the args written into Epic Games Launcher.
+  eglLaunchOptionsNotes?: string[];
+  // Set only when achievement strings were installed.
+  achievementsDelivery?: AchievementsDelivery;
   error?: {
     message: string;
     needsManualSelection?: boolean;
@@ -127,7 +177,6 @@ export interface InstallOptions {
   installVoice: boolean;
   installAchievements: boolean;
   platform: Platform | 'auto';
-  protonPath?: string;
 }
 
 export interface PausedDownloadState {
@@ -156,23 +205,12 @@ export interface GetGamesParams {
 export interface GetGamesResult {
   games: Game[];
   total: number;
-  uniqueCount?: number; // Count of unique games by slug (for filters)
 }
 
 export interface TagOption {
   tagid: number;
   name: string;
   count: number;
-}
-
-export interface FilterCountsResult {
-  planned: number;
-  'in-progress': number;
-  completed: number;
-  'tech-improvement': number;
-  'with-achievements': number;
-  'with-voice': number;
-  'from-workshop': number;
 }
 
 export interface DetectedGameInfo {
@@ -187,7 +225,7 @@ export interface DetectedGame {
   path: string;
 }
 
-export interface LaunchGameResult {
+interface LaunchGameResult {
   success: boolean;
   error?: string;
 }
@@ -200,7 +238,13 @@ export interface FeedbackReplyPayload {
   createdAt: string;
 }
 
-export type SteamBridgeFailure = 'cef-unavailable' | 'steam-not-running' | 'failed';
+export type SteamBridgeFailure =
+  | 'cef-unavailable'
+  | 'steam-not-running'
+  | 'failed'
+  | 'cef-blocked'
+  | 'millennium-plugin-pending'
+  | 'millennium-outdated';
 
 export type SteamLibraryFailure = SteamBridgeFailure | 'library-unavailable';
 
@@ -213,7 +257,11 @@ export interface ElectronAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
-  fetchFilterCounts: () => Promise<FilterCountsResult>;
+  fetchFacetRows: () => Promise<FacetRow[] | null>;
+  fetchSearchMatchIds: (searchQuery: string) => Promise<string[] | null>;
+  getLibraryMemberships: () => Promise<LibraryMemberships | null>;
+  checkStoreLibraries: () => Promise<boolean>;
+  onStoreLibraryChanged: (callback: () => void) => () => void;
   fetchTrendingGames: (
     days?: number,
     limit?: number
@@ -246,7 +294,6 @@ export interface ElectronAPI {
     hideAiTranslations?: boolean,
     sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
-  countGamesBySteamAppIds: (steamAppIds: number[]) => Promise<number>;
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,
@@ -271,16 +318,11 @@ export interface ElectronAPI {
   uninstallTranslation: (game: Game) => Promise<InstallResult>;
   rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
   showItemInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
-  /**
-   * Fires after the installer/script has been downloaded and extracted, before it
-   * runs, so the renderer can ask the user whether to launch it now. The renderer
-   * must eventually call `respondRunInstaller` with the same gameId or the install
-   * promise on the main process stays pending forever.
-   */
+  /** Main blocks until `respondRunInstaller` answers with the same gameId. */
   onRequestRunInstallerConfirm: (
-    callback: (gameId: string, installerPath: string, isExe: boolean) => void
+    callback: (request: RunInstallerRequest) => void
   ) => () => void;
-  respondRunInstaller: (gameId: string, shouldRun: boolean) => void;
+  respondRunInstaller: (gameId: string, decision: RunInstallerDecision) => void;
   abortDownload: (reason?: string) => Promise<{ success: boolean }>;
   pauseDownload: (
     gameId: string
@@ -301,7 +343,6 @@ export interface ElectronAPI {
   fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
-  onInstallProgress: (callback: (progress: number) => void) => () => void;
   onDownloadProgress: (
     callback: (gameId: string, progress: DownloadProgress) => void
   ) => () => void;
@@ -329,8 +370,9 @@ export interface ElectronAPI {
   ) => () => void;
   onUpdateError: (callback: (error: Error) => void) => () => void;
   fetchChangelog: (version: string) => Promise<ChangelogEntry[] | null>;
-  // Real-time updates (автоматично керуються в main process)
+  // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
+  onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
@@ -347,10 +389,35 @@ export interface ElectronAPI {
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
-  restartSteam: () => Promise<{ success: boolean; error?: string }>;
-  applyPendingLaunchOptions: (
-    game: Game
-  ) => Promise<{ success: boolean; error?: string }>;
+  restartSteam: () => Promise<RestartSteamResult>;
+  applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
+  getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
+  // Clears the persisted "blocked" verdict and re-verifies.
+  recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
+  onSteamBridgeStatusChanged: (
+    callback: (status: SteamBridgeStatus) => void
+  ) => () => void;
+  onSteamPendingActionsApplied: (
+    callback: (payload: { gameIds: string[] }) => void
+  ) => () => void;
+  // Millennium / Decky plugin host
+  getPluginHostState: () => Promise<PluginHostState | null>;
+  // Download, verify and stage Millennium; touches nothing outside userData.
+  prepareMillennium: () => Promise<MillenniumInstallResult>;
+  activateMillennium: (opts: {
+    restart: 'now' | 'on-exit';
+  }) => Promise<MillenniumInstallResult>;
+  uninstallMillennium: (opts: {
+    purge: boolean;
+    restart: 'now' | 'on-exit';
+  }) => Promise<MillenniumInstallResult>;
+  cancelMillennium: () => Promise<{ success: boolean }>;
+  requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
+  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
+  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
+  saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
+  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
   /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
   onSteamRestartRequired: (callback: () => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
@@ -358,9 +425,10 @@ export interface ElectronAPI {
   /** Turning it off reverts Ukrainian library artwork already installed. */
   setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
   /**
-   * Create or update the Steam library collection «З українізаторами» with
-   * every owned game that has a translation in the catalog. Re-running it
-   * also drops games whose translation disappeared since the last sync.
+   * Create or update the Steam library collection «З українізаторами» (games
+   * with translations) with every owned game that has a translation in the
+   * catalog. Re-running it also drops games whose translation disappeared
+   * since the last sync.
    */
   syncSteamTranslatedCollection: () => Promise<
     | { ok: true; total: number }
@@ -392,26 +460,24 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
-  // Track like/unlike events
-  trackLike: (
-    gameId: string,
-    action: 'like' | 'unlike'
-  ) => Promise<{ success: boolean; error?: string }>;
-  // Підписка й відписка на переклад у Майстерні без відкриття Steam
+  getLikedGameIds: () => Promise<string[]>;
+  setLike: (gameId: string, liked: boolean) => Promise<string[]>;
+  onLikedGamesChanged: (callback: (gameIds: string[]) => void) => () => void;
+  // Subscribe/unsubscribe from a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,
     appId: number,
     workshopId: string,
     subscribe: boolean
   ) => Promise<{ ok: true } | { ok: false; reason: SteamBridgeFailure; error?: string }>;
-  /** Які воркшоп-переклади з каталогу вже на диску; null — містка немає */
+  /** Which Workshop translations from the catalog are already on disk; null — no bridge */
   listInstalledWorkshopGames: () => Promise<string[] | null>;
-  /** Факт наявності на диску; null — CEF-місток недоступний, відповіді немає */
+  /** Whether it's present on disk; null — CEF bridge unavailable, no answer */
   isWorkshopItemDownloaded: (
     appId: number,
     workshopId: string
   ) => Promise<boolean | null>;
-  // Перехід у Майстерню рахується як завантаження
+  // Navigating to the Workshop counts as a download
   trackWorkshopOpen: (
     gameId: string,
     isFirstSession?: boolean
@@ -443,6 +509,7 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  findDeepLinkGameId: (slug: string, team: string) => Promise<string | null>;
   /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
   notifyReady: () => void;
   // Sync status

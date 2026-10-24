@@ -5,6 +5,14 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and publish'
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
@@ -69,12 +77,15 @@ jobs:
       - name: Create or update release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
         run: |
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          CURRENT_TAG="$RELEASE_TAG"
+          NOTES_FILE=$(mktemp)
+          printf '%s\n' "$CHANGELOG" > "$NOTES_FILE"
 
           # Create release with generated changelog
-          gh release create "$CURRENT_TAG" --notes "${{ steps.changelog.outputs.changelog }}" --draft 2>/dev/null || \
-            gh release edit "$CURRENT_TAG" --notes "${{ steps.changelog.outputs.changelog }}"
+          gh release create "$CURRENT_TAG" --notes-file "$NOTES_FILE" --draft 2>/dev/null || \
+            gh release edit "$CURRENT_TAG" --notes-file "$NOTES_FILE"
 
   release:
     runs-on: ${{ matrix.os }}
@@ -94,7 +105,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.20.0'
+          node-version: '24.22.1'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -194,6 +205,15 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: pnpm dist:mac --publish never
 
+      # Electron 44 dropped macOS 12; electron-updater compares os.release() (Darwin 22 = macOS 13)
+      - name: Mark macOS minimum version in update feed
+        if: matrix.os == 'macos-26'
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "minimumSystemVersion: 22.0.0" >> "release/${VERSION}/latest-mac.yml"
+          cat "release/${VERSION}/latest-mac.yml"
+
       # --- E2E tests on built app ---
 
       - name: Install Electron system dependencies (Linux)
@@ -246,7 +266,7 @@ jobs:
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          CURRENT_TAG="$RELEASE_TAG"
           RELEASE_DIR="release/${VERSION}"
 
           echo "Publishing artifacts from: $RELEASE_DIR"
@@ -269,7 +289,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.FLATPAK_DISPATCH_TOKEN }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="$RELEASE_TAG"
           echo "Triggering Flatpak build for tag: $TAG"
           jq -n --arg tag "$TAG" '{"event_type":"new-release","client_payload":{"tag":$tag}}' | \
             gh api repos/Vadko/lbk-flatpak/dispatches --method POST --input -
@@ -278,6 +298,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="$RELEASE_TAG"
           echo "Triggering AUR update for tag: $TAG"
           gh workflow run update-aur.yml --repo Vadko/lbk-launcher -f app_version="$TAG"

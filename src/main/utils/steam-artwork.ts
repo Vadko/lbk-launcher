@@ -13,19 +13,19 @@
  * aside rather than copied, or it would beat the `.png` we write.
  */
 
-import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { app } from 'electron';
 import got from 'got';
+import pTimeout from 'p-timeout';
 import { getSteamGridPath } from '@/main/game-detector/steam';
-import {
-  evaluateInSharedJsContext,
-  isCefUsable,
-  jsLiteral,
-} from '@/main/utils/steam-cef';
+import { writeFileAtomic } from '@/main/utils/atomic-write';
+import { sha256, sha256FileSync } from '@/main/utils/hash';
+import { getSteamBridge, type SteamBridge } from '@/main/utils/steam-bridge';
+import { jsLiteral } from '@/main/utils/steam-cef';
 import { readRendererSetting } from '@/main/utils/store-storage';
 import { getMainWindow } from '@/main/window';
+import { errnoCode } from '@/shared/errors';
 
 const DOWNLOAD_TIMEOUT_MS = 15_000;
 const DOWNLOAD_RETRY_LIMIT = 1;
@@ -58,7 +58,7 @@ interface SteamArtworkParams {
 
 type ApplyMode =
   | 'noop' // disabled, no sources, or nothing could be prepared
-  | 'cef' // pushed live through Steam's CEF API
+  | 'cef' // pushed live through the Steam bridge (CDP or plugin)
   | 'file'; // written to grid/, visible after Steam restarts
 
 interface SteamArtworkResult {
@@ -81,31 +81,6 @@ interface ArtworkRecord {
 /** User opt-out from the Settings modal. */
 function isSteamArtworkEnabledInSettings(): boolean {
   return readRendererSetting('steamCustomArtworkEnabled', true);
-}
-
-function sha256(bytes: Buffer): string {
-  return crypto.createHash('sha256').update(bytes).digest('hex');
-}
-
-function hashFile(filePath: string): string | null {
-  try {
-    return sha256(fs.readFileSync(filePath));
-  } catch {
-    return null;
-  }
-}
-
-/** Reject after `ms` so a wedged dependency can't hang the install forever. */
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => {
-    if (timer) {
-      clearTimeout(timer);
-    }
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -157,7 +132,7 @@ function deleteRecord(appId: number): void {
 
 /** True when the file on disk is still byte-for-byte what we put there. */
 function isStillOurs(gridDir: string, entry: ArtworkRecordEntry): boolean {
-  return hashFile(path.join(gridDir, entry.name)) === entry.hash;
+  return sha256FileSync(path.join(gridDir, entry.name)) === entry.hash;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,10 +215,12 @@ async function transcodeToPng(
   try {
     // `executeJavaScript` never settles if the renderer dies mid-call, and the
     // check above only covers the state before it.
-    const base64 = await withTimeout(
+    const base64: unknown = await pTimeout(
       window.webContents.executeJavaScript(script, true),
-      TRANSCODE_TIMEOUT_MS,
-      'PNG transcode'
+      {
+        milliseconds: TRANSCODE_TIMEOUT_MS,
+        message: `PNG transcode timed out after ${TRANSCODE_TIMEOUT_MS}ms`,
+      }
     );
     return typeof base64 === 'string' && base64.length > 0
       ? Buffer.from(base64, 'base64')
@@ -273,11 +250,11 @@ async function prepareAsset(
 
   let bytes: Buffer;
   try {
-    bytes = await got(url, {
-      responseType: 'buffer',
+    const data = await got(url, {
       timeout: { request: DOWNLOAD_TIMEOUT_MS },
       retry: { limit: DOWNLOAD_RETRY_LIMIT },
     }).buffer();
+    bytes = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
   } catch (error) {
     console.warn(`[SteamArtwork] Failed to download ${slot.key} from ${url}:`, error);
     return null;
@@ -327,7 +304,7 @@ function displaceExistingArtwork(
     }
 
     const prior = ours.get(fileName);
-    if (prior && hashFile(fullPath) === prior.hash) {
+    if (prior && sha256FileSync(fullPath) === prior.hash) {
       try {
         fs.unlinkSync(fullPath);
       } catch (error) {
@@ -362,24 +339,25 @@ interface ArtworkSlotWrite {
   extension: string;
   bytes: Buffer;
   gridDir: string | null;
-  cefUsable: boolean;
+  bridge: SteamBridge | null;
   label: string;
 }
 
 export async function applyArtworkSlot(
   write: ArtworkSlotWrite
 ): Promise<'cef' | 'file' | null> {
-  if (write.cefUsable) {
+  if (write.bridge) {
     try {
-      await evaluateInSharedJsContext(
-        `SteamClient.Apps.SetCustomArtworkForApp(${write.appId}, ${jsLiteral(
-          write.bytes.toString('base64')
-        )}, ${jsLiteral(write.extension)}, ${write.assetType})`
-      );
+      await write.bridge.invoke('setArtwork', {
+        appId: write.appId,
+        base64: write.bytes.toString('base64'),
+        ext: write.extension,
+        assetType: write.assetType,
+      });
       return 'cef';
     } catch (error) {
       console.warn(
-        `[SteamArtwork] CEF apply failed for ${write.label}, writing file instead:`,
+        `[SteamArtwork] Bridge apply failed for ${write.label}, writing file instead:`,
         error
       );
     }
@@ -390,14 +368,14 @@ export async function applyArtworkSlot(
   }
   try {
     fs.mkdirSync(write.gridDir, { recursive: true });
-    const target = path.join(
-      write.gridDir,
-      artworkFileName(write.appId, write.suffix, write.extension)
+    // Steam must never read a half-written image.
+    writeFileAtomic(
+      path.join(
+        write.gridDir,
+        artworkFileName(write.appId, write.suffix, write.extension)
+      ),
+      write.bytes
     );
-    // Write beside the target then rename, so Steam can't read a half-written image.
-    const tmp = `${target}.lbk.tmp`;
-    fs.writeFileSync(tmp, write.bytes);
-    fs.renameSync(tmp, target);
     return 'file';
   } catch (error) {
     console.warn(`[SteamArtwork] Failed to apply ${write.label}:`, error);
@@ -466,7 +444,7 @@ export async function applySteamArtwork(
     (entry) => !refreshedTypes.has(entry.assetType) && isStillOurs(gridDir, entry)
   );
 
-  const cefUsable = await isCefUsable();
+  const bridge = await getSteamBridge();
   const installed: ArtworkSlotKey[] = [];
   let anyViaFile = false;
 
@@ -478,7 +456,7 @@ export async function applySteamArtwork(
       extension: asset.extension,
       bytes: asset.bytes,
       gridDir,
-      cefUsable,
+      bridge,
       label: asset.slot.key,
     });
     const applied = mode !== null;
@@ -504,7 +482,7 @@ export async function applySteamArtwork(
     return { mode: 'noop', installed: [], reason: 'Every slot failed to apply' };
   }
 
-  const mode: ApplyMode = anyViaFile || !cefUsable ? 'file' : 'cef';
+  const mode: ApplyMode = anyViaFile || !bridge ? 'file' : 'cef';
   console.log(
     `[SteamArtwork] App ${params.appId} installed ${installed.join(', ')} via ${mode}`
   );
@@ -526,36 +504,34 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
     return false;
   }
 
-  const cefUsable = await isCefUsable();
+  const bridge = await getSteamBridge();
 
   for (const entry of record.written) {
     const fullPath = path.join(gridDir, entry.name);
     if (!fs.existsSync(fullPath)) {
       continue;
     }
-    // Replaced by the user since — leave it, and skip the CEF clear too, which
+    // Replaced by the user since — leave it, and skip the bridge clear too, which
     // would delete their file.
-    if (hashFile(fullPath) !== entry.hash) {
+    if (sha256FileSync(fullPath) !== entry.hash) {
       console.log(`[SteamArtwork] ${entry.name} was replaced by the user, keeping it`);
       continue;
     }
 
-    // Clearing via CEF drops the running client's cached image too, so the
+    // Clearing via the bridge drops the running client's cached image too, so the
     // library stops showing our art without a restart.
-    if (cefUsable) {
+    if (bridge) {
       try {
-        await evaluateInSharedJsContext(
-          `SteamClient.Apps.ClearCustomArtworkForApp(${appId}, ${entry.assetType})`
-        );
+        await bridge.invoke('clearArtwork', { appId, assetType: entry.assetType });
       } catch (error) {
-        console.warn(`[SteamArtwork] CEF clear failed for ${entry.name}:`, error);
+        console.warn(`[SteamArtwork] Bridge clear failed for ${entry.name}:`, error);
       }
     }
 
     try {
       fs.unlinkSync(fullPath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (errnoCode(error) !== 'ENOENT') {
         console.warn(`[SteamArtwork] Failed to remove ${entry.name}:`, error);
       }
     }

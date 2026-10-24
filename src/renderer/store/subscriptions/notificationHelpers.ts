@@ -1,3 +1,4 @@
+import { t } from '@/shared/i18n/i18n';
 import { playNotificationSound } from '../../utils/notificationSounds';
 import { useSettingsStore } from '../useSettingsStore';
 import type { Notification, ToastNotification } from './types';
@@ -22,25 +23,36 @@ export function getNotificationMessage(
 ): string {
   switch (notification.type) {
     case 'status-change':
-      return `Стан змінено на "${notification.newValue}"`;
+      return t('notificationMessage.statusChange', {
+        status: notification.newValue ?? '',
+      });
     case 'version-update':
-      return `Доступна версія ${notification.newValue}`;
+      return t('notifications.versionAvailable', {
+        version: notification.newValue ?? '',
+      });
     case 'app-update':
-      return `Доступна версія ${notification.newValue}`;
+      return t('notifications.versionAvailable', {
+        version: notification.newValue ?? '',
+      });
     case 'progress-change':
-      return `Прогрес оновлено: ${notification.newValue}`;
+      return t('notificationMessage.progressChange', {
+        progress: notification.newValue ?? '',
+      });
     case 'team-new-game':
-      return `Нова локалізація від ${notification.teamName}`;
+      return t('notifications.teamNewGame', { team: notification.teamName ?? '' });
     case 'team-status-change':
-      return `${notification.teamName}: стан змінено на "${notification.newValue}"`;
+      return t('notifications.teamStatusChange', {
+        team: notification.teamName ?? '',
+        status: notification.newValue ?? '',
+      });
     case 'first-favorite':
-      return 'Натисніть, щоб відфільтрувати список улюблених';
+      return t('notificationMessage.firstFavorite');
     case 'feedback-reply':
       return notification.message
         ? `${notification.gameName}: ${notification.message}`
-        : 'Нова відповідь на ваш відгук';
+        : t('notificationMessage.feedbackReply');
     default:
-      return 'Нове сповіщення';
+      return t('notificationMessage.fallback');
   }
 }
 

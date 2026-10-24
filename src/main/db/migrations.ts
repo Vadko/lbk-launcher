@@ -10,7 +10,7 @@ interface Migration {
   up: (db: Database.Database) => void;
 }
 
-/** Додати колонку, якщо її ще нема (ідемпотентно) */
+/** Add a column if it doesn't already exist (idempotent) */
 function addColumnIfMissing(db: Database.Database, column: string, ddl: string): void {
   const has = db
     .prepare("SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name = ?")
@@ -22,8 +22,8 @@ function addColumnIfMissing(db: Database.Database, column: string, ddl: string):
 }
 
 /**
- * Разовий примусовий повний ресинк: маркер-ключ мусить збігатися з історичним
- * байт-у-байт, інакше клієнти повторять ресинк.
+ * One-time forced full resync: the marker key must match the historical one
+ * byte-for-byte, otherwise clients will repeat the resync.
  */
 function forceResyncOnce(db: Database.Database, name: string, markerKey: string): void {
   const done = db
@@ -946,8 +946,8 @@ const migrations: Migration[] = [
 
       console.log('[Migrations] Running: reindex_fts_without_apostrophes');
 
-      // Індекс перебудовуємо локально з наявних рядків — на відміну від решти
-      // resync_* міграцій, тут нічого не треба заново тягнути з Supabase.
+      // The index is rebuilt locally from existing rows — unlike the other
+      // resync_* migrations, there's nothing to re-fetch from Supabase here.
       const rows = db.prepare('SELECT id, name, search_keywords FROM games').all() as {
         id: string;
         name: string;
@@ -1064,18 +1064,34 @@ const migrations: Migration[] = [
     },
   },
   {
-    name: 'add_likes_count_column',
+    name: 'add_likes_column',
     up: (db) =>
       addColumnIfMissing(
         db,
-        'likes_count',
-        'ALTER TABLE games ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0;'
+        'likes',
+        'ALTER TABLE games ADD COLUMN likes INTEGER NOT NULL DEFAULT 0;'
       ),
   },
   {
-    name: 'resync_for_likes_count',
+    name: 'resync_for_server_sync_cursor',
     up: (db) =>
-      forceResyncOnce(db, 'resync_for_likes_count', 'migration_resync_likes_count_done'),
+      forceResyncOnce(
+        db,
+        'resync_for_server_sync_cursor',
+        'migration_resync_server_sync_cursor_done'
+      ),
+  },
+  {
+    name: 'add_my_likes_table',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS my_likes (
+          game_id TEXT PRIMARY KEY,
+          liked INTEGER NOT NULL,
+          server_liked INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+    },
   },
 ];
 

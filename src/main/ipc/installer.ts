@@ -1,8 +1,16 @@
 import { dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
-import type { Game, InstallOptions } from '../../shared/types';
+import path from 'path';
+import { errorMessage } from '@/shared/errors';
+import { t } from '@/shared/i18n/i18n';
+import type { ApplyPendingLaunchOptionsResult } from '../../shared/plugin-host-types';
+import type {
+  Game,
+  InstallOptions,
+  InstallResult,
+  RunInstallerDecision,
+} from '../../shared/types';
 import { GamesRepository } from '../db/games-repository';
-import { getFirstAvailableGamePath } from '../game-detector';
 import { installTranslation } from '../installer';
 import {
   checkInstallation,
@@ -26,29 +34,31 @@ import {
 import { checkPlatformCompatibility, rerunInstaller } from '../installer/platform';
 import { resumeDownload } from '../installer/resume';
 import { removeComponents, uninstallTranslation } from '../installer/uninstall';
+import { applyLaunchOptionsNow } from '../steam-restart';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
-import {
-  launchOptionsParamsFor,
-  needsGameDir,
-  writeSteamLaunchOptions,
-} from '../utils/steam-launch-options';
-import { launchSteam, shutdownSteam } from '../utils/steam-launcher';
+import { readLastGameFolder, writeLastGameFolder } from '../utils/store-storage';
 import { getMainWindow } from '../window';
 
 // Resolvers for run-installer confirmations awaiting a decision from the renderer,
 // keyed by game id (one pending install per game at a time).
-const pendingRunInstallerDecisions = new Map<string, (decision: boolean) => void>();
+const pendingRunInstallerDecisions = new Map<
+  string,
+  (decision: RunInstallerDecision) => void
+>();
 
 export function setupInstallerHandlers(): void {
-  ipcMain.on('installer:run-decision', (_, gameId: string, decision: boolean) => {
-    const resolve = pendingRunInstallerDecisions.get(gameId);
-    if (resolve) {
-      pendingRunInstallerDecisions.delete(gameId);
-      resolve(decision);
+  ipcMain.on(
+    'installer:run-decision',
+    (_, gameId: string, decision: RunInstallerDecision) => {
+      const resolve = pendingRunInstallerDecisions.get(gameId);
+      if (resolve) {
+        pendingRunInstallerDecisions.delete(gameId);
+        resolve(decision);
+      }
     }
-  });
+  );
 
   ipcMain.handle(
     'install-translation',
@@ -68,21 +78,16 @@ export function setupInstallerHandlers(): void {
           (status) => {
             getMainWindow()?.webContents.send('installation-status', game.id, status);
           },
-          (installerPath, isExe) =>
-            new Promise<boolean>((resolve) => {
-              pendingRunInstallerDecisions.set(game.id, resolve);
-              getMainWindow()?.webContents.send(
-                'installer:confirm-run',
-                game.id,
-                installerPath,
-                isExe
-              );
+          (request) =>
+            new Promise<RunInstallerDecision>((resolve) => {
+              pendingRunInstallerDecisions.set(request.gameId, resolve);
+              getMainWindow()?.webContents.send('installer:confirm-run', request);
             })
         );
 
-        // Note: cache invalidation та installed-games-changed event
-        // автоматично відбуваються через InstallationWatcher при зміні файлів
-        // Download tracking тепер відбувається в Edge Function при генерації signed URL
+        // Note: cache invalidation and the installed-games-changed event
+        // happen automatically via InstallationWatcher when files change
+        // Download tracking now happens in the Edge Function when generating the signed URL
 
         // Locally increment downloads counter (broadcast is skipped for downloads-only changes).
         // The server counts unique downloads, so the worst case is +1 drift until next sync.
@@ -92,19 +97,21 @@ export function setupInstallerHandlers(): void {
             repo.incrementDownloads(game.id);
             const updatedGame = repo.getGameById(game.id);
             if (updatedGame) {
-              getMainWindow()?.webContents.send('game-updated', updatedGame);
+              getMainWindow()?.webContents.send('game-counters-updated', [updatedGame]);
             }
           } catch (err) {
             console.error('[Installer] Failed to update local downloads count:', err);
           }
         }
 
-        return {
+        const result: InstallResult = {
           success: true,
-          launchOptionsPending: installResult.launchOptionsPending,
+          launchOptionsQueued: installResult.launchOptionsQueued,
           launchOptionsError: installResult.launchOptionsError,
-          achievementsChanged: installResult.achievementsChanged,
+          eglLaunchOptionsNotes: installResult.eglLaunchOptionsNotes,
+          achievementsDelivery: installResult.achievementsDelivery,
         };
+        return result;
       } catch (error) {
         // Handle pause - not an error, just a state
         if (error instanceof PausedSignal) {
@@ -115,7 +122,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: false,
           error: {
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            message: error instanceof Error ? error.message : t('common.unknownError'),
             needsManualSelection: error instanceof ManualSelectionError,
             isRateLimit: error instanceof RateLimitError,
             isNetworkError: error instanceof NetworkError,
@@ -125,87 +132,20 @@ export function setupInstallerHandlers(): void {
     }
   );
 
-  /**
-   * Restart Steam and apply launch options in the gap. Used when a translation
-   * needs launch options but CEF was unreachable at install time (typically
-   * Millennium-modded Steam). Order matters: Steam must be off before we
-   * touch localconfig.vdf, or it overwrites our changes on graceful exit.
-   */
-  ipcMain.handle('apply-pending-launch-options', async (_, game: Game) => {
-    try {
-      if (!game.steam_app_id) {
-        return { success: false, error: 'Гра не має Steam App ID' };
-      }
-
-      // Only needed to expand {GAME_DIR}, and the lookup walks Steam's library
-      // folders and rewrites the install cache — too much I/O to spend on the
-      // common case. Read before Steam goes down.
-      const needsDir = needsGameDir(game);
-      const installInfo = needsDir ? await checkInstallation(game) : null;
-
-      // The recorded path is where the game was at install time; moving it to
-      // another Steam library leaves it stale. Detect the current location
-      // first and keep the recorded one only as a fallback.
-      const detected = needsDir
-        ? getFirstAvailableGamePath(game.install_paths || [], game.steam_app_id)
-        : null;
-      const recordedPath = installInfo?.gamePath ?? null;
-
-      let gamePath: string | null = null;
-      if (detected?.exists && detected.path) {
-        gamePath = detected.path;
-      } else if (recordedPath && fs.existsSync(recordedPath)) {
-        gamePath = recordedPath;
-      }
-
-      const params = launchOptionsParamsFor(game, gamePath);
-      if (!params) {
-        return {
-          success: false,
-          error: 'Для цього перекладу не задано параметрів запуску',
-        };
-      }
-      // Knowable before Steam goes down — no point tearing down the user's
-      // session (and any running game or download) for a write that cannot land.
-      if (needsDir && !params.gamePath) {
-        return {
-          success: false,
-          error: 'Не вдалося визначити теку гри для параметрів запуску',
-        };
-      }
-
-      await shutdownSteam();
-      let result: Awaited<ReturnType<typeof writeSteamLaunchOptions>>;
+  ipcMain.handle(
+    'apply-pending-launch-options',
+    async (_, game: Game): Promise<ApplyPendingLaunchOptionsResult> => {
       try {
-        result = await writeSteamLaunchOptions(params);
-      } finally {
-        // Steam was force-killed above; bring it back even if the write threw,
-        // or the user is left with no Steam and an error dialog.
-        await launchSteam();
+        return await applyLaunchOptionsNow(game);
+      } catch (error) {
+        console.error('[Installer] Applying pending launch options failed:', error);
+        return {
+          success: false,
+          error: errorMessage(error, t('common.unknownError')),
+        };
       }
-      console.log(
-        `[Installer] Apply pending launch options mode=${result.mode}${result.reason ? ` — ${result.reason}` : ''}`
-      );
-
-      // 'cef' counts: shutdownSteam gives up silently when Steam refuses to
-      // exit, and the value is then applied live instead of through the file.
-      // 'needs-shutdown' is the opposite — Steam stayed up and nothing was
-      // written, so it must not read as success.
-      if (result.mode === 'file' || result.mode === 'cef' || result.mode === 'noop') {
-        return { success: true };
-      }
-      return {
-        success: false,
-        error: result.reason ?? 'Не вдалося записати параметри запуску',
-      };
-    } catch (error) {
-      console.error('Error applying pending launch options:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
-      };
     }
-  });
+  );
 
   ipcMain.handle('check-installation', async (_, game: Game) => {
     const timer = createTimer(`IPC: check-installation (${game.name})`);
@@ -254,7 +194,7 @@ export function setupInstallerHandlers(): void {
   ipcMain.handle('show-item-in-folder', async (_, filePath: string) => {
     try {
       if (!fs.existsSync(filePath)) {
-        return { success: false, error: 'Файл не знайдено' };
+        return { success: false, error: t('installIpc.fileNotFound') };
       }
       shell.showItemInFolder(filePath);
       return { success: true };
@@ -262,22 +202,25 @@ export function setupInstallerHandlers(): void {
       console.error('Error showing item in folder:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
 
   ipcMain.handle('select-game-folder', async () => {
+    const lastFolder = readLastGameFolder();
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
-      title: 'Виберіть папку з грою',
-      buttonLabel: 'Вибрати',
+      title: t('installIpc.pickFolderTitle'),
+      buttonLabel: t('installIpc.pickFolderButton'),
+      defaultPath: lastFolder && path.dirname(lastFolder),
     });
 
     if (result.canceled || result.filePaths.length === 0) {
       return null;
     }
 
+    writeLastGameFolder(result.filePaths[0]);
     return result.filePaths[0];
   });
 
@@ -290,8 +233,8 @@ export function setupInstallerHandlers(): void {
         console.error('[Installer] Failed to track uninstall:', err);
       });
 
-      // Note: cache invalidation та installed-games-changed event
-      // автоматично відбуваються через InstallationWatcher при зміні файлів
+      // Note: cache invalidation and the installed-games-changed event
+      // happen automatically via InstallationWatcher when files change
 
       return { success: true };
     } catch (error) {
@@ -299,7 +242,7 @@ export function setupInstallerHandlers(): void {
       return {
         success: false,
         error: {
-          message: error instanceof Error ? error.message : 'Невідома помилка',
+          message: error instanceof Error ? error.message : t('common.unknownError'),
         },
       };
     }
@@ -316,7 +259,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: false,
           error: {
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            message: error instanceof Error ? error.message : t('common.unknownError'),
           },
         };
       }
@@ -339,12 +282,12 @@ export function setupInstallerHandlers(): void {
       if (state) {
         return { success: true, state };
       }
-      return { success: false, error: 'Немає активного завантаження для призупинення' };
+      return { success: false, error: t('installIpc.noActiveDownload') };
     } catch (error) {
       console.error('Error pausing download:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -353,7 +296,7 @@ export function setupInstallerHandlers(): void {
     try {
       const state = getPausedDownloadState(gameId);
       if (!state) {
-        return { success: false, error: 'Немає призупиненого завантаження' };
+        return { success: false, error: t('installIpc.noPausedDownload') };
       }
 
       // Resume download in background
@@ -371,8 +314,9 @@ export function setupInstallerHandlers(): void {
         }
       ).catch((error) => {
         console.error('Error during resumed download:', error);
-        getMainWindow()?.webContents.send('installation-status', {
-          message: `❌ ${error instanceof Error ? error.message : 'Помилка завантаження'}`,
+        getMainWindow()?.webContents.send('installation-status', gameId, {
+          message: error instanceof Error ? error.message : t('download.failed'),
+          tone: 'error',
         });
       });
 
@@ -381,7 +325,7 @@ export function setupInstallerHandlers(): void {
       console.error('Error resuming download:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -411,7 +355,7 @@ export function setupInstallerHandlers(): void {
       console.error('Error cancelling paused download:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Невідома помилка',
+        error: error instanceof Error ? error.message : t('common.unknownError'),
       };
     }
   });
@@ -441,7 +385,7 @@ export function setupInstallerHandlers(): void {
         return {
           success: false,
           error: {
-            message: error instanceof Error ? error.message : 'Невідома помилка',
+            message: error instanceof Error ? error.message : t('common.unknownError'),
           },
         };
       }

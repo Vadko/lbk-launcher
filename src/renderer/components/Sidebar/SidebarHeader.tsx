@@ -1,7 +1,8 @@
 import logo from '@resources/logo.svg';
-import { BookOpenText, Home, Medal, Newspaper } from 'lucide-react';
+import { BookOpenTextIcon, HomeIcon, MedalIcon, NewspaperIcon } from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 
 interface SidebarHeaderProps {
   isCompact?: boolean;
@@ -27,30 +28,30 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
             <button
               onClick={() => navigate('/site/guides&tools')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити посібники та інструменти"
+              title={t('sidebarNav.guides')}
             >
-              <BookOpenText size={20} />
+              <BookOpenTextIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/site/donaters')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити сторінку донаторів"
+              title={t('sidebarNav.donators')}
             >
-              <Medal size={20} />
+              <MedalIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/news')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити новини"
+              title={t('sidebarNav.news')}
             >
-              <Newspaper size={20} />
+              <NewspaperIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/')}
               className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
-              title="Відкрити головну сторінку"
+              title={t('sidebarNav.home')}
             >
-              <Home size={20} />
+              <HomeIcon size={20} />
             </button>
           </div>
         )}

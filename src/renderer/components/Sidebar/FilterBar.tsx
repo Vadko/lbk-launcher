@@ -1,8 +1,9 @@
-import { Bookmark, Download, SlidersHorizontal, X } from 'lucide-react';
+import { BookmarkIcon, DownloadIcon, SlidersHorizontalIcon, XIcon } from 'lucide-react';
 import React from 'react';
+import { t } from '@/shared/i18n/i18n';
+import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
 import { SortDropdown } from './SortDropdown';
-import type { SortOrderType } from './types';
 
 interface FilterBarProps {
   isHorizontal?: boolean;
@@ -33,21 +34,26 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const headerItemProps = isHorizontal ? { 'data-gamepad-header-item': true } : {};
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex">
+    <div className={`flex items-center gap-2 ${isHorizontal ? '' : '@container'}`}>
+      <div className="flex min-w-0">
         <Button
           variant="filter"
           onClick={onOpenFilters}
+          title={t('filterBar.filters')}
           {...headerItemProps}
           className={`
-            !transition-[color,background-color,border-color]
-          ${hasModalFilters ? '!bg-glass-hover !text-text-main !border-border-hover rounded-r-none' : ''}
+            min-w-0 transition-[color,background-color,border-color]!
+          ${hasModalFilters ? 'bg-glass-hover! text-text-main! border-border-hover! rounded-r-none' : ''}
         `}
         >
-          <SlidersHorizontal size={14} />
-          <span>Фільтри</span>
+          <SlidersHorizontalIcon size={14} className="shrink-0" />
+          <span
+            className={`truncate ${hasModalFilters ? '[@container(max-width:296px)]:hidden' : ''}`}
+          >
+            {t('filterBar.filters')}
+          </span>
           {hasModalFilters && (
-            <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-color-accent text-text-dark text-xs font-semibold">
+            <span className="flex shrink-0 items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-color-accent text-text-dark text-xs font-semibold">
               {activeFilterCount}
             </span>
           )}
@@ -58,10 +64,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             variant="filter"
             onClick={onClearAll}
             {...headerItemProps}
-            className={'rounded-l-none'}
-            title="Очистити всі фільтри"
+            className="rounded-l-none shrink-0"
+            title={t('filterBar.clearAll')}
           >
-            <X size={14} />
+            <XIcon size={14} />
           </Button>
         )}
       </div>
@@ -72,34 +78,40 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         onSortChange={onSortChange}
       />
 
-      <div className="flex-1 justify-end flex gap-2">
+      <div className="flex-1 justify-end flex gap-2 shrink-0">
         <Button
           variant="filter"
-          title={`${
-            isInstalledQuickActive ? 'Приховати' : 'Показати'
-          } завантажені переклади`}
+          title={
+            isInstalledQuickActive
+              ? t('filterBar.hideInstalled')
+              : t('filterBar.showInstalled')
+          }
           onClick={onToggleInstalledQuick}
           {...headerItemProps}
           className={
             isInstalledQuickActive
-              ? '!bg-glass-hover !text-text-main !border-border-hover'
+              ? 'bg-glass-hover! text-text-main! border-border-hover!'
               : ''
           }
         >
-          <Download size={14} />
+          <DownloadIcon size={14} />
         </Button>
         <Button
           variant="filter"
-          title={`${isFavoriteQuickActive ? 'Приховати' : 'Показати'} улюблене`}
+          title={
+            isFavoriteQuickActive
+              ? t('filterBar.hideFavorites')
+              : t('filterBar.showFavorites')
+          }
           onClick={onToggleFavoriteQuick}
           {...headerItemProps}
           className={
             isFavoriteQuickActive
-              ? '!bg-glass-hover !text-text-main !border-border-hover'
+              ? 'bg-glass-hover! text-text-main! border-border-hover!'
               : ''
           }
         >
-          <Bookmark size={14} />
+          <BookmarkIcon size={14} />
         </Button>
       </div>
     </div>

@@ -2,6 +2,8 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
+import { system32 } from '@/main/utils/host-exec';
+import { t } from '@/shared/i18n/i18n';
 
 const readdir = promisify(fs.readdir);
 const unlink = promisify(fs.unlink);
@@ -49,11 +51,7 @@ async function setHiddenAttribute(dirPath: string): Promise<void> {
   }
 
   try {
-    const attribPath = path.join(
-      process.env.SystemRoot || 'C:\\Windows',
-      'System32',
-      'attrib.exe'
-    );
+    const attribPath = system32('attrib.exe');
     await execPromise(`"${attribPath}" +h "${dirPath}"`);
     console.log(`[Backup] Set hidden attribute on: ${dirPath}`);
   } catch (error) {
@@ -130,7 +128,9 @@ export async function backupFiles(
   } catch (error) {
     console.error('[Backup] Error creating backup:', error);
     throw new Error(
-      `Помилка створення резервної копії: ${error instanceof Error ? error.message : 'Unknown error'}`
+      t('installBackup.backupFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     );
   }
 }
@@ -184,7 +184,9 @@ export async function restoreBackupLegacy(
   } catch (error) {
     console.error('[Restore] Error restoring backup:', error);
     throw new Error(
-      `Помилка відновлення файлів: ${error instanceof Error ? error.message : 'Unknown error'}`
+      t('installBackup.restoreFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     );
   }
 }
@@ -279,7 +281,9 @@ export async function restoreBackupNew(
   } catch (error) {
     console.error('[Restore] Error restoring backup:', error);
     throw new Error(
-      `Помилка відновлення файлів: ${error instanceof Error ? error.message : 'Unknown error'}`
+      t('installBackup.restoreFailed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     );
   }
 }

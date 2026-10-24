@@ -1,5 +1,5 @@
 /**
- * Типи для API трекінгу
+ * Types for the tracking API
  */
 
 export interface TrackingResponse {

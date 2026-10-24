@@ -1,6 +1,6 @@
 /**
- * Worker Thread для SQLite операцій
- * Виконує важкі database операції без блокування main thread
+ * Worker Thread for SQLite operations
+ * Runs heavy database operations without blocking the main thread
  */
 
 import Database from 'better-sqlite3';
@@ -8,7 +8,7 @@ import { parentPort, workerData } from 'worker_threads';
 import type { Game } from '../../shared/types';
 import { deleteGameById, upsertGamesTransaction } from './db-queries';
 
-// Ініціалізація бази даних з переданим шляхом
+// Initialize the database with the provided path
 let db: Database.Database | null = null;
 
 function getDb(): Database.Database {
@@ -34,7 +34,7 @@ function getDb(): Database.Database {
   return db;
 }
 
-// Типи повідомлень
+// Message types
 type WorkerMessage =
   | { type: 'upsertGames'; id: number; games: Game[] }
   | { type: 'deleteGame'; id: number; gameId: string }
@@ -44,7 +44,7 @@ type WorkerResponse =
   | { type: 'success'; id: number }
   | { type: 'error'; id: number; error: string };
 
-// Обробка повідомлень від main thread
+// Handle messages from the main thread
 parentPort?.on('message', (message: WorkerMessage) => {
   try {
     const database = getDb();
@@ -83,5 +83,5 @@ parentPort?.on('message', (message: WorkerMessage) => {
   }
 });
 
-// Повідомити main thread що worker готовий
+// Notify the main thread that the worker is ready
 parentPort?.postMessage({ type: 'ready' });

@@ -1,3 +1,4 @@
+import { t } from '@/shared/i18n/i18n';
 import type {
   DownloadProgress,
   InstallationStatus,
@@ -29,7 +30,7 @@ export async function resumeDownload(
   let downloadUrl = state.url;
   if (now - pausedTime > fiftyFiveMinutes) {
     onStatus?.({
-      message: 'Оновлення посилання на завантаження...',
+      message: t('archiveDownload.refreshingUrl'),
       phase: 'download',
     });
     console.log('[Installer] Signed URL might be expired, getting new one...');
@@ -66,7 +67,7 @@ export async function resumeDownload(
   setDownloadAbortController(abortController);
 
   try {
-    onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
+    onStatus?.({ message: t('download.resuming'), phase: 'download' });
 
     await downloadFile(
       downloadUrl,
@@ -80,7 +81,7 @@ export async function resumeDownload(
 
     clearPausedDownloadState(state.gameId);
 
-    onStatus?.({ message: 'Завантаження завершено!', phase: 'install' });
+    onStatus?.({ message: t('archiveDownload.completed'), phase: 'install' });
     console.log('[Installer] Resume download completed successfully');
   } catch (error) {
     if (error instanceof Error && error.message === 'PAUSED') {

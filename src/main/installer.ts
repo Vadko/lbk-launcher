@@ -1,36 +1,90 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { formatBytes } from '../shared/formatters';
+import { t } from '@/shared/i18n/i18n';
+import { formatBytes, parseSizeToBytes } from '../shared/formatters';
+import { isExeInstaller } from '../shared/installer-kind';
+import type { AchievementsDelivery } from '../shared/plugin-host-types';
 import type {
+  AchievementsComponent,
   DownloadProgress,
   Game,
+  GamePath,
   InstallationInfo,
   InstallationStatus,
   InstallOptions,
+  RunInstallerDecision,
+  RunInstallerRequest,
 } from '../shared/types';
+import { syncAchievementsToPlugin } from './achievements';
+import {
+  commitAchievementStrings,
+  type PreparedAchievements,
+  prepareAchievements,
+} from './achievements/install';
 import { detectGamePath, getFirstAvailableGamePath } from './game-detector';
-import { BACKUP_SUFFIX, backupFiles } from './installer/backup';
+import { refreshXboxRootsForGame } from './game-detector/xbox';
+import { backupFiles } from './installer/backup';
 import { readInstallationInfo, saveInstallationInfo } from './installer/cache';
-import { checkDiskSpace, parseSizeToBytes } from './installer/disk';
+import { checkDiskSpace } from './installer/disk';
 import { downloadAndExtractArchive } from './installer/download-and-extract';
+import { applyEglIntegration } from './installer/egl-integration';
 import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
+import { isExecutableInstaller } from './installer/executable';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
+import { withAchievementsComponent } from './installer/installation-info';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
 import { resignMacBundles } from './installer/mac-codesign';
 import {
   checkPlatformCompatibility,
   getInstallerFileName,
-  getSteamAchievementsPath,
-  hasExecutableInstaller,
+  isWindowsInstallerFile,
   runInstaller,
 } from './installer/platform';
+import { findProtons } from './installer/proton';
 import { applySteamIntegration } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
+import { isLinux } from './utils/platform';
 
 const mkdir = promisify(fs.mkdir);
+
+type InstallTranslationResult = Awaited<ReturnType<typeof applySteamIntegration>> &
+  Awaited<ReturnType<typeof applyEglIntegration>> & {
+    achievementsDelivery?: AchievementsDelivery;
+  };
+
+// The shared tail: strings are written only once the install is about to be recorded, so a failed install leaves none behind.
+async function finishInstall(i: {
+  game: Game;
+  gamePath: GamePath;
+  onStatus?: (status: InstallationStatus) => void;
+  existingInfo: InstallationInfo | null;
+  achievements: PreparedAchievements;
+  record: (achievements: AchievementsComponent | null) => InstallationInfo;
+  // Runs between building the record and saving it; throwing there skips the save.
+  beforeSave?: (info: InstallationInfo) => Promise<void>;
+}): Promise<InstallTranslationResult> {
+  const previous = i.existingInfo?.components?.achievements;
+  const component = await commitAchievementStrings({
+    extracted: i.achievements.extracted,
+    gameId: i.game.id,
+    archiveHash: i.achievements.archiveHash,
+    component: i.achievements.component,
+    previous:
+      i.existingInfo && previous
+        ? { gameId: i.existingInfo.gameId, component: previous }
+        : null,
+  });
+  const info = i.record(component);
+  const delivery = component || previous ? await syncAchievementsToPlugin() : undefined;
+  await i.beforeSave?.(info);
+  await saveInstallationInfo(i.gamePath.path, info);
+  const steam = await applySteamIntegration(i.game, i.gamePath, i.onStatus);
+  const egl = await applyEglIntegration(i.game, i.gamePath);
+  return { ...steam, ...egl, achievementsDelivery: component ? delivery : undefined };
+}
 
 /**
  * Main installation function
@@ -41,12 +95,8 @@ export async function installTranslation(
   customGamePath?: string,
   onDownloadProgress?: (progress: DownloadProgress) => void,
   onStatus?: (status: InstallationStatus) => void,
-  onConfirmRunInstaller?: (installerPath: string, isExe: boolean) => Promise<boolean>
-): Promise<{
-  launchOptionsPending: boolean;
-  launchOptionsError?: string;
-  achievementsChanged: boolean;
-}> {
+  onConfirmRunInstaller?: (request: RunInstallerRequest) => Promise<RunInstallerDecision>
+): Promise<InstallTranslationResult> {
   const { createBackup, installText, installVoice, installAchievements, platform } =
     options;
 
@@ -68,13 +118,13 @@ export async function installTranslation(
       console.error(
         `[Installer] Manual selection not allowed for license-only game: ${game.id}`
       );
-      throw new Error(
-        `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-          `Ручний вибір папки заборонено.`
-      );
+      throw new Error(t('installSteps.licenseOnlyManual'));
     }
 
     let gamePath: ReturnType<typeof getFirstAvailableGamePath>;
+    if (!customGamePath) {
+      await refreshXboxRootsForGame(game.install_paths);
+    }
     if (customGamePath) {
       const customPlatform = platform === 'auto' ? 'steam' : platform;
       gamePath = { platform: customPlatform, path: customGamePath, exists: true };
@@ -95,23 +145,33 @@ export async function installTranslation(
 
       // If license_only, show a different error message
       if (game.license_only) {
-        throw new Error(
-          `Встановлення цього перекладу доступне тільки для ліцензійної версії гри.\n\n` +
-            `Гру не знайдено. Переконайтеся, що ліцензійна версія гри встановлена через офіційний магазин (Steam, GOG, Epic Games, Ubisoft Connect, EA App тощо).`
-        );
+        throw new Error(t('installSteps.licenseOnlyNotFound'));
       }
 
       throw new ManualSelectionError(
-        `Гру не знайдено\n\n` +
-          `Ми не змогли автоматично визначити шлях до папки: ${platformPath || 'не вказано'}`
+        t('installSteps.gameNotFound', {
+          path: platformPath || t('installSteps.pathNotSpecified'),
+        })
       );
     }
 
     console.log(`[Installer] ✓ Game found at: ${gamePath.path} (${gamePath.platform})`);
 
     // Not the host OS: Linux Steam titles are mostly the Windows build under Proton.
-    const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id);
+    const buildOs = await resolveGameBuildOs(gamePath.path, game.steam_app_id, [
+      game.installation_file_windows_path,
+      game.installation_file_linux_path,
+    ]);
     console.log(`[Installer] Installed game build: ${buildOs}`);
+
+    // Checked before the download: a Windows installer on Linux is dead without Proton.
+    const installerFileName = getInstallerFileName(game, buildOs);
+    const needsProton =
+      !!installerFileName && isLinux() && isWindowsInstallerFile(installerFileName);
+    const protons = needsProton ? findProtons() : [];
+    if (needsProton && protons.length === 0) {
+      throw new Error(t('installSteps.protonMissing'));
+    }
 
     // 3. Create temp directory on the same disk as the game (for correct disk space check and faster file operations)
     const downloadDir = path.join(gamePath.path, '.lbk-temp');
@@ -160,10 +220,10 @@ export async function installTranslation(
         // Cleanup temp dir before throwing
         await cleanupDownloadDir(downloadDir);
         throw new Error(
-          `Недостатньо місця на диску.\n\n` +
-            `Необхідно: ${formatBytes(neededSpace)}\n` +
-            `Доступно: ${formatBytes(diskSpace)}\n\n` +
-            `Звільніть місце та спробуйте знову.`
+          t('installSteps.notEnoughSpace', {
+            needed: formatBytes(neededSpace),
+            available: formatBytes(diskSpace),
+          })
         );
       }
       console.log(`[Installer] ✓ Disk space check passed`);
@@ -227,8 +287,10 @@ export async function installTranslation(
             buildOs
           ];
           throw new Error(
-            `Для встановленої збірки гри (${buildLabel}) немає архіву перекладу.\n\n` +
-              `Переклад доступний лише для: ${otherVariants.join(', ')}.`
+            t('installSteps.noArchiveForBuild', {
+              build: buildLabel,
+              variants: otherVariants.join(', '),
+            })
           );
         }
       }
@@ -261,176 +323,140 @@ export async function installTranslation(
         isFirstSession,
         onDownloadProgress,
         onStatus: (status) =>
-          onStatus?.({ message: `Озвучення: ${status.message}`, phase: status.phase }),
+          onStatus?.({
+            message: t('installSteps.voiceStatus', { message: status.message }),
+            phase: status.phase,
+          }),
       });
       // Copy voice files to main extract directory
       await copyDirectory(voiceExtractDir, extractDir);
     }
 
-    // 5.3 Download achievements archive if requested (Steam only)
-    let achievementsFiles: string[] = [];
-    let achievementsInstallPath: string | null = null;
-    let achievementsChanged = false;
-    console.log(`[Installer] Achievements check:`, {
-      installAchievements,
-      hasArchivePath: !!game.achievements_archive_path,
-      archivePath: game.achievements_archive_path,
-      platform: gamePath.platform,
-    });
-    // If the on-disk install already has the same achievement archive hash,
-    // re-copying would write byte-identical files and the in-Steam state
-    // wouldn't change — so we skip and suppress the restart prompt.
+    // 5.3 Achievements (Steam only)
     const existingInfo = readInstallationInfo(gamePath.path);
-    const existingAchievementHash = existingInfo?.components?.achievements?.archiveHash;
-    const achievementsAlreadyUpToDate =
-      installAchievements &&
-      !!game.achievements_archive_hash &&
-      existingAchievementHash === game.achievements_archive_hash &&
-      existingInfo?.components?.achievements?.installed === true;
-    if (achievementsAlreadyUpToDate) {
-      console.log(
-        `[Installer] Achievements already up-to-date (hash matches), skipping re-install`
-      );
-      achievementsFiles = existingInfo?.components?.achievements?.files || [];
-      achievementsInstallPath = await getSteamAchievementsPath();
-    }
-    if (
-      installAchievements &&
-      game.achievements_archive_path &&
-      gamePath.platform === 'steam' &&
-      !achievementsAlreadyUpToDate
-    ) {
-      achievementsChanged = true;
-      const achievementsExtractDir = path.join(
-        downloadDir,
-        `${game.id}_achievements_extract`
-      );
-      achievementsFiles = await downloadAndExtractArchive({
+    const achievements = await prepareAchievements({
+      game,
+      platform: gamePath.platform,
+      wanted: installAchievements,
+      existing:
+        existingInfo?.gameId === game.id
+          ? existingInfo.components?.achievements
+          : undefined,
+      downloadDir,
+      isFirstSession,
+      onDownloadProgress,
+      onStatus,
+    });
+    const finish = (
+      record: (achievements: AchievementsComponent | null) => InstallationInfo,
+      beforeSave?: (info: InstallationInfo) => Promise<void>
+    ) =>
+      finishInstall({
         game,
-        type: 'achievements',
-        archivePath: game.achievements_archive_path,
-        archiveHash: game.achievements_archive_hash,
-        downloadDir,
-        extractDir: achievementsExtractDir,
-        isFirstSession,
-        onDownloadProgress,
-        onStatus: (status) =>
-          onStatus?.({ message: `Досягнення: ${status.message}`, phase: status.phase }),
+        gamePath,
+        onStatus,
+        existingInfo,
+        achievements,
+        record,
+        beforeSave,
       });
 
-      achievementsInstallPath = await getSteamAchievementsPath();
-      if (achievementsInstallPath) {
-        console.log(`[Installer] Installing achievements to: ${achievementsInstallPath}`);
-        onStatus?.({ message: 'Копіювання перекладу досягнень...', phase: 'install' });
-        await mkdir(achievementsInstallPath, { recursive: true });
-
-        // Find all achievement files (ignore folder structure from archive)
-        const allExtractedFiles = await getAllFiles(achievementsExtractDir);
-        const achievementFilesToCopy: { src: string; dest: string }[] = [];
-
-        for (const relativePath of allExtractedFiles) {
-          const fileName = path.basename(relativePath);
-          const srcPath = path.join(achievementsExtractDir, relativePath);
-          const destPath = path.join(achievementsInstallPath, fileName);
-          achievementFilesToCopy.push({ src: srcPath, dest: destPath });
-        }
-
-        // Backup original achievement files (using _backup suffix)
-        if (createBackup) {
-          for (const { dest } of achievementFilesToCopy) {
-            const backupPath = dest + BACKUP_SUFFIX;
-            // Only backup if original exists and backup doesn't exist yet
-            if (fs.existsSync(dest) && !fs.existsSync(backupPath)) {
-              await fs.promises.copyFile(dest, backupPath);
-              console.log(`[Installer] Backed up: ${path.basename(dest)}`);
-            }
-          }
-        }
-
-        // Copy files directly to achievements folder (flatten structure)
-        for (const { src, dest } of achievementFilesToCopy) {
-          await fs.promises.copyFile(src, dest);
-          console.log(`[Installer] Copied achievement file: ${path.basename(dest)}`);
-        }
-
-        // Update achievementsFiles to contain only filenames (for installation info)
-        achievementsFiles = achievementFilesToCopy.map(({ dest }) => path.basename(dest));
-      }
+    // 6. Check for executable installer
+    if (installerFileName && isExecutableInstaller(installerFileName) && !installText) {
+      // Achievements only: the shipped installer already ran and nothing was extracted to copy.
+      await cleanupDownloadDir(downloadDir);
+      return await finish((component) =>
+        withAchievementsComponent(
+          existingInfo?.gameId === game.id
+            ? existingInfo
+            : {
+                gameId: game.id,
+                version: game.version || '1.0.0',
+                installedAt: new Date().toISOString(),
+                gamePath: gamePath.path,
+                hasBackup: false,
+                isCustomPath: !!customGamePath,
+                installedFiles: [],
+                installedPlatform: gamePath.platform,
+                components: { text: { installed: false, files: [] } },
+              },
+          component
+        )
+      );
     }
 
-    // 6. Check for executable installer
-    const installerFileName = getInstallerFileName(game, buildOs);
-    const isExeInstaller = hasExecutableInstaller(game);
-
-    if (installerFileName && isExeInstaller) {
+    if (installerFileName && isExecutableInstaller(installerFileName)) {
       const fullTargetPath = gamePath.path;
       console.log(`[Installer] Found executable installer: ${installerFileName}`);
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
+      onStatus?.({ message: t('installSteps.copying'), phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
 
-      onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
+      onStatus?.({ message: t('installSteps.cleaning'), phase: 'install' });
       await cleanupDownloadDir(downloadDir);
 
       const installerPath = path.join(fullTargetPath, installerFileName);
-      // "Installer" (.exe) vs "script" (.bat/.sh/etc.) label, matching the
-      // distinction the renderer already draws (ImportantNotice, install confirm).
-      const isExeFile = !!game.installation_file_windows_path?.endsWith('.exe');
-      const installerLabel = isExeFile ? 'інсталятор' : 'скрипт';
-      const installationInfo: InstallationInfo = {
-        gameId: game.id,
-        version: game.version || '1.0.0',
-        installedAt: new Date().toISOString(),
-        gamePath: gamePath.path,
-        hasBackup: false,
-        isCustomPath: !!customGamePath,
-        protonPath: options.protonPath,
-        installerPath,
-        installedFiles: [],
-        installedPlatform: gamePath.platform,
-        components: { text: { installed: true, files: [] } },
-      };
+      const isExeFile = isExeInstaller(installerFileName);
+      const context = isExeFile ? 'installer' : 'script';
 
       if (onConfirmRunInstaller) {
         onStatus?.({
-          message: `Очікування підтвердження запуску ${installerLabel}а...`,
+          message: t('installSteps.awaitingConfirm', { context }),
           phase: 'install',
+          tone: 'waiting',
         });
       }
-      const shouldRunInstaller = onConfirmRunInstaller
-        ? await onConfirmRunInstaller(installerPath, isExeFile)
-        : true;
+      const decision: RunInstallerDecision = onConfirmRunInstaller
+        ? await onConfirmRunInstaller({
+            gameId: game.id,
+            installerPath,
+            isExe: isExeFile,
+            protons: needsProton ? protons : undefined,
+          })
+        : { run: true };
 
-      if (!shouldRunInstaller) {
-        console.log('[Installer] User declined to run installer:', installerPath);
-        await saveInstallationInfo(gamePath.path, {
-          ...installationInfo,
-          hasInstallError: true,
-        });
-        throw new Error(
-          `Встановлення скасовано: запуск ${installerLabel}а було відхилено.\n\nФайли розпаковано в папку гри — ви можете запустити ${installerLabel} пізніше кнопкою «Перевстановити».`
-        );
-      }
-
-      try {
-        await runInstaller(
-          fullTargetPath,
-          installerFileName,
-          onStatus,
-          options.protonPath
-        );
-
-        await saveInstallationInfo(gamePath.path, installationInfo);
-      } catch (error) {
-        await saveInstallationInfo(gamePath.path, {
-          ...installationInfo,
-          hasInstallError: true,
-        });
-        throw error;
-      }
-
-      const steam = await applySteamIntegration(game, gamePath, onStatus);
-      return { ...steam, achievementsChanged };
+      return await finish(
+        (component) => ({
+          gameId: game.id,
+          version: game.version || '1.0.0',
+          installedAt: new Date().toISOString(),
+          gamePath: gamePath.path,
+          hasBackup: false,
+          isCustomPath: !!customGamePath,
+          protonPath: decision.protonPath,
+          installerPath,
+          installedFiles: [],
+          installedPlatform: gamePath.platform,
+          components: {
+            text: { installed: true, files: [] },
+            ...(component ? { achievements: component } : {}),
+          },
+        }),
+        async (installationInfo) => {
+          if (!decision.run) {
+            console.log('[Installer] User declined to run installer:', installerPath);
+            await saveInstallationInfo(gamePath.path, {
+              ...installationInfo,
+              hasInstallError: true,
+            });
+            throw new Error(t('installSteps.runDeclined', { context }));
+          }
+          try {
+            await runInstaller(
+              fullTargetPath,
+              installerFileName,
+              onStatus,
+              decision.protonPath
+            );
+          } catch (error) {
+            await saveInstallationInfo(gamePath.path, {
+              ...installationInfo,
+              hasInstallError: true,
+            });
+            throw error;
+          }
+        }
+      );
     }
 
     // 7. Copy files to game directory
@@ -449,10 +475,7 @@ export async function installTranslation(
         additionalPath = macBundle.target;
         console.log(`[Installer] macOS .app bundle — installing into: ${additionalPath}`);
       } else if (macBundle.appBundleFound && macBundle.matchedInsideBundle > 0) {
-        throw new Error(
-          'Не вдалося визначити місце встановлення всередині macOS-бандла (.app).\n\n' +
-            'Для цієї гри потрібен окремий macOS-архів перекладу.'
-        );
+        throw new Error(t('installSteps.macBundleUnresolved'));
       }
     }
 
@@ -476,7 +499,7 @@ export async function installTranslation(
       }
 
       if (createBackup) {
-        onStatus?.({ message: 'Створення резервної копії...', phase: 'install' });
+        onStatus?.({ message: t('installSteps.backingUp'), phase: 'install' });
         await backupFiles(
           extractDir,
           fullTargetPath,
@@ -486,7 +509,7 @@ export async function installTranslation(
         );
       }
 
-      onStatus?.({ message: 'Копіювання файлів українізатора...', phase: 'install' });
+      onStatus?.({ message: t('installSteps.copying'), phase: 'install' });
       await copyDirectory(extractDir, fullTargetPath);
 
       // The files are already copied by this point, so a signing problem must
@@ -505,11 +528,11 @@ export async function installTranslation(
     }
 
     // 8. Cleanup
-    onStatus?.({ message: 'Очищення тимчасових файлів...', phase: 'install' });
+    onStatus?.({ message: t('installSteps.cleaning'), phase: 'install' });
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
-    const installationInfo: InstallationInfo = {
+    const result = await finish((component) => ({
       gameId: game.id,
       version: game.version || '1.0.0',
       installedAt: new Date().toISOString(),
@@ -526,24 +549,11 @@ export async function installTranslation(
         ...(installVoice && voiceFiles.length > 0
           ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
           : {}),
-        ...(installAchievements && achievementsFiles.length > 0 && achievementsInstallPath
-          ? {
-              achievements: {
-                installed: true,
-                files: achievementsFiles,
-                archiveHash: game.achievements_archive_hash || undefined,
-              },
-            }
-          : {}),
+        ...(component ? { achievements: component } : {}),
       },
-    };
-    await saveInstallationInfo(gamePath.path, installationInfo);
-
-    // 10. Steam-only tail: launch options + Ukrainian library artwork
-    const steam = await applySteamIntegration(game, gamePath, onStatus);
-
+    }));
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
-    return { ...steam, achievementsChanged };
+    return result;
   } catch (error) {
     // Handle pause specially - throw PausedSignal for IPC handler
     if (error instanceof Error && error.message === 'PAUSED') {

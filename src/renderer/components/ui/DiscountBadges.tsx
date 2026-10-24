@@ -1,7 +1,8 @@
 import React from 'react';
 import { useSteamDiscount } from '@/renderer/hooks/useDiscount';
 import { openSteamPage } from '@/renderer/utils/openWithFallback';
-import type { Game } from '../../types/game';
+import { t } from '@/shared/i18n/i18n';
+import type { Game } from '../../../shared/types';
 import {
   SteamIcon,
   // EAIcon,
@@ -67,7 +68,7 @@ export const DiscountBadges: React.FC<{ game: Game; type: BadgeStyleType }> = ({
       {steamPercent !== null && steamAppId !== null && (
         <DiscountBadge
           percent={steamPercent}
-          title="Відкрити в Steam"
+          title={t('gameInfo.openInSteam')}
           icon={<SteamIcon size={type === 'button' ? 22 : 20} />}
           onClick={() => openSteamPage(steamAppId)}
           type={type}

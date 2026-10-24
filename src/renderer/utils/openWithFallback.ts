@@ -1,4 +1,4 @@
-export async function openWithFallback(primary: string, fallback: string): Promise<void> {
+async function openWithFallback(primary: string, fallback: string): Promise<void> {
   const result = await window.electronAPI.openExternal(primary);
   if (!result.success) {
     await window.electronAPI.openExternal(fallback);

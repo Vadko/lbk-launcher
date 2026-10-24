@@ -1,21 +1,23 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowDownAZ,
-  ArrowUpDown,
-  Check,
-  Sparkles,
-  TrendingUp,
-  Users,
+  ArrowDownAZIcon,
+  ArrowUpDownIcon,
+  CheckIcon,
+  SparklesIcon,
+  TrendingUpIcon,
+  UsersIcon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
+import type { SortOrderType } from '../../../shared/types';
 import { Button } from '../ui/Button';
-import { SORT_OPTIONS, type SortOrderType } from './types';
+import { SORT_OPTIONS } from './types';
 
 const SORT_ICONS: Record<string, React.ReactNode> = {
-  name: <ArrowDownAZ size={14} />,
-  downloads: <TrendingUp size={14} />,
-  subscribers: <Users size={14} />,
-  newest: <Sparkles size={14} />,
+  name: <ArrowDownAZIcon size={14} />,
+  downloads: <TrendingUpIcon size={14} />,
+  subscribers: <UsersIcon size={14} />,
+  newest: <SparklesIcon size={14} />,
 };
 
 interface SortDropdownProps {
@@ -58,12 +60,12 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
   return (
     <div className="relative" ref={menuRef}>
       <Button
-        title="Сортування"
+        title={t('filterBar.sort')}
         variant="filter"
         onClick={() => setIsOpen((open) => !open)}
         {...headerItemProps}
       >
-        <ArrowUpDown size={14} />
+        <ArrowUpDownIcon size={14} />
       </Button>
 
       <AnimatePresence>
@@ -78,20 +80,21 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
           >
             <div className="py-1">
               {SORT_OPTIONS.map((option) => {
-                const selected = sortOrder === option.value;
+                const selected = sortOrder === option;
                 return (
                   <button
-                    key={option.value}
-                    onClick={() => handleSelect(option.value)}
+                    key={option}
+                    onClick={() => handleSelect(option)}
                     data-gamepad-dropdown-item
+                    data-gamepad-dropdown-selected={selected || undefined}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                       selected
                         ? 'bg-glass-hover text-text-main'
                         : 'text-text-muted hover:bg-glass hover:text-text-main'
                     }`}
                   >
-                    {selected ? <Check size={14} /> : SORT_ICONS[option.value]}
-                    <span className="flex-1">{option.label}</span>
+                    {selected ? <CheckIcon size={14} /> : SORT_ICONS[option]}
+                    <span className="flex-1">{t(`filterOptions.sort.${option}`)}</span>
                   </button>
                 );
               })}

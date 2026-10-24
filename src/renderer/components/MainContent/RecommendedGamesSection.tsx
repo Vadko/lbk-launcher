@@ -6,6 +6,7 @@ import { useRecommendedGames } from '@/renderer/queries/useRecommendedGames';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { trackEvent } from '@/renderer/utils/analytics';
+import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
@@ -20,7 +21,7 @@ interface RecommendedGamesSectionProps {
 export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = ({
   gameId,
   gameName,
-  title = 'Вас може зацікавити',
+  title = t('homeSections.recommended'),
   showLimit = 3,
 }) => {
   const isInstalled = useIsTranslationInstalled();

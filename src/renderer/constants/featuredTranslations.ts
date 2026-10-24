@@ -1,3 +1,5 @@
+import { t } from '@/shared/i18n/i18n';
+
 // Featured translations to highlight in the UI with trophy badge
 interface FeaturedTranslation {
   gameSlug: string;
@@ -9,12 +11,12 @@ interface FeaturedTranslation {
 const FEATURED_TRANSLATIONS: FeaturedTranslation[] = [
   {
     gameSlug: 'persona_4_golden',
-    description: 'Найочікуваніший переклад 2026 за версією спільноти',
+    description: t('translationAwards.mostAnticipated2026'),
     year: 2026,
   },
   {
     gameSlug: 'dispatch',
-    description: 'Найкращий текстовий переклад 2025 за версією спільноти',
+    description: t('translationAwards.bestText2025'),
     year: 2025,
   },
 ];
@@ -26,7 +28,9 @@ export const getFeaturedInfo = (
 ): FeaturedTranslation | null => {
   return (
     FEATURED_TRANSLATIONS.find(
-      (t) => t.gameSlug === gameSlug && (t.team === undefined || t.team === team)
+      (featured) =>
+        featured.gameSlug === gameSlug &&
+        (featured.team === undefined || featured.team === team)
     ) || null
   );
 };

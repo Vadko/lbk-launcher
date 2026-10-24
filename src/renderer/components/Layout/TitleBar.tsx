@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { CloseIcon } from '../Icons/CloseIcon';
 import { MaximizeIcon } from '../Icons/MaximizeIcon';
 import { MinimizeIcon } from '../Icons/MinimizeIcon';
@@ -11,14 +12,8 @@ interface TitleBarProps {
 
 export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [isMacOS26Plus, setIsMacOS26Plus] = useState(false);
-
-  // Check if running on macOS 26+ (has native window controls)
-  useEffect(() => {
-    window.liquidGlassAPI?.isSupported().then((supported) => {
-      setIsMacOS26Plus(supported);
-    });
-  }, []);
+  // macOS always shows the native traffic lights on the left instead of these controls.
+  const isMacOS = window.electronAPI?.getPlatform() === 'macos';
 
   useEffect(() => {
     window.windowControls?.onMaximizedChange((maximized) => {
@@ -32,20 +27,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
 
   return (
     <div
-      className={`drag-region fixed top-0 left-0 right-0 h-8 flex items-center justify-between pl-4 z-[9999] ${
+      className={`drag-region fixed top-0 left-0 right-0 h-8 flex items-center justify-between pl-4 z-9999 ${
         online ? '' : 'bg-red-500/20'
       } transition-colors`}
     >
-      {/* Hide LBK text on macOS 26+ to avoid overlap with native traffic lights */}
-      {!isMacOS26Plus && <div className="text-xs text-text-muted font-medium">LBK</div>}
-      {isMacOS26Plus && <div />}
+      {isMacOS ? <div /> : <div className="text-xs text-text-muted font-medium">LBK</div>}
 
-      <div className="text-[10px] text-text-muted/70 absolute left-1/2 -translate-x-1/2">
-        {`v${version}${online ? '' : ' · ви оффлайн'}`}
+      <div className="text-[10px] absolute left-1/2 -translate-x-1/2">
+        {`v${version}${online ? '' : t('titleBar.offlineSuffix')}`}
       </div>
 
-      {/* Hide custom window controls on macOS 26+ (has native controls) */}
-      {!isMacOS26Plus && (
+      {!isMacOS && (
         <div className="no-drag flex gap-1">
           <button
             onClick={handleMinimize}
@@ -67,7 +59,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
           </button>
         </div>
       )}
-      {isMacOS26Plus && <div />}
+      {isMacOS && <div />}
     </div>
   );
 };

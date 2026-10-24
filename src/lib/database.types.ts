@@ -502,6 +502,37 @@ export type Database = {
           },
         ]
       }
+      game_counters_touched: {
+        Row: {
+          broadcast_pending: boolean
+          game_id: string
+          touched_at: string
+        }
+        Insert: {
+          broadcast_pending?: boolean
+          game_id: string
+          touched_at?: string
+        }
+        Update: {
+          broadcast_pending?: boolean
+          game_id?: string
+          touched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_counters_touched_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_counters_touched_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
       game_downloads: {
         Row: {
           downloaded_at: string | null
@@ -603,6 +634,98 @@ export type Database = {
           },
           {
             foreignKeyName: "game_fundraising_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+        ]
+      }
+      game_hide_reasons: {
+        Row: {
+          game_id: string
+          hidden_at: string | null
+          hidden_by: string | null
+          reason: string
+          reason_code: string | null
+          reason_comment: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          game_id: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          reason: string
+          reason_code?: string | null
+          reason_comment?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          game_id?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          reason?: string
+          reason_code?: string | null
+          reason_comment?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_hide_reasons_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_hidden_by_fkey"
+            columns: ["hidden_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_hide_reasons_updated_by_fkey"
+            columns: ["updated_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_likes: {
+        Row: {
+          created_at: string
+          game_id: string
+          ip: string | null
+          machine_id: string
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          ip?: string | null
+          machine_id: string
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          ip?: string | null
+          machine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_likes_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_likes_game_id_fkey"
             columns: ["game_id"]
             referencedRelation: "trending_games_cache"
             referencedColumns: ["game_id"]
@@ -1253,7 +1376,7 @@ export type Database = {
           last_download_milestone: number
           last_subscriber_milestone: number
           license_only: boolean
-          likes_count: number
+          likes: number
           logo_path: string | null
           name: string
           name_fts: unknown
@@ -1363,7 +1486,7 @@ export type Database = {
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
-          likes_count?: number
+          likes?: number
           logo_path?: string | null
           name: string
           name_fts?: unknown
@@ -1473,7 +1596,7 @@ export type Database = {
           last_download_milestone?: number
           last_subscriber_milestone?: number
           license_only?: boolean
-          likes_count?: number
+          likes?: number
           logo_path?: string | null
           name?: string
           name_fts?: unknown
@@ -1538,6 +1661,77 @@ export type Database = {
           },
           {
             foreignKeyName: "games_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_pick_games: {
+        Row: {
+          game_id: string
+          position: number
+          set_id: string
+        }
+        Insert: {
+          game_id: string
+          position: number
+          set_id: string
+        }
+        Update: {
+          game_id?: string
+          position?: number
+          set_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_pick_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_pick_games_game_id_fkey"
+            columns: ["game_id"]
+            referencedRelation: "trending_games_cache"
+            referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "home_pick_games_set_id_fkey"
+            columns: ["set_id"]
+            referencedRelation: "home_pick_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_pick_sets: {
+        Row: {
+          created_by: string | null
+          expires_at: string
+          id: string
+          source: string
+          starts_at: string
+          title: string | null
+        }
+        Insert: {
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          source: string
+          starts_at?: string
+          title?: string | null
+        }
+        Update: {
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          source?: string
+          starts_at?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_pick_sets_created_by_fkey"
             columns: ["created_by"]
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -2349,6 +2543,34 @@ export type Database = {
           },
         ]
       }
+      support_message_links: {
+        Row: {
+          created_at: string
+          group_message_id: number
+          user_id: number
+          user_message_id: number
+        }
+        Insert: {
+          created_at?: string
+          group_message_id: number
+          user_id: number
+          user_message_id: number
+        }
+        Update: {
+          created_at?: string
+          group_message_id?: number
+          user_id?: number
+          user_message_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_message_links_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "user_threads"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       telegram_channel_queue: {
         Row: {
           content_type: string
@@ -2552,6 +2774,7 @@ export type Database = {
       }
       users: {
         Row: {
+          analytics_enabled: boolean
           approved: boolean
           approved_at: string | null
           approved_by: string | null
@@ -2575,6 +2798,7 @@ export type Database = {
           verified_user: boolean
         }
         Insert: {
+          analytics_enabled?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -2598,6 +2822,7 @@ export type Database = {
           verified_user?: boolean
         }
         Update: {
+          analytics_enabled?: boolean
           approved?: boolean
           approved_at?: string | null
           approved_by?: string | null
@@ -2667,6 +2892,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      broadcast_game_counters: { Args: never; Returns: undefined }
+      can_read_game_archive: {
+        Args: { object_name: string; object_owner: string }
+        Returns: boolean
+      }
+      can_upload_game_archive: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
       check_download_rate_limit: {
         Args: {
           p_game_id: string
@@ -2724,6 +2958,7 @@ export type Database = {
         }[]
       }
       generate_author_slug: { Args: { author_name: string }; Returns: string }
+      generate_auto_home_picks: { Args: { p_force?: boolean }; Returns: string }
       get_active_users: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -2781,6 +3016,25 @@ export type Database = {
           conversion_rate: number
           first_session_downloads: number
           total_first_launches: number
+        }[]
+      }
+      get_game_counters: {
+        Args: { p_since?: string }
+        Returns: {
+          downloads: number
+          game_id: string
+          likes: number
+          subscriptions: number
+          touched_at: string
+        }[]
+      }
+      get_home_picks: {
+        Args: never
+        Returns: {
+          expires_at: string
+          game_ids: string[]
+          starts_at: string
+          title: string
         }[]
       }
       get_landing_stats: {
@@ -2928,6 +3182,10 @@ export type Database = {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
       }
+      save_home_picks: {
+        Args: { p_game_ids: string[]; p_title?: string; p_user: string }
+        Returns: string
+      }
       scan_verdict_rank: { Args: { verdict: string }; Returns: number }
       search_steam_apps: {
         Args: { limit_val?: number; offset_val?: number; search_query: string }
@@ -2936,6 +3194,41 @@ export type Database = {
           installdir: string
           name: string
         }[]
+      }
+      set_game_hidden: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_hide: boolean
+          p_reason?: string
+          p_reason_code?: string
+          p_reason_comment?: string
+        }
+        Returns: {
+          game_name: string
+          game_slug: string
+          game_team: string
+          was_hidden: boolean
+        }[]
+      }
+      set_game_hide_reason: {
+        Args: {
+          p_actor: string
+          p_game_id: string
+          p_reason: string
+          p_reason_code?: string
+          p_reason_comment?: string
+        }
+        Returns: string
+      }
+      set_game_like: {
+        Args: {
+          p_game_id: string
+          p_ip?: string
+          p_liked: boolean
+          p_machine_id: string
+        }
+        Returns: number
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
@@ -2992,12 +3285,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3021,11 +3314,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3046,11 +3339,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3071,11 +3364,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3088,11 +3381,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

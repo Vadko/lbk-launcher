@@ -1,8 +1,10 @@
 import { app } from 'electron';
 import fs from 'fs';
-import got from 'got';
+import got, { HTTPError } from 'got';
 import path from 'path';
+import { setTimeout as sleep } from 'timers/promises';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type {
   DownloadProgress,
   InstallationStatus,
@@ -39,7 +41,10 @@ async function getFileSizeViaHead(url: string): Promise<number> {
 
     return 0;
   } catch (error) {
-    console.warn('[Downloader] HEAD request failed:', error);
+    console.warn(
+      '[Downloader] HEAD request failed:',
+      error instanceof HTTPError ? `HTTP ${error.response.statusCode}` : error
+    );
     return 0;
   }
 }
@@ -62,7 +67,7 @@ let currentDownloadState: {
 /**
  * Abort current download
  */
-export function abortCurrentDownload(reason = 'Завантаження скасовано'): void {
+export function abortCurrentDownload(reason: string = t('download.cancelled')): void {
   if (currentDownloadAbortController) {
     console.log('[Installer] Aborting current download:', reason);
     currentDownloadAbortController.abort(reason);
@@ -217,6 +222,16 @@ async function cleanupPartialFile(partialPath: string): Promise<void> {
  * Download file from URL with progress tracking and retry logic
  * Uses .part files for partial downloads to support pause/resume
  */
+// Signed download URLs carry an access token in the query, and logs can be sent with feedback.
+function withoutQuery(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return '[invalid url]';
+  }
+}
+
 export async function downloadFile(
   url: string,
   outputPath: string,
@@ -245,28 +260,24 @@ export async function downloadFile(
       if (attempt > 1) {
         console.log(`[Downloader] Retry attempt ${attempt}/${maxRetries}`);
         onStatus?.({
-          message: `Спроба ${attempt}/${maxRetries}... Перевірте підключення до Інтернету.`,
+          message: t('download.retryAttempt', { attempt, maxRetries }),
+          tone: 'retry',
           phase: 'download',
         });
-        // Wait before retry (exponential backoff)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 10000))
-        );
+        await sleep(Math.min(1000 * 2 ** (attempt - 1), 10000));
       } else if (currentStartByte > 0) {
-        onStatus?.({ message: 'Продовження завантаження...', phase: 'download' });
+        onStatus?.({ message: t('download.resuming'), phase: 'download' });
       } else {
-        onStatus?.({ message: 'Завантаження українізатора...', phase: 'download' });
+        onStatus?.({ message: t('download.downloading'), phase: 'download' });
       }
 
       // Check if cancelled/network lost before starting attempt
       if (signal?.aborted) {
         if (signal.reason === 'NETWORK_LOST') {
-          lastError = new NetworkError(
-            "З'єднання втрачено. Перевірте підключення до Інтернету."
-          );
+          lastError = new NetworkError(t('download.connectionLost'));
           break;
         }
-        throw new Error('Завантаження скасовано');
+        throw new Error(t('download.cancelled'));
       }
 
       await downloadFileAttempt(
@@ -302,7 +313,11 @@ export async function downloadFile(
       // Show user that error occurred
       if (error instanceof NetworkError && attempt < maxRetries) {
         onStatus?.({
-          message: `Помилка мережі. Спроба ${attempt + 1}/${maxRetries}...`,
+          message: t('download.networkRetry', {
+            attempt: attempt + 1,
+            maxRetries,
+          }),
+          tone: 'retry',
           phase: 'download',
         });
         // Don't clean up partial file on network error - we can resume
@@ -325,7 +340,10 @@ export async function downloadFile(
           await cleanupPartialFile(partialPath);
           throw error;
         }
-        if (message.includes('скасовано') || message.includes('aborted')) {
+        if (
+          message.includes(t('download.cancelled').toLowerCase()) ||
+          message.includes('aborted')
+        ) {
           if (!message.includes('paused')) {
             await cleanupPartialFile(partialPath);
           }
@@ -349,9 +367,10 @@ export async function downloadFile(
   await cleanupPartialFile(partialPath);
 
   throw new Error(
-    `Не вдалося завантажити файл після ${maxRetries} спроб.\n\n` +
-      `Остання помилка: ${lastError?.message || 'Невідома помилка'}\n\n` +
-      'Перевірте підключення до Інтернету та спробуйте ще раз.'
+    t('download.failedAfterRetries', {
+      maxRetries,
+      error: lastError?.message || t('common.unknownError'),
+    })
   );
 }
 
@@ -368,7 +387,7 @@ async function downloadFileAttempt(
   expectedTotalBytes = 0
 ): Promise<void> {
   console.log(
-    `[Downloader] Starting download: ${url}${startByte > 0 ? ` (resuming from byte ${startByte})` : ''}`
+    `[Downloader] Starting download: ${withoutQuery(url)}${startByte > 0 ? ` (resuming from byte ${startByte})` : ''}`
   );
 
   // Open file in append mode if resuming, otherwise overwrite
@@ -409,15 +428,13 @@ async function downloadFileAttempt(
           );
           serverSupportsRange = false;
           onStatus?.({
-            message: 'Сервер не підтримує продовження, перезапуск...',
+            message: t('download.rangeUnsupported'),
             phase: 'download',
           });
         } else if (response.statusCode === 416) {
           // Range not satisfiable - file may have changed on server
           console.error('[Downloader] Range not satisfiable (416)');
-          downloadStream.destroy(
-            new Error('Файл на сервері змінився, потрібно перезапустити завантаження')
-          );
+          downloadStream.destroy(new Error(t('download.fileChanged')));
           return;
         }
       }
@@ -439,7 +456,7 @@ async function downloadFileAttempt(
     // If already cancelled - stop immediately
     if (signal?.aborted) {
       downloadStream.destroy();
-      throw new Error(signal.reason || 'Завантаження скасовано');
+      throw new Error(signal.reason || t('download.cancelled'));
     }
 
     downloadStream.on('downloadProgress', (progress) => {
@@ -488,7 +505,7 @@ async function downloadFileAttempt(
         const onFreshAbort = () => {
           downloadStream.destroy();
           freshWriteStream.close();
-          reject(new Error(signal?.reason || 'Завантаження скасовано'));
+          reject(new Error(signal?.reason || t('download.cancelled')));
         };
 
         signal?.addEventListener('abort', onFreshAbort);
@@ -513,7 +530,7 @@ async function downloadFileAttempt(
       const onAbort = () => {
         downloadStream.destroy();
         writeStream.close();
-        const reason = signal?.reason || 'Завантаження скасовано';
+        const reason = signal?.reason || t('download.cancelled');
         reject(new Error(reason));
       };
 
@@ -539,7 +556,10 @@ async function downloadFileAttempt(
 
     console.log(`[Downloader] Download completed: ${outputPath}`);
   } catch (error) {
-    console.error(`[Downloader] Download error:`, error);
+    console.error(
+      `[Downloader] Download error:`,
+      error instanceof HTTPError ? `HTTP ${error.response.statusCode}` : error
+    );
 
     // Provide more specific error messages and notify UI
     if (error instanceof Error) {
@@ -550,53 +570,72 @@ async function downloadFileAttempt(
         throw error;
       }
 
+      if (error instanceof HTTPError) {
+        const { statusCode, statusMessage = '' } = error.response;
+        if ([408, 504, 524].includes(statusCode) || /timeout/i.test(statusMessage)) {
+          onStatus?.({
+            message: t('download.timeout'),
+            tone: 'error',
+          });
+          throw new NetworkError(t('download.timeout'));
+        }
+        onStatus?.({ message: t('download.failed'), tone: 'error' });
+        throw new Error(t('download.httpError', { statusCode, statusMessage }).trim());
+      }
+
       // Check for cancellation
-      if (message.includes('скасовано') || message.includes('aborted')) {
-        onStatus?.({ message: `❌ ${error.message}` });
+      if (
+        message.includes(t('download.cancelled').toLowerCase()) ||
+        message.includes('aborted')
+      ) {
+        onStatus?.({ message: error.message, tone: 'error' });
         throw error;
       }
 
       if (message.includes('enotfound') || message.includes('getaddrinfo')) {
-        onStatus?.({ message: '❌ Відсутнє підключення до Інтернету' });
-        throw new NetworkError(
-          'Не вдалося підключитися до сервера. Перевірте підключення до Інтернету.'
-        );
+        onStatus?.({ message: t('download.noInternet'), tone: 'error' });
+        throw new NetworkError(t('download.connectFailed'));
       }
 
       if (message.includes('etimedout') || message.includes('timeout')) {
         onStatus?.({
-          message: '❌ Час очікування вичерпано. Перевірте підключення до Інтернету.',
+          message: t('download.timeout'),
+          tone: 'error',
         });
-        throw new NetworkError(
-          'Час очікування вичерпано. Перевірте підключення до Інтернету.'
-        );
+        throw new NetworkError(t('download.timeout'));
       }
 
-      if (message.includes('econnreset') || message.includes('socket hang up')) {
+      if (
+        message.includes('econnreset') ||
+        message.includes('socket hang up') ||
+        (error as { code?: string }).code === 'ERR_HTTP_CONTENT_LENGTH_MISMATCH'
+      ) {
         onStatus?.({
-          message: "❌ З'єднання розірвано. Перевірте підключення до Інтернету.",
+          message: t('download.connectionReset'),
+          tone: 'error',
         });
-        throw new NetworkError(
-          "З'єднання розірвано. Перевірте підключення до Інтернету."
-        );
+        throw new NetworkError(t('download.connectionReset'));
       }
 
       if (message.includes('econnrefused')) {
-        onStatus?.({ message: '❌ Сервер недоступний' });
-        throw new NetworkError('Сервер недоступний. Спробуйте пізніше.');
+        onStatus?.({ message: t('download.serverUnavailable'), tone: 'error' });
+        throw new NetworkError(t('download.serverUnavailableRetry'));
       }
 
       // Network lost abort from offline detection
       if (message === 'network_lost') {
-        throw new NetworkError("З'єднання втрачено. Перевірте підключення до Інтернету.");
+        throw new NetworkError(t('download.connectionLost'));
       }
     }
 
     onStatus?.({
-      message: '❌ Помилка завантаження. Перевірте підключення до Інтернету.',
+      message: t('download.failedCheckConnection'),
+      tone: 'error',
     });
     throw new Error(
-      `Помилка завантаження: ${error instanceof Error ? error.message : 'Невідома помилка'}`
+      t('download.failedWithError', {
+        error: error instanceof Error ? error.message : t('common.unknownError'),
+      })
     );
   } finally {
     writeStream.close();

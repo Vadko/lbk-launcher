@@ -1,10 +1,12 @@
 import { execSync } from 'child_process';
 import { app } from 'electron';
 import fs from 'fs';
-import { extractFull } from 'node-7z';
+import { add, extractFull } from 'node-7z';
 import path from 'path';
 import { promisify } from 'util';
+import { t } from '@/shared/i18n/i18n';
 import type { InstallationStatus } from '../../shared/types';
+import { getCleanEnv } from '../utils/host-exec';
 import { forCurrentOS, isLinux } from '../utils/platform';
 
 const mkdir = promisify(fs.mkdir);
@@ -32,17 +34,6 @@ function getResourcesBased7zPath(): string {
     : path.join(app.getAppPath(), 'node_modules', '7zip-bin-full');
 
   return get7zBinaryPath(basePath);
-}
-
-/**
- * Get clean environment without Steam's LD_PRELOAD
- * Steam Deck sets LD_PRELOAD with 32-bit libraries that conflict with 64-bit processes
- */
-export function getCleanEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  // Remove LD_PRELOAD to avoid "wrong ELF class" errors from Steam Overlay
-  delete env.LD_PRELOAD;
-  return env;
 }
 
 /**
@@ -101,17 +92,6 @@ function get7zPath(): string {
 }
 
 /**
- * Check if error is just a Steam Deck LD_PRELOAD warning (not a real error)
- */
-function isLdPreloadWarning(errorMessage: string, stderr?: string): boolean {
-  const text = `${errorMessage} ${stderr || ''}`.toLowerCase();
-  return (
-    (text.includes('ld_preload') || text.includes('wrong elf class')) &&
-    text.includes('ignored')
-  );
-}
-
-/**
  * Extract ZIP archive with support for all compression methods and UTF-8/Cyrillic filenames
  * Uses 7-Zip which supports LZMA, Deflate64, and all other compression methods
  */
@@ -162,7 +142,7 @@ export async function extractArchive(
       lastPercent = percent;
       console.log(`[Installer] Extraction progress: ${percent}%`);
       onStatus?.({
-        message: `Розпакування файлів... ${percent}%`,
+        message: t('installArchive.extracting', { percent }),
         progress: percent,
         phase: 'install',
       });
@@ -170,27 +150,35 @@ export async function extractArchive(
 
     stream.on('end', () => {
       console.log(`[Installer] Extracted archive to: ${extractPath}`);
-      onStatus?.({ message: 'Розпакування завершено', phase: 'install' });
+      onStatus?.({ message: t('installArchive.extracted'), phase: 'install' });
       resolve();
     });
 
     stream.on('error', (err: Error & { stderr?: string }) => {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      const stderr = err.stderr || '';
-
-      // Ignore LD_PRELOAD warnings from Steam Deck (not a real error)
-      if (isLdPreloadWarning(errorMessage, stderr)) {
-        console.log(
-          `[Installer] Ignoring LD_PRELOAD warning (Steam Deck): ${errorMessage}`
-        );
-        return;
-      }
-
       console.error(`[Installer] extractArchive failed:`, {
         message: errorMessage,
+        stderr: err.stderr,
         archivePath,
       });
-      reject(new Error(`Помилка розпакування архіву: ${errorMessage}`));
+      reject(new Error(t('installArchive.extractFailed', { error: errorMessage })));
     });
+  });
+}
+
+// Zips `srcDir` as one top-level folder named after it (relative source + cwd keep the folder in the paths).
+export function createZip(srcDir: string, outFile: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const stream = add(outFile, path.basename(srcDir), {
+      $bin: get7zPath(),
+      $spawnOptions: {
+        cwd: path.dirname(srcDir),
+        env: isLinux() ? getCleanEnv() : process.env,
+      },
+      archiveType: 'zip',
+      yes: true,
+    });
+    stream.on('end', () => resolve());
+    stream.on('error', (err: Error) => reject(new Error(`7z failed: ${err.message}`)));
   });
 }

@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { SortOrderType } from '../../shared/types';
 import type {
   ContentTypeFilterType,
+  SortOrderType,
   SpecialFilterType,
   TranslationTypeFilterType,
-} from '../components/Sidebar/types';
+} from '../../shared/types';
 import { electronStorage } from './electronStorage';
 import { useSubscriptionsStore } from './useSubscriptionsStore';
 
@@ -48,6 +48,11 @@ interface SettingsStore {
   gamepadSoundsEnabled: boolean;
   steamCefDebuggingEnabled: boolean;
   steamCustomArtworkEnabled: boolean;
+  millenniumOfferDeclined: boolean;
+  deckyPluginOfferDeclined: boolean;
+  productAnalyticsEnabled: boolean;
+  localizationAnalyticsEnabled: boolean;
+  crashDiagnosticsEnabled: boolean;
   isSettingsModalOpen: boolean;
   sidebarWidth: number;
   specialFilter: SpecialFilterType | null;
@@ -77,6 +82,11 @@ interface SettingsStore {
   toggleGamepadSounds: () => void;
   toggleSteamCefDebugging: () => void;
   toggleSteamCustomArtwork: () => void;
+  declineMillenniumOffer: () => void;
+  declineDeckyPluginOffer: () => void;
+  toggleProductAnalytics: () => void;
+  toggleLocalizationAnalytics: () => void;
+  toggleCrashDiagnostics: () => void;
   setSidebarWidth: (width: number) => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
@@ -97,6 +107,11 @@ export const useSettingsStore = create<SettingsStore>()(
       gamepadSoundsEnabled: true,
       steamCefDebuggingEnabled: true,
       steamCustomArtworkEnabled: true,
+      millenniumOfferDeclined: false,
+      deckyPluginOfferDeclined: false,
+      productAnalyticsEnabled: true,
+      localizationAnalyticsEnabled: true,
+      crashDiagnosticsEnabled: true,
       isSettingsModalOpen: false,
       sidebarWidth: 320,
       specialFilter: null,
@@ -202,6 +217,21 @@ export const useSettingsStore = create<SettingsStore>()(
       toggleSteamCustomArtwork: () =>
         set((state) => ({ steamCustomArtworkEnabled: !state.steamCustomArtworkEnabled })),
 
+      declineMillenniumOffer: () => set({ millenniumOfferDeclined: true }),
+
+      declineDeckyPluginOffer: () => set({ deckyPluginOfferDeclined: true }),
+
+      toggleProductAnalytics: () =>
+        set((state) => ({ productAnalyticsEnabled: !state.productAnalyticsEnabled })),
+
+      toggleLocalizationAnalytics: () =>
+        set((state) => ({
+          localizationAnalyticsEnabled: !state.localizationAnalyticsEnabled,
+        })),
+
+      toggleCrashDiagnostics: () =>
+        set((state) => ({ crashDiagnosticsEnabled: !state.crashDiagnosticsEnabled })),
+
       setSidebarWidth: (width) => set({ sidebarWidth: width }),
 
       openSettingsModal: () => set({ isSettingsModalOpen: true }),
@@ -233,6 +263,11 @@ export const useSettingsStore = create<SettingsStore>()(
         gamepadSoundsEnabled: state.gamepadSoundsEnabled,
         steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,
         steamCustomArtworkEnabled: state.steamCustomArtworkEnabled,
+        millenniumOfferDeclined: state.millenniumOfferDeclined,
+        deckyPluginOfferDeclined: state.deckyPluginOfferDeclined,
+        productAnalyticsEnabled: state.productAnalyticsEnabled,
+        localizationAnalyticsEnabled: state.localizationAnalyticsEnabled,
+        crashDiagnosticsEnabled: state.crashDiagnosticsEnabled,
         sidebarWidth: state.sidebarWidth,
         specialFilter: state.specialFilter,
         selectedContentTypes: state.selectedContentTypes,

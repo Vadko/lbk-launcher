@@ -3,10 +3,16 @@ import { init as reactInit } from '@sentry/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { I18nextProvider } from 'react-i18next';
+import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initFeedbackReplies } from './store/feedbackReplyBridge';
+import { initLikes } from './store/likesBridge';
+import { useSettingsStore } from './store/useSettingsStore';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
+import '@fontsource-variable/inter';
+import '@fontsource-variable/space-grotesk';
 import './styles/globals.css';
 import './styles/animations.css';
 
@@ -14,11 +20,14 @@ import './styles/animations.css';
 sentryInit(
   {
     release: __SENTRY_RELEASE__,
-    sendDefaultPii: true,
-    enabled: !window.electronAPI?.isE2E?.(),
+    enabled:
+      !window.electronAPI?.isE2E?.() &&
+      useSettingsStore.getState().crashDiagnosticsEnabled,
     integrations: [browserTracingIntegration()],
     tracesSampleRate: 1.0,
-    enableLogs: true,
+    // GlitchTip ignores streamed span items, so keep sending whole transactions
+    traceLifecycle: 'static',
+    attachStacktrace: false,
   },
   reactInit
 );
@@ -28,6 +37,9 @@ initGlobalErrorHandlers();
 
 // Bridge feedback replies (IPC) into the notification store — once, outside React.
 initFeedbackReplies();
+
+// Bridge the liked set (IPC) into the likes store — once, outside React.
+initLikes();
 
 console.log('[Renderer] Starting React application...');
 
@@ -39,9 +51,11 @@ try {
 
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </I18nextProvider>
     </React.StrictMode>
   );
 

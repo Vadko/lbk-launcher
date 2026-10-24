@@ -1,7 +1,11 @@
-import { Download, ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide';
+import { ExternalLinkIcon } from 'lucide-react';
 import { useEffect } from 'react';
+import { t } from '@/shared/i18n/i18n';
+import { useActionPhase } from '../../hooks/useActionPhase';
 import { useWorkshopInstallsStore } from '../../store/useWorkshopInstallsStore';
 import { openWorkshopPage } from '../../utils/openWithFallback';
+import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
 
@@ -27,6 +31,8 @@ export function WorkshopInstallButton({
   const reconcile = useWorkshopInstallsStore((s) => s.reconcile);
   const install = useWorkshopInstallsStore((s) => s.install);
   const remove = useWorkshopInstallsStore((s) => s.remove);
+  const installAction = useActionPhase();
+  const removeAction = useActionPhase();
 
   useEffect(() => {
     if (steamAppId) {
@@ -34,63 +40,90 @@ export function WorkshopInstallButton({
     }
   }, [gameId, steamAppId, workshopId, reconcile]);
 
-  const label = pending
-    ? pending === 'removing'
-      ? 'Видалення в Steam…'
-      : 'Завантаження в Steam…'
-    : 'Встановити зі Steam';
+  const installPhase =
+    pending && pending !== 'removing' ? 'pending' : installAction.phase;
+  const removePhase = pending === 'removing' ? 'pending' : removeAction.phase;
+  const isPending = Boolean(pending) || installAction.isPending || removeAction.isPending;
+
+  const handleInstall = async () => {
+    if (isPending) {
+      return;
+    }
+    const ok = await installAction.attempt(
+      () => install({ gameId, appId: steamAppId, workshopId }),
+      { isSuccess: (ok) => ok, label: 'WorkshopInstallButton.install' }
+    );
+    if (ok) {
+      installAction.reset();
+    }
+  };
+
+  const handleRemove = async () => {
+    if (isPending) {
+      return;
+    }
+    const ok = await removeAction.attempt(
+      () => remove({ gameId, appId: steamAppId, workshopId }),
+      { isSuccess: (ok) => ok, label: 'WorkshopInstallButton.remove' }
+    );
+    if (ok) {
+      removeAction.reset();
+    }
+  };
 
   const hint = isTombstoned
-    ? 'Переклад більше не доступний у каталозі'
+    ? t('workshopButton.tombstoned')
     : !isOnline
-      ? 'Відсутнє підключення до Інтернету'
+      ? t('workshopButton.offline')
       : !isGameInstalledOnSystem
-        ? 'Гру не встановлено на цьому пристрої'
+        ? t('workshopButton.gameNotInstalled')
         : pending === 'downloading'
-          ? 'Прогрес показано в клієнті Steam'
+          ? t('workshopButton.progressInSteam')
           : null;
-
-  const showActionSlot = !installed || Boolean(pending);
-
-  const icon = pending ? (
-    <RefreshCw size={20} className="animate-spin" />
-  ) : (
-    <Download size={20} />
-  );
 
   return (
     <>
-      {showActionSlot && (
+      {!installed && (
         <Tooltip content={hint}>
           <Button
             variant="primary"
-            icon={icon}
-            onClick={() => void install({ gameId, appId: steamAppId, workshopId })}
-            disabled={
-              !isOnline || isTombstoned || !isGameInstalledOnSystem || Boolean(pending)
+            icon={
+              <AppActionIcon
+                phase={installPhase}
+                icon={Download}
+                size={20}
+                inheritColor
+              />
             }
+            onClick={() => void handleInstall()}
+            aria-busy={installPhase === 'pending'}
+            disabled={!isOnline || isTombstoned || !isGameInstalledOnSystem || isPending}
+            className="aria-busy:cursor-wait"
             data-gamepad-primary-action
             data-gamepad-action
           >
-            {label}
+            {t('workshopButton.install')}
           </Button>
         </Tooltip>
       )}
       <Button
         variant="secondary"
-        icon={<ExternalLink size={20} />}
+        icon={<ExternalLinkIcon size={20} />}
         onClick={() => void openWorkshopPage(workshopId)}
-        title="Відкрити сторінку в Майстерні"
+        title={t('workshopButton.openPageTitle')}
         data-gamepad-action
       >
-        Майстерня
+        {t('workshopButton.openPage')}
       </Button>
-      {installed && !pending && (
+      {installed && (
         <Button
           variant="secondary"
-          icon={<Trash2 size={20} />}
-          onClick={() => void remove({ gameId, appId: steamAppId, workshopId })}
-          title="Скасувати підписку в Steam"
+          icon={<AppActionIcon phase={removePhase} icon={Trash2} size={20} />}
+          onClick={() => void handleRemove()}
+          aria-busy={removePhase === 'pending'}
+          disabled={isPending}
+          className="aria-busy:cursor-wait"
+          title={t('workshopButton.unsubscribeTitle')}
           data-gamepad-action
         />
       )}

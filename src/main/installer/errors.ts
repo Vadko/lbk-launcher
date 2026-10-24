@@ -1,4 +1,4 @@
-import { plural } from '@/shared/plural';
+import { t } from '@/shared/i18n/i18n';
 
 /**
  * Error that requires manual folder selection
@@ -63,13 +63,14 @@ export class RateLimitError extends Error {
           hour12: false,
           timeZone: 'Europe/Kyiv',
         })
-      : 'невідомо';
+      : t('downloadLimit.unknownTime');
 
     super(
-      `Перевищено ліміт завантажень.\n\n` +
-        `Ви вже завантажили цю гру ${downloadsToday} ${plural(downloadsToday, 'раз', 'рази', 'разів')} за останні 24 години.\n` +
-        `Максимум дозволено: ${maxAllowed} ${plural(maxAllowed, 'завантаження', 'завантаження', 'завантажень')} на добу для великих ігор.\n\n` +
-        `Спробуйте знову після ${timeStr}.`
+      t('downloadLimit.message', {
+        used: t('downloadLimit.used', { count: downloadsToday }),
+        max: t('downloadLimit.max', { count: maxAllowed }),
+        time: timeStr,
+      })
     );
     this.name = 'RateLimitError';
     this.nextAvailableAt = nextAvailableAt;

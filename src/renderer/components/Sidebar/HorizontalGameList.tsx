@@ -1,11 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { motion } from 'framer-motion';
 import React, { useEffect, useMemo } from 'react';
+import { t } from '@/shared/i18n/i18n';
+import type { Game } from '../../../shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { useListAnimation } from '../../hooks/useListAnimation';
 import { useListCompositionKey } from '../../hooks/useListCompositionKey';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
-import type { Game } from '../../types/game';
 import { Loader } from '../ui/Loader';
 import { GAMEPAD_CARD_STRIDE } from './constants';
 import { GamepadCard } from './GamepadCard';
@@ -60,8 +61,8 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
       getItemKey: (index) => gameGroups[index].key,
     });
 
-    // Даємо геймпад-навігації канонічний scrollToIndex віртуалізатора,
-    // щоб вона могла доскролити до ще не змонтованої картки
+    // Give gamepad navigation the virtualizer's canonical scrollToIndex,
+    // so it can scroll to a card that isn't mounted yet
     const setScrollGameListToIndex = useGamepadModeStore(
       (s) => s.setScrollGameListToIndex
     );
@@ -85,7 +86,7 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     if (totalGames === 0) {
       return (
         <div className="flex items-center justify-center h-32 text-text-muted">
-          <p>Ігор не знайдено</p>
+          <p>{t('homeSections.noGames')}</p>
         </div>
       );
     }
@@ -95,9 +96,13 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
         {virtualizer.getVirtualItems().map((virtualCol) => {
           const group = gameGroups[virtualCol.index];
           const primaryGame = group.translations[0];
-          const isSelected = group.translations.some((t) => selectedGameId === t.id);
-          const hasUpdate = group.translations.some((t) => gamesWithUpdates.has(t.id));
-          const detected = group.translations.some((t) => isGameDetected(t.id));
+          const isSelected = group.translations.some(
+            (game) => selectedGameId === game.id
+          );
+          const hasUpdate = group.translations.some((game) =>
+            gamesWithUpdates.has(game.id)
+          );
+          const detected = group.translations.some((game) => isGameDetected(game.id));
 
           const handleClick = () => {
             if (group.translations.length > 1) {
