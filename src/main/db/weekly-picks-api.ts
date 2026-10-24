@@ -1,11 +1,11 @@
-import type { HomePicks } from '../../shared/home-picks-types';
+import type { WeeklyPicks } from '../../shared/weekly-picks-types';
 import { getSupabaseClient } from './supabase-client';
 
-export async function fetchHomePicks(): Promise<HomePicks | null> {
+export async function fetchWeeklyPicks(): Promise<WeeklyPicks | null> {
   const { data, error } = await getSupabaseClient().rpc('get_home_picks');
 
   if (error) {
-    console.warn('[HomePicks] Failed to fetch the current set:', error.message);
+    console.warn('[WeeklyPicks] Failed to fetch the current set:', error.message);
     return null;
   }
 

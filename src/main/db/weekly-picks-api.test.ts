@@ -4,7 +4,7 @@ const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 
 vi.mock('./supabase-client', () => ({ getSupabaseClient: () => ({ rpc }) }));
 
-const { fetchHomePicks } = await import('./home-picks-api');
+const { fetchWeeklyPicks } = await import('./weekly-picks-api');
 
 const row = {
   title: 'Halloween',
@@ -18,11 +18,11 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
-describe('fetchHomePicks', () => {
+describe('fetchWeeklyPicks', () => {
   it('maps the current set', async () => {
     rpc.mockResolvedValue({ data: [row], error: null });
 
-    await expect(fetchHomePicks()).resolves.toEqual({
+    await expect(fetchWeeklyPicks()).resolves.toEqual({
       title: 'Halloween',
       startsAt: row.starts_at,
       expiresAt: row.expires_at,
@@ -34,7 +34,7 @@ describe('fetchHomePicks', () => {
   it('keeps a missing title as null', async () => {
     rpc.mockResolvedValue({ data: [{ ...row, title: null }], error: null });
 
-    await expect(fetchHomePicks()).resolves.toMatchObject({ title: null });
+    await expect(fetchWeeklyPicks()).resolves.toMatchObject({ title: null });
   });
 
   it.each([
@@ -45,6 +45,6 @@ describe('fetchHomePicks', () => {
   ])('returns null for %s', async (_label, response) => {
     rpc.mockResolvedValue(response);
 
-    await expect(fetchHomePicks()).resolves.toBeNull();
+    await expect(fetchWeeklyPicks()).resolves.toBeNull();
   });
 });

@@ -1,28 +1,28 @@
 import type { Game } from '../../shared/types';
-import { orderHomePickGames } from '../utils/homePicks';
+import { orderWeeklyPickGames } from '../utils/weeklyPicks';
 import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 const ONE_HOUR = 60 * 60 * 1000;
 
-interface HomePicksWithGames {
+interface WeeklyPicksWithGames {
   title: string | null;
   games: Game[];
 }
 
-const homePicksKeys = {
-  all: ['home-picks'] as const,
+const weeklyPicksKeys = {
+  all: ['weekly-picks'] as const,
   withGames: (hideAiTranslations: boolean) =>
-    [...homePicksKeys.all, 'with-games', hideAiTranslations] as const,
+    [...weeklyPicksKeys.all, 'with-games', hideAiTranslations] as const,
 };
 
-export function useHomePicks(hideAiTranslations: boolean) {
+export function useWeeklyPicks(hideAiTranslations: boolean) {
   return useSyncAwareQuery({
-    queryKey: homePicksKeys.withGames(hideAiTranslations),
-    queryFn: async (): Promise<HomePicksWithGames> => {
-      const picks = await window.electronAPI.fetchHomePicks();
+    queryKey: weeklyPicksKeys.withGames(hideAiTranslations),
+    queryFn: async (): Promise<WeeklyPicksWithGames> => {
+      const picks = await window.electronAPI.fetchWeeklyPicks();
       if (!picks) {
         // Throwing keeps the last good data while a refresh fails; with none, the section stays hidden
-        throw new Error('No current home picks');
+        throw new Error('No current weekly picks');
       }
 
       const games = await window.electronAPI.fetchGamesByIds(
@@ -30,7 +30,7 @@ export function useHomePicks(hideAiTranslations: boolean) {
         undefined,
         hideAiTranslations
       );
-      return { title: picks.title, games: orderHomePickGames(picks.gameIds, games) };
+      return { title: picks.title, games: orderWeeklyPickGames(picks.gameIds, games) };
     },
     staleTime: ONE_HOUR,
     gcTime: ONE_HOUR,

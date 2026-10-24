@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-import { useHomePicks } from '@/renderer/queries/useHomePicks';
+import { useWeeklyPicks } from '@/renderer/queries/useWeeklyPicks';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { trackEvent } from '@/renderer/utils/analytics';
@@ -10,7 +10,7 @@ import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { GameListItem } from '../Sidebar/GameListItem';
 
-export const HomePicksSection: React.FC = () => {
+export const WeeklyPicksSection: React.FC = () => {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
   const hideAiTranslations = useSettingsStore((state) => state.hideAiTranslations);
@@ -20,7 +20,7 @@ export const HomePicksSection: React.FC = () => {
       isGameDetected: state.isGameDetected,
     }))
   );
-  const { data } = useHomePicks(hideAiTranslations);
+  const { data } = useWeeklyPicks(hideAiTranslations);
 
   if (!data || data.games.length === 0) {
     return null;
@@ -37,7 +37,7 @@ export const HomePicksSection: React.FC = () => {
         {data.games.map((game, index) => (
           <motion.div
             key={game.id}
-            id={`home-pick-${game.slug}`}
+            id={`weekly-pick-${game.slug}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
@@ -58,8 +58,8 @@ export const HomePicksSection: React.FC = () => {
               }
               onClick={() => {
                 trackEvent('Select game', {
-                  'Is home pick': true,
-                  'Home pick title': data.title ?? 'default',
+                  'Is weekly pick': true,
+                  'Weekly pick title': data.title ?? 'default',
                   'Game Id': game.id,
                   'Game Name': game.name,
                 });

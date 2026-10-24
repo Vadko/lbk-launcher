@@ -54,38 +54,38 @@ Cron: `cron.schedule('generate-auto-home-picks', '0 * * * *', 'SELECT public.gen
 
 ## Адмінка (`lbk-admin`)
 
-Вкладка `homePicks` («Добірка тижня») в `AdminPanel.tsx`, `visible: isAdmin`, з `prefetchHomePicks` у `TAB_PREFETCH`.
+Вкладка `weeklyPicks` («Добірка тижня») в `AdminPanel.tsx`, `visible: isAdmin`, з `prefetchWeeklyPicks` у `TAB_PREFETCH`.
 
-Компонент `HomePicksTab`:
+Компонент `WeeklyPicksTab`:
 
 - «Поточний набір»: заголовок, мітка «Автоматично» чи «Вручну», «діє до …», три картки з назвою, командою і позначкою ШІ.
 - Редагування: поле заголовка (порожнє означає «Добірка тижня»), три слоти з кнопкою «Замінити» і пошуком за назвою, slug чи командою. «Зберегти» активна лише для 3 різних перекладів. Під кнопкою підпис, що збереження запускає новий 7-денний відлік.
 - «Випадкова трійка»: одразу створює новий автонабір, відлік теж стартує заново.
 - «Історія»: останні 8 наборів, лише читання.
 
-API у `src/app/api/admin/home-picks/`. Усі з `requireAuth(request, { requireRole: 'admin' })`, помилки через `t(...)`, кожен роут має `route.test.ts`:
+API у `src/app/api/admin/weekly-picks/`. Усі з `requireAuth(request, { requireRole: 'admin' })`, помилки через `t(...)`, кожен роут має `route.test.ts`:
 
 - `GET`: `{ current, history }`, ігри підтягуються одним join-ом через `home_pick_games`.
 - `PUT`: тіло перевіряє zod 4: `title` рядок до 60 символів або `null`, `gameIds` рівно 3 різні uuid. Викликає `save_home_picks`. Код `invalid_home_picks` дає 400.
 - `POST`: викликає `generate_auto_home_picks(true)`. Якщо повернулось `null`, відповідь 409 з повідомленням, що кандидатів замало.
 - `GET /games?search=`: від 2 символів, до 10 схвалених не прихованих ігор, фільтр через наявний `buildIlikeOrFilter(['name', 'slug', 'team'], search)`.
 
-Клієнт: `useHomePicksQuery` (ключі з фабрики `queryKeys`, мутації інвалідують `homePicks`), `useActionPhase` на кнопках, без емодзі. Тексти через `useTranslations` лежать у словниках `uk`, `be` і `en` пакета `@lbk/i18n` (`supabase/functions/_shared/i18n/`): кожен новий ключ додається в усі три, а `dictionaries.test.ts` вимагає, щоб ключ `uk` реально читався в коді.
+Клієнт: `useWeeklyPicksQuery` (ключі з фабрики `queryKeys`, мутації інвалідують `weeklyPicks`), `useActionPhase` на кнопках, без емодзі. Тексти через `useTranslations` лежать у словниках `uk`, `be` і `en` пакета `@lbk/i18n` (`supabase/functions/_shared/i18n/`): кожен новий ключ додається в усі три, а `dictionaries.test.ts` вимагає, щоб ключ `uk` реально читався в коді.
 
 ## Лаунчер (`lbk-launcher`)
 
 Main:
 
-- `src/main/db/home-picks-api.ts`: `fetchHomePicks()` викликає `supabase.rpc('get_home_picks')`. Помилка чи порожня відповідь повертає `null`. Лог із тегом `[HomePicks]`.
-- `src/main/ipc/home-picks.ts`: `setupHomePicksHandlers()` реєструє канал `fetch-home-picks`. Виклик додається в `src/main/index.ts` до інших `setup*Handlers()`, усередині гілки single-instance lock.
-- `src/shared/home-picks-types.ts`: `HomePicks { title: string | null; startsAt: string; expiresAt: string; gameIds: string[] }` і `HomePicksAPI { fetchHomePicks(): Promise<HomePicks | null> }`. В `src/shared/types.ts` додається лише `ElectronAPI extends HomePicksAPI`, бо файл уже 536 рядків.
-- `src/preload/index.ts`: метод `fetchHomePicks`.
+- `src/main/db/weekly-picks-api.ts`: `fetchWeeklyPicks()` викликає `supabase.rpc('get_home_picks')`. Помилка чи порожня відповідь повертає `null`. Лог із тегом `[WeeklyPicks]`.
+- `src/main/ipc/weekly-picks.ts`: `setupWeeklyPicksHandlers()` реєструє канал `fetch-weekly-picks`. Виклик додається в `src/main/index.ts` до інших `setup*Handlers()`, усередині гілки single-instance lock.
+- `src/shared/weekly-picks-types.ts`: `WeeklyPicks { title: string | null; startsAt: string; expiresAt: string; gameIds: string[] }` і `WeeklyPicksAPI { fetchWeeklyPicks(): Promise<WeeklyPicks | null> }`. В `src/shared/types.ts` додається лише `ElectronAPI extends WeeklyPicksAPI`, бо файл уже 536 рядків.
+- `src/preload/index.ts`: метод `fetchWeeklyPicks`.
 
 Renderer:
 
-- `src/renderer/queries/useHomePicks.ts` через `useSyncAwareQuery`. Бере `HomePicks` з IPC, потім `fetchGamesByIds(ids, undefined, hideAiTranslations)`, зберігає серверний порядок, відкидає ігри, яких немає в локальному каталозі. Ключ містить `hideAiTranslations`, а сам фільтр ШІ виконує `fetchGamesByIds` у SQL (`ai IS NULL`). `staleTime` і `refetchInterval` по 1 годині. Застосунок глобально вимикає `refetchOnWindowFocus` (`queryClient.ts`), тож для цього запиту він вмикається явно: лаунчер днями висить у треї, і `refetchInterval` у фоні не працює. Якщо IPC повернув `null`, запит кидає помилку: React Query тоді лишає останні дані, а без жодних даних секція прихована.
-- Перетворення «id → впорядковані ігри» (`orderHomePickGames`, чиста функція в `src/renderer/utils/homePicks.ts`) зберігає серверний порядок, прибирає дублікати та ігри, яких немає в локальному каталозі.
-- `src/renderer/components/MainContent/HomePicksSection.tsx` за зразком `TrendGamesSection`: `<h2>` із `title ?? t('homeSections.weeklyPicks')`, три `GameListItem` (`isCardStyle`), без кнопки «Переглянути всі». Без даних компонент повертає `null`. Клік шле `trackEvent('Select game', { 'Is home pick': true, 'Home pick title': …, 'Game Id': …, 'Game Name': … })`. Тексти через `t()` з `@/shared/i18n/i18n`: заголовок за замовчуванням це ключ `homeSections.weeklyPicks` у `packages/lbk-i18n/src/{uk,be,en}.ts`.
+- `src/renderer/queries/useWeeklyPicks.ts` через `useSyncAwareQuery`. Бере `WeeklyPicks` з IPC, потім `fetchGamesByIds(ids, undefined, hideAiTranslations)`, зберігає серверний порядок, відкидає ігри, яких немає в локальному каталозі. Ключ містить `hideAiTranslations`, а сам фільтр ШІ виконує `fetchGamesByIds` у SQL (`ai IS NULL`). `staleTime` і `refetchInterval` по 1 годині. Застосунок глобально вимикає `refetchOnWindowFocus` (`queryClient.ts`), тож для цього запиту він вмикається явно: лаунчер днями висить у треї, і `refetchInterval` у фоні не працює. Якщо IPC повернув `null`, запит кидає помилку: React Query тоді лишає останні дані, а без жодних даних секція прихована.
+- Перетворення «id → впорядковані ігри» (`orderWeeklyPickGames`, чиста функція в `src/renderer/utils/weeklyPicks.ts`) зберігає серверний порядок, прибирає дублікати та ігри, яких немає в локальному каталозі.
+- `src/renderer/components/MainContent/WeeklyPicksSection.tsx` за зразком `TrendGamesSection`: `<h2>` із `title ?? t('homeSections.weeklyPicks')`, три `GameListItem` (`isCardStyle`), без кнопки «Переглянути всі». Без даних компонент повертає `null`. Клік шле `trackEvent('Select game', { 'Is weekly pick': true, 'Weekly pick title': …, 'Game Id': …, 'Game Name': … })`. Тексти через `t()` з `@/shared/i18n/i18n`: заголовок за замовчуванням це ключ `homeSections.weeklyPicks` у `packages/lbk-i18n/src/{uk,be,en}.ts`.
 - `MainPage.tsx`: секція одразу після `InstalledGamesSection` і перед `NewGamesSection`.
 
 Навігація геймпадом працює без змін: `GameListItem` уже несе потрібні атрибути.
@@ -94,7 +94,7 @@ Renderer:
 
 - SQL: PGlite-тест `src/lib/homePicks/homePicksSql.test.ts`, що програє міграцію, за зразком `packages/scan-core/src/scan/scanSql.test.ts`. `@electric-sql/pglite` зараз є лише в `scan-core`, тож додається в корінь як devDependency тієї самої версії. Перевіряє `generate_auto_home_picks` (пропуск, поки набір чинний; виключення ШІ, `planned`, `tech-improvement`, прихованих; дедуп за Steam-грою; виключення недавніх і його зняття; примусовий запуск), `save_home_picks` (валідація, зміщення відліку) і `get_home_picks`. Функції `pg_cron` і Vault у PGlite відсутні, тож перевіряється лише plpgsql.
 - API адмінки: тести роутів за шаблоном `requireAuth.test.ts`: ролі, валідація тіла, мапінг `invalid_home_picks` на 400 і `null` на 409.
-- Лаунчер: node-vitest для чистої функції порядку та для `fetchHomePicks` із замоканим клієнтом (успіх, помилка, порожньо). Тестів компонентів немає, їх не додаємо.
+- Лаунчер: node-vitest для чистої функції порядку та для `fetchWeeklyPicks` із замоканим клієнтом (успіх, помилка, порожньо). Тестів компонентів немає, їх не додаємо.
 
 ## Порядок робіт
 

@@ -1,5 +1,7 @@
 # Weekly picks Implementation Plan
 
+> **Naming note (2026-10-24):** after execution the code names in this plan (`homePicks`, `home-picks`, `HomePick*`) were renamed to `weeklyPicks`, `weekly-picks`, `WeeklyPick*`; the database objects (`home_pick_*`, `*_home_picks`, `HP001`) keep their names.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A launcher home-page section with 3 translations shared by all users: rolled randomly (non-AI) by the server once the current set expires, replaceable by hand from the admin panel, synced to the launcher.

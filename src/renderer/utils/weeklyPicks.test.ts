@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Game } from '../../shared/types';
-import { orderHomePickGames } from './homePicks';
+import { orderWeeklyPickGames } from './weeklyPicks';
 
 const game = (id: string) => ({ id }) as Game;
 
-describe('orderHomePickGames', () => {
+describe('orderWeeklyPickGames', () => {
   it.each([
     [
       'keeps the server order, not the catalog order',
@@ -18,7 +18,7 @@ describe('orderHomePickGames', () => {
     ['gives nothing for an empty set', [], ['a'], []],
     ['gives nothing while no game is local yet', ['a', 'b'], [], []],
   ])('%s', (_label, ids, local, expected) => {
-    expect(orderHomePickGames(ids, local.map(game)).map((item) => item.id)).toEqual(
+    expect(orderWeeklyPickGames(ids, local.map(game)).map((item) => item.id)).toEqual(
       expected
     );
   });

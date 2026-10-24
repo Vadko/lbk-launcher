@@ -1,6 +1,6 @@
 import type { Game } from '../../shared/types';
 
-export function orderHomePickGames(gameIds: string[], games: Game[]): Game[] {
+export function orderWeeklyPickGames(gameIds: string[], games: Game[]): Game[] {
   const byId = new Map(games.map((game) => [game.id, game]));
   const seen = new Set<string>();
 
