@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { launchApp, waitForAppReady, type AppInstance } from '../helpers/launch';
+import { t } from '../../src/shared/i18n/i18n';
 
 let instance: AppInstance;
 let page: Page;
@@ -28,7 +29,7 @@ test('app window is visible with correct minimum size', async () => {
 });
 
 test('main UI is visible after sync', async () => {
-  await expect(page.getByPlaceholder('Пошук гри...')).toBeVisible();
+  await expect(page.getByPlaceholder(t('gameSearch.placeholder'))).toBeVisible();
 });
 
 test('title bar displays version', async () => {

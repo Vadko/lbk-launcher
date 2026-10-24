@@ -1,21 +1,20 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Bookmark, BookmarkCheck } from 'lucide';
+import { Share2Icon } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
-import { Bookmark, BookmarkCheck, Share2, ThumbsUp } from 'lucide-react';
-import {
-  useHasEverInstalledTranslation,
-  useIsTranslationInstalledForGame,
-} from '@/renderer/hooks/useInstalledTranslations';
-import { useLikesStore } from '@/renderer/store/useLikesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
+import { t } from '@/shared/i18n/i18n';
 import { teamToSlug } from '@/shared/search-utils';
-import type { Game } from '../../types/game';
+import type { Game } from '../../../shared/types';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { AiIcon } from '../Icons/AiIcon';
 import { PencilIcon } from '../Icons/PencilIcon';
 import { ShareModal } from '../Modal/ShareModal';
+import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
+import { LikeButton } from '../ui/LikeButton';
 
 interface GameHeroProps {
   game: Game;
@@ -48,7 +47,7 @@ function checkImageHasTransparentCorners(img: HTMLImageElement): boolean {
       alphaAt(last, last) < ALPHA_THRESHOLD
     );
   } catch {
-    return true; // при помилці — без скруглення
+    return true; // on error — no rounding
   }
 }
 
@@ -69,29 +68,17 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
     }
   }, [game, toggleFavoriteGame]);
 
-  const isTranslationInstalled = useIsTranslationInstalledForGame(game.id);
-  const hasEverInstalled = useHasEverInstalledTranslation(game.id);
-  const canRate = isTranslationInstalled || hasEverInstalled;
-  const isLiked = useLikesStore((state) => state.isLiked(game.id));
-  const likesCount = useLikesStore((state) =>
-    state.getDisplayedCount(game.id, game.likes_count)
-  );
-  const handleLike = useCallback(() => {
-    if (game && canRate) {
-      useLikesStore.getState().toggleLike(game.id, game.likes_count);
-    }
-  }, [game, canRate]);
-
   // Reset state when game changes
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset on prop change */
-  useEffect(() => {
+  const [prevGameId, setPrevGameId] = useState(game.id);
+
+  if (prevGameId !== game.id) {
+    setPrevGameId(game.id);
     setBannerError(false);
     setLogoError(false);
     setShouldRoundLogo(false);
-  }, [game.id]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  }
 
-  // Перевірити прозорість при завантаженні лого
+  // Check transparency when the logo loads
   const handleLogoLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const hasTransparency = checkImageHasTransparentCorners(e.currentTarget);
     setShouldRoundLogo(!hasTransparency);
@@ -105,10 +92,10 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="relative h-[300px] rounded-2xl overflow-hidden select-none">
+    <div className="relative h-75 rounded-2xl overflow-hidden select-none">
       {/* Banner placeholder - only visible when banner is unavailable */}
       {!showBanner && (
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-color-main via-color-accent to-color-main opacity-30" />
+        <div className="absolute inset-0 rounded-2xl bg-linear-to-br/srgb from-color-main via-color-accent to-color-main opacity-30" />
       )}
 
       {/* Banner image */}
@@ -121,7 +108,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{
-              duration: 0.2,
+              duration: 0.3,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
           >
@@ -139,7 +126,7 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
       </AnimatePresence>
 
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-bg-dark/50 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t/srgb from-bg-dark via-bg-dark/50 to-transparent" />
 
       {/* Game logo */}
       <div className="relative h-full flex items-end p-8">
@@ -190,40 +177,25 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
         {(game.ai === 'edited' || game.ai === 'non-edited') && (
           <motion.div
             key={game.id}
-            className="absolute top-[90px] right-[90px] w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border-[1px] rotate-45 translate-x-1/2 translate-y--1/2"
+            className="absolute top-22.5 right-22.5 w-80 bg-white/80 text-text-dark flex justify-center items-center gap-1 py-3 border-white border"
             initial={{ opacity: 0, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             animate={{ opacity: 1, scale: 1, rotate: 45, x: '50%', y: '-50%' }}
             exit={{ opacity: 0, scale: 0.9, rotate: 45, x: '50%', y: '-50%' }}
             transition={{
-              duration: 0.3,
+              duration: 0.2,
               ease: [0.25, 0.46, 0.45, 0.94],
             }}
           >
             {game.ai === 'edited' ? <PencilIcon size={20} /> : <AiIcon size={20} />}
             <span className="">
-              {game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}
+              {game.ai === 'edited'
+                ? t('aiTranslationBadge.edited')
+                : t('aiTranslationBadge.ai')}
             </span>
           </motion.div>
         )}
         <div className="absolute bottom-4 right-4 flex gap-2">
-          <div className="hidden sm:block w-0 h-10 my-auto border-l border-border-hover mx-2 last:hidden first:hidden" />
-          <Button
-            variant="secondary"
-            icon={<ThumbsUp size={20} className={isLiked ? 'fill-current' : undefined} />}
-            onClick={handleLike}
-            disabled={!canRate}
-            data-gamepad-action
-            className="!px-4 !gap-1"
-            title={
-              canRate
-                ? isLiked
-                  ? 'Зняти оцінку'
-                  : 'Оцінити'
-                : 'Встановіть переклад, щоб оцінити'
-            }
-          >
-            {likesCount > 0 && <span className="text-sm">{likesCount}</span>}
-          </Button>
+          <LikeButton gameId={game.id} likes={game.likes} />
           {hasShareButton && (
             <>
               <ShareModal
@@ -236,22 +208,28 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               />
               <Button
                 variant="secondary"
-                icon={<Share2 size={20} />}
+                icon={<Share2Icon size={20} />}
                 onClick={() => setIsModalOpen(true)}
                 data-nav-group="main-links"
                 data-gamepad-action
-                className="!px-4"
-                title="Поділитися"
+                className="px-4!"
+                title={t('gameHero.share')}
               />
             </>
           )}
           <Button
             variant="secondary"
-            icon={isFavorite ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+            icon={
+              <AppActionIcon
+                phase="idle"
+                icon={isFavorite ? BookmarkCheck : Bookmark}
+                size={20}
+              />
+            }
             onClick={handleToggleFavorite}
             data-gamepad-action
-            className="!px-4"
-            title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+            className="px-4!"
+            title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
           />
         </div>
       </AnimatePresence>

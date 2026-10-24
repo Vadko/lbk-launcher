@@ -1,6 +1,6 @@
 /**
- * Централізований модуль для отримання Supabase credentials
- * Використовується в main process
+ * Central module for obtaining Supabase credentials
+ * Used in the main process
  */
 
 interface SupabaseCredentials {
@@ -9,8 +9,8 @@ interface SupabaseCredentials {
 }
 
 /**
- * Отримати Supabase credentials з environment variables
- * @throws Error якщо credentials відсутні
+ * Get the Supabase credentials from environment variables
+ * @throws Error when the credentials are missing
  */
 export function getSupabaseCredentials(): SupabaseCredentials {
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;

@@ -2,19 +2,21 @@ import type Database from 'better-sqlite3';
 import type { Game } from '../../shared/types';
 import { getLocallyInstalledGameIds } from '../installer/cache';
 import { createTimer } from '../utils/logger';
-import { getMainWindow } from '../window';
+import { getMainWindow, sendToRenderer } from '../window';
 import { getDatabase } from './database';
 import { upsertTagNames } from './db-queries';
 import { dbWorkerClient } from './db-worker-client';
 import { GamesRepository } from './games-repository';
-import type { TagNameRow } from './supabase-sync-api';
+import type { DeletedGame, TagNameRow } from './supabase-sync-api';
+import { latest, rewind } from './sync-cursor';
 import { getSyncMetadata, setSyncMetadata } from './sync-metadata';
 
 const PENDING_DELETIONS_KEY = 'pending_game_deletions';
 const TAG_NAMES_KEY = 'tag_names_synced_at';
+const DELETED_GAMES_KEY = 'deleted_games_synced_at';
 
 /**
- * Повідомити рендерер про видалення ігор зі списку (sidebar/головний список).
+ * Notify the renderer that games were removed from the list (sidebar/main list).
  */
 function notifyGamesRemoved(gameIds: string[]): void {
   if (gameIds.length === 0) {
@@ -30,8 +32,8 @@ function notifyGamesRemoved(gameIds: string[]): void {
 }
 
 /**
- * Повідомити рендерер що гра була позначена як tombstoned (видалена з каталогу,
- * але збережена локально бо встановлена). Використовується GamePage для banner.
+ * Notify the renderer that a game was marked as tombstoned (removed from the
+ * catalog but kept locally because it's installed). Used by GamePage for the banner.
  */
 function notifyGamesTombstoned(gameIds: string[]): void {
   if (gameIds.length === 0) {
@@ -47,7 +49,7 @@ function notifyGamesTombstoned(gameIds: string[]): void {
 }
 
 /**
- * Менеджер синхронізації між Supabase та локальною базою даних
+ * Manages synchronization between Supabase and the local database
  */
 export class SyncManager {
   private static instance: SyncManager | null = null;
@@ -61,8 +63,8 @@ export class SyncManager {
   }
 
   /**
-   * Отримати singleton (використовується IPC хендлерами та іншими споживачами,
-   * щоб не передавати референс через index.ts).
+   * Get the singleton (used by IPC handlers and other consumers so a
+   * reference doesn't need to be threaded through index.ts).
    */
   static getInstance(): SyncManager {
     if (!SyncManager.instance) {
@@ -72,7 +74,7 @@ export class SyncManager {
   }
 
   /**
-   * Перевірити чи це перший запуск (база порожня)
+   * Check whether this is the first run (database is empty)
    */
   private isFirstRun(): boolean {
     const stmt = this.db.prepare('SELECT COUNT(*) as count FROM games');
@@ -81,7 +83,7 @@ export class SyncManager {
   }
 
   /**
-   * Отримати last_sync_timestamp з метаданих
+   * Get last_sync_timestamp from metadata
    */
   private getLastSyncTimestamp(): string | null {
     const stmt = this.db.prepare('SELECT value FROM sync_metadata WHERE key = ?');
@@ -90,7 +92,7 @@ export class SyncManager {
   }
 
   /**
-   * Зберегти last_sync_timestamp
+   * Save last_sync_timestamp
    */
   private setLastSyncTimestamp(timestamp: string): void {
     const stmt = this.db.prepare(`
@@ -101,8 +103,8 @@ export class SyncManager {
   }
 
   /**
-   * Отримати список ID ігор, які сервер позначив видаленими, але які наразі
-   * встановлені у користувача і тому збережені в локальній БД.
+   * Get the list of game IDs the server marked as deleted, but that are
+   * currently installed for the user and are therefore kept in the local DB.
    */
   private getPendingDeletions(): string[] {
     const stmt = this.db.prepare('SELECT value FROM sync_metadata WHERE key = ?');
@@ -127,8 +129,8 @@ export class SyncManager {
   }
 
   /**
-   * Єдина точка реального видалення ігор: видаляє з SQLite через worker
-   * і повідомляє рендерер ('game-removed'), щоб список у sidebar оновився.
+   * The single point of actual game deletion: deletes from SQLite via the worker
+   * and notifies the renderer ('game-removed') so the sidebar list refreshes.
    */
   private async actuallyDeleteGames(ids: string[]): Promise<void> {
     if (ids.length === 0) {
@@ -140,8 +142,8 @@ export class SyncManager {
   }
 
   /**
-   * Розділити deletedIds на ті, які можна видалити одразу (гра не встановлена),
-   * та ті, які треба зберегти до моменту видалення локалізації.
+   * Split deletedIds into ones that can be deleted right away (game not installed)
+   * and ones that must be kept until the localization is uninstalled.
    */
   private async splitDeletedIds(
     deletedIds: string[]
@@ -163,7 +165,7 @@ export class SyncManager {
   }
 
   /**
-   * Додати ID до списку pending deletions (унікально).
+   * Add IDs to the pending deletions list (uniquely).
    */
   private addPendingDeletions(ids: string[]): void {
     if (ids.length === 0) {
@@ -185,16 +187,16 @@ export class SyncManager {
   }
 
   /**
-   * Чи позначена гра як tombstoned (видалена з каталогу, але встановлена локально).
+   * Whether the game is marked as tombstoned (removed from the catalog but installed locally).
    */
   isGameTombstoned(gameId: string): boolean {
     return this.getPendingDeletions().includes(gameId);
   }
 
   /**
-   * Пройтися по pending deletions і видалити з локальної БД ті, які
-   * більше не встановлені (юзер видалив переклад або файли відновлено).
-   * Викликається після зміни в installation-cache.
+   * Walk pending deletions and delete from the local DB the ones that are no
+   * longer installed (user uninstalled the translation or files were restored).
+   * Called after a change in installation-cache.
    */
   async processPendingDeletions(): Promise<void> {
     const pending = this.getPendingDeletions();
@@ -229,13 +231,75 @@ export class SyncManager {
     }
   }
 
+  // Installed games are kept and deferred instead of deleted
+  private async applyDeletions(deleted: DeletedGame[]): Promise<void> {
+    if (deleted.length === 0) {
+      return;
+    }
+    const { safe, deferred } = await this.splitDeletedIds(
+      this.storedIds(deleted.map((row) => row.game_id))
+    );
+    if (safe.length > 0) {
+      console.log(`[SyncManager] Deleting ${safe.length} games removed from server`);
+      await this.actuallyDeleteGames(safe);
+    }
+    if (deferred.length > 0) {
+      console.log(
+        `[SyncManager] Deferring deletion of ${deferred.length} installed games`
+      );
+      this.addPendingDeletions(deferred);
+    }
+    const cursor = latest(
+      getSyncMetadata(DELETED_GAMES_KEY),
+      deleted.map((row) => row.deleted_at)
+    );
+    if (cursor) {
+      setSyncMetadata(DELETED_GAMES_KEY, cursor);
+    }
+  }
+
+  // The rewind re-reads rows already applied; skipping them spares the worker upsert and the spellfix rebuild
+  private changedGames(games: Game[]): Game[] {
+    if (games.length === 0) {
+      return games;
+    }
+    const rows = this.db
+      .prepare(
+        `SELECT id, updated_at FROM games WHERE id IN (${games.map(() => '?').join(',')})`
+      )
+      .all(...games.map((game) => game.id)) as Pick<Game, 'id' | 'updated_at'>[];
+    const stored = new Map(rows.map((row) => [row.id, row.updated_at]));
+    return games.filter((game) => stored.get(game.id) !== game.updated_at);
+  }
+
+  private storedIds(ids: string[]): string[] {
+    if (ids.length === 0) {
+      return ids;
+    }
+    const rows = this.db
+      .prepare(`SELECT id FROM games WHERE id IN (${ids.map(() => '?').join(',')})`)
+      .all(...ids) as Pick<Game, 'id'>[];
+    return rows.map((row) => row.id);
+  }
+
+  // The server's own timestamps, so a skewed local clock cannot skip rows
+  private advanceGamesCursor(previous: string | null, games: Game[]): void {
+    const cursor = latest(
+      previous,
+      games.map((game) => game.updated_at)
+    );
+    if (cursor) {
+      this.setLastSyncTimestamp(cursor);
+    }
+  }
+
   /**
-   * Повний sync - завантажити всі ігри з Supabase та видалити видалені
-   * Використовує Worker Thread для batch операцій щоб не блокувати main thread
+   * Full sync - load all games from Supabase and delete removed ones
+   * Uses a Worker Thread for batch operations so the main thread isn't blocked
    */
   async fullSync(
     fetchAllGames: () => Promise<Game[]>,
-    fetchDeletedGameIds?: () => Promise<string[]>
+    fetchDeletedGames?: () => Promise<DeletedGame[]>
   ): Promise<void> {
     if (this.isSyncing) {
       console.log('[SyncManager] Sync already in progress, skipping');
@@ -246,7 +310,7 @@ export class SyncManager {
     console.log('[SyncManager] Starting full sync...');
 
     try {
-      // Ініціалізувати worker перед використанням
+      // Initialize the worker before use
       const workerTimer = createTimer('Worker initialization');
       await dbWorkerClient.init();
       workerTimer.end();
@@ -256,7 +320,7 @@ export class SyncManager {
       fetchTimer.end();
       console.log(`[SyncManager] Fetched ${games.length} games from Supabase`);
 
-      // Batch upsert через Worker Thread (не блокує main thread)
+      // Batch upsert via the Worker Thread (doesn't block the main thread)
       if (games.length > 0) {
         const upsertTimer = createTimer(`Upsert ${games.length} games via worker`);
         await dbWorkerClient.upsertGames(games);
@@ -264,31 +328,11 @@ export class SyncManager {
         console.log(`[SyncManager] Inserted/updated ${games.length} games via worker`);
       }
 
-      // Видалити ігри, які є в deleted_games (крім встановлених — їх відкладаємо)
-      if (fetchDeletedGameIds) {
-        const deletedIds = await fetchDeletedGameIds();
-        if (deletedIds.length > 0) {
-          const { safe, deferred } = await this.splitDeletedIds(deletedIds);
-          if (safe.length > 0) {
-            console.log(
-              `[SyncManager] Deleting ${safe.length} games from deleted_games table`
-            );
-            const deleteTimer = createTimer(`Delete ${safe.length} games`);
-            await this.actuallyDeleteGames(safe);
-            deleteTimer.end();
-          }
-          if (deferred.length > 0) {
-            console.log(
-              `[SyncManager] Deferring deletion of ${deferred.length} installed games`
-            );
-            this.addPendingDeletions(deferred);
-          }
-        }
+      if (fetchDeletedGames) {
+        await this.applyDeletions(await fetchDeletedGames());
       }
 
-      // Оновити last_sync_timestamp
-      const now = new Date().toISOString();
-      this.setLastSyncTimestamp(now);
+      this.advanceGamesCursor(null, games);
       console.log('[SyncManager] Full sync completed successfully');
     } catch (error) {
       console.error('[SyncManager] Error during full sync:', error);
@@ -299,12 +343,12 @@ export class SyncManager {
   }
 
   /**
-   * Delta sync - завантажити тільки оновлені ігри та видалити видалені
-   * Використовує Worker Thread для batch операцій щоб не блокувати main thread
+   * Delta sync - load only updated games and delete removed ones
+   * Uses a Worker Thread for batch operations so the main thread isn't blocked
    */
   async deltaSync(
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
-    fetchDeletedGameIds?: (since: string) => Promise<string[]>
+    fetchDeletedGames?: (since: string) => Promise<DeletedGame[]>
   ): Promise<void> {
     if (this.isSyncing) {
       console.log('[SyncManager] Sync already in progress, skipping');
@@ -314,7 +358,7 @@ export class SyncManager {
     this.isSyncing = true;
 
     try {
-      // Ініціалізувати worker перед використанням
+      // Initialize the worker before use
       await dbWorkerClient.init();
 
       const lastSync = this.getLastSyncTimestamp();
@@ -326,40 +370,24 @@ export class SyncManager {
 
       console.log(`[SyncManager] Starting delta sync from ${lastSync}...`);
 
-      const updatedGames = await fetchUpdatedGames(lastSync);
+      const fetchedGames = await fetchUpdatedGames(rewind(lastSync));
+      const updatedGames = this.changedGames(fetchedGames);
       console.log(
         `[SyncManager] Fetched ${updatedGames.length} updated games from Supabase`
       );
 
-      // Upsert через Worker Thread (не блокує main thread)
+      // Upsert via the Worker Thread (doesn't block the main thread)
       if (updatedGames.length > 0) {
         await dbWorkerClient.upsertGames(updatedGames);
         console.log(`[SyncManager] Updated ${updatedGames.length} games via worker`);
       }
 
-      // Видалити ігри, які були видалені на сервері (крім встановлених)
-      if (fetchDeletedGameIds) {
-        const deletedIds = await fetchDeletedGameIds(lastSync);
-        if (deletedIds.length > 0) {
-          const { safe, deferred } = await this.splitDeletedIds(deletedIds);
-          if (safe.length > 0) {
-            console.log(
-              `[SyncManager] Deleting ${safe.length} games removed from server`
-            );
-            await this.actuallyDeleteGames(safe);
-          }
-          if (deferred.length > 0) {
-            console.log(
-              `[SyncManager] Deferring deletion of ${deferred.length} installed games`
-            );
-            this.addPendingDeletions(deferred);
-          }
-        }
+      if (fetchDeletedGames) {
+        const deletedSince = getSyncMetadata(DELETED_GAMES_KEY) ?? lastSync;
+        await this.applyDeletions(await fetchDeletedGames(rewind(deletedSince)));
       }
 
-      // Оновити last_sync_timestamp
-      const now = new Date().toISOString();
-      this.setLastSyncTimestamp(now);
+      this.advanceGamesCursor(lastSync, fetchedGames);
       console.log('[SyncManager] Delta sync completed successfully');
     } catch (error) {
       console.error('[SyncManager] Error during delta sync:', error);
@@ -370,31 +398,31 @@ export class SyncManager {
   }
 
   /**
-   * Синхронізація при старті додатка
-   * - Перший запуск: повний sync
-   * - Наступні запуски: delta sync
+   * Sync at app startup
+   * - First run: full sync
+   * - Subsequent runs: delta sync
    */
   async sync(
     fetchAllGames: () => Promise<Game[]>,
     fetchUpdatedGames: (since: string) => Promise<Game[]>,
-    fetchDeletedGameIds?: (since?: string) => Promise<string[]>
+    fetchDeletedGames?: (since?: string) => Promise<DeletedGame[]>
   ): Promise<void> {
     if (this.isFirstRun()) {
       console.log('[SyncManager] First run detected, performing full sync');
-      // Для fullSync передаємо функцію без параметра since
+      // For fullSync, pass a function without the since parameter
       await this.fullSync(
         fetchAllGames,
-        fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
+        fetchDeletedGames ? () => fetchDeletedGames() : undefined
       );
     } else {
       console.log('[SyncManager] Performing delta sync');
       try {
-        await this.deltaSync(fetchUpdatedGames, fetchDeletedGameIds);
+        await this.deltaSync(fetchUpdatedGames, fetchDeletedGames);
       } catch (error) {
         console.log('[SyncManager] Delta sync failed, falling back to full sync');
         await this.fullSync(
           fetchAllGames,
-          fetchDeletedGameIds ? () => fetchDeletedGameIds() : undefined
+          fetchDeletedGames ? () => fetchDeletedGames() : undefined
         );
       }
     }
@@ -403,30 +431,46 @@ export class SyncManager {
   async syncTagNames(
     fetchTagNames: (since?: string) => Promise<TagNameRow[]>
   ): Promise<void> {
-    const rows = await fetchTagNames(getSyncMetadata(TAG_NAMES_KEY) ?? undefined);
+    const since = getSyncMetadata(TAG_NAMES_KEY);
+    // Not rewound: the worker writes the whole set in one transaction, so nothing commits late, and a rewind would refetch all of it
+    const rows = await fetchTagNames(since ?? undefined);
     if (rows.length === 0) {
       return;
     }
 
     upsertTagNames(this.db, rows);
-    setSyncMetadata(TAG_NAMES_KEY, rows[rows.length - 1].updated_at);
+    const cursor = latest(
+      since,
+      rows.map((row) => row.updated_at)
+    );
+    if (cursor) {
+      setSyncMetadata(TAG_NAMES_KEY, cursor);
+    }
     console.log(`[SyncManager] Tag names updated: ${rows.length}`);
   }
 
   /**
-   * Обробити realtime update
+   * Handle a realtime update
    */
   handleRealtimeUpdate(game: Game): void {
     console.log(
       `[SyncManager] Handling realtime update for game: ${game.name} (${game.id})`
     );
+    const wasVisible = this.gamesRepo.isGameVisible(game.id);
     this.gamesRepo.upsertGame(game);
+    // The broadcast carries hidden rows too; only the stored row knows user_unlocked
+    if (this.gamesRepo.isGameVisible(game.id)) {
+      // The stored row: its counters belong to game-counters.ts, not to this broadcast
+      sendToRenderer('game-updated', this.gamesRepo.getGameById(game.id) ?? game);
+    } else if (wasVisible) {
+      notifyGamesRemoved([game.id]);
+    }
   }
 
   /**
-   * Обробити realtime видалення.
-   * Якщо гра встановлена — зберегти її у локальній БД до моменту, коли
-   * користувач видалить локалізацію (див. processPendingDeletions).
+   * Handle a realtime deletion.
+   * If the game is installed — keep it in the local DB until the user
+   * uninstalls the localization (see processPendingDeletions).
    */
   async handleRealtimeDelete(gameId: string): Promise<void> {
     console.log(`[SyncManager] Handling realtime delete for game: ${gameId}`);
@@ -442,7 +486,7 @@ export class SyncManager {
   }
 
   /**
-   * Чи синхронізація в процесі
+   * Whether a sync is in progress
    */
   get syncing(): boolean {
     return this.isSyncing;

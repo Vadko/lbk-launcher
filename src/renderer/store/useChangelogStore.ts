@@ -1,12 +1,7 @@
 import { create } from 'zustand';
 import changelogData from '../../shared/changelog.json';
 import type { ChangelogEntry } from '../../shared/types';
-
-export function compareVersions(a: string, b: string): number {
-  const [aMajor, aMinor, aPatch] = a.split('.').map(Number);
-  const [bMajor, bMinor, bPatch] = b.split('.').map(Number);
-  return aMajor - bMajor || aMinor - bMinor || aPatch - bPatch;
-}
+import { compareVersions } from '../../shared/version';
 
 function sortNewestFirst(entries: ChangelogEntry[]): ChangelogEntry[] {
   return [...entries].sort((a, b) => compareVersions(b.version, a.version));

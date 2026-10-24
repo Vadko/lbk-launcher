@@ -4,11 +4,10 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { getAllInstalledSteamGames } from '../game-detector';
-import { getSteamPath } from '../game-detector/steam';
+import { getAllInstalledSteamGames, getSteamPath } from '../game-detector/steam';
 import { findSteamAppId } from '../game-launcher';
 import { renameFileToTranslit } from '../utils/files';
-import { isLinux } from '../utils/platform';
+import { isGamescopeSession, isLinux } from '../utils/platform';
 
 const HOME = os.homedir();
 const PREFIX_BASE = path.join(HOME, 'lbk-proton-prefixes');
@@ -434,10 +433,7 @@ export function runProton({
       // fires, which needs all three: gamescope session + STEAM_MULTIPLE_XWAYLANDS
       // + PROTON_VERB=waitforexitandrun. Without them the installer renders
       // off-screen. (Native AppImage doesn't need this — the window shows itself.)
-      const inGameMode =
-        process.env.XDG_CURRENT_DESKTOP === 'gamescope' ||
-        process.env.XDG_SESSION_DESKTOP === 'gamescope' ||
-        Boolean(process.env.GAMESCOPE_WAYLAND_DISPLAY);
+      const inGameMode = isGamescopeSession();
 
       // Prefer umu-run (in-sandbox) — required for the installer window to render
       // under gamescope in Flatpak. Fall back to launching Proton directly, which

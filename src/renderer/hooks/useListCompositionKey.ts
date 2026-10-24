@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react';
 
 /**
- * Ключ складу списку: змінюється, коли міняється видача (пошук/фільтри/сортування).
- * Використовується як префікс key для перезапуску entrance-анімацій framer-motion
- * і скидає скрол контейнера на початок при новій видачі.
+ * List composition key: changes whenever the result set does (search/filters/sorting).
+ * Used as a key prefix to restart framer-motion entrance animations
+ * and to reset the container scroll to the top on a new result set.
  */
 export function useListCompositionKey(
   items: ReadonlyArray<{ key: string }>,

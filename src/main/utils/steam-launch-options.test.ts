@@ -3,11 +3,10 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 // The module reaches into Steam and the filesystem; the OS split and the
 // no-fallback rule are decided long before any of that, so it is all stubbed.
 vi.mock('@/main/game-detector/steam', () => ({ getLocalConfigPath: () => null }));
-vi.mock('@/main/utils/steam-cef', () => ({
-  evaluateInSharedJsContext: vi.fn(),
-  isCefUsable: () => false,
+vi.mock('@/main/utils/steam-bridge', () => ({
+  getSteamBridge: () => Promise.resolve(null),
 }));
-vi.mock('@/main/utils/steam-launcher', () => ({ isSteamRunning: () => false }));
+vi.mock('@/main/steam-process/lifecycle', () => ({ isSteamRunning: () => false }));
 
 const { needsGameDir, writeSteamLaunchOptions } = await import(
   '@/main/utils/steam-launch-options'

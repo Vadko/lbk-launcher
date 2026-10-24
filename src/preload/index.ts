@@ -6,6 +6,11 @@ Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
 import type {
+  MillenniumProgress,
+  PluginHostState,
+  SteamBridgeStatus,
+} from '../shared/plugin-host-types';
+import type {
   DownloadProgress,
   ElectronAPI,
   FeedbackReplyPayload,
@@ -13,6 +18,8 @@ import type {
   Game,
   InstallationStatus,
   InstallOptions,
+  RunInstallerDecision,
+  RunInstallerRequest,
   SortOrderType,
 } from '../shared/types';
 
@@ -20,7 +27,11 @@ const electronAPI: ElectronAPI = {
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
-  fetchFilterCounts: () => ipcRenderer.invoke('fetch-filter-counts'),
+  fetchFacetRows: () => ipcRenderer.invoke('fetch-facet-rows'),
+  fetchSearchMatchIds: (searchQuery: string) =>
+    ipcRenderer.invoke('fetch-search-match-ids', searchQuery),
+  getLibraryMemberships: () => ipcRenderer.invoke('get-library-memberships'),
+  checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
   fetchGamesByIds: (
@@ -69,8 +80,6 @@ const electronAPI: ElectronAPI = {
       hideAiTranslations,
       sortOrder
     ),
-  countGamesBySteamAppIds: (steamAppIds: number[]) =>
-    ipcRenderer.invoke('count-games-by-steam-app-ids', steamAppIds),
   findGamesByTitles: (
     titles: string[],
     searchQuery?: string,
@@ -111,13 +120,12 @@ const electronAPI: ElectronAPI = {
   showItemInFolder: (filePath: string) =>
     ipcRenderer.invoke('show-item-in-folder', filePath),
   onRequestRunInstallerConfirm: (callback) => {
-    const handler = (_: unknown, gameId: string, installerPath: string, isExe: boolean) =>
-      callback(gameId, installerPath, isExe);
+    const handler = (_: unknown, request: RunInstallerRequest) => callback(request);
     ipcRenderer.on('installer:confirm-run', handler);
     return () => ipcRenderer.removeListener('installer:confirm-run', handler);
   },
-  respondRunInstaller: (gameId: string, shouldRun: boolean) =>
-    ipcRenderer.send('installer:run-decision', gameId, shouldRun),
+  respondRunInstaller: (gameId: string, decision: RunInstallerDecision) =>
+    ipcRenderer.send('installer:run-decision', gameId, decision),
   abortDownload: (reason?: string) => ipcRenderer.invoke('abort-download', reason),
   pauseDownload: (gameId: string) => ipcRenderer.invoke('pause-download', gameId),
   resumeDownload: (gameId: string) => ipcRenderer.invoke('resume-download', gameId),
@@ -141,11 +149,6 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('fetch-news-feed', filter, before),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   selectGameFolder: () => ipcRenderer.invoke('select-game-folder'),
-  onInstallProgress: (callback: (progress: number) => void) => {
-    const handler = (_: unknown, progress: number) => callback(progress);
-    ipcRenderer.on('install-progress', handler);
-    return () => ipcRenderer.removeListener('install-progress', handler);
-  },
   onDownloadProgress: (callback) => {
     const handler = (_: unknown, gameId: string, progress: DownloadProgress) =>
       callback(gameId, progress);
@@ -191,11 +194,16 @@ const electronAPI: ElectronAPI = {
     return () => ipcRenderer.removeListener('update-error', handler);
   },
   fetchChangelog: (version) => ipcRenderer.invoke('fetch-changelog', version),
-  // Real-time updates (автоматично керуються в main process)
+  // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback) => {
     const handler = (_: unknown, game: Game) => callback(game);
     ipcRenderer.on('game-updated', handler);
     return () => ipcRenderer.removeListener('game-updated', handler);
+  },
+  onGameCountersUpdated: (callback) => {
+    const handler = (_: unknown, games: Game[]) => callback(games);
+    ipcRenderer.on('game-counters-updated', handler);
+    return () => ipcRenderer.removeListener('game-counters-updated', handler);
   },
   onGameRemoved: (callback: (gameId: string) => void) => {
     const handler = (_: unknown, gameId: string) => callback(gameId);
@@ -232,12 +240,47 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('installed-games-changed', handler);
     return () => ipcRenderer.removeListener('installed-games-changed', handler);
   },
+  onStoreLibraryChanged: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('store-library-changed', handler);
+    return () => ipcRenderer.removeListener('store-library-changed', handler);
+  },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
   // Steam integration
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   applyPendingLaunchOptions: (game: Game) =>
     ipcRenderer.invoke('apply-pending-launch-options', game),
+  getSteamBridgeStatus: () => ipcRenderer.invoke('get-steam-bridge-status'),
+  recheckSteamBridge: () => ipcRenderer.invoke('recheck-steam-bridge'),
+  onSteamBridgeStatusChanged: (callback) => {
+    const handler = (_: unknown, status: SteamBridgeStatus) => callback(status);
+    ipcRenderer.on('steam-bridge-status-changed', handler);
+    return () => ipcRenderer.removeListener('steam-bridge-status-changed', handler);
+  },
+  onSteamPendingActionsApplied: (callback) => {
+    const handler = (_: unknown, payload: { gameIds: string[] }) => callback(payload);
+    ipcRenderer.on('steam-pending-actions-applied', handler);
+    return () => ipcRenderer.removeListener('steam-pending-actions-applied', handler);
+  },
+  getPluginHostState: () => ipcRenderer.invoke('plugin-host:get-state'),
+  prepareMillennium: () => ipcRenderer.invoke('millennium:prepare'),
+  activateMillennium: (opts) => ipcRenderer.invoke('millennium:activate', opts),
+  uninstallMillennium: (opts) => ipcRenderer.invoke('millennium:uninstall', opts),
+  cancelMillennium: () => ipcRenderer.invoke('millennium:cancel'),
+  requestDeckyPluginInstall: () => ipcRenderer.invoke('decky:request-plugin-install'),
+  installDeckyLoader: () => ipcRenderer.invoke('decky:install-loader'),
+  saveDeckyPluginZip: () => ipcRenderer.invoke('decky:save-plugin-zip'),
+  onMillenniumProgress: (callback) => {
+    const handler = (_: unknown, progress: MillenniumProgress) => callback(progress);
+    ipcRenderer.on('millennium:progress', handler);
+    return () => ipcRenderer.removeListener('millennium:progress', handler);
+  },
+  onPluginHostStateChanged: (callback) => {
+    const handler = (_: unknown, state: PluginHostState) => callback(state);
+    ipcRenderer.on('plugin-host:state-changed', handler);
+    return () => ipcRenderer.removeListener('plugin-host:state-changed', handler);
+  },
   /**
    * Fires when the Settings CEF toggle was turned on but the debug port isn't
    * open yet — the user needs to restart Steam for it to take effect.
@@ -270,10 +313,15 @@ const electronAPI: ElectronAPI = {
   // Track support click events
   trackSupportClick: (gameId: string) =>
     ipcRenderer.invoke('track-support-click', gameId),
-  // Track like/unlike events
-  trackLike: (gameId: string, action: 'like' | 'unlike') =>
-    ipcRenderer.invoke('track-like', gameId, action),
-  // Підписка на переклад у Майстерні без відкриття Steam
+  getLikedGameIds: () => ipcRenderer.invoke('likes:get'),
+  setLike: (gameId: string, liked: boolean) =>
+    ipcRenderer.invoke('likes:set', gameId, liked),
+  onLikedGamesChanged: (callback) => {
+    const handler = (_: unknown, gameIds: string[]) => callback(gameIds);
+    ipcRenderer.on('liked-games-changed', handler);
+    return () => ipcRenderer.removeListener('liked-games-changed', handler);
+  },
+  // Subscribe to a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,
     appId: number,
@@ -284,7 +332,7 @@ const electronAPI: ElectronAPI = {
   listInstalledWorkshopGames: () => ipcRenderer.invoke('list-installed-workshop-games'),
   isWorkshopItemDownloaded: (appId: number, workshopId: string) =>
     ipcRenderer.invoke('is-workshop-item-downloaded', appId, workshopId),
-  // Перехід у Майстерню рахується як завантаження
+  // Navigating to the Workshop counts as a download
   trackWorkshopOpen: (gameId: string, isFirstSession?: boolean) =>
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
   // Track failed search (0 results)
@@ -317,6 +365,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
+  findDeepLinkGameId: (slug: string, team: string) =>
+    ipcRenderer.invoke('find-deep-link-game-id', slug, team),
   notifyReady: () => ipcRenderer.send('renderer-ready'),
   // Sync status
   onSyncStatus: (callback: (status: 'syncing' | 'ready' | 'error') => void) => {

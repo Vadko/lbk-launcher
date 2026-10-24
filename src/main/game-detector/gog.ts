@@ -2,18 +2,17 @@
  * GOG Galaxy Detection
  */
 
+import { F } from '@mobily/ts-belt';
 import Database from 'better-sqlite3';
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { HKEY } from 'registry-js';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import { getRegistryString } from '../utils/registry';
 import { getCleanTitle } from './game-titles';
-import {
-  getAllHeroicGameFolders,
-  getHeroicConfigPaths,
-  getHeroicGamePaths,
-} from './heroic';
+import { getHeroicConfigPaths } from './heroic';
+import { logIfChanged } from './log-if-changed';
 import { getLutrisGOGDirs, getLutrisGogLibrary } from './lutris';
 
 const GOG_DB_FILENAME = 'galaxy-2.0.db';
@@ -25,34 +24,32 @@ interface GOGInstalledGame {
   installationPath?: string;
 }
 
+/** Where GOG Galaxy keeps its database on this OS, whether or not Galaxy is installed */
+export function getGOGGalaxyDBCandidatePath(): string | null {
+  if (isWindows()) {
+    const programData = process.env.PROGRAMDATA;
+    return programData
+      ? path.join(programData, 'GOG.com', 'Galaxy', 'storage', GOG_DB_FILENAME)
+      : null;
+  }
+  if (isMacOS()) {
+    return path.join(
+      os.homedir(),
+      'Library/Application Support/GOG.com/Galaxy/Storage',
+      GOG_DB_FILENAME
+    );
+  }
+  return null;
+}
+
 /**
  * Get GOG Galaxy database path
  */
 function getGOGGalaxyDBPath(): string | null {
   try {
-    if (isWindows()) {
-      const programData = process.env.PROGRAMDATA;
-      if (programData) {
-        const dbPath = path.join(
-          programData,
-          'GOG.com',
-          'Galaxy',
-          'storage',
-          GOG_DB_FILENAME
-        );
-        if (fs.existsSync(dbPath)) {
-          return dbPath;
-        }
-      }
-    } else if (isMacOS()) {
-      const dbPath = path.join(
-        os.homedir(),
-        'Library/Application Support/GOG.com/Galaxy/Storage',
-        GOG_DB_FILENAME
-      );
-      if (fs.existsSync(dbPath)) {
-        return dbPath;
-      }
+    const dbPath = getGOGGalaxyDBCandidatePath();
+    if (dbPath && fs.existsSync(dbPath)) {
+      return dbPath;
     }
   } catch (error) {
     console.warn('[GOG] Error getting Galaxy DB path:', error);
@@ -171,24 +168,18 @@ function getAllGamesFromGalaxyDB(): string[] {
 export function getGOGGalaxyClientPath(): string | null {
   try {
     if (isWindows()) {
-      try {
-        const output = execSync(
-          'reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths" /v client',
-          { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
-        );
-        const match = output.match(/client\s+REG_SZ\s+(.+)/);
-        if (match?.[1]) {
-          const clientPath = path.join(match[1].trim(), 'GalaxyClient.exe');
-          if (fs.existsSync(clientPath)) {
-            return clientPath;
-          }
-        }
-      } catch {
-        // Try default path
-        const defaultPath = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe';
-        if (fs.existsSync(defaultPath)) {
-          return defaultPath;
-        }
+      const clientDir = getRegistryString(
+        HKEY.HKEY_LOCAL_MACHINE,
+        'SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths',
+        'client'
+      );
+      const clientPath = clientDir ? path.join(clientDir, 'GalaxyClient.exe') : null;
+      if (clientPath && fs.existsSync(clientPath)) {
+        return clientPath;
+      }
+      const defaultPath = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe';
+      if (fs.existsSync(defaultPath)) {
+        return defaultPath;
       }
     } else if (isMacOS()) {
       const appPath = path.join(
@@ -230,35 +221,11 @@ export function getHeroicGOGId(gamePath: string): string | null {
   }
 
   try {
-    const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, 'gog_store/installed.json')
+    const game = readHeroicGogInstalled().find(
+      (g) => g.install_path && path.resolve(g.install_path) === path.resolve(gamePath)
     );
-
-    for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) {
-        continue;
-      }
-
-      const content = fs.readFileSync(configPath, 'utf8');
-      const data = JSON.parse(content);
-      const games = Array.isArray(data) ? data : data.installed || [];
-
-      if (Array.isArray(games)) {
-        const game = games.find((g: HeroicGogGame) => {
-          return (
-            g.install_path && path.resolve(g.install_path) === path.resolve(gamePath)
-          );
-        });
-
-        if (game && game.appName) {
-          return game.appName as string;
-        }
-        // Fallback: use ID from installed.json if appName is missing
-        if (game && game.id) {
-          return game.id as string;
-        }
-      }
-    }
+    // Fallback: use ID from installed.json if appName is missing
+    return game?.appName ?? game?.id ?? null;
   } catch (error) {
     console.error('[GOG] Error getting Heroic ID:', error);
   }
@@ -267,38 +234,132 @@ export function getHeroicGOGId(gamePath: string): string | null {
 }
 
 interface HeroicGogGame {
+  appName?: string;
+  app_name?: string;
+  id?: string;
   install_path?: string;
   title?: string;
+  is_dlc?: boolean;
   [key: string]: unknown;
+}
+
+const isHeroicGogGame = (value: unknown): value is HeroicGogGame =>
+  typeof value === 'object' && value !== null;
+
+// Heroic writes gog_store/installed.json as { installed: [...] } (older versions: a bare array) and leaves out titles
+function readHeroicGogInstalled(): HeroicGogGame[] {
+  const installed: HeroicGogGame[] = [];
+  for (const root of getHeroicConfigPaths()) {
+    const configPath = path.join(root, 'gog_store/installed.json');
+    if (!fs.existsSync(configPath)) {
+      continue;
+    }
+    try {
+      const data: unknown = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const list = Array.isArray(data)
+        ? data
+        : isHeroicGogGame(data) && Array.isArray(data.installed)
+          ? data.installed
+          : [];
+      installed.push(...list.filter(isHeroicGogGame));
+    } catch (error) {
+      console.warn(`[GOG] Error reading ${configPath}:`, error);
+    }
+  }
+  return installed;
+}
+
+// gog_library.json can be several MB, so titles are only joined in for the callers that match by title
+function withHeroicGogTitles(installed: HeroicGogGame[]): HeroicGogGame[] {
+  if (installed.every((game) => game.title)) {
+    return installed;
+  }
+  const titles = readHeroicGogTitles();
+  return installed.map((game) =>
+    game.title || !game.appName ? game : { ...game, title: titles.get(game.appName) }
+  );
+}
+
+function readHeroicGogLibrary(): HeroicGogGame[] {
+  const games: HeroicGogGame[] = [];
+  for (const root of getHeroicConfigPaths()) {
+    const configPath = path.join(root, 'store_cache/gog_library.json');
+    if (!fs.existsSync(configPath)) {
+      continue;
+    }
+    try {
+      const data: unknown = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const list = Array.isArray(data)
+        ? data
+        : isHeroicGogGame(data) && Array.isArray(data.games)
+          ? data.games
+          : [];
+      games.push(...list.filter(isHeroicGogGame));
+    } catch (error) {
+      console.error(`[GOG] Error reading ${configPath}:`, error);
+    }
+  }
+  return games;
+}
+
+function readHeroicGogTitles(): Map<string, string> {
+  const titles = new Map<string, string>();
+  for (const game of readHeroicGogLibrary()) {
+    if (game.app_name && game.title) {
+      titles.set(game.app_name, game.title);
+    }
+  }
+  return titles;
+}
+
+/** Folder names of GOG games Heroic has installed, so the Epic side can skip them in the shared Heroic dir */
+export function getHeroicGogInstallFolders(): string[] {
+  return readHeroicGogInstalled()
+    .filter(
+      (game) => game.install_path && !game.is_dlc && fs.existsSync(game.install_path)
+    )
+    .map((game) => path.basename(game.install_path as string));
 }
 
 /**
  * Find GOG game by folder name
  */
 export function findGOGGame(gameFolderName: string): string | null {
-  // Linux (Heroic) support
+  // One lookup parses gog_library.json at most once, shared by the title match and the fallback scan
+  const installed = readHeroicGogInstalled();
+  const titled = F.once(() => withHeroicGogTitles(installed));
+
   if (isLinux()) {
     // Helper to normalize strings for comparison (remove special chars, lowercase)
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const targetFolder = normalize(gameFolderName);
 
-    // Check Heroic and Lutris directories (fuzzy match)
-    const heroicDirs = [
-      ...getHeroicGamePaths(), // Flatpak + Native
-      ...getLutrisGOGDirs(), // Lutris GOG base directories
-    ];
+    // installed.json first: Epic games share Heroic's install dir, so a bare folder match there can't tell the stores apart
+    try {
+      const matchesFolder = (g: HeroicGogGame) =>
+        !!g.install_path &&
+        (path.basename(g.install_path) === gameFolderName ||
+          normalize(path.basename(g.install_path)) === targetFolder);
+      const game =
+        installed.find(matchesFolder) ??
+        titled().find((g) => !!g.title && normalize(g.title) === targetFolder);
 
-    for (const dir of heroicDirs) {
-      if (!fs.existsSync(dir)) {
-        continue;
+      if (game?.install_path && fs.existsSync(game.install_path)) {
+        console.log(`[GOG] ✓ Game found via installed.json: ${game.install_path}`);
+        return game.install_path;
       }
+    } catch (e) {
+      console.warn('[GOG] Error checking Heroic config:', e);
+    }
+
+    // Lutris GOG directories (fuzzy match)
+    for (const dir of getLutrisGOGDirs()) {
       try {
-        const subdirs = fs.readdirSync(dir);
-        for (const subdir of subdirs) {
+        for (const subdir of fs.readdirSync(dir)) {
           if (normalize(subdir) === targetFolder) {
             const fullPath = path.join(dir, subdir);
             if (fs.statSync(fullPath).isDirectory()) {
-              console.log(`[GOG] ✓ Game found (Heroic fuzzy): ${fullPath}`);
+              console.log(`[GOG] ✓ Game found (Lutris fuzzy): ${fullPath}`);
               return fullPath;
             }
           }
@@ -307,52 +368,9 @@ export function findGOGGame(gameFolderName: string): string | null {
         // Safe to ignore
       }
     }
-
-    // Try parsing installed.json
-    try {
-      const configPaths = getHeroicConfigPaths().map((p) =>
-        path.join(p, 'gog_store/installed.json')
-      );
-
-      for (const configPath of configPaths) {
-        if (fs.existsSync(configPath)) {
-          const content = fs.readFileSync(configPath, 'utf8');
-          const games = JSON.parse(content);
-          // Heroic GOG installed.json is usually an array of objects with install_path
-          if (Array.isArray(games)) {
-            const game = games.find((g: HeroicGogGame) => {
-              const installPath = g.install_path;
-              if (installPath) {
-                // Try exact basename match
-                if (path.basename(installPath) === gameFolderName) {
-                  return true;
-                }
-                // Try normalized match
-                if (normalize(path.basename(installPath)) === targetFolder) {
-                  return true;
-                }
-              }
-              // Try normalized title match if folder name matches title
-              if (g.title && normalize(g.title) === targetFolder) {
-                return true;
-              }
-              return false;
-            });
-
-            if (game && game.install_path && fs.existsSync(game.install_path)) {
-              console.log(`[GOG] ✓ Game found via installed.json: ${game.install_path}`);
-              return game.install_path;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[GOG] Error checking Heroic config:', e);
-    }
   }
 
-  // Get all installed GOG games with their full paths
-  const installedGames = getAllInstalledGOGGames();
+  const installedGames = getAllInstalledGOGGames(titled());
 
   // Search through all installed games by folder name
   for (const [, gamePath] of installedGames) {
@@ -376,44 +394,19 @@ export function getInstalledGOGGamePaths(): string[] {
   try {
     // Linux (Heroic) support
     if (isLinux()) {
-      // Get all game folders from Heroic directories
-      paths.push(...getAllHeroicGameFolders());
-
       // Get game folders from Lutris directories (each subdir in drive_c/GOG Games is a game installation)
-      const lutrisDirs = getLutrisGOGDirs();
-      for (const dir of lutrisDirs) {
-        if (fs.existsSync(dir)) {
-          try {
-            const subdirs = fs.readdirSync(dir);
-            paths.push(...subdirs);
-          } catch (e) {
-            // ignore
-          }
+      for (const dir of getLutrisGOGDirs()) {
+        try {
+          paths.push(...fs.readdirSync(dir));
+        } catch {
+          // Safe to ignore
         }
       }
 
-      // Read from installed.json as well
-      const configPaths = getHeroicConfigPaths().map((p) =>
-        path.join(p, 'gog_store/installed.json')
-      );
-
-      for (const configPath of configPaths) {
-        if (!fs.existsSync(configPath)) {
-          continue;
-        }
-
-        try {
-          const content = fs.readFileSync(configPath, 'utf8');
-          const games = JSON.parse(content);
-          if (Array.isArray(games)) {
-            for (const game of games as HeroicGogGame[]) {
-              if (game.install_path && fs.existsSync(game.install_path)) {
-                paths.push(path.basename(game.install_path));
-              }
-            }
-          }
-        } catch (e) {
-          console.warn(`[GOG] Error reading ${configPath}:`, e);
+      // Heroic's installed.json lists GOG installs wherever they live, custom install dirs included
+      for (const game of readHeroicGogInstalled()) {
+        if (game.install_path && fs.existsSync(game.install_path)) {
+          paths.push(path.basename(game.install_path));
         }
       }
     }
@@ -431,7 +424,10 @@ export function getInstalledGOGGamePaths(): string[] {
   }
 
   if (paths.length > 0) {
-    console.log(`[GOG] Found ${paths.length} installed games: ${paths.join(', ')}`);
+    logIfChanged(
+      'gog-installed',
+      `[GOG] Found ${paths.length} installed games: ${paths.join(', ')}`
+    );
   }
 
   return paths;
@@ -442,51 +438,26 @@ export function getInstalledGOGGamePaths(): string[] {
  * Returns Map<title, installationPath>
  * Similar to getAllInstalledSteamGames()
  */
-function getAllInstalledGOGGames(): Map<string, string> {
+function getAllInstalledGOGGames(heroicGames: HeroicGogGame[]): Map<string, string> {
   const gamesMap = new Map<string, string>();
 
-  // Linux: Use Heroic launcher data
   if (isLinux()) {
-    const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, 'gog_store/installed.json')
-    );
-
-    for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) {
-        continue;
-      }
-
-      try {
-        const content = fs.readFileSync(configPath, 'utf8');
-        const games = JSON.parse(content);
-
-        if (Array.isArray(games)) {
-          for (const game of games as HeroicGogGame[]) {
-            if (game.title && game.install_path && fs.existsSync(game.install_path)) {
-              gamesMap.set(getCleanTitle(game.title).toLowerCase(), game.install_path);
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`[GOG] Error reading ${configPath}:`, error);
+    for (const game of heroicGames) {
+      if (game.title && game.install_path && fs.existsSync(game.install_path)) {
+        gamesMap.set(getCleanTitle(game.title).toLowerCase(), game.install_path);
       }
     }
 
     // Include Lutris GOG installations mapped via db directly (we can leverage fuzzy matching folders too)
-    const lutrisDirs = getLutrisGOGDirs();
-    for (const dir of lutrisDirs) {
-      if (!fs.existsSync(dir)) {
-        continue;
-      }
+    for (const dir of getLutrisGOGDirs()) {
       try {
-        const subdirs = fs.readdirSync(dir);
-        for (const subdir of subdirs) {
+        for (const subdir of fs.readdirSync(dir)) {
           const gamePath = path.join(dir, subdir);
           if (fs.statSync(gamePath).isDirectory()) {
             gamesMap.set(getCleanTitle(subdir).toLowerCase(), gamePath);
           }
         }
-      } catch (e) {
+      } catch {
         // Safe to ignore
       }
     }
@@ -516,37 +487,16 @@ function getAllInstalledGOGGames(): Map<string, string> {
 export function getGogLibrary(): string[] {
   // Linux: Use Heroic launcher data
   if (isLinux()) {
-    const configPaths = getHeroicConfigPaths().map((p) =>
-      path.join(p, 'store_cache/gog_library.json')
-    );
-
-    const allTitles: string[] = [];
-
-    for (const configPath of configPaths) {
-      if (!fs.existsSync(configPath)) {
-        continue;
-      }
-
-      try {
-        const content = fs.readFileSync(configPath, 'utf8');
-        const data = JSON.parse(content);
-        const games = Array.isArray(data) ? data : data.games || [];
-
-        if (Array.isArray(games)) {
-          allTitles.push(
-            ...games
-              .map((g: HeroicGogGame) => (g.title ? getCleanTitle(g.title) : null))
-              .filter((title): title is string => !!title)
-          );
-        }
-      } catch (error) {
-        console.error(`[GOG] Error reading ${configPath}:`, error);
-      }
-    }
+    const allTitles = readHeroicGogLibrary()
+      .map((g) => (g.title ? getCleanTitle(g.title) : null))
+      .filter((title): title is string => !!title);
 
     const result = [...new Set([...allTitles, ...getLutrisGogLibrary()])];
     if (result.length > 0) {
-      console.log(`[GOG] Found ${result.length} games in Heroic/Lutris library`);
+      logIfChanged(
+        'gog-library',
+        `[GOG] Found ${result.length} games in Heroic/Lutris library`
+      );
     }
     return result;
   }
@@ -555,8 +505,10 @@ export function getGogLibrary(): string[] {
   const result = getAllGamesFromGalaxyDB();
 
   if (result.length > 0) {
-    console.log(`[GOG] Found ${result.length} games in GOG Galaxy DB`);
-    console.log(`[GOG] Games list: ${result.join(', ')}`);
+    logIfChanged(
+      'gog-library',
+      `[GOG] Found ${result.length} games in GOG Galaxy DB: ${result.join(', ')}`
+    );
   }
 
   return result;

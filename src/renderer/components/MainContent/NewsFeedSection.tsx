@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 import { useNewsFeed } from '@/renderer/queries/useNewsFeed';
+import { t } from '@/shared/i18n/i18n';
 import type { NewsFeedFilter } from '@/shared/types';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { trackEvent } from '../../utils/analytics';
@@ -8,11 +9,7 @@ import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 import { PillTabs } from '../ui/PillTabs';
 
-const tabs: { label: string; id: NewsFeedFilter }[] = [
-  { label: 'Ігри по знижці', id: 'sales' },
-  { label: 'Ігри за 80', id: 'games-80' },
-  { label: 'Новини', id: 'news' },
-];
+const FEED_FILTERS: NewsFeedFilter[] = ['sales', 'games-80', 'news'];
 
 const formatDate = (date?: string) => {
   if (!date) {
@@ -48,8 +45,8 @@ export const NewsFeedSection: React.FC = () => {
   });
 
   const openInTelegram = async (url: string) => {
-    // Витягуємо назву каналу та ID поста за допомогою регулярного виразу
-    // Приклад URL: https://t.me/LBK_news/1234
+    // Extract the channel name and post ID using a regular expression
+    // Example URL: https://t.me/LBK_news/1234
     const match = url.match(/t\.me\/([\w_]+)\/(\d+)/);
 
     if (match) {
@@ -69,8 +66,17 @@ export const NewsFeedSection: React.FC = () => {
   return (
     <section>
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-4xl font-head font-semibold text-text-main">Новини</h2>
-        <PillTabs tabs={tabs} activeTab={activeFilter} onChange={setActiveFilter} />
+        <h2 className="text-4xl font-head font-semibold text-text-main">
+          {t('newsFeed.title')}
+        </h2>
+        <PillTabs
+          tabs={FEED_FILTERS.map((filter) => ({
+            id: filter,
+            label: t(`newsFeed.tab.${filter}`),
+          }))}
+          activeTab={activeFilter}
+          onChange={setActiveFilter}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-8 align-start">
@@ -95,7 +101,7 @@ export const NewsFeedSection: React.FC = () => {
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="col-span-2 text-center text-text-muted py-8"
             >
-              <p>Новин не знайдено</p>
+              <p>{t('newsFeed.empty')}</p>
             </motion.div>
           ) : (
             <React.Fragment>
@@ -112,7 +118,7 @@ export const NewsFeedSection: React.FC = () => {
                       delay: Math.min(index * 0.05, 0.2),
                       ease: [0.25, 0.46, 0.45, 0.94],
                     }}
-                    className="glass-card-no-motion !p-5 min-h-[172px] flex flex-col gap-4"
+                    className="glass-card-no-motion p-5! min-h-[172px] flex flex-col gap-4"
                   >
                     <div>
                       {publishedAt && (
@@ -132,13 +138,13 @@ export const NewsFeedSection: React.FC = () => {
 
                     <Button
                       data-gamepad-action
-                      aria-label="Відкрити новину"
-                      title="Відкрити новину"
+                      aria-label={t('newsFeed.open')}
+                      title={t('newsFeed.open')}
                       variant="secondary"
                       onClick={() => openInTelegram(item.url)}
-                      className="w-fit !px-3 !py-2 text-sm"
+                      className="w-fit px-3! py-2! text-sm"
                     >
-                      Обговорити в Telegram
+                      {t('newsFeed.discuss')}
                     </Button>
                   </motion.article>
                 );

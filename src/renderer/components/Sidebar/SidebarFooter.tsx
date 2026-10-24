@@ -1,8 +1,19 @@
-import { Bell, Settings, Volume2, VolumeX } from 'lucide-react';
-import React from 'react';
+import { useAnimate } from 'framer-motion';
+import { Bell, BellRing, Volume2, VolumeX } from 'lucide';
+import {
+  BookOpenTextIcon,
+  HomeIcon,
+  MedalIcon,
+  NewspaperIcon,
+  SettingsIcon,
+  TrophyIcon,
+} from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { MENU_BUTTONS } from './constants';
+import { AppActionIcon } from '../ui/AppActionIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 
 interface SidebarFooterProps {
   onOpenHistory: () => void;
@@ -15,39 +26,91 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
   ({ onOpenHistory, onOpenSettings, unreadCount, isCompact = false }) => {
     const navigate = useNavigate();
     const { gamepadSoundsEnabled, toggleGamepadSounds } = useSettingsStore();
+    const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
+    const [badgeRef, animateBadge] = useAnimate<HTMLSpanElement>();
+    const prevUnreadCount = useRef(0);
+
+    useEffect(() => {
+      if (
+        animationsEnabled &&
+        unreadCount > prevUnreadCount.current &&
+        badgeRef.current
+      ) {
+        animateBadge(
+          badgeRef.current,
+          { opacity: [1, 0.5, 1] },
+          { duration: 2, repeat: 2, ease: [0.4, 0, 0.6, 1] }
+        );
+      }
+      prevUnreadCount.current = unreadCount;
+    }, [unreadCount, animationsEnabled, animateBadge, badgeRef]);
 
     return (
       <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
         {isCompact && (
           <>
-            {MENU_BUTTONS.map((button) => (
-              <button
-                key={button.id}
-                onClick={() => navigate(button.path)}
-                data-nav-group="sidebar-actions"
-                data-gamepad-header-item
-                className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-                title={button.title}
-              >
-                <button.icon size={20} className="mx-auto text-text-muted" />
-              </button>
-            ))}
+            <button
+              onClick={() => navigate('/site/guides&tools')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title={t('sidebarNav.guides')}
+            >
+              <BookOpenTextIcon size={20} className="mx-auto text-text-muted" />
+            </button>
+            <button
+              onClick={() => navigate('/site/donaters')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title={t('sidebarNav.donators')}
+            >
+              <MedalIcon size={20} className="mx-auto text-text-muted" />
+            </button>
+            <button
+              onClick={() => navigate('/ratings')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title={t('sidebarNav.ratings')}
+            >
+              <TrophyIcon size={20} className="mx-auto text-text-muted" />
+            </button>
+            <button
+              onClick={() => navigate('/news')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title={t('sidebarNav.news')}
+            >
+              <NewspaperIcon size={20} className="mx-auto text-text-muted" />
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title={t('sidebarNav.home')}
+            >
+              <HomeIcon size={20} className="mx-auto text-text-muted" />
+            </button>
             <button
               onClick={toggleGamepadSounds}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title={
                 gamepadSoundsEnabled
-                  ? 'Вимкнути звуки геймпада'
-                  : 'Увімкнути звуки геймпада'
+                  ? t('sidebarNav.gamepadSoundsOff')
+                  : t('sidebarNav.gamepadSoundsOn')
               }
             >
-              {gamepadSoundsEnabled ? (
-                <Volume2 size={20} className="mx-auto text-text-muted" />
-              ) : (
-                <VolumeX size={20} className="mx-auto text-text-muted opacity-50" />
-              )}
+              <AppActionIcon
+                phase="idle"
+                icon={gamepadSoundsEnabled ? Volume2 : VolumeX}
+                size={20}
+                className={`text-text-muted transition-opacity ${gamepadSoundsEnabled ? '' : 'opacity-50'}`}
+              />
             </button>
           </>
         )}
@@ -55,13 +118,24 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           onClick={onOpenHistory}
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
-          className={`relative glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
-          title="Сповіщення"
+          className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+          title={t('sidebarNav.notifications')}
         >
-          <Bell size={20} className="mx-auto text-text-muted" />
+          <AppActionIcon
+            phase="idle"
+            icon={unreadCount > 0 ? BellRing : Bell}
+            size={20}
+            className="text-text-muted"
+          />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-              {unreadCount > 9 ? '9+' : unreadCount}
+            <span
+              ref={badgeRef}
+              className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center"
+            >
+              <AppNumberFlow
+                value={Math.min(unreadCount, 9)}
+                suffix={unreadCount > 9 ? '+' : undefined}
+              />
             </span>
           )}
         </button>
@@ -70,9 +144,9 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
           data-nav-group="sidebar-actions"
           data-gamepad-header-item={isCompact ? true : undefined}
           className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
-          title="Налаштування"
+          title={t('sidebarNav.settings')}
         >
-          <Settings size={20} className="mx-auto text-text-muted" />
+          <SettingsIcon size={20} className="mx-auto text-text-muted" />
         </button>
       </div>
     );

@@ -1,5 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { Send } from 'lucide';
+import React, { useEffect, useRef, useState } from 'react';
+import { useActionPhase } from '@/renderer/hooks/useActionPhase';
+import { t } from '@/shared/i18n/i18n';
 import { trackEvent } from '../../utils/analytics';
+import { AppActionIcon } from '../ui/AppActionIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Modal } from './Modal';
 
 interface SendLogsModalProps {
@@ -14,56 +19,54 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
   crashReason,
 }) => {
   const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const { phase, isPending, isBusy, run } = useActionPhase();
+  const closeWhenSettledRef = useRef(false);
 
   useEffect(() => {
+    if (closeWhenSettledRef.current && !isBusy) {
+      closeWhenSettledRef.current = false;
+      onClose();
+    }
+  }, [isBusy, onClose]);
+
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
     if (isOpen) {
-      setSendStatus('idle');
       setError(null);
       setMessage('');
     }
-  }, [isOpen]);
+  }
 
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setSendStatus('idle');
+    if (isBusy) {
+      return;
+    }
     setError(null);
+    closeWhenSettledRef.current = false;
 
     try {
-      const result = await window.electronAPI.submitLogs(message.trim(), crashReason);
+      const result = await run(
+        () => window.electronAPI.submitLogs(message.trim(), crashReason),
+        { isSuccess: (r) => r.success }
+      );
 
       if (result.success) {
-        setSendStatus('success');
-
-        // Track event
         trackEvent('Tech Log Sent', {
           has_comment: !!message.trim(),
         });
-
-        // Close modal after success
-        setTimeout(() => {
-          onClose();
-          setMessage('');
-          setSendStatus('idle');
-          setError(null);
-        }, 2000);
+        closeWhenSettledRef.current = true;
       } else if (result.error === 'rate_limit') {
-        setError('Зачекайте кілька хвилин перед наступною відправкою');
-        setSendStatus('error');
+        setError(t('sendLogs.rateLimit'));
         trackEvent('Tech Log Rate Limited');
       } else {
-        setError(result.error || 'Не вдалося надіслати логи');
-        setSendStatus('error');
+        setError(result.error || t('sendLogs.sendFailed'));
         trackEvent('Tech Log Error', { Error: result.error });
       }
     } catch (err) {
       console.error('Failed to send logs:', err);
-      setError('Помилка мережі. Спробуйте пізніше');
-      setSendStatus('error');
-    } finally {
-      setIsSubmitting(false);
+      setError(t('sendLogs.networkError'));
     }
   };
 
@@ -71,33 +74,21 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={crashReason ? 'Звіт про помилку' : 'Відправити логи'}
-      classNames="!max-w-[520px]"
+      title={crashReason ? t('sendLogs.titleCrash') : t('sendLogs.title')}
+      classNames="max-w-[520px]!"
       footer={
         <div className="grid gap-4">
           <button
             onClick={handleSubmit}
             data-gamepad-confirm
             data-gamepad-modal-item
-            disabled={isSubmitting}
-            className={`w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark ${
-              isSubmitting
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-color-main hover:opacity-90'
-            }`}
+            aria-busy={isPending}
+            className="w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark bg-color-main hover:opacity-90 aria-busy:opacity-60 aria-busy:cursor-wait"
           >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-bg-dark border-t-transparent rounded-full animate-spin" />
-                Надсилання...
-              </>
-            ) : (
-              <>Надіслати логи</>
-            )}
+            <AppActionIcon phase={phase} icon={Send} size={18} inheritColor />
+            {t('sendLogs.submit')}
           </button>
-          <p className="text-xs text-text-muted">
-            Надіславши логи, ви погоджуєтеся на обробку ваших персональних даних.
-          </p>
+          <p className="text-xs text-text-muted">{t('sendLogs.consent')}</p>
         </div>
       }
     >
@@ -105,7 +96,9 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
         {/* Crash reason */}
         {crashReason && (
           <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-xs font-medium text-red-400 mb-1">Причина помилки:</p>
+            <p className="text-xs font-medium text-red-400 mb-1">
+              {t('sendLogs.crashReason')}
+            </p>
             <p className="text-xs text-red-300 font-mono break-all">{crashReason}</p>
           </div>
         )}
@@ -116,29 +109,23 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
             htmlFor="log-message"
             className="block text-sm font-medium text-text-muted mb-3"
           >
-            Опис (необов'язково)
+            {t('sendLogs.descriptionLabel')}
           </label>
           <textarea
             id="log-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Опишіть що сталося, щоб ми могли швидше розібратися..."
+            placeholder={t('sendLogs.placeholder')}
             rows={4}
             maxLength={500}
-            disabled={isSubmitting}
+            disabled={isPending}
             data-gamepad-modal-item
-            className="w-full p-4 rounded-xl bg-glass border border-border text-text-main placeholder-text-muted resize-none focus:outline-none focus:border-color-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full p-4 rounded-xl bg-glass border border-border text-text-main placeholder-text-muted resize-none focus:outline-hidden focus:border-color-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <p className="text-xs text-right text-text-muted mt-2">{message.length}/500</p>
+          <p className="text-xs text-right text-text-muted mt-2">
+            <AppNumberFlow value={message.length} suffix="/500" />
+          </p>
         </div>
-
-        {/* Status messages */}
-        {sendStatus === 'success' && (
-          <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-green-500/10 border border-green-500/30">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <p className="text-sm text-green-400">Дякуємо! Файл успішно відправлено</p>
-          </div>
-        )}
 
         {/* Error message */}
         {error && (

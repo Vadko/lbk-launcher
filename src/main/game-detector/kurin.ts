@@ -132,6 +132,7 @@ export async function syncKurinGames() {
       const kurinGame = kurinData.find(
         ({ steamId, team }) =>
           steamId === String(game.steam_app_id) &&
+          // eslint-disable-next-line no-restricted-syntax -- Kurin's team name in its data, not UI text
           (team === game.team || team === 'Спільнота')
       );
       if (!kurinGame) {

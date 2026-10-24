@@ -1,28 +1,29 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Bell,
-  CheckCircle,
-  ChevronLeft,
-  Download,
-  Languages,
-  MessageSquare,
-  RefreshCw,
-  Settings,
-  Sparkles,
-  Trash2,
-  TrendingUp,
-  Users,
-  X,
+  BellIcon,
+  CheckCircleIcon,
+  ChevronLeftIcon,
+  DownloadIcon,
+  LanguagesIcon,
+  MessageSquareIcon,
+  RefreshCwIcon,
+  SettingsIcon,
+  SparklesIcon,
+  Trash2Icon,
+  TrendingUpIcon,
+  UsersIcon,
+  XIcon,
 } from 'lucide-react';
 import React, { useState } from 'react';
+import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
+import type { Notification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import {
-  type Notification,
-  useSubscriptionsStore,
-} from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Modal } from '../Modal/Modal';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Switch } from '../ui/Switch';
 
@@ -63,7 +64,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   );
 
   const handleNotificationClick = (notification: Notification) => {
-    // Позначити як прочитане
+    // Mark as read
     markNotificationAsRead(notification.id);
 
     if (notification.type === 'app-update') {
@@ -72,7 +73,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       return;
     }
 
-    // Перейти на сторінку гри
+    // Navigate to the game page
     navigate(`/game/${notification.gameId}`);
     onClose();
   };
@@ -87,7 +88,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) {
-      return 'Щойно';
+      return t('notificationCenter.justNow');
     }
     if (minutes < 60) {
       return RELATIVE_TIME.format(-minutes, 'minute');
@@ -105,21 +106,21 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
       case 'status-change':
-        return <Languages className="w-4 h-4 text-green-400" />;
+        return <LanguagesIcon className="w-4 h-4 text-green-400" />;
       case 'version-update':
-        return <RefreshCw className="w-4 h-4 text-color-accent" />;
+        return <RefreshCwIcon className="w-4 h-4 text-color-accent" />;
       case 'app-update':
-        return <Download className="w-4 h-4 text-color-main" />;
+        return <DownloadIcon className="w-4 h-4 text-color-main" />;
       case 'progress-change':
-        return <TrendingUp className="w-4 h-4 text-color-mixed" />;
+        return <TrendingUpIcon className="w-4 h-4 text-color-mixed" />;
       case 'team-new-game':
-        return <Sparkles className="w-4 h-4 text-yellow-400" />;
+        return <SparklesIcon className="w-4 h-4 text-yellow-400" />;
       case 'team-status-change':
-        return <Users className="w-4 h-4 text-cyan-400" />;
+        return <UsersIcon className="w-4 h-4 text-cyan-400" />;
       case 'feedback-reply':
-        return <MessageSquare className="w-4 h-4 text-color-main" />;
+        return <MessageSquareIcon className="w-4 h-4 text-color-main" />;
       default:
-        return <Bell className="w-4 h-4 text-color-accent" />;
+        return <BellIcon className="w-4 h-4 text-color-accent" />;
     }
   };
 
@@ -147,44 +148,51 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const getNotificationText = (notification: Notification) => {
     switch (notification.type) {
       case 'status-change':
-        return (
-          <>
-            Стан змінено з "{notification.oldValue}" на "{notification.newValue}"
-          </>
-        );
+        return t('notificationCenter.statusChange', {
+          from: notification.oldValue ?? '',
+          to: notification.newValue ?? '',
+        });
       case 'version-update':
-        return (
-          <>
-            Оновлення версії з {notification.oldValue} до {notification.newValue}
-          </>
-        );
+        return t('notificationCenter.versionUpdate', {
+          from: notification.oldValue ?? '',
+          to: notification.newValue ?? '',
+        });
       case 'app-update':
-        return <>Доступна нова версія застосунку: {notification.newValue}</>;
+        return t('notificationCenter.appUpdate', {
+          version: notification.newValue ?? '',
+        });
       case 'progress-change':
         return <>{notification.newValue}</>;
       case 'team-new-game':
         return (
-          <>
-            Нова локалізація від{' '}
-            <span className="text-yellow-400">{notification.teamName}</span>
-          </>
+          <Trans
+            i18nKey="notificationCenter.teamNewGame"
+            components={{
+              team: <span className="text-yellow-400">{notification.teamName}</span>,
+            }}
+          />
         );
       case 'team-status-change':
         return (
-          <>
-            <span className="text-cyan-400">{notification.teamName}</span>: стан змінено
-            на "{notification.newValue}"
-          </>
+          <Trans
+            i18nKey="notificationCenter.teamStatusChange"
+            components={{
+              team: <span className="text-cyan-400">{notification.teamName}</span>,
+              status: <>{notification.newValue}</>,
+            }}
+          />
         );
       case 'feedback-reply':
         return (
           <>
-            <span className="text-color-main">Відповідь на ваш відгук:</span>{' '}
+            <span className="text-color-main">
+              {t('notificationCenter.feedbackReply')}
+            </span>{' '}
             {notification.message}
           </>
         );
       default:
-        return <>Нове сповіщення</>;
+        return t('notificationCenter.fallback');
     }
   };
 
@@ -198,17 +206,19 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 onClick={() => setShowSettings(false)}
                 className="p-1 hover:bg-glass rounded-lg transition-colors"
               >
-                <ChevronLeft className="w-6 h-6 text-color-accent" />
+                <ChevronLeftIcon className="w-6 h-6 text-color-accent" />
               </button>
             ) : (
-              <Bell className="w-6 h-6 text-color-accent" />
+              <BellIcon className="w-6 h-6 text-color-accent" />
             )}
             <h2 className="text-2xl font-bold text-text-main">
-              {showSettings ? 'Налаштування сповіщень' : 'Сповіщення'}
+              {showSettings
+                ? t('notificationCenter.settingsTitle')
+                : t('notificationCenter.title')}
             </h2>
             {!showSettings && notifications.filter((n) => !n.read).length > 0 && (
               <span className="px-2 py-1 bg-color-accent text-text-dark text-xs font-bold rounded-full">
-                {notifications.filter((n) => !n.read).length}
+                <AppNumberFlow value={notifications.filter((n) => !n.read).length} />
               </span>
             )}
           </div>
@@ -217,10 +227,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <button
                 onClick={() => setShowSettings(true)}
                 className="p-2 hover:bg-glass rounded-lg transition-colors"
-                title="Налаштування сповіщень"
+                title={t('notificationCenter.settingsTitle')}
                 data-gamepad-skip={showConfirmClear || undefined}
               >
-                <Settings className="w-5 h-5 text-text-muted" />
+                <SettingsIcon className="w-5 h-5 text-text-muted" />
               </button>
             )}
             <button
@@ -229,7 +239,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               className="p-2 hover:bg-glass rounded-lg transition-colors"
               data-gamepad-skip={showConfirmClear || undefined}
             >
-              <X className="w-5 h-5 text-text-muted" />
+              <XIcon className="w-5 h-5 text-text-muted" />
             </button>
           </div>
         </div>
@@ -247,10 +257,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
                   <h4 className="text-sm font-semibold text-text-main mb-1">
-                    Оновлення застосунку
+                    {t('notificationCenter.appUpdatesTitle')}
                   </h4>
                   <p className="text-xs text-text-muted">
-                    Сповіщення про нові версії LBK Launcher
+                    {t('notificationCenter.appUpdatesDescription')}
                   </p>
                 </div>
                 <Switch
@@ -263,10 +273,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
                 <div className="flex-1 pr-4">
                   <h4 className="text-sm font-semibold text-text-main mb-1">
-                    Оновлення українізаторів
+                    {t('notificationCenter.gameUpdatesTitle')}
                   </h4>
                   <p className="text-xs text-text-muted">
-                    Сповіщення про нові версії встановлених українізаторів
+                    {t('notificationCenter.gameUpdatesDescription')}
                   </p>
                 </div>
                 <Switch
@@ -287,12 +297,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             >
               {notifications.length === 0 ? (
                 <div className="text-center py-12">
-                  <Bell className="w-16 h-16 text-text-muted mx-auto mb-4 opacity-30" />
-                  <p className="text-text-muted">Сповіщень немає</p>
+                  <BellIcon className="w-16 h-16 text-text-muted mx-auto mb-4 opacity-30" />
+                  <p className="text-text-muted">{t('notificationCenter.empty')}</p>
                   <p className="text-sm text-text-muted mt-2">
-                    Підпишіться на українізатори зі станом "Заплановано",
-                    <br />
-                    щоб отримувати сповіщення про зміни стану
+                    <Trans
+                      i18nKey="notificationCenter.emptyHint"
+                      components={{ br: <br /> }}
+                    />
                   </p>
                 </div>
               ) : (
@@ -305,8 +316,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       className="text-sm px-4 py-2"
                       data-gamepad-skip={showConfirmClear || undefined}
                     >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Прочитати всі
+                      <CheckCircleIcon className="w-4 h-4 mr-2" />
+                      {t('notificationCenter.markAllRead')}
                     </Button>
                     <Button
                       variant="glass"
@@ -314,8 +325,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       className="text-sm px-4 py-2"
                       data-gamepad-skip={showConfirmClear || undefined}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Очистити всі
+                      <Trash2Icon className="w-4 h-4 mr-2" />
+                      {t('notificationCenter.clearAll')}
                     </Button>
                   </div>
 
@@ -332,14 +343,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       >
                         <div className="flex items-start gap-3">
                           <div
-                            className={`p-2 rounded-lg flex-shrink-0 ${getNotificationIconBg(notification.type)}`}
+                            className={`p-2 rounded-lg shrink-0 ${getNotificationIconBg(notification.type)}`}
                           >
                             {getNotificationIcon(notification.type)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               {!notification.read && (
-                                <span className="w-2 h-2 bg-color-accent rounded-full animate-pulse flex-shrink-0" />
+                                <span className="w-2 h-2 bg-color-accent rounded-full animate-pulse shrink-0" />
                               )}
                               <h3
                                 className="font-semibold text-text-main truncate"
@@ -360,9 +371,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                               e.stopPropagation();
                               clearNotification(notification.id);
                             }}
-                            className="p-1 hover:bg-glass rounded transition-colors flex-shrink-0"
+                            className="p-1 hover:bg-glass rounded-sm transition-colors shrink-0"
                           >
-                            <X className="w-4 h-4 text-text-muted" />
+                            <XIcon className="w-4 h-4 text-text-muted" />
                           </button>
                         </div>
                       </div>
@@ -382,7 +393,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10"
+              className="absolute inset-0 bg-black/50 backdrop-blur-xs rounded-2xl flex items-center justify-center z-10"
             >
               <motion.div
                 role="dialog"
@@ -394,14 +405,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 rounded-lg bg-red-500/20">
-                    <Trash2 className="w-5 h-5 text-red-400" />
+                    <Trash2Icon className="w-5 h-5 text-red-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-text-main">
-                    Видалити всі сповіщення?
+                    {t('notificationCenter.clearConfirmTitle')}
                   </h3>
                 </div>
                 <p className="text-sm text-text-muted mb-6">
-                  Цю дію неможливо скасувати. Всі сповіщення будуть видалені назавжди.
+                  {t('notificationCenter.clearConfirmBody')}
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -411,7 +422,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     data-gamepad-modal-item
                     className="flex-1"
                   >
-                    Скасувати
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     variant="primary"
@@ -421,9 +432,9 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                     }}
                     data-gamepad-confirm
                     data-gamepad-modal-item
-                    className="flex-1 !bg-red-500 hover:!bg-red-600"
+                    className="flex-1 bg-red-500! hover:bg-red-600!"
                   >
-                    Видалити
+                    {t('notificationCenter.delete')}
                   </Button>
                 </div>
               </motion.div>

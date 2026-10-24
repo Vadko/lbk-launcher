@@ -1,38 +1,37 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  BookmarkCheck,
-  Download,
-  Languages,
-  MessageSquare,
-  RefreshCw,
-  TrendingUp,
-  X,
+  BookmarkCheckIcon,
+  DownloadIcon,
+  LanguagesIcon,
+  MessageSquareIcon,
+  RefreshCwIcon,
+  TrendingUpIcon,
+  XIcon,
 } from 'lucide-react';
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/shared/i18n/i18n';
+import type { ToastNotification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import {
-  type ToastNotification,
-  useSubscriptionsStore,
-} from '../../store/useSubscriptionsStore';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {
     case 'status-change':
-      return <Languages size={20} className="text-white" />;
+      return <LanguagesIcon size={20} className="text-white" />;
     case 'version-update':
-      return <RefreshCw size={20} className="text-white" />;
+      return <RefreshCwIcon size={20} className="text-white" />;
     case 'app-update':
-      return <Download size={20} className="text-white" />;
+      return <DownloadIcon size={20} className="text-white" />;
     case 'progress-change':
-      return <TrendingUp size={20} className="text-white" />;
+      return <TrendingUpIcon size={20} className="text-white" />;
     case 'first-favorite':
-      return <BookmarkCheck size={20} className="text-text-dark" />;
+      return <BookmarkCheckIcon size={20} className="text-text-dark" />;
     case 'feedback-reply':
-      return <MessageSquare size={20} className="text-white" />;
+      return <MessageSquareIcon size={20} className="text-white" />;
     default:
-      return <RefreshCw size={20} className="text-white" />;
+      return <RefreshCwIcon size={20} className="text-white" />;
   }
 };
 
@@ -71,25 +70,6 @@ const getToastBorder = (type: ToastNotification['type']) => {
       return 'border-color-main';
     default:
       return 'border-color-accent';
-  }
-};
-
-const getToastTitle = (type: ToastNotification['type']) => {
-  switch (type) {
-    case 'status-change':
-      return 'Зміна стану';
-    case 'version-update':
-      return 'Доступне оновлення';
-    case 'app-update':
-      return 'Оновлення застосунку';
-    case 'first-favorite':
-      return 'Додано в улюблені';
-    case 'progress-change':
-      return 'Оновлення прогресу';
-    case 'feedback-reply':
-      return 'Відповідь на відгук';
-    default:
-      return 'Сповіщення';
   }
 };
 
@@ -135,18 +115,18 @@ export const ToastNotifications: React.FC = () => {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.9 }}
             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-            className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto cursor-pointer hover:scale-[1.02] transition-transform`}
+            className={`notification-toast border ${getToastBorder(toast.type)} rounded-xl p-4 shadow-lg min-w-[320px] max-w-[400px] pointer-events-auto cursor-pointer transition-transform`}
             onClick={() => handleToastClick(toast)}
           >
             <div className="flex items-start gap-3">
               <div
-                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getToastGradient(toast.type)} flex items-center justify-center flex-shrink-0`}
+                className={`w-10 h-10 rounded-lg bg-linear-to-br/srgb ${getToastGradient(toast.type)} flex items-center justify-center shrink-0`}
               >
                 {getToastIcon(toast.type)}
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-semibold text-white mb-1">
-                  {getToastTitle(toast.type)}
+                  {t(`notificationToast.${toast.type}`)}
                 </h4>
                 <p className="text-xs text-text-muted">
                   {toast.gameName} • {toast.message}
@@ -157,9 +137,9 @@ export const ToastNotifications: React.FC = () => {
                   e.stopPropagation();
                   dismissToast(toast.id);
                 }}
-                className="flex-shrink-0 w-6 h-6 rounded-lg hover:bg-glass-hover transition-colors flex items-center justify-center"
+                className="shrink-0 w-6 h-6 rounded-lg hover:bg-glass-hover transition-colors flex items-center justify-center"
               >
-                <X size={14} className="text-text-muted" />
+                <XIcon size={14} className="text-text-muted" />
               </button>
             </div>
           </motion.div>

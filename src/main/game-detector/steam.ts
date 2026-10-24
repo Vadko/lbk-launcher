@@ -3,10 +3,10 @@
  * Handles Steam path detection, library scanning, and owned games fetching
  */
 
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { HKEY } from 'registry-js';
 import {
   fetchSteamLibraryFromApi,
   invalidateSteamLibraryCache,
@@ -14,12 +14,9 @@ import {
   steam3ToSteam64,
   writeSteamLibraryCache,
 } from '../steam-library-api';
-import { forCurrentOS, getPlatform } from '../utils/platform';
-import {
-  evaluateInSharedJsContext,
-  isCefUsable,
-  libraryAppsGuard,
-} from '../utils/steam-cef';
+import { forCurrentOS, getPlatform, isWindows } from '../utils/platform';
+import { getRegistryString } from '../utils/registry';
+import { getSteamBridge } from '../utils/steam-bridge';
 import {
   parseAppManifest,
   parseLibraryFolders,
@@ -108,48 +105,43 @@ export function getSteamPath(): string | null {
   return null;
 }
 
-function detectSteamPathWindows(): string | null {
-  const regPath = path.join(
-    process.env.SystemRoot || 'C:\\Windows',
-    'System32',
-    'reg.exe'
-  );
+const STEAM_USER_KEY = 'Software\\Valve\\Steam';
 
-  // Try 64-bit registry
+// HKCU values are written by the Steam client itself, lowercased and with forward slashes ("c:/program files (x86)/steam").
+function toWindowsPath(value: string): string {
+  const normalized = path.win32.normalize(value.replace(/\//g, '\\'));
+  // The on-disk casing keeps it equal to the libraryfolders.vdf entry for the same folder.
   try {
-    const output = execSync(
-      `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v InstallPath`,
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
-    );
-    const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
-    if (match?.[1]) {
-      const steamPath = match[1].trim();
-      if (isValidSteamPath(steamPath)) {
-        console.log('[Steam] Found at:', steamPath);
-        return steamPath;
-      }
-    }
+    return fs.realpathSync.native(normalized);
   } catch {
-    // Try 32-bit registry
-    try {
-      const output = execSync(
-        `"${regPath}" query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Valve\\Steam" /v InstallPath`,
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
-      );
-      const match = output.match(/InstallPath\s+REG_SZ\s+(.+)/);
-      if (match?.[1]) {
-        const steamPath = match[1].trim();
-        if (isValidSteamPath(steamPath)) {
-          console.log('[Steam] Found at (32-bit):', steamPath);
-          return steamPath;
-        }
-      }
-    } catch {
-      console.warn('[Steam] Registry query failed, trying default paths...');
+    return normalized;
+  }
+}
+
+function detectSteamPathWindows(): string | null {
+  const userSteamPath = getRegistryString(
+    HKEY.HKEY_CURRENT_USER,
+    STEAM_USER_KEY,
+    'SteamPath'
+  );
+  if (userSteamPath) {
+    const steamPath = toWindowsPath(userSteamPath);
+    if (isValidSteamPath(steamPath)) {
+      console.log('[Steam] Found at (HKCU):', steamPath);
+      return steamPath;
     }
   }
 
-  // Fallback to default paths
+  for (const key of ['SOFTWARE\\WOW6432Node\\Valve\\Steam', 'SOFTWARE\\Valve\\Steam']) {
+    const steamPath = getRegistryString(HKEY.HKEY_LOCAL_MACHINE, key, 'InstallPath');
+    if (steamPath && isValidSteamPath(steamPath)) {
+      console.log('[Steam] Found at:', steamPath);
+      return steamPath;
+    }
+  }
+
+  console.warn('[Steam] Registry lookup found nothing, trying default paths...');
+
   const defaultPaths = [
     'C:\\Program Files (x86)\\Steam',
     'C:\\Program Files\\Steam',
@@ -161,6 +153,34 @@ function detectSteamPathWindows(): string | null {
     if (fs.existsSync(defaultPath) && isValidSteamPath(defaultPath)) {
       console.log('[Steam] Found at default location:', defaultPath);
       return defaultPath;
+    }
+  }
+
+  return null;
+}
+
+export function getSteamExePath(): string | null {
+  if (!isWindows()) {
+    return null;
+  }
+
+  const fromRegistry = getRegistryString(
+    HKEY.HKEY_CURRENT_USER,
+    STEAM_USER_KEY,
+    'SteamExe'
+  );
+  if (fromRegistry) {
+    const exePath = toWindowsPath(fromRegistry);
+    if (fs.existsSync(exePath)) {
+      return exePath;
+    }
+  }
+
+  const steamPath = getSteamPath();
+  if (steamPath) {
+    const exePath = path.join(steamPath, 'steam.exe');
+    if (fs.existsSync(exePath)) {
+      return exePath;
     }
   }
 
@@ -194,6 +214,7 @@ function detectSteamPathLinux(): string | null {
     path.join(home, '.local/share/Steam'),
     path.join(home, '.local/share/steam'),
     // Flatpak Steam
+    path.join(home, '.var/app/com.valvesoftware.Steam/data/Steam'),
     path.join(home, '.var/app/com.valvesoftware.Steam/.steam/steam'),
     path.join(home, '.var/app/com.valvesoftware.Steam/.steam/Steam'),
     path.join(home, '.var/app/com.valvesoftware.Steam/.local/share/Steam'),
@@ -535,21 +556,12 @@ function resolveSteamGameByAppId(
  * Find Steam game by folder name
  */
 export function findSteamGame(
-  gameFolderName: string,
+  gameFolderName: string | null,
   steamAppId?: number | null
 ): string | null {
   console.log(
-    `[Steam] Searching for game: "${gameFolderName}"${steamAppId != null ? ` (appid ${steamAppId})` : ''}`
+    `[Steam] Searching for game: "${gameFolderName ?? ''}"${steamAppId != null ? ` (appid ${steamAppId})` : ''}`
   );
-
-  // Normalize the folder name
-  const normalizedFolderName = gameFolderName
-    .replace(/^steamapps[/\\]common[/\\]/i, '')
-    .replace(/^common[/\\]/i, '');
-
-  if (normalizedFolderName !== gameFolderName) {
-    console.log(`[Steam] Normalized: "${gameFolderName}" -> "${normalizedFolderName}"`);
-  }
 
   const steamPath = getSteamPath();
   if (!steamPath) {
@@ -569,6 +581,24 @@ export function findSteamGame(
       console.log(`[Steam] ✓ Game found via appid ${steamAppId}: ${pathByAppId}`);
       return pathByAppId;
     }
+  }
+
+  const normalizedFolderName = gameFolderName
+    ?.replace(/^steamapps[/\\]common[/\\]/i, '')
+    .replace(/^common[/\\]/i, '');
+
+  // Without a real name the folder fallbacks would match steamapps/common or steamapps itself.
+  if (
+    !normalizedFolderName ||
+    normalizedFolderName === '.' ||
+    normalizedFolderName === '..'
+  ) {
+    console.warn(`[Steam] ✗ Game "${gameFolderName ?? ''}" not found`);
+    return null;
+  }
+
+  if (normalizedFolderName !== gameFolderName) {
+    console.log(`[Steam] Normalized: "${gameFolderName}" -> "${normalizedFolderName}"`);
   }
 
   const installedGames = getAllSteamGames(libraryFolders).byFolder;
@@ -657,11 +687,8 @@ export function getInstalledSteamGamePaths(): string[] {
 // Steam Library App IDs (Owned Games)
 // ============================================================================
 
-/** Скільки CEF-знімок вважається свіжим, поки його нема чим перевірити. */
+/** How long a CEF snapshot is considered fresh while there's nothing to verify it against. */
 const CEF_SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-/** Не-Steam ярлики мають старший біт — це не ігри бібліотеки. */
-const NON_STEAM_APPID_MIN = 2147483648;
 
 function isCefSnapshotFresh(cachedAt: string): boolean {
   const age = Date.now() - new Date(cachedAt).getTime();
@@ -669,30 +696,25 @@ function isCefSnapshotFresh(cachedAt: string): boolean {
 }
 
 /**
- * Read owned apps straight from the running client's library store via CEF —
+ * Read owned apps straight from the running client's library store via the Steam bridge —
  * no network call, no rate limit, and (unlike the Web API path) it includes
  * family-shared games. `null` means the bridge isn't usable right now and the
  * caller should fall through to the API/file-cache chain.
  */
 async function getSteamLibraryAppIdsFromCef(): Promise<number[] | null> {
-  if (!(await isCefUsable())) {
+  const bridge = await getSteamBridge();
+  if (!bridge) {
     return null;
   }
 
   try {
-    const result = await evaluateInSharedJsContext<number[] | 'unavailable'>(
-      `(() => {${libraryAppsGuard("'unavailable'")}
-        return apps
-          .map((a) => a.appid)
-          .filter((id) => Number.isInteger(id) && id > 0 && id < ${NON_STEAM_APPID_MIN});
-      })()`
-    );
+    const result = await bridge.invoke('libraryAppIds', {});
     if (result === 'unavailable') {
       return null;
     }
     return Array.isArray(result) && result.length > 0 ? result : null;
   } catch (error) {
-    console.error('[Steam] CEF library read failed:', error);
+    console.error(`[Steam] Library read via ${bridge.transport} failed:`, error);
     return null;
   }
 }
@@ -770,8 +792,8 @@ async function readSteamLibraryAppIds(): Promise<number[]> {
     const isSameUser = fileCache.steamId === steam64Id;
     const isSameLicensecacheSize =
       (fileCache.licensecacheSize ?? 0) === (currentLicensecacheSize ?? 0);
-    // Розшарені сімейні ігри бачить лише CEF, і їх відкликання не змінює
-    // licensecache — тому такий знімок додатково обмежений терміном.
+    // Only CEF sees family-shared games, and revoking them doesn't change
+    // the licensecache — so that kind of snapshot is additionally TTL-bound.
     const isFresh = fileCache.source !== 'cef' || isCefSnapshotFresh(fileCache.cachedAt);
 
     if (isSameUser && isSameLicensecacheSize && isFresh) {
@@ -857,22 +879,12 @@ function getSteamLibraryAppIdsFallback(): number[] {
 // Cache Invalidation
 // ============================================================================
 
-/**
- * Invalidate Steam path cache (and dependent caches)
- */
-export function invalidateSteamPathCache(): void {
-  console.log('[Steam] Invalidating path cache');
-  cache.steamPath = undefined;
+// The owned list is re-read (an install can add a free license or follow an account switch), but its file cache stays
+export function invalidateSteamInstalledCaches(): void {
+  console.log('[Steam] Invalidating installed games cache');
   cache.libraryFolders = null;
-  cache.libraryAppIds = null;
-}
-
-/**
- * Invalidate Steam games cache
- */
-export function invalidateSteamGamesCache(): void {
-  console.log('[Steam] Invalidating games cache');
   cache.installedSteam = null;
+  cache.libraryAppIds = null;
 }
 
 /**

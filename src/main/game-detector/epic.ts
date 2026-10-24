@@ -6,12 +6,16 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { isLinux, isMacOS, isWindows } from '../utils/platform';
+import { getEglInstallDirs } from './egl-linux';
+import { parseEpicManifest } from './epic-manifest';
 import { getCleanTitle } from './game-titles';
+import { getHeroicGogInstallFolders } from './gog';
 import {
   findGameInHeroicDirs,
   getAllHeroicGameFolders,
   getHeroicConfigPaths,
 } from './heroic';
+import { logIfChanged } from './log-if-changed';
 import {
   getLutrisEpicGameDirNames,
   getLutrisEpicLibrary,
@@ -40,69 +44,38 @@ interface HeroicLegendaryGame {
   [key: string]: unknown;
 }
 
+/** Where the Epic Games Launcher keeps install manifests on this OS, whether or not it is installed */
+export function getEpicManifestsCandidatePath(): string | null {
+  if (isWindows()) {
+    const programData = process.env.PROGRAMDATA;
+    return programData
+      ? path.join(programData, 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests')
+      : null;
+  }
+  if (isMacOS()) {
+    return path.join(
+      os.homedir(),
+      'Library/Application Support/Epic/EpicGamesLauncher/Data/Manifests'
+    );
+  }
+  return null;
+}
+
 /**
  * Detect Epic Games Launcher manifests path
  */
 function getEpicPath(): string | null {
   try {
-    if (isWindows()) {
-      const programData = process.env.PROGRAMDATA;
-      if (!programData) {
-        return null;
-      }
-      const manifestPath = path.join(
-        programData,
-        'Epic',
-        'EpicGamesLauncher',
-        'Data',
-        'Manifests'
-      );
-      if (fs.existsSync(manifestPath)) {
-        console.log('[Epic] Manifests found at:', manifestPath);
-        return manifestPath;
-      }
-    } else if (isMacOS()) {
-      const manifestPath = path.join(
-        os.homedir(),
-        'Library/Application Support/Epic/EpicGamesLauncher/Data/Manifests'
-      );
-      if (fs.existsSync(manifestPath)) {
-        console.log('[Epic] Manifests found at:', manifestPath);
-        return manifestPath;
-      }
+    const manifestPath = getEpicManifestsCandidatePath();
+    if (manifestPath && fs.existsSync(manifestPath)) {
+      logIfChanged('epic-path', `[Epic] Manifests found at: ${manifestPath}`);
+      return manifestPath;
     }
   } catch (error) {
     console.error('[Epic] Error detecting path:', error);
   }
 
-  console.warn('[Epic] Epic Games Launcher not found');
-  return null;
-}
-
-/**
- * Parse Epic Games manifest file
- */
-function parseEpicManifest(manifestPath: string): {
-  installLocation: string;
-  displayName: string;
-  catalogItemId?: string;
-  appName?: string;
-} | null {
-  try {
-    const content = fs.readFileSync(manifestPath, 'utf8');
-    const manifest = JSON.parse(content);
-
-    if (manifest.InstallLocation && manifest.DisplayName) {
-      return {
-        installLocation: manifest.InstallLocation,
-        displayName: manifest.DisplayName,
-        catalogItemId: manifest.CatalogItemId,
-        appName: manifest.AppName,
-      };
-    }
-  } catch (error) {
-    console.error(`[Epic] Error parsing manifest ${manifestPath}:`, error);
-  }
+  logIfChanged('epic-path', '[Epic] Epic Games Launcher not found', 'warn');
   return null;
 }
 
@@ -113,9 +86,9 @@ export function findEpicGame(gameFolderName: string): string | null {
   console.log(`[Epic] Searching for game: "${gameFolderName}"`);
 
   if (isLinux()) {
-    // Check Heroic directories
+    // Check Heroic directories, which also hold GOG installs
     const heroicPath = findGameInHeroicDirs(gameFolderName);
-    if (heroicPath) {
+    if (heroicPath && !getHeroicGogInstallFolders().includes(path.basename(heroicPath))) {
       console.log(`[Epic] ✓ Game found (Heroic): ${heroicPath}`);
       return heroicPath;
     }
@@ -159,6 +132,14 @@ export function findEpicGame(gameFolderName: string): string | null {
       console.warn('[Epic] Error checking Legendary config:', e);
     }
 
+    const eglPath = getEglInstallDirs().find(
+      (dir) => path.basename(dir).toLowerCase() === gameFolderName.toLowerCase()
+    );
+    if (eglPath) {
+      console.log(`[Epic] ✓ Game found (Epic Games Launcher): ${eglPath}`);
+      return eglPath;
+    }
+
     // Check Lutris installations
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const targetFolder = normalize(gameFolderName);
@@ -178,7 +159,11 @@ export function findEpicGame(gameFolderName: string): string | null {
 
   const epicManifestPath = getEpicPath();
   if (!epicManifestPath) {
-    console.warn('[Epic] Cannot search - Epic Games Launcher not found');
+    logIfChanged(
+      'epic-search',
+      '[Epic] Cannot search - Epic Games Launcher not found',
+      'warn'
+    );
     return null;
   }
 
@@ -221,8 +206,11 @@ export function getInstalledEpicGamePaths(): string[] {
 
   try {
     if (isLinux()) {
-      // Get all game folders from Heroic directories
-      paths.push(...getAllHeroicGameFolders());
+      // GOG and Epic installs share Heroic's default dir; the GOG ones are known from its installed.json
+      const gogFolders = new Set(getHeroicGogInstallFolders());
+      paths.push(
+        ...getAllHeroicGameFolders().filter((folder) => !gogFolders.has(folder))
+      );
 
       // Read from legendary_library.json as well
       try {
@@ -253,6 +241,7 @@ export function getInstalledEpicGamePaths(): string[] {
 
       // Get paths from Lutris
       paths.push(...getLutrisEpicGameDirNames());
+      paths.push(...getEglInstallDirs().map((dir) => path.basename(dir)));
     }
 
     const epicManifestPath = getEpicPath();
@@ -276,7 +265,10 @@ export function getInstalledEpicGamePaths(): string[] {
   }
 
   if (paths.length > 0) {
-    console.log(`[Epic] Found ${paths.length} installed games: ${paths.join(', ')}`);
+    logIfChanged(
+      'epic-installed',
+      `[Epic] Found ${paths.length} installed games: ${paths.join(', ')}`
+    );
   }
 
   return paths;
@@ -359,12 +351,13 @@ export function getEpicLibrary(): string[] {
 
   const result = Array.from(titles);
   if (result.length > 0) {
-    console.log(`[Epic] Found ${result.length} games in library`);
-
     // Print only first 15 detected titles to keep logs readable.
     const maxLoggedGames = 15;
     const visibleTitles = result.slice(0, maxLoggedGames).join(', ');
-    console.log(`[Epic] Games list: ${visibleTitles}`);
+    logIfChanged(
+      'epic-library',
+      `[Epic] Found ${result.length} games in library: ${visibleTitles}`
+    );
   }
 
   return result;
@@ -438,48 +431,49 @@ export function getHeroicEpicAppName(gamePath: string): string | null {
   return null;
 }
 
-/**
- * Get Epic App Name / Catalog Item ID by game path (Windows/macOS)
- * Returns the app name in format suitable for epic:// protocol
- */
+function findEpicManifest(gamePath: string): ReturnType<typeof parseEpicManifest> {
+  const epicManifestPath = getEpicPath();
+  if (!epicManifestPath || !fs.existsSync(epicManifestPath)) {
+    return null;
+  }
+  try {
+    const resolvedGamePath = path.resolve(gamePath);
+    const matches = fs
+      .readdirSync(epicManifestPath)
+      .filter((f: string) => f.endsWith('.item'))
+      .map((f) => parseEpicManifest(path.join(epicManifestPath, f)))
+      .filter(
+        (manifest) =>
+          manifest?.installLocation &&
+          path.resolve(manifest.installLocation) === resolvedGamePath
+      );
+    // DLC manifests share the game's folder
+    return (
+      matches.find((m) => !m?.mainGameAppName || m.mainGameAppName === m.appName) ??
+      matches[0] ??
+      null
+    );
+  } catch (error) {
+    console.error('[Epic] Error reading Epic manifests:', error);
+    return null;
+  }
+}
+
+// The id the epic:// protocol takes for a game folder
 export function getEpicAppName(gamePath: string): string | null {
   // For Linux, use Heroic config
   if (isLinux()) {
     return getHeroicEpicAppName(gamePath);
   }
+  const manifest = findEpicManifest(gamePath);
+  // Prefer AppName: it is the ownership key Epic checks on launch.
+  return manifest?.appName || manifest?.catalogItemId || null;
+}
 
-  // For Windows/macOS, use Epic manifests
-  const epicManifestPath = getEpicPath();
-  if (!epicManifestPath || !fs.existsSync(epicManifestPath)) {
-    return null;
-  }
-
-  try {
-    const manifestFiles = fs
-      .readdirSync(epicManifestPath)
-      .filter((f: string) => f.endsWith('.item'));
-
-    for (const manifestFile of manifestFiles) {
-      const manifestFullPath = path.join(epicManifestPath, manifestFile);
-      const manifest = parseEpicManifest(manifestFullPath);
-
-      if (manifest && manifest.installLocation) {
-        const resolvedManifestPath = path.resolve(manifest.installLocation);
-        const resolvedGamePath = path.resolve(gamePath);
-
-        if (resolvedManifestPath === resolvedGamePath) {
-          // Prefer AppName: it is the ownership key Epic checks on launch.
-          const appIdentifier = manifest.appName || manifest.catalogItemId;
-          if (appIdentifier) {
-            console.log(`[Epic] Found app identifier for ${gamePath}: ${appIdentifier}`);
-            return appIdentifier;
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('[Epic] Error getting Epic App Name:', error);
-  }
-
-  return null;
+// EGL's own app id, the key of its per-game settings on Windows
+export function getEpicManifestAppId(gamePath: string): string | null {
+  const manifest = findEpicManifest(gamePath);
+  return manifest?.catalogNamespace && manifest.catalogItemId && manifest.appName
+    ? `${manifest.catalogNamespace}:${manifest.catalogItemId}:${manifest.appName}`
+    : null;
 }

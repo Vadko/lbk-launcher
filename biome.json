@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -10,6 +10,7 @@
     "includes": [
       "src/**",
       "!src/lib/database.types.ts",
+      "packages/**",
       "electron.vite.config.ts",
       "vitest.config.ts",
       "package.json",
@@ -29,6 +30,11 @@
       "style": {
         "useBlockStatements": "error"
       }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "javascript": {

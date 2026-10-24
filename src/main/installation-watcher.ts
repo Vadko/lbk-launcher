@@ -1,19 +1,42 @@
-import { app, type BrowserWindow } from 'electron';
+import { F } from '@mobily/ts-belt';
+import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { invalidateInstalledGameIdsCache } from './installer/cache';
+import { sendToRenderer } from './window';
 
 let watcher: fs.FSWatcher | null = null;
-let debounceTimer: NodeJS.Timeout | null = null;
 const pendingChanges = new Set<string>();
+
+// Batches the rapid writes of one install into a single refresh
+const flushChanges = F.makeControlledDebounce(
+  (onChange?: () => void) => {
+    if (pendingChanges.size === 0) {
+      return;
+    }
+    console.log(
+      '[InstallationWatcher] Installation cache changed:',
+      [...pendingChanges].join(', ')
+    );
+    pendingChanges.clear();
+
+    // Invalidate the installed game IDs cache
+    invalidateInstalledGameIdsCache();
+
+    // Notify renderer to refresh installed games list
+    sendToRenderer('installed-games-changed');
+
+    // Optional callback (e.g. process server-side tombstoned games
+    // that became uninstalled and can now be removed locally)
+    onChange?.();
+  },
+  { delay: 100, leading: false }
+);
 
 /**
  * Start watching installation-cache directory for changes
  */
-export function startInstallationWatcher(
-  mainWindow: BrowserWindow | null,
-  onChange?: () => void
-): void {
+export function startInstallationWatcher(onChange?: () => void): void {
   // Close any existing watcher first to prevent EMFILE errors
   if (watcher) {
     console.log('[InstallationWatcher] Closing existing watcher before starting new one');
@@ -34,34 +57,8 @@ export function startInstallationWatcher(
   // Watch for directory changes (file additions/deletions)
   watcher = fs.watch(installInfoDir, (_eventType, filename) => {
     if (filename && filename.endsWith('.json')) {
-      // Collect pending changes and debounce
       pendingChanges.add(filename);
-
-      // Clear existing timer
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      // Debounce: wait 100ms before processing to batch multiple rapid changes
-      debounceTimer = setTimeout(() => {
-        if (pendingChanges.size > 0) {
-          console.log(
-            '[InstallationWatcher] Installation cache changed:',
-            [...pendingChanges].join(', ')
-          );
-          pendingChanges.clear();
-
-          // Invalidate the installed game IDs cache
-          invalidateInstalledGameIdsCache();
-
-          // Notify renderer to refresh installed games list
-          mainWindow?.webContents.send('installed-games-changed');
-
-          // Optional callback (e.g. process server-side tombstoned games
-          // that became uninstalled and can now be removed locally)
-          onChange?.();
-        }
-      }, 100);
+      flushChanges.schedule(onChange);
     }
   });
 }
@@ -70,6 +67,7 @@ export function startInstallationWatcher(
  * Stop watching installation-cache directory
  */
 export function stopInstallationWatcher(): void {
+  flushChanges.cancel();
   if (watcher) {
     console.log('[InstallationWatcher] Stopping directory watcher');
     watcher.close();

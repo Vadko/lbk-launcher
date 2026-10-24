@@ -1,14 +1,16 @@
+import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-import type { TagOption } from '@/shared/types';
+import { getGameGroupKey } from '@/shared/game-filters';
+import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
-import { useFilterCounts } from '../../hooks/useFilterCounts';
+import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
+import { useSyncAwareQuery } from '../../queries/useSyncAwareQuery';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
-import type { Game } from '../../types/game';
 import { deriveGroupNaming } from '../../utils/groupName';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
@@ -24,6 +26,10 @@ import type { GameGroup } from './types';
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
 const FILTERS_RELOAD_DEBOUNCE = 300;
+const TEAMS_KEY = ['teams'];
+const TAG_OPTIONS_KEY = ['tag-options'];
+const NO_AUTHORS: string[] = [];
+const NO_TAGS: TagOption[] = [];
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -35,8 +41,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const navigate = useNavigate();
 
     // Use shallow selectors to prevent unnecessary re-renders
-    // Статуси, автори, спеціальний (бібліотечний) фільтр і типи контенту - незалежні
-    // групи, що комбінуються через AND, тож вибір в одній групі не скидає інші.
+    // Statuses, authors, the special (library) filter and content types are
+    // independent groups combined via AND, so a selection in one group doesn't reset others.
     const {
       selectedGame,
       selectedStatuses,
@@ -160,61 +166,31 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       );
     }, [specialFilter, setSpecialFilter]);
 
-    // Fetch authors and tag options (wait for sync to complete)
-    const syncStatus = useStore((state) => state.syncStatus);
-    const [authors, setAuthors] = useState<string[]>([]);
-    const [authorsLoading, setAuthorsLoading] = useState(true);
-    const [tags, setTags] = useState<TagOption[]>([]);
-    const [tagsLoading, setTagsLoading] = useState(true);
-    const reloadFiltersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const queryClient = useQueryClient();
+    const { data: authors = NO_AUTHORS, isPending: authorsLoading } = useSyncAwareQuery({
+      queryKey: TEAMS_KEY,
+      queryFn: () => window.electronAPI.fetchTeams(),
+    });
+    const { data: tags = NO_TAGS, isPending: tagsLoading } = useSyncAwareQuery({
+      queryKey: TAG_OPTIONS_KEY,
+      queryFn: () => window.electronAPI.fetchTagOptions(),
+    });
 
-    const loadAuthors = useCallback(async () => {
-      try {
-        const fetchedAuthors = await window.electronAPI.fetchTeams();
-        setAuthors(fetchedAuthors);
-      } catch (error) {
-        console.error('[Sidebar] Error fetching authors:', error);
-      } finally {
-        setAuthorsLoading(false);
-      }
-    }, []);
-
-    const loadTags = useCallback(async () => {
-      try {
-        const fetchedTags = await window.electronAPI.fetchTagOptions();
-        setTags(fetchedTags);
-      } catch (error) {
-        console.error('[Sidebar] Error fetching tags:', error);
-      } finally {
-        setTagsLoading(false);
-      }
-    }, []);
-
+    // A bulk catalog update broadcasts many games back-to-back; re-read the filters once it settles
     useEffect(() => {
-      if (syncStatus !== 'ready' && syncStatus !== 'error') {
-        return;
-      }
-      loadAuthors();
-      loadTags();
-
-      // Пачка бродкастів при масовому апдейті каталогу інакше дала б N
-      // синхронних сканів games у main-процесі поспіль
-      const unsub = window.electronAPI?.onGameUpdated?.(() => {
-        if (reloadFiltersTimerRef.current) {
-          clearTimeout(reloadFiltersTimerRef.current);
-        }
-        reloadFiltersTimerRef.current = setTimeout(() => {
-          loadAuthors();
-          loadTags();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const unsubscribe = window.electronAPI.onGameUpdated(() => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          void queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+          void queryClient.invalidateQueries({ queryKey: TAG_OPTIONS_KEY });
         }, FILTERS_RELOAD_DEBOUNCE);
       });
       return () => {
-        unsub?.();
-        if (reloadFiltersTimerRef.current) {
-          clearTimeout(reloadFiltersTimerRef.current);
-        }
+        unsubscribe();
+        clearTimeout(timer);
       };
-    }, [syncStatus, loadAuthors, loadTags]);
+    }, [queryClient]);
 
     const {
       games: visibleGames,
@@ -251,15 +227,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     const gameGroups = useMemo((): GameGroup[] => {
       const groupMap = new Map<string, GameGroup>();
 
-      const getGroupKey = (game: Game): string => {
-        if (game.steam_app_id !== null && game.steam_app_id !== undefined) {
-          return `steam:${game.steam_app_id}`;
-        }
-        return game.slug ? `slug:${game.slug}` : `id:${game.id}`;
-      };
-
       for (const game of visibleGames) {
-        const key = getGroupKey(game);
+        const key = getGameGroupKey(game);
         const existing = groupMap.get(key);
 
         if (existing) {
@@ -282,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           (a, b) => (b.translation_progress ?? 0) - (a.translation_progress ?? 0)
         );
         // Derive a clean shared title and per-translation variant suffix
-        // (e.g. "Stray (без озвучення)" → name="Stray", variant="(без озвучення)").
+        // (e.g. "Stray (no voice acting)" → name="Stray", variant="(no voice acting)").
         const naming = deriveGroupNaming(group.translations);
         group.name = naming.name;
         group.variantById = naming.variantById;
@@ -364,15 +333,14 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       [navigate]
     );
 
-    // Filter counts from dedicated hook (with debouncing)
-    const { counts: filterCounts } = useFilterCounts();
+    const facetData = useFacetData(isFiltersModalOpen);
 
     if (isHorizontal) {
       // Horizontal gamepad mode
       // Disable backdrop-blur when animations are off for performance
       const headerClass = animationsEnabled
-        ? 'w-full flex flex-col bg-glass/30 backdrop-blur-md'
-        : 'w-full flex flex-col bg-bg-dark/90';
+        ? 'w-full flex flex-col backdrop-blur-md'
+        : 'w-full flex flex-col';
 
       return (
         <div className={headerClass}>
@@ -384,7 +352,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             <SidebarHeader isCompact />
 
             {/* Search */}
-            <div className="flex-1 min-w-0" data-gamepad-header-item>
+            <div className="flex-1 min-w-0" data-gamepad-header-item data-gamepad-search>
               <SearchBar value={searchQuery} onChange={setSearchQuery} />
             </div>
 
@@ -461,7 +429,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             onTagsChange={setSelectedTagIds}
             tags={tags}
             tagsLoading={tagsLoading}
-            counts={filterCounts}
+            facetData={facetData}
+            searchQuery={debouncedSearchQuery}
           />
         </div>
       );
@@ -470,7 +439,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
     // Vertical layout (default)
     return (
       <GlassPanel
-        className="h-full flex flex-col relative"
+        className="h-full flex flex-col relative z-10"
         style={{ width: sidebarWidth }}
       >
         <SidebarHeader />
@@ -547,7 +516,8 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           onTagsChange={setSelectedTagIds}
           tags={tags}
           tagsLoading={tagsLoading}
-          counts={filterCounts}
+          facetData={facetData}
+          searchQuery={debouncedSearchQuery}
         />
       </GlassPanel>
     );

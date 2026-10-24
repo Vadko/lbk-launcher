@@ -1,4 +1,4 @@
-/** steam:// не спрацює без зареєстрованого протоколу — тоді ведемо у браузер */
+/** steam:// won't work without a registered protocol handler — fall back to the browser then */
 export async function openWorkshopPage(workshopId: string): Promise<void> {
   const result = await window.electronAPI.openExternal(
     `steam://url/CommunityFilePage/${workshopId}`

@@ -1,5 +1,4 @@
 import type { Game } from '@/shared/types.ts';
-import { getMainWindow } from '../window';
 import type { BroadcastMessage, BroadcastSubscription } from './supabase-realtime';
 
 export function createGamesBroadcastSubscription(
@@ -26,7 +25,6 @@ export function createGamesBroadcastSubscription(
     }
 
     onUpdate(game);
-    getMainWindow()?.webContents.send('game-updated', game);
   };
 
   return {

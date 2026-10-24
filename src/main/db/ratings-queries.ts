@@ -7,7 +7,7 @@ const visibleSql = (hideAi: boolean) =>
 
 const teamsCte = (hideAi: boolean) => `
   WITH RECURSIVE split(game_id, likes, downloads, author, rest) AS (
-    SELECT id, COALESCE(likes_count, 0), COALESCE(downloads, 0), '', team || ','
+    SELECT id, COALESCE(likes, 0), COALESCE(downloads, 0), '', team || ','
     FROM games
     WHERE ${visibleSql(hideAi)} AND team IS NOT NULL AND team != ''
     UNION ALL
@@ -64,7 +64,7 @@ export function getGamesRating(
   ).total;
   const items = db
     .prepare(
-      `SELECT id, name, COALESCE(likes_count, 0) AS likes,
+      `SELECT id, name, COALESCE(likes, 0) AS likes,
         COALESCE(downloads, 0) AS downloads, status
       FROM games
       WHERE ${visibleSql(hideAi)}

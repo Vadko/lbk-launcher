@@ -5,7 +5,7 @@ import { join } from 'path';
 import { runMigrations } from './migrations';
 
 /**
- * Database Manager - клас для управління локальною базою даних
+ * Database Manager - class for managing the local database
  */
 class DatabaseManager {
   private static instance: DatabaseManager | null = null;
@@ -52,7 +52,7 @@ class DatabaseManager {
 
     this.db = new Database(dbPath);
 
-    // Увімкнути WAL режим для кращої продуктивності
+    // Enable WAL mode for better performance
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('synchronous = NORMAL');
     this.db.pragma('foreign_keys = ON');
@@ -60,12 +60,12 @@ class DatabaseManager {
     // Load spellfix1 extension for fuzzy search
     this.loadSpellfixExtension();
 
-    // Створити таблиці якщо їх немає
+    // Create tables if they don't exist
     if (!dbExists) {
       this.createTables();
       console.log('[Database] Database created successfully');
     } else {
-      // Перевірити чи таблиці існують, якщо ні - створити
+      // Check if tables exist, create them if not
       const tablesExist = this.db
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='games'")
         .get();
@@ -99,7 +99,7 @@ class DatabaseManager {
   }
 
   /**
-   * Singleton pattern для отримання єдиного екземпляру
+   * Singleton pattern for getting the single instance
    */
   public static getInstance(): DatabaseManager {
     if (!DatabaseManager.instance) {
@@ -109,15 +109,15 @@ class DatabaseManager {
   }
 
   /**
-   * Отримати Database інстанс
+   * Get the Database instance
    */
   public getDb(): Database.Database {
     return this.db;
   }
 
   /**
-   * Створення таблиць - структура співпадає з Supabase
-   * ВАЖЛИВО: При додаванні нових колонок тут, також додайте міграцію для існуючих БД!
+   * Table creation - structure matches Supabase
+   * IMPORTANT: When adding new columns here, also add a migration for existing DBs!
    */
   private createTables(): void {
     this.db.exec(`
@@ -214,7 +214,7 @@ class DatabaseManager {
         search_keywords TEXT,
         steam_tag_ids TEXT, -- JSON array of Steam tag ids
         source_language TEXT,
-        likes_count INTEGER NOT NULL DEFAULT 0,
+        likes INTEGER NOT NULL DEFAULT 0,
         user_unlocked INTEGER NOT NULL DEFAULT 0 -- Local-only, never synced from Supabase
       );
 
@@ -229,6 +229,12 @@ class DatabaseManager {
       CREATE TABLE IF NOT EXISTS steam_tag_names (
         tagid INTEGER PRIMARY KEY,
         name TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS my_likes (
+        game_id TEXT PRIMARY KEY,
+        liked INTEGER NOT NULL,
+        server_liked INTEGER NOT NULL DEFAULT 0
       );
 
       -- FTS5 virtual table for full-text search
@@ -249,7 +255,7 @@ class DatabaseManager {
       console.log('[Database] Spellfix1 not available, skipping spellfix_words table');
     }
 
-    // Таблиця для sync метаданих
+    // Table for sync metadata
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS sync_metadata (
         key TEXT PRIMARY KEY,
@@ -260,10 +266,10 @@ class DatabaseManager {
   }
 
   /**
-   * Закрити з'єднання з базою даних
+   * Close the database connection
    */
   public close(): void {
-    if (this.db) {
+    if (this.db.open) {
       try {
         // Checkpoint WAL to ensure all data is written to main DB file
         this.db.pragma('wal_checkpoint(TRUNCATE)');
@@ -271,7 +277,6 @@ class DatabaseManager {
         // Ignore checkpoint errors
       }
       this.db.close();
-      this.db = null as unknown as Database.Database;
       DatabaseManager.instance = null;
       console.log('[Database] Database connection closed');
     }
@@ -279,21 +284,21 @@ class DatabaseManager {
 }
 
 /**
- * Helper функція для отримання Database інстансу
+ * Helper function for getting the Database instance
  */
 export function getDatabase(): Database.Database {
   return DatabaseManager.getInstance().getDb();
 }
 
 /**
- * Helper функція для ініціалізації БД
+ * Helper function for initializing the DB
  */
 export function initDatabase(): Database.Database {
   return DatabaseManager.getInstance().getDb();
 }
 
 /**
- * Helper функція для закриття БД
+ * Helper function for closing the DB
  */
 export function closeDatabase(): void {
   DatabaseManager.getInstance().close();

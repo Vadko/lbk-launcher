@@ -5,13 +5,14 @@ import { Router } from '../lib/electron-router-dom';
 import { MainLayout } from './components/Layout/MainLayout';
 import { useIdleEffect } from './hooks/useIdleEffect';
 import { useRealtimeGames } from './hooks/useRealtimeGames';
+import { useSteamBridgeStatusSync } from './hooks/useSteamBridgeStatusSync';
+import { useSteamRestartPrompt } from './hooks/useSteamRestartPrompt';
 import { GamePage } from './pages/GamePage';
 import { HomePage } from './pages/HomePage';
 import { NewsPage } from './pages/NewsPage';
 import { RatingsPage } from './pages/RatingsPage';
 import { SitePage } from './pages/SitePage';
 import { useGamepadModeStore } from './store/useGamepadModeStore';
-import { useModalStore } from './store/useModalStore';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useStore } from './store/useStore';
 import { useWorkshopInstallsStore } from './store/useWorkshopInstallsStore';
@@ -23,6 +24,8 @@ const MODE_SWITCH_DEADZONE = 0.8;
 
 const isE2E = window.electronAPI?.isE2E?.() ?? false;
 
+let isMixpanelInitialized = false;
+
 if (!isE2E) {
   try {
     const mpToken = import.meta.env.DEV
@@ -30,16 +33,25 @@ if (!isE2E) {
       : import.meta.env.VITE_MIXPANEL_TOKEN_PROD;
     if (mpToken) {
       mixpanel.init(mpToken, {
+        // Disable geolocation tracking for privacy reasons
+        ip: false,
+        property_blacklist: ['$current_url'],
         debug: import.meta.env.DEV,
+        api_host: import.meta.env.DEV ? 'https://api-eu.mixpanel.com' : undefined,
       });
+      isMixpanelInitialized = true;
     }
   } catch (err) {
     console.error('[Analytics] mixpanel.init failed', err);
   }
 }
 
-// Реєструємо версію лаунчера як super property, щоб вона додавалась у всі івенти автоматично
+// Register launcher version and id as super properties so they get attached to all events automatically
+// register() throws on an uninitialized mixpanel instance (E2E, missing token)
 (async () => {
+  if (!isMixpanelInitialized) {
+    return;
+  }
   try {
     const version = await window.electronAPI?.getVersion?.();
     const machineId = await window.electronAPI?.getMachineId?.();
@@ -52,6 +64,29 @@ if (!isE2E) {
   }
 })();
 
+// Mirror the Settings toggle into the SDK: opting out also stops Mixpanel's own
+// persistence and queued events, not just our trackEvent() guard.
+if (isMixpanelInitialized) {
+  const applyOptState = (enabled: boolean) => {
+    try {
+      if (enabled) {
+        mixpanel.opt_in_tracking();
+      } else {
+        mixpanel.opt_out_tracking();
+      }
+    } catch (err) {
+      console.error('[Analytics] mixpanel opt state failed', err);
+    }
+  };
+
+  applyOptState(useSettingsStore.getState().productAnalyticsEnabled);
+  useSettingsStore.subscribe((state, prev) => {
+    if (state.productAnalyticsEnabled !== prev.productAnalyticsEnabled) {
+      applyOptState(state.productAnalyticsEnabled);
+    }
+  });
+}
+
 export const App: React.FC = () => {
   const { detectInstalledGames, setSyncStatus, syncStatus } = useStore();
   const { liquidGlassEnabled } = useSettingsStore();
@@ -60,7 +95,7 @@ export const App: React.FC = () => {
   const [liquidGlassSupported, setLiquidGlassSupported] = useState(false);
   const setLoaderVisible = useStore((s) => s.setLoaderVisible);
 
-  // Підписка на real-time оновлення ігор
+  // Subscribe to real-time game updates
   useRealtimeGames();
 
   // Listen for sync status from main process
@@ -70,9 +105,9 @@ export const App: React.FC = () => {
     const loaderStartTime = performance.now();
     const MIN_LOADER_DISPLAY_MS = 1000; // Minimum time to show loader for animations
     const STABLE_FRAMES = 20;
-    // 45мс покриває 24-120Hz: на 30Hz (Low Power Mode) кадр ~33мс, на 40Hz
-    // (Steam Deck) ~25мс — з меншим бюджетом стрік ніколи не набирався і
-    // лоадер завжди висів повні MAX_WAIT_AFTER_READY_MS
+    // 45ms covers 24-120Hz: at 30Hz (Low Power Mode) a frame is ~33ms, at 40Hz
+    // (Steam Deck) ~25ms — with a smaller budget the streak never accumulated and
+    // the loader always hung around for the full MAX_WAIT_AFTER_READY_MS
     const FRAME_BUDGET_MS = 45;
     const MAX_WAIT_AFTER_READY_MS = 8000;
 
@@ -134,7 +169,7 @@ export const App: React.FC = () => {
     };
   }, [setSyncStatus, setLoaderVisible]);
 
-  // Відстеження першого запуску додатку
+  // Track the app's first launch
   useEffect(() => {
     if (!window.storeStorage) {
       return;
@@ -261,12 +296,12 @@ export const App: React.FC = () => {
     checkAndApplyLiquidGlass();
   }, [liquidGlassEnabled]);
 
-  // Завантажити встановлені українізатори при старті
+  // Gated on sync: pre-sync catalog rows have stale versions and may be missing entirely
   useIdleEffect(() => {
-    if (window.electronAPI) {
+    if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
       useStore.getState().loadInstalledGamesFromSystem();
     }
-  }, []);
+  }, [syncStatus]);
 
   useIdleEffect(() => {
     if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
@@ -274,15 +309,15 @@ export const App: React.FC = () => {
     }
   }, [syncStatus]);
 
-  // Детекція встановлених ігор — тільки коли sync завершився (інакше каталог ще
-  // порожній). Ефект перезапускається, коли syncStatus стане ready/error.
+  // Detect installed games — only once sync has finished (otherwise the catalog is
+  // still empty). The effect reruns when syncStatus becomes ready/error.
   useIdleEffect(() => {
     if (window.electronAPI && (syncStatus === 'ready' || syncStatus === 'error')) {
       detectInstalledGames();
     }
   }, [detectInstalledGames, syncStatus]);
 
-  // Слухати зміни Steam бібліотеки
+  // Listen for Steam library changes
   useEffect(() => {
     if (!window.electronAPI) {
       return;
@@ -301,8 +336,8 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, [detectInstalledGames]);
 
-  // Слухати зміни встановлених українізаторів
-  // Цей listener потрібен для всіх змін: інсталяція, деінсталяція, зовнішні зміни
+  // Listen for changes to installed translations
+  // This listener is needed for all changes: install, uninstall, external changes
   useEffect(() => {
     if (!window.electronAPI?.onInstalledGamesChanged) {
       return;
@@ -320,7 +355,27 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Перевірка нових версій встановлених українізаторів при realtime оновленні гри
+  useEffect(() => {
+    const unsubProgress = window.electronAPI?.onDownloadProgress?.((gameId, progress) => {
+      useStore.getState().setInstallationProgress(gameId, {
+        progress: progress.percent,
+        downloadProgress: progress,
+      });
+    });
+    const unsubStatus = window.electronAPI?.onInstallationStatus?.((gameId, status) => {
+      useStore.getState().setInstallationProgress(gameId, {
+        statusMessage: status.message,
+        statusTone: status.tone ?? null,
+        ...(status.phase !== 'download' && { downloadProgress: null, progress: 0 }),
+      });
+    });
+    return () => {
+      unsubProgress?.();
+      unsubStatus?.();
+    };
+  }, []);
+
+  // Check installed translations for new versions on a realtime game update
   useEffect(() => {
     if (!window.electronAPI?.onGameUpdated) {
       return;
@@ -346,32 +401,8 @@ export const App: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // "Restart Steam" prompt from the Settings CEF toggle when the port isn't
-  // open yet. Dismissible — installs that need CEF show their own mandatory one.
-  useEffect(() => {
-    if (!window.electronAPI?.onSteamRestartRequired) {
-      return;
-    }
-    const unsubscribe = window.electronAPI.onSteamRestartRequired(() => {
-      useModalStore.getState().showModal({
-        title: 'Перезапустіть Steam',
-        message:
-          'Щоб зміни набули чинності, потрібно перезапустити Steam. ' +
-          'Можна зробити це пізніше — налаштування вже збережено.',
-        type: 'info',
-        actions: [
-          {
-            label: 'Перезапустити Steam',
-            onClick: () => {
-              window.electronAPI.restartSteam();
-            },
-            variant: 'primary',
-          },
-        ],
-      });
-    });
-    return unsubscribe;
-  }, []);
+  useSteamRestartPrompt();
+  useSteamBridgeStatusSync();
 
   const handleOnlineEvent = () => {
     setOnline(true);
@@ -393,7 +424,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Слухати зміни стану maximize для прибирання border-radius
+  // Listen for maximize state changes to remove border-radius
   useEffect(() => {
     window.windowControls?.onMaximizedChange((isMaximized) => {
       if (isMaximized) {

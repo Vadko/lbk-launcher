@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { t } from '@/shared/i18n/i18n';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { InstalledGamesSection } from './InstalledGamesSection';
 import { NewGamesSection, type TabConfig } from './NewGamesSection';
@@ -17,8 +18,8 @@ export const MainPage: React.FC = () => {
       ContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
 
-    const isGamepadMode = useGamepadModeStore.getState().isGamepadMode;
-    if (!isGamepadMode) {
+    const { isGamepadMode, navigationArea } = useGamepadModeStore.getState();
+    if (!isGamepadMode || navigationArea !== 'main-content') {
       return;
     }
     document
@@ -30,11 +31,11 @@ export const MainPage: React.FC = () => {
 
   const newsTabsConfig: TabConfig[] = [
     {
-      label: 'Нові переклади',
+      label: t('homeSections.newTranslations'),
       sortOrder: 'newest',
     },
     {
-      label: 'Оновлення',
+      label: t('homeSections.updates'),
       sortOrder: 'updated',
     },
   ];
@@ -52,13 +53,13 @@ export const MainPage: React.FC = () => {
         >
           <InstalledGamesSection showLimit={3} />
           <NewGamesSection
-            title="Новинки"
+            title={t('homeSections.newGames')}
             tabs={newsTabsConfig}
             defaultTabSortOrder="newest"
             showLimit={3}
           />
           <TrendGamesSection
-            title="Популярне у гравців"
+            title={t('homeSections.popular')}
             showDownloadCounter={true}
             onViewAll={() => setCurrentView('trending')}
           />

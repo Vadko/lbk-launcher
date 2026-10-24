@@ -1,3 +1,5 @@
+import { t } from '@/shared/i18n/i18n';
+
 /**
  * Global error handlers for uncaught errors and unhandled promise rejections
  */
@@ -61,7 +63,7 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
         margin-bottom: 24px;
         line-height: 1.5;
       ">
-        На жаль, сталася критична помилка. Надішліть звіт, щоб ми могли виправити це швидше.
+        ${t('crashScreen.intro')}
       </p>
 
       <button id="send-logs-btn" style="
@@ -76,10 +78,10 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
         text-align: center;
         width: 100%;
         margin-bottom: 24px;
-      ">Надіслати звіт про помилку</button>
+      ">${t('crashScreen.sendReport')}</button>
 
       <div id="send-logs-form" style="display: none; margin-bottom: 24px;">
-        <textarea id="send-logs-message" placeholder="Опишіть що сталося (необов'язково)..." style="
+        <textarea id="send-logs-message" placeholder="${t('crashScreen.messagePlaceholder')}" style="
           width: 100%;
           padding: 12px;
           background-color: #0f1419;
@@ -102,7 +104,7 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
           border-radius: 8px;
           cursor: pointer;
           width: 100%;
-        ">Надіслати</button>
+        ">${t('crashScreen.send')}</button>
         <p id="send-logs-status" style="
           font-size: 12px;
           margin-top: 8px;
@@ -128,8 +130,8 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
           cursor: pointer;
           text-align: left;
         ">
-          <div style="font-weight: bold; margin-bottom: 4px;">1. Перезавантажити</div>
-          <div style="font-size: 12px; opacity: 0.9;">Швидке виправлення (зберігає всі дані)</div>
+          <div style="font-weight: bold; margin-bottom: 4px;">${t('crashScreen.reload')}</div>
+          <div style="font-size: 12px; opacity: 0.9;">${t('crashScreen.reloadHint')}</div>
         </button>
 
         <button id="clear-cache-only-btn" style="
@@ -143,8 +145,8 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
           cursor: pointer;
           text-align: left;
         ">
-          <div style="font-weight: bold; margin-bottom: 4px;">2. Очистити кеш</div>
-          <div style="font-size: 12px; opacity: 0.9;">Видалить тимчасові файли (зберігає налаштування)</div>
+          <div style="font-weight: bold; margin-bottom: 4px;">${t('crashScreen.clearCache')}</div>
+          <div style="font-size: 12px; opacity: 0.9;">${t('crashScreen.clearCacheHint')}</div>
         </button>
 
         <button id="clear-all-data-btn" style="
@@ -158,8 +160,8 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
           cursor: pointer;
           text-align: left;
         ">
-          <div style="font-weight: bold; margin-bottom: 4px;">3. Очистити всі дані ⚠️</div>
-          <div style="font-size: 12px; opacity: 0.9;">Видалить налаштування, підписки та всі дані</div>
+          <div style="font-weight: bold; margin-bottom: 4px;">${t('crashScreen.clearAll')}</div>
+          <div style="font-size: 12px; opacity: 0.9;">${t('crashScreen.clearAllHint')}</div>
         </button>
       </div>
 
@@ -174,10 +176,10 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
           font-weight: 500;
           margin-bottom: 12px;
           user-select: none;
-        ">Технічна інформація</summary>
+        ">${t('crashScreen.techInfo')}</summary>
 
         <div style="font-size: 12px; font-family: monospace;">
-          <strong style="color: #ff6b6b;">Помилка:</strong>
+          <strong style="color: #ff6b6b;">${t('crashScreen.errorLabel')}</strong>
           <pre style="
             margin-top: 8px;
             padding: 12px;
@@ -244,7 +246,7 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
       return;
     }
     sendLogsSubmit.disabled = true;
-    sendLogsSubmit.textContent = 'Надсилання...';
+    sendLogsSubmit.textContent = t('crashScreen.sending');
     sendLogsStatus.textContent = '';
 
     try {
@@ -254,22 +256,22 @@ function showErrorScreen(title: string, message: string, stack?: string): void {
 
       if (result?.success) {
         sendLogsStatus.style.color = '#a8cf96';
-        sendLogsStatus.textContent = '✅ Звіт надіслано. Дякуємо!';
+        sendLogsStatus.textContent = t('crashScreen.sent');
         sendLogsSubmit.style.display = 'none';
       } else {
         sendLogsStatus.style.color = '#ff6b6b';
         sendLogsStatus.textContent =
           result?.error === 'rate_limit'
-            ? 'Зачекайте кілька хвилин'
-            : 'Помилка надсилання. Спробуйте пізніше';
+            ? t('crashScreen.rateLimited')
+            : t('crashScreen.sendFailed');
         sendLogsSubmit.disabled = false;
-        sendLogsSubmit.textContent = 'Надіслати';
+        sendLogsSubmit.textContent = t('crashScreen.send');
       }
     } catch {
       sendLogsStatus.style.color = '#ff6b6b';
-      sendLogsStatus.textContent = 'Помилка мережі';
+      sendLogsStatus.textContent = t('crashScreen.networkError');
       sendLogsSubmit.disabled = false;
-      sendLogsSubmit.textContent = 'Надіслати';
+      sendLogsSubmit.textContent = t('crashScreen.send');
     }
   });
 
@@ -304,7 +306,7 @@ export function initGlobalErrorHandlers(): void {
     console.error('[GlobalErrorHandler] Uncaught error:', event.error);
 
     showErrorScreen(
-      'Необроблена помилка',
+      t('crashScreen.uncaughtError'),
       event.error?.message || event.message || 'Unknown error',
       event.error?.stack
     );
@@ -321,7 +323,7 @@ export function initGlobalErrorHandlers(): void {
       event.reason?.message || event.reason?.toString() || 'Unknown rejection';
     const stack = event.reason?.stack;
 
-    showErrorScreen('Необроблений Promise rejection', message, stack);
+    showErrorScreen(t('crashScreen.unhandledRejection'), message, stack);
 
     // Prevent default error handling
     event.preventDefault();

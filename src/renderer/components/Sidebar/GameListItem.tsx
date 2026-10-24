@@ -1,17 +1,18 @@
-import { Bookmark, BookmarkCheck, EyeOff } from 'lucide-react';
+import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
+import { t } from '@/shared/i18n/i18n';
+import type { Game } from '../../../shared/types';
 import { useDeferredImage } from '../../hooks/useDeferredImage';
 import { useImagePreload } from '../../hooks/useImagePreload';
 import type { TrendingGameWithDetails } from '../../queries/useTrendingGames';
-import { useLikesStore } from '../../store/useLikesStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import type { Game } from '../../types/game';
 import { isTranslationInstallable } from '../../utils/gameStatus';
 import { getGameImageUrl } from '../../utils/imageUrl';
 import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
+import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
 
@@ -53,9 +54,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
     const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
     const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
-    const likesCount = useLikesStore((state) =>
-      state.getDisplayedCount(game.id, game.likes_count)
-    );
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
@@ -73,7 +71,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const bannerUrl = getGameImageUrl(game.banner_path, game.updated_at);
     const logoUrl = getGameImageUrl(game.logo_path, game.updated_at);
 
-    const teamLabel = game.team || 'Невідомий автор';
+    const teamLabel = game.team || t('gameCard.unknownAuthor');
     const gameTeamTitle = showTeamName
       ? variant
         ? `${teamLabel} ${variant}`
@@ -116,9 +114,9 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           data-game-card
           data-gamepad-card={true}
           {...(gamepadAction ? { 'data-gamepad-action': 'true' } : {})}
-          className={`group glass-card !p-0 flex flex-col items-center scroll-m-20`}
+          className={`group glass-card p-0! flex flex-col items-center scroll-m-20`}
         >
-          <div className="relative aspect-[616/353] w-full bg-glass rounded-t-xl overflow-hidden">
+          <div className="relative aspect-616/353 w-full bg-glass rounded-t-xl overflow-hidden">
             {thumbnailUrl && !imageError ? (
               <>
                 {imageLoading && (
@@ -145,7 +143,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
+                className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-text-dark font-bold text-2xl  truncate ${
                   isAdultBlurred ? 'blur-lg' : ''
                 }`}
                 title={game.name}
@@ -157,7 +155,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Adult content indicator */}
             {isAdultBlurred && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOff size={20} className="text-white/80" />
+                <EyeOffIcon size={20} className="text-white/80" />
               </div>
             )}
 
@@ -174,14 +172,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   isFavorite={isFavorite}
                 />
                 <InfoIcons
-                  likesCount={likesCount}
+                  likesCount={game.likes}
                   downloadsCount={game.downloads}
                   floatPosition="default"
                 />
               </>
             )}
           </div>
-          <div className="flex-grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
+          <div className="grow p-4 gap-2 flex flex-col w-full text-sm text-text-main">
             <div className="flex items-center gap-2">
               <h3
                 className="text-lg font-head font-bold truncate flex-1"
@@ -192,26 +190,32 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               <Button
                 variant="ghost"
                 onClick={handleToggleFavorite}
-                className="!rounded-lg !px-1 mr-[-10.5px]"
+                className="rounded-lg! px-1! mr-[-10.5px]"
                 icon={
                   isFavorite ? (
-                    <BookmarkCheck size={20} className="text-color-accent" />
+                    <BookmarkCheckIcon size={20} className="text-color-accent" />
                   ) : (
-                    <Bookmark
+                    <BookmarkIcon
                       size={20}
                       className="text-text-muted group-hover/button:text-text-main"
                     />
                   )
                 }
-                title={isFavorite ? 'Видалити з улюблених' : 'Додати в улюблені'}
+                title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
               />
             </div>
             {showDownloadCounter && (
               <div className="flex items-center gap-2">
                 <PopularIcon />
-                <span>Завантажено гравцями</span>
+                <span>{t('gameCard.downloadedByPlayers')}</span>
                 <span className="ml-auto">
-                  {'trendingDownloads' in game ? game.trendingDownloads : game.downloads}
+                  <AppNumberFlow
+                    value={
+                      ('trendingDownloads' in game
+                        ? game.trendingDownloads
+                        : game.downloads) ?? 0
+                    }
+                  />
                 </span>
               </div>
             )}
@@ -226,14 +230,14 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
                   <StatusBadge
                     status={game.status}
                     style="capsule"
-                    className="flex-shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
+                    className="shrink-0 py-1 px-2 bg-[rgba(168,207,150,0.25)] rounded-xl"
                   />
                 )}
                 {isTranslationInstallable(game.status) && (
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="h-1 bg-white/10 rounded-full overflow-hidden flex-grow">
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden grow">
                       <div
-                        className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                        className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
                         style={{ width: `${averageProgress}%` }}
                       />
                     </div>
@@ -262,7 +266,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             : 'bg-glass border border-transparent hover:bg-glass-hover hover:border-border'
         }`}
       >
-        <div className="relative w-12 h-12 flex-shrink-0 select-none">
+        <div className="relative w-12 h-12 shrink-0 select-none">
           <div className="w-full h-full rounded-lg overflow-hidden bg-glass">
             {thumbnailUrl && !imageError ? (
               <>
@@ -290,7 +294,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
               </>
             ) : (
               <div
-                className={`w-full h-full bg-gradient-to-br from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
+                className={`w-full h-full bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center text-white font-bold text-sm ${
                   isAdultBlurred ? 'blur-md' : ''
                 }`}
               >
@@ -300,7 +304,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Adult content indicator on image */}
             {isAdultBlurred && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <EyeOff size={14} className="text-white/80" />
+                <EyeOffIcon size={14} className="text-white/80" />
               </div>
             )}
           </div>
@@ -315,7 +319,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           <div className="flex flex-1 justify-between items-center gap-2  mb-1 -mt-1">
             <div className="text-text-muted text-xs">
               {(game.ai === 'edited' || game.ai === 'non-edited') && (
-                <p>{game.ai === 'edited' ? 'ШІ + редактура людиною' : 'Переклад ШІ'}</p>
+                <p>
+                  {game.ai === 'edited'
+                    ? t('aiTranslationBadge.edited')
+                    : t('aiTranslationBadge.ai')}
+                </p>
               )}
               {showTeamName && <p className="truncate">{averageProgress}%</p>}
             </div>
@@ -333,7 +341,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
           {!showTeamName && (
             <div className="h-1 bg-glass-hover rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-color-accent to-color-main rounded-full transition-all duration-500"
+                className="h-full bg-linear-to-r/srgb from-color-accent to-color-main rounded-full transition-all duration-500"
                 title={`${averageProgress}%`}
                 style={{ width: `${averageProgress}%` }}
               />

@@ -4,6 +4,7 @@ import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
 import { buildFtsQuery, stripApostrophes } from '../../shared/search-utils';
 import type {
+  FacetRow,
   Game,
   GetGamesParams,
   GetGamesResult,
@@ -21,8 +22,10 @@ import {
   VISIBLE_GAMES_SQL,
 } from './db-queries';
 
+const FTS_MATCH_SQL = 'id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)';
+
 /**
- * Repository для роботи з іграми в локальній базі даних
+ * Repository for working with games in the local database
  */
 export class GamesRepository {
   private static instance: GamesRepository | null = null;
@@ -49,7 +52,7 @@ export class GamesRepository {
   }
 
   /**
-   * Прочитати і розпарсити test/games.json
+   * Read and parse test/games.json
    */
   private readTestGamesFile(): Game[] {
     if (!existsSync(this.testGamesPath)) {
@@ -67,7 +70,7 @@ export class GamesRepository {
   }
 
   /**
-   * Відстежувати зміни в test/games.json
+   * Watch for changes in test/games.json
    */
   private watchTestGamesFile(): void {
     if (process.env.NODE_ENV !== 'development' || !existsSync(this.testGamesPath)) {
@@ -110,7 +113,7 @@ export class GamesRepository {
   }
 
   /**
-   * Повідомити renderer процес про зміни в іграх
+   * Notify the renderer process about changes in games
    */
   private notifyGamesChanged(): void {
     const windows = BrowserWindow.getAllWindows();
@@ -120,7 +123,7 @@ export class GamesRepository {
   }
 
   /**
-   * Завантажити тестові ігри з test/games.json в режимі розробки
+   * Load test games from test/games.json in development mode
    */
   private loadTestGamesInDevelopment(): void {
     if (process.env.NODE_ENV !== 'development') {
@@ -155,11 +158,11 @@ export class GamesRepository {
   }
 
   /**
-   * Побудувати ORDER BY clause для сортування ігор
+   * Build the ORDER BY clause for sorting games
    */
   private buildOrderClause(sortOrder: SortOrderType): string {
-    // LTRIM видаляє цифри та символи з початку назви для сортування
-    // Наприклад "112 Operator" сортується як "Operator", "[Chilla's Art]" як "Chilla's Art"
+    // LTRIM strips digits and symbols from the start of the name for sorting
+    // E.g. "112 Operator" sorts as "Operator", "[Chilla's Art]" as "Chilla's Art"
     const nameSortExpr = `LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE`;
 
     if (sortOrder === 'downloads') {
@@ -178,8 +181,8 @@ export class GamesRepository {
   }
 
   /**
-   * Конвертувати row з SQLite в Game
-   * Тільки для полів platforms та install_paths потрібен JSON.parse
+   * Convert a row from SQLite into a Game
+   * Only the platforms and install_paths fields need JSON.parse
    */
   private rowToGame(row: Record<string, unknown>): Game {
     const platforms =
@@ -199,7 +202,7 @@ export class GamesRepository {
       approved: Boolean(row.approved),
       is_adult: Boolean(row.is_adult),
       license_only: Boolean(row.license_only),
-      ai: row.ai as string | null, // ai тепер текстове: 'edited' | 'non-edited' | null
+      ai: row.ai as string | null, // ai is now a text field: 'edited' | 'non-edited' | null
       hide: Boolean(row.hide),
       achievements_third_party: row.achievements_third_party || null,
       platforms,
@@ -210,8 +213,8 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати ігри з фільтрацією
-   * Оскільки це local-first застосунок, повертаємо всі ігри одразу
+   * Get games with filtering
+   * Since this is a local-first app, we return all games at once
    */
   getGames(params: GetGamesParams = {}): GetGamesResult {
     const {
@@ -247,23 +250,10 @@ export class GamesRepository {
       queryParams.push(...tagIds);
     }
 
-    // Filter by search query using FTS5 (min 2 chars to avoid expensive single-char prefix scans)
-    if (searchQuery && searchQuery.trim().length >= 2) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      } else {
-        // No usable tokens (e.g. only punctuation/single-char) — fall back to LIKE
-        whereConditions.push('name LIKE ?');
-        queryParams.push(`%${searchQuery.trim()}%`);
-      }
-    } else if (searchQuery) {
-      // For 1-char queries use simple LIKE (faster than FTS prefix scan)
-      whereConditions.push('name LIKE ?');
-      queryParams.push(`${searchQuery.trim()}%`);
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const whereClause = whereConditions.join(' AND ');
@@ -286,16 +276,6 @@ export class GamesRepository {
     ) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
 
-    // Spellfix1 fuzzy fallback when FTS returns 0 results
-    if (searchQuery && games.length === 0 && isSpellfixAvailable()) {
-      games = this.fuzzySearchFallback(
-        searchQuery,
-        whereConditions,
-        queryParams,
-        orderClause
-      );
-    }
-
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
@@ -313,58 +293,71 @@ export class GamesRepository {
     return { games, total: games.length };
   }
 
-  /**
-   * Spellfix1 fuzzy fallback: correct each query word via spellfix_words,
-   * then re-run FTS5 with corrected words
-   */
-  private fuzzySearchFallback(
-    searchQuery: string,
-    _baseConditions: string[],
-    _baseParams: (string | number)[],
-    orderClause: string
-  ): Game[] {
+  // One search predicate for every list and the facet counts, so a count never disagrees with its list
+  private buildSearchCondition(
+    searchQuery?: string
+  ): { sql: string; params: string[] } | null {
+    const query = searchQuery?.trim();
+    if (!query) {
+      return null;
+    }
+
+    // 1-char queries use a name prefix LIKE (an FTS prefix scan is expensive); no usable tokens fall back to substring LIKE
+    const ftsQuery = query.length >= 2 ? buildFtsQuery(query) : '';
+    const condition = ftsQuery
+      ? { sql: FTS_MATCH_SQL, params: [ftsQuery] }
+      : { sql: 'name LIKE ?', params: [query.length >= 2 ? `%${query}%` : `${query}%`] };
+
+    if (!isSpellfixAvailable() || this.hasVisibleMatch(condition)) {
+      return condition;
+    }
+
+    // Typo fallback is decided on the search alone, so the other filters still apply to its matches
+    const correctedFts = this.correctFtsQuery(query);
+    return correctedFts ? { sql: FTS_MATCH_SQL, params: [correctedFts] } : condition;
+  }
+
+  private hasVisibleMatch(condition: { sql: string; params: string[] }): boolean {
+    return (
+      this.db
+        .prepare(
+          `SELECT 1 FROM games WHERE ${VISIBLE_GAMES_SQL} AND ${condition.sql} LIMIT 1`
+        )
+        .get(...condition.params) !== undefined
+    );
+  }
+
+  /** Spellfix1: replace each query word with its closest dictionary word, as an FTS5 OR query */
+  private correctFtsQuery(searchQuery: string): string | null {
     try {
-      // словник spellfix — без апострофів (extractUniqueWords), запит теж стріпаємо
+      // spellfix dictionary has no apostrophes (extractUniqueWords), so strip the query too
       const queryWords = stripApostrophes(searchQuery)
         .toLowerCase()
         .split(/\s+/)
         .filter((w) => w.length >= 3);
 
       if (queryWords.length === 0) {
-        return [];
+        return null;
       }
 
-      const correctedWords: string[] = [];
       const spellfixStmt = this.db.prepare(
         'SELECT word FROM spellfix_words WHERE word MATCH ? AND top=5 ORDER BY score LIMIT 1'
       );
-
-      for (const word of queryWords) {
+      const correctedWords = queryWords.map((word) => {
         const result = spellfixStmt.get(word) as { word: string } | undefined;
-        correctedWords.push(result ? result.word : word);
-      }
+        return result ? result.word : word;
+      });
 
-      // Build FTS query from corrected words
-      const correctedFts = correctedWords.map((w) => `"${w}"*`).join(' OR ');
-
-      const fuzzyStmt = this.db.prepare(`
-        SELECT * FROM games
-        WHERE ${VISIBLE_GAMES_SQL}
-          AND id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)
-        ORDER BY ${orderClause}
-      `);
-
-      const fuzzyRows = fuzzyStmt.all(correctedFts) as Record<string, unknown>[];
-      return fuzzyRows.map((row) => this.rowToGame(row));
+      return correctedWords.map((w) => `"${w}"*`).join(' OR ');
     } catch (e) {
       console.warn('[GamesRepository] Spellfix fuzzy fallback error:', e);
-      return [];
+      return null;
     }
   }
 
   /**
-   * Отримати унікальних авторів
-   * Парсить comma-separated team поле і повертає унікальних авторів
+   * Get unique authors
+   * Parses the comma-separated team field and returns unique authors
    */
   getUniqueAuthors(): string[] {
     const stmt = this.db.prepare(`
@@ -394,7 +387,7 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати ігри за ID
+   * Get games by ID
    */
   getGamesByIds(
     gameIds: string[],
@@ -418,14 +411,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -467,14 +456,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -510,15 +495,12 @@ export class GamesRepository {
       );
     });
 
-    // Count unique games by slug (not total translations)
-    const uniqueCount = new Set(matchedGames.map((g) => g.slug || g.id)).size;
-
-    return { games: matchedGames, total: matchedGames.length, uniqueCount };
+    return { games: matchedGames, total: matchedGames.length };
   }
 
   /**
-   * Знайти ігри за Steam App IDs
-   * Повертає всі переклади, але total рахує унікальні ігри (за steam_app_id)
+   * Find games by Steam App IDs
+   * Returns all translations, but total counts unique games (by steam_app_id)
    */
   findGamesBySteamAppIds(
     steamAppIds: number[],
@@ -542,14 +524,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -566,42 +544,21 @@ export class GamesRepository {
   }
 
   /**
-   * Підрахувати кількість унікальних ігор доступних зі Steam бібліотеки
-   * (рахує унікальні steam_app_id, щоб не дублювати ігри з кількома перекладами)
-   */
-  countGamesBySteamAppIds(steamAppIds: number[]): number {
-    if (steamAppIds.length === 0) {
-      return 0;
-    }
-
-    const stmt = this.db.prepare(`
-      SELECT COUNT(DISTINCT steam_app_id) as count
-      FROM games
-      WHERE ${VISIBLE_GAMES_SQL}
-        AND steam_app_id IS NOT NULL
-        AND steam_app_id IN (${steamAppIds.map(() => '?').join(',')})
-    `);
-
-    const result = stmt.get(...steamAppIds) as { count: number };
-    return result.count;
-  }
-
-  /**
-   * Вставити або оновити гру (upsert)
+   * Insert or update a game (upsert)
    */
   upsertGame(game: Game): void {
     upsertGameSingle(this.db, game);
   }
 
   /**
-   * Вставити або оновити декілька ігор (batch upsert)
+   * Insert or update multiple games (batch upsert)
    */
   upsertGames(games: Game[]): void {
     upsertGamesTransaction(this.db, games);
   }
 
   /**
-   * Інкрементувати лічильник завантажень для гри в локальній БД
+   * Increment the download counter for a game in the local DB
    */
   incrementDownloads(gameId: string): void {
     const stmt = this.db.prepare(
@@ -610,12 +567,19 @@ export class GamesRepository {
     stmt.run(gameId);
   }
 
+  /** Subscriber count from the tracking response — holds until the next catalog sync */
+  setSubscriptions(gameId: string, subscriptions: number): void {
+    this.db
+      .prepare('UPDATE games SET subscriptions = ? WHERE id = ?')
+      .run(subscriptions, gameId);
+  }
+
   /**
-   * Розблокувати/заблокувати приховану гру локально для користувача.
-   * Записує в `user_unlocked` - локальну колонку, яка НЕ синхронізується з Supabase
-   * і тому не злітає при наступному оновленні бази (на відміну від прямого
-   * редагування `hide`, яке завжди перезаписується значенням з сервера).
-   * В WHERE-умовах запитів приховані ігри показуються, якщо `user_unlocked = 1`.
+   * Unlock/lock a hidden game locally for the user.
+   * Writes to `user_unlocked` - a local column that does NOT sync from Supabase
+   * and therefore doesn't get wiped on the next database update (unlike directly
+   * editing `hide`, which is always overwritten by the server's value).
+   * In query WHERE conditions, hidden games are shown when `user_unlocked = 1`.
    */
   setGameVisibility(gameId: string, hidden: boolean): boolean {
     const stmt = this.db.prepare('UPDATE games SET user_unlocked = ? WHERE id = ?');
@@ -633,10 +597,10 @@ export class GamesRepository {
   }
 
   /**
-   * Steam App ID усіх ігор каталогу, для яких є переклад — незалежно від
-   * способу встановлення (Workshop чи архів). На відміну від
-   * `getWorkshopTargets`, який бере лише `kind = 'workshop'` (це рідкість —
-   * абсолютна більшість перекладів встановлюються архівом).
+   * Steam App ID of every catalog game that has a translation — regardless of
+   * the install method (Workshop or archive). Unlike
+   * `getWorkshopTargets`, which only takes `kind = 'workshop'` (a rarity —
+   * the vast majority of translations are installed via archive).
    */
   getTranslatedSteamAppIds(): number[] {
     const rows = this.db
@@ -649,14 +613,14 @@ export class GamesRepository {
   }
 
   /**
-   * Видалити гру
+   * Delete a game
    */
   deleteGame(gameId: string): void {
     deleteGameById(this.db, gameId);
   }
 
   /**
-   * Отримати останній updated_at для синхронізації
+   * Get the latest updated_at for synchronization
    */
   getLastUpdatedAt(): string | null {
     const stmt = this.db.prepare(`
@@ -669,7 +633,7 @@ export class GamesRepository {
   }
 
   /**
-   * Отримати гру за ID
+   * Get a game by ID
    */
   getGameById(gameId: string): Game | null {
     const stmt = this.db.prepare(`
@@ -682,14 +646,21 @@ export class GamesRepository {
     return row ? this.rowToGame(row) : null;
   }
 
+  isGameVisible(gameId: string): boolean {
+    return this.hasVisibleMatch({ sql: 'id = ?', params: [gameId] });
+  }
+
   /**
-   * Теги для фільтра: лише ті, що є у видимих іграх, з локалізованими назвами.
-   * JOIN зі словником водночас відсіює id, для яких назви ще не синкнулись.
+   * Tags for the filter: only those present in visible games, with localized names.
+   * The JOIN with the dictionary also filters out ids whose names haven't synced yet.
    */
   getTagOptions(): TagOption[] {
     return this.db
       .prepare(
-        `SELECT t.tagid AS tagid, t.name AS name, COUNT(DISTINCT COALESCE(g.slug, g.id)) AS count
+        `SELECT t.tagid AS tagid, t.name AS name,
+                COUNT(DISTINCT COALESCE(
+                  'steam:' || g.steam_app_id, 'slug:' || NULLIF(g.slug, ''), 'id:' || g.id
+                )) AS count
          FROM games g
          JOIN json_each(g.steam_tag_ids) je
          JOIN steam_tag_names t ON t.tagid = je.value
@@ -700,59 +671,36 @@ export class GamesRepository {
       .all() as TagOption[];
   }
 
-  /**
-   * Отримати лічильники для фільтрів (ефективний SQL запит з агрегацією)
-   * Рахує унікальні ігри за slug (або id якщо slug відсутній),
-   * щоб не дублювати ігри з кількома перекладами
-   */
-  getFilterCounts(): {
-    planned: number;
-    'in-progress': number;
-    completed: number;
-    'tech-improvement': number;
-    'with-achievements': number;
-    'with-voice': number;
-    'from-workshop': number;
-  } {
-    const stmt = this.db.prepare(`
-      SELECT
-        COUNT(DISTINCT CASE WHEN status = 'planned' THEN COALESCE(slug, id) END) as planned,
-        COUNT(DISTINCT CASE WHEN status = 'in-progress' THEN COALESCE(slug, id) END) as in_progress,
-        COUNT(DISTINCT CASE WHEN status = 'completed' THEN COALESCE(slug, id) END) as completed,
-        COUNT(DISTINCT CASE WHEN status = 'tech-improvement' THEN COALESCE(slug, id) END) as tech_improvement,
-        COUNT(DISTINCT CASE WHEN achievements_archive_path IS NOT NULL AND achievements_archive_path != '' THEN COALESCE(slug, id) END) as with_achievements,
-        COUNT(DISTINCT CASE WHEN (voice_archive_path IS NOT NULL AND voice_archive_path != '') OR voice_progress IS NOT NULL THEN COALESCE(slug, id) END) as with_voice,
-        COUNT(DISTINCT CASE WHEN kind = 'workshop' THEN COALESCE(slug, id) END) as from_workshop
-      FROM games
-      WHERE ${VISIBLE_GAMES_SQL}
-    `);
+  /** Every visible translation with just the columns the filters read, for renderer-side faceted counts */
+  getFacetRows(): FacetRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, slug, steam_app_id, status, team, steam_tag_ids, ai, kind,
+                achievements_archive_path, voice_archive_path, voice_progress
+         FROM games
+         WHERE ${VISIBLE_GAMES_SQL}
+         ORDER BY id`
+      )
+      .all() as Array<Omit<FacetRow, 'steam_tag_ids'> & { steam_tag_ids: unknown }>;
+    return rows.map((row) => ({ ...row, steam_tag_ids: parseTagIds(row.steam_tag_ids) }));
+  }
 
-    const row = stmt.get() as {
-      planned: number;
-      in_progress: number;
-      completed: number;
-      tech_improvement: number;
-      with_achievements: number;
-      with_voice: number;
-      from_workshop: number;
-    };
-
-    return {
-      planned: row.planned || 0,
-      'in-progress': row.in_progress || 0,
-      completed: row.completed || 0,
-      'tech-improvement': row.tech_improvement || 0,
-      'with-achievements': row.with_achievements || 0,
-      'with-voice': row.with_voice || 0,
-      'from-workshop': row.from_workshop || 0,
-    };
+  /** Visible ids matched by the sidebar search, for the facet counts */
+  getSearchMatchIds(searchQuery: string): string[] {
+    const search = this.buildSearchCondition(searchQuery);
+    const rows = this.db
+      .prepare(
+        `SELECT id FROM games WHERE ${VISIBLE_GAMES_SQL}${search ? ` AND ${search.sql}` : ''}`
+      )
+      .all(...(search?.params ?? [])) as { id: string }[];
+    return rows.map((row) => row.id);
   }
 
   /**
-   * Знайти ігри за списком назв папок Xbox-інсталяцій. Метчимо проти
-   * `install_paths` JSON-поля (елементи `{type: 'xbox', path: 'FolderName'}`).
-   * SQLite не вміє JSON-аррей-індекси, тож використовуємо json_each для
-   * розгортання install_paths і LIKE-патерн для пошуку відповідного запису.
+   * Find games by a list of Xbox installation folder names. Matches against
+   * the `install_paths` JSON field (items `{type: 'xbox', path: 'FolderName'}`).
+   * SQLite has no JSON array indexes, so we use json_each to
+   * expand install_paths and a LIKE pattern to find the matching entry.
    */
   findGamesByXboxPaths(
     folderNames: string[],
@@ -767,8 +715,8 @@ export class GamesRepository {
 
     const whereConditions = [VISIBLE_GAMES_SQL];
     const placeholders = trimmed.map(() => '?').join(',');
-    // Кожен елемент install_paths — JSON {type, path}. Шукаємо такі де
-    // type='xbox' і path COLLATE NOCASE IN (folderNames).
+    // Each install_paths element is JSON {type, path}. We look for ones where
+    // type='xbox' and path COLLATE NOCASE IN (folderNames).
     whereConditions.push(`
       EXISTS (
         SELECT 1
@@ -784,14 +732,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`
@@ -807,7 +751,7 @@ export class GamesRepository {
   }
 
   /**
-   * Знайти ігри за списком назв (exact match, case-insensitive)
+   * Find games by a list of titles (exact match, case-insensitive)
    */
   findGamesByTitles(
     titles: string[],
@@ -839,14 +783,10 @@ export class GamesRepository {
       whereConditions.push('ai IS NULL');
     }
 
-    if (searchQuery) {
-      const ftsQuery = buildFtsQuery(searchQuery);
-      if (ftsQuery) {
-        whereConditions.push(
-          `id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)`
-        );
-        queryParams.push(ftsQuery);
-      }
+    const search = this.buildSearchCondition(searchQuery);
+    if (search) {
+      whereConditions.push(search.sql);
+      queryParams.push(...search.params);
     }
 
     const stmt = this.db.prepare(`

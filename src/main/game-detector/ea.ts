@@ -9,56 +9,42 @@
  * the EA library dirs covers games that didn't write a registry entry.
  */
 
-import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { enumerateKeysSafe, HKEY } from 'registry-js';
 import { isWindows } from '../utils/platform';
+import { getRegistryString } from '../utils/registry';
+import { logIfChanged } from './log-if-changed';
 
 interface EAInstalledGame {
   installDir: string;
 }
 
-/**
- * Read `Install Dir` values from the EA/Origin registry trees.
- * `reg query ... /s /v "Install Dir"` returns only subkeys that have that
- * value, so the client keys (EA Core, EA Desktop, EADM) are skipped
- * automatically. Games appear under both `Electronic Arts\{Game}` and the
- * nested `Electronic Arts\Electronic Arts\{Game}` — deduped by resolved path.
- */
+// Games sit at any depth, e.g. both Electronic Arts\{Game} and Electronic Arts\Electronic Arts\{Game}
+function findInstallDirs(key: string): string[] {
+  const installDir = getRegistryString(HKEY.HKEY_LOCAL_MACHINE, key, 'Install Dir');
+  return [
+    ...(installDir ? [installDir] : []),
+    ...enumerateKeysSafe(HKEY.HKEY_LOCAL_MACHINE, key).flatMap((subkey) =>
+      findInstallDirs(`${key}\\${subkey}`)
+    ),
+  ];
+}
+
+/** `Install Dir` values from the EA/Origin registry trees, deduped by resolved path. */
 function getGamesFromRegistry(): EAInstalledGame[] {
-  const regPath = path.join(
-    process.env.SystemRoot || 'C:\\Windows',
-    'System32',
-    'reg.exe'
-  );
   const registryKeys = [
-    'HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Electronic Arts',
-    'HKEY_LOCAL_MACHINE\\SOFTWARE\\Electronic Arts',
-    'HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Origin Games',
-    'HKEY_LOCAL_MACHINE\\SOFTWARE\\Origin Games',
+    'SOFTWARE\\WOW6432Node\\Electronic Arts',
+    'SOFTWARE\\Electronic Arts',
+    'SOFTWARE\\WOW6432Node\\Origin Games',
+    'SOFTWARE\\Origin Games',
   ];
 
   const byResolved = new Map<string, string>();
-
-  for (const registryKey of registryKeys) {
-    try {
-      const output = execSync(`"${regPath}" query "${registryKey}" /s /v "Install Dir"`, {
-        encoding: 'utf8',
-        timeout: 5000,
-        stdio: ['pipe', 'pipe', 'ignore'],
-      });
-
-      for (const rawLine of output.split(/\r?\n/)) {
-        const match = rawLine.match(/Install Dir\s+REG_SZ\s+(.+)$/);
-        if (match?.[1]) {
-          const installDir = match[1].trim().replace(/[\\/]+$/, '');
-          if (installDir && fs.existsSync(installDir)) {
-            byResolved.set(path.resolve(installDir).toLowerCase(), installDir);
-          }
-        }
-      }
-    } catch {
-      // Key missing on this machine — try the next one
+  for (const value of registryKeys.flatMap(findInstallDirs)) {
+    const installDir = value.trim().replace(/[\\/]+$/, '');
+    if (installDir && fs.existsSync(installDir)) {
+      byResolved.set(path.resolve(installDir).toLowerCase(), installDir);
     }
   }
 
@@ -134,9 +120,9 @@ function getEAInstalledGames(): EAInstalledGame[] {
 
   const games = Array.from(byResolved.values()).map((installDir) => ({ installDir }));
   if (games.length > 0) {
-    console.log(`[EA] Found ${games.length} installed games`);
-    console.log(
-      `[EA] Games list: ${games.map((g) => path.basename(g.installDir)).join(', ')}`
+    logIfChanged(
+      'ea-installed',
+      `[EA] Found ${games.length} installed games: ${games.map((g) => path.basename(g.installDir)).join(', ')}`
     );
   }
   return games;

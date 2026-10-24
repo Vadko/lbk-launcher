@@ -3,13 +3,13 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // За замовчуванням кешуємо на 5 хвилин
+      // Cache for 5 minutes by default
       staleTime: 5 * 60 * 1000,
-      // Зберігаємо в кеші 30 хвилин
+      // Keep in cache for 30 minutes
       gcTime: 30 * 60 * 1000,
-      // Не рефетчити при фокусі вікна (Electron)
+      // Don't refetch on window focus (Electron)
       refetchOnWindowFocus: false,
-      // Повторювати 1 раз при помилці
+      // Retry once on error
       retry: 1,
     },
   },
