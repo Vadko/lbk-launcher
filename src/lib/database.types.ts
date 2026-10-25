@@ -526,6 +526,7 @@ export type Database = {
           moderation_requested_at: string | null
           moderation_rev: number
           moderation_scores: Json | null
+          os_version: string | null
           pending_text: string | null
           platform: string | null
           published_at: string | null
@@ -567,6 +568,7 @@ export type Database = {
           moderation_requested_at?: string | null
           moderation_rev?: number
           moderation_scores?: Json | null
+          os_version?: string | null
           pending_text?: string | null
           platform?: string | null
           published_at?: string | null
@@ -608,6 +610,7 @@ export type Database = {
           moderation_requested_at?: string | null
           moderation_rev?: number
           moderation_scores?: Json | null
+          os_version?: string | null
           pending_text?: string | null
           platform?: string | null
           published_at?: string | null
@@ -2053,6 +2056,7 @@ export type Database = {
           log_path: string | null
           machine_id: string
           message: string | null
+          os_version: string | null
           platform: string | null
           status: Database["public"]["Enums"]["feedback_status"]
           updated_at: string
@@ -2067,6 +2071,7 @@ export type Database = {
           log_path?: string | null
           machine_id: string
           message?: string | null
+          os_version?: string | null
           platform?: string | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
@@ -2081,6 +2086,7 @@ export type Database = {
           log_path?: string | null
           machine_id?: string
           message?: string | null
+          os_version?: string | null
           platform?: string | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
@@ -3464,6 +3470,15 @@ export type Database = {
         }[]
       }
       get_review_author: { Args: { p_machine_id: string }; Returns: Json }
+      get_review_machine_entries: {
+        Args: {
+          p_id: string
+          p_kind: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: Json
+      }
       get_review_moderation_queue: {
         Args: { p_limit?: number; p_offset?: number; p_state?: string }
         Returns: Json
@@ -3573,6 +3588,7 @@ export type Database = {
           p_id: string
           p_machine_id: string
           p_message: string
+          p_os_version?: string
           p_platform?: string
           p_public?: boolean
           p_screenshot_paths?: string[]
@@ -3676,6 +3692,17 @@ export type Database = {
           p_machine_id: string
         }
         Returns: number
+      }
+      set_review_ban: {
+        Args: {
+          p_banned: boolean
+          p_by?: string
+          p_by_name?: string
+          p_id: string
+          p_kind: string
+          p_reason?: Database["public"]["Enums"]["review_moderation_reason"]
+        }
+        Returns: Json
       }
       set_review_tg_message: {
         Args: {
