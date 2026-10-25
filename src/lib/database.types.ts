@@ -2374,6 +2374,46 @@ export type Database = {
         }
         Relationships: []
       }
+      review_bans: {
+        Row: {
+          banned_by: string | null
+          banned_by_name: string | null
+          created_at: string
+          entry_id: string | null
+          entry_kind: string | null
+          machine_id: string
+          reason: Database["public"]["Enums"]["review_moderation_reason"]
+          source: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Insert: {
+          banned_by?: string | null
+          banned_by_name?: string | null
+          created_at?: string
+          entry_id?: string | null
+          entry_kind?: string | null
+          machine_id: string
+          reason: Database["public"]["Enums"]["review_moderation_reason"]
+          source: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Update: {
+          banned_by?: string | null
+          banned_by_name?: string | null
+          created_at?: string
+          entry_id?: string | null
+          entry_kind?: string | null
+          machine_id?: string
+          reason?: Database["public"]["Enums"]["review_moderation_reason"]
+          source?: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_bans_banned_by_fkey"
+            columns: ["banned_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_nickname_spins: {
         Row: {
           adjective: string
