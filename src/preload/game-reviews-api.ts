@@ -10,4 +10,5 @@ export const gameReviewsAPI: GameReviewsAPI = {
   claimReviewNickname: (input) => ipcRenderer.invoke('reviews:claim', input),
   submitFeedback: (input) => ipcRenderer.invoke('reviews:submit-feedback', input),
   getFeedbackUploadUrls: (input) => ipcRenderer.invoke('reviews:upload-urls', input),
+  prefetchCaptcha: (action) => ipcRenderer.send('reviews:prefetch-captcha', action),
 };

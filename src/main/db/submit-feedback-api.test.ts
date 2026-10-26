@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { answered, invokeCalls, MACHINE_ID } from './review-functions.fixture';
 
-const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
+  invoke: vi.fn(),
+  takeCaptchaToken: vi.fn(),
+}));
 
 vi.mock('electron', () => ({ app: { getVersion: () => '2.24.0' } }));
 vi.mock('@/main/utils/os-version', () => ({ getOsVersion: () => 'Test OS 1' }));
@@ -9,24 +12,30 @@ vi.mock('@/main/db/supabase-client', () => ({
   getSupabaseClient: () => ({ functions: { invoke } }),
 }));
 vi.mock('@/main/tracking', () => ({ IS_E2E: false, getMachineId: () => 'machine-1' }));
+vi.mock('@/main/turnstile/report-captcha-fault', () => ({ reportCaptchaFault: vi.fn() }));
+vi.mock('@/main/turnstile/tokens', () => ({ takeCaptchaToken }));
 
 const { getFeedbackUploadUrls, submitFeedback } = await import('./submit-feedback-api');
 
 const POST = '3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a';
 const GAME = '0b6f3f0e-5c1a-4d2e-9f3b-2a1c4d5e6f70';
 
-const post = (screenshotPaths: string[]) => ({
+const post = (screenshotPaths: string[], allowPublish = false) => ({
   id: POST,
   gameId: GAME,
   type: 'error' as const,
   message: 'The menu is in English',
   screenshotPaths,
+  allowPublish,
 });
 
 const sentBody = () => invokeCalls(invoke.mock.calls)[0]?.body;
 
 beforeEach(() => {
   invoke.mockReset();
+  takeCaptchaToken.mockReset();
+  takeCaptchaToken.mockResolvedValue('token-1');
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
 describe('submitFeedback', () => {
@@ -62,13 +71,34 @@ describe('submitFeedback', () => {
     expect(sentBody()).not.toHaveProperty('screenshotPaths');
   });
 
-  it('never asks for publication', async () => {
+  it('asks for no publication and no token for a private post', async () => {
     invoke.mockResolvedValue(answered({ id: POST, outcome: 'published' }));
 
     await submitFeedback(post([]));
 
     expect(sentBody()).not.toHaveProperty('allowPublish');
     expect(sentBody()).not.toHaveProperty('captchaToken');
+    expect(takeCaptchaToken).not.toHaveBeenCalled();
+  });
+
+  it('asks for publication with a review token', async () => {
+    invoke.mockResolvedValue(answered({ id: POST, outcome: 'pending' }));
+
+    await submitFeedback(post([], true));
+
+    expect(takeCaptchaToken).toHaveBeenCalledWith('review');
+    expect(sentBody()).toMatchObject({ allowPublish: true, captchaToken: 'token-1' });
+  });
+
+  // Without a token the server would store the post as private, so nothing goes out
+  it('sends no public post without a token', async () => {
+    takeCaptchaToken.mockResolvedValue(null);
+
+    expect(await submitFeedback(post([], true))).toEqual({
+      ok: false,
+      failure: { code: 'captcha_unavailable', kind: 'retry' },
+    });
+    expect(invoke).not.toHaveBeenCalled();
   });
 });
 

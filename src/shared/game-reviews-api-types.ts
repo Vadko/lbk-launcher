@@ -1,4 +1,5 @@
 import type { Database } from '../lib/database.types';
+import type { TurnstileAction } from '../main/turnstile/contract';
 import type {
   GameReviewOutcome,
   GameReviewsPage,
@@ -33,8 +34,8 @@ export type ReviewLocalFailureCode =
   | 'no_machine_id'
   | 'e2e_mode';
 
-// retry: resend with the same id; needs-*: only a nickname or a fresh captcha token helps; rejected: roll back
-export type ReviewFailureKind = 'retry' | 'needs-author' | 'needs-captcha' | 'rejected';
+// retry: resend with the same id; needs-author: only a nickname helps; rejected: roll back
+export type ReviewFailureKind = 'retry' | 'needs-author' | 'rejected';
 
 export interface ReviewFailure {
   code: ReviewErrorCode | ReviewLocalFailureCode;
@@ -56,11 +57,14 @@ export interface ReviewReplyInput {
   reviewId: string;
   parentId: string | null;
   text: string;
+  // The thread's visibility: main fetches a captcha token only for a public one, and the server checks it anyway
+  isPublic: boolean;
 }
 
 export interface ReviewEditInput {
   id: string;
   text: string;
+  isPublic: boolean;
 }
 
 export interface ReviewWriteResult {
@@ -100,6 +104,7 @@ export interface SubmitFeedbackInput {
   type: Database['public']['Enums']['feedback_type'];
   message: string;
   screenshotPaths: string[];
+  allowPublish: boolean;
 }
 
 export interface FeedbackUploadUrlsInput {
@@ -131,4 +136,6 @@ export interface GameReviewsAPI {
   getFeedbackUploadUrls: (
     input: FeedbackUploadUrlsInput
   ) => Promise<ReviewResult<FeedbackUploadUrl[]>>;
+  // Solves a token in main ahead of a public write; the renderer never sees it
+  prefetchCaptcha: (action: TurnstileAction) => void;
 }

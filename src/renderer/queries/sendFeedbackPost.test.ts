@@ -29,6 +29,7 @@ const post = (screenshots = [SHOT_A, SHOT_B], message = 'The menu is in English'
   type: 'error' as const,
   message,
   screenshots,
+  allowPublish: false,
 });
 
 const first = (): FeedbackAttempt => ({
@@ -86,6 +87,7 @@ describe('sendFeedbackPost', () => {
       type: 'error',
       message: 'The menu is in English',
       screenshotPaths: [`${POST}/a.png`, `${POST}/b.png`],
+      allowPublish: false,
     });
   });
 
@@ -94,6 +96,14 @@ describe('sendFeedbackPost', () => {
     expect(client.requestFeedbackUploadUrls).not.toHaveBeenCalled();
     expect(client.sendFeedback).toHaveBeenCalledWith(
       expect.objectContaining({ screenshotPaths: [] })
+    );
+  });
+
+  it('passes the choice to publish on to main', async () => {
+    await sendFeedbackPost(first(), { ...post([]), allowPublish: true });
+
+    expect(client.sendFeedback).toHaveBeenCalledWith(
+      expect.objectContaining({ allowPublish: true })
     );
   });
 
@@ -134,7 +144,7 @@ describe('sendFeedbackPost', () => {
   it.each([
     ['rate_limit', 'retry', 'feedbackModal.rateLimit'],
     ['unreachable', 'retry', 'feedbackModal.networkError'],
-    ['captcha_failed', 'needs-captcha', 'feedbackModal.sendFailed'],
+    ['captcha_failed', 'retry', 'feedbackModal.sendFailed'],
     ['not_found', 'rejected', 'feedbackModal.sendFailed'],
   ] as const)('explains a refused %s post', async (code, kind, key) => {
     client.sendFeedback.mockResolvedValue(refusal(code, kind));

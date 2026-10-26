@@ -1,3 +1,4 @@
+import type { TurnstileAction } from '@/main/turnstile/contract';
 import type {
   FeedbackUploadUrl,
   FeedbackUploadUrlsInput,
@@ -50,6 +51,10 @@ export function sendFeedback(
   input: SubmitFeedbackInput
 ): Promise<ReviewResult<ReviewWriteResult>> {
   return settled(window.electronAPI.submitFeedback(input));
+}
+
+export function prefetchReviewCaptcha(action: TurnstileAction): void {
+  window.electronAPI.prefetchCaptcha(action);
 }
 
 export function requestFeedbackUploadUrls(

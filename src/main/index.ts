@@ -177,6 +177,7 @@ import {
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
+import { stopCaptchaWindow } from './turnstile/window';
 import { startPendingEglLaunchArgs } from './utils/egl-windows-settings';
 import { startSteamBridge } from './utils/steam-bridge-lifecycle';
 import { createMainWindow, getMainWindow, showMainWindow } from './window';
@@ -472,6 +473,7 @@ if (!gotTheLock) {
     shutdownSteamBridgeServer().catch((err) => {
       console.warn('[Main] Steam bridge server stop failed:', err);
     });
+    stopCaptchaWindow();
   });
 
   app.on('will-quit', (event) => {

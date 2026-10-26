@@ -30,7 +30,7 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const tree = buildReplyTree(review.id, review.replies, MAX_DEPTH);
-    // A public thread takes writes only with a nickname and a captcha token, which the launcher cannot get yet
+    // A public thread takes writes only from a machine with a nickname, which the launcher cannot pick yet
     const canWrite = !review.isPublic;
 
     const toggle = (id: string) =>
@@ -50,6 +50,8 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
             <div className="pt-1.5">
               <ReviewComposer
                 submitLabel={t('gameReviews.send')}
+                captchaAction="reply"
+                isPublic={review.isPublic}
                 onSubmit={(text) =>
                   onReply(review.id, text, entryId === review.id ? null : entryId, () => {
                     setReplyingTo(null);

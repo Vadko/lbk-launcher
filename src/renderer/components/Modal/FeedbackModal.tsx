@@ -184,6 +184,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           type: feedbackType,
           message: trimmedMessage,
           screenshots,
+          allowPublish: false,
         }),
       { isSuccess: (r) => r.ok }
     );

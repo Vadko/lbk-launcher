@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   machineId: 'machine-1' as string | null,
   e2e: false,
   clientThrows: false,
+  reportCaptchaFault: vi.fn(),
 }));
 
 vi.mock('@/main/db/supabase-client', () => ({
@@ -28,6 +29,9 @@ vi.mock('@/main/tracking', () => ({
     return state.e2e;
   },
   getMachineId: () => state.machineId,
+}));
+vi.mock('@/main/turnstile/report-captcha-fault', () => ({
+  reportCaptchaFault: state.reportCaptchaFault,
 }));
 
 const { callReviewFunction } = await import('./review-request');
@@ -87,7 +91,7 @@ describe('callReviewFunction', () => {
     ['invalid_body', 400, 'rejected', 'error'],
     ['invalid_hold', 400, 'rejected', 'warn'],
     ['invalid_candidate', 400, 'rejected', 'warn'],
-    ['captcha_failed', 403, 'needs-captcha', 'warn'],
+    ['captcha_failed', 403, 'retry', 'warn'],
     ['edit_window_closed', 403, 'rejected', 'warn'],
     ['not_owner', 403, 'rejected', 'warn'],
     ['banned', 403, 'rejected', 'warn'],
@@ -262,12 +266,15 @@ describe('callReviewFunction', () => {
 
       expect(result).toEqual({
         ok: false,
-        failure: { code: 'captcha_failed', kind: 'needs-captcha' },
+        failure: { code: 'captcha_failed', kind: 'retry' },
       });
       expect(calls().map((call) => call.body['captchaToken'])).toEqual([
         'token-1',
         'token-2',
       ]);
+      expect(state.reportCaptchaFault).toHaveBeenCalledWith(
+        'siteverify refused a fresh token'
+      );
     });
 
     it('settles on the retry when the fresh token passes', async () => {
@@ -278,6 +285,7 @@ describe('callReviewFunction', () => {
       const result = await reply({ captchaToken: () => Promise.resolve('token') });
 
       expect(result).toEqual({ ok: true, data: { id: 'r1' } });
+      expect(state.reportCaptchaFault).not.toHaveBeenCalled();
     });
 
     it('does not retry other refusals', async () => {
@@ -288,8 +296,34 @@ describe('callReviewFunction', () => {
       expect(state.invoke).toHaveBeenCalledTimes(1);
     });
 
-    it('reports a source without a token as captcha_unavailable', async () => {
+    it('leaves a write without a token to the server, which may have the captcha off', async () => {
+      state.invoke.mockResolvedValue(answered({ id: 'r1' }));
+
+      const result = await reply({ captchaToken: () => Promise.resolve(null) });
+
+      expect(result).toEqual({ ok: true, data: { id: 'r1' } });
+      expect(calls().map((call) => call.body)).toEqual([
+        { id: 'r1', text: 'hi', machineId: MACHINE_ID },
+      ]);
+    });
+
+    it('reads a refused write without a token as captcha_unavailable, never retried', async () => {
+      state.invoke.mockResolvedValue(refused('captcha_failed', 403));
+
       expect(await reply({ captchaToken: () => Promise.resolve(null) })).toEqual({
+        ok: false,
+        failure: { code: 'captcha_unavailable', kind: 'retry' },
+      });
+      expect(state.invoke).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends nothing without a token when the call refuses that', async () => {
+      const result = await reply({
+        captchaToken: () => Promise.resolve(null),
+        refuseWithoutToken: true,
+      });
+
+      expect(result).toEqual({
         ok: false,
         failure: { code: 'captcha_unavailable', kind: 'retry' },
       });

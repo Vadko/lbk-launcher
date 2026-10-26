@@ -7,6 +7,7 @@ import {
   isLiquidGlassSupported,
   removeLiquidGlass,
 } from './liquid-glass';
+import { destroyCaptchaWindow } from './turnstile/window';
 import { openExternalUrl } from './utils/open-external';
 import { isLinux, isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
 import { readRendererSetting } from './utils/store-storage';
@@ -119,6 +120,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   mainWindow.on('closed', async () => {
+    destroyCaptchaWindow();
     // Clean up liquid glass if it was applied
     if (liquidGlassId) {
       await removeLiquidGlass(liquidGlassId);

@@ -20,6 +20,8 @@ import {
 } from '../db/review-author-api';
 import { reviewFailure } from '../db/review-failure';
 import { getFeedbackUploadUrls, submitFeedback } from '../db/submit-feedback-api';
+import { turnstileActionSchema } from '../turnstile/contract';
+import { prefetchCaptchaToken } from '../turnstile/tokens';
 
 const MAX_TEXT_CODE_POINTS = 1000;
 const MAX_SCREENSHOTS = 5;
@@ -42,9 +44,14 @@ const replyInput: z.ZodType<ReviewReplyInput> = z.object({
   reviewId: id,
   parentId: id.nullable(),
   text,
+  isPublic: z.boolean(),
 });
 
-const editInput: z.ZodType<ReviewEditInput> = z.object({ id, text });
+const editInput: z.ZodType<ReviewEditInput> = z.object({
+  id,
+  text,
+  isPublic: z.boolean(),
+});
 
 const spinInput: z.ZodType<NicknameSpinInput> = z.object({
   spinId: id.nullable(),
@@ -59,6 +66,7 @@ const submitInput: z.ZodType<SubmitFeedbackInput> = z.object({
   type: z.enum(Constants.public.Enums.feedback_type),
   message: text,
   screenshotPaths: z.array(z.string().max(200)).max(MAX_SCREENSHOTS),
+  allowPublish: z.boolean(),
 });
 
 const uploadUrlsInput: z.ZodType<FeedbackUploadUrlsInput> = z.object({
@@ -89,4 +97,12 @@ export function setupGameReviewsHandlers(): void {
   handle('reviews:claim', claimInput, claimReviewNickname);
   handle('reviews:submit-feedback', submitInput, submitFeedback);
   handle('reviews:upload-urls', uploadUrlsInput, getFeedbackUploadUrls);
+  ipcMain.on('reviews:prefetch-captcha', (_, raw: unknown) => {
+    const action = turnstileActionSchema.safeParse(raw);
+    if (action.success) {
+      prefetchCaptchaToken(action.data);
+    } else {
+      console.warn('[Reviews] reviews:prefetch-captcha ignored a malformed action');
+    }
+  });
 }

@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { answered, invokeCalls, MACHINE_ID, refused } from './review-functions.fixture';
 
-const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
+  invoke: vi.fn(),
+  takeCaptchaToken: vi.fn(),
+}));
 
 vi.mock('@/main/db/supabase-client', () => ({
   getSupabaseClient: () => ({ functions: { invoke } }),
 }));
 vi.mock('@/main/tracking', () => ({ IS_E2E: false, getMachineId: () => 'machine-1' }));
+vi.mock('@/main/turnstile/report-captcha-fault', () => ({ reportCaptchaFault: vi.fn() }));
+vi.mock('@/main/turnstile/tokens', () => ({ takeCaptchaToken }));
 
 const { claimReviewNickname, getReviewAuthor, spinReviewNickname } = await import(
   './review-author-api'
@@ -17,6 +22,8 @@ const SPIN = '6c1f1d0e-7a2b-4c3d-8e9f-0a1b2c3d4e5f';
 
 beforeEach(() => {
   invoke.mockReset();
+  takeCaptchaToken.mockReset();
+  takeCaptchaToken.mockResolvedValue('token-1');
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
@@ -77,17 +84,32 @@ describe('spinReviewNickname', () => {
 });
 
 describe('claimReviewNickname', () => {
-  it('returns the claimed author', async () => {
+  it('returns the claimed author, claimed with a nickname token', async () => {
     invoke.mockResolvedValue(answered({ author: AUTHOR }));
 
     expect(await claimReviewNickname({ spinId: SPIN })).toEqual({
       ok: true,
       data: AUTHOR,
     });
+    expect(takeCaptchaToken).toHaveBeenCalledWith('nickname');
     expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
       name: 'reviews?action=claim',
-      body: { spinId: SPIN, machineId: MACHINE_ID },
+      body: { spinId: SPIN, machineId: MACHINE_ID, captchaToken: 'token-1' },
       timeout: 30_000,
+    });
+  });
+
+  it('leaves a claim without a token to the server', async () => {
+    takeCaptchaToken.mockResolvedValue(null);
+    invoke.mockResolvedValue(answered({ author: AUTHOR }));
+
+    expect(await claimReviewNickname({ spinId: SPIN })).toEqual({
+      ok: true,
+      data: AUTHOR,
+    });
+    expect(invokeCalls(invoke.mock.calls)[0]?.body).toEqual({
+      spinId: SPIN,
+      machineId: MACHINE_ID,
     });
   });
 });

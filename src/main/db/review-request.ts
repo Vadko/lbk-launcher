@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { errorMessage } from '../../shared/errors';
 import type { ReviewResult } from '../../shared/game-reviews-api-types';
 import { getMachineId, IS_E2E } from '../tracking';
+import { reportCaptchaFault } from '../turnstile/report-captcha-fault';
 import { failureCodeOf, reviewFailure } from './review-failure';
 import { getSupabaseClient } from './supabase-client';
 
@@ -26,6 +27,8 @@ interface EndpointRule {
 interface ReviewCallOptions {
   // Seam for Turnstile: each attempt asks for a fresh single-use token, null when none can be had
   captchaToken?: () => Promise<string | null>;
+  // Otherwise a write without a token still goes out, so the server's REVIEWS_CAPTCHA=off switch can pass it
+  refuseWithoutToken?: boolean;
 }
 
 const READ_TIMEOUT_MS = 15_000;
@@ -77,22 +80,26 @@ async function attempt<T>(
   endpoint: ReviewEndpoint,
   body: Record<string, unknown>,
   schema: z.ZodType<T>,
-  captchaToken: ReviewCallOptions['captchaToken']
+  { captchaToken, refuseWithoutToken }: ReviewCallOptions
 ): Promise<ReviewResult<T>> {
   try {
     const token = captchaToken ? await captchaToken() : undefined;
-    if (token === null) {
+    if (token === null && refuseWithoutToken) {
       return { ok: false, failure: reviewFailure('captcha_unavailable', endpoint) };
     }
     const { data, error } = await getSupabaseClient().functions.invoke<unknown>(
       endpoint,
       {
-        body: token === undefined ? body : { ...body, captchaToken: token },
+        body: typeof token === 'string' ? { ...body, captchaToken: token } : body,
         timeout: ENDPOINTS[endpoint].timeoutMs,
       }
     );
     if (error) {
-      return { ok: false, failure: reviewFailure(await failureCodeOf(error), endpoint) };
+      const code = await failureCodeOf(error);
+      // An enforced captcha refuses a write without a token, which only a working captcha page can fix
+      const failure =
+        token === null && code === 'captcha_failed' ? 'captcha_unavailable' : code;
+      return { ok: false, failure: reviewFailure(failure, endpoint) };
     }
     const flagged = successSchema.safeParse(data);
     const parsed = flagged.success ? schema.safeParse(data) : flagged;
@@ -124,10 +131,15 @@ export async function callReviewFunction<T>(
     return { ok: false, failure: reviewFailure('no_machine_id', endpoint) };
   }
   const payload = machineId ? { ...body, machineId } : body;
-  const first = await attempt(endpoint, payload, schema, options.captchaToken);
+  const first = await attempt(endpoint, payload, schema, options);
   // Siteverify spends a token even when it rejects it, so the one retry takes a fresh one
   if (!first.ok && first.failure.code === 'captcha_failed' && options.captchaToken) {
-    return attempt(endpoint, payload, schema, options.captchaToken);
+    const second = await attempt(endpoint, payload, schema, options);
+    // Two fresh tokens refused points at a hostname, action or cData mismatch, not at the user
+    if (!second.ok && second.failure.code === 'captcha_failed') {
+      reportCaptchaFault('siteverify refused a fresh token');
+    }
+    return second;
   }
   return first;
 }

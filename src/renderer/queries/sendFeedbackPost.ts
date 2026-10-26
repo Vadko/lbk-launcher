@@ -15,6 +15,7 @@ interface FeedbackPost {
   type: FeedbackType;
   message: string;
   screenshots: FeedbackScreenshot[];
+  allowPublish: boolean;
 }
 
 type Refusal = { ok: false; message: string; failure: ReviewFailure | null };
@@ -94,6 +95,7 @@ export async function sendFeedbackPost(
     type: post.type,
     message: post.message,
     screenshotPaths: uploaded.paths,
+    allowPublish: post.allowPublish,
   });
   if (sent.ok) {
     return { ok: true, attempt: withUploads };

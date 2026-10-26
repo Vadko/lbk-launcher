@@ -1,17 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Handler = (event: unknown, input?: unknown) => Promise<unknown>;
+type Listener = (event: unknown, input?: unknown) => void;
 
 const state = vi.hoisted(() => ({
   handlers: new Map<string, Handler>(),
+  listeners: new Map<string, Listener>(),
   api: vi.fn(),
+  prefetch: vi.fn(),
 }));
 
 vi.mock('electron', () => ({
   ipcMain: {
     handle: (channel: string, handler: Handler) => state.handlers.set(channel, handler),
+    on: (channel: string, listener: Listener) => state.listeners.set(channel, listener),
   },
 }));
+vi.mock('@/main/turnstile/tokens', () => ({ prefetchCaptchaToken: state.prefetch }));
 vi.mock('@/main/db/game-reviews-api', () => ({ fetchGameReviews: state.api }));
 vi.mock('@/main/db/review-actions-api', () => ({
   replyToReview: state.api,
@@ -38,15 +43,20 @@ const call = (channel: string, input?: unknown) =>
 
 beforeEach(() => {
   state.api.mockReset();
+  state.prefetch.mockReset();
   state.api.mockResolvedValue({ ok: true, data: null });
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
 describe('setupGameReviewsHandlers', () => {
   it.each([
     ['reviews:list', { gameId: OTHER, cursor: null }],
-    ['reviews:reply', { id: ID, reviewId: OTHER, parentId: null, text: 'hi' }],
-    ['reviews:edit', { id: ID, text: 'hi' }],
+    [
+      'reviews:reply',
+      { id: ID, reviewId: OTHER, parentId: null, text: 'hi', isPublic: true },
+    ],
+    ['reviews:edit', { id: ID, text: 'hi', isPublic: false }],
     [
       'reviews:spin',
       { spinId: null, hold: { avatar: false, adjective: true, noun: false } },
@@ -54,7 +64,14 @@ describe('setupGameReviewsHandlers', () => {
     ['reviews:claim', { spinId: ID }],
     [
       'reviews:submit-feedback',
-      { id: ID, gameId: OTHER, type: 'feedback', message: 'hi', screenshotPaths: [] },
+      {
+        id: ID,
+        gameId: OTHER,
+        type: 'feedback',
+        message: 'hi',
+        screenshotPaths: [],
+        allowPublish: true,
+      },
     ],
     ['reviews:upload-urls', { id: ID, fileNames: ['a.png'] }],
   ])('passes a valid %s call through', async (channel, input) => {
@@ -70,27 +87,49 @@ describe('setupGameReviewsHandlers', () => {
   });
 
   it('hands over the trimmed text', async () => {
-    await call('reviews:edit', { id: ID, text: '  hi \n' });
+    await call('reviews:edit', { id: ID, text: '  hi \n', isPublic: false });
 
-    expect(state.api).toHaveBeenCalledWith({ id: ID, text: 'hi' });
+    expect(state.api).toHaveBeenCalledWith({ id: ID, text: 'hi', isPublic: false });
   });
 
   it('drops a machine id or captcha token the renderer slips in', async () => {
-    await call('reviews:edit', { id: ID, text: 'hi', machineId: 'x', captchaToken: 'y' });
+    await call('reviews:edit', {
+      id: ID,
+      text: 'hi',
+      isPublic: true,
+      machineId: 'x',
+      captchaToken: 'y',
+    });
 
-    expect(state.api).toHaveBeenCalledWith({ id: ID, text: 'hi' });
+    expect(state.api).toHaveBeenCalledWith({ id: ID, text: 'hi', isPublic: true });
   });
 
   it.each([
     ['reviews:list', { gameId: 'not-a-uuid', cursor: null }],
-    ['reviews:reply', { id: ID, reviewId: OTHER, parentId: null, text: '   ' }],
-    ['reviews:reply', { id: ID, reviewId: OTHER, text: 'hi' }],
-    ['reviews:edit', { id: ID, text: 'x'.repeat(1001) }],
+    [
+      'reviews:reply',
+      { id: ID, reviewId: OTHER, parentId: null, text: '   ', isPublic: false },
+    ],
+    ['reviews:reply', { id: ID, reviewId: OTHER, text: 'hi', isPublic: false }],
+    ['reviews:reply', { id: ID, reviewId: OTHER, parentId: null, text: 'hi' }],
+    ['reviews:edit', { id: ID, text: 'x'.repeat(1001), isPublic: false }],
+    ['reviews:edit', { id: ID, text: 'hi', isPublic: 'yes' }],
     ['reviews:spin', { spinId: null, hold: { avatar: false } }],
     ['reviews:claim', {}],
     [
       'reviews:submit-feedback',
-      { id: ID, gameId: OTHER, type: 'praise', message: 'hi', screenshotPaths: [] },
+      {
+        id: ID,
+        gameId: OTHER,
+        type: 'praise',
+        message: 'hi',
+        screenshotPaths: [],
+        allowPublish: false,
+      },
+    ],
+    [
+      'reviews:submit-feedback',
+      { id: ID, gameId: OTHER, type: 'feedback', message: 'hi', screenshotPaths: [] },
     ],
     ['reviews:upload-urls', { id: ID, fileNames: [] }],
     ['reviews:upload-urls', { id: ID, fileNames: Array(6).fill('a.png') }],
@@ -103,8 +142,27 @@ describe('setupGameReviewsHandlers', () => {
   });
 
   it('counts the text limit in code points, as the server does', async () => {
-    await call('reviews:edit', { id: ID, text: '\u{1F600}'.repeat(1000) });
+    await call('reviews:edit', {
+      id: ID,
+      text: '\u{1F600}'.repeat(1000),
+      isPublic: false,
+    });
 
     expect(state.api).toHaveBeenCalledTimes(1);
+  });
+
+  it('prefetches a token for a known action', () => {
+    state.listeners.get('reviews:prefetch-captcha')?.(null, 'reply');
+
+    expect(state.prefetch).toHaveBeenCalledWith('reply');
+  });
+
+  it.each([
+    ['an unknown action', 'publish'],
+    ['no action', undefined],
+  ])('prefetches nothing for %s', (_label, action) => {
+    state.listeners.get('reviews:prefetch-captcha')?.(null, action);
+
+    expect(state.prefetch).not.toHaveBeenCalled();
   });
 });

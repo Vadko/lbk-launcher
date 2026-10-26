@@ -52,7 +52,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   const text = entry.pendingText ?? entry.text;
   const isChecking = entry.isChecking === true;
   const failure = entry.failure ?? null;
-  // A nickname or a captcha cannot come from a plain resend
+  // A nickname cannot come from a plain resend
   const canResend = failure?.kind === 'retry';
   const isOwnPlayerEntry = entry.author.isMine && entry.author.role === 'player';
   const editDeadline = new Date(entry.createdAt).getTime() + EDIT_WINDOW_MS;
@@ -94,6 +94,8 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
           <ReviewComposer
             initialText={text}
             submitLabel={t('gameReviews.save')}
+            captchaAction="edit"
+            isPublic={isPublicThread}
             expiresAt={editDeadline}
             onSubmit={(text) => onEdit(text, () => setIsEditing(false))}
             onClose={() => setIsEditing(false)}

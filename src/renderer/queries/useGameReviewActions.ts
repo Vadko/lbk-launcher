@@ -55,7 +55,7 @@ export function useGameReviewActions(gameId: string) {
     // The entry shows at once with a checking badge; the server's answer settles it later
     const settle = async (entryId: string, plan: SettlePlan): Promise<void> => {
       const result = await plan.request();
-      // needs-author and needs-captcha wait for a nickname or a token, which a plain resend lacks
+      // needs-author waits for a nickname, which a plain resend lacks
       if (!result.ok && result.failure.kind === 'retry') {
         failedRequests.set(entryId, () => settle(entryId, plan));
       } else {
@@ -84,10 +84,12 @@ export function useGameReviewActions(gameId: string) {
         await queryClient.cancelQueries({ queryKey });
         const data = pages();
         const viewer = data?.pages[0]?.viewer ?? null;
+        const thread = findThread(data, reviewId);
+        const isPublic = thread?.isPublic ?? false;
         const reply: GameReviewReply = {
           id: crypto.randomUUID(),
           text,
-          createdAt: nextReplyTime(findThread(data, reviewId), Date.now()),
+          createdAt: nextReplyTime(thread, Date.now()),
           editedAt: null,
           author: {
             role: 'player',
@@ -107,7 +109,8 @@ export function useGameReviewActions(gameId: string) {
           )
         );
         void settle(reply.id, {
-          request: () => sendReviewReply({ id: reply.id, reviewId, parentId, text }),
+          request: () =>
+            sendReviewReply({ id: reply.id, reviewId, parentId, text, isPublic }),
           done: afterReply,
           rejected: () => null,
         });
@@ -122,7 +125,7 @@ export function useGameReviewActions(gameId: string) {
         const { thread, entry: before } = found;
         showWith(onShown, () => patch(entryId, withEdit(text)));
         void settle(entryId, {
-          request: () => sendReviewEdit({ id: entryId, text }),
+          request: () => sendReviewEdit({ id: entryId, text, isPublic: thread.isPublic }),
           done: (outcome) => afterEdit(outcome, text, new Date().toISOString()),
           rejected: restored(before),
           // The answer cannot tell a kept edit from a rejected one, so the list says which

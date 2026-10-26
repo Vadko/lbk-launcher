@@ -1,14 +1,19 @@
 import { Check, Send } from 'lucide';
 import React, { useState } from 'react';
+import type { TurnstileAction } from '@/main/turnstile/contract';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useNow } from '../../hooks/useNow';
+import { usePrefetchCaptcha } from '../../hooks/usePrefetchCaptcha';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 
 interface ReviewComposerProps {
   initialText?: string;
   submitLabel: string;
+  captchaAction: TurnstileAction;
+  // A public thread takes a captcha token, which main solves while the text is typed
+  isPublic: boolean;
   // An edit closes on the server at this moment, so saving stops with it
   expiresAt?: number;
   onSubmit: (text: string) => Promise<void>;
@@ -20,10 +25,13 @@ const MAX_LENGTH = 1000;
 export const ReviewComposer: React.FC<ReviewComposerProps> = ({
   initialText = '',
   submitLabel,
+  captchaAction,
+  isPublic,
   expiresAt,
   onSubmit,
   onClose,
 }) => {
+  usePrefetchCaptcha(captchaAction, isPublic);
   const [text, setText] = useState(initialText);
   const submit = useActionPhase();
   const now = useNow(10_000, expiresAt ?? 0);

@@ -19,8 +19,8 @@ const SERVER_FAILURES: Record<ReviewErrorCode, FailureRule> = {
   invalid_body: { kind: 'rejected', log: 'error' },
   invalid_hold: { kind: 'rejected', log: 'warn' },
   invalid_candidate: { kind: 'rejected', log: 'warn' },
-  // A resend without a new single-use token is refused the same way
-  captcha_failed: { kind: 'needs-captcha', log: 'warn' },
+  // Every attempt takes a fresh single-use token, so a resend can pass
+  captcha_failed: { kind: 'retry', log: 'warn' },
   edit_window_closed: { kind: 'rejected', log: 'warn' },
   not_owner: { kind: 'rejected', log: 'warn' },
   banned: { kind: 'rejected', log: 'warn' },

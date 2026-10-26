@@ -7,6 +7,7 @@ import type {
   ReviewWriteResult,
   SubmitFeedbackInput,
 } from '../../shared/game-reviews-api-types';
+import { takeCaptchaToken } from '../turnstile/tokens';
 import { getOsVersion } from '../utils/os-version';
 import { callReviewFunction } from './review-request';
 import { writeResultSchema } from './review-schemas';
@@ -19,13 +20,14 @@ const uploadUrlsSchema: z.ZodType<FeedbackUploadUrl[]> = z
   })
   .transform(({ uploadUrls }) => uploadUrls);
 
-// Without allowPublish and a captcha token the server keeps the post private
+// The server stores a post without a token as private, silently, so publishing never goes out without one
 export function submitFeedback({
   id,
   gameId,
   type,
   message,
   screenshotPaths,
+  allowPublish,
 }: SubmitFeedbackInput): Promise<ReviewResult<ReviewWriteResult>> {
   return callReviewFunction(
     'submit-feedback',
@@ -35,12 +37,16 @@ export function submitFeedback({
       type,
       message,
       ...(screenshotPaths.length > 0 && { screenshotPaths }),
+      ...(allowPublish && { allowPublish }),
       version: app.getVersion(),
       platform: process.platform,
       arch: process.arch,
       osVersion: getOsVersion(),
     },
-    writeResultSchema
+    writeResultSchema,
+    allowPublish
+      ? { captchaToken: () => takeCaptchaToken('review'), refuseWithoutToken: true }
+      : {}
   );
 }
 

@@ -7,6 +7,7 @@ import type {
   ReviewResult,
 } from '../../shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '../../shared/game-reviews-types';
+import { takeCaptchaToken } from '../turnstile/tokens';
 import { callReviewFunction } from './review-request';
 import { authorIdentitySchema } from './review-schemas';
 
@@ -56,5 +57,7 @@ export function spinReviewNickname({
 export function claimReviewNickname({
   spinId,
 }: NicknameClaimInput): Promise<ReviewResult<ReviewAuthorIdentity>> {
-  return callReviewFunction('reviews?action=claim', { spinId }, claimSchema);
+  return callReviewFunction('reviews?action=claim', { spinId }, claimSchema, {
+    captchaToken: () => takeCaptchaToken('nickname'),
+  });
 }
