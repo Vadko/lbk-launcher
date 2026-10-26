@@ -476,6 +476,7 @@ export const en = {
     popular: 'Popular with players',
     installedGames: 'Installed games found',
     recommended: 'You might like',
+    weeklyPicks: 'Picks of the week',
     viewAll: 'View all',
     noGames: 'No games found',
     back: 'Back',

@@ -34,6 +34,7 @@ const electronAPI: ElectronAPI = {
   checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
+  fetchWeeklyPicks: () => ipcRenderer.invoke('fetch-weekly-picks'),
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
