@@ -21,7 +21,6 @@ import {
   recordBannerImpression,
 } from '../db/banners-api';
 import { findDeepLinkGameId } from '../db/deep-link-game';
-import { fetchGameReviews } from '../db/game-reviews-api';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
@@ -51,16 +50,13 @@ import { findProtons } from '../installer/proton';
 import { getLibraryMemberships } from '../library-memberships';
 import { checkStoreLibraries } from '../store-library-watcher';
 import {
-  getFeedbackUploadUrls,
   getMachineId,
-  submitFeedback,
   submitLogs,
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
   trackUninstall,
   trackWorkshopOpen,
-  uploadFileToSignedUrl,
 } from '../tracking';
 import { launchEglGame } from '../utils/egl-launcher';
 import { flushEglLaunchArgs } from '../utils/egl-windows-settings';
@@ -175,40 +171,9 @@ export function setupGamesHandlers(): void {
     trackFailedSearch(query)
   );
 
-  // Submit feedback for a game translation
-  ipcMain.handle(
-    'submit-feedback',
-    async (
-      _,
-      gameId: string,
-      type: string,
-      message: string,
-      screenshotPaths?: string[],
-      allowPublish?: boolean
-    ) => submitFeedback(gameId, type, message, screenshotPaths, allowPublish)
-  );
-
-  ipcMain.handle(
-    'fetch-game-reviews',
-    (_, gameId: string, page: number, pageSize: number) =>
-      fetchGameReviews(gameId, page, pageSize)
-  );
-
   // Send logs handler
   ipcMain.handle('submit-logs', async (_, message: string, crashReason?: string) =>
     submitLogs(message, crashReason)
-  );
-
-  // Get signed upload URLs for feedback screenshots
-  ipcMain.handle('get-feedback-upload-urls', async (_, fileNames: string[]) =>
-    getFeedbackUploadUrls(fileNames)
-  );
-
-  // Upload file to signed URL
-  ipcMain.handle(
-    'upload-file-to-signed-url',
-    async (_, signedUrl: string, filePath: string, contentType: string) =>
-      uploadFileToSignedUrl(signedUrl, filePath, contentType)
   );
 
   // Check whether the game is marked as tombstoned

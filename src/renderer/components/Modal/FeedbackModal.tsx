@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Send } from 'lucide';
 import {
@@ -12,10 +13,12 @@ import { Trans } from 'react-i18next';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
+import { gameReviewsQueryKey } from '../../queries/gameReviewsQueryKey';
+import { sendFeedbackPost } from '../../queries/sendFeedbackPost';
 import { trackEvent } from '../../utils/analytics';
+import { freshAttempt } from '../../utils/feedbackAttempt';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
-import { Checkbox } from '../ui/Checkbox';
 import { Modal } from './Modal';
 
 const MAX_MESSAGE_LENGTH = 1000;
@@ -58,12 +61,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 }) => {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('feedback');
   const [message, setMessage] = useState('');
-  const [allowPublish, setAllowPublish] = useState(true);
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The post's id and uploads, so a resend of the same post is stored once and uploads nothing twice
+  const [attempt, setAttempt] = useState(freshAttempt);
+  const queryClient = useQueryClient();
   const {
     phase: submitPhase,
     isPending: isSubmitting,
@@ -82,7 +87,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
     if (isOpen) {
       setFeedbackType('feedback');
       setMessage('');
-      setAllowPublish(true);
+      setAttempt(freshAttempt());
       setScreenshots([]);
       setIsSubmitted(false);
       setError(null);
@@ -172,81 +177,47 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
     setError(null);
 
-    try {
-      const result = await runSubmit(
-        async (): Promise<{ success: boolean; error?: string }> => {
-          let uploadedPaths: string[] | undefined;
+    const result = await runSubmit(
+      () =>
+        sendFeedbackPost(attempt, {
+          gameId,
+          type: feedbackType,
+          message: trimmedMessage,
+          screenshots,
+        }),
+      { isSuccess: (r) => r.ok }
+    );
+    setAttempt(result.attempt);
 
-          if (screenshots.length > 0) {
-            const urlsResult = await window.electronAPI.getFeedbackUploadUrls(
-              screenshots.map((s) => s.name)
-            );
-
-            if (!urlsResult.success || !urlsResult.uploadUrls) {
-              return { success: false, error: t('feedbackModal.screenshotsFailed') };
-            }
-
-            uploadedPaths = [];
-            for (const [i, { signedUrl, path }] of urlsResult.uploadUrls.entries()) {
-              const response = await fetch(signedUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': screenshots[i].type },
-                body: screenshots[i].file,
-              });
-
-              if (!response.ok) {
-                return {
-                  success: false,
-                  error: t('feedbackModal.screenshotFailed', {
-                    name: screenshots[i].name,
-                  }),
-                };
-              }
-
-              uploadedPaths.push(path);
-            }
-          }
-
-          return window.electronAPI.submitFeedback(
-            gameId,
-            feedbackType,
-            trimmedMessage,
-            uploadedPaths,
-            feedbackType === 'feedback' ? allowPublish : undefined
-          );
-        },
-        { isSuccess: (r) => r.success }
-      );
-
-      if (result.success) {
-        setIsSubmitted(true);
-        trackEvent('Feedback Submitted', {
-          'Game Id': gameId,
-          'Game Name': gameName,
-          'Feedback Type': feedbackType,
-          ...(feedbackType === 'feedback' && { 'Allow Publish': allowPublish }),
-          'Message Length': trimmedMessage.length,
-          Screenshots: screenshots.length,
-        });
-      } else if (result.error === 'rate_limit') {
-        setError(t('feedbackModal.rateLimit'));
-        trackEvent('Feedback Rate Limited', { 'Game Id': gameId });
-      } else {
-        setError(result.error || t('feedbackModal.sendFailed'));
-        trackEvent('Feedback Error', { 'Game Id': gameId, Error: result.error });
-      }
-    } catch {
-      setError(t('feedbackModal.networkError'));
+    if (result.ok) {
+      setIsSubmitted(true);
+      // The post shows in the reviews tab for this machine, private or not
+      void queryClient.invalidateQueries({ queryKey: gameReviewsQueryKey(gameId) });
+      trackEvent('Feedback Submitted', {
+        'Game Id': gameId,
+        'Game Name': gameName,
+        'Feedback Type': feedbackType,
+        'Message Length': trimmedMessage.length,
+        Screenshots: screenshots.length,
+      });
+      return;
+    }
+    setError(result.message);
+    if (result.failure?.code === 'rate_limit') {
+      trackEvent('Feedback Rate Limited', { 'Game Id': gameId });
+    } else {
+      trackEvent('Feedback Error', { 'Game Id': gameId, Error: result.failure?.code });
     }
   }, [
     gameId,
     gameName,
     feedbackType,
     message,
-    allowPublish,
+    attempt,
     screenshots,
     isSubmitting,
     runSubmit,
+    queryClient,
   ]);
 
   // Success state
@@ -396,22 +367,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             }}
           />
         </div>
-
-        {feedbackType === 'feedback' && (
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="allow-publish-feedback"
-              checked={allowPublish}
-              onCheckedChange={setAllowPublish}
-            />
-            <label
-              htmlFor="allow-publish-feedback"
-              className="text-sm text-text-muted cursor-pointer"
-            >
-              {t('feedbackModal.allowPublish')}
-            </label>
-          </div>
-        )}
 
         {/* Error */}
         {error && (

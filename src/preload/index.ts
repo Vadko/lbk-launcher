@@ -21,8 +21,10 @@ import type {
   RunInstallerRequest,
   SortOrderType,
 } from '../shared/types';
+import { gameReviewsAPI } from './game-reviews-api';
 
 const electronAPI: ElectronAPI = {
+  ...gameReviewsAPI,
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
@@ -336,14 +338,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
-  // Submit feedback for a game translation
-  submitFeedback: (...args) => ipcRenderer.invoke('submit-feedback', ...args),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
-  getFeedbackUploadUrls: (fileNames: string[]) =>
-    ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
-  uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
-    ipcRenderer.invoke('upload-file-to-signed-url', signedUrl, filePath, contentType),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
@@ -366,8 +362,6 @@ const electronAPI: ElectronAPI = {
   fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
   fetchBannersForGame: (gameId: string, gameSlug: string) =>
     ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
-  fetchGameReviews: (gameId: string, page: number, pageSize: number) =>
-    ipcRenderer.invoke('fetch-game-reviews', gameId, page, pageSize),
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

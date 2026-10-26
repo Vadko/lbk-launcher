@@ -390,6 +390,53 @@ export const en = {
       'This translation is no longer available in the catalog. You can uninstall it, but you will not be able to reinstall it.',
     uninstalling: 'Uninstalling Ukrainian patch and restoring original files...',
   },
+  gameReviews: {
+    title: 'Community reviews',
+    count_one: '{{count}} comment',
+    count_few: '{{count}} comments',
+    count_many: '{{count}} comments',
+    count_other: '{{count}} comments',
+    leave: 'Leave a review',
+    installRequired: 'You can leave a review after installing the translation.',
+    loadFailed: 'Could not load reviews. Try again later.',
+    empty: 'No reviews yet.',
+    you: 'You',
+    moderator: 'Moderator',
+    translationAuthor: 'Translation creator',
+    bug: 'Bug',
+    edited: 'edited',
+    private: 'Private',
+    badge: {
+      checking: 'Checking',
+      confirmed: 'Confirmed',
+      moderation: 'Awaiting moderation',
+      failed: 'Not sent',
+    },
+    hint: {
+      moderation: 'Others will see this post once a moderator approves it.',
+      moderationEdit:
+        'Others see the previous version until a moderator approves your changes.',
+      private: 'Only you and the translation creators can see this.',
+    },
+    reply: 'Reply',
+    edit: 'Edit',
+    editTimeLeft: '{{minutes}} min left',
+    replyPlaceholder: 'Your reply…',
+    send: 'Send',
+    resend: 'Send again',
+    save: 'Save',
+    actionFailed: 'Could not save. Try again.',
+    showMoreReplies_one: 'Show {{count}} more reply',
+    showMoreReplies_few: 'Show {{count}} more replies',
+    showMoreReplies_many: 'Show {{count}} more replies',
+    showMoreReplies_other: 'Show {{count}} more replies',
+    hideReplies: 'Collapse replies',
+    today: 'Today, {{time}}',
+    yesterday: 'Yesterday, {{time}}',
+    screenshotAlt: 'Screenshot {{number}}',
+    loadMoreFailed: 'Could not load more reviews.',
+    removed: 'Removed by a moderator',
+  },
   gameSearch: { placeholder: 'Search games...' },
   gameSections: {
     aboutTranslation: 'About the Ukrainian patch',
@@ -401,6 +448,7 @@ export const en = {
     completed: 'Complete',
     techImprovement: 'Technical updates in progress',
   },
+  gameTabs: { info: 'Info', recommended: 'Recommended', reviews: 'Reviews' },
   gameSubscribe: {
     subscribedTitle: 'You receive notifications about “{{game}}”',
     subscribeTitle: 'Get notifications about “{{game}}”',
@@ -1355,7 +1403,7 @@ export const en = {
   },
   privacyPolicy: {
     title: 'Privacy policy',
-    updated: 'Updated: 22 October 2026',
+    updated: 'Updated: 24 October 2026',
     intro:
       'LBK Launcher is a service for finding, installing and updating Ukrainian localizations.',
     openSource:
@@ -1410,7 +1458,7 @@ export const en = {
         publicText:
           'Aggregated figures may be used in public statistics, promotional materials and partner presentations without MachineID or other identifiers of individual installations.',
         noTracking:
-          'The app and website do not use advertising networks, tracking pixels, session recording or device/browser fingerprinting. We do not sell personal data or share it with data brokers.',
+          'The app and website do not use advertising networks, tracking pixels, session recording or device/browser fingerprinting for tracking. We do not sell personal data or share it with data brokers.',
       },
       localOnly: {
         title: '3. Data processed only on your device',
@@ -1584,6 +1632,8 @@ export const en = {
         externalTitle: 'External services',
         mixpanel: '<b>Mixpanel</b> — app product analytics;',
         zaraz: '<b>Cloudflare Zaraz</b> — public website analytics;',
+        turnstile:
+          '<b>Cloudflare Turnstile</b> — bot protection on admin panel forms and when publishing reviews in the app (<turnstile>Turnstile Privacy Addendum</turnstile>);',
         googleAnalytics: '<b>Google Analytics</b> — dashboard analytics;',
         resend: '<b>Resend</b> — account emails and service notifications;',
         youtube: '<b>YouTube / Google</b> — embedded videos;',
@@ -1603,7 +1653,7 @@ export const en = {
         title: '15. Where data are processed',
         servers: "LBK's own servers are located in <b>Germany</b>.",
         external:
-          'Some external services may process data in other countries, including the United States. These include Mixpanel, Resend, Google/YouTube, GitHub and Steam.',
+          'Some external services may process data in other countries, including the United States. These include Cloudflare, Mixpanel, Resend, Google/YouTube, GitHub and Steam.',
       },
       rights: {
         title: '16. Your rights and consent management',
@@ -1639,7 +1689,7 @@ export const en = {
         machineId: 'does not include MachineID in public or aggregated statistics;',
         ads: 'does not show behavior-based advertising;',
         fingerprinting:
-          'does not use browser fingerprinting or record on-screen activity.',
+          'does not use browser fingerprinting for tracking or record on-screen activity.',
       },
       changes: {
         title: '19. Changes to this policy',

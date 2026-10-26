@@ -151,6 +151,7 @@ import {
   stopInstallationWatcher,
 } from './installation-watcher';
 import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
+import { setupGameReviewsHandlers } from './ipc/game-reviews';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
@@ -263,6 +264,7 @@ if (!gotTheLock) {
   setupTgNewsHandlers();
   setupLikesHandlers();
   setupFeedbackReplyHandlers();
+  setupGameReviewsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
   setupPluginHostHandlers();

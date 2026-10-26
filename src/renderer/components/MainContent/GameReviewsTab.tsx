@@ -1,19 +1,15 @@
 import { RotateCcw } from 'lucide';
 import { FileEditIcon, InfoIcon } from 'lucide-react';
-import React, { useState } from 'react';
-import type {
-  GameReview,
-  GameReviewReply,
-  GameReviewsPage,
-} from '@/shared/game-reviews-types';
+import React, { useCallback, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
+import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
+import { useGameReviewActions } from '../../queries/useGameReviewActions';
 import { useGameReviews } from '../../queries/useGameReviews';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
-import { ReviewImages } from './ReviewImages';
-import { ReviewsPagination } from './ReviewsPagination';
+import { ReviewThread } from './ReviewThread';
 
 interface GameReviewsTabProps {
   gameId: string;
@@ -21,86 +17,28 @@ interface GameReviewsTabProps {
   onLeaveFeedback: () => void;
 }
 
-const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
-
-function formatReviewDate(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const time = date.toLocaleTimeString('uk-UA', TIME_FORMAT);
-  const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const daysAgo = Math.round(
-    (dayStart(now).getTime() - dayStart(date).getTime()) / 86_400_000
-  );
-
-  if (daysAgo === 0) {
-    return t('gameReviews.today', { time });
-  }
-  if (daysAgo === 1) {
-    return t('gameReviews.yesterday', { time });
-  }
-  const day = date
-    .toLocaleDateString('uk-UA', {
-      day: 'numeric',
-      month: 'short',
-      ...(date.getFullYear() !== now.getFullYear() && { year: 'numeric' }),
-    })
-    .replace('.', '');
-  return `${day}, ${time}`;
-}
-
-const AuthorReply: React.FC<{ reply: GameReviewReply; isLast: boolean }> = ({
-  reply,
-  isLast,
-}) => (
-  <div
-    className={`relative flex flex-col gap-2 pt-3 pl-6 ${!isLast && 'border-l border-color-main'}`}
-  >
-    <span className="absolute left-0 top-0 h-[22px] w-5 border-l border-b border-color-main rounded-bl-xl" />
-    <div className="flex items-center gap-2">
-      <span className="px-2 py-0.5 rounded-md bg-color-main/15 text-xs font-semibold text-color-main">
-        {t('gameReviews.authorReply')}
-      </span>
-      <span className="text-sm text-text-muted">{formatReviewDate(reply.createdAt)}</span>
-    </div>
-    <p className="text-sm text-text-main wrap-break-word">{reply.text}</p>
-  </div>
-);
-
-const ReviewItem: React.FC<{ review: GameReview }> = ({ review }) => (
-  <div className="flex flex-col gap-2.5 pb-3 border-b border-white/[0.03]">
-    <p className="text-sm text-text-muted">{formatReviewDate(review.createdAt)}</p>
-    <p className="text-sm text-text-main wrap-break-word">{review.text}</p>
-    <ReviewImages images={review.images} />
-    {review.replies.length > 0 && (
-      <div className="flex flex-col -mt-2.5 ml-3">
-        {review.replies.map((reply, i) => (
-          <AuthorReply
-            key={reply.id}
-            reply={reply}
-            isLast={i === review.replies.length - 1}
-          />
-        ))}
-      </div>
-    )}
-  </div>
-);
-
 export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   gameId,
   canLeaveFeedback,
   onLeaveFeedback,
 }) => {
-  const [page, setPage] = useState(1);
-  const { data, isPending, isError, isFetching, isPlaceholderData, refetch } =
-    useGameReviews(gameId, page);
-  // A failed page has no data; the last known count keeps the pagination there to leave it
-  const [summary, setSummary] = useState<Pick<GameReviewsPage, 'total' | 'pageSize'>>();
-  if (data && (data.total !== summary?.total || data.pageSize !== summary?.pageSize)) {
-    setSummary({ total: data.total, pageSize: data.pageSize });
-  }
-  const totalPages = summary
-    ? Math.max(1, Math.ceil(summary.total / summary.pageSize))
-    : 1;
+  const {
+    data,
+    isPending,
+    isError,
+    isFetching,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  } = useGameReviews(gameId);
+  const actions = useGameReviewActions(gameId);
+  const handleResend = useCallback(
+    (entryId: string) => void actions.resend(entryId),
+    [actions]
+  );
+  const reviews = data?.pages.flatMap((page) => page.items) ?? [];
+  const total = data?.pages[0]?.total;
   // A retry resets the query to pending, so the phase keeps the focused button mounted until it settles
   const retry = useActionPhase();
   const handleRetry = () => {
@@ -108,10 +46,29 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       void retry.run(() => refetch(), { isSuccess: (result) => !result.isError });
     }
   };
-  const handlePageChange = (next: number) => {
-    retry.reset();
-    setPage(next);
+  // An optimistic patch clears the query's error, so the failed page is remembered here
+  const [isLoadMoreFailed, setIsLoadMoreFailed] = useState(false);
+  const loadNextPage = useCallback(async () => {
+    const result = await fetchNextPage();
+    setIsLoadMoreFailed(result.isFetchNextPageError);
+    return result;
+  }, [fetchNextPage]);
+  const loadMore = useActionPhase();
+  const handleLoadMore = () => {
+    if (!loadMore.isPending) {
+      void loadMore.run(loadNextPage, {
+        isSuccess: (result) => !result.isFetchNextPageError,
+      });
+    }
   };
+  const showLoadMoreError = loadMore.isBusy || (isLoadMoreFailed && !isFetchingNextPage);
+  const loadFromSentinel = useCallback(() => void loadNextPage(), [loadNextPage]);
+  // A failed page stays intersecting, so the sentinel waits for the manual retry instead of looping
+  const attachSentinel = useInfiniteScrollSentinel({
+    hasNextPage: hasNextPage && !showLoadMoreError,
+    isFetchingNextPage,
+    fetchNextPage: loadFromSentinel,
+  });
 
   return (
     <section className="glass-card-no-motion flex flex-col gap-5 min-w-0 min-h-[60vh] h-max">
@@ -121,7 +78,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
             {t('gameReviews.title')}
           </h3>
           <p className="min-h-[18px] text-sm text-text-muted">
-            {summary && t('gameReviews.count', { count: summary.total })}
+            {total !== undefined && t('gameReviews.count', { count: total })}
           </p>
         </div>
         {canLeaveFeedback && (
@@ -144,7 +101,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       )}
 
       <div className="flex-1">
-        {retry.isBusy || (isError && !isFetching) ? (
+        {retry.isBusy || (isError && !data && !isFetching) ? (
           <div className="flex flex-col items-center gap-4 py-12">
             <p className="text-text-muted">{t('gameReviews.loadFailed')}</p>
             <Button
@@ -161,26 +118,45 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
           <div className="flex justify-center py-12">
             <Loader size="md" />
           </div>
-        ) : data.items.length === 0 ? (
+        ) : reviews.length === 0 ? (
           <p className="text-sm text-text-muted">{t('gameReviews.empty')}</p>
         ) : (
-          <div
-            className={`flex flex-col gap-4 transition-opacity ${isPlaceholderData ? 'opacity-60' : ''}`}
-          >
-            {data.items.map((review) => (
-              <ReviewItem key={review.id} review={review} />
+          <div className="flex flex-col divide-y divide-white/5">
+            {reviews.map((review) => (
+              <div key={review.id} className="py-5 first:pt-0 last:pb-0">
+                <ReviewThread
+                  review={review}
+                  onReply={actions.sendReply}
+                  onEdit={actions.edit}
+                  onResend={handleResend}
+                />
+              </div>
             ))}
           </div>
         )}
+        {hasNextPage && !showLoadMoreError && (
+          <div ref={attachSentinel} className="h-1" aria-hidden />
+        )}
+        {isFetchingNextPage && !loadMore.isBusy && (
+          <div className="flex justify-center py-6">
+            <Loader size="sm" />
+          </div>
+        )}
+        {showLoadMoreError && (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <p className="text-sm text-text-muted">{t('gameReviews.loadMoreFailed')}</p>
+            <Button
+              variant="secondary"
+              icon={<AppActionIcon phase={loadMore.phase} icon={RotateCcw} size={20} />}
+              onClick={handleLoadMore}
+              aria-busy={loadMore.isPending}
+              data-gamepad-action
+            >
+              {t('common.tryAgain')}
+            </Button>
+          </div>
+        )}
       </div>
-
-      {totalPages > 1 && (
-        <ReviewsPagination
-          page={page}
-          totalPages={totalPages}
-          onChange={handlePageChange}
-        />
-      )}
     </section>
   );
 };

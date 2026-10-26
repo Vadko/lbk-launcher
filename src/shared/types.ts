@@ -4,7 +4,7 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
-import type { GameReviewsPage } from './game-reviews-types';
+import type { GameReviewsAPI } from './game-reviews-api-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
@@ -248,7 +248,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI extends SteamPluginHostAPI {
+export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
@@ -445,29 +445,9 @@ export interface ElectronAPI extends SteamPluginHostAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
-  // Submit feedback for a game translation
-  submitFeedback: (
-    gameId: string,
-    type: FeedbackType,
-    message: string,
-    screenshotPaths?: string[],
-    allowPublish?: boolean
-  ) => Promise<{ success: boolean; error?: string }>;
   submitLogs: (
     message: string,
     crashReason?: string
-  ) => Promise<{ success: boolean; error?: string }>;
-  // Get signed upload URLs for feedback screenshots
-  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
-    success: boolean;
-    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
-    error?: string;
-  }>;
-  // Upload a file to a signed URL
-  uploadFileToSignedUrl: (
-    signedUrl: string,
-    filePath: string,
-    contentType: string
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
@@ -480,11 +460,6 @@ export interface ElectronAPI extends SteamPluginHostAPI {
   // Banner API
   fetchPromoBanner: () => Promise<BannerData | null>;
   fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
-  fetchGameReviews: (
-    gameId: string,
-    page: number,
-    pageSize: number
-  ) => Promise<GameReviewsPage | null>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

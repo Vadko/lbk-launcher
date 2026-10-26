@@ -720,13 +720,24 @@ export function useGamepadModeNavigation(enabled = true) {
         return;
       }
 
+      const active = document.activeElement;
+      // The review composer: leaving the area or switching games would unmount it with the text
+      if (isTextInput(active) && root.contains(active)) {
+        if (f.held(BUTTON.B) && f.now - lastBWhileTyping > B_WHILE_TYPING_THROTTLE) {
+          lastBWhileTyping = f.now;
+          playBackSound();
+          active.blur();
+          active.setAttribute('data-gamepad-selected', 'true');
+        }
+        return;
+      }
+
       if (f.pressed(BUTTON.B)) {
         playBackSound();
         switchArea('games');
         return;
       }
 
-      const active = document.activeElement;
       if (!justEntered && !f.hasInput && active !== root && root.contains(active)) {
         return;
       }
