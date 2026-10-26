@@ -2420,6 +2420,36 @@ export type Database = {
           },
         ]
       }
+      review_cleanup_jobs: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          feedback_id: string | null
+          id: number
+          paths: string[] | null
+          tg_message_id: number | null
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          feedback_id?: string | null
+          id?: never
+          paths?: string[] | null
+          tg_message_id?: number | null
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          feedback_id?: string | null
+          id?: never
+          paths?: string[] | null
+          tg_message_id?: number | null
+        }
+        Relationships: []
+      }
       review_nickname_spins: {
         Row: {
           adjective: string
@@ -3268,6 +3298,16 @@ export type Database = {
         Args: { p_ip: string; p_machine_id: string; p_spin_id: string }
         Returns: Json
       }
+      claim_review_cleanup_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          feedback_id: string
+          id: number
+          paths: string[]
+          tg_message_id: number
+        }[]
+      }
       claim_stale_review_moderation: {
         Args: { p_limit?: number }
         Returns: {
@@ -3297,6 +3337,7 @@ export type Database = {
         Args: { p_entry_id: string; p_machine_id: string; p_text: string }
         Returns: Json
       }
+      finish_review_cleanup_jobs: { Args: { p_ids: number[] }; Returns: number }
       fuzzy_search_games: {
         Args: {
           limit_val?: number
@@ -3470,6 +3511,10 @@ export type Database = {
         }[]
       }
       get_review_author: { Args: { p_machine_id: string }; Returns: Json }
+      get_review_bans: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       get_review_machine_entries: {
         Args: {
           p_id: string
@@ -3615,6 +3660,7 @@ export type Database = {
         Returns: undefined
       }
       resolve_review_alerts: { Args: { p_prefix: string }; Returns: string[] }
+      review_cleanup_cron: { Args: never; Returns: undefined }
       review_entry_outcome: {
         Args: { p_id: string; p_machine_id: string; p_text?: string }
         Returns: Json
