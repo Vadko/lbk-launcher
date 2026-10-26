@@ -25,6 +25,9 @@ if (isE2E) {
 // whether the toggle can turn reporting back on without a restart
 const sentryStartedEnabled = app.isPackaged && !isE2E && isCrashDiagnosticsEnabled();
 
+// Before Sentry.init, so captureConsoleIntegration wraps the logger instead of being replaced by it
+initLogger();
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   enabled: sentryStartedEnabled,
@@ -193,9 +196,6 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  // Initialize logger early to capture all logs
-  initLogger();
-
   // Catch unhandled errors in main process to prevent crashes
   process.on('uncaughtException', (error) => {
     console.error('[Main] Uncaught Exception:', error);

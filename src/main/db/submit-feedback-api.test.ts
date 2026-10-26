@@ -12,7 +12,6 @@ vi.mock('@/main/db/supabase-client', () => ({
   getSupabaseClient: () => ({ functions: { invoke } }),
 }));
 vi.mock('@/main/tracking', () => ({ IS_E2E: false, getMachineId: () => 'machine-1' }));
-vi.mock('@/main/turnstile/report-captcha-fault', () => ({ reportCaptchaFault: vi.fn() }));
 vi.mock('@/main/turnstile/tokens', () => ({ takeCaptchaToken }));
 
 const { getFeedbackUploadUrls, submitFeedback } = await import('./submit-feedback-api');

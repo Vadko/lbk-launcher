@@ -264,8 +264,7 @@ describe('openCaptchaPage', () => {
     fail();
     await ready;
 
-    expect(error).toHaveBeenCalledWith(`[Turnstile] Captcha window closed: ${reason}`);
-    expect(state.reportCaptchaFault.mock.calls).toEqual([[reason]]);
+    expect(state.reportCaptchaFault.mock.calls).toEqual([[`window closed: ${reason}`]]);
   });
 
   it.each<[string, () => void]>([

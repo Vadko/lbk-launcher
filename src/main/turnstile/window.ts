@@ -95,10 +95,11 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
       return;
     }
     closed = true;
-    console[log](`[Turnstile] Captcha window closed: ${reason}`);
-    // An error is a landing fault that stops every public write, so it has to reach Sentry
+    // An error is a landing fault that stops every public write
     if (log === 'error') {
-      reportCaptchaFault(reason);
+      reportCaptchaFault(`window closed: ${reason}`);
+    } else {
+      console[log](`[Turnstile] Captcha window closed: ${reason}`);
     }
     clearTimeout(readyTimer);
     if (page?.window === window) {

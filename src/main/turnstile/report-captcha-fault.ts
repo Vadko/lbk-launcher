@@ -1,12 +1,8 @@
-import * as Sentry from '@sentry/electron/main';
-
 const reported = new Set<string>();
 
-// initLogger replaces the console hook Sentry installs, so a fault that stops every public write is sent by hand, once per cause and run
+// A broken captcha page fails every public write, so each cause is an error (a Sentry event) once per run and a warning after
 export function reportCaptchaFault(cause: string): void {
-  if (reported.has(cause)) {
-    return;
-  }
+  const first = !reported.has(cause);
   reported.add(cause);
-  Sentry.captureMessage(`Captcha page: ${cause}`, 'error');
+  console[first ? 'error' : 'warn'](`[Turnstile] Captcha page: ${cause}`);
 }

@@ -1,30 +1,35 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as Report from './report-captcha-fault';
 
-const { captureMessage } = vi.hoisted(() => ({ captureMessage: vi.fn() }));
-
-vi.mock('@sentry/electron/main', () => ({ captureMessage }));
+const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
 let report: typeof Report;
 
 beforeEach(async () => {
-  captureMessage.mockReset();
   vi.resetModules();
   report = await import('./report-captcha-fault');
 });
 
+afterEach(() => {
+  error.mockClear();
+  warn.mockClear();
+});
+
 describe('reportCaptchaFault', () => {
-  it('sends a cause once per run', () => {
+  it('logs a cause as an error once per run, then as a warning', () => {
     report.reportCaptchaFault('HTTP 404');
     report.reportCaptchaFault('HTTP 404');
 
-    expect(captureMessage.mock.calls).toEqual([['Captcha page: HTTP 404', 'error']]);
+    expect(error.mock.calls).toEqual([['[Turnstile] Captcha page: HTTP 404']]);
+    expect(warn.mock.calls).toEqual([['[Turnstile] Captcha page: HTTP 404']]);
   });
 
-  it('sends each cause of its own', () => {
+  it('logs each cause as an error of its own', () => {
     report.reportCaptchaFault('HTTP 404');
     report.reportCaptchaFault('page reported script_error');
 
-    expect(captureMessage).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledTimes(2);
+    expect(warn).not.toHaveBeenCalled();
   });
 });
