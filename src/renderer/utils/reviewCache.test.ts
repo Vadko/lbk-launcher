@@ -1,9 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  GameReview,
-  GameReviewReply,
-  GameReviewThreadReply,
-} from '@/shared/game-reviews-types';
 import {
   appendReply,
   findEntry,
@@ -11,40 +6,15 @@ import {
   nextReplyTime,
   type ReviewPages,
   updateEntry,
+  withViewer,
 } from './reviewCache';
-
-const at = (minute: number) => new Date(Date.UTC(2026, 9, 22, 10, minute)).toISOString();
-
-const reply = (id: string, minute = 1): GameReviewReply => ({
-  id,
-  parentId: null,
-  text: id,
-  createdAt: at(minute),
-  editedAt: null,
-  author: { role: 'player', name: id, avatarSeed: id, isMine: false },
-  moderation: 'published',
-  pendingText: null,
-});
-
-const stub = (id: string): GameReviewThreadReply => ({
-  id,
-  parentId: null,
-  createdAt: at(2),
-  removed: true,
-});
-
-const thread = (id: string, replies: GameReviewThreadReply[] = []): GameReview => ({
-  ...reply(id, 0),
-  type: 'feedback',
-  isPublic: true,
-  screenshots: [],
-  replies,
-});
-
-const pages = (...items: GameReview[][]): ReviewPages => ({
-  pages: items.map((page) => ({ items: page, total: 9, nextCursor: null, viewer: null })),
-  pageParams: items.map(() => null),
-});
+import {
+  removedReply,
+  reviewAt,
+  reviewPages,
+  reviewReply,
+  reviewThread,
+} from './reviewPages.fixture';
 
 const ids = (data: ReviewPages) =>
   data.pages.map((page) =>
@@ -52,7 +22,10 @@ const ids = (data: ReviewPages) =>
   );
 
 describe('findEntry', () => {
-  const data = pages([thread('a')], [thread('b', [reply('r'), stub('gone')])]);
+  const data = reviewPages(
+    [reviewThread('a')],
+    [reviewThread('b', [reviewReply('r'), removedReply('gone')])]
+  );
 
   it.each([
     ['a root', 'a', 'a', 'a'],
@@ -76,7 +49,10 @@ describe('findEntry', () => {
 });
 
 describe('updateEntry', () => {
-  const data = pages([thread('a', [reply('r'), stub('gone')]), thread('b')]);
+  const data = reviewPages([
+    reviewThread('a', [reviewReply('r'), removedReply('gone')]),
+    reviewThread('b'),
+  ]);
 
   it('patches a reply and leaves the rest alone', () => {
     const next = updateEntry(data, 'r', (entry) => ({ ...entry, text: 'new' }));
@@ -105,9 +81,9 @@ describe('updateEntry', () => {
 
 describe('appendReply', () => {
   it('adds the reply last in its thread only', () => {
-    const data = pages([thread('a', [reply('r')]), thread('b')]);
+    const data = reviewPages([reviewThread('a', [reviewReply('r')]), reviewThread('b')]);
 
-    expect(ids(appendReply(data, 'a', reply('new')))).toEqual([
+    expect(ids(appendReply(data, 'a', reviewReply('new')))).toEqual([
       [
         ['a', ['r', 'new']],
         ['b', []],
@@ -118,18 +94,37 @@ describe('appendReply', () => {
 
 describe('findThread', () => {
   it('finds a thread on any page', () => {
-    expect(findThread(pages([thread('a')], [thread('b')]), 'b')?.id).toBe('b');
+    expect(
+      findThread(reviewPages([reviewThread('a')], [reviewThread('b')]), 'b')?.id
+    ).toBe('b');
   });
 });
 
 describe('nextReplyTime', () => {
   it('uses the clock when it is ahead of the thread', () => {
-    expect(nextReplyTime(thread('a', [reply('r', 5)]), Date.parse(at(30)))).toBe(at(30));
+    expect(
+      nextReplyTime(reviewThread('a', [reviewReply('r', 5)]), Date.parse(reviewAt(30)))
+    ).toBe(reviewAt(30));
   });
 
   it('dates a reply after the newest entry when the clock is behind', () => {
     expect(
-      nextReplyTime(thread('a', [reply('r', 5), stub('gone')]), Date.parse(at(0)))
-    ).toBe(new Date(Date.parse(at(5)) + 1).toISOString());
+      nextReplyTime(
+        reviewThread('a', [reviewReply('r', 5), removedReply('gone')]),
+        Date.parse(reviewAt(0))
+      )
+    ).toBe(new Date(Date.parse(reviewAt(5)) + 1).toISOString());
+  });
+});
+
+describe('withViewer', () => {
+  it('names the viewer on every page', () => {
+    const viewer = { name: 'Quiet Owl', avatarSeed: '0a1b2c3d4e5f' };
+    const data = withViewer(
+      reviewPages([reviewThread('a')], [reviewThread('b')]),
+      viewer
+    );
+
+    expect(data.pages.map((page) => page.viewer)).toEqual([viewer, viewer]);
   });
 });

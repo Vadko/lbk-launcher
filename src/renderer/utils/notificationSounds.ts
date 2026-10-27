@@ -1,13 +1,5 @@
 import type { ToastNotification } from '../store/subscriptions/types';
-
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-  return audioContext;
-}
+import { getAudioContext } from './audioContext';
 
 /**
  * Play a pleasant chime sound for status changes (green theme)

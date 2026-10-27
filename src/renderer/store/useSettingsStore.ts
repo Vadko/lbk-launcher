@@ -50,6 +50,8 @@ interface SettingsStore {
   steamCustomArtworkEnabled: boolean;
   millenniumOfferDeclined: boolean;
   deckyPluginOfferDeclined: boolean;
+  // One-way: the nickname lever glows until it is first hovered or focused, on any later open too
+  reviewLeverHintSeen: boolean;
   productAnalyticsEnabled: boolean;
   localizationAnalyticsEnabled: boolean;
   crashDiagnosticsEnabled: boolean;
@@ -84,6 +86,7 @@ interface SettingsStore {
   toggleSteamCustomArtwork: () => void;
   declineMillenniumOffer: () => void;
   declineDeckyPluginOffer: () => void;
+  markReviewLeverHintSeen: () => void;
   toggleProductAnalytics: () => void;
   toggleLocalizationAnalytics: () => void;
   toggleCrashDiagnostics: () => void;
@@ -109,6 +112,7 @@ export const useSettingsStore = create<SettingsStore>()(
       steamCustomArtworkEnabled: true,
       millenniumOfferDeclined: false,
       deckyPluginOfferDeclined: false,
+      reviewLeverHintSeen: false,
       productAnalyticsEnabled: true,
       localizationAnalyticsEnabled: true,
       crashDiagnosticsEnabled: true,
@@ -221,6 +225,8 @@ export const useSettingsStore = create<SettingsStore>()(
 
       declineDeckyPluginOffer: () => set({ deckyPluginOfferDeclined: true }),
 
+      markReviewLeverHintSeen: () => set({ reviewLeverHintSeen: true }),
+
       toggleProductAnalytics: () =>
         set((state) => ({ productAnalyticsEnabled: !state.productAnalyticsEnabled })),
 
@@ -265,6 +271,7 @@ export const useSettingsStore = create<SettingsStore>()(
         steamCustomArtworkEnabled: state.steamCustomArtworkEnabled,
         millenniumOfferDeclined: state.millenniumOfferDeclined,
         deckyPluginOfferDeclined: state.deckyPluginOfferDeclined,
+        reviewLeverHintSeen: state.reviewLeverHintSeen,
         productAnalyticsEnabled: state.productAnalyticsEnabled,
         localizationAnalyticsEnabled: state.localizationAnalyticsEnabled,
         crashDiagnosticsEnabled: state.crashDiagnosticsEnabled,

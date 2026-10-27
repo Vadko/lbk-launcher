@@ -1,1 +1,4 @@
-export const gameReviewsQueryKey = (gameId: string) => ['game-reviews', gameId] as const;
+export const allGameReviewsQueryKey = ['game-reviews'] as const;
+
+export const gameReviewsQueryKey = (gameId: string) =>
+  [...allGameReviewsQueryKey, gameId] as const;

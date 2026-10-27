@@ -26,6 +26,9 @@ export const Modal: React.FC<ModalProps> = ({
   usePortal = false,
   classNames = '',
 }) => {
+  // Stacked dialogs each need their own title id, or a screen reader names them all after the first
+  const titleId = React.useId();
+
   // Close the modal on Escape
   React.useEffect(() => {
     if (!isOpen) {
@@ -63,7 +66,7 @@ export const Modal: React.FC<ModalProps> = ({
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-title"
+            aria-labelledby={styleModal === 'normal' && title ? titleId : undefined}
             className={`relative max-w-200 w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
             ${classNames}
             ${styleModal === 'promo' ? 'glass-card glass-card-gold p-0! overflow-hidden min-h-100' : 'bg-[rgb(15,15,16)] rounded-2xl modal-gradient-border'}`}
@@ -82,7 +85,7 @@ export const Modal: React.FC<ModalProps> = ({
                 {(title || showCloseButton) && (
                   <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
                     <h3
-                      id="modal-title"
+                      id={titleId}
                       className="text-lg font-semibold text-text-main wrap-break-word"
                     >
                       {title}

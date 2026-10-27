@@ -1012,6 +1012,39 @@ export const en = {
     dontShowAgain: 'Do not show again',
     donate: 'Donate',
   },
+  reviewAuthorPicker: {
+    title: 'Your name in reviews',
+    intro:
+      'Public reviews and replies are signed with a name and an avatar. Spin the reels, hold what you like and pick one.',
+    permanent: 'You choose the name and the avatar once: they cannot be changed later.',
+    reel: {
+      avatar: 'Avatar',
+      adjective: 'First word',
+      noun: 'Second word',
+    },
+    reelValue: '{{reel}}: {{value}}',
+    hold: 'Hold',
+    held: 'Held',
+    lever: 'Spin',
+    claim: 'Take this name',
+    led: {
+      idle: 'Pull the lever',
+      spinning: 'Good luck!',
+    },
+    notice: {
+      nameTaken: 'Someone has just taken this name, so the reels spun again.',
+      nameExpired: 'This name can no longer be taken, so the reels spun again.',
+      holdsReleased: 'Holds released: the previous spin is no longer valid.',
+      wordsReleased:
+        'No free names are left with the held words, so their holds were released.',
+      exhausted: 'No free name came up this time. Spin again.',
+      rateLimit: 'Too many attempts. Try again a little later.',
+      captchaFailed: 'The check did not pass. Try again.',
+      captchaUnavailable: 'The check is unavailable right now. Try again in a minute.',
+      offline: 'No connection to the server. Check your internet and try again.',
+      failed: 'Something went wrong. Try again.',
+    },
+  },
   runInstaller: {
     exeTitle: 'Run installer',
     scriptTitle: 'Run script',
@@ -1094,8 +1127,9 @@ export const en = {
       description: 'Play sounds for update notifications',
     },
     gamepadSounds: {
-      title: 'Controller sounds',
-      description: 'Play sounds when navigating with a controller',
+      title: 'Interface sounds',
+      description:
+        'Play sounds for controller navigation and the slot machine that picks your name in reviews',
     },
     productAnalytics: {
       title: 'Product analytics',
@@ -1171,7 +1205,7 @@ export const en = {
       soundProgress: 'Progress',
       soundNewGame: 'New game',
       soundTeam: 'Team',
-      gamepadSounds: 'Controller sounds:',
+      gamepadSounds: 'Interface sounds:',
       navigate: 'Navigate',
       confirm: 'Confirm',
       back: 'Back',
@@ -1218,8 +1252,8 @@ export const en = {
     donators: 'Open supporters page',
     news: 'Open news',
     home: 'Open home page',
-    gamepadSoundsOff: 'Turn off controller sounds',
-    gamepadSoundsOn: 'Turn on controller sounds',
+    gamepadSoundsOff: 'Turn off interface sounds',
+    gamepadSoundsOn: 'Turn on interface sounds',
     notifications: 'Notifications',
     settings: 'Settings',
   },

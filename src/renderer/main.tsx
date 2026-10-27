@@ -15,6 +15,7 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/space-grotesk';
 import './styles/globals.css';
 import './styles/animations.css';
+import './styles/slotMachine.css';
 
 // Initialize Sentry for renderer error reporting with React integration
 sentryInit(

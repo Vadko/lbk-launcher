@@ -2,6 +2,10 @@ import type { TurnstileAction } from '@/main/turnstile/contract';
 import type {
   FeedbackUploadUrl,
   FeedbackUploadUrlsInput,
+  NicknameClaimInput,
+  NicknameSpin,
+  NicknameSpinInput,
+  ReviewAuthorState,
   ReviewEditInput,
   ReviewFailure,
   ReviewReplyInput,
@@ -9,7 +13,7 @@ import type {
   ReviewWriteResult,
   SubmitFeedbackInput,
 } from '@/shared/game-reviews-api-types';
-import type { GameReviewsPage } from '@/shared/game-reviews-types';
+import type { GameReviewsPage, ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 
 // A rejected IPC call means the bridge itself broke, which a resend may outlive
 const BRIDGE_FAILURE: ReviewFailure = { code: 'unreachable', kind: 'retry' };
@@ -61,4 +65,20 @@ export function requestFeedbackUploadUrls(
   input: FeedbackUploadUrlsInput
 ): Promise<ReviewResult<FeedbackUploadUrl[]>> {
   return settled(window.electronAPI.getFeedbackUploadUrls(input));
+}
+
+export function fetchReviewAuthor(): Promise<ReviewResult<ReviewAuthorState>> {
+  return settled(window.electronAPI.getReviewAuthor());
+}
+
+export function spinNickname(
+  input: NicknameSpinInput
+): Promise<ReviewResult<NicknameSpin>> {
+  return settled(window.electronAPI.spinReviewNickname(input));
+}
+
+export function claimNickname(
+  input: NicknameClaimInput
+): Promise<ReviewResult<ReviewAuthorIdentity>> {
+  return settled(window.electronAPI.claimReviewNickname(input));
 }

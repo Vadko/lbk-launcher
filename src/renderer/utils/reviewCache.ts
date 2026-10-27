@@ -5,6 +5,7 @@ import type {
   GameReviewReply,
   GameReviewsPage,
   GameReviewThreadReply,
+  ReviewAuthorIdentity,
 } from '@/shared/game-reviews-types';
 
 export type ReviewPages = InfiniteData<GameReviewsPage, string | null>;
@@ -94,4 +95,9 @@ export function findThread(
   reviewId: string
 ): GameReview | undefined {
   return data ? threads(data).find((thread) => thread.id === reviewId) : undefined;
+}
+
+// A nickname claimed after the pages loaded; an optimistic write reads it from the first page
+export function withViewer(data: ReviewPages, viewer: ReviewAuthorIdentity): ReviewPages {
+  return { ...data, pages: data.pages.map((page) => ({ ...page, viewer })) };
 }

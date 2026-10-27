@@ -21,13 +21,11 @@ interface ReviewEntryProps {
   isRoot: boolean;
   hasThreadLine: boolean;
   isPublicThread: boolean;
-  // Off where the launcher cannot write yet, so no reply or edit is offered that can only fail
-  canWrite: boolean;
   isBug: boolean;
   replyTo: GameReviewAuthor | null;
   images: string[];
   onReply: () => void;
-  onEdit: (text: string, onShown: () => void) => Promise<void>;
+  onEdit: (text: string, onShown: () => void) => Promise<boolean>;
   onResend: () => void;
   children?: React.ReactNode;
 }
@@ -39,7 +37,6 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   isRoot,
   hasThreadLine,
   isPublicThread,
-  canWrite,
   isBug,
   replyTo,
   images,
@@ -52,14 +49,12 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   const text = entry.pendingText ?? entry.text;
   const isChecking = entry.isChecking === true;
   const failure = entry.failure ?? null;
-  // A nickname cannot come from a plain resend
-  const canResend = failure?.kind === 'retry';
   const isOwnPlayerEntry = entry.author.isMine && entry.author.role === 'player';
   const editDeadline = new Date(entry.createdAt).getTime() + EDIT_WINDOW_MS;
-  const editableUntil = canWrite && isOwnPlayerEntry ? editDeadline : 0;
+  const editableUntil = isOwnPlayerEntry ? editDeadline : 0;
   const now = useNow(10_000, editableUntil);
   const canEdit = now < editableUntil;
-  const canReply = canWrite && (entry.moderation === 'published' || isChecking);
+  const canReply = entry.moderation === 'published' || isChecking;
 
   return (
     <article id={`review-${entry.id}`} className="relative flex gap-4 min-w-0">
@@ -106,7 +101,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
           </p>
         )}
         <ReviewImages images={images} />
-        {!isEditing && (failure ? canResend : canReply || canEdit) && (
+        {!isEditing && (failure !== null || canReply || canEdit) && (
           // Shown but disabled while the check runs, so its answer does not push the thread down
           <div className="flex items-center gap-1 -ml-2">
             {failure ? (

@@ -1,31 +1,13 @@
-import { useSettingsStore } from '../store/useSettingsStore';
+import { getAudioContext } from './audioContext';
+import { uiSoundsEnabled } from './uiSoundsEnabled';
 
 interface PlayOptions {
   /** Skip the gamepadSoundsEnabled + document.hasFocus checks (used by settings preview buttons). */
   ignoreSettings?: boolean;
 }
 
-let audioContext: AudioContext | null = null;
-
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
-  // Resume if suspended (browser autoplay policy)
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
-  }
-  return audioContext;
-}
-
 function shouldPlay(opts?: PlayOptions): boolean {
-  if (opts?.ignoreSettings) {
-    return true;
-  }
-  if (!document.hasFocus()) {
-    return false;
-  }
-  return useSettingsStore.getState().gamepadSoundsEnabled;
+  return opts?.ignoreSettings === true || uiSoundsEnabled();
 }
 
 /** Soft click when moving between items. */

@@ -1,5 +1,5 @@
 import { Check, Send } from 'lucide';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { TurnstileAction } from '@/main/turnstile/contract';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
@@ -16,7 +16,8 @@ interface ReviewComposerProps {
   isPublic: boolean;
   // An edit closes on the server at this moment, so saving stops with it
   expiresAt?: number;
-  onSubmit: (text: string) => Promise<void>;
+  // False when the write was called off before it went out; the signal aborts once the composer is closed
+  onSubmit: (text: string, signal: AbortSignal) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -34,6 +35,7 @@ export const ReviewComposer: React.FC<ReviewComposerProps> = ({
   usePrefetchCaptcha(captchaAction, isPublic);
   const [text, setText] = useState(initialText);
   const submit = useActionPhase();
+  const pendingSubmit = useRef<AbortController | null>(null);
   const now = useNow(10_000, expiresAt ?? 0);
   const trimmed = text.trim();
   const canSubmit =
@@ -41,18 +43,27 @@ export const ReviewComposer: React.FC<ReviewComposerProps> = ({
     trimmed !== initialText.trim() &&
     (expiresAt === undefined || now < expiresAt);
 
+  // A reply waiting for the nickname must not go out once its composer is gone
+  useEffect(() => () => pendingSubmit.current?.abort(), []);
+
+  const close = () => {
+    pendingSubmit.current?.abort();
+    onClose();
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit || submit.isPending) {
       return;
     }
+    const controller = new AbortController();
+    pendingSubmit.current = controller;
     // The caller closes the composer, so it can do that in the render that shows the result
-    await submit.attempt(
-      async () => {
-        await onSubmit(trimmed);
-        return true;
-      },
-      { label: 'GameReviews' }
-    );
+    const sent = await submit.attempt(() => onSubmit(trimmed, controller.signal), {
+      label: 'GameReviews',
+    });
+    if (sent === false) {
+      submit.reset();
+    }
   };
 
   return (
@@ -62,7 +73,7 @@ export const ReviewComposer: React.FC<ReviewComposerProps> = ({
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
-            onClose();
+            close();
           }
         }}
         placeholder={t('gameReviews.replyPlaceholder')}
@@ -76,7 +87,7 @@ export const ReviewComposer: React.FC<ReviewComposerProps> = ({
         <Button
           variant="ghost"
           className="px-3! py-1.5! text-sm"
-          onClick={onClose}
+          onClick={close}
           data-gamepad-action
         >
           {t('common.cancel')}

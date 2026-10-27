@@ -130,6 +130,19 @@ const getMainCandidates = (root: HTMLElement) =>
     (el) => isEnabled(el) && isVisible(el)
   );
 
+const getVisiblePrimaryAction = (): HTMLElement | null => {
+  const root = getMainContent();
+  if (!root) {
+    return null;
+  }
+  const actions = root.querySelectorAll<HTMLElement>('[data-gamepad-primary-action]');
+  return (
+    Array.from(actions).find(
+      (el) => isEnabled(el) && isVisible(el) && intersects(el, root)
+    ) ?? null
+  );
+};
+
 const getHeaderTargets = () =>
   Array.from(document.querySelectorAll<HTMLElement>('[data-gamepad-header-item]'))
     .filter(isVisible)
@@ -868,7 +881,8 @@ export function useGamepadModeNavigation(enabled = true) {
         if (focusBeforeModal?.isConnected) {
           focusBeforeModal.focus({ preventScroll: true });
         } else {
-          document.querySelector<HTMLElement>('[data-gamepad-primary-action]')?.focus();
+          // The opener left while the modal was up (a sent reply's composer); with no visible action, handleMainContent picks one on screen
+          getVisiblePrimaryAction()?.focus({ preventScroll: true });
         }
         focusBeforeModal = null;
       }

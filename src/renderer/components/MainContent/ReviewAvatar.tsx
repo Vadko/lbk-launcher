@@ -1,41 +1,12 @@
-import { Avatar, Style } from '@dicebear/core';
-import shapeGrid from '@dicebear/styles/shape-grid.json';
-import { F } from '@mobily/ts-belt';
 import { type LucideIcon, ShieldCheckIcon, UserIcon, UsersIcon } from 'lucide-react';
 import React from 'react';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
+import { playerAvatarUri } from '../../utils/playerAvatar';
 
 interface ReviewAvatarProps {
   author: GameReviewAuthor;
   size: number;
 }
-
-const SHAPE_GRID = new Style(shapeGrid);
-
-// The launcher's three accents alone give one in three players the same disc
-const PASTELS = [
-  '#ffa47a',
-  '#a8cf96',
-  '#efeead',
-  '#9cc7ec',
-  '#c4b2f2',
-  '#f4a8b8',
-  '#8fd3c7',
-];
-
-const playerAvatarUri = F.memoizeWithKey(
-  (seed: string) => seed,
-  (seed: string) =>
-    new Avatar(SHAPE_GRID, {
-      seed,
-      borderRadius: 50,
-      backgroundColor: PASTELS,
-      backgroundColorFill: 'linear',
-      backgroundColorFillStops: 2,
-      backgroundColorAngle: [0, 360],
-      shapeColor: ['#18181b'],
-    }).toDataUri()
-);
 
 // A player gets a generated avatar once the server assigns the seed with the nickname
 const ICON_AVATARS: Record<

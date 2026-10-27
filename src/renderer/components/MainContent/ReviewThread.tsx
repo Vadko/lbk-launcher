@@ -15,9 +15,10 @@ interface ReviewThreadProps {
     reviewId: string,
     text: string,
     parentId: string | null,
-    onShown: () => void
-  ) => Promise<void>;
-  onEdit: (entryId: string, text: string, onShown: () => void) => Promise<void>;
+    onShown: () => void,
+    signal: AbortSignal
+  ) => Promise<boolean>;
+  onEdit: (entryId: string, text: string, onShown: () => void) => Promise<boolean>;
   onResend: (entryId: string) => void;
 }
 
@@ -30,8 +31,6 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const tree = buildReplyTree(review.id, review.replies, MAX_DEPTH);
-    // A public thread takes writes only from a machine with a nickname, which the launcher cannot pick yet
-    const canWrite = !review.isPublic;
 
     const toggle = (id: string) =>
       setExpanded((current) => {
@@ -52,11 +51,17 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
                 submitLabel={t('gameReviews.send')}
                 captchaAction="reply"
                 isPublic={review.isPublic}
-                onSubmit={(text) =>
-                  onReply(review.id, text, entryId === review.id ? null : entryId, () => {
-                    setReplyingTo(null);
-                    setExpanded((current) => new Set(current).add(landingBranchId));
-                  })
+                onSubmit={(text, signal) =>
+                  onReply(
+                    review.id,
+                    text,
+                    entryId === review.id ? null : entryId,
+                    () => {
+                      setReplyingTo(null);
+                      setExpanded((current) => new Set(current).add(landingBranchId));
+                    },
+                    signal
+                  )
                 }
                 onClose={() => setReplyingTo(null)}
               />
@@ -75,7 +80,6 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
           isRoot={false}
           hasThreadLine={children.length > 0}
           isPublicThread={review.isPublic}
-          canWrite={canWrite}
           isBug={false}
           replyTo={replyTo}
           images={[]}
@@ -94,7 +98,6 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
           isRoot
           hasThreadLine={tree.length > 0}
           isPublicThread={review.isPublic}
-          canWrite={canWrite}
           isBug={review.type === 'error'}
           replyTo={null}
           images={review.screenshots}

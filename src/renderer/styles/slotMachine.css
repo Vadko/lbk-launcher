@@ -1,0 +1,589 @@
+/* The nickname picker's slot machine (components/Modal/ReviewAuthorPicker): one cabinet in the launcher's colours */
+
+/* The crown and the lever's ball stand above the cabinet; --slot-axis is the reel window's middle, from the cabinet's top */
+.slot-machine {
+  --slot-axis: 104px;
+  display: flex;
+  align-items: stretch;
+  padding-top: 18px;
+}
+
+.slot-cabinet {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 12px 12px 3px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2d2e32 0%, #1f2023 40%, #18191b 70%, #121315 100%);
+  box-shadow:
+    inset 0 0 0 2px #7d8087,
+    inset 0 0 0 3px #0b0b0c,
+    inset 0 5px 6px -2px rgb(255 255 255 / 0.06),
+    0 0 0 1px rgb(0 0 0 / 0.75),
+    0 18px 32px -14px rgb(0 0 0 / 0.85);
+}
+
+/* The topper: a chrome-rimmed display that stands a little above the cabinet's top */
+.slot-crown {
+  position: relative;
+  z-index: 1;
+  width: 70%;
+  height: 34px;
+  margin: -20px auto 0;
+  padding: 3px 3px 0;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, #d9dce1 0%, #8a8e95 30%, #c4c7cc 55%, #4b4e54 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    0 0 0 1px rgb(0 0 0 / 0.7),
+    0 -3px 8px -2px rgb(0 0 0 / 0.6);
+}
+
+.slot-led {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 11px 11px 0 0;
+  color: rgb(var(--color-main));
+  background:
+    radial-gradient(circle, rgb(var(--color-main) / 0.09) 0.75px, transparent 1px) 0 0 /
+    2px 2px,
+    #040404;
+  box-shadow: inset 0 2px 6px #000;
+}
+
+.slot-led[data-tone="error"] {
+  color: #ff6b5b;
+}
+
+.slot-led[data-won] {
+  color: rgb(var(--color-accent));
+}
+
+/* Light shows only through the matrix dots, which stay put while the text runs behind them */
+.slot-led__screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  text-transform: uppercase;
+  text-shadow: 0 0 4px currentColor;
+  mask: radial-gradient(circle, #000 0.75px, transparent 1px) 0 0 / 2px 2px;
+}
+
+/* A notice stands still, on up to two lines */
+.slot-led__notice {
+  width: 100%;
+  font-size: 10.5px;
+  line-height: 12.5px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.slot-led__line {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.slot-led__text {
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
+/* Enters at the right edge and leaves past the left one, whatever its length */
+.slot-led__text--run {
+  padding-left: 100%;
+  animation: slotLedRun 7s linear infinite;
+}
+
+.slot-led__text--blink {
+  animation: slotLedBlink 0.6s steps(1, end) infinite;
+}
+
+@keyframes slotLedRun {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slotLedBlink {
+  0% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.12;
+  }
+}
+
+.slot-lightboard {
+  position: relative;
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #131315 0%, #0b0b0c 100%);
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 0.85),
+    inset 0 -1px 0 rgb(255 255 255 / 0.04),
+    0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+/* Marquee bulbs on a track through their centres, half a band in from the edge */
+.slot-lights {
+  position: absolute;
+  inset: 9px;
+  pointer-events: none;
+}
+
+/* An unlit bulb is still a glass dome in a chrome socket */
+.slot-bulb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 38% 32%,
+    rgb(255 255 255 / 0.35),
+    rgb(var(--slot-bulb) / 0.28) 45%,
+    rgb(0 0 0 / 0.6) 100%
+  );
+  box-shadow:
+    0 0 0 1.5px #6f737a,
+    0 0 0 2.5px #000;
+}
+
+.slot-bulb--peach {
+  --slot-bulb: var(--color-accent);
+}
+
+.slot-bulb--green {
+  --slot-bulb: var(--color-main);
+}
+
+/* Lit by default: with animations off every bulb burns */
+.slot-bulb__light {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 40% 35%,
+    #fff 0 20%,
+    rgb(var(--slot-bulb)) 50%,
+    rgb(var(--slot-bulb) / 0.6) 75%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 6px 1px rgb(var(--slot-bulb) / 0.75),
+    0 0 14px 3px rgb(var(--slot-bulb) / 0.25);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
+.slot-lights[data-mode="idle"] .slot-bulb__light {
+  animation-name: slotBulbTwinkle;
+  animation-timing-function: ease-in-out;
+}
+
+.slot-lights[data-mode="chase"] .slot-bulb__light {
+  animation-name: slotBulbChase;
+  animation-timing-function: steps(1, end);
+}
+
+.slot-lights[data-mode="win"] .slot-bulb__light {
+  animation-name: slotBulbFlash;
+  animation-timing-function: steps(1, end);
+}
+
+@keyframes slotBulbTwinkle {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  50%,
+  90% {
+    opacity: 0.12;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slotBulbChase {
+  0% {
+    opacity: 1;
+  }
+  33.333%,
+  100% {
+    opacity: 0.1;
+  }
+}
+
+@keyframes slotBulbFlash {
+  0% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.08;
+  }
+}
+
+/* Brushed chrome, dark enough that the reels stay the brightest thing on the machine */
+.slot-bezel {
+  position: relative;
+  padding: 9px;
+  border-radius: 13px;
+  background: linear-gradient(
+    180deg,
+    #d9dce1 0%,
+    #8a8e95 18%,
+    #c4c7cc 34%,
+    #4b4e54 52%,
+    #9a9ea4 70%,
+    #3a3c41 88%,
+    #6f7278 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    inset 0 -1px 0 rgb(0 0 0 / 0.45),
+    0 0 0 1px rgb(0 0 0 / 0.6),
+    0 3px 8px rgb(0 0 0 / 0.7);
+}
+
+/* The payline's arrows sit on the chrome, pointing in at the window */
+.slot-payline-marker {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  width: 11px;
+  height: 18px;
+  margin-top: -9px;
+  background: rgb(var(--color-accent));
+  filter: drop-shadow(0 0 3px rgb(var(--color-accent) / 0.9));
+}
+
+.slot-payline-marker--left {
+  left: -2px;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.slot-payline-marker--right {
+  right: -2px;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.slot-window {
+  position: relative;
+  height: 102px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #050506;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 0 3px rgb(255 255 255 / 0.25);
+}
+
+/* The window is recessed into the bezel */
+.slot-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 7px 9px -6px rgb(0 0 0 / 0.7),
+    inset 0 -7px 9px -6px rgb(0 0 0 / 0.7),
+    inset 6px 0 8px -6px rgb(0 0 0 / 0.6),
+    inset -6px 0 8px -6px rgb(0 0 0 / 0.6);
+}
+
+/* A faint reflection on the glass in front of the reels */
+.slot-window::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      168deg,
+      rgb(255 255 255 / 0.12) 0%,
+      rgb(255 255 255 / 0.04) 34%,
+      transparent 35%
+    ),
+    linear-gradient(180deg, transparent 72%, rgb(255 255 255 / 0.03) 100%);
+}
+
+/* A paper strip on the drum, ivory with a warm cast, darker where it curves away to the sides */
+.slot-reel {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #b9b0a6 0%,
+    #efe7dd 14%,
+    #fbf6ef 50%,
+    #efe7dd 86%,
+    #b9b0a6 100%
+  );
+}
+
+.slot-reel__strip {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* The drum turning away at the top and bottom, with a lit band through the middle */
+.slot-reel__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(20 14 10 / 0.78) 0%,
+    rgb(20 14 10 / 0.38) 16%,
+    rgb(20 14 10 / 0.08) 32%,
+    transparent 44%,
+    rgb(255 255 255 / 0.1) 50%,
+    transparent 56%,
+    rgb(20 14 10 / 0.08) 68%,
+    rgb(20 14 10 / 0.38) 84%,
+    rgb(20 14 10 / 0.78) 100%
+  );
+}
+
+.slot-reel__word {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-head);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #1f1d1c;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.6);
+}
+
+/* A dark ring, or the pastel discs melt into the paper */
+.slot-reel__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #1f1d1c;
+}
+
+/* The button shelf, the cabinet's width; its 36px sides line its columns up with the reels */
+.slot-deck {
+  margin: 10px -9px 0;
+  padding: 8px 36px;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 0 0 7px 7px;
+  background: linear-gradient(180deg, #1c1d20, #121315);
+}
+
+/* A lit push-button cap in a chrome ring; the cap itself is the lamp */
+.slot-hold {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 112px;
+  height: 34px;
+  min-width: 0;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(255 210 190 / 0.7);
+  background: linear-gradient(180deg, #6b4434, #4a2e22 55%, #3a231a);
+  box-shadow:
+    0 0 0 2px #8d9096,
+    0 0 0 3px #000,
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 5px 6px rgb(0 0 0 / 0.55);
+  transition:
+    transform 60ms ease-out,
+    box-shadow 120ms,
+    color 120ms,
+    filter 120ms;
+}
+
+.slot-hold:hover:not([aria-disabled="true"]) {
+  color: rgb(255 228 214 / 0.95);
+}
+
+.slot-hold:active:not([aria-disabled="true"]) {
+  transform: translateY(2px);
+}
+
+/* A held cap latches a little way in and lights up from inside */
+.slot-hold[aria-pressed="true"] {
+  color: #3a1d10;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.35);
+  background: radial-gradient(
+    120% 100% at 50% 30%,
+    #fff1ea,
+    rgb(var(--color-accent)) 45%,
+    #d9784b
+  );
+  box-shadow:
+    0 0 0 2px #8d9096,
+    0 0 0 3px #000,
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    0 0 16px rgb(var(--color-accent) / 0.55);
+  transform: translateY(1px);
+}
+
+.slot-hold[aria-disabled="true"] {
+  cursor: default;
+}
+
+.slot-hold[aria-disabled="true"]:not([aria-pressed="true"]) {
+  color: rgb(255 210 190 / 0.38);
+  filter: saturate(0.6) brightness(0.8);
+}
+
+.slot-hold:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 4px;
+}
+
+/* The lever: its rail is flush with the cabinet, and its axis is the reel window's middle */
+.slot-lever {
+  position: relative;
+  flex-shrink: 0;
+  width: 54px;
+  margin-left: -1px;
+  touch-action: none;
+}
+
+.slot-lever:focus-visible {
+  outline: none;
+}
+
+.slot-lever__rail {
+  position: absolute;
+  top: calc(var(--slot-axis) - 60px);
+  left: 0;
+  width: 14px;
+  height: 120px;
+  border-radius: 0 5px 5px 0;
+  background: linear-gradient(90deg, #4b4e54 0%, #d9dce1 35%, #9a9ea4 60%, #3a3c41 100%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.6),
+    2px 3px 6px rgb(0 0 0 / 0.5);
+}
+
+.slot-lever__rod {
+  position: absolute;
+  bottom: calc(100% - var(--slot-axis));
+  left: 19px;
+  width: 10px;
+  border-radius: 5px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(90deg, #4a4d53 0%, #f5f6f8 34%, #b4b8be 58%, #43464c 100%);
+  box-shadow: 1px 0 2px rgb(0 0 0 / 0.5);
+}
+
+/* A round chrome hub on the rail, with the dark bolt the arm turns on */
+.slot-lever__hub {
+  position: absolute;
+  top: calc(var(--slot-axis) - 15px);
+  left: 9px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #1a1b1e 0 4px, #5d6168 4.5px, transparent 5.5px),
+    radial-gradient(circle at 36% 32%, #ffffff 0%, #d3d6db 26%, #7b7f86 62%, #3e4146 100%);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.6),
+    0 2px 5px rgb(0 0 0 / 0.65);
+}
+
+.slot-lever__knob {
+  position: absolute;
+  top: calc(var(--slot-axis) - 22px);
+  left: 2px;
+  width: 44px;
+  height: 44px;
+}
+
+.slot-lever__hint {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 14px 4px rgb(var(--color-accent) / 0.5);
+}
+
+/* A solid ball of peach resin, lit from the top left */
+.slot-lever__ball {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 34% 28%,
+    #fff 0 5%,
+    #ffe0d1 11%,
+    rgb(var(--color-accent)) 36%,
+    #cf6a40 72%,
+    #6d2d15
+  );
+  box-shadow: 0 6px 10px rgb(0 0 0 / 0.55);
+  transition:
+    filter 200ms,
+    box-shadow 120ms;
+}
+
+.slot-lever[aria-disabled="true"] .slot-lever__ball {
+  filter: saturate(0.35) brightness(0.72);
+}
+
+/* The focus ring goes round the ball, not the lever's whole box */
+.slot-lever:focus-visible .slot-lever__ball {
+  box-shadow:
+    0 6px 10px rgb(0 0 0 / 0.55),
+    0 0 0 2px #121315,
+    0 0 0 5px rgb(var(--color-accent));
+}
+
+/* The global gamepad ring is !important, so the lever opts out of it explicitly */
+[data-gamepad-mode] .slot-lever:focus,
+[data-gamepad-mode] .slot-lever:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+[data-gamepad-mode] .slot-lever:focus .slot-lever__ball {
+  box-shadow:
+    0 6px 10px rgb(0 0 0 / 0.55),
+    0 0 0 2px #121315,
+    0 0 0 5px var(--gamepad-focus),
+    0 0 18px rgb(251 191 36 / 0.5);
+}
