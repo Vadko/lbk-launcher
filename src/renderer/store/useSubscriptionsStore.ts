@@ -114,6 +114,8 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     reply: FeedbackReplyPayload,
     showToast?: boolean
   ) => void;
+  // A toast with its sound that never enters the notification list
+  showToast: (toast: Omit<ToastNotification, 'id' | 'timestamp'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   markAppUpdateNotificationsAsRead: () => void;
@@ -552,6 +554,18 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
             reply.gameId
           );
         }
+      },
+
+      showToast: (params) => {
+        const toast: ToastNotification = {
+          ...params,
+          id: `${params.type}-${crypto.randomUUID()}`,
+          timestamp: Date.now(),
+        };
+        set((state) => ({ toasts: [...state.toasts, toast] }));
+        playNotificationSoundIfEnabled(toast.type);
+        scheduleToastDismissal(toast.id, get().dismissToast);
+        showSystemNotificationIfHidden(toast.gameName, toast.message, toast.gameId);
       },
 
       markNotificationAsRead: (notificationId) => {

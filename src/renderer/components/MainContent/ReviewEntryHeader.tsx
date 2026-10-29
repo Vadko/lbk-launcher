@@ -16,7 +16,9 @@ interface ReviewEntryHeaderProps {
   isChecking: boolean;
   isFailed: boolean;
   isOnModeration: boolean;
-  moderationHint: string;
+  // A refused edit: the badge leaves instead of confirming
+  isRolledBack: boolean;
+  badgeHint: string;
 }
 
 const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
@@ -63,7 +65,8 @@ export const ReviewEntryHeader: React.FC<ReviewEntryHeaderProps> = ({
   isChecking,
   isFailed,
   isOnModeration,
-  moderationHint,
+  isRolledBack,
+  badgeHint,
 }) => (
   <div className="flex items-center gap-2 min-w-0">
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
@@ -109,7 +112,8 @@ export const ReviewEntryHeader: React.FC<ReviewEntryHeaderProps> = ({
       <ReviewModerationBadge
         isChecking={isChecking}
         settled={isFailed ? 'failed' : isOnModeration ? 'moderation' : 'confirmed'}
-        hint={moderationHint}
+        isRolledBack={isRolledBack}
+        hint={badgeHint}
       />
     </div>
   </div>

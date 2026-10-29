@@ -464,6 +464,21 @@ export const uk = {
     screenshotAlt: 'Скріншот {{number}}',
     loadMoreFailed: 'Не вдалося завантажити ще відгуки.',
     removed: 'Видалено модератором',
+    rejected: {
+      editRejected: 'Модерація не пропустила зміни, тож повернуто попередній текст.',
+      removed: 'Модерація видалила запис.',
+      banned: 'Дописи з цього пристрою заблоковано.',
+      notFound: 'Цього запису вже немає.',
+      replyTargetGone: 'Запису, на який ви відповідали, вже немає.',
+      editWindowClosed: 'Час на редагування минув, тож лишився попередній текст.',
+      editLimitReached: 'Запис більше не можна змінювати, тож лишився попередній текст.',
+      threadFull: 'У цій гілці більше не можна відповідати.',
+      generic: 'Сервер не прийняв запис.',
+    },
+    failed: {
+      dailyLimit: 'Вичерпано ліміт дописів на добу. Надішліть пізніше.',
+      generic: 'Не вдалося надіслати запис.',
+    },
   },
   gameSearch: {
     placeholder: 'Пошук гри...',
@@ -979,6 +994,7 @@ export const uk = {
     'feedback-reply': 'Відповідь на відгук',
     'team-new-game': 'Сповіщення',
     'team-status-change': 'Сповіщення',
+    'review-rejected': 'Запис не прийнято',
   },
   notifications: {
     versionAvailable: 'Доступна версія {{version}}',

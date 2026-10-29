@@ -800,6 +800,7 @@ export const GamePage: React.FC = () => {
             <GameReviewsTab
               key={selectedGame.id}
               gameId={selectedGame.id}
+              gameName={selectedGame.name}
               canLeaveFeedback={canLeaveFeedback}
               onLeaveFeedback={() => setShowFeedbackModal(true)}
             />

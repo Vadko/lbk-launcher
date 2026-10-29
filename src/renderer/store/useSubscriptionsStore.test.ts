@@ -1,8 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.stubGlobal('window', {});
-vi.mock('./useSettingsStore', () => ({ useSettingsStore: { getState: () => ({}) } }));
-vi.mock('../utils/notificationSounds', () => ({ playNotificationSound: vi.fn() }));
+const { playNotificationSound } = vi.hoisted(() => ({ playNotificationSound: vi.fn() }));
+vi.mock('./useSettingsStore', () => ({
+  useSettingsStore: { getState: () => ({ notificationSoundsEnabled: true }) },
+}));
+vi.mock('../utils/notificationSounds', () => ({ playNotificationSound }));
 
 const { useSubscriptionsStore } = await import('./useSubscriptionsStore');
 const store = () => useSubscriptionsStore.getState();
@@ -42,5 +45,49 @@ describe('useSubscriptionsStore caps', () => {
     expect(store().seenFeedbackReplyIds).toHaveLength(500);
     expect(store().seenFeedbackReplyIds[0]).toBe('r504');
     expect(store().seenFeedbackReplyIds).not.toContain('r4');
+  });
+});
+
+describe('useSubscriptionsStore showToast', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    playNotificationSound.mockReset();
+    useSubscriptionsStore.setState({ notifications: [], unreadCount: 0, toasts: [] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('shows the toast with its sound and keeps it out of the list', () => {
+    store().showToast({
+      type: 'review-rejected',
+      gameId: 'g1',
+      gameName: 'Game',
+      message: 'refused',
+    });
+
+    expect(store().toasts).toEqual([
+      expect.objectContaining({
+        type: 'review-rejected',
+        gameId: 'g1',
+        message: 'refused',
+      }),
+    ]);
+    expect(playNotificationSound).toHaveBeenCalledWith('review-rejected');
+    expect(store().notifications).toEqual([]);
+    expect(store().unreadCount).toBe(0);
+  });
+
+  it('dismisses the toast by itself', () => {
+    store().showToast({
+      type: 'review-rejected',
+      gameId: 'g1',
+      gameName: 'Game',
+      message: 'refused',
+    });
+    vi.runAllTimers();
+
+    expect(store().toasts).toEqual([]);
   });
 });

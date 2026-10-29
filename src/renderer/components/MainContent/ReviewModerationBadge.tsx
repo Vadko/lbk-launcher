@@ -27,12 +27,15 @@ const CONFIRMED_MS = 1000;
 interface ReviewModerationBadgeProps {
   isChecking: boolean;
   settled: SettledView;
+  // The check ended in a refused edit, so it leaves without confirming; later changes ignore it
+  isRolledBack: boolean;
   hint: string;
 }
 
 export const ReviewModerationBadge: React.FC<ReviewModerationBadgeProps> = ({
   isChecking,
   settled,
+  isRolledBack,
   hint,
 }) => {
   const [view, setView] = useState<BadgeView>(
@@ -62,9 +65,12 @@ export const ReviewModerationBadge: React.FC<ReviewModerationBadgeProps> = ({
       return;
     }
     const wait = Math.max(0, MIN_CHECKING_MS - (Date.now() - checkingSinceRef.current));
-    const id = setTimeout(() => setView(settled), wait);
+    const id = setTimeout(
+      () => setView(isRolledBack && settled === 'confirmed' ? 'hidden' : settled),
+      wait
+    );
     return () => clearTimeout(id);
-  }, [isChecking, settled, view]);
+  }, [isChecking, settled, isRolledBack, view]);
 
   useEffect(() => {
     if (view !== 'confirmed') {
@@ -83,7 +89,7 @@ export const ReviewModerationBadge: React.FC<ReviewModerationBadgeProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.85 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          title={view === 'moderation' ? hint : undefined}
+          title={view === 'moderation' || view === 'failed' ? hint : undefined}
           className={`${PILL} ${BADGE[view].tone}`}
         >
           <AppActionIcon phase={BADGE[view].phase} icon={Clock} size={12} inheritColor />

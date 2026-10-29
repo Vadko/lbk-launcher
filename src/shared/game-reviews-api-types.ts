@@ -15,6 +15,8 @@ export type ReviewErrorCode =
   | 'edit_window_closed'
   | 'not_owner'
   | 'banned'
+  | 'edit_limit_reached'
+  | 'thread_full'
   | 'not_found'
   | 'method_not_allowed'
   | 'id_conflict'
@@ -23,6 +25,7 @@ export type ReviewErrorCode =
   | 'not_moderated'
   | 'author_required'
   | 'rate_limit'
+  | 'daily_limit'
   | 'internal'
   | 'captcha_unavailable'
   | 'nicknames_exhausted';
@@ -70,6 +73,11 @@ export interface ReviewEditInput {
 export interface ReviewWriteResult {
   id: string;
   outcome: GameReviewOutcome;
+}
+
+export interface ReviewEditResult extends ReviewWriteResult {
+  // Moderation refused the new text, so the entry keeps its published one
+  editRejected: boolean;
 }
 
 export interface ReviewAuthorState {
@@ -124,7 +132,7 @@ export interface GameReviewsAPI {
     input: GameReviewsListInput
   ) => Promise<ReviewResult<GameReviewsPage>>;
   replyToReview: (input: ReviewReplyInput) => Promise<ReviewResult<ReviewWriteResult>>;
-  editReviewEntry: (input: ReviewEditInput) => Promise<ReviewResult<ReviewWriteResult>>;
+  editReviewEntry: (input: ReviewEditInput) => Promise<ReviewResult<ReviewEditResult>>;
   getReviewAuthor: () => Promise<ReviewResult<ReviewAuthorState>>;
   spinReviewNickname: (input: NicknameSpinInput) => Promise<ReviewResult<NicknameSpin>>;
   claimReviewNickname: (

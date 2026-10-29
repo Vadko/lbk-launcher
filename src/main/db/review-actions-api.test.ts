@@ -118,13 +118,35 @@ describe('editReviewEntry', () => {
       isPublic: false,
     });
 
-    expect(result).toEqual({ ok: true, data: { id: 'entry-1', outcome: 'removed' } });
+    expect(result).toEqual({
+      ok: true,
+      data: { id: 'entry-1', outcome: 'removed', editRejected: false },
+    });
     expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
       name: 'reviews?action=edit',
       body: { id: 'entry-1', text: 'better', machineId: MACHINE_ID },
       timeout: 30_000,
     });
     expect(takeCaptchaToken).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a refused edit', { editRejected: true }, true],
+    ['a kept edit', { editRejected: false }, false],
+    ['an answer from a function that predates the field', {}, false],
+  ])('reads %s', async (_label, field, editRejected) => {
+    invoke.mockResolvedValue(answered({ id: 'entry-1', outcome: 'published', ...field }));
+
+    const result = await editReviewEntry({
+      id: 'entry-1',
+      text: 'better',
+      isPublic: false,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { id: 'entry-1', outcome: 'published', editRejected },
+    });
   });
 
   it('adds an edit token for a public entry', async () => {

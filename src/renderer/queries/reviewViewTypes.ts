@@ -13,6 +13,8 @@ export interface ReviewWriteStatus {
   isChecking?: boolean;
   // Set once the write failed; a resend goes out with the same id
   failure?: ReviewFailure;
+  // The server refused the viewer's edit, so the badge leaves without confirming
+  isRolledBack?: boolean;
 }
 
 export type ReviewReplyView = GameReviewReply & ReviewWriteStatus;

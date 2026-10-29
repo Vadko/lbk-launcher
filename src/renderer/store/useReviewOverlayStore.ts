@@ -8,6 +8,8 @@ import type {
 
 type Games = ReadonlyMap<string, GameReviewWrites>;
 
+type RolledBack = ReadonlyMap<string, ReadonlySet<string>>;
+
 interface ReviewOverlayStore {
   // In memory only, so a failed write outlives the tab and React Query's gc but not the session
   games: Games;
@@ -23,6 +25,10 @@ interface ReviewOverlayStore {
   ) => void;
   // Without an attempt, drops the entry's write whichever send it is on
   drop: (gameId: string, entryId: string, attempt?: number) => void;
+  // Entries whose edit the server refused, by game, until a new write on them starts
+  rolledBack: RolledBack;
+  // Drops the entry's write and marks it in one update, so the badge never sees it confirmed
+  rollBack: (gameId: string, entryId: string) => void;
 }
 
 // Never reused, so an answer to a discarded write cannot pass for a later write on the same entry
@@ -50,6 +56,30 @@ function withWrite(
   return next;
 }
 
+function withRolledBack(
+  rolledBack: RolledBack,
+  gameId: string,
+  entryId: string,
+  isRolledBack: boolean
+): RolledBack {
+  if (rolledBack.get(gameId)?.has(entryId) === isRolledBack) {
+    return rolledBack;
+  }
+  const entries = new Set(rolledBack.get(gameId));
+  if (isRolledBack) {
+    entries.add(entryId);
+  } else {
+    entries.delete(entryId);
+  }
+  const next = new Map(rolledBack);
+  if (entries.size > 0) {
+    next.set(gameId, entries);
+  } else {
+    next.delete(gameId);
+  }
+  return next;
+}
+
 export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
   games: new Map(),
 
@@ -57,8 +87,9 @@ export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
 
   start: (gameId, entryId, draft) => {
     const attempt = ++lastAttempt;
-    set(({ games }) => ({
+    set(({ games, rolledBack }) => ({
       games: withWrite(games, gameId, entryId, { ...draft, state: 'checking', attempt }),
+      rolledBack: withRolledBack(rolledBack, gameId, entryId, false),
     }));
     return attempt;
   },
@@ -84,5 +115,16 @@ export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
       return;
     }
     set(({ games }) => ({ games: withWrite(games, gameId, entryId, null) }));
+  },
+
+  rolledBack: new Map(),
+
+  rollBack: (gameId, entryId) => {
+    set(({ games, rolledBack }) => ({
+      games: get().writeOf(gameId, entryId)
+        ? withWrite(games, gameId, entryId, null)
+        : games,
+      rolledBack: withRolledBack(rolledBack, gameId, entryId, true),
+    }));
   },
 }));

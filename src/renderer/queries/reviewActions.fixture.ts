@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import type { Mock } from 'vitest';
 import type {
+  ReviewEditResult,
   ReviewFailure,
   ReviewResult,
   ReviewWriteResult,
@@ -8,12 +9,12 @@ import type {
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
 import type { ReviewPages } from '../utils/reviewCache';
-import { applyOverlay, NO_REVIEW_WRITES } from '../utils/reviewOverlay';
+import { applyOverlay, NO_REVIEW_WRITES, NO_ROLLED_BACK } from '../utils/reviewOverlay';
 import { reviewPages, reviewReply, reviewThread } from '../utils/reviewPages.fixture';
 import { gameReviewsQueryKey } from './gameReviewsQueryKey';
 import type { ReviewReplyView, ReviewThreadView } from './reviewViewTypes';
 
-export type WriteAnswer = ReviewResult<ReviewWriteResult>;
+export type WriteAnswer = ReviewResult<ReviewWriteResult | ReviewEditResult>;
 
 export const OWL: ReviewAuthorIdentity = {
   name: 'Quiet Owl',
@@ -26,11 +27,21 @@ export const published = (id: string): WriteAnswer => ({
   ok: true,
   data: { id, outcome: 'published' },
 });
+export const removedAnswer = (id: string): WriteAnswer => ({
+  ok: true,
+  data: { id, outcome: 'removed' },
+});
+export const editRefused = (id: string): WriteAnswer => ({
+  ok: true,
+  data: { id, outcome: 'published', editRejected: true },
+});
 const failed = (failure: ReviewFailure): WriteAnswer => ({ ok: false, failure });
 export const needsAuthor = failed({ code: 'author_required', kind: 'needs-author' });
 export const rateLimit = failed({ code: 'rate_limit', kind: 'retry' });
 export const unreachable = failed({ code: 'unreachable', kind: 'retry' });
 export const banned = failed({ code: 'banned', kind: 'rejected' });
+export const notFound = failed({ code: 'not_found', kind: 'rejected' });
+export const dailyLimit = failed({ code: 'daily_limit', kind: 'retry' });
 export const liveSignal = () => new AbortController().signal;
 
 // Resolves the next request whenever the test says so
@@ -75,10 +86,13 @@ export function seedReviews(
 export const heldWrites = () =>
   useReviewOverlayStore.getState().games.get('g1') ?? NO_REVIEW_WRITES;
 
+const rolledBack = () =>
+  useReviewOverlayStore.getState().rolledBack.get('g1') ?? NO_ROLLED_BACK;
+
 export function shownEntry(queryClient: QueryClient, id: string) {
   const data = queryClient.getQueryData<ReviewPages>(REVIEWS_KEY);
   return data
-    ? applyOverlay(data, heldWrites())
+    ? applyOverlay(data, heldWrites(), rolledBack())
         .pages.flatMap((page) => page.items)
         .flatMap((thread) => [thread, ...thread.replies])
         .find(

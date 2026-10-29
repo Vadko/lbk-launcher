@@ -10,7 +10,7 @@ const resend = () => Promise.resolve();
 const store = () => useReviewOverlayStore.getState();
 
 beforeEach(() => {
-  useReviewOverlayStore.setState({ games: new Map() });
+  useReviewOverlayStore.setState({ games: new Map(), rolledBack: new Map() });
 });
 
 describe('useReviewOverlayStore', () => {
@@ -78,5 +78,36 @@ describe('useReviewOverlayStore', () => {
 
     expect(store().games.get('g1')).not.toBe(before);
     expect([...(before?.keys() ?? [])]).toEqual(['a']);
+  });
+
+  it('rolls an edit back by dropping it and marking its entry in one update', () => {
+    store().start('g1', 'e', EDIT);
+    const updates: [boolean, boolean][] = [];
+    const stop = useReviewOverlayStore.subscribe((state) =>
+      updates.push([state.games.has('g1'), state.rolledBack.get('g1')?.has('e') === true])
+    );
+
+    store().rollBack('g1', 'e');
+    stop();
+
+    expect(updates).toEqual([[false, true]]);
+  });
+
+  it('clears the mark once a new write on the entry starts', () => {
+    store().rollBack('g1', 'e');
+    store().rollBack('g1', 'other');
+
+    store().start('g1', 'e', EDIT);
+
+    expect([...(store().rolledBack.get('g1') ?? [])]).toEqual(['other']);
+  });
+
+  it('keeps the marks as they are when a write starts on an unmarked entry', () => {
+    store().rollBack('g1', 'e');
+    const before = store().rolledBack;
+
+    store().start('g1', 'x', EDIT);
+
+    expect(store().rolledBack).toBe(before);
   });
 });

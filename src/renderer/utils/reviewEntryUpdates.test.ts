@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameReviewEntry } from '@/shared/game-reviews-types';
-import { afterEdit, withEdit } from './reviewEntryUpdates';
+import { afterEdit, withEdit, withoutPendingEdit } from './reviewEntryUpdates';
 
 const NOW = '2026-10-26T12:00:00.000Z';
 
@@ -62,5 +62,17 @@ describe('afterEdit', () => {
 
   it('drops an entry moderation removed', () => {
     expect(afterEdit('removed', 'new', NOW)(entry())).toBeNull();
+  });
+});
+
+describe('withoutPendingEdit', () => {
+  it('drops the held edit and keeps the published text', () => {
+    expect(withoutPendingEdit(entry({ pendingText: 'new' }))).toEqual(entry());
+  });
+
+  it('hands back an entry without a held edit as it is', () => {
+    const plain = entry();
+
+    expect(withoutPendingEdit(plain)).toBe(plain);
   });
 });

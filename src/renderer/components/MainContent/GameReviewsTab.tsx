@@ -13,12 +13,14 @@ import { ReviewThread } from './ReviewThread';
 
 interface GameReviewsTabProps {
   gameId: string;
+  gameName: string;
   canLeaveFeedback: boolean;
   onLeaveFeedback: () => void;
 }
 
 export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   gameId,
+  gameName,
   canLeaveFeedback,
   onLeaveFeedback,
 }) => {
@@ -32,7 +34,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
     fetchNextPage,
     refetch,
   } = useGameReviews(gameId);
-  const actions = useGameReviewActions(gameId);
+  const actions = useGameReviewActions(gameId, gameName);
   const handleResend = useCallback(
     (entryId: string) => void actions.resend(entryId),
     [actions]

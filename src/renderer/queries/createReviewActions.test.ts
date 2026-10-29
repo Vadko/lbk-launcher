@@ -3,19 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewEditInput, ReviewReplyInput } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
-import type { ReviewPages } from '../utils/reviewCache';
+import { type ReviewPages, updateEntry } from '../utils/reviewCache';
+import { reviewRefusalMessage } from '../utils/reviewRefusalMessage';
 import {
   banned,
+  dailyLimit,
   deferAnswer,
+  editRefused,
   flush,
   heldWrites,
   isCached,
   liveSignal,
   needsAuthor,
+  notFound,
   OWL,
   published,
   REVIEWS_KEY,
   rateLimit,
+  removedAnswer,
   seedReviews,
   shownEntry,
   unreachable,
@@ -27,7 +32,11 @@ const sendReviewEdit = vi.fn<(input: ReviewEditInput) => Promise<WriteAnswer>>()
 const ensureAuthor =
   vi.fn<(signal?: AbortSignal) => Promise<ReviewAuthorIdentity | null>>();
 const forgetAuthor = vi.fn();
+const showToast = vi.fn();
 vi.mock('./reviewsClient', () => ({ sendReviewReply, sendReviewEdit }));
+vi.mock('../store/useSubscriptionsStore', () => ({
+  useSubscriptionsStore: { getState: () => ({ showToast }) },
+}));
 vi.mock('../store/useReviewAuthorStore', () => ({
   useReviewAuthorStore: { getState: () => ({ ensureAuthor, forgetAuthor }) },
 }));
@@ -38,17 +47,29 @@ let queryClient: QueryClient;
 
 function seed(isPublic: boolean, viewer: ReviewAuthorIdentity | null = null) {
   seedReviews(queryClient, isPublic, viewer);
-  return createReviewActions(queryClient, 'g1');
+  return createReviewActions(queryClient, 'g1', 'Game');
 }
 
 const sentIds = () => sendReviewReply.mock.calls.map(([input]) => input.id);
 const cached = () => queryClient.getQueryData<ReviewPages>(REVIEWS_KEY);
 const shown = (id: string) => shownEntry(queryClient, id);
 const inCache = (id: string) => isCached(queryClient, id);
+const toasted = (reason: Parameters<typeof reviewRefusalMessage>[0]) =>
+  expect(showToast.mock.calls).toEqual([
+    [
+      {
+        type: 'review-rejected',
+        gameId: 'g1',
+        gameName: 'Game',
+        message: reviewRefusalMessage(reason),
+      },
+    ],
+  ]);
 
 beforeEach(() => {
   queryClient = new QueryClient();
-  useReviewOverlayStore.setState({ games: new Map() });
+  useReviewOverlayStore.setState({ games: new Map(), rolledBack: new Map() });
+  showToast.mockReset();
   sendReviewReply.mockReset();
   sendReviewReply.mockImplementation(({ id }) => Promise.resolve(published(id)));
   sendReviewEdit.mockReset();
@@ -119,13 +140,40 @@ describe('createReviewActions overlay', () => {
     expect(inCache(sentIds()[0])).toBe(false);
   });
 
-  it('drops a rejected reply', async () => {
-    sendReviewReply.mockResolvedValue(banned);
+  it.each([
+    ['a refusal', banned, 'banned'],
+    ['a removed verdict', undefined, 'removed'],
+  ] as const)('drops a reply on %s and says why', async (_label, answer, reason) => {
+    sendReviewReply.mockImplementation(({ id }) =>
+      Promise.resolve(answer ?? removedAnswer(id))
+    );
 
     await seed(false).sendReply('t', 'hi', null, vi.fn(), liveSignal());
     await flush();
 
     expect(shown(sentIds()[0])).toBeUndefined();
+    expect(inCache(sentIds()[0])).toBe(false);
+    expect(heldWrites().size).toBe(0);
+    toasted(reason);
+  });
+
+  it('keeps a reply over the daily limit unsent with a resend', async () => {
+    sendReviewReply.mockResolvedValueOnce(dailyLimit);
+    const actions = seed(false);
+
+    await actions.sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    await flush();
+    const id = sentIds()[0];
+
+    expect(shown(id)).toMatchObject({
+      isChecking: false,
+      failure: { code: 'daily_limit' },
+    });
+    expect(showToast).not.toHaveBeenCalled();
+    await actions.resend(id);
+
+    expect(sentIds()).toEqual([id, id]);
+    expect(inCache(id)).toBe(true);
   });
 
   it('keeps a failed reply through a dropped and refetched query and resends it', async () => {
@@ -232,15 +280,98 @@ describe('createReviewActions overlay', () => {
     expect(shown('mine')).toMatchObject({ text: 'changed', pendingText: null });
   });
 
-  it('shows the cached text again when an edit is rejected', async () => {
+  it.each([
+    ['a refusal', banned, 'banned'],
+    ['a refused text', undefined, 'edit_rejected'],
+  ] as const)(
+    'rolls an edit back on %s and shows the cached text',
+    async (_label, answer, reason) => {
+      sendReviewEdit.mockImplementation(({ id }) =>
+        Promise.resolve(answer ?? editRefused(id))
+      );
+      const actions = seed(true);
+
+      await actions.edit('mine', 'changed', vi.fn());
+      await flush();
+
+      expect(shown('mine')).toMatchObject({
+        text: 'mine',
+        pendingText: null,
+        editedAt: null,
+        isRolledBack: true,
+      });
+      expect(heldWrites().size).toBe(0);
+      toasted(reason);
+    }
+  );
+
+  it('keeps an earlier edit under moderation when the server refuses the next one', async () => {
     sendReviewEdit.mockResolvedValue(banned);
-    const actions = seed(false);
+    const actions = seed(true);
+    queryClient.setQueryData<ReviewPages>(
+      REVIEWS_KEY,
+      (data) =>
+        data && updateEntry(data, 'mine', (entry) => ({ ...entry, pendingText: 'first' }))
+    );
 
     await actions.edit('mine', 'changed', vi.fn());
     await flush();
 
-    expect(shown('mine')).toMatchObject({ text: 'mine', pendingText: null });
+    expect(shown('mine')).toMatchObject({
+      text: 'mine',
+      pendingText: 'first',
+      isRolledBack: true,
+    });
     expect(heldWrites().size).toBe(0);
+    toasted('banned');
+  });
+
+  it('clears the rollback once the entry is edited again', async () => {
+    sendReviewEdit.mockResolvedValueOnce(banned);
+    const actions = seed(false);
+    await actions.edit('mine', 'changed', vi.fn());
+    await flush();
+    const answer = deferAnswer(sendReviewEdit);
+
+    await actions.edit('mine', 'again', vi.fn());
+
+    expect(shown('mine')).toMatchObject({ isChecking: true });
+    expect(shown('mine')?.isRolledBack).toBeUndefined();
+    answer(published('mine'));
+  });
+
+  it.each([
+    ['the server no longer has it', notFound, 'not_found'],
+    ['moderation took the entry down', undefined, 'removed'],
+  ] as const)('drops an edited entry when %s', async (_label, answer, reason) => {
+    sendReviewEdit.mockImplementation(({ id }) =>
+      Promise.resolve(answer ?? removedAnswer(id))
+    );
+    const actions = seed(false);
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await actions.edit('mine', 'changed', vi.fn());
+    await flush();
+
+    expect(inCache('mine')).toBe(false);
+    expect(shown('mine')).toBeUndefined();
+    expect(heldWrites().size).toBe(0);
+    toasted(reason);
+    // A deleted row's replies moved on the server, so only not_found asks it for the thread again
+    expect(invalidate).toHaveBeenCalledTimes(reason === 'not_found' ? 1 : 0);
+  });
+
+  it('drops a reply whose thread or parent is gone and asks the server again', async () => {
+    sendReviewReply.mockResolvedValue(notFound);
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await seed(false).sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    await flush();
+
+    expect(shown(sentIds()[0])).toBeUndefined();
+    expect(heldWrites().size).toBe(0);
+    toasted('reply_target_gone');
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: REVIEWS_KEY });
   });
 
   it.each([

@@ -10,7 +10,8 @@ interface BaseNotification {
     | 'team-new-game'
     | 'team-status-change'
     | 'first-favorite'
-    | 'feedback-reply';
+    | 'feedback-reply'
+    | 'review-rejected';
   gameName: string;
   timestamp: number;
 }

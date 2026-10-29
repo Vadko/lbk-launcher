@@ -31,6 +31,13 @@ export type GameReviewWrites = ReadonlyMap<string, ReviewWrite>;
 
 export const NO_REVIEW_WRITES: GameReviewWrites = new Map();
 
+export const NO_ROLLED_BACK: ReadonlySet<string> = new Set();
+
+interface GameOverlay {
+  writes: GameReviewWrites;
+  rolledBack: ReadonlySet<string>;
+}
+
 function statusOf(write: ReviewWrite): ReviewWriteStatus {
   return write.state === 'failed'
     ? { write: write.kind, isChecking: false, failure: write.failure }
@@ -39,10 +46,11 @@ function statusOf(write: ReviewWrite): ReviewWriteStatus {
 
 function entryView<T extends GameReviewEntry>(
   entry: T,
-  write: ReviewWrite | undefined
+  { writes, rolledBack }: GameOverlay
 ): T & ReviewWriteStatus {
+  const write = writes.get(entry.id);
   if (!write) {
-    return entry;
+    return rolledBack.has(entry.id) ? { ...entry, isRolledBack: true } : entry;
   }
   const shown = write.kind === 'edit' ? withEdit(entry, write.text) : entry;
   return { ...shown, ...statusOf(write) };
@@ -54,16 +62,16 @@ function mapKept<T extends R, R>(items: T[], map: (item: T) => R): R[] {
   return mapped.every((item, i) => item === items[i]) ? items : mapped;
 }
 
-function threadView(thread: GameReview, writes: GameReviewWrites): ReviewThreadView {
-  const root = entryView(thread, writes.get(thread.id));
+function threadView(thread: GameReview, overlay: GameOverlay): ReviewThreadView {
+  const root = entryView(thread, overlay);
   const replies = mapKept(thread.replies, (reply) =>
-    'removed' in reply ? reply : entryView(reply, writes.get(reply.id))
+    'removed' in reply ? reply : entryView(reply, overlay)
   );
-  const added = [...writes.values()].flatMap((write) =>
+  const added = [...overlay.writes.values()].flatMap((write) =>
     write.kind === 'reply' &&
     write.reviewId === thread.id &&
     !thread.replies.some((reply) => reply.id === write.reply.id)
-      ? [entryView(write.reply, write)]
+      ? [{ ...write.reply, ...statusOf(write) }]
       : []
   );
   if (root === thread && replies === thread.replies && added.length === 0) {
@@ -75,13 +83,16 @@ function threadView(thread: GameReview, writes: GameReviewWrites): ReviewThreadV
 // A write whose thread is not loaded waits in the overlay until a page brings that thread
 export function applyOverlay(
   data: ReviewPages,
-  writes: GameReviewWrites
+  writes: GameReviewWrites,
+  rolledBack = NO_ROLLED_BACK
 ): ReviewViewPages {
-  if (writes.size === 0) {
+  if (writes.size === 0 && rolledBack.size === 0) {
     return data;
   }
   const pages = mapKept(data.pages, (page) => {
-    const items = mapKept(page.items, (thread) => threadView(thread, writes));
+    const items = mapKept(page.items, (thread) =>
+      threadView(thread, { writes, rolledBack })
+    );
     return items === page.items ? page : { ...page, items };
   });
   return pages === data.pages ? data : { ...data, pages };

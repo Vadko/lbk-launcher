@@ -19,9 +19,12 @@ export const reviewReply = (id: string, minute = 1): GameReviewReply => ({
   pendingText: null,
 });
 
-export const removedReply = (id: string): GameReviewThreadReply => ({
+export const removedReply = (
+  id: string,
+  parentId: string | null = null
+): GameReviewThreadReply => ({
   id,
-  parentId: null,
+  parentId,
   createdAt: reviewAt(2),
   removed: true,
 });

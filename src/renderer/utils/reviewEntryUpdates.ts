@@ -29,3 +29,7 @@ export function afterEdit(
     };
   };
 }
+
+// A refused edit leaves the entry with the text everyone already sees
+export const withoutPendingEdit: EntryUpdate = (entry) =>
+  entry.pendingText === null ? entry : { ...entry, pendingText: null };

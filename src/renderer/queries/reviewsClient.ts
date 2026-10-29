@@ -7,6 +7,7 @@ import type {
   NicknameSpinInput,
   ReviewAuthorState,
   ReviewEditInput,
+  ReviewEditResult,
   ReviewFailure,
   ReviewReplyInput,
   ReviewResult,
@@ -47,7 +48,7 @@ export function sendReviewReply(
 
 export function sendReviewEdit(
   input: ReviewEditInput
-): Promise<ReviewResult<ReviewWriteResult>> {
+): Promise<ReviewResult<ReviewEditResult>> {
   return settled(window.electronAPI.editReviewEntry(input));
 }
 

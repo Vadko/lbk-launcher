@@ -24,6 +24,8 @@ const SERVER_FAILURES: Record<ReviewErrorCode, FailureRule> = {
   edit_window_closed: { kind: 'rejected', log: 'warn' },
   not_owner: { kind: 'rejected', log: 'warn' },
   banned: { kind: 'rejected', log: 'warn' },
+  edit_limit_reached: { kind: 'rejected', log: 'warn' },
+  thread_full: { kind: 'rejected', log: 'warn' },
   not_found: { kind: 'rejected', log: 'warn' },
   method_not_allowed: { kind: 'rejected', log: 'error' },
   id_conflict: { kind: 'rejected', log: 'warn' },
@@ -32,6 +34,8 @@ const SERVER_FAILURES: Record<ReviewErrorCode, FailureRule> = {
   not_moderated: { kind: 'rejected', log: 'error' },
   author_required: { kind: 'needs-author', log: 'warn' },
   rate_limit: { kind: 'retry', log: 'warn' },
+  // A machine's quota for the day: the entry waits unsent until it clears
+  daily_limit: { kind: 'retry', log: 'warn' },
   // It can follow a committed write, and a resend with the same id answers the stored result
   internal: { kind: 'retry', log: 'error' },
   captcha_unavailable: { kind: 'retry', log: 'warn' },

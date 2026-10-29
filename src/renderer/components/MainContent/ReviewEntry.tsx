@@ -1,5 +1,6 @@
 import { ReplyIcon, RotateCcwIcon, XIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import { useNow } from '../../hooks/useNow';
@@ -27,6 +28,20 @@ interface ReviewEntryProps {
   onResend: () => void;
   onDiscard: () => void;
   children?: React.ReactNode;
+}
+
+function badgeHint(
+  entry: ReviewThreadView | ReviewReplyView,
+  failure: ReviewFailure | null
+) {
+  if (failure) {
+    return t('gameReviews.failed.generic');
+  }
+  return t(
+    entry.pendingText === null
+      ? 'gameReviews.hint.moderation'
+      : 'gameReviews.hint.moderationEdit'
+  );
 }
 
 export const ReviewEntry: React.FC<ReviewEntryProps> = ({
@@ -79,11 +94,8 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
             isPublicThread &&
             (entry.moderation === 'pending' || entry.pendingText !== null)
           }
-          moderationHint={t(
-            entry.pendingText === null
-              ? 'gameReviews.hint.moderation'
-              : 'gameReviews.hint.moderationEdit'
-          )}
+          isRolledBack={entry.isRolledBack === true}
+          badgeHint={badgeHint(entry, failure)}
         />
         {isEditing ? (
           <ReviewComposer
@@ -126,6 +138,12 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
                 >
                   {t('common.cancel')}
                 </Button>
+                {/* Only the day's quota says why a resend will not pass yet, so it is shown, not hovered */}
+                {failure.code === 'daily_limit' && (
+                  <span className="text-xs text-text-muted">
+                    {t('gameReviews.failed.dailyLimit')}
+                  </span>
+                )}
               </>
             ) : (
               <>

@@ -186,33 +186,45 @@ function playTeamStatusChangeSound() {
   });
 }
 
-/**
- * Play notification sound based on notification type
- */
+// A soft falling E5 -> B4: a refusal must not sound like the cheerful chimes
+function playRefusalSound() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+
+  [659.25, 493.88].forEach((freq, i) => {
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(freq, now);
+
+    gainNode.gain.setValueAtTime(0, now + i * 0.12);
+    gainNode.gain.linearRampToValueAtTime(0.1, now + i * 0.12 + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    oscillator.start(now + i * 0.12);
+    oscillator.stop(now + i * 0.12 + 0.35);
+  });
+}
+
+const SOUNDS: Record<ToastNotification['type'], () => void> = {
+  'status-change': playStatusChangeSound,
+  'version-update': playVersionUpdateSound,
+  'app-update': playAppUpdateSound,
+  'progress-change': playProgressChangeSound,
+  'team-new-game': playTeamNewGameSound,
+  'team-status-change': playTeamStatusChangeSound,
+  'first-favorite': playStatusChangeSound,
+  'feedback-reply': playStatusChangeSound,
+  'review-rejected': playRefusalSound,
+};
+
 export function playNotificationSound(type: ToastNotification['type']): void {
   try {
-    switch (type) {
-      case 'status-change':
-        playStatusChangeSound();
-        break;
-      case 'version-update':
-        playVersionUpdateSound();
-        break;
-      case 'app-update':
-        playAppUpdateSound();
-        break;
-      case 'progress-change':
-        playProgressChangeSound();
-        break;
-      case 'team-new-game':
-        playTeamNewGameSound();
-        break;
-      case 'team-status-change':
-        playTeamStatusChangeSound();
-        break;
-      default:
-        playStatusChangeSound();
-    }
+    SOUNDS[type]();
   } catch (error) {
     console.error('[NotificationSound] Failed to play sound:', error);
   }

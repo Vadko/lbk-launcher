@@ -126,4 +126,13 @@ describe('applyOverlay', () => {
 
     expect(next.pages[0]?.items[0]?.replies[0]).toBe(data.pages[0]?.items[0]?.replies[0]);
   });
+
+  it('marks a rolled-back entry and leaves its thread neighbours as they were', () => {
+    const data = base();
+    const next = applyOverlay(data, NO_REVIEW_WRITES, new Set(['r1']));
+
+    expect(view(next, 'r1')).toMatchObject({ id: 'r1', text: 'r1', isRolledBack: true });
+    expect(view(next, 'a')).not.toHaveProperty('isRolledBack');
+    expect(next.pages[1]).toBe(data.pages[1]);
+  });
 });

@@ -1,13 +1,13 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { flushSync } from 'react-dom';
 import type {
+  ReviewEditResult,
   ReviewFailure,
   ReviewResult,
   ReviewWriteResult,
 } from '@/shared/game-reviews-api-types';
 import type {
   GameReview,
-  GameReviewOutcome,
   GameReviewReply,
   ReviewAuthorIdentity,
 } from '@/shared/game-reviews-types';
@@ -25,16 +25,45 @@ import {
 } from '../utils/reviewCache';
 import type { ReviewWriteDraft } from '../utils/reviewOverlay';
 import { gameReviewsQueryKey } from './gameReviewsQueryKey';
+import { type ReviewRefusal, refuseReviewWrite } from './refuseReviewWrite';
 import { sendReviewEdit, sendReviewReply } from './reviewsClient';
+
+type AnswerData = ReviewWriteResult | ReviewEditResult;
 
 interface WritePlan {
   draft: ReviewWriteDraft;
-  request: () => Promise<ReviewResult<ReviewWriteResult>>;
+  request: () => Promise<ReviewResult<AnswerData>>;
   // The server refuses an edit once its window closed, so a resend after it is pointless
   resendUntil: number;
-  afterDone?: (outcome: GameReviewOutcome) => void;
   // The picker already opened for this write, so another needs-author answer waits for a click
   askedForAuthor?: boolean;
+}
+
+type Refusal = Pick<ReviewRefusal, 'effect' | 'reason'>;
+
+// The server stored nothing: a reply never reached the list, an edit leaves the cached state as it is
+function failureRefusal(draft: ReviewWriteDraft, failure: ReviewFailure): Refusal {
+  if (draft.kind === 'reply') {
+    // A reply is refused as not found when its thread or the reply it answers is gone
+    return {
+      effect: 'gone',
+      reason: failure.code === 'not_found' ? 'reply_target_gone' : failure.code,
+    };
+  }
+  return {
+    effect: failure.code === 'not_found' ? 'gone' : 'refused',
+    reason: failure.code,
+  };
+}
+
+// A removed outcome on an edit is a takedown of the whole entry
+function answerRefusal(answer: AnswerData): Refusal | null {
+  if (answer.outcome === 'removed') {
+    return { effect: 'gone', reason: 'removed' };
+  }
+  return 'editRejected' in answer && answer.editRejected
+    ? { effect: 'rolledBack', reason: 'edit_rejected' }
+    : null;
 }
 
 function signed(draft: ReviewWriteDraft, author: ReviewAuthorIdentity): ReviewWriteDraft {
@@ -46,8 +75,14 @@ function signed(draft: ReviewWriteDraft, author: ReviewAuthorIdentity): ReviewWr
     : draft;
 }
 
-export function createReviewActions(queryClient: QueryClient, gameId: string) {
+export function createReviewActions(
+  queryClient: QueryClient,
+  gameId: string,
+  gameName: string
+) {
   const queryKey = gameReviewsQueryKey(gameId);
+  const refuse = (entryId: string, refusal: Refusal) =>
+    refuseReviewWrite(queryClient, { gameId, gameName, entryId, ...refusal });
   const overlay = () => useReviewOverlayStore.getState();
   const pages = () => queryClient.getQueryData<ReviewPages>(queryKey);
   const isCurrent = (entryId: string, attempt: number) =>
@@ -121,48 +156,66 @@ export function createReviewActions(queryClient: QueryClient, gameId: string) {
     };
   };
 
+  const holdFailed = async (
+    entryId: string,
+    attempt: number,
+    plan: WritePlan,
+    failure: ReviewFailure
+  ) => {
+    const resend = resendFor(entryId, attempt, plan, failure);
+    overlay().fail(gameId, entryId, attempt, failure, resend);
+    // The first needs-author answer opens the picker by itself; a later one waits for the resend button
+    if (failure.kind === 'needs-author' && !plan.askedForAuthor) {
+      await resend();
+    }
+  };
+
+  // The cache takes the entry before the overlay lets it go, so no frame goes without it
+  const takeAnswer = (
+    entryId: string,
+    attempt: number,
+    plan: WritePlan,
+    answer: AnswerData
+  ) => {
+    const refusal = answerRefusal(answer);
+    if (refusal) {
+      refuse(entryId, refusal);
+      return;
+    }
+    queryClient.setQueryData<ReviewPages>(
+      queryKey,
+      (data) =>
+        data &&
+        handOver(data, entryId, plan.draft, answer.outcome, new Date().toISOString())
+    );
+    overlay().drop(gameId, entryId, attempt);
+  };
+
   const settle = async (entryId: string, attempt: number, plan: WritePlan) => {
     const result = await plan.request();
     if (!isCurrent(entryId, attempt)) {
       return;
     }
-    if (!result.ok) {
-      const { failure } = result;
-      if (failure.kind === 'rejected') {
-        overlay().drop(gameId, entryId, attempt);
-        return;
-      }
-      const resend = resendFor(entryId, attempt, plan, failure);
-      overlay().fail(gameId, entryId, attempt, failure, resend);
-      // The first needs-author answer opens the picker by itself; a later one waits for the resend button
-      if (failure.kind === 'needs-author' && !plan.askedForAuthor) {
-        await resend();
-      }
+    if (!result.ok && result.failure.kind !== 'rejected') {
+      await holdFailed(entryId, attempt, plan, result.failure);
       return;
     }
     // A page fetched meanwhile holds the pre-answer snapshot and would overwrite the patch
     const wasFetching = queryClient.isFetching({ queryKey }) > 0;
     await queryClient.cancelQueries({ queryKey });
-    // A patch marks the pages fresh, so a refetch the cancel dropped (a discard's, say) goes out again
-    const refetchCancelled = () => {
-      if (wasFetching) {
-        void queryClient.invalidateQueries({ queryKey });
+    if (isCurrent(entryId, attempt)) {
+      if (result.ok) {
+        takeAnswer(entryId, attempt, plan, result.data);
+      } else {
+        refuse(entryId, failureRefusal(plan.draft, result.failure));
       }
-    };
-    if (!isCurrent(entryId, attempt)) {
-      refetchCancelled();
-      return;
     }
-    const { outcome } = result.data;
-    // The cache takes the entry before the overlay lets it go, so no frame goes without it
-    queryClient.setQueryData<ReviewPages>(
-      queryKey,
-      (data) =>
-        data && handOver(data, entryId, plan.draft, outcome, new Date().toISOString())
-    );
-    overlay().drop(gameId, entryId, attempt);
-    refetchCancelled();
-    plan.afterDone?.(outcome);
+    // Only the server knows where a deleted row's replies went, so the cache's guess gets replaced
+    const isGone = !result.ok && result.failure.code === 'not_found';
+    // A patch marks the pages fresh, so a refetch the cancel dropped (a discard's, say) goes out again
+    if (wasFetching || isGone) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
   };
 
   return {
@@ -232,23 +285,13 @@ export function createReviewActions(queryClient: QueryClient, gameId: string) {
         onShown();
         return Promise.resolve(true);
       }
-      const { thread, entry: before } = found;
+      const { thread, entry } = found;
       void send(
         entryId,
         {
           draft: { kind: 'edit', text },
           request: () => sendReviewEdit({ id: entryId, text, isPublic: thread.isPublic }),
-          resendUntil: editDeadline(before.createdAt),
-          // The answer cannot tell a kept edit from a rejected one, so the list says which
-          afterDone: (outcome) => {
-            if (
-              thread.isPublic &&
-              before.moderation === 'published' &&
-              outcome === 'published'
-            ) {
-              void queryClient.invalidateQueries({ queryKey });
-            }
-          },
+          resendUntil: editDeadline(entry.createdAt),
         },
         onShown
       );

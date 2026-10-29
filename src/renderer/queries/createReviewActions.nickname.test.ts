@@ -22,7 +22,11 @@ const sendReviewEdit = vi.fn<(input: ReviewEditInput) => Promise<WriteAnswer>>()
 const ensureAuthor =
   vi.fn<(signal?: AbortSignal) => Promise<ReviewAuthorIdentity | null>>();
 const forgetAuthor = vi.fn();
+const showToast = vi.fn();
 vi.mock('./reviewsClient', () => ({ sendReviewReply, sendReviewEdit }));
+vi.mock('../store/useSubscriptionsStore', () => ({
+  useSubscriptionsStore: { getState: () => ({ showToast }) },
+}));
 vi.mock('../store/useReviewAuthorStore', () => ({
   useReviewAuthorStore: { getState: () => ({ ensureAuthor, forgetAuthor }) },
 }));
@@ -33,7 +37,7 @@ let queryClient: QueryClient;
 
 function seed(isPublic: boolean, viewer: ReviewAuthorIdentity | null = null) {
   seedReviews(queryClient, isPublic, viewer);
-  return createReviewActions(queryClient, 'g1');
+  return createReviewActions(queryClient, 'g1', 'Game');
 }
 
 const sentIds = () => sendReviewReply.mock.calls.map(([input]) => input.id);
@@ -42,7 +46,8 @@ const shown = (id: string) => shownEntry(queryClient, id);
 
 beforeEach(() => {
   queryClient = new QueryClient();
-  useReviewOverlayStore.setState({ games: new Map() });
+  useReviewOverlayStore.setState({ games: new Map(), rolledBack: new Map() });
+  showToast.mockReset();
   sendReviewReply.mockReset();
   sendReviewReply.mockImplementation(({ id }) => Promise.resolve(published(id)));
   sendReviewEdit.mockReset();

@@ -4,6 +4,7 @@ import {
   DownloadIcon,
   LanguagesIcon,
   MessageSquareIcon,
+  MessageSquareXIcon,
   RefreshCwIcon,
   TrendingUpIcon,
   XIcon,
@@ -30,6 +31,8 @@ const getToastIcon = (type: ToastNotification['type']) => {
       return <BookmarkCheckIcon size={20} className="text-text-dark" />;
     case 'feedback-reply':
       return <MessageSquareIcon size={20} className="text-white" />;
+    case 'review-rejected':
+      return <MessageSquareXIcon size={20} className="text-white" />;
     default:
       return <RefreshCwIcon size={20} className="text-white" />;
   }
@@ -49,6 +52,8 @@ const getToastGradient = (type: ToastNotification['type']) => {
       return 'from-color-mixed to-color-mixed';
     case 'feedback-reply':
       return 'from-color-main to-color-accent';
+    case 'review-rejected':
+      return 'from-red-500 to-red-600';
     default:
       return 'from-color-accent to-color-main';
   }
@@ -68,6 +73,8 @@ const getToastBorder = (type: ToastNotification['type']) => {
       return 'border-color-mixed';
     case 'feedback-reply':
       return 'border-color-main';
+    case 'review-rejected':
+      return 'border-red-500';
     default:
       return 'border-color-accent';
   }

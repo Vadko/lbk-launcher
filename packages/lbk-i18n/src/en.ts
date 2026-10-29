@@ -436,6 +436,23 @@ export const en = {
     screenshotAlt: 'Screenshot {{number}}',
     loadMoreFailed: 'Could not load more reviews.',
     removed: 'Removed by a moderator',
+    rejected: {
+      editRejected:
+        'Moderation did not accept the changes, so the previous text is back.',
+      removed: 'Moderation removed the entry.',
+      banned: 'Posts from this device are blocked.',
+      notFound: 'This entry no longer exists.',
+      replyTargetGone: 'The entry you replied to no longer exists.',
+      editWindowClosed: 'The time to edit has run out, so the previous text stays.',
+      editLimitReached:
+        'This entry can no longer be changed, so the previous text stays.',
+      threadFull: 'This thread takes no more replies.',
+      generic: 'The server did not accept the entry.',
+    },
+    failed: {
+      dailyLimit: 'The daily post limit is used up. Send it later.',
+      generic: 'The entry could not be sent.',
+    },
   },
   gameSearch: { placeholder: 'Search games...' },
   gameSections: {
@@ -937,6 +954,7 @@ export const en = {
     'feedback-reply': 'Reply to feedback',
     'team-new-game': 'Notification',
     'team-status-change': 'Notification',
+    'review-rejected': 'Entry not accepted',
   },
   notifications: {
     versionAvailable: 'Version {{version}} available',
