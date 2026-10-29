@@ -30,6 +30,9 @@ type ReelPhase =
 
 const REST: ReelPhase = { kind: 'rest' };
 
+// The resting and the settling strips both start with the result's upper neighbour
+const RESULT_INDEX = 1;
+
 interface ReelMotionInput {
   value: ReelCell;
   decoys: readonly string[];
@@ -44,6 +47,17 @@ interface ReelMotion {
   y: MotionValue<number>;
   blurRef: React.RefObject<SVGFEGaussianBlurElement | null>;
   isBlurred: boolean;
+  // The cell that holds the result, lit as soon as the brake brings it in; null while the strip loops
+  resultIndex: number | null;
+}
+
+// Set on the filter directly, every frame, without a render; the smear runs only along the travel
+function paintBlur(
+  blur: SVGFEGaussianBlurElement | null,
+  speed: number,
+  isSpinning: boolean
+): void {
+  blur?.setAttribute('stdDeviation', `0 ${reelBlur(speed, isSpinning)}`);
 }
 
 const spinPhase = (value: ReelCell, decoys: readonly string[]): ReelPhase => ({
@@ -89,10 +103,7 @@ export function useSlotReelMotion({
   }
 
   useLayoutEffect(() => {
-    blurRef.current?.setAttribute(
-      'stdDeviation',
-      `0 ${reelBlur(velocity.get(), phase.kind === 'spin')}`
-    );
+    paintBlur(blurRef.current, velocity.get(), phase.kind === 'spin');
     if (phase.kind === 'rest') {
       y.set(reelOffset(1));
       return undefined;
@@ -122,17 +133,15 @@ export function useSlotReelMotion({
     };
   }, [phase, velocity, y]);
 
-  useMotionValueEvent(velocity, 'change', (speed) => {
-    blurRef.current?.setAttribute(
-      'stdDeviation',
-      `0 ${reelBlur(speed, phase.kind === 'spin')}`
-    );
-  });
+  useMotionValueEvent(velocity, 'change', (speed) =>
+    paintBlur(blurRef.current, speed, phase.kind === 'spin')
+  );
 
   return {
     cells: phase.kind === 'rest' ? restCells(value, rest.decoys) : phase.cells,
     y,
     blurRef,
     isBlurred: phase.kind !== 'rest',
+    resultIndex: phase.kind === 'spin' ? null : RESULT_INDEX,
   };
 }

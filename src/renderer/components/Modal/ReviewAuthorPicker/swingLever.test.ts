@@ -12,7 +12,7 @@ describe('swingLever', () => {
     vi.clearAllMocks();
   });
 
-  it('runs the ratchet and the thunk with the moving arm', () => {
+  it('runs the ratchet and the thunk with the moving knob', () => {
     swingLever({ animate: true, swing, still });
 
     expect(playLeverPull).toHaveBeenCalledOnce();

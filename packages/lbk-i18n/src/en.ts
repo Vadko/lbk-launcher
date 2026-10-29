@@ -1026,11 +1026,10 @@ export const en = {
     hold: 'Hold',
     held: 'Held',
     lever: 'Spin',
+    spins: 'Spins',
+    generating: 'Generating a name…',
+    releaseOne: 'Release one of the reels',
     claim: 'Take this name',
-    led: {
-      idle: 'Pull the lever',
-      spinning: 'Good luck!',
-    },
     notice: {
       nameTaken: 'Someone has just taken this name, so the reels spun again.',
       nameExpired: 'This name can no longer be taken, so the reels spun again.',

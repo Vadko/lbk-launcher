@@ -19,6 +19,8 @@ interface ReviewAuthorStore {
   // The server's latest spin for this machine in this session, so a reopened picker shows it instead of spending a new one
   lastSpin: NicknameSpin | null;
   lastSpinAt: number | null;
+  // Spins the server still allows this machine this hour, null until a lookup or a spin tells; at 0 the lever locks
+  spinsLeft: number | null;
   isPickerOpen: boolean;
   // Resolves with the nickname, opening the picker when there is none; null when the picker was closed, or when the signal aborted before it opened
   ensureAuthor: (signal?: AbortSignal) => Promise<PickedAuthor>;
@@ -59,6 +61,9 @@ function rememberAuthor(set: Set_, author: ReviewAuthorIdentity): void {
 function lookUpAuthor(set: Set_): Promise<PickedAuthor> {
   lookup ??= fetchReviewAuthor()
     .then((known) => {
+      if (known.ok) {
+        set({ spinsLeft: known.data.spinsLeft });
+      }
       if (known.ok && known.data.author) {
         rememberAuthor(set, known.data.author);
         return known.data.author;
@@ -91,6 +96,7 @@ export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => ({
   author: null,
   lastSpin: null,
   lastSpinAt: null,
+  spinsLeft: null,
   isPickerOpen: false,
 
   ensureAuthor: async (signal) => {
@@ -113,7 +119,13 @@ export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => ({
     spinRequest ??= spinNickname(input)
       .then((result) => {
         if (result.ok) {
-          set({ lastSpin: result.data, lastSpinAt: Date.now() });
+          set({
+            lastSpin: result.data,
+            lastSpinAt: Date.now(),
+            spinsLeft: result.data.spinsLeft,
+          });
+        } else if (result.failure.code === 'rate_limit') {
+          set({ spinsLeft: 0 });
         }
         return result;
       })

@@ -1,89 +1,116 @@
 import { spring } from 'framer-motion';
 import { describe, expect, it } from 'vitest';
 import {
-  LEVER_DOWN_DEG,
   LEVER_PULL,
   LEVER_RETURN,
-  LEVER_ROD_PX,
-  leverAngleForDrag,
+  LEVER_TRAVEL_PX,
   leverFinishTransition,
-  leverPose,
+  leverReleasePulls,
+  leverTravelForDrag,
   ratchetTooth,
+  teethLeftBelow,
+  teethPassed,
 } from './slotLeverMotion';
 
-describe('leverAngleForDrag', () => {
+describe('leverTravelForDrag', () => {
   it.each([
     ['no drag', 0, 0],
     ['a drag up', -40, 0],
-    ['the ball level with the pivot', LEVER_ROD_PX, 90],
-    ['the full travel', 2 * LEVER_ROD_PX, 180],
-    ['a drag past the bottom', 3 * LEVER_ROD_PX, 180],
-  ])('turns %s into the arm angle', (_label, drag, angle) => {
-    expect(leverAngleForDrag(drag)).toBeCloseTo(angle);
-  });
-
-  it('keeps the ball under the pointer', () => {
-    const drag = 30;
-    const { reach } = leverPose(leverAngleForDrag(drag));
-
-    expect(LEVER_ROD_PX * (1 - reach)).toBeCloseTo(drag);
+    ['a drag down half the track', LEVER_TRAVEL_PX / 2, 0.5],
+    ['the full track', LEVER_TRAVEL_PX, 1],
+    ['a drag past the bottom', LEVER_TRAVEL_PX + 60, 1],
+  ])('turns %s into the knob’s travel', (_label, drag, travel) => {
+    expect(leverTravelForDrag(drag)).toBeCloseTo(travel);
   });
 });
 
-describe('leverPose', () => {
+describe('leverReleasePulls', () => {
   it.each([
-    ['upright', 0, 1, 1],
-    ['pointing at the viewer', 90, 0, 1.22],
-    ['pulled down', 180, -1, 1],
-  ])('shows the arm %s', (_label, angle, reach, ballScale) => {
-    const pose = leverPose(angle);
-
-    expect(pose.reach).toBeCloseTo(reach);
-    expect(pose.ballScale).toBeCloseTo(ballScale);
-  });
-
-  it('shrinks the ball when the spring swings the arm back past upright', () => {
-    expect(leverPose(-3).ballScale).toBeLessThan(1);
-  });
-
-  it('stops the arm dead at the bottom however far the angle runs on', () => {
-    expect(leverPose(LEVER_DOWN_DEG + 28)).toEqual(leverPose(LEVER_DOWN_DEG));
+    ['springs back from', 0, false],
+    ['springs back from', 0.55, false],
+    ['spins the reels from', 0.6, true],
+    ['spins the reels from', 1, true],
+  ])('%s a knob let go at %s of its travel', (_label, travel, pulls) => {
+    expect(leverReleasePulls(travel)).toBe(pulls);
   });
 });
 
 describe('lever return', () => {
   // framer-motion starts a spring at the value's own speed unless the transition names one
-  const hitSpeed = 2150;
-  const swing = spring({
-    keyframes: [LEVER_DOWN_DEG, 0],
-    velocity: hitSpeed,
-    ...LEVER_RETURN,
-  });
-  const angles = Array.from({ length: 750 }, (_, step) => swing.next(step * 4).value);
+  const hitSpeed = 20;
+  const swing = spring({ keyframes: [1, 0], velocity: hitSpeed, ...LEVER_RETURN });
+  const travels = Array.from({ length: 750 }, (_, step) => swing.next(step * 4).value);
 
   it('leaves the bottom stop at rest, whatever speed the pull hit it with', () => {
-    expect(Math.max(...angles)).toBe(LEVER_DOWN_DEG);
+    expect(Math.max(...travels)).toBe(1);
   });
 
-  it('swings at most 5° past upright and settles there', () => {
-    expect(Math.min(...angles)).toBeGreaterThanOrEqual(-5);
-    expect(Math.min(...angles)).toBeLessThan(0);
+  it('springs at most 3% past rest and settles there', () => {
+    expect(Math.min(...travels)).toBeGreaterThanOrEqual(-0.03);
+    expect(Math.min(...travels)).toBeLessThan(0);
     expect(swing.next(3000)).toEqual({ done: true, value: 0 });
   });
 });
 
-describe('lever travel', () => {
+describe('lever ratchet', () => {
   it.each([
     ['at rest', 0, 0],
-    ['just past the first tooth', 31, 1],
-    ['at the bottom', LEVER_DOWN_DEG, 6],
-  ])('counts ratchet teeth %s', (_label, angle, tooth) => {
-    expect(ratchetTooth(angle)).toBe(tooth);
+    ['above rest on the spring', -0.02, 0],
+    ['just short of the first tooth', 0.16, 0],
+    ['just past the first tooth', 0.17, 1],
+    ['at the bottom', 1, 6],
+    ['past the bottom', 1.2, 6],
+  ])('counts ratchet teeth %s', (_label, travel, teeth) => {
+    expect(ratchetTooth(travel)).toBe(teeth);
   });
 
-  it('finishes a half-dragged pull in half the time', () => {
-    expect(leverFinishTransition(90).duration).toBeCloseTo(
-      (LEVER_PULL.duration ?? 0) / 2
+  it.each([
+    ['a step onto the next tooth', 2, 3, [3]],
+    ['a fast step over three teeth', 1, 4, [2, 3, 4]],
+    ['a whole drag from rest to the bottom', 0, 6, [1, 2, 3, 4, 5, 6]],
+    ['staying on one tooth', 3, 3, []],
+    ['going back up', 4, 2, []],
+  ])('sounds every tooth of %s, in order', (_label, from, to, teeth) => {
+    expect(teethPassed(from, to)).toEqual(teeth);
+  });
+
+  it('runs a whole drag down the track through each of the six teeth once', () => {
+    const steps = Array.from({ length: 73 }, (_, step) =>
+      ratchetTooth(leverTravelForDrag(step * 2))
+    );
+
+    const teeth = steps.flatMap((tooth, step) =>
+      teethPassed(steps[step - 1] ?? 0, tooth)
+    );
+
+    expect(teeth).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('clicks a tooth again when the hand backs up and brings the knob past it once more', () => {
+    const steps = [0.7, 0.4, 1].map((travel) => ratchetTooth(travel));
+
+    const teeth = steps.flatMap((tooth, step) =>
+      teethPassed(steps[step - 1] ?? 0, tooth)
+    );
+
+    expect(teeth).toEqual([1, 2, 3, 4, 3, 4, 5, 6]);
+  });
+
+  it.each([
+    ['from rest', 0, [1, 2, 3, 4, 5, 6]],
+    ['from the pull threshold', ratchetTooth(0.6), [4, 5, 6]],
+    ['from the last tooth above the stop', 5, [6]],
+    ['from the bottom stop', ratchetTooth(1), []],
+  ])('runs a released knob over the teeth left below it %s', (_label, tooth, teeth) => {
+    expect(teethLeftBelow(tooth)).toEqual(teeth);
+  });
+
+  it.each([
+    ['finishes a half-dragged pull in half the time', 0.5, 0.5],
+    ['gives a pull dragged almost to the stop a fifth of the time', 0.95, 0.2],
+  ])('%s', (_label, travel, share) => {
+    expect(leverFinishTransition(travel).duration).toBeCloseTo(
+      (LEVER_PULL.duration ?? 0) * share
     );
   });
 });

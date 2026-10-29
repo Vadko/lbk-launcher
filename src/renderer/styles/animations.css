@@ -18,14 +18,14 @@
   }
 }
 
-/* The nickname lever's hint: a static glow stays under it when animations are off */
+/* The nickname knob's halo until the first hover: a static glow stays when animations are off */
 @keyframes leverHint {
   0%,
   100% {
-    box-shadow: 0 0 10px 2px rgba(255, 164, 122, 0.35);
+    box-shadow: 0 0 4px 0 rgba(255, 164, 122, 0.2);
   }
   50% {
-    box-shadow: 0 0 22px 7px rgba(255, 164, 122, 0.7);
+    box-shadow: 0 0 14px 4px rgba(255, 164, 122, 0.5);
   }
 }
 

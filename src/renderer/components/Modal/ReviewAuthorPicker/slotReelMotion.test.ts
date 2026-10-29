@@ -9,7 +9,6 @@ import {
   type ReelMotionStep,
   recoilMotion,
   reelBlur,
-  reelCellProjection,
   reelOffset,
   reelSchedule,
   restCells,
@@ -31,7 +30,7 @@ describe('reelSchedule', () => {
       1260,
     ],
   ])(
-    'rests the reels at 1.25, 1.65 and 2.05 s for %s',
+    'stops the reels at 0.99, 1.39 and 1.79 s for %s',
     (_label, answeredAfter, settle, landed) => {
       expect(reelSchedule(answeredAfter, ALL_REELS)).toEqual({ settle, landed });
     }
@@ -146,33 +145,6 @@ describe('heldReelRest', () => {
   });
 });
 
-describe('reelCellProjection', () => {
-  const rest = reelOffset(1);
-
-  it('leaves the result in the middle of the window as it is', () => {
-    expect(reelCellProjection(rest, 1)).toEqual({ shift: 0, scale: 1, visible: true });
-  });
-
-  it.each([
-    ['above', 0, 1],
-    ['below', 2, -1],
-  ])('draws the neighbour %s nearer the middle and squashed', (_label, index, toward) => {
-    const { shift, scale, visible } = reelCellProjection(rest, index);
-
-    expect(visible).toBe(true);
-    expect(shift * toward).toBeGreaterThan(0);
-    expect(scale).toBeGreaterThan(0.6);
-    expect(scale).toBeLessThan(0.75);
-  });
-
-  it.each([
-    ['two cells down, round the back of the drum', 3],
-    ['a whole turn of the drum away', 9],
-  ])('hides a cell %s', (_label, index) => {
-    expect(reelCellProjection(rest, index).visible).toBe(false);
-  });
-});
-
 describe('reel motion', () => {
   it('kicks against the spin before it speeds up', () => {
     const [rest, kick, end] = spinUpMotion(12).keyframes;
@@ -220,8 +192,11 @@ describe('reel motion', () => {
 
   it.each([
     ['a reel at rest', 0, false, 0],
-    ['full speed down', 1240, true, 11.2],
-    ['the loop wrapping back up', -50000, true, 12],
+    ['half speed down', 620, true, 2],
+    ['two thirds of the speed down', 900, true, 2.5],
+    ['full speed down', 1240, true, 3.5],
+    ['the loop wrapping back up', -50000, true, 3.5],
+    ['the brake running out', 300, false, 0.8],
     ['the first frame of a spin, before the speed reading', 0, true, 2],
   ])('smears %s', (_label, speed, isSpinning, blur) => {
     expect(reelBlur(speed, isSpinning)).toBe(blur);

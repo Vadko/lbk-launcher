@@ -14,7 +14,7 @@ function silence(noise: ReelNoise): void {
   noise.spinning.clear();
 }
 
-// A whirr while reels spin, quieter as each stops, and a clunk per stop; returns what a reel calls when it lands
+// The spin bed while reels spin, quieter as each stops, and a note per stop; returns what a reel calls when it lands
 export function useReelSounds(
   moving: ReelFlags,
   isSpinning: boolean,
@@ -28,9 +28,9 @@ export function useReelSounds(
     const current = noise.current;
     if (!animate) {
       silence(current);
-      // Without motion the results appear together, so they land with one clunk
+      // Without motion the results appear together, so they land on the last reel's note
       if (wasMoving.current && !anyMoving) {
-        playReelStop();
+        playReelStop(SLOT_REELS.length - 1);
       }
     } else {
       for (const reel of SLOT_REELS.filter((id) => moving[id])) {
@@ -70,7 +70,7 @@ export function useReelSounds(
   return (reel) => {
     const current = noise.current;
     current.spinning.delete(reel);
-    playReelStop();
+    playReelStop(SLOT_REELS.indexOf(reel));
     if (current.spinning.size === 0) {
       silence(current);
     } else {

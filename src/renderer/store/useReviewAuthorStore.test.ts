@@ -45,6 +45,7 @@ beforeEach(() => {
     author: null,
     lastSpin: null,
     lastSpinAt: null,
+    spinsLeft: null,
     isPickerOpen: false,
   });
 });
@@ -233,6 +234,22 @@ describe('useReviewAuthorStore', () => {
     await store().spin(FRESH);
 
     expect(store().openingSpin()).toBe(SPIN);
+    expect(store().spinsLeft).toBe(0);
+  });
+
+  it('tracks the spins left from the lookup and from each spin', async () => {
+    fetchReviewAuthor.mockResolvedValue({
+      ok: true,
+      data: { author: null, spinsLeft: 12 },
+    });
+    void store().ensureAuthor();
+    await vi.waitFor(() => expect(store().isPickerOpen).toBe(true));
+    expect(store().spinsLeft).toBe(12);
+
+    spinNickname.mockResolvedValue({ ok: true, data: { ...SPIN, spinsLeft: 11 } });
+    await store().spin(FRESH);
+
+    expect(store().spinsLeft).toBe(11);
   });
 
   it.each([

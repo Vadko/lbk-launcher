@@ -8,3 +8,5 @@ export const NO_REELS: ReelFlags = { avatar: false, adjective: false, noun: fals
 export const ALL_REELS: ReelFlags = { avatar: true, adjective: true, noun: true };
 
 export const anyReel = (flags: ReelFlags) => SLOT_REELS.some((reel) => flags[reel]);
+
+export const everyReel = (flags: ReelFlags) => SLOT_REELS.every((reel) => flags[reel]);

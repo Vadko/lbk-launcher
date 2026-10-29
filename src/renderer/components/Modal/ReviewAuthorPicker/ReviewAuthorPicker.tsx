@@ -22,6 +22,7 @@ export const ReviewAuthorPicker: React.FC = () => {
   const [input] = useState(() => ({
     spin: useReviewAuthorStore.getState().openingSpin(),
     animate,
+    spinsLeft: useReviewAuthorStore.getState().spinsLeft,
   }));
   const claimPhase = useActionPhase();
   const [snapshot, send] = useMachine(
@@ -37,13 +38,15 @@ export const ReviewAuthorPicker: React.FC = () => {
     }),
     { input }
   );
-  const { spin, heldSpin, holds, moving, pulledAt, notice, author } = snapshot.context;
+  const { spin, heldSpin, holds, moving, pulledAt, notice, spinsLeft, won, refused } =
+    snapshot.context;
   const isIdle = snapshot.matches('idle');
   const isSpinning = snapshot.matches('spinning') || snapshot.matches('landing');
   const isClaimed = snapshot.status === 'done';
-  const isBusy =
-    snapshot.matches('claiming') || snapshot.matches('resolvingAuthor') || isClaimed;
-  const canClaim = isIdle && spin !== null;
+  const isClaiming = snapshot.matches('claiming') || snapshot.matches('resolvingAuthor');
+  const isBusy = isClaiming || isClaimed;
+  const canClaim = isIdle && spin !== null && !refused;
+  const isOutOfSpins = spinsLeft === 0;
 
   usePrefetchCaptcha('nickname', canClaim);
 
@@ -61,8 +64,7 @@ export const ReviewAuthorPicker: React.FC = () => {
   }, [claimPhase.isBusy, closePicker, isClaimed]);
 
   const body = (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-text-muted">{t('reviewAuthorPicker.intro')}</p>
+    <div className="flex flex-col gap-4.5">
       <SlotMachine
         spin={spin}
         heldSpin={heldSpin}
@@ -70,10 +72,11 @@ export const ReviewAuthorPicker: React.FC = () => {
         moving={moving}
         pulledAt={pulledAt}
         isSpinning={isSpinning}
-        wonName={isClaimed ? (author?.name ?? null) : null}
+        isWon={won}
         notice={notice}
-        canHold={canClaim}
-        canPull={isIdle}
+        canHold={isIdle && spin !== null && !isOutOfSpins}
+        canPull={isIdle && !isOutOfSpins}
+        spinsLeft={spinsLeft}
         animate={animate}
         onToggleHold={(reel) => send({ type: 'TOGGLE_HOLD', reel })}
         onPull={() => send({ type: 'PULL' })}
@@ -99,7 +102,7 @@ export const ReviewAuthorPicker: React.FC = () => {
       <SetupButton
         tone="primary"
         onClick={() => send({ type: 'CLAIM' })}
-        disabled={isIdle && spin === null}
+        disabled={isIdle && !canClaim}
         busy={!isIdle}
         gamepad="confirm"
         icon={
@@ -113,7 +116,15 @@ export const ReviewAuthorPicker: React.FC = () => {
 
   return (
     <SetupFrame
-      view={{ title: t('reviewAuthorPicker.title'), dismissable: !isBusy, body, footer }}
+      view={{
+        title: t('reviewAuthorPicker.title'),
+        description: t('reviewAuthorPicker.intro'),
+        dismissable: !isBusy,
+        body,
+        footer,
+      }}
+      className="review-author-dialog"
+      seamlessHeader
       onClose={closePicker}
     />
   );

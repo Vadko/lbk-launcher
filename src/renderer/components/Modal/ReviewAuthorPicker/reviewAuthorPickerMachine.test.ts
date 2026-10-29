@@ -10,7 +10,7 @@ import type {
 } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { reviewAuthorPickerMachine } from './reviewAuthorPickerMachine';
-import { NO_REELS, type ReelFlags } from './slotReels';
+import { ALL_REELS, NO_REELS, type ReelFlags } from './slotReels';
 
 const OWL: ReviewAuthorIdentity = { name: 'Quiet Owl', avatarSeed: '0a1b2c3d4e5f' };
 
@@ -41,9 +41,15 @@ interface StartOptions {
   animate?: boolean;
   // The answer to the spin the picker makes on open
   firstSpin?: ReviewResult<NicknameSpin>;
+  spinsLeft?: number | null;
 }
 
-function start({ spin = null, animate = true, firstSpin }: StartOptions = {}) {
+function start({
+  spin = null,
+  animate = true,
+  firstSpin,
+  spinsLeft = null,
+}: StartOptions = {}) {
   const spinCalls = vi.fn((_input: NicknameSpinInput) =>
     Promise.resolve<ReviewResult<NicknameSpin>>(ok(dealt()))
   );
@@ -64,7 +70,7 @@ function start({ spin = null, animate = true, firstSpin }: StartOptions = {}) {
         author: fromPromise(() => authorCalls()),
       },
     }),
-    { input: { spin, animate } }
+    { input: { spin, animate, spinsLeft } }
   ).start();
   actor = machine;
   return { actor: machine, spinCalls, claimCalls, authorCalls };
@@ -144,7 +150,7 @@ describe('reviewAuthorPickerMachine', () => {
     expect(context(h).holds).toEqual({ avatar: false, adjective: false, noun: true });
   });
 
-  it('refuses to hold a third reel but lets a held one go', async () => {
+  it('holds all three reels but takes no pull until one is let go', async () => {
     const h = start();
     await flush();
     await land();
@@ -153,12 +159,12 @@ describe('reviewAuthorPickerMachine', () => {
     for (const reel of ['avatar', 'adjective', 'noun'] as const) {
       h.actor.send({ type: 'TOGGLE_HOLD', reel });
     }
-    expect(context(h).holds).toEqual({ avatar: true, adjective: true, noun: false });
+    expect(context(h).holds).toEqual(ALL_REELS);
+    h.actor.send({ type: 'PULL' });
+    expect(state(h)).toBe('idle');
+    expect(h.spinCalls).toHaveBeenCalledTimes(1);
 
     h.actor.send({ type: 'TOGGLE_HOLD', reel: 'adjective' });
-    h.actor.send({ type: 'TOGGLE_HOLD', reel: 'noun' });
-    expect(context(h).holds).toEqual({ avatar: true, adjective: false, noun: true });
-
     h.actor.send({ type: 'PULL' });
     expect(h.spinCalls).toHaveBeenLastCalledWith({
       spinId: first?.spinId,
@@ -206,11 +212,13 @@ describe('reviewAuthorPickerMachine', () => {
     expect(h.claimCalls).toHaveBeenCalledWith({ spinId: shown?.spinId });
     expect(h.actor.getSnapshot().status).toBe('done');
     expect(h.actor.getSnapshot().output).toEqual(OWL);
+    expect(context(h).won).toBe(true);
   });
 
   it.each<[string, ReelFlags]>([
     ['the avatar and the noun', { avatar: true, adjective: false, noun: true }],
     ['both words', { avatar: false, adjective: true, noun: true }],
+    ['all three reels', ALL_REELS],
   ])(
     'spins again on a taken name held with %s, keeping only the noun',
     async (_held, holds) => {
@@ -249,6 +257,8 @@ describe('reviewAuthorPickerMachine', () => {
 
     expect(h.spinCalls.mock.lastCall?.[0].hold).toEqual(NO_REELS);
     expect(context(h).notice).toBe('nameExpired');
+    h.actor.send({ type: 'CLAIM' });
+    expect(state(h)).toBe('claiming');
   });
 
   it('respins without holds once when the held spin is no longer the latest', async () => {
@@ -286,6 +296,20 @@ describe('reviewAuthorPickerMachine', () => {
 
     expect(h.authorCalls).toHaveBeenCalledTimes(1);
     expect(h.actor.getSnapshot().output).toEqual(OWL);
+    expect(context(h).won).toBe(false);
+  });
+
+  it('takes the existing author over a claim, without winning the dealt name', async () => {
+    const h = start({ animate: false });
+    await flush();
+    h.claimCalls.mockResolvedValueOnce(fail('author_exists'));
+
+    h.actor.send({ type: 'CLAIM' });
+    await flush();
+
+    expect(h.actor.getSnapshot().status).toBe('done');
+    expect(h.actor.getSnapshot().output).toEqual(OWL);
+    expect(context(h).won).toBe(false);
   });
 
   it.each([
@@ -326,11 +350,80 @@ describe('reviewAuthorPickerMachine', () => {
   });
 
   it('clears the notice on the next pull', async () => {
-    const h = start({ animate: false, firstSpin: fail('rate_limit') });
+    const h = start({ animate: false, firstSpin: fail('unreachable') });
     await flush();
-    expect(context(h).notice).toBe('rateLimit');
+    expect(context(h).notice).toBe('offline');
 
     h.actor.send({ type: 'PULL' });
     expect(context(h).notice).toBeNull();
+  });
+
+  describe('out of spins', () => {
+    it('opens on the notice without starting the reels', () => {
+      const h = start({ spinsLeft: 0 });
+
+      expect(state(h)).toBe('idle');
+      expect(context(h).notice).toBe('rateLimit');
+      expect(context(h).moving).toEqual(NO_REELS);
+      expect(h.spinCalls).not.toHaveBeenCalled();
+    });
+
+    it('still shows a kept spin, which stays claimable', () => {
+      const kept = dealt();
+      const h = start({ spin: kept, spinsLeft: 0 });
+
+      expect(state(h)).toBe('idle');
+      expect(context(h).spin).toBe(kept);
+      h.actor.send({ type: 'CLAIM' });
+      expect(state(h)).toBe('claiming');
+    });
+
+    it('locks after the spin that spent the last one', async () => {
+      const h = start({ animate: false, firstSpin: ok({ ...dealt(), spinsLeft: 0 }) });
+      await flush();
+      expect(context(h).spinsLeft).toBe(0);
+
+      h.actor.send({ type: 'PULL' });
+
+      expect(state(h)).toBe('idle');
+      expect(context(h).notice).toBe('rateLimit');
+      expect(h.spinCalls).toHaveBeenCalledTimes(1);
+    });
+
+    it('locks once the server refuses a spin for the limit', async () => {
+      const h = start({ animate: false, firstSpin: fail('rate_limit') });
+      await flush();
+
+      h.actor.send({ type: 'PULL' });
+
+      expect(context(h).moving).toEqual(NO_REELS);
+      expect(h.spinCalls).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not respin by itself when a claimed name was taken', async () => {
+      const h = start({ animate: false, firstSpin: ok({ ...dealt(), spinsLeft: 0 }) });
+      await flush();
+      h.claimCalls.mockResolvedValueOnce(fail('nickname_taken'));
+
+      h.actor.send({ type: 'CLAIM' });
+      await flush();
+
+      expect(state(h)).toBe('idle');
+      expect(context(h).notice).toBe('rateLimit');
+      expect(h.spinCalls).toHaveBeenCalledTimes(1);
+    });
+
+    it('takes no second claim of a name the first one turned down', async () => {
+      const h = start({ animate: false, firstSpin: ok({ ...dealt(), spinsLeft: 0 }) });
+      await flush();
+      h.claimCalls.mockResolvedValueOnce(fail('invalid_candidate'));
+      h.actor.send({ type: 'CLAIM' });
+      await flush();
+
+      h.actor.send({ type: 'CLAIM' });
+
+      expect(state(h)).toBe('idle');
+      expect(h.claimCalls).toHaveBeenCalledTimes(1);
+    });
   });
 });

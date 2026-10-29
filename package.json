@@ -21,6 +21,7 @@
     "preview": "install-electron && electron-vite preview",
     "prebuild": "pnpm build:bridge && node scripts/build-spellfix.js",
     "build:bridge": "wireit",
+    "build:avatar-style": "vitest run src/renderer/utils/vyshyvanka/buildVyshyvanka.test.ts --update",
     "dev:bridge": "pnpm --filter \"./packages/*\" --parallel run watch",
     "build": "electron-vite build",
     "dist": "electron-builder --config electron-builder.config.cjs",
@@ -113,8 +114,7 @@
   "devDependencies": {
     "7zip-bin-full": "26.3.1",
     "@biomejs/biome": "2.5.15",
-    "@dicebear/core": "^10.7.0",
-    "@dicebear/styles": "^10.6.0",
+    "@dicebear/core": "10.7.0",
     "@eslint/js": "10.0.1",
     "@lbk/bridge-core": "workspace:*",
     "@lbk/i18n": "workspace:*",

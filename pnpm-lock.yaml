@@ -170,11 +170,8 @@ importers:
         specifier: 2.5.15
         version: 2.5.15
       '@dicebear/core':
-        specifier: ^10.7.0
+        specifier: 10.7.0
         version: 10.7.0
-      '@dicebear/styles':
-        specifier: ^10.6.0
-        version: 10.6.0
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.11.0(jiti@2.7.0))
@@ -1044,9 +1041,6 @@ packages:
   '@dicebear/core@10.7.0':
     resolution: {integrity: sha512-JUOzKOd8RUByJJo8ZL+C7YE/pvEsWewfpbWUmR8OIQZWv/PvUQHnohdevySC3icyyxe6EIU/8B/rQgA42us1QA==}
     engines: {node: '>=22.0.0'}
-
-  '@dicebear/styles@10.6.0':
-    resolution: {integrity: sha512-KhxbEVI+z8TaenX58+ZhIRFBt7adggu/F+8g6ZYLu43H2/lgLuWA3Kg8vHBrCVWdfTTTt1p2wUhQomIkkypTuQ==}
 
   '@electron-internal/extract-zip@1.0.5':
     resolution: {integrity: sha512-+bqFCP98pLI0Tt0XQo1TmlXtwjWchISndDOxCkEcIuUgXWpBnLyRI+2DU+mesvnMMX6L1XDqYNA0lXNDHd/yiA==}
@@ -7013,8 +7007,6 @@ snapshots:
   '@decky/ui@4.13.0': {}
 
   '@dicebear/core@10.7.0': {}
-
-  '@dicebear/styles@10.6.0': {}
 
   '@electron-internal/extract-zip@1.0.5': {}
 

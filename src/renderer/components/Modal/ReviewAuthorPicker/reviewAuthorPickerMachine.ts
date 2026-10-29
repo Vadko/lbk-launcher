@@ -10,12 +10,12 @@ import type {
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { claimNickname, fetchReviewAuthor } from '../../../queries/reviewsClient';
 import { useReviewAuthorStore } from '../../../store/useReviewAuthorStore';
-import { isHoldLocked } from './isHoldLocked';
 import { FAILURE_NOTICE, type PickerNotice } from './pickerNotice';
 import { type ReelSchedule, reelSchedule } from './slotReelMotion';
 import {
   ALL_REELS,
   anyReel,
+  everyReel,
   NO_REELS,
   type ReelFlags,
   type SlotReelId,
@@ -36,12 +36,19 @@ interface PickerContext {
   schedule: ReelSchedule;
   notice: PickerNotice | null;
   author: ReviewAuthorIdentity | null;
+  // The claim took the dealt name; a nickname the machine already had is taken over, not won
+  won: boolean;
+  // The claim turned the shown name down, and only a new spin brings one that can be claimed
+  refused: boolean;
   animate: boolean;
+  // Spins the server still allows this hour; at 0 no pull starts the reels, since the server would only refuse it
+  spinsLeft: number | null;
 }
 
 interface PickerInput {
   spin: NicknameSpin | null;
   animate: boolean;
+  spinsLeft: number | null;
 }
 
 type PickerEvent =
@@ -105,6 +112,10 @@ export const reviewAuthorPickerMachine = setup({
   },
   guards: {
     hasSpin: ({ context }) => context.spin !== null,
+    canClaim: ({ context }) => context.spin !== null && !context.refused,
+    outOfSpins: ({ context }) => context.spinsLeft === 0,
+    // Three held reels would re-deal the very same name and only book it for another day
+    hasFreeReel: ({ context }) => !everyReel(context.holds),
   },
   delays: {
     settleAvatar: ({ context }) => context.schedule.settle.avatar,
@@ -124,14 +135,28 @@ export const reviewAuthorPickerMachine = setup({
     schedule: NO_SCHEDULE,
     notice: null,
     author: null,
+    won: false,
+    refused: false,
     animate: input.animate,
+    spinsLeft: input.spinsLeft,
   }),
   output: ({ context }) => context.author,
   initial: 'opening',
   states: {
     // A spin kept from an earlier open is still claimable, so it is shown instead of spending a new one
     opening: {
-      always: [{ guard: 'hasSpin', target: 'idle' }, { target: 'spinning' }],
+      always: [{ guard: 'hasSpin', target: 'idle' }, { target: 'pulling' }],
+    },
+    // Every spin, asked for or made by the picker itself, passes here, so an exhausted hour never starts the reels
+    pulling: {
+      always: [
+        {
+          guard: 'outOfSpins',
+          target: 'idle',
+          actions: assign({ moving: NO_REELS, notice: 'rateLimit' }),
+        },
+        { target: 'spinning' },
+      ],
     },
     spinning: {
       entry: assign(({ context }) => {
@@ -152,6 +177,8 @@ export const reviewAuthorPickerMachine = setup({
               event.output.ok
                 ? {
                     spin: event.output.data,
+                    refused: false,
+                    spinsLeft: event.output.data.spinsLeft,
                     heldSpin: context.spin,
                     schedule: reelSchedule(Date.now() - context.pulledAt, context.moving),
                   }
@@ -165,15 +192,13 @@ export const reviewAuthorPickerMachine = setup({
           {
             guard: ({ context, event }) =>
               codeOf(event.output) === 'invalid_hold' && anyReel(context.holds),
-            target: 'spinning',
-            reenter: true,
+            target: 'pulling',
             actions: assign({ holds: NO_REELS, notice: 'holdsReleased' }),
           },
           {
             guard: ({ context, event }) =>
               codeOf(event.output) === 'nicknames_exhausted' && holdsWord(context.holds),
-            target: 'spinning',
-            reenter: true,
+            target: 'pulling',
             actions: assign({
               holds: ({ context }) => ({
                 ...context.holds,
@@ -191,6 +216,7 @@ export const reviewAuthorPickerMachine = setup({
                 moving: NO_REELS,
                 notice: FAILURE_NOTICE[code],
                 holds: UNKNOWN_OUTCOME.has(code) ? NO_REELS : context.holds,
+                spinsLeft: code === 'rate_limit' ? 0 : context.spinsLeft,
               };
             }),
           },
@@ -218,10 +244,13 @@ export const reviewAuthorPickerMachine = setup({
     },
     idle: {
       on: {
-        PULL: { target: 'spinning', actions: assign({ notice: null }) },
+        PULL: {
+          guard: 'hasFreeReel',
+          target: 'pulling',
+          actions: assign({ notice: null }),
+        },
         TOGGLE_HOLD: {
-          guard: ({ context, event }) =>
-            context.spin !== null && !isHoldLocked(context.holds, event.reel),
+          guard: 'hasSpin',
           actions: assign({
             holds: ({ context, event }) => ({
               ...context.holds,
@@ -229,7 +258,7 @@ export const reviewAuthorPickerMachine = setup({
             }),
           }),
         },
-        CLAIM: { guard: 'hasSpin', target: 'claiming' },
+        CLAIM: { guard: 'canClaim', target: 'claiming' },
       },
     },
     claiming: {
@@ -243,20 +272,22 @@ export const reviewAuthorPickerMachine = setup({
             target: 'done',
             actions: assign({
               author: ({ event }) => (event.output.ok ? event.output.data : null),
+              won: true,
             }),
           },
           {
             guard: ({ event }) => codeOf(event.output) === 'nickname_taken',
-            target: 'spinning',
+            target: 'pulling',
             actions: assign({
               holds: ({ context }) => holdsAfterTaken(context.holds),
               notice: 'nameTaken',
+              refused: true,
             }),
           },
           {
             guard: ({ event }) => codeOf(event.output) === 'invalid_candidate',
-            target: 'spinning',
-            actions: assign({ holds: NO_REELS, notice: 'nameExpired' }),
+            target: 'pulling',
+            actions: assign({ holds: NO_REELS, notice: 'nameExpired', refused: true }),
           },
           {
             guard: ({ event }) => codeOf(event.output) === 'author_exists',

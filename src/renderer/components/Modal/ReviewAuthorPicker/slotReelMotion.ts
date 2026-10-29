@@ -5,16 +5,17 @@ import { type ReelFlags, SLOT_REELS, type SlotReelId } from './slotReels';
 export type ReelCell = string | null;
 
 export const REEL_CELL_PX = 52;
-// The result in full and half of each neighbour, as through the window of a real machine
-export const REEL_WINDOW_PX = 102;
-// The drum the strip is wrapped round
-const REEL_RADIUS_PX = 64;
+// Three whole rows, the result between its neighbours
+export const REEL_WINDOW_PX = 3 * REEL_CELL_PX;
 
-// When each reel comes to rest, counted from the pull
-const REST_AT_MS: Record<SlotReelId, number> = {
-  avatar: 1250,
-  adjective: 1650,
-  noun: 2050,
+// The spin loop's beat at 150 BPM, which the reels stop on
+export const SLOT_BEAT_MS = 400;
+
+// When each reel hits its stop, counted from the pull
+const STOP_AT_MS: Record<SlotReelId, number> = {
+  avatar: 990,
+  adjective: 990 + SLOT_BEAT_MS,
+  noun: 990 + 2 * SLOT_BEAT_MS,
 };
 
 const BRAKE_MS = 200;
@@ -25,13 +26,13 @@ const SETTLE_MS = BRAKE_MS + RECOIL_MS;
 const BRAKE_CELLS = 2;
 const OVERSHOOT_PX = 12;
 const KICK_PX = 16;
-const KICK_MS = 140;
+export const KICK_MS = 140;
 const SPIN_UP_MS = 420;
 const CELL_MS = 42;
 const MIN_LOOP = 6;
-const MAX_BLUR_PX = 12;
-// At full speed the smear runs a word into the next, a grey band on the paper
-const BLUR_PER_SPEED = 0.009;
+const MAX_BLUR_PX = 3.5;
+// The loop's pace, a cell every 42 ms, reaches the full smear
+const BLUR_PER_SPEED = 0.0028;
 // The speed reading lags a frame, and sharp decoys at the start of a spin read as a result
 const MIN_SPIN_BLUR_PX = 2;
 
@@ -44,10 +45,10 @@ export interface ReelSchedule {
 
 // A reel needs the answer's decoys to settle on, so a slow answer moves every stop by the same amount
 export function reelSchedule(answeredAfterMs: number, moving: ReelFlags): ReelSchedule {
-  const firstSettle = REST_AT_MS.avatar - SETTLE_MS;
+  const firstSettle = STOP_AT_MS.avatar - BRAKE_MS;
   const shift = Math.max(0, answeredAfterMs - firstSettle);
   const fromAnswer = (reel: SlotReelId) =>
-    REST_AT_MS[reel] - SETTLE_MS + shift - answeredAfterMs;
+    STOP_AT_MS[reel] - BRAKE_MS + shift - answeredAfterMs;
   const settle = {
     avatar: fromAnswer('avatar'),
     adjective: fromAnswer('adjective'),
@@ -63,28 +64,6 @@ export function reelSchedule(answeredAfterMs: number, moving: ReelFlags): ReelSc
 // The strip's y that puts cell `index` in the middle of the window
 export const reelOffset = (index: number): number =>
   (REEL_WINDOW_PX - REEL_CELL_PX) / 2 - index * REEL_CELL_PX;
-
-export interface ReelCellProjection {
-  // How far the drum moves the cell from its place on a flat strip
-  shift: number;
-  scale: number;
-  // On the half of the drum that faces the window
-  visible: boolean;
-}
-
-// A cell d px from the window's middle shows at r·sin(d/r), squashed by cos(d/r)
-export function reelCellProjection(stripY: number, index: number): ReelCellProjection {
-  const fromMiddle = stripY + (index + 0.5) * REEL_CELL_PX - REEL_WINDOW_PX / 2;
-  const angle = fromMiddle / REEL_RADIUS_PX;
-  if (Math.abs(angle) >= Math.PI / 2) {
-    return { shift: 0, scale: 0, visible: false };
-  }
-  return {
-    shift: REEL_RADIUS_PX * Math.sin(angle) - fromMiddle,
-    scale: Math.cos(angle),
-    visible: true,
-  };
-}
 
 const cellAt = (decoys: readonly string[], index: number): ReelCell =>
   decoys.length > 0 ? decoys[index % decoys.length] : null;

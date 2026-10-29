@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import React, { useId } from 'react';
-import { SlotReelCell } from './SlotReelCell';
+import { REEL_CELL_PX } from './slotReelMotion';
 import { useSlotReelMotion } from './useSlotReelMotion';
+
+const CELL = { height: REEL_CELL_PX };
 
 interface SlotReelProps {
   value: string | null;
@@ -13,7 +15,7 @@ interface SlotReelProps {
   onLand: () => void;
 }
 
-// One cylinder behind the window; its hold button below carries what a screen reader hears
+// One flat strip in the reel window; its hold button below carries what a screen reader hears
 export const SlotReel: React.FC<SlotReelProps> = ({
   value,
   decoys,
@@ -24,7 +26,7 @@ export const SlotReel: React.FC<SlotReelProps> = ({
   onLand,
 }) => {
   const blurId = useId();
-  const { cells, y, blurRef, isBlurred } = useSlotReelMotion({
+  const { cells, y, blurRef, isBlurred, resultIndex } = useSlotReelMotion({
     value,
     decoys,
     isMoving,
@@ -53,13 +55,17 @@ export const SlotReel: React.FC<SlotReelProps> = ({
       >
         <motion.div className="flex flex-col" style={{ y }}>
           {cells.map((cell, index) => (
-            <SlotReelCell key={index} y={y} index={index}>
+            <div
+              key={index}
+              className="slot-reel__cell"
+              data-result={index === resultIndex || undefined}
+              style={CELL}
+            >
               {cell === null ? placeholder : renderCell(cell)}
-            </SlotReelCell>
+            </div>
           ))}
         </motion.div>
       </div>
-      <span className="slot-reel__shade" />
     </div>
   );
 };

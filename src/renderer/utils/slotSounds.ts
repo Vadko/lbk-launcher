@@ -1,4 +1,11 @@
+import hold from '@resources/sounds/slot/hold.ogg?inline';
+import leverThunk from '@resources/sounds/slot/lever-thunk.ogg?inline';
+import payout from '@resources/sounds/slot/payout.ogg?inline';
+import ratchet from '@resources/sounds/slot/ratchet.ogg?inline';
+import reelSpin from '@resources/sounds/slot/reel-spin.ogg?inline';
+import reelStop from '@resources/sounds/slot/reel-stop.ogg?inline';
 import { getAudioContext } from './audioContext';
+import { ratchetRun } from './ratchetRun';
 import { uiSoundsEnabled } from './uiSoundsEnabled';
 
 export interface ReelWhirr {
@@ -9,98 +16,92 @@ export interface ReelWhirr {
 
 const SILENT_WHIRR: ReelWhirr = { setLevel: () => undefined, stop: () => undefined };
 
-const WHIRR_GAIN = 0.05;
+// The clips (resources/sounds/slot/SOURCES.md), inlined as data URIs, which fetch reads even in the packaged file:// renderer
+const CLIPS = { hold, leverThunk, payout, ratchet, reelSpin, reelStop };
+
+type Clip = keyof typeof CLIPS;
+
+const CLIP_NAMES = Object.keys(CLIPS) as Clip[];
+
+const semitones = (steps: number): number => 2 ** (steps / 12);
+
 const SILENCE = 0.0001;
 // In step with the lever's 0.32 s pull, which speeds up as it drops
 const RATCHET_AT = [0, 0.067, 0.127, 0.18, 0.227, 0.267];
+// The clips are in E: the ticks climb the pentatonic scale from E to the E above, where the thunk lands
+const RATCHET_RATE = [0, 2, 4, 7, 9, 12].map(semitones);
+const RATCHET_GAIN = 0.35;
 const THUNK_AT = 0.32;
-const BELL_HZ = 1180;
-const BELL_STRIKES = 10;
-const BELL_STEP = 0.06;
-const BELL_DECAY = 0.35;
-// A struck bell's partials are not harmonics, which is what makes it ring rather than beep
-const BELL_PARTIALS = [
-  { ratio: 1, gain: 0.07 },
-  { ratio: 2.76, gain: 0.035 },
-  { ratio: 5.4, gain: 0.02 },
-  { ratio: 8.93, gain: 0.01 },
-];
-const COIN_AT = [0.1, 0.28, 0.46];
+// The stops rise root, major third, fifth, and the payout resolves them
+const REEL_STOP_RATE = [0, 4, 7].map(semitones);
+// Releasing a reel answers the hold a fourth lower
+const HOLD_RELEASE_RATE = semitones(-5);
+const SPIN_GAIN = 0.2;
+// One bar at the clips' 150 BPM, the beat the reels stop on; a decode a few frames longer would drift off it every pass
+const SPIN_LOOP_S = 1.6;
+// A sound asked for while the recordings still decode plays late only by this much; later than that it would lag its motion
+const LATE_S = 0.15;
 
-const noiseBuffers = new WeakMap<AudioContext, AudioBuffer>();
+const buffers = new Map<Clip, AudioBuffer>();
+let loading: Promise<boolean> | null = null;
+let nextToothAt = 0;
 
-function noiseOf(ctx: AudioContext): AudioBuffer {
-  const known = noiseBuffers.get(ctx);
-  if (known) {
-    return known;
-  }
-  const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-  const samples = buffer.getChannelData(0);
-  for (let index = 0; index < samples.length; index++) {
-    samples[index] = Math.random() * 2 - 1;
-  }
-  noiseBuffers.set(ctx, buffer);
-  return buffer;
+// Resolves false when decoding failed, and the next sound tries again
+function loadClips(ctx: AudioContext): Promise<boolean> {
+  loading ??= Promise.all(
+    CLIP_NAMES.map(async (name) => {
+      const response = await fetch(CLIPS[name]);
+      buffers.set(name, await ctx.decodeAudioData(await response.arrayBuffer()));
+    })
+  ).then(
+    () => true,
+    (error: unknown) => {
+      loading = null;
+      console.error('[SlotSound] Failed to decode the recordings:', error);
+      return false;
+    }
+  );
+  return loading;
 }
 
-interface Burst {
+interface Hit {
   at: number;
-  frequency: number;
-  q: number;
   gain: number;
-  decay: number;
-  filter?: BiquadFilterType;
+  rate?: number;
 }
 
-// Filtered noise hit: a ratchet tooth, a latch, the rattle of a stopping reel
-function burst(
-  ctx: AudioContext,
-  { at, frequency, q, gain, decay, filter = 'bandpass' }: Burst
-) {
+// A clip sped up is shorter and so sounds quieter; keeping its energy stops a rising figure from fading
+const pitched = (at: number, gain: number, rate: number): Hit => ({
+  at,
+  gain: gain * Math.sqrt(rate),
+  rate,
+});
+
+const rateAt = (rates: readonly number[], index: number): number =>
+  rates[Math.min(Math.max(index, 0), rates.length - 1)];
+
+function hit(ctx: AudioContext, clip: Clip, { at, gain, rate = 1 }: Hit): void {
+  const buffer = buffers.get(clip);
+  if (!buffer) {
+    return;
+  }
   const source = ctx.createBufferSource();
-  source.buffer = noiseOf(ctx);
-  const band = ctx.createBiquadFilter();
-  band.type = filter;
-  band.frequency.setValueAtTime(frequency, at);
-  band.Q.setValueAtTime(q, at);
-  const envelope = ctx.createGain();
-  envelope.gain.setValueAtTime(gain, at);
-  envelope.gain.exponentialRampToValueAtTime(SILENCE, at + decay);
-  source.connect(band).connect(envelope).connect(ctx.destination);
-  source.start(at, Math.random() * 0.5);
-  source.stop(at + decay + 0.02);
+  source.buffer = buffer;
+  // playbackRate is k-rate: set at a future time inside a render quantum, the clip's attack would play at the old rate
+  source.playbackRate.value = rate;
+  const level = ctx.createGain();
+  level.gain.value = gain;
+  source.connect(level).connect(ctx.destination);
+  source.start(at);
 }
 
-interface Tone {
-  at: number;
-  from: number;
-  to: number;
-  gain: number;
-  decay: number;
-  type?: OscillatorType;
-}
-
-function tone(ctx: AudioContext, { at, from, to, gain, decay, type = 'sine' }: Tone) {
-  const oscillator = ctx.createOscillator();
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(from, at);
-  oscillator.frequency.exponentialRampToValueAtTime(to, at + decay);
-  const envelope = ctx.createGain();
-  envelope.gain.setValueAtTime(SILENCE, at);
-  envelope.gain.linearRampToValueAtTime(gain, at + 0.004);
-  envelope.gain.exponentialRampToValueAtTime(SILENCE, at + decay);
-  oscillator.connect(envelope).connect(ctx.destination);
-  oscillator.start(at);
-  oscillator.stop(at + decay + 0.02);
-}
-
-// Opening the audio context takes over 100 ms, which would otherwise stall the lever's first pull
+// Opening the audio context takes over 100 ms and decoding a little more, which would otherwise stall the lever's first pull
 export function warmSlotSounds(): void {
   if (!uiSoundsEnabled()) {
     return;
   }
   try {
-    noiseOf(getAudioContext());
+    void loadClips(getAudioContext());
   } catch (error) {
     console.error('[SlotSound] Failed to open the audio context:', error);
   }
@@ -113,101 +114,89 @@ function play(name: string, sound: (ctx: AudioContext, at: number) => void): voi
   }
   try {
     const ctx = getAudioContext();
-    sound(ctx, ctx.currentTime);
+    const askedAt = ctx.currentTime;
+    if (buffers.size === CLIP_NAMES.length) {
+      sound(ctx, askedAt);
+      return;
+    }
+    void loadClips(ctx).then((loaded) => {
+      if (loaded && ctx.currentTime - askedAt < LATE_S) {
+        sound(ctx, ctx.currentTime);
+      }
+    });
   } catch (error) {
     console.error(`[SlotSound] Failed to play ${name}:`, error);
   }
 }
 
-const ratchet = (ctx: AudioContext, at: number, gain: number) => {
-  burst(ctx, { at, frequency: 3200, q: 6, gain, decay: 0.025 });
-  tone(ctx, { at, from: 1900, to: 1300, gain: gain / 5, decay: 0.02, type: 'square' });
-};
-
-const thunk = (ctx: AudioContext, at: number) => {
-  tone(ctx, { at, from: 115, to: 46, gain: 0.22, decay: 0.17 });
-  burst(ctx, { at, frequency: 480, q: 0.7, gain: 0.12, decay: 0.08, filter: 'lowpass' });
-  burst(ctx, { at, frequency: 1500, q: 3, gain: 0.05, decay: 0.04 });
-};
-
-// One tooth of the lever's ratchet, while it is dragged
-export const playRatchetClick = () =>
-  play('ratchet', (ctx, at) => ratchet(ctx, at, 0.14));
+// Teeth of the dragged lever passed together, 1 at the top to 6 at the bottom, all sounded within `withinS`
+export function playRatchetRun(teeth: readonly number[], withinS: number): void {
+  if (teeth.length === 0) {
+    return;
+  }
+  play('ratchet', (ctx, now) => {
+    const run = ratchetRun(now, nextToothAt, teeth.length, withinS);
+    nextToothAt = run.free;
+    teeth.forEach((tooth, index) =>
+      hit(
+        ctx,
+        'ratchet',
+        pitched(run.at[index], RATCHET_GAIN, rateAt(RATCHET_RATE, tooth - 1))
+      )
+    );
+  });
+}
 
 // The lever hits the bottom of its travel
-export const playLeverThunk = () => play('thunk', thunk);
+export const playLeverThunk = () =>
+  play('thunk', (ctx, at) => hit(ctx, 'leverThunk', { at, gain: 0.45 }));
 
-// A whole pull: the ratchet runs faster as the arm drops, then the arm bottoms out
+// A whole pull: the ticks run up the scale as the knob drops, then it bottoms out
 export const playLeverPull = () =>
   play('lever', (ctx, at) => {
     RATCHET_AT.forEach((offset, index) =>
-      ratchet(ctx, at + offset, 0.09 + index * 0.012)
+      hit(ctx, 'ratchet', pitched(at + offset, RATCHET_GAIN, RATCHET_RATE[index]))
     );
-    thunk(ctx, at + THUNK_AT);
+    hit(ctx, 'leverThunk', { at: at + THUNK_AT, gain: 0.45 });
   });
 
-export const playReelStop = () =>
-  play('reel stop', (ctx, at) => {
-    tone(ctx, { at, from: 165, to: 70, gain: 0.16, decay: 0.11 });
-    burst(ctx, { at, frequency: 900, q: 2, gain: 0.12, decay: 0.05 });
-    burst(ctx, { at: at + 0.006, frequency: 2600, q: 4, gain: 0.05, decay: 0.03 });
-  });
+export const playReelStop = (reelIndex: number) =>
+  play('reel stop', (ctx, at) =>
+    hit(ctx, 'reelStop', pitched(at, 0.5, rateAt(REEL_STOP_RATE, reelIndex)))
+  );
 
-export const playHoldClick = () =>
-  play('hold', (ctx, at) => {
-    tone(ctx, { at, from: 1300, to: 880, gain: 0.05, decay: 0.035, type: 'triangle' });
-    burst(ctx, { at, frequency: 4000, q: 3, gain: 0.05, decay: 0.02 });
-  });
+export const playHoldClick = (on: boolean) =>
+  play('hold', (ctx, at) =>
+    hit(ctx, 'hold', { at, gain: 0.4, rate: on ? 1 : HOLD_RELEASE_RATE })
+  );
 
-// The payout: the machine's bell rings on and coins drop into the tray
+// The payout, once the nickname is taken
 export const playWinChime = () =>
-  play('payout', (ctx, at) => {
-    for (let strike = 0; strike < BELL_STRIKES; strike++) {
-      for (const { ratio, gain } of BELL_PARTIALS) {
-        const frequency = BELL_HZ * ratio;
-        tone(ctx, {
-          at: at + strike * BELL_STEP,
-          from: frequency,
-          to: frequency,
-          gain,
-          decay: BELL_DECAY,
-        });
-      }
-    }
-    for (const offset of COIN_AT) {
-      burst(ctx, { at: at + offset, frequency: 5200, q: 12, gain: 0.08, decay: 0.03 });
-    }
-  });
+  play('payout', (ctx, at) => hit(ctx, 'payout', { at, gain: 0.35 }));
 
-// Band-passed noise chopped by a sawtooth, the ticking hum of the reels; runs until stopped
+// The spin bed, in time with the stops and a step quieter as each one lands; runs until stopped
 export function startReelWhirr(): ReelWhirr {
   if (!uiSoundsEnabled()) {
     return SILENT_WHIRR;
   }
   try {
     const ctx = getAudioContext();
+    const buffer = buffers.get('reelSpin');
+    if (!buffer) {
+      void loadClips(ctx);
+      return SILENT_WHIRR;
+    }
     const at = ctx.currentTime;
     const source = ctx.createBufferSource();
-    source.buffer = noiseOf(ctx);
+    source.buffer = buffer;
     source.loop = true;
-    const band = ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.setValueAtTime(700, at);
-    band.Q.setValueAtTime(0.9, at);
-    const flutter = ctx.createGain();
-    flutter.gain.setValueAtTime(0.6, at);
-    const tick = ctx.createOscillator();
-    tick.type = 'sawtooth';
-    tick.frequency.setValueAtTime(26, at);
-    const depth = ctx.createGain();
-    depth.gain.setValueAtTime(0.4, at);
+    source.loopStart = 0;
+    source.loopEnd = SPIN_LOOP_S;
     const level = ctx.createGain();
     level.gain.setValueAtTime(SILENCE, at);
-    level.gain.linearRampToValueAtTime(WHIRR_GAIN, at + 0.12);
-    tick.connect(depth).connect(flutter.gain);
-    source.connect(band).connect(flutter).connect(level).connect(ctx.destination);
+    level.gain.linearRampToValueAtTime(SPIN_GAIN, at + 0.08);
+    source.connect(level).connect(ctx.destination);
     source.start(at);
-    tick.start(at);
 
     let stopped = false;
     return {
@@ -217,8 +206,7 @@ export function startReelWhirr(): ReelWhirr {
         }
         const now = ctx.currentTime;
         level.gain.cancelAndHoldAtTime(now);
-        level.gain.setTargetAtTime(WHIRR_GAIN * share, now, 0.05);
-        tick.frequency.setTargetAtTime(14 + 12 * share, now, 0.1);
+        level.gain.setTargetAtTime(SPIN_GAIN * share, now, 0.05);
       },
       stop: () => {
         if (stopped) {
@@ -229,7 +217,6 @@ export function startReelWhirr(): ReelWhirr {
         level.gain.cancelAndHoldAtTime(now);
         level.gain.setTargetAtTime(SILENCE, now, 0.04);
         source.stop(now + 0.25);
-        tick.stop(now + 0.25);
       },
     };
   } catch (error) {

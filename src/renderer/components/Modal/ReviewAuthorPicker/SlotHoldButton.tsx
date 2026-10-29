@@ -11,40 +11,36 @@ interface SlotHoldButtonProps {
   isMoving: boolean;
   isHeld: boolean;
   canHold: boolean;
-  // Two other reels are held, and a third hold is never allowed
-  isLocked: boolean;
   onToggleHold: (reel: SlotReelId) => void;
 }
 
-// A lit push-button cap under its reel; a held one latches down and glows
+// A pill under its reel; a held one takes the accent
 export const SlotHoldButton: React.FC<SlotHoldButtonProps> = ({
   reel,
   spokenValue,
   isMoving,
   isHeld,
   canHold,
-  isLocked,
   onToggleHold,
 }) => {
   const name = t(`reviewAuthorPicker.reel.${reel}`);
-  const isEnabled = canHold && !isLocked;
 
   return (
     <button
       type="button"
       aria-busy={isMoving || undefined}
       aria-pressed={isHeld}
-      aria-disabled={!isEnabled || undefined}
+      aria-disabled={!canHold || undefined}
       onClick={() => {
-        if (isEnabled) {
-          playHoldClick();
+        if (canHold) {
+          playHoldClick(!isHeld);
           onToggleHold(reel);
         }
       }}
       data-gamepad-modal-item
-      className="slot-hold justify-self-center"
+      className="slot-hold"
     >
-      {isLocked && <LockIcon size={10} className="shrink-0" aria-hidden />}
+      <LockIcon size={13} strokeWidth={2.25} className="shrink-0" aria-hidden />
       <span className="min-w-0 truncate">
         {t(isHeld ? 'reviewAuthorPicker.held' : 'reviewAuthorPicker.hold')}
       </span>{' '}
