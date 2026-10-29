@@ -89,7 +89,7 @@ describe('submitFeedback', () => {
     expect(sentBody()).toMatchObject({ allowPublish: true, captchaToken: 'token-1' });
   });
 
-  // Without a token the server would store the post as private, so nothing goes out
+  // Without a token the server answers captcha_failed, so nothing goes out
   it('sends no public post without a token', async () => {
     takeCaptchaToken.mockResolvedValue(null);
 

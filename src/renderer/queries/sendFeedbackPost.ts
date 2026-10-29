@@ -1,7 +1,9 @@
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
+import type { GameReviewOutcome } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
 import { afterRefusal, attemptFor, type FeedbackAttempt } from '../utils/feedbackAttempt';
+import { feedbackFailureMessage } from '../utils/feedbackFailureMessage';
 import { requestFeedbackUploadUrls, sendFeedback } from './reviewsClient';
 
 interface FeedbackScreenshot {
@@ -10,7 +12,7 @@ interface FeedbackScreenshot {
   type: string;
 }
 
-interface FeedbackPost {
+export interface FeedbackPost {
   gameId: string;
   type: FeedbackType;
   message: string;
@@ -21,20 +23,13 @@ interface FeedbackPost {
 type Refusal = { ok: false; message: string; failure: ReviewFailure | null };
 
 // The attempt to send next time: the same post keeps its id and uploads
-type FeedbackPostResult = ({ ok: true } | Refusal) & { attempt: FeedbackAttempt };
+export type FeedbackPostResult = ({ ok: true; outcome: GameReviewOutcome } | Refusal) & {
+  attempt: FeedbackAttempt;
+};
 
 type UploadResult = ({ ok: true; paths: string[] } | Refusal) & {
   uploads: ReadonlyMap<File, string>;
 };
-
-function failureMessage(failure: ReviewFailure): string {
-  if (failure.code === 'rate_limit') {
-    return t('feedbackModal.rateLimit');
-  }
-  return failure.code === 'unreachable'
-    ? t('feedbackModal.networkError')
-    : t('feedbackModal.sendFailed');
-}
 
 // A resend under the same id uploads only what the last attempt did not, so no file is left orphaned
 async function uploadScreenshots(
@@ -80,6 +75,7 @@ export async function sendFeedbackPost(
     type: post.type,
     message: post.message,
     files: post.screenshots.map((shot) => shot.file),
+    allowPublish: post.allowPublish,
   };
   const attempt = attemptFor(previous, content);
   const uploaded = await uploadScreenshots(attempt, post.screenshots);
@@ -98,11 +94,11 @@ export async function sendFeedbackPost(
     allowPublish: post.allowPublish,
   });
   if (sent.ok) {
-    return { ok: true, attempt: withUploads };
+    return { ok: true, outcome: sent.data.outcome, attempt: withUploads };
   }
   return {
     ok: false,
-    message: failureMessage(sent.failure),
+    message: feedbackFailureMessage(sent.failure, post.allowPublish),
     failure: sent.failure,
     attempt: afterRefusal(withUploads, content, sent.failure),
   };

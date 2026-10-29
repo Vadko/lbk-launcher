@@ -72,7 +72,7 @@ describe('sendFeedbackPost', () => {
   it('uploads every screenshot under the post id, then sends their paths', async () => {
     const result = await sendFeedbackPost(first(), post());
 
-    expect(result.ok).toBe(true);
+    expect(result).toMatchObject({ ok: true, outcome: 'published' });
     expect(client.requestFeedbackUploadUrls).toHaveBeenCalledWith({
       id: POST,
       fileNames: ['a.png', 'b.png'],
@@ -141,20 +141,38 @@ describe('sendFeedbackPost', () => {
     expect(client.sendFeedback).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['rate_limit', 'retry', 'feedbackModal.rateLimit'],
-    ['unreachable', 'retry', 'feedbackModal.networkError'],
-    ['captcha_failed', 'retry', 'feedbackModal.sendFailed'],
-    ['not_found', 'rejected', 'feedbackModal.sendFailed'],
-  ] as const)('explains a refused %s post', async (code, kind, key) => {
-    client.sendFeedback.mockResolvedValue(refusal(code, kind));
+  it.each(['published', 'pending', 'removed'] as const)(
+    'hands back the server outcome %s',
+    async (outcome) => {
+      client.sendFeedback.mockResolvedValue({ ok: true, data: { id: POST, outcome } });
 
-    expect(await sendFeedbackPost(first(), post([]))).toMatchObject({
-      ok: false,
-      message: t(key),
-      failure: { code, kind },
-    });
-  });
+      expect(await sendFeedbackPost(first(), post([]))).toMatchObject({
+        ok: true,
+        outcome,
+      });
+    }
+  );
+
+  it.each([
+    ['rate_limit', 'retry', false, 'feedbackModal.rateLimit'],
+    ['unreachable', 'retry', false, 'feedbackModal.networkError'],
+    ['captcha_failed', 'retry', true, 'feedbackModal.captchaFailed'],
+    ['not_found', 'rejected', true, 'feedbackModal.gameUnavailable'],
+    ['not_found', 'rejected', false, 'feedbackModal.gameRemoved'],
+  ] as const)(
+    'explains a refused %s post (public: %s)',
+    async (code, kind, allowPublish, key) => {
+      client.sendFeedback.mockResolvedValue(refusal(code, kind));
+
+      expect(
+        await sendFeedbackPost(first(), { ...post([]), allowPublish })
+      ).toMatchObject({
+        ok: false,
+        message: t(key),
+        failure: { code, kind },
+      });
+    }
+  );
 
   it('resends the same post without uploading its screenshots again', async () => {
     client.sendFeedback.mockResolvedValueOnce(refusal('rate_limit', 'retry'));

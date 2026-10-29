@@ -6,6 +6,7 @@ interface FeedbackContent {
   type: FeedbackType;
   message: string;
   files: readonly File[];
+  allowPublish: boolean;
 }
 
 export interface FeedbackAttempt {
@@ -24,6 +25,7 @@ function isSameContent(a: FeedbackContent, b: FeedbackContent): boolean {
   return (
     a.type === b.type &&
     a.message === b.message &&
+    a.allowPublish === b.allowPublish &&
     a.files.length === b.files.length &&
     a.files.every((file, i) => file === b.files[i])
   );

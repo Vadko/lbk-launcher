@@ -14,6 +14,7 @@ const content = (extra: Partial<Parameters<typeof attemptFor>[1]> = {}) => ({
   type: 'feedback' as const,
   message: 'Text',
   files: [FILE_A],
+  allowPublish: false,
   ...extra,
 });
 
@@ -55,6 +56,7 @@ describe('attemptFor', () => {
     ['another screenshot', { files: [FILE_B] }],
     ['one more screenshot', { files: [FILE_A, FILE_B] }],
     ['no screenshots', { files: [] }],
+    ['publishing turned on', { allowPublish: true }],
   ])('starts over for %s after an unconfirmed send', (_label, change) => {
     const next = attemptFor(attempt(content()), content(change));
 

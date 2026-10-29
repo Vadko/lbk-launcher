@@ -20,7 +20,7 @@ const uploadUrlsSchema: z.ZodType<FeedbackUploadUrl[]> = z
   })
   .transform(({ uploadUrls }) => uploadUrls);
 
-// The server stores a post without a token as private, silently, so publishing never goes out without one
+// The server refuses allowPublish without a solved captcha (403 captcha_failed), so a public post waits for a token
 export function submitFeedback({
   id,
   gameId,
