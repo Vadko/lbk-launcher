@@ -1,5 +1,6 @@
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import type { FeedbackType } from '@/shared/types';
+import { isOutcomeUnknown } from './isOutcomeUnknown';
 
 interface FeedbackContent {
   type: FeedbackType;
@@ -14,13 +15,6 @@ export interface FeedbackAttempt {
   // Content sent without a clear answer: the server may already hold it under this id
   unconfirmed: FeedbackContent | null;
 }
-
-// A lost or garbled answer can follow a post the server stored
-const OUTCOME_UNKNOWN: ReadonlySet<ReviewFailure['code']> = new Set([
-  'unreachable',
-  'bad_response',
-  'internal',
-]);
 
 export function freshAttempt(): FeedbackAttempt {
   return { id: crypto.randomUUID(), uploads: new Map(), unconfirmed: null };
@@ -50,7 +44,5 @@ export function afterRefusal(
   content: FeedbackContent,
   failure: ReviewFailure
 ): FeedbackAttempt {
-  return OUTCOME_UNKNOWN.has(failure.code)
-    ? { ...attempt, unconfirmed: content }
-    : attempt;
+  return isOutcomeUnknown(failure) ? { ...attempt, unconfirmed: content } : attempt;
 }

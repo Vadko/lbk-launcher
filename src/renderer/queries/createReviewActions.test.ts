@@ -1,215 +1,260 @@
 import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ReviewReplyInput,
-  ReviewResult,
-  ReviewWriteResult,
-} from '@/shared/game-reviews-api-types';
+import type { ReviewEditInput, ReviewReplyInput } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
-import { findEntry, type ReviewPages } from '../utils/reviewCache';
-import { reviewPages, reviewThread } from '../utils/reviewPages.fixture';
-import { gameReviewsQueryKey } from './gameReviewsQueryKey';
+import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
+import type { ReviewPages } from '../utils/reviewCache';
+import {
+  banned,
+  deferAnswer,
+  flush,
+  heldWrites,
+  isCached,
+  liveSignal,
+  needsAuthor,
+  OWL,
+  published,
+  REVIEWS_KEY,
+  rateLimit,
+  seedReviews,
+  shownEntry,
+  unreachable,
+  type WriteAnswer,
+} from './reviewActions.fixture';
 
-const sendReviewReply =
-  vi.fn<(input: ReviewReplyInput) => Promise<ReviewResult<ReviewWriteResult>>>();
+const sendReviewReply = vi.fn<(input: ReviewReplyInput) => Promise<WriteAnswer>>();
+const sendReviewEdit = vi.fn<(input: ReviewEditInput) => Promise<WriteAnswer>>();
 const ensureAuthor =
   vi.fn<(signal?: AbortSignal) => Promise<ReviewAuthorIdentity | null>>();
 const forgetAuthor = vi.fn();
-vi.mock('./reviewsClient', () => ({ sendReviewReply, sendReviewEdit: vi.fn() }));
+vi.mock('./reviewsClient', () => ({ sendReviewReply, sendReviewEdit }));
 vi.mock('../store/useReviewAuthorStore', () => ({
   useReviewAuthorStore: { getState: () => ({ ensureAuthor, forgetAuthor }) },
 }));
 
 const { createReviewActions } = await import('./createReviewActions');
 
-const OWL: ReviewAuthorIdentity = { name: 'Quiet Owl', avatarSeed: '0a1b2c3d4e5f' };
-const KEY = gameReviewsQueryKey('g1');
-const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
-const published = (id: string): ReviewResult<ReviewWriteResult> => ({
-  ok: true,
-  data: { id, outcome: 'published' },
-});
-const needsAuthor: ReviewResult<ReviewWriteResult> = {
-  ok: false,
-  failure: { code: 'author_required', kind: 'needs-author' },
-};
-
 let queryClient: QueryClient;
 
 function seed(isPublic: boolean, viewer: ReviewAuthorIdentity | null = null) {
-  const data = reviewPages([reviewThread('t', [], isPublic)]);
-  queryClient.setQueryData<ReviewPages>(KEY, {
-    ...data,
-    pages: data.pages.map((page) => ({ ...page, viewer })),
-  });
+  seedReviews(queryClient, isPublic, viewer);
   return createReviewActions(queryClient, 'g1');
 }
 
-const liveSignal = () => new AbortController().signal;
 const sentIds = () => sendReviewReply.mock.calls.map(([input]) => input.id);
-const entry = (id: string) =>
-  findEntry(queryClient.getQueryData<ReviewPages>(KEY), id)?.entry;
+const cached = () => queryClient.getQueryData<ReviewPages>(REVIEWS_KEY);
+const shown = (id: string) => shownEntry(queryClient, id);
+const inCache = (id: string) => isCached(queryClient, id);
 
 beforeEach(() => {
   queryClient = new QueryClient();
+  useReviewOverlayStore.setState({ games: new Map() });
   sendReviewReply.mockReset();
   sendReviewReply.mockImplementation(({ id }) => Promise.resolve(published(id)));
+  sendReviewEdit.mockReset();
+  sendReviewEdit.mockImplementation(({ id }) => Promise.resolve(published(id)));
   ensureAuthor.mockReset();
   forgetAuthor.mockReset();
 });
 
-describe('createReviewActions public reply gate', () => {
-  it('sends a private reply without asking for a nickname', async () => {
+describe('createReviewActions overlay', () => {
+  it('sends nothing for a thread the pages do not hold', async () => {
     const onShown = vi.fn();
 
     await expect(
-      seed(false).sendReply('t', 'hi', null, onShown, liveSignal())
-    ).resolves.toBe(true);
-    await flush();
+      seed(true, OWL).sendReply('missing', 'hi', null, onShown, liveSignal())
+    ).resolves.toBe(false);
 
-    expect(ensureAuthor).not.toHaveBeenCalled();
-    expect(sendReviewReply).toHaveBeenCalledWith(
-      expect.objectContaining({ reviewId: 't', isPublic: false })
-    );
+    expect(sendReviewReply).not.toHaveBeenCalled();
+    expect(onShown).not.toHaveBeenCalled();
+    expect(heldWrites().size).toBe(0);
+  });
+
+  it('keeps an unanswered reply out of the cache and shows it from the overlay', async () => {
+    const answer = deferAnswer(sendReviewReply);
+    const onShown = vi.fn();
+
+    await seed(false).sendReply('t', 'hi', null, onShown, liveSignal());
+    const id = sentIds()[0];
+
     expect(onShown).toHaveBeenCalled();
+    expect(inCache(id)).toBe(false);
+    expect(shown(id)).toMatchObject({ text: 'hi', isChecking: true, write: 'reply' });
+    answer(published(id));
   });
 
-  it('signs a public reply with the nickname the pages already carry', async () => {
-    await seed(true, OWL).sendReply('t', 'hi', null, vi.fn(), liveSignal());
-    await flush();
-
-    expect(ensureAuthor).not.toHaveBeenCalled();
-    expect(entry(sentIds()[0])?.author).toMatchObject({ name: OWL.name, isMine: true });
-  });
-
-  it('asks for a nickname before a public reply and signs it with the claimed one', async () => {
-    ensureAuthor.mockResolvedValue(OWL);
-
-    await expect(
-      seed(true).sendReply('t', 'hi', null, vi.fn(), liveSignal())
-    ).resolves.toBe(true);
-    await flush();
-
-    expect(sendReviewReply).toHaveBeenCalledWith(
-      expect.objectContaining({ isPublic: true, text: 'hi' })
+  it('hands a taken reply to the cache without a moment it is missing', async () => {
+    const answer = deferAnswer(sendReviewReply);
+    await seed(false).sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    const id = sentIds()[0];
+    const visible: boolean[] = [];
+    const stop = useReviewOverlayStore.subscribe(() =>
+      visible.push(shown(id) !== undefined)
     );
-    expect(entry(sentIds()[0])?.author).toMatchObject({
-      name: OWL.name,
-      avatarSeed: OWL.avatarSeed,
-    });
+
+    answer(published(id));
+    await vi.waitFor(() => expect(heldWrites().size).toBe(0));
+    stop();
+
+    expect(visible).toEqual([true]);
+    expect(inCache(id)).toBe(true);
+    expect(shown(id)).toMatchObject({ moderation: 'published' });
+    expect(shown(id)?.isChecking).toBeUndefined();
   });
 
-  it('sends nothing and keeps the composer open when the picker is closed', async () => {
+  it.each([
+    ['a retry', rateLimit, 'rate_limit'],
+    ['a needs-author', needsAuthor, 'author_required'],
+  ])('turns the reply failed on %s answer', async (_label, answer, code) => {
+    sendReviewReply.mockResolvedValue(answer);
     ensureAuthor.mockResolvedValue(null);
-    const onShown = vi.fn();
-    const actions = seed(true);
-    const before = queryClient.getQueryData(KEY);
 
-    await expect(actions.sendReply('t', 'hi', null, onShown, liveSignal())).resolves.toBe(
-      false
-    );
+    await seed(false).sendReply('t', 'hi', null, vi.fn(), liveSignal());
     await flush();
 
-    expect(sendReviewReply).not.toHaveBeenCalled();
-    expect(onShown).not.toHaveBeenCalled();
-    expect(queryClient.getQueryData(KEY)).toBe(before);
-  });
-
-  it('hands the composer signal to the nickname lookup and sends nothing once it aborts', async () => {
-    let lookedUp: (author: ReviewAuthorIdentity | null) => void = () => undefined;
-    ensureAuthor.mockReturnValue(
-      new Promise((resolve) => {
-        lookedUp = resolve;
-      })
-    );
-    const onShown = vi.fn();
-    const composer = new AbortController();
-
-    const sent = seed(true).sendReply('t', 'hi', null, onShown, composer.signal);
-    expect(ensureAuthor).toHaveBeenCalledWith(composer.signal);
-    composer.abort();
-    lookedUp(null);
-
-    await expect(sent).resolves.toBe(false);
-    await flush();
-    expect(sendReviewReply).not.toHaveBeenCalled();
-    expect(onShown).not.toHaveBeenCalled();
-  });
-
-  it('drops a public reply whose composer closed while the nickname was picked', async () => {
-    let pick: (author: ReviewAuthorIdentity) => void = () => undefined;
-    ensureAuthor.mockReturnValue(
-      new Promise((resolve) => {
-        pick = resolve;
-      })
-    );
-    const onShown = vi.fn();
-    const actions = seed(true);
-    const before = queryClient.getQueryData(KEY);
-    const composer = new AbortController();
-
-    const sent = actions.sendReply('t', 'hi', null, onShown, composer.signal);
-    composer.abort();
-    pick(OWL);
-
-    await expect(sent).resolves.toBe(false);
-    await flush();
-    expect(sendReviewReply).not.toHaveBeenCalled();
-    expect(onShown).not.toHaveBeenCalled();
-    expect(queryClient.getQueryData(KEY)).toBe(before);
-  });
-
-  it('opens the picker on a needs-author answer and resends the same id after a claim', async () => {
-    sendReviewReply.mockResolvedValueOnce(needsAuthor);
-    ensureAuthor.mockResolvedValue(OWL);
-
-    await seed(true, { name: 'Gone Name', avatarSeed: 'ffffffffffff' }).sendReply(
-      't',
-      'hi',
-      null,
-      vi.fn(),
-      liveSignal()
-    );
-    await vi.waitFor(() => expect(sendReviewReply).toHaveBeenCalledTimes(2));
-    await flush();
-
-    expect(forgetAuthor).toHaveBeenCalledTimes(1);
-    expect(new Set(sentIds()).size).toBe(1);
-    expect(entry(sentIds()[0])).toMatchObject({
-      author: { name: OWL.name },
-      moderation: 'published',
+    expect(shown(sentIds()[0])).toMatchObject({
       isChecking: false,
-      failure: undefined,
+      failure: { code },
     });
+    expect(inCache(sentIds()[0])).toBe(false);
   });
 
-  it('keeps the reply unsent when the picker is closed and asks again on resend', async () => {
-    sendReviewReply.mockResolvedValueOnce(needsAuthor);
-    ensureAuthor.mockResolvedValueOnce(null).mockResolvedValueOnce(OWL);
-    const actions = seed(true, { name: 'Gone Name', avatarSeed: 'ffffffffffff' });
+  it('drops a rejected reply', async () => {
+    sendReviewReply.mockResolvedValue(banned);
 
-    await actions.sendReply('t', 'hi', null, vi.fn(), liveSignal());
-    await vi.waitFor(() => expect(ensureAuthor).toHaveBeenCalledTimes(1));
+    await seed(false).sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    await flush();
+
+    expect(shown(sentIds()[0])).toBeUndefined();
+  });
+
+  it('keeps a failed reply through a dropped and refetched query and resends it', async () => {
+    sendReviewReply.mockResolvedValueOnce(rateLimit);
+
+    await seed(false).sendReply('t', 'hi', null, vi.fn(), liveSignal());
     await flush();
     const id = sentIds()[0];
-    expect(entry(id)?.failure?.kind).toBe('needs-author');
+    queryClient.removeQueries({ queryKey: REVIEWS_KEY });
+    const actions = seed(false);
 
+    expect(inCache(id)).toBe(false);
+    expect(shown(id)?.failure?.code).toBe('rate_limit');
     await actions.resend(id);
 
-    expect(ensureAuthor).toHaveBeenCalledTimes(2);
     expect(sentIds()).toEqual([id, id]);
-    expect(entry(id)?.failure).toBeUndefined();
+    expect(inCache(id)).toBe(true);
+    expect(heldWrites().size).toBe(0);
   });
 
-  it('opens the picker by itself only once for a reply', async () => {
-    sendReviewReply.mockResolvedValue(needsAuthor);
-    ensureAuthor.mockResolvedValue(OWL);
+  it('dates a new reply after one the overlay still holds', async () => {
+    const now = vi
+      .spyOn(Date, 'now')
+      .mockReturnValue(Date.parse('2026-10-26T12:00:00.000Z'));
+    sendReviewReply.mockResolvedValueOnce(rateLimit);
+    const actions = seed(false);
 
-    await seed(true, OWL).sendReply('t', 'hi', null, vi.fn(), liveSignal());
-    await vi.waitFor(() => expect(sendReviewReply).toHaveBeenCalledTimes(2));
+    await actions.sendReply('t', 'first', null, vi.fn(), liveSignal());
+    await flush();
+    await actions.sendReply('t', 'second', null, vi.fn(), liveSignal());
+    await flush();
+    now.mockRestore();
+    const [first, second] = sentIds().map((id) => Date.parse(shown(id)?.createdAt ?? ''));
+
+    expect(second).toBeGreaterThan(first);
+  });
+
+  it.each([
+    ['sends again the refetch the hand-over cancelled', true],
+    ['leaves the pages fresh when nothing was fetching', false],
+  ])('%s', async (_label, fetching) => {
+    const answer = deferAnswer(sendReviewReply);
+    const actions = seed(false);
+    await actions.sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    if (fetching) {
+      queryClient
+        .fetchInfiniteQuery({
+          queryKey: REVIEWS_KEY,
+          queryFn: () => new Promise<never>(() => undefined),
+          initialPageParam: null,
+        })
+        .catch(() => undefined);
+    }
+
+    answer(published(sentIds()[0]));
+    await vi.waitFor(() => expect(heldWrites().size).toBe(0));
+
+    expect(inCache(sentIds()[0])).toBe(true);
+    expect(queryClient.getQueryState(REVIEWS_KEY)?.isInvalidated).toBe(fetching);
+  });
+
+  it.each([
+    ['refetches after a discard whose outcome is unknown', unreachable, 1],
+    ['leaves the list alone after a clear refusal', rateLimit, 0],
+  ])('%s', async (_label, answer, refetches) => {
+    sendReviewReply.mockResolvedValue(answer);
+    const actions = seed(false);
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await actions.sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    await flush();
+    actions.discard(sentIds()[0]);
+
+    expect(shown(sentIds()[0])).toBeUndefined();
+    expect(invalidate).toHaveBeenCalledTimes(refetches);
+  });
+
+  it('ignores an answer that lands after the discard', async () => {
+    const answer = deferAnswer(sendReviewReply);
+    const actions = seed(false);
+    const before = cached();
+
+    await actions.sendReply('t', 'hi', null, vi.fn(), liveSignal());
+    const id = sentIds()[0];
+    actions.discard(id);
+    answer(published(id));
     await flush();
 
-    expect(ensureAuthor).toHaveBeenCalledTimes(1);
-    expect(entry(sentIds()[0])?.failure?.kind).toBe('needs-author');
+    expect(cached()).toBe(before);
+    expect(shown(id)).toBeUndefined();
+  });
+
+  it('shows an edit from the overlay and hands it to the cache once taken', async () => {
+    const answer = deferAnswer(sendReviewEdit);
+    const actions = seed(false);
+
+    await actions.edit('mine', 'changed', vi.fn());
+    expect(shown('mine')).toMatchObject({ pendingText: 'changed', isChecking: true });
+    expect(shown('mine')?.text).toBe('mine');
+
+    answer(published('mine'));
+    await vi.waitFor(() => expect(heldWrites().size).toBe(0));
+
+    expect(shown('mine')).toMatchObject({ text: 'changed', pendingText: null });
+  });
+
+  it('shows the cached text again when an edit is rejected', async () => {
+    sendReviewEdit.mockResolvedValue(banned);
+    const actions = seed(false);
+
+    await actions.edit('mine', 'changed', vi.fn());
+    await flush();
+
+    expect(shown('mine')).toMatchObject({ text: 'mine', pendingText: null });
+    expect(heldWrites().size).toBe(0);
+  });
+
+  it.each([
+    ['resends a failed edit inside its window', 'mine', 2],
+    ['offers no resend once the edit window closed', 'old', 1],
+  ])('%s', async (_label, entryId, sends) => {
+    sendReviewEdit.mockResolvedValueOnce(rateLimit);
+    const actions = seed(false);
+
+    await actions.edit(entryId, 'changed', vi.fn());
+    await flush();
+    expect(shown(entryId)?.failure?.code).toBe('rate_limit');
+    await actions.resend(entryId);
+
+    expect(sendReviewEdit).toHaveBeenCalledTimes(sends);
   });
 });

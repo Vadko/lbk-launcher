@@ -90,6 +90,14 @@ describe('appendReply', () => {
       ],
     ]);
   });
+
+  it('keeps the copy a refetch already brought', () => {
+    const data = reviewPages([reviewThread('a', [reviewReply('r')])]);
+    const next = appendReply(data, 'a', { ...reviewReply('r'), text: 'mine' });
+
+    expect(ids(next)).toEqual([[['a', ['r']]]]);
+    expect(findEntry(next, 'r')?.entry.text).toBe('r');
+  });
 });
 
 describe('findThread', () => {

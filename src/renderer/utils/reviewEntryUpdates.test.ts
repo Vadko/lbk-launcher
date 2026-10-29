@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameReviewEntry } from '@/shared/game-reviews-types';
-import {
-  afterEdit,
-  afterReply,
-  markChecking,
-  markFailed,
-  restored,
-  withEdit,
-} from './reviewEntryUpdates';
+import { afterEdit, withEdit } from './reviewEntryUpdates';
 
 const NOW = '2026-10-26T12:00:00.000Z';
 
@@ -22,21 +15,6 @@ const entry = (extra: Partial<GameReviewEntry> = {}): GameReviewEntry => ({
   ...extra,
 });
 
-describe('afterReply', () => {
-  it.each([
-    ['published', { moderation: 'published', isChecking: false }],
-    ['pending', { moderation: 'pending', isChecking: false }],
-  ] as const)('settles a %s reply', (outcome, expected) => {
-    expect(
-      afterReply(outcome)(entry({ moderation: 'pending', isChecking: true }))
-    ).toEqual(entry(expected));
-  });
-
-  it('drops a removed reply', () => {
-    expect(afterReply('removed')(entry())).toBeNull();
-  });
-});
-
 describe('withEdit', () => {
   it.each([
     [
@@ -46,8 +24,8 @@ describe('withEdit', () => {
     ],
     ['replaces an unpublished text', 'pending', { text: 'new' }],
   ] as const)('%s', (_label, moderation, change) => {
-    expect(withEdit('new')(entry({ moderation }))).toEqual(
-      entry({ moderation, isChecking: true, ...change })
+    expect(withEdit(entry({ moderation }), 'new')).toEqual(
+      entry({ moderation, ...change })
     );
   });
 });
@@ -56,27 +34,27 @@ describe('afterEdit', () => {
   it.each([
     [
       'a published entry whose edit went through',
-      entry({ pendingText: 'new', isChecking: true }),
+      entry(),
       'published',
-      entry({ text: 'new', editedAt: NOW, isChecking: false }),
+      entry({ text: 'new', editedAt: NOW }),
     ],
     [
       'a published entry whose edit waits for a moderator',
-      entry({ pendingText: 'new', isChecking: true }),
+      entry(),
       'pending',
-      entry({ pendingText: 'new', isChecking: false }),
+      entry({ pendingText: 'new' }),
     ],
     [
       'an unpublished entry that got published',
-      entry({ moderation: 'pending', text: 'new', isChecking: true }),
+      entry({ moderation: 'pending' }),
       'published',
-      entry({ text: 'new', isChecking: false }),
+      entry({ text: 'new' }),
     ],
     [
       'an unpublished entry still waiting',
-      entry({ moderation: 'pending', text: 'new', isChecking: true }),
+      entry({ moderation: 'pending' }),
       'pending',
-      entry({ moderation: 'pending', text: 'new', isChecking: false }),
+      entry({ moderation: 'pending', text: 'new' }),
     ],
   ] as const)('settles %s', (_label, before, outcome, expected) => {
     expect(afterEdit(outcome, 'new', NOW)(before)).toEqual(expected);
@@ -84,25 +62,5 @@ describe('afterEdit', () => {
 
   it('drops an entry moderation removed', () => {
     expect(afterEdit('removed', 'new', NOW)(entry())).toBeNull();
-  });
-});
-
-describe('restored', () => {
-  it('takes a refused edit back', () => {
-    const before = entry({ pendingText: 'waiting', editedAt: NOW });
-
-    expect(restored(before)(entry({ pendingText: 'new', isChecking: true }))).toEqual(
-      entry({ pendingText: 'waiting', editedAt: NOW, isChecking: false })
-    );
-  });
-});
-
-describe('markChecking and markFailed', () => {
-  it('keep the failure until the entry is sent again', () => {
-    const failure = { code: 'rate_limit', kind: 'retry' } as const;
-    const failed = markFailed(failure)(entry({ isChecking: true }));
-
-    expect(failed).toEqual(entry({ isChecking: false, failure }));
-    expect(failed && markChecking(failed)).toEqual(entry({ isChecking: true }));
   });
 });

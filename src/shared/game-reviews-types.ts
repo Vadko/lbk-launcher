@@ -1,5 +1,4 @@
 import type { Database } from '../lib/database.types';
-import type { ReviewFailure } from './game-reviews-api-types';
 
 type Enums = Database['public']['Enums'];
 
@@ -30,10 +29,6 @@ export interface GameReviewEntry {
   moderation: GameReviewModeration;
   // An own edit still in moderation; everyone else keeps seeing `text`
   pendingText: string | null;
-  // Client-only: the submit or edit has not been answered yet
-  isChecking?: boolean;
-  // Client-only: the submit or edit was not taken, and the failure says what a resend needs
-  failure?: ReviewFailure;
 }
 
 export interface GameReviewReply extends GameReviewEntry {
@@ -42,7 +37,7 @@ export interface GameReviewReply extends GameReviewEntry {
 }
 
 // The server keeps a removed reply as a stub only while a visible reply hangs under it
-interface GameReviewRemovedReply {
+export interface GameReviewRemovedReply {
   id: string;
   parentId: string | null;
   createdAt: string;

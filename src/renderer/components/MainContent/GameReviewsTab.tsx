@@ -46,7 +46,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       void retry.run(() => refetch(), { isSuccess: (result) => !result.isError });
     }
   };
-  // An optimistic patch clears the query's error, so the failed page is remembered here
+  // A cache patch from a taken write clears the query's error, so the failed page is remembered here
   const [isLoadMoreFailed, setIsLoadMoreFailed] = useState(false);
   const loadNextPage = useCallback(async () => {
     const result = await fetchNextPage();
@@ -129,6 +129,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
                   onReply={actions.sendReply}
                   onEdit={actions.edit}
                   onResend={handleResend}
+                  onDiscard={actions.discard}
                 />
               </div>
             ))}

@@ -1,10 +1,8 @@
-import type {
-  GameReviewAuthor,
-  GameReviewThreadReply,
-} from '@/shared/game-reviews-types';
+import type { GameReviewAuthor } from '@/shared/game-reviews-types';
+import type { ReviewThreadReplyView } from '../queries/reviewViewTypes';
 
 export interface ReplyNode {
-  reply: GameReviewThreadReply;
+  reply: ReviewThreadReplyView;
   // Set when the answered entry sits on the last level, so this one is shown beside it
   replyTo: GameReviewAuthor | null;
   // The entry whose branch holds this node: the review for the first level
@@ -23,7 +21,7 @@ const byTime = (a: ReplyNode, b: ReplyNode) =>
 
 export function buildReplyTree(
   reviewId: string,
-  replies: GameReviewThreadReply[],
+  replies: ReviewThreadReplyView[],
   maxDepth: number
 ): ReplyNode[] {
   const roots: ReplyNode[] = [];
@@ -32,7 +30,7 @@ export function buildReplyTree(
   const visiting = new Set<string>();
 
   // Parents are placed first by id, so a skewed clock cannot detach an answer from them
-  const place = (reply: GameReviewThreadReply): Placed => {
+  const place = (reply: ReviewThreadReplyView): Placed => {
     const existing = placed.get(reply.id);
     if (existing) {
       return existing;
@@ -77,12 +75,12 @@ function sortByTime(nodes: ReplyNode[]): void {
 }
 
 // A removed parent has no author left to name
-function authorOf(reply: GameReviewThreadReply): GameReviewAuthor | null {
+function authorOf(reply: ReviewThreadReplyView): GameReviewAuthor | null {
   return 'removed' in reply ? null : reply.author;
 }
 
 function node(
-  reply: GameReviewThreadReply,
+  reply: ReviewThreadReplyView,
   replyTo: GameReviewAuthor | null,
   branchId: string,
   depth: number

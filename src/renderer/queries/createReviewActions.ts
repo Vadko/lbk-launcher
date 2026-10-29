@@ -1,117 +1,168 @@
-import { notifyManager, type QueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
+import { flushSync } from 'react-dom';
 import type {
   ReviewFailure,
   ReviewResult,
   ReviewWriteResult,
 } from '@/shared/game-reviews-api-types';
-import type { GameReviewOutcome, GameReviewReply } from '@/shared/game-reviews-types';
+import type {
+  GameReview,
+  GameReviewOutcome,
+  GameReviewReply,
+  ReviewAuthorIdentity,
+} from '@/shared/game-reviews-types';
 import { useReviewAuthorStore } from '../store/useReviewAuthorStore';
+import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
+import { editDeadline } from '../utils/editDeadline';
+import { handOver } from '../utils/handOver';
+import { isOutcomeUnknown } from '../utils/isOutcomeUnknown';
 import {
-  appendReply,
-  type EntryUpdate,
   findEntry,
   findThread,
   nextReplyTime,
   type ReviewPages,
   updateEntry,
 } from '../utils/reviewCache';
-import {
-  afterEdit,
-  afterReply,
-  markChecking,
-  markFailed,
-  restored,
-  withEdit,
-} from '../utils/reviewEntryUpdates';
+import type { ReviewWriteDraft } from '../utils/reviewOverlay';
 import { gameReviewsQueryKey } from './gameReviewsQueryKey';
 import { sendReviewEdit, sendReviewReply } from './reviewsClient';
 
-interface SettlePlan {
+interface WritePlan {
+  draft: ReviewWriteDraft;
   request: () => Promise<ReviewResult<ReviewWriteResult>>;
-  done: (outcome: GameReviewOutcome) => EntryUpdate;
-  // The server's final no: the optimistic change is taken back
-  rejected: EntryUpdate;
+  // The server refuses an edit once its window closed, so a resend after it is pointless
+  resendUntil: number;
   afterDone?: (outcome: GameReviewOutcome) => void;
   // The picker already opened for this write, so another needs-author answer waits for a click
   askedForAuthor?: boolean;
 }
 
-// Keyed by entry id: the same client id goes out again, so a resend cannot post twice
-const failedRequests = new Map<string, () => Promise<void>>();
+function signed(draft: ReviewWriteDraft, author: ReviewAuthorIdentity): ReviewWriteDraft {
+  return draft.kind === 'reply'
+    ? {
+        ...draft,
+        reply: { ...draft.reply, author: { ...draft.reply.author, ...author } },
+      }
+    : draft;
+}
 
 export function createReviewActions(queryClient: QueryClient, gameId: string) {
   const queryKey = gameReviewsQueryKey(gameId);
+  const overlay = () => useReviewOverlayStore.getState();
   const pages = () => queryClient.getQueryData<ReviewPages>(queryKey);
-  const patch = (entryId: string, update: EntryUpdate) =>
-    queryClient.setQueryData<ReviewPages>(
-      queryKey,
-      (data) => data && updateEntry(data, entryId, update)
-    );
+  const isCurrent = (entryId: string, attempt: number) =>
+    overlay().writeOf(gameId, entryId)?.attempt === attempt;
+  // Replies still checking or failed live only in the overlay, yet a new reply has to be dated after them too
+  const withHeldReplies = (thread: GameReview): GameReview => ({
+    ...thread,
+    replies: [
+      ...thread.replies,
+      ...[...(overlay().games.get(gameId)?.values() ?? [])].flatMap((write) =>
+        write.kind === 'reply' && write.reviewId === thread.id ? [write.reply] : []
+      ),
+    ],
+  });
 
-  // React Query hands cache changes to React a task later; onShown joins that same flush
-  const showWith = (onShown: () => void, change: () => void) =>
-    notifyManager.batch(() => {
-      change();
-      notifyManager.schedule(onShown);
+  // The overlay notifies React at once, so flushSync closes the composer in the commit that shows the entry
+  const send = (entryId: string, plan: WritePlan, onShown?: () => void) => {
+    const attempt = flushSync(() => {
+      const started = overlay().start(gameId, entryId, plan.draft);
+      onShown?.();
+      return started;
     });
+    return settle(entryId, attempt, plan);
+  };
 
   // The server holds no nickname for this machine: the picker gets one, then the same id goes out again
-  const settleWithAuthor = async (entryId: string, plan: SettlePlan): Promise<void> => {
+  const settleWithAuthor = async (
+    entryId: string,
+    attempt: number,
+    plan: WritePlan
+  ): Promise<void> => {
     const authors = useReviewAuthorStore.getState();
     authors.forgetAuthor();
     const author = await authors.ensureAuthor();
-    if (!author) {
+    if (!author || !isCurrent(entryId, attempt)) {
       return;
     }
-    await queryClient.cancelQueries({ queryKey });
-    patch(entryId, (entry) =>
-      markChecking({ ...entry, author: { ...entry.author, ...author } })
-    );
-    await settle(entryId, plan);
+    if (plan.draft.kind === 'edit') {
+      queryClient.setQueryData<ReviewPages>(
+        queryKey,
+        (data) =>
+          data &&
+          updateEntry(data, entryId, (entry) => ({
+            ...entry,
+            author: { ...entry.author, ...author },
+          }))
+      );
+    }
+    await send(entryId, {
+      ...plan,
+      draft: signed(plan.draft, author),
+      askedForAuthor: true,
+    });
   };
 
   const resendFor = (
     entryId: string,
-    plan: SettlePlan,
+    attempt: number,
+    plan: WritePlan,
     failure: ReviewFailure
-  ): (() => Promise<void>) | null => {
-    switch (failure.kind) {
-      case 'retry':
-        return async () => {
-          await queryClient.cancelQueries({ queryKey });
-          patch(entryId, markChecking);
-          await settle(entryId, plan);
-        };
-      case 'needs-author':
-        return () => settleWithAuthor(entryId, { ...plan, askedForAuthor: true });
-      case 'rejected':
-        return null;
-    }
+  ) => {
+    const again =
+      failure.kind === 'needs-author'
+        ? () => settleWithAuthor(entryId, attempt, plan)
+        : () => send(entryId, plan);
+    // A discarded write stays discarded
+    return async () => {
+      if (isCurrent(entryId, attempt) && Date.now() < plan.resendUntil) {
+        await again();
+      }
+    };
   };
 
-  // The entry shows at once with a checking badge; the server's answer settles it later
-  const settle = async (entryId: string, plan: SettlePlan): Promise<void> => {
+  const settle = async (entryId: string, attempt: number, plan: WritePlan) => {
     const result = await plan.request();
-    const resend = result.ok ? null : resendFor(entryId, plan, result.failure);
-    if (resend) {
-      failedRequests.set(entryId, resend);
-    } else {
-      failedRequests.delete(entryId);
+    if (!isCurrent(entryId, attempt)) {
+      return;
     }
-    const update: EntryUpdate = result.ok
-      ? plan.done(result.data.outcome)
-      : result.failure.kind === 'rejected'
-        ? plan.rejected
-        : markFailed(result.failure);
-    // A page fetched meanwhile holds the pre-answer snapshot and would overwrite the patch
-    await queryClient.cancelQueries({ queryKey });
-    patch(entryId, update);
-    if (result.ok) {
-      plan.afterDone?.(result.data.outcome);
-    } else if (result.failure.kind === 'needs-author' && !plan.askedForAuthor && resend) {
+    if (!result.ok) {
+      const { failure } = result;
+      if (failure.kind === 'rejected') {
+        overlay().drop(gameId, entryId, attempt);
+        return;
+      }
+      const resend = resendFor(entryId, attempt, plan, failure);
+      overlay().fail(gameId, entryId, attempt, failure, resend);
       // The first needs-author answer opens the picker by itself; a later one waits for the resend button
-      await resend();
+      if (failure.kind === 'needs-author' && !plan.askedForAuthor) {
+        await resend();
+      }
+      return;
     }
+    // A page fetched meanwhile holds the pre-answer snapshot and would overwrite the patch
+    const wasFetching = queryClient.isFetching({ queryKey }) > 0;
+    await queryClient.cancelQueries({ queryKey });
+    // A patch marks the pages fresh, so a refetch the cancel dropped (a discard's, say) goes out again
+    const refetchCancelled = () => {
+      if (wasFetching) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
+    };
+    if (!isCurrent(entryId, attempt)) {
+      refetchCancelled();
+      return;
+    }
+    const { outcome } = result.data;
+    // The cache takes the entry before the overlay lets it go, so no frame goes without it
+    queryClient.setQueryData<ReviewPages>(
+      queryKey,
+      (data) =>
+        data && handOver(data, entryId, plan.draft, outcome, new Date().toISOString())
+    );
+    overlay().drop(gameId, entryId, attempt);
+    refetchCancelled();
+    plan.afterDone?.(outcome);
   };
 
   return {
@@ -124,22 +175,27 @@ export function createReviewActions(queryClient: QueryClient, gameId: string) {
       signal: AbortSignal
     ): Promise<boolean> => {
       const known = pages();
-      const isPublic = findThread(known, reviewId)?.isPublic ?? false;
+      const thread = findThread(known, reviewId);
+      // Without its thread the reply has no visibility to go out with
+      if (!thread) {
+        return false;
+      }
       const viewer = known?.pages[0]?.viewer ?? null;
       // A public thread shows its writer's nickname, so a reply there waits until the machine has one
-      const author = isPublic
+      const author = thread.isPublic
         ? (viewer ?? (await useReviewAuthorStore.getState().ensureAuthor(signal)))
         : viewer;
       // The composer was closed while the nickname was looked up or picked, so its text stays unsent
-      if (signal.aborted || (isPublic && !author)) {
+      if (signal.aborted || (thread.isPublic && !author)) {
         return false;
       }
-      await queryClient.cancelQueries({ queryKey });
-      const thread = findThread(pages(), reviewId);
       const reply: GameReviewReply = {
         id: crypto.randomUUID(),
         text,
-        createdAt: nextReplyTime(thread, Date.now()),
+        createdAt: nextReplyTime(
+          withHeldReplies(findThread(pages(), reviewId) ?? thread),
+          Date.now()
+        ),
         editedAt: null,
         author: {
           role: 'player',
@@ -149,56 +205,68 @@ export function createReviewActions(queryClient: QueryClient, gameId: string) {
         },
         moderation: 'pending',
         pendingText: null,
-        isChecking: true,
         parentId,
       };
-      showWith(onShown, () =>
-        queryClient.setQueryData<ReviewPages>(
-          queryKey,
-          (current) => current && appendReply(current, reviewId, reply)
-        )
+      void send(
+        reply.id,
+        {
+          draft: { kind: 'reply', reviewId, reply },
+          request: () =>
+            sendReviewReply({
+              id: reply.id,
+              reviewId,
+              parentId,
+              text,
+              isPublic: thread.isPublic,
+            }),
+          resendUntil: Infinity,
+        },
+        onShown
       );
-      void settle(reply.id, {
-        request: () =>
-          sendReviewReply({ id: reply.id, reviewId, parentId, text, isPublic }),
-        done: afterReply,
-        rejected: () => null,
-      });
       return true;
     },
     // An own entry already has its author, so an edit needs no picker up front
-    edit: async (
-      entryId: string,
-      text: string,
-      onShown: () => void
-    ): Promise<boolean> => {
-      await queryClient.cancelQueries({ queryKey });
+    edit: (entryId: string, text: string, onShown: () => void): Promise<boolean> => {
       const found = findEntry(pages(), entryId);
       if (!found) {
         onShown();
-        return true;
+        return Promise.resolve(true);
       }
       const { thread, entry: before } = found;
-      showWith(onShown, () => patch(entryId, withEdit(text)));
-      void settle(entryId, {
-        request: () => sendReviewEdit({ id: entryId, text, isPublic: thread.isPublic }),
-        done: (outcome) => afterEdit(outcome, text, new Date().toISOString()),
-        rejected: restored(before),
-        // The answer cannot tell a kept edit from a rejected one, so the list says which
-        afterDone: (outcome) => {
-          if (
-            thread.isPublic &&
-            before.moderation === 'published' &&
-            outcome === 'published'
-          ) {
-            void queryClient.invalidateQueries({ queryKey });
-          }
+      void send(
+        entryId,
+        {
+          draft: { kind: 'edit', text },
+          request: () => sendReviewEdit({ id: entryId, text, isPublic: thread.isPublic }),
+          resendUntil: editDeadline(before.createdAt),
+          // The answer cannot tell a kept edit from a rejected one, so the list says which
+          afterDone: (outcome) => {
+            if (
+              thread.isPublic &&
+              before.moderation === 'published' &&
+              outcome === 'published'
+            ) {
+              void queryClient.invalidateQueries({ queryKey });
+            }
+          },
         },
-      });
-      return true;
+        onShown
+      );
+      return Promise.resolve(true);
     },
     resend: async (entryId: string) => {
-      await failedRequests.get(entryId)?.();
+      const write = overlay().writeOf(gameId, entryId);
+      if (write?.state === 'failed') {
+        await write.resend();
+      }
+    },
+    discard: (entryId: string) => {
+      const write = overlay().writeOf(gameId, entryId);
+      overlay().drop(gameId, entryId);
+      // The server may hold what was discarded, so the list asks it
+      if (write?.state === 'failed' && isOutcomeUnknown(write.failure)) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
     },
   };
 }

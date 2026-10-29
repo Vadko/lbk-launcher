@@ -1,7 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import React, { useState } from 'react';
-import type { GameReview } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
+import type { ReviewThreadView } from '../../queries/reviewViewTypes';
 import { buildReplyTree, type ReplyNode } from '../../utils/replyTree';
 import { ReviewComposer } from './ReviewComposer';
 import { ReviewEntry } from './ReviewEntry';
@@ -10,7 +10,7 @@ import { ReviewReplyBranch } from './ReviewReplyBranch';
 import { ReviewReveal } from './ReviewReveal';
 
 interface ReviewThreadProps {
-  review: GameReview;
+  review: ReviewThreadView;
   onReply: (
     reviewId: string,
     text: string,
@@ -20,6 +20,7 @@ interface ReviewThreadProps {
   ) => Promise<boolean>;
   onEdit: (entryId: string, text: string, onShown: () => void) => Promise<boolean>;
   onResend: (entryId: string) => void;
+  onDiscard: (entryId: string) => void;
 }
 
 // Deeper answers stay on the last level and name whom they answer, so the text keeps its width
@@ -27,7 +28,7 @@ const MAX_DEPTH = 3;
 
 // A reply changes one thread; memo keeps the others from re-rendering in the animation's first frame
 export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
-  ({ review, onReply, onEdit, onResend }) => {
+  ({ review, onReply, onEdit, onResend, onDiscard }) => {
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const tree = buildReplyTree(review.id, review.replies, MAX_DEPTH);
@@ -86,6 +87,7 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
           onReply={() => setReplyingTo(reply.id)}
           onEdit={(text, onShown) => onEdit(reply.id, text, onShown)}
           onResend={() => onResend(reply.id)}
+          onDiscard={() => onDiscard(reply.id)}
         >
           {composerFor(reply.id, depth < MAX_DEPTH ? reply.id : branchId)}
         </ReviewEntry>
@@ -104,6 +106,7 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
           onReply={() => setReplyingTo(review.id)}
           onEdit={(text, onShown) => onEdit(review.id, text, onShown)}
           onResend={() => onResend(review.id)}
+          onDiscard={() => onDiscard(review.id)}
         >
           {composerFor(review.id, review.id)}
         </ReviewEntry>

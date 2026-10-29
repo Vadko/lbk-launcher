@@ -1,12 +1,10 @@
-import { ReplyIcon, RotateCcwIcon } from 'lucide-react';
+import { ReplyIcon, RotateCcwIcon, XIcon } from 'lucide-react';
 import React, { useState } from 'react';
-import type {
-  GameReview,
-  GameReviewAuthor,
-  GameReviewReply,
-} from '@/shared/game-reviews-types';
+import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import { useNow } from '../../hooks/useNow';
+import type { ReviewReplyView, ReviewThreadView } from '../../queries/reviewViewTypes';
+import { editDeadline } from '../../utils/editDeadline';
 import { Button } from '../ui/Button';
 import { ReviewAvatar } from './ReviewAvatar';
 import { ReviewComposer } from './ReviewComposer';
@@ -17,7 +15,7 @@ import { REVIEW_ACTION } from './reviewActionClass';
 import { THREAD_LINE } from './reviewThreadLine';
 
 interface ReviewEntryProps {
-  entry: GameReview | GameReviewReply;
+  entry: ReviewThreadView | ReviewReplyView;
   isRoot: boolean;
   hasThreadLine: boolean;
   isPublicThread: boolean;
@@ -27,10 +25,9 @@ interface ReviewEntryProps {
   onReply: () => void;
   onEdit: (text: string, onShown: () => void) => Promise<boolean>;
   onResend: () => void;
+  onDiscard: () => void;
   children?: React.ReactNode;
 }
-
-const EDIT_WINDOW_MS = 15 * 60_000;
 
 export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   entry,
@@ -43,6 +40,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   onReply,
   onEdit,
   onResend,
+  onDiscard,
   children,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -50,10 +48,12 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   const isChecking = entry.isChecking === true;
   const failure = entry.failure ?? null;
   const isOwnPlayerEntry = entry.author.isMine && entry.author.role === 'player';
-  const editDeadline = new Date(entry.createdAt).getTime() + EDIT_WINDOW_MS;
-  const editableUntil = isOwnPlayerEntry ? editDeadline : 0;
+  const deadline = editDeadline(entry.createdAt);
+  const editableUntil = isOwnPlayerEntry ? deadline : 0;
   const now = useNow(10_000, editableUntil);
   const canEdit = now < editableUntil;
+  // A new reply has no deadline, while the server refuses a failed edit once its window closed
+  const canResend = entry.write !== 'edit' || canEdit;
   const canReply = entry.moderation === 'published' || isChecking;
 
   return (
@@ -91,7 +91,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
             submitLabel={t('gameReviews.save')}
             captchaAction="edit"
             isPublic={isPublicThread}
-            expiresAt={editDeadline}
+            expiresAt={deadline}
             onSubmit={(text) => onEdit(text, () => setIsEditing(false))}
             onClose={() => setIsEditing(false)}
           />
@@ -105,15 +105,28 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
           // Shown but disabled while the check runs, so its answer does not push the thread down
           <div className="flex items-center gap-1 -ml-2">
             {failure ? (
-              <Button
-                variant="ghost"
-                className={REVIEW_ACTION}
-                icon={<RotateCcwIcon size={14} />}
-                onClick={onResend}
-                data-gamepad-action
-              >
-                {t('gameReviews.resend')}
-              </Button>
+              <>
+                {canResend && (
+                  <Button
+                    variant="ghost"
+                    className={REVIEW_ACTION}
+                    icon={<RotateCcwIcon size={14} />}
+                    onClick={onResend}
+                    data-gamepad-action
+                  >
+                    {t('gameReviews.resend')}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  className={REVIEW_ACTION}
+                  icon={<XIcon size={14} />}
+                  onClick={onDiscard}
+                  data-gamepad-action
+                >
+                  {t('common.cancel')}
+                </Button>
+              </>
             ) : (
               <>
                 {canReply && (
@@ -130,7 +143,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
                 )}
                 {canEdit && (
                   <ReviewEditButton
-                    minutesLeft={Math.ceil((editDeadline - now) / 60_000)}
+                    minutesLeft={Math.ceil((deadline - now) / 60_000)}
                     disabled={isChecking}
                     onClick={() => setIsEditing(true)}
                   />

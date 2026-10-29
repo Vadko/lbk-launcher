@@ -69,13 +69,16 @@ export function updateEntry(
   });
 }
 
+// A reply a refetch already brought keeps the server's copy
 export function appendReply(
   data: ReviewPages,
   reviewId: string,
   reply: GameReviewReply
 ): ReviewPages {
   return mapThreads(data, (thread) => [
-    thread.id === reviewId ? { ...thread, replies: [...thread.replies, reply] } : thread,
+    thread.id === reviewId && !thread.replies.some((item) => item.id === reply.id)
+      ? { ...thread, replies: [...thread.replies, reply] }
+      : thread,
   ]);
 }
 
