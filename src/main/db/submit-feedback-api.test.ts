@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { answered, invokeCalls, MACHINE_ID } from './review-functions.fixture';
+import { answered, invokeCalls, MACHINE_ID, refused } from './review-functions.fixture';
 
 const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -89,15 +89,27 @@ describe('submitFeedback', () => {
     expect(sentBody()).toMatchObject({ allowPublish: true, captchaToken: 'token-1' });
   });
 
-  // Without a token the server answers captcha_failed, so nothing goes out
-  it('sends no public post without a token', async () => {
+  it('confirms a stored public post without a token', async () => {
     takeCaptchaToken.mockResolvedValue(null);
+    invoke.mockResolvedValue(answered({ id: POST, outcome: 'pending' }));
+
+    expect(await submitFeedback(post([], true))).toEqual({
+      ok: true,
+      data: { id: POST, outcome: 'pending' },
+    });
+    expect(sentBody()).toMatchObject({ id: POST, allowPublish: true });
+    expect(sentBody()).not.toHaveProperty('captchaToken');
+  });
+
+  it('reads a new public post refused for want of a token as captcha_unavailable', async () => {
+    takeCaptchaToken.mockResolvedValue(null);
+    invoke.mockResolvedValue(refused('captcha_failed', 403));
 
     expect(await submitFeedback(post([], true))).toEqual({
       ok: false,
       failure: { code: 'captcha_unavailable', kind: 'retry' },
     });
-    expect(invoke).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 });
 

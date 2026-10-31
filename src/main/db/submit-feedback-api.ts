@@ -20,7 +20,7 @@ const uploadUrlsSchema: z.ZodType<FeedbackUploadUrl[]> = z
   })
   .transform(({ uploadUrls }) => uploadUrls);
 
-// The server refuses allowPublish without a solved captcha (403 captcha_failed), so a public post waits for a token
+// A public post takes a review token; the server answers a resend of a stored post before it checks one
 export function submitFeedback({
   id,
   gameId,
@@ -44,9 +44,7 @@ export function submitFeedback({
       osVersion: getOsVersion(),
     },
     writeResultSchema,
-    allowPublish
-      ? { captchaToken: () => takeCaptchaToken('review'), refuseWithoutToken: true }
-      : {}
+    allowPublish ? { captchaToken: () => takeCaptchaToken('review') } : {}
   );
 }
 

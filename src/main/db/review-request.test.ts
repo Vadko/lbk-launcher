@@ -340,19 +340,6 @@ describe('callReviewFunction', () => {
       });
       expect(state.invoke).toHaveBeenCalledTimes(1);
     });
-
-    it('sends nothing without a token when the call refuses that', async () => {
-      const result = await reply({
-        captchaToken: () => Promise.resolve(null),
-        refuseWithoutToken: true,
-      });
-
-      expect(result).toEqual({
-        ok: false,
-        failure: { code: 'captcha_unavailable', kind: 'retry' },
-      });
-      expect(state.invoke).not.toHaveBeenCalled();
-    });
   });
 
   it('never retries captcha_failed without a source', async () => {

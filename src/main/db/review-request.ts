@@ -28,8 +28,6 @@ interface EndpointRule {
 interface ReviewCallOptions {
   // Seam for Turnstile: each attempt asks for a fresh single-use token, null when none can be had
   captchaToken?: () => Promise<string | null>;
-  // Otherwise a write without a token still goes out, so the server's REVIEWS_CAPTCHA=off switch can pass it
-  refuseWithoutToken?: boolean;
   // The Date header of a 2xx answer, for a caller that must not trust the local clock
   onServerTime?: (at: string) => void;
 }
@@ -88,13 +86,11 @@ async function attempt<T>(
   endpoint: ReviewEndpoint,
   body: Record<string, unknown>,
   schema: z.ZodType<T>,
-  { captchaToken, refuseWithoutToken, onServerTime }: ReviewCallOptions
+  { captchaToken, onServerTime }: ReviewCallOptions
 ): Promise<ReviewResult<T>> {
   try {
+    // Without a token a write still goes out: a resend is answered before the captcha, and REVIEWS_CAPTCHA=off passes it
     const token = captchaToken ? await captchaToken() : undefined;
-    if (token === null && refuseWithoutToken) {
-      return { ok: false, failure: reviewFailure('captcha_unavailable', endpoint) };
-    }
     const { data, error, response } = await getSupabaseClient().functions.invoke<unknown>(
       endpoint,
       {
