@@ -42,6 +42,7 @@ import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
 import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { type ActionPhase, useActionPhase } from '../hooks/useActionPhase';
+import { useGameTabFromUrl } from '../hooks/useGameTabFromUrl';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
 import {
@@ -200,17 +201,11 @@ export const GamePage: React.FC = () => {
     selectedGameId,
     RECOMMENDED_LIMIT
   );
-  const [tabState, setTabState] = useState<{ gameId?: string; tab: GameTab }>({
-    gameId: selectedGameId,
-    tab: 'info',
-  });
-  if (tabState.gameId !== selectedGameId) {
-    setTabState({ gameId: selectedGameId, tab: 'info' });
-  }
+  const { tab, setTab, focus, clearFocus } = useGameTabFromUrl(selectedGameId);
   const gameTabs: GameTab[] = isRecommendedHidden
     ? ['info', 'reviews']
     : ['info', 'recommended', 'reviews'];
-  const activeTab = gameTabs.includes(tabState.tab) ? tabState.tab : 'info';
+  const activeTab = gameTabs.includes(tab) ? tab : 'info';
 
   const { data: banners, isError: bannersFailed } = useQuery({
     queryKey: ['game-banners', selectedGameId, selectedGameSlug],
@@ -790,11 +785,7 @@ export const GamePage: React.FC = () => {
             </motion.div>
           </div>
 
-          <GameTabs
-            tabs={gameTabs}
-            activeTab={activeTab}
-            onChange={(tab) => setTabState({ gameId: selectedGame.id, tab })}
-          />
+          <GameTabs tabs={gameTabs} activeTab={activeTab} onChange={setTab} />
 
           {activeTab === 'reviews' ? (
             <GameReviewsTab
@@ -803,6 +794,8 @@ export const GamePage: React.FC = () => {
               gameName={selectedGame.name}
               canLeaveFeedback={canLeaveFeedback}
               onLeaveFeedback={() => setShowFeedbackModal(true)}
+              focus={focus}
+              onFocusHandled={clearFocus}
             />
           ) : activeTab === 'recommended' ? (
             <RecommendedGamesSection

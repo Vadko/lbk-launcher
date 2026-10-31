@@ -18,6 +18,7 @@ import { getLogFileDirectory } from '../utils/logger';
 import { isLinux, isMacOS } from '../utils/platform';
 import { clearStore } from '../utils/store-storage';
 import { showSystemNotification } from '../utils/system-notification';
+import { parseSystemNotificationOptions } from '../utils/system-notification-options';
 import { getIcon } from '../utils/theme';
 import { getMainWindow, sendToRenderer, showMainWindow } from '../window';
 
@@ -98,19 +99,18 @@ export function setupWindowControls(): void {
   });
 
   // Show system notification (used when app is in tray)
-  ipcMain.handle(
-    'show-system-notification',
-    (_, options: { title: string; body: string; gameId?: string }) =>
-      showSystemNotification({
-        title: options.title,
-        body: options.body,
-        onClick: () => {
-          if (options.gameId) {
-            sendToRenderer('navigate-to-game', options.gameId);
-          }
-        },
-      })
-  );
+  ipcMain.handle('show-system-notification', (_, raw: unknown) => {
+    const options = parseSystemNotificationOptions(raw);
+    if (!options) {
+      return false;
+    }
+    const { title, body, target } = options;
+    return showSystemNotification({
+      title,
+      body,
+      onClick: target ? () => sendToRenderer('navigate-to-game', target) : undefined,
+    });
+  });
 
   // Guard against multiple clear cache calls (user spamming the button)
   let isClearingCache = false;

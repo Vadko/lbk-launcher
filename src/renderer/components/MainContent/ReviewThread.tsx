@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion';
 import React, { useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { useFocusEntry } from '../../hooks/useFocusEntry';
 import type { ReviewThreadView } from '../../queries/reviewViewTypes';
 import { buildReplyTree, type ReplyNode } from '../../utils/replyTree';
 import { ReviewComposer } from './ReviewComposer';
@@ -21,6 +22,9 @@ interface ReviewThreadProps {
   onEdit: (entryId: string, text: string, onShown: () => void) => Promise<boolean>;
   onResend: (entryId: string) => void;
   onDiscard: (entryId: string) => void;
+  // The deep-linked entry of this thread, until it has been scrolled to
+  focusEntryId: string | null;
+  onFocused: () => void;
 }
 
 // Deeper answers stay on the last level and name whom they answer, so the text keeps its width
@@ -28,10 +32,19 @@ const MAX_DEPTH = 3;
 
 // A reply changes one thread; memo keeps the others from re-rendering in the animation's first frame
 export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
-  ({ review, onReply, onEdit, onResend, onDiscard }) => {
+  ({ review, onReply, onEdit, onResend, onDiscard, focusEntryId, onFocused }) => {
     const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const tree = buildReplyTree(review.id, review.replies, MAX_DEPTH);
+    useFocusEntry({
+      rootId: review.id,
+      tree,
+      entryId: focusEntryId,
+      expanded,
+      expand: (branchIds) =>
+        setExpanded((current) => new Set([...current, ...branchIds])),
+      onFocused,
+    });
 
     const toggle = (id: string) =>
       setExpanded((current) => {

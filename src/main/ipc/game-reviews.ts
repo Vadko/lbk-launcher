@@ -38,6 +38,8 @@ const text = z
 const listInput: z.ZodType<GameReviewsListInput> = z.object({
   gameId: id,
   cursor: z.string().max(128).nullable(),
+  // A malformed deep link costs only its scroll, never the page
+  focusId: id.optional().catch(undefined),
 });
 
 const replyInput: z.ZodType<ReviewReplyInput> = z.object({

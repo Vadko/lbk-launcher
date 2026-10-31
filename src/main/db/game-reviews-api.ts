@@ -12,6 +12,7 @@ import type {
 import { keepValid } from './keep-valid';
 import { callReviewFunction } from './review-request';
 import { authorIdentitySchema } from './review-schemas';
+import { withFocus } from './with-focus';
 
 const enums = Constants.public.Enums;
 
@@ -53,28 +54,44 @@ const reviewSchema: z.ZodType<GameReview> = z.object({
     .transform((items) => keepValid(items, replySchema, 'replies')),
 });
 
-const pageSchema: z.ZodType<GameReviewsPage> = z.object({
-  items: z.array(z.unknown()).transform((items, ctx) => {
-    const kept = keepValid(items, reviewSchema, 'threads');
-    // Every thread failing is a contract break, which must not read as a game without reviews
-    if (items.length > 0 && kept.length === 0) {
-      ctx.issues.push({
-        code: 'custom',
-        message: 'Every thread failed its schema',
-        input: items,
-      });
-      return z.NEVER;
-    }
-    return kept;
-  }),
-  total: z.number(),
-  nextCursor: z.string().nullable(),
-  viewer: authorIdentitySchema.nullable(),
-});
+const pageSchema: z.ZodType<GameReviewsPage> = z
+  .object({
+    items: z.array(z.unknown()).transform((items, ctx) => {
+      const kept = keepValid(items, reviewSchema, 'threads');
+      // Every thread failing is a contract break, which must not read as a game without reviews
+      if (items.length > 0 && kept.length === 0) {
+        ctx.issues.push({
+          code: 'custom',
+          message: 'Every thread failed its schema',
+          input: items,
+        });
+        return z.NEVER;
+      }
+      return kept;
+    }),
+    total: z.number(),
+    nextCursor: z.string().nullable(),
+    viewer: authorIdentitySchema.nullable(),
+    // A bad focus thread costs the deep link its scroll, never the page
+    focus: z
+      .unknown()
+      .transform((focus) =>
+        focus == null
+          ? null
+          : (keepValid([focus], reviewSchema, 'focus threads')[0] ?? null)
+      ),
+  })
+  .transform(withFocus);
 
 export function fetchGameReviews({
   gameId,
   cursor,
+  focusId,
 }: GameReviewsListInput): Promise<ReviewResult<GameReviewsPage>> {
-  return callReviewFunction('reviews?action=list', { gameId, cursor }, pageSchema);
+  const focus = cursor === null && focusId ? { focusId } : {};
+  return callReviewFunction(
+    'reviews?action=list',
+    { gameId, cursor, ...focus },
+    pageSchema
+  );
 }

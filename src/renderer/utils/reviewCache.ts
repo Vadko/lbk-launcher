@@ -9,7 +9,12 @@ import type {
   ReviewAuthorIdentity,
 } from '@/shared/game-reviews-types';
 
-export type ReviewPages = InfiniteData<GameReviewsPage, string | null>;
+export interface ReviewCachePage extends GameReviewsPage {
+  // The deep link whose focus thread this first page was fetched with
+  focusKey?: string;
+}
+
+export type ReviewPages = InfiniteData<ReviewCachePage, string | null>;
 
 // null is a removal as get_game_reviews shows one: a root takes its thread, a reply leaves a stub only above a visible reply
 export type EntryUpdate = (entry: GameReviewEntry) => GameReviewEntry | null;

@@ -85,10 +85,25 @@ export function createReviewActions(
   gameName: string
 ) {
   const queryKey = gameReviewsQueryKey(gameId);
-  const refuse = (entryId: string, attempt: number, refusal: Refusal) =>
-    refuseReviewWrite(queryClient, { gameId, gameName, entryId, attempt, ...refusal });
   const overlay = () => useReviewOverlayStore.getState();
   const pages = () => queryClient.getQueryData<ReviewPages>(queryKey);
+  // Read before the refusal leaves the cache, so its notice links to the thread
+  const threadOf = (entryId: string, draft: ReviewWriteDraft) =>
+    draft.kind === 'reply' ? draft.reviewId : findEntry(pages(), entryId)?.thread.id;
+  const refuse = (
+    entryId: string,
+    attempt: number,
+    draft: ReviewWriteDraft,
+    refusal: Refusal
+  ) =>
+    refuseReviewWrite(queryClient, {
+      gameId,
+      gameName,
+      feedbackId: threadOf(entryId, draft),
+      entryId,
+      attempt,
+      ...refusal,
+    });
   const isCurrent = (entryId: string, attempt: number) =>
     overlay().writeOf(gameId, entryId)?.attempt === attempt;
   // Replies still checking or failed live only in the overlay, yet a new reply has to be dated after them too
@@ -188,7 +203,7 @@ export function createReviewActions(
     );
     const refusal = answerRefusal(answer);
     if (refusal) {
-      refuse(entryId, attempt, refusal);
+      refuse(entryId, attempt, plan.draft, refusal);
       return;
     }
     queryClient.setQueryData<ReviewPages>(
@@ -216,7 +231,7 @@ export function createReviewActions(
       if (result.ok) {
         takeAnswer(entryId, attempt, plan, result.data);
       } else {
-        refuse(entryId, attempt, failureRefusal(plan.draft, result.failure));
+        refuse(entryId, attempt, plan.draft, failureRefusal(plan.draft, result.failure));
       }
     }
     // Only the server knows where a deleted row's replies went, so the cache's guess gets replaced

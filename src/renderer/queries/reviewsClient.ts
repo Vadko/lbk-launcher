@@ -31,9 +31,10 @@ async function settled<T>(request: Promise<ReviewResult<T>>): Promise<ReviewResu
 // React Query needs a throw to keep the cached pages and show the retry
 export async function fetchReviewsPage(
   gameId: string,
-  cursor: string | null
+  cursor: string | null,
+  focusId?: string
 ): Promise<GameReviewsPage> {
-  const result = await window.electronAPI.fetchGameReviews({ gameId, cursor });
+  const result = await window.electronAPI.fetchGameReviews({ gameId, cursor, focusId });
   if (!result.ok) {
     throw new Error(`Reviews list failed: ${result.failure.code}`);
   }

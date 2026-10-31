@@ -311,7 +311,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           showSystemNotificationIfHidden(
             notificationParams.gameName,
             message,
-            notificationParams.gameId
+            notification
           );
         }
       },
@@ -355,7 +355,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('version-update');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -388,7 +388,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('progress-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -450,7 +450,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('team-new-game');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -487,7 +487,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('team-status-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -515,7 +515,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('status-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -560,7 +560,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           showSystemNotificationIfHidden(
             t('notifications.feedbackReplyTitle', { game: reply.gameName }),
             message,
-            reply.gameId
+            notification
           );
         }
         return true;
@@ -590,7 +590,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         set((state) => ({ toasts: [...state.toasts, toast] }));
         playNotificationSoundIfEnabled(toast.type);
         scheduleToastDismissal(toast.id, get().dismissToast);
-        showSystemNotificationIfHidden(toast.gameName, toast.message, toast.gameId);
+        showSystemNotificationIfHidden(toast.gameName, toast.message, toast);
       },
 
       markNotificationAsRead: (notificationId) => {

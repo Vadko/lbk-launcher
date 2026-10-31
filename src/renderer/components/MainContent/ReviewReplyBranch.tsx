@@ -2,7 +2,7 @@ import { AnimatePresence } from 'framer-motion';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import React from 'react';
 import { t } from '@/shared/i18n/i18n';
-import { countReplies, type ReplyNode } from '../../utils/replyTree';
+import { countReplies, type ReplyNode, VISIBLE_REPLIES } from '../../utils/replyTree';
 import { Button } from '../ui/Button';
 import { type BranchLevel, ReviewThreadRow } from './ReviewThreadRow';
 
@@ -14,8 +14,6 @@ interface ReviewReplyBranchProps {
   onToggle: (id: string) => void;
   renderReply: (node: ReplyNode) => React.ReactNode;
 }
-
-const VISIBLE_REPLIES = 3;
 
 export const ReviewReplyBranch: React.FC<ReviewReplyBranchProps> = ({
   parentId,

@@ -11,6 +11,7 @@ vi.mock('@/main/tracking', () => ({ IS_E2E: false, getMachineId: () => 'machine-
 const { fetchGameReviews } = await import('./game-reviews-api');
 
 const GAME = '0b6f3f0e-5c1a-4d2e-9f3b-2a1c4d5e6f70';
+const FOCUS = '3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a';
 // to_jsonb(timestamptz) keeps microseconds and an offset
 const CREATED = '2026-10-22T10:00:00.123456+00:00';
 
@@ -56,6 +57,69 @@ describe('fetchGameReviews', () => {
         timeout: 15_000,
       },
     ]);
+  });
+
+  it.each([
+    [
+      'asks for the focus thread with the first page',
+      null,
+      { gameId: GAME, cursor: null, focusId: FOCUS, machineId: MACHINE_ID },
+    ],
+    [
+      'leaves the focus thread off a next page',
+      'c|id',
+      { gameId: GAME, cursor: 'c|id', machineId: MACHINE_ID },
+    ],
+  ])('%s', async (_case, cursor, expected) => {
+    invoke.mockResolvedValue(page([]));
+
+    await fetchGameReviews({ gameId: GAME, cursor, focusId: FOCUS });
+
+    expect(invokeCalls(invoke.mock.calls).map(({ body }) => body)).toEqual([expected]);
+  });
+
+  it('puts the focus thread first when the page does not hold it', async () => {
+    invoke.mockResolvedValue(
+      answered({
+        items: [thread('a')],
+        total: 30,
+        nextCursor: `${CREATED}|a`,
+        focus: thread('z'),
+        viewer: null,
+      })
+    );
+
+    const result = await fetchGameReviews({ gameId: GAME, cursor: null, focusId: FOCUS });
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        items: [thread('z'), thread('a')],
+        total: 30,
+        nextCursor: `${CREATED}|a`,
+        viewer: null,
+      },
+    });
+  });
+
+  it('keeps the page when the focus thread is malformed', async () => {
+    invoke.mockResolvedValue(
+      answered({
+        items: [thread('a')],
+        total: 1,
+        nextCursor: null,
+        focus: thread('z', { type: 'unknown' }),
+        viewer: null,
+      })
+    );
+
+    const result = await fetchGameReviews({ gameId: GAME, cursor: null, focusId: FOCUS });
+
+    expect(result.ok && result.data.items.map((item) => item.id)).toEqual(['a']);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('focus threads'),
+      expect.any(String)
+    );
   });
 
   it('reads the server page with screenshots, the viewer and removed stubs', async () => {

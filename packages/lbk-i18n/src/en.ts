@@ -450,6 +450,8 @@ export const en = {
     yesterday: 'Yesterday, {{time}}',
     screenshotAlt: 'Screenshot {{number}}',
     loadMoreFailed: 'Could not load more reviews.',
+    focusMissing: 'This comment is no longer available.',
+    focusFailed: 'Could not load this comment.',
     removed: 'Removed by a moderator',
     rejected: {
       editRejected:

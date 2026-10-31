@@ -61,6 +61,7 @@ const toasted = (reason: Parameters<typeof reviewRefusalMessage>[0]) =>
         type: 'review-rejected',
         gameId: 'g1',
         gameName: 'Game',
+        feedbackId: 't',
         entryId: expect.any(String),
         message: reviewRefusalMessage(reason),
       },

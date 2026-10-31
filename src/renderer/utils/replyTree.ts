@@ -1,6 +1,9 @@
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import type { ReviewThreadReplyView } from '../queries/reviewViewTypes';
 
+// A branch shows this many replies until it is expanded
+export const VISIBLE_REPLIES = 3;
+
 export interface ReplyNode {
   reply: ReviewThreadReplyView;
   // Set when the answered entry sits on the last level, so this one is shown beside it

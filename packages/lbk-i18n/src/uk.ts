@@ -478,6 +478,8 @@ export const uk = {
     yesterday: 'Вчора, {{time}}',
     screenshotAlt: 'Скріншот {{number}}',
     loadMoreFailed: 'Не вдалося завантажити ще відгуки.',
+    focusMissing: 'Цей коментар більше недоступний.',
+    focusFailed: 'Не вдалося завантажити цей коментар.',
     removed: 'Видалено модератором',
     rejected: {
       editRejected: 'Модерація не пропустила зміни, тож повернуто попередній текст.',

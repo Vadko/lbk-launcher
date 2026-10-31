@@ -457,6 +457,8 @@ export const be = {
     yesterday: 'Учора, {{time}}',
     screenshotAlt: 'Здымак экрана {{number}}',
     loadMoreFailed: 'Не ўдалося загрузіць больш водгукаў.',
+    focusMissing: 'Гэты каментарый больш недаступны.',
+    focusFailed: 'Не ўдалося загрузіць гэты каментарый.',
     removed: 'Выдалена мадэратарам',
     rejected: {
       editRejected: 'Мадэрацыя не прапусціла змены, таму вернуты папярэдні тэкст.',

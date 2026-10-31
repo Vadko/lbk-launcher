@@ -24,6 +24,7 @@ import type { Notification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { gameLink } from '../../utils/gameLink';
 import { Modal } from '../Modal/Modal';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
@@ -75,8 +76,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       return;
     }
 
-    // Navigate to the game page
-    navigate(`/game/${notification.gameId}`);
+    navigate(gameLink(notification));
     onClose();
   };
 

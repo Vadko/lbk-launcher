@@ -1,3 +1,4 @@
+import type { GameLinkTarget } from '@/shared/game-link-target';
 import { t } from '@/shared/i18n/i18n';
 import { playNotificationSound } from '../../utils/notificationSounds';
 import { useSettingsStore } from '../useSettingsStore';
@@ -100,7 +101,7 @@ export function createToast(
 export async function showSystemNotificationIfHidden(
   title: string,
   body: string,
-  gameId?: string
+  link?: GameLinkTarget
 ): Promise<void> {
   if (
     !window.windowControls?.isVisible ||
@@ -112,7 +113,13 @@ export async function showSystemNotificationIfHidden(
   try {
     const isVisible = await window.windowControls.isVisible();
     if (!isVisible) {
-      await window.windowControls.showSystemNotification({ title, body, gameId });
+      // Only the link's own fields cross IPC, not the whole notice
+      const target = link && {
+        gameId: link.gameId,
+        feedbackId: link.feedbackId,
+        entryId: link.entryId,
+      };
+      await window.windowControls.showSystemNotification({ title, body, target });
     }
   } catch (error) {
     console.error('[Notification] Failed to show system notification:', error);

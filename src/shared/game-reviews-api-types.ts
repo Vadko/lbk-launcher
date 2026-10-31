@@ -53,6 +53,8 @@ export type ReviewResult<T> =
 export interface GameReviewsListInput {
   gameId: string;
   cursor: string | null;
+  // A deep link's thread: the server returns it beside page 0, and main's withFocus puts it first in that page
+  focusId?: string;
 }
 
 export interface ReviewReplyInput {

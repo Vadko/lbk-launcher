@@ -17,6 +17,7 @@ import type { ToastNotification } from '../../store/subscriptions/types';
 import { useChangelogStore } from '../../store/useChangelogStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
+import { gameLink } from '../../utils/gameLink';
 
 const getToastIcon = (type: ToastNotification['type']) => {
   switch (type) {
@@ -108,8 +109,7 @@ export const ToastNotifications: React.FC = () => {
         return;
       }
 
-      // Navigate to game page
-      navigate(`/game/${toast.gameId}`);
+      navigate(gameLink(toast));
       dismissToast(toast.id);
     },
     [navigate, dismissToast, setSpecialFilter]

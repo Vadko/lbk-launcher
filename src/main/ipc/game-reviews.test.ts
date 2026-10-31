@@ -82,6 +82,19 @@ describe('setupGameReviewsHandlers', () => {
     expect(state.api).toHaveBeenCalledWith(input);
   });
 
+  it.each([
+    ['passes a valid focus id through', ID, { gameId: OTHER, cursor: null, focusId: ID }],
+    [
+      'drops a malformed focus id and keeps the page',
+      'not-a-uuid',
+      { gameId: OTHER, cursor: null },
+    ],
+  ])('%s', async (_case, focusId, expected) => {
+    await call('reviews:list', { gameId: OTHER, cursor: null, focusId });
+
+    expect(state.api).toHaveBeenCalledWith(expected);
+  });
+
   it('reads the author without input', async () => {
     await call('reviews:author');
 

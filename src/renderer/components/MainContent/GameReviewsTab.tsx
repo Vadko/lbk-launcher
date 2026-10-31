@@ -1,11 +1,14 @@
 import { RotateCcw } from 'lucide';
 import { FileEditIcon, InfoIcon } from 'lucide-react';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
+import { useReviewFocus } from '../../hooks/useReviewFocus';
 import { useGameReviewActions } from '../../queries/useGameReviewActions';
 import { useGameReviews } from '../../queries/useGameReviews';
+import type { ReviewFocus } from '../../utils/readReviewLink';
+import { uniqueThreads } from '../../utils/uniqueThreads';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -16,6 +19,9 @@ interface GameReviewsTabProps {
   gameName: string;
   canLeaveFeedback: boolean;
   onLeaveFeedback: () => void;
+  // A deep link's entry, until the tab has shown it
+  focus: ReviewFocus | null;
+  onFocusHandled: () => void;
 }
 
 export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
@@ -23,7 +29,13 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   gameName,
   canLeaveFeedback,
   onLeaveFeedback,
+  focus,
+  onFocusHandled,
 }) => {
+  const { query, loadNextPage, isLoadMoreFailed, failedFocusKey } = useGameReviews(
+    gameId,
+    focus
+  );
   const {
     data,
     isPending,
@@ -31,16 +43,23 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
     isFetching,
     hasNextPage,
     isFetchingNextPage,
-    fetchNextPage,
     refetch,
-  } = useGameReviews(gameId);
+  } = query;
   const actions = useGameReviewActions(gameId, gameName);
   const handleResend = useCallback(
     (entryId: string) => void actions.resend(entryId),
     [actions]
   );
-  const reviews = data?.pages.flatMap((page) => page.items) ?? [];
+  const reviews = uniqueThreads(data?.pages ?? []);
   const total = data?.pages[0]?.total;
+  const focused = useReviewFocus({
+    focus,
+    failedKey: failedFocusKey,
+    firstPage: data?.pages[0],
+    threads: reviews,
+    isFetching,
+    onHandled: onFocusHandled,
+  });
   // A retry resets the query to pending, so the phase keeps the focused button mounted until it settles
   const retry = useActionPhase();
   const handleRetry = () => {
@@ -48,13 +67,6 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       void retry.run(() => refetch(), { isSuccess: (result) => !result.isError });
     }
   };
-  // A cache patch from a taken write clears the query's error, so the failed page is remembered here
-  const [isLoadMoreFailed, setIsLoadMoreFailed] = useState(false);
-  const loadNextPage = useCallback(async () => {
-    const result = await fetchNextPage();
-    setIsLoadMoreFailed(result.isFetchNextPageError);
-    return result;
-  }, [fetchNextPage]);
   const loadMore = useActionPhase();
   const handleLoadMore = () => {
     if (!loadMore.isPending) {
@@ -102,6 +114,13 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
         </div>
       )}
 
+      {focused.notice && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-glass text-sm text-text-muted">
+          <InfoIcon size={18} className="shrink-0" />
+          {t(`gameReviews.${focused.notice}`)}
+        </div>
+      )}
+
       <div className="flex-1">
         {retry.isBusy || (isError && !data && !isFetching) ? (
           <div className="flex flex-col items-center gap-4 py-12">
@@ -132,6 +151,8 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
                   onEdit={actions.edit}
                   onResend={handleResend}
                   onDiscard={actions.discard}
+                  focusEntryId={review.id === focused.threadId ? focused.entryId : null}
+                  onFocused={focused.onFocused}
                 />
               </div>
             ))}
