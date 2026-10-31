@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
+import type { ModerationVerdict } from '../utils/moderationVerdict';
 import type {
   GameReviewWrites,
   ReviewWrite,
@@ -27,8 +28,16 @@ interface ReviewOverlayStore {
   drop: (gameId: string, entryId: string, attempt?: number) => void;
   // Entries whose edit the server refused, by game, until a new write on them starts
   rolledBack: RolledBack;
-  // Drops the entry's write and marks it in one update, so the badge never sees it confirmed
-  rollBack: (gameId: string, entryId: string) => void;
+  // Marks the entry and drops the answered attempt's write in one update, so the badge never sees it confirmed; another write stays
+  rollBack: (gameId: string, entryId: string, attempt?: number) => void;
+  // Root posts the feedback form sent and the server has not answered yet, by id
+  posting: ReadonlySet<string>;
+  startPost: (id: string) => void;
+  endPost: (id: string, shown: ModerationVerdict | null) => void;
+  // The verdict each answer to the viewer's own write showed, until a moderation event on that entry takes it
+  shown: ReadonlyMap<string, ModerationVerdict>;
+  markShown: (entryId: string, verdict: ModerationVerdict) => void;
+  takeShown: (entryId: string) => ModerationVerdict | undefined;
 }
 
 // Never reused, so an answer to a discarded write cannot pass for a later write on the same entry
@@ -52,6 +61,20 @@ function withWrite(
     next.set(gameId, writes);
   } else {
     next.delete(gameId);
+  }
+  return next;
+}
+
+function withShown(
+  shown: ReadonlyMap<string, ModerationVerdict>,
+  entryId: string,
+  verdict: ModerationVerdict | null
+): ReadonlyMap<string, ModerationVerdict> {
+  const next = new Map(shown);
+  if (verdict) {
+    next.set(entryId, verdict);
+  } else {
+    next.delete(entryId);
   }
   return next;
 }
@@ -119,12 +142,42 @@ export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
 
   rolledBack: new Map(),
 
-  rollBack: (gameId, entryId) => {
+  rollBack: (gameId, entryId, attempt) => {
     set(({ games, rolledBack }) => ({
-      games: get().writeOf(gameId, entryId)
-        ? withWrite(games, gameId, entryId, null)
-        : games,
+      games:
+        attempt !== undefined && get().writeOf(gameId, entryId)?.attempt === attempt
+          ? withWrite(games, gameId, entryId, null)
+          : games,
       rolledBack: withRolledBack(rolledBack, gameId, entryId, true),
     }));
+  },
+
+  posting: new Set(),
+
+  startPost: (id) => {
+    set(({ posting }) => ({ posting: new Set(posting).add(id) }));
+  },
+
+  // One update, so a verdict waiting for the answer already sees what it showed
+  endPost: (id, verdict) => {
+    set(({ posting, shown }) => {
+      const rest = new Set(posting);
+      rest.delete(id);
+      return { posting: rest, shown: verdict ? withShown(shown, id, verdict) : shown };
+    });
+  },
+
+  shown: new Map(),
+
+  markShown: (entryId, verdict) => {
+    set(({ shown }) => ({ shown: withShown(shown, entryId, verdict) }));
+  },
+
+  takeShown: (entryId) => {
+    const verdict = get().shown.get(entryId);
+    if (verdict) {
+      set(({ shown }) => ({ shown: withShown(shown, entryId, null) }));
+    }
+    return verdict;
   },
 }));

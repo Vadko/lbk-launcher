@@ -30,7 +30,11 @@ const refusal = (entryId: string, effect: keyof typeof REASONS) => ({
 
 beforeEach(() => {
   queryClient = new QueryClient();
-  useReviewOverlayStore.setState({ games: new Map(), rolledBack: new Map() });
+  useReviewOverlayStore.setState({
+    games: new Map(),
+    rolledBack: new Map(),
+    shown: new Map(),
+  });
   showToast.mockReset();
   queryClient.setQueryData<ReviewPages>(
     REVIEWS_KEY,
@@ -56,15 +60,18 @@ describe('refuseReviewWrite', () => {
       type: 'review-rejected',
       gameId: 'g1',
       gameName: 'Game',
+      entryId: 'held',
       message: reviewRefusalMessage('edit_rejected'),
     });
   });
 
   it('keeps an earlier edit still under moderation when the server stored nothing', () => {
     const before = cached();
-    useReviewOverlayStore.getState().start('g1', 'held', { kind: 'edit', text: 'again' });
+    const attempt = useReviewOverlayStore
+      .getState()
+      .start('g1', 'held', { kind: 'edit', text: 'again' });
 
-    refuseReviewWrite(queryClient, refusal('held', 'refused'));
+    refuseReviewWrite(queryClient, { ...refusal('held', 'refused'), attempt });
 
     expect(cached()).toBe(before);
     expect(findEntry(cached(), 'held')?.entry.pendingText).toBe('changed');
@@ -72,8 +79,12 @@ describe('refuseReviewWrite', () => {
     expect(useReviewOverlayStore.getState().rolledBack.get('g1')?.has('held')).toBe(true);
   });
 
-  it('leaves a stub where a removed reply still holds an answer', () => {
+  it('leaves a stub where a removed reply still holds an answer, and drops its write', () => {
+    useReviewOverlayStore.getState().start('g1', 'held', { kind: 'edit', text: 'again' });
+
     refuseReviewWrite(queryClient, refusal('held', 'gone'));
+
+    expect(useReviewOverlayStore.getState().writeOf('g1', 'held')).toBeUndefined();
 
     expect(cached()?.pages[0]?.items[0]?.replies).toEqual([
       expect.objectContaining({ id: 'held', removed: true }),

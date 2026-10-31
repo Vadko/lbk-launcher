@@ -61,3 +61,24 @@ export interface GameReviewsPage {
   // This machine's nickname, null until it claims one
   viewer: ReviewAuthorIdentity | null;
 }
+
+// A live 'review' broadcast or a catch-up item, for a reply to the viewer or a verdict on their own entry
+export interface ReviewEvent {
+  kind: 'reply' | 'moderation';
+  gameId: string;
+  gameName: string;
+  feedbackId: string;
+  entryId: string;
+  parentId: string | null;
+  // A player's nickname or an author's team; staff stay unnamed
+  authorName: string | null;
+  authorRole: Enums['review_author_role'];
+  // Null unless the entry is published
+  message: string | null;
+  outcome: GameReviewOutcome;
+  editRejected: boolean;
+  createdAt: string;
+  editedAt: string | null;
+  // The server's event time, kept as sent: the catch-up resumes from it to the microsecond
+  at: string;
+}

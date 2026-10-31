@@ -5,7 +5,9 @@ import {
   ChevronLeftIcon,
   DownloadIcon,
   LanguagesIcon,
+  MessageSquareCheckIcon,
   MessageSquareIcon,
+  MessageSquareXIcon,
   RefreshCwIcon,
   SettingsIcon,
   SparklesIcon,
@@ -119,6 +121,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return <UsersIcon className="w-4 h-4 text-cyan-400" />;
       case 'feedback-reply':
         return <MessageSquareIcon className="w-4 h-4 text-color-main" />;
+      case 'review-rejected':
+        return <MessageSquareXIcon className="w-4 h-4 text-red-400" />;
+      case 'review-published':
+        return <MessageSquareCheckIcon className="w-4 h-4 text-green-400" />;
       default:
         return <BellIcon className="w-4 h-4 text-color-accent" />;
     }
@@ -140,6 +146,10 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return 'bg-cyan-500/20';
       case 'feedback-reply':
         return 'bg-color-main/20';
+      case 'review-rejected':
+        return 'bg-red-500/20';
+      case 'review-published':
+        return 'bg-green-500/20';
       default:
         return 'bg-color-accent/20';
     }
@@ -191,6 +201,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
             {notification.message}
           </>
         );
+      case 'review-rejected':
+        return (
+          <>
+            <span className="text-red-400">{t('notificationCenter.reviewRejected')}</span>{' '}
+            {notification.message}
+          </>
+        );
+      case 'review-published':
+        return t('notificationMessage.reviewPublished');
       default:
         return t('notificationCenter.fallback');
     }

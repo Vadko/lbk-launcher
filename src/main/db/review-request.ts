@@ -14,7 +14,8 @@ type ReviewEndpoint =
   | 'reviews?action=reply'
   | 'reviews?action=edit'
   | 'submit-feedback'
-  | 'submit-feedback?action=upload-urls';
+  | 'submit-feedback?action=upload-urls'
+  | 'get-feedback-replies';
 
 interface EndpointRule {
   // Writes never leave an E2E run, which builds with the production keys
@@ -29,6 +30,8 @@ interface ReviewCallOptions {
   captchaToken?: () => Promise<string | null>;
   // Otherwise a write without a token still goes out, so the server's REVIEWS_CAPTCHA=off switch can pass it
   refuseWithoutToken?: boolean;
+  // The Date header of a 2xx answer, for a caller that must not trust the local clock
+  onServerTime?: (at: string) => void;
 }
 
 const READ_TIMEOUT_MS = 15_000;
@@ -72,6 +75,11 @@ const ENDPOINTS: Record<ReviewEndpoint, EndpointRule> = {
     machineId: 'required',
     timeoutMs: READ_TIMEOUT_MS,
   },
+  'get-feedback-replies': {
+    write: false,
+    machineId: 'required',
+    timeoutMs: READ_TIMEOUT_MS,
+  },
 };
 
 const successSchema = z.object({ success: z.literal(true) });
@@ -80,14 +88,14 @@ async function attempt<T>(
   endpoint: ReviewEndpoint,
   body: Record<string, unknown>,
   schema: z.ZodType<T>,
-  { captchaToken, refuseWithoutToken }: ReviewCallOptions
+  { captchaToken, refuseWithoutToken, onServerTime }: ReviewCallOptions
 ): Promise<ReviewResult<T>> {
   try {
     const token = captchaToken ? await captchaToken() : undefined;
     if (token === null && refuseWithoutToken) {
       return { ok: false, failure: reviewFailure('captcha_unavailable', endpoint) };
     }
-    const { data, error } = await getSupabaseClient().functions.invoke<unknown>(
+    const { data, error, response } = await getSupabaseClient().functions.invoke<unknown>(
       endpoint,
       {
         body: typeof token === 'string' ? { ...body, captchaToken: token } : body,
@@ -107,6 +115,10 @@ async function attempt<T>(
       // Issues name paths and expectations, never the values, so no user text reaches Sentry
       const detail = z.prettifyError(parsed.error);
       return { ok: false, failure: reviewFailure('bad_response', endpoint, detail) };
+    }
+    const serverTime = Date.parse(response?.headers.get('Date') ?? '');
+    if (onServerTime && !Number.isNaN(serverTime)) {
+      onServerTime(new Date(serverTime).toISOString());
     }
     return { ok: true, data: parsed.data };
   } catch (error) {

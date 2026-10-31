@@ -225,14 +225,6 @@ interface LaunchGameResult {
   error?: string;
 }
 
-export interface FeedbackReplyPayload {
-  replyId: string;
-  gameId: string;
-  gameName: string;
-  message: string;
-  createdAt: string;
-}
-
 export type SteamBridgeFailure =
   | 'cef-unavailable'
   | 'steam-not-running'
@@ -371,12 +363,6 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
-  // Feedback replies (admin/owner → this install). `live=false` = silent catch-up.
-  onFeedbackReply: (
-    callback: (reply: FeedbackReplyPayload, live: boolean) => void
-  ) => () => void;
-  /** Kick main to replay replies missed while offline (delivered via onFeedbackReply). */
-  syncFeedbackReplies: () => Promise<void>;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
   onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY

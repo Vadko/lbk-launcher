@@ -51,6 +51,10 @@ export function getNotificationMessage(
       return notification.message
         ? `${notification.gameName}: ${notification.message}`
         : t('notificationMessage.feedbackReply');
+    case 'review-rejected':
+      return notification.message ?? t('gameReviews.rejected.generic');
+    case 'review-published':
+      return t('notificationMessage.reviewPublished');
     default:
       return t('notificationMessage.fallback');
   }
@@ -83,6 +87,8 @@ export function createToast(
     type: notification.type,
     gameId: notification.gameId,
     gameName: notification.gameName,
+    feedbackId: notification.feedbackId,
+    entryId: notification.entryId,
     message,
     timestamp: Date.now(),
   };

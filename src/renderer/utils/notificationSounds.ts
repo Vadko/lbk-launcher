@@ -220,6 +220,7 @@ const SOUNDS: Record<ToastNotification['type'], () => void> = {
   'first-favorite': playStatusChangeSound,
   'feedback-reply': playStatusChangeSound,
   'review-rejected': playRefusalSound,
+  'review-published': playStatusChangeSound,
 };
 
 export function playNotificationSound(type: ToastNotification['type']): void {

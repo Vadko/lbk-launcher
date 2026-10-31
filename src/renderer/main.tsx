@@ -7,8 +7,8 @@ import { I18nextProvider } from 'react-i18next';
 import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
-import { initFeedbackReplies } from './store/feedbackReplyBridge';
 import { initLikes } from './store/likesBridge';
+import { initReviewEvents } from './store/reviewEventsBridge';
 import { useSettingsStore } from './store/useSettingsStore';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import '@fontsource-variable/inter';
@@ -36,8 +36,8 @@ sentryInit(
 // Initialize global error handlers before React renders
 initGlobalErrorHandlers();
 
-// Bridge feedback replies (IPC) into the notification store — once, outside React.
-initFeedbackReplies();
+// Bridge review events (IPC) into the notifications and the reviews cache — once, outside React.
+initReviewEvents();
 
 // Bridge the liked set (IPC) into the likes store — once, outside React.
 initLikes();

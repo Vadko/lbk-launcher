@@ -13,7 +13,6 @@ import type {
 import type {
   DownloadProgress,
   ElectronAPI,
-  FeedbackReplyPayload,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -217,13 +216,6 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-tombstoned', handler);
     return () => ipcRenderer.removeListener('game-tombstoned', handler);
   },
-  onFeedbackReply: (callback) => {
-    const handler = (_: unknown, reply: FeedbackReplyPayload, live: boolean) =>
-      callback(reply, live);
-    ipcRenderer.on('feedback-reply', handler);
-    return () => ipcRenderer.removeListener('feedback-reply', handler);
-  },
-  syncFeedbackReplies: () => ipcRenderer.invoke('feedback-replies:sync'),
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();

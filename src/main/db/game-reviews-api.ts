@@ -9,6 +9,7 @@ import type {
   GameReviewsPage,
   GameReviewThreadReply,
 } from '../../shared/game-reviews-types';
+import { keepValid } from './keep-valid';
 import { callReviewFunction } from './review-request';
 import { authorIdentitySchema } from './review-schemas';
 
@@ -40,20 +41,6 @@ const replySchema: z.ZodType<GameReviewThreadReply> = z.union([
     removed: z.literal(true),
   }),
 ]);
-
-// One bad entry is dropped instead of failing the whole page, and the drop reaches Sentry
-function keepValid<T>(items: unknown[], schema: z.ZodType<T>, what: string): T[] {
-  const results = items.map((item) => schema.safeParse(item));
-  const kept = results.flatMap((result) => (result.success ? [result.data] : []));
-  const dropped = results.find((result) => !result.success);
-  if (dropped && !dropped.success) {
-    console.error(
-      `[Reviews] Dropped ${items.length - kept.length} of ${items.length} ${what}:`,
-      z.prettifyError(dropped.error)
-    );
-  }
-  return kept;
-}
 
 // Malformed data would otherwise reach render and take the whole window down
 const reviewSchema: z.ZodType<GameReview> = z.object({

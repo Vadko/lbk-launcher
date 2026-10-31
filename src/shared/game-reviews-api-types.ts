@@ -4,6 +4,7 @@ import type {
   GameReviewOutcome,
   GameReviewsPage,
   ReviewAuthorIdentity,
+  ReviewEvent,
 } from './game-reviews-types';
 
 // Mirrors REVIEW_ERROR_STATUS in lbk-admin's supabase/functions/_shared/reviewErrorCodes.ts
@@ -146,4 +147,10 @@ export interface GameReviewsAPI {
   ) => Promise<ReviewResult<FeedbackUploadUrl[]>>;
   // Solves a token in main ahead of a public write; the renderer never sees it
   prefetchCaptcha: (action: TurnstileAction) => void;
+  // A live event alone, or a catch-up page (live=false: into the list without a toast)
+  onReviewEvents: (
+    callback: (events: ReviewEvent[], live: boolean) => void
+  ) => () => void;
+  // Replays the events missed while offline through onReviewEvents
+  syncReviewEvents: () => Promise<void>;
 }

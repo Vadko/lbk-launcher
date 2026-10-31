@@ -79,6 +79,27 @@ describe('callReviewFunction', () => {
     ]);
   });
 
+  it('reports the Date header of a 2xx answer only', async () => {
+    const onServerTime = vi.fn();
+    const headers = { Date: 'Thu, 29 Oct 2026 10:00:00 GMT' };
+    state.invoke
+      .mockResolvedValueOnce({
+        ...answered({ id: 'r1' }),
+        response: new Response(null, { headers }),
+      })
+      .mockResolvedValueOnce({
+        ...refused('not_owner', 403),
+        response: new Response(null, { status: 403, headers }),
+      })
+      .mockResolvedValueOnce(answered({ id: 'r1' }));
+
+    await reply({ onServerTime });
+    await reply({ onServerTime });
+    await reply({ onServerTime });
+
+    expect(onServerTime.mock.calls).toEqual([['2026-10-29T10:00:00.000Z']]);
+  });
+
   it('gives reads the shorter timeout', async () => {
     state.invoke.mockResolvedValue(answered({ id: 'x' }));
 

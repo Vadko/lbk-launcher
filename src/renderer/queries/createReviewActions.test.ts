@@ -61,6 +61,7 @@ const toasted = (reason: Parameters<typeof reviewRefusalMessage>[0]) =>
         type: 'review-rejected',
         gameId: 'g1',
         gameName: 'Game',
+        entryId: expect.any(String),
         message: reviewRefusalMessage(reason),
       },
     ],
@@ -68,7 +69,11 @@ const toasted = (reason: Parameters<typeof reviewRefusalMessage>[0]) =>
 
 beforeEach(() => {
   queryClient = new QueryClient();
-  useReviewOverlayStore.setState({ games: new Map(), rolledBack: new Map() });
+  useReviewOverlayStore.setState({
+    games: new Map(),
+    rolledBack: new Map(),
+    shown: new Map(),
+  });
   showToast.mockReset();
   sendReviewReply.mockReset();
   sendReviewReply.mockImplementation(({ id }) => Promise.resolve(published(id)));
@@ -117,7 +122,7 @@ describe('createReviewActions overlay', () => {
     await vi.waitFor(() => expect(heldWrites().size).toBe(0));
     stop();
 
-    expect(visible).toEqual([true]);
+    expect(visible).not.toContain(false);
     expect(inCache(id)).toBe(true);
     expect(shown(id)).toMatchObject({ moderation: 'published' });
     expect(shown(id)?.isChecking).toBeUndefined();
@@ -359,6 +364,39 @@ describe('createReviewActions overlay', () => {
     toasted(reason);
     // A deleted row's replies moved on the server, so only not_found asks it for the thread again
     expect(invalidate).toHaveBeenCalledTimes(reason === 'not_found' ? 1 : 0);
+  });
+
+  it.each([
+    ['a removal', removedAnswer('mine'), 'removed'],
+    ['a rejected edit', editRefused('mine'), 'rolledBack'],
+    ['a publish', published('mine'), 'published'],
+  ] as const)(
+    'marks %s the answer showed while the write still checks',
+    async (_l, answer, verdict) => {
+      sendReviewEdit.mockResolvedValue(answer);
+      const actions = seed(false);
+      const marks: [string | undefined, boolean][] = [];
+      const stop = useReviewOverlayStore.subscribe((state) =>
+        marks.push([state.shown.get('mine'), state.games.has('g1')])
+      );
+
+      await actions.edit('mine', 'changed', vi.fn());
+      await flush();
+      stop();
+
+      expect(marks).toContainEqual([verdict, true]);
+      expect(useReviewOverlayStore.getState().shown.get('mine')).toBe(verdict);
+    }
+  );
+
+  it('marks nothing for a write the server refused without storing it', async () => {
+    sendReviewEdit.mockResolvedValue(banned);
+    const actions = seed(false);
+
+    await actions.edit('mine', 'changed', vi.fn());
+    await flush();
+
+    expect(useReviewOverlayStore.getState().shown.size).toBe(0);
   });
 
   it('drops a reply whose thread or parent is gone and asks the server again', async () => {

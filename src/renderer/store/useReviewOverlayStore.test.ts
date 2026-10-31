@@ -10,7 +10,12 @@ const resend = () => Promise.resolve();
 const store = () => useReviewOverlayStore.getState();
 
 beforeEach(() => {
-  useReviewOverlayStore.setState({ games: new Map(), rolledBack: new Map() });
+  useReviewOverlayStore.setState({
+    games: new Map(),
+    rolledBack: new Map(),
+    posting: new Set(),
+    shown: new Map(),
+  });
 });
 
 describe('useReviewOverlayStore', () => {
@@ -81,13 +86,13 @@ describe('useReviewOverlayStore', () => {
   });
 
   it('rolls an edit back by dropping it and marking its entry in one update', () => {
-    store().start('g1', 'e', EDIT);
+    const attempt = store().start('g1', 'e', EDIT);
     const updates: [boolean, boolean][] = [];
     const stop = useReviewOverlayStore.subscribe((state) =>
       updates.push([state.games.has('g1'), state.rolledBack.get('g1')?.has('e') === true])
     );
 
-    store().rollBack('g1', 'e');
+    store().rollBack('g1', 'e', attempt);
     stop();
 
     expect(updates).toEqual([[false, true]]);
@@ -109,5 +114,44 @@ describe('useReviewOverlayStore', () => {
     store().start('g1', 'x', EDIT);
 
     expect(store().rolledBack).toBe(before);
+  });
+
+  it('marks a rollback without an attempt and keeps the write that failed to send', () => {
+    const attempt = store().start('g1', 'e', EDIT);
+    store().fail('g1', 'e', attempt, FAILURE, resend);
+
+    store().rollBack('g1', 'e');
+
+    expect(store().writeOf('g1', 'e')).toMatchObject({ state: 'failed', attempt });
+    expect(store().rolledBack.get('g1')?.has('e')).toBe(true);
+  });
+
+  it('hands a shown verdict out once', () => {
+    store().markShown('e', 'removed');
+
+    expect(store().takeShown('e')).toBe('removed');
+    expect(store().takeShown('e')).toBeUndefined();
+  });
+
+  it('ends a post and marks its verdict in one update', () => {
+    store().startPost('p');
+    const updates: [boolean, string | undefined][] = [];
+    const stop = useReviewOverlayStore.subscribe((state) =>
+      updates.push([state.posting.has('p'), state.shown.get('p')])
+    );
+
+    store().endPost('p', 'published');
+    stop();
+
+    expect(updates).toEqual([[false, 'published']]);
+  });
+
+  it('marks nothing for a post without an answer', () => {
+    store().startPost('p');
+
+    store().endPost('p', null);
+
+    expect(store().posting.size).toBe(0);
+    expect(store().shown.size).toBe(0);
   });
 });

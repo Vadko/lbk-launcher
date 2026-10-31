@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/shared/i18n/i18n';
+import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
 import type { FeedbackAttempt } from '../utils/feedbackAttempt';
 
 const client = vi.hoisted(() => ({
@@ -89,6 +90,31 @@ describe('sendFeedbackPost', () => {
       screenshotPaths: [`${POST}/a.png`, `${POST}/b.png`],
       allowPublish: false,
     });
+  });
+
+  it('holds the post as sending until its answer marks the verdict it showed', async () => {
+    const overlay = () => useReviewOverlayStore.getState();
+    useReviewOverlayStore.setState({ posting: new Set(), shown: new Map() });
+    client.sendFeedback.mockImplementation(() => {
+      expect(overlay().posting.has(POST)).toBe(true);
+      return Promise.resolve({ ok: true, data: { id: POST, outcome: 'removed' } });
+    });
+
+    await sendFeedbackPost(first(), post([]));
+
+    expect(overlay().posting.size).toBe(0);
+    expect(overlay().shown.get(POST)).toBe('removed');
+  });
+
+  it('lets a waiting verdict go when the send throws, marking nothing as shown', async () => {
+    const overlay = () => useReviewOverlayStore.getState();
+    useReviewOverlayStore.setState({ posting: new Set(), shown: new Map() });
+    client.sendFeedback.mockRejectedValue(new Error('ipc'));
+
+    await expect(sendFeedbackPost(first(), post([]))).rejects.toThrow('ipc');
+
+    expect(overlay().posting.size).toBe(0);
+    expect(overlay().shown.size).toBe(0);
   });
 
   it('asks for no upload without screenshots', async () => {

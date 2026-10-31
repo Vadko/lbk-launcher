@@ -148,12 +148,10 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
-import { createFeedbackReplyBroadcastSubscription } from './feedback-replies';
 import {
   startInstallationWatcher,
   stopInstallationWatcher,
 } from './installation-watcher';
-import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
 import { setupGameReviewsHandlers } from './ipc/game-reviews';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
@@ -169,6 +167,7 @@ import {
 } from './playtime-tracker';
 import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
 import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import { createReviewEventsSubscription } from './review-events';
 import {
   deleteStaleBridgeData,
   shutdownSteamBridgeServer,
@@ -264,7 +263,6 @@ if (!gotTheLock) {
   setupInstallerHandlers();
   setupTgNewsHandlers();
   setupLikesHandlers();
-  setupFeedbackReplyHandlers();
   setupGameReviewsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
@@ -382,10 +380,9 @@ if (!gotTheLock) {
         });
       }
     );
-    const feedbackChannel = createFeedbackReplyBroadcastSubscription();
     realtimeManager.subscribe([
       gamesChannel,
-      feedbackChannel,
+      createReviewEventsSubscription(),
       createGameCountersSubscription(),
     ]);
 

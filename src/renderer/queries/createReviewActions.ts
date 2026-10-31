@@ -16,6 +16,7 @@ import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
 import { editDeadline } from '../utils/editDeadline';
 import { handOver } from '../utils/handOver';
 import { isOutcomeUnknown } from '../utils/isOutcomeUnknown';
+import { moderationVerdict } from '../utils/moderationVerdict';
 import {
   findEntry,
   findThread,
@@ -56,12 +57,15 @@ function failureRefusal(draft: ReviewWriteDraft, failure: ReviewFailure): Refusa
   };
 }
 
+const isEditRejected = (answer: AnswerData) =>
+  'editRejected' in answer && answer.editRejected;
+
 // A removed outcome on an edit is a takedown of the whole entry
 function answerRefusal(answer: AnswerData): Refusal | null {
   if (answer.outcome === 'removed') {
     return { effect: 'gone', reason: 'removed' };
   }
-  return 'editRejected' in answer && answer.editRejected
+  return isEditRejected(answer)
     ? { effect: 'rolledBack', reason: 'edit_rejected' }
     : null;
 }
@@ -81,8 +85,8 @@ export function createReviewActions(
   gameName: string
 ) {
   const queryKey = gameReviewsQueryKey(gameId);
-  const refuse = (entryId: string, refusal: Refusal) =>
-    refuseReviewWrite(queryClient, { gameId, gameName, entryId, ...refusal });
+  const refuse = (entryId: string, attempt: number, refusal: Refusal) =>
+    refuseReviewWrite(queryClient, { gameId, gameName, entryId, attempt, ...refusal });
   const overlay = () => useReviewOverlayStore.getState();
   const pages = () => queryClient.getQueryData<ReviewPages>(queryKey);
   const isCurrent = (entryId: string, attempt: number) =>
@@ -177,9 +181,14 @@ export function createReviewActions(
     plan: WritePlan,
     answer: AnswerData
   ) => {
+    // Marked while the write still checks, so a moderation event waiting on it sees the verdict was shown
+    overlay().markShown(
+      entryId,
+      moderationVerdict({ outcome: answer.outcome, editRejected: isEditRejected(answer) })
+    );
     const refusal = answerRefusal(answer);
     if (refusal) {
-      refuse(entryId, refusal);
+      refuse(entryId, attempt, refusal);
       return;
     }
     queryClient.setQueryData<ReviewPages>(
@@ -207,7 +216,7 @@ export function createReviewActions(
       if (result.ok) {
         takeAnswer(entryId, attempt, plan, result.data);
       } else {
-        refuse(entryId, failureRefusal(plan.draft, result.failure));
+        refuse(entryId, attempt, failureRefusal(plan.draft, result.failure));
       }
     }
     // Only the server knows where a deleted row's replies went, so the cache's guess gets replaced

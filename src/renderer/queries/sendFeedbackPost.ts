@@ -2,6 +2,7 @@ import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import type { GameReviewOutcome } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
+import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
 import { afterRefusal, attemptFor, type FeedbackAttempt } from '../utils/feedbackAttempt';
 import { feedbackFailureMessage } from '../utils/feedbackFailureMessage';
 import { requestFeedbackUploadUrls, sendFeedback } from './reviewsClient';
@@ -85,6 +86,9 @@ export async function sendFeedbackPost(
     return { ok: false, message, failure, attempt: withUploads };
   }
 
+  const overlay = useReviewOverlayStore.getState();
+  // A moderation event on the post waits for this answer, so the verdict the form shows is not announced again
+  overlay.startPost(attempt.id);
   const sent = await sendFeedback({
     id: attempt.id,
     gameId: post.gameId,
@@ -92,7 +96,11 @@ export async function sendFeedbackPost(
     message: post.message,
     screenshotPaths: uploaded.paths,
     allowPublish: post.allowPublish,
+  }).catch((error: unknown) => {
+    overlay.endPost(attempt.id, null);
+    throw error;
   });
+  overlay.endPost(attempt.id, sent.ok ? sent.data.outcome : null);
   if (sent.ok) {
     return { ok: true, outcome: sent.data.outcome, attempt: withUploads };
   }

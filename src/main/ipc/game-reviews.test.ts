@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   listeners: new Map<string, Listener>(),
   api: vi.fn(),
   prefetch: vi.fn(),
+  syncEvents: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('electron', () => ({
@@ -27,6 +28,7 @@ vi.mock('@/main/db/review-author-api', () => ({
   spinReviewNickname: state.api,
   claimReviewNickname: state.api,
 }));
+vi.mock('@/main/review-events', () => ({ syncReviewEvents: state.syncEvents }));
 vi.mock('@/main/db/submit-feedback-api', () => ({
   submitFeedback: state.api,
   getFeedbackUploadUrls: state.api,
@@ -149,6 +151,14 @@ describe('setupGameReviewsHandlers', () => {
     });
 
     expect(state.api).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays missed review events to the page that asked', async () => {
+    const sender = { id: 1 };
+
+    await state.handlers.get('reviews:sync-events')?.({ sender });
+
+    expect(state.syncEvents).toHaveBeenCalledWith(sender);
   });
 
   it('prefetches a token for a known action', () => {

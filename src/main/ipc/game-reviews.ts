@@ -20,6 +20,7 @@ import {
 } from '../db/review-author-api';
 import { reviewFailure } from '../db/review-failure';
 import { getFeedbackUploadUrls, submitFeedback } from '../db/submit-feedback-api';
+import { syncReviewEvents } from '../review-events';
 import { turnstileActionSchema } from '../turnstile/contract';
 import { prefetchCaptchaToken } from '../turnstile/tokens';
 
@@ -97,6 +98,7 @@ export function setupGameReviewsHandlers(): void {
   handle('reviews:claim', claimInput, claimReviewNickname);
   handle('reviews:submit-feedback', submitInput, submitFeedback);
   handle('reviews:upload-urls', uploadUrlsInput, getFeedbackUploadUrls);
+  ipcMain.handle('reviews:sync-events', (event) => syncReviewEvents(event.sender));
   ipcMain.on('reviews:prefetch-captcha', (_, raw: unknown) => {
     const action = turnstileActionSchema.safeParse(raw);
     if (action.success) {

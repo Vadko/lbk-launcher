@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron';
 import type { GameReviewsAPI } from '../shared/game-reviews-api-types';
+import type { ReviewEvent } from '../shared/game-reviews-types';
 
 export const gameReviewsAPI: GameReviewsAPI = {
   fetchGameReviews: (input) => ipcRenderer.invoke('reviews:list', input),
@@ -11,4 +12,11 @@ export const gameReviewsAPI: GameReviewsAPI = {
   submitFeedback: (input) => ipcRenderer.invoke('reviews:submit-feedback', input),
   getFeedbackUploadUrls: (input) => ipcRenderer.invoke('reviews:upload-urls', input),
   prefetchCaptcha: (action) => ipcRenderer.send('reviews:prefetch-captcha', action),
+  onReviewEvents: (callback) => {
+    const handler = (_: unknown, events: ReviewEvent[], live: boolean) =>
+      callback(events, live);
+    ipcRenderer.on('review-events', handler);
+    return () => ipcRenderer.removeListener('review-events', handler);
+  },
+  syncReviewEvents: () => ipcRenderer.invoke('reviews:sync-events'),
 };
