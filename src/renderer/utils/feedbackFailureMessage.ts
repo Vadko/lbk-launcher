@@ -1,5 +1,6 @@
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import { t } from '@/shared/i18n/i18n';
+import type { FeedbackType } from '@/shared/types';
 
 type FeedbackFailureText =
   | 'gameReviews.rejected.banned'
@@ -43,11 +44,14 @@ const FEEDBACK_FAILURES: Record<ReviewFailure['code'], FeedbackFailureText> = {
 
 export function feedbackFailureMessage(
   failure: ReviewFailure,
-  allowPublish: boolean
+  allowPublish: boolean,
+  type: FeedbackType
 ): string {
   // post_review refuses a public post on a hidden, unapproved or deleted translation, a private one only on a deleted one
   if (failure.code === 'not_found' && !allowPublish) {
-    return t('feedbackModal.gameRemoved');
+    return t('feedbackModal.gameRemoved', { context: type });
   }
-  return t(FEEDBACK_FAILURES[failure.code]);
+  const key = FEEDBACK_FAILURES[failure.code];
+  // Only the generic refusal names what was sent, so only it reads per type
+  return key === 'feedbackModal.sendFailed' ? t(key, { context: type }) : t(key);
 }

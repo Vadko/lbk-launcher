@@ -3,34 +3,105 @@ import { feedbackSentView } from './feedbackSentView';
 
 describe('feedbackSentView', () => {
   it.each([
-    ['private published', false, 'published', 'private', 'feedbackModal.sent', 2000],
-    ['private pending', false, 'pending', 'private', 'feedbackModal.sent', 2000],
-    ['private removed', false, 'removed', 'private', 'feedbackModal.sent', 2000],
     [
-      'public published',
+      'private feedback, published',
+      'feedback',
+      false,
+      'published',
+      'private',
+      'feedbackModal.thanks',
+      'feedbackModal.sent',
+      2000,
+    ],
+    [
+      'private feedback, pending',
+      'feedback',
+      false,
+      'pending',
+      'private',
+      'feedbackModal.thanks',
+      'feedbackModal.sent',
+      2000,
+    ],
+    [
+      'private feedback, removed',
+      'feedback',
+      false,
+      'removed',
+      'private',
+      'feedbackModal.thanks',
+      'feedbackModal.sent',
+      2000,
+    ],
+    [
+      'private error report',
+      'error',
+      false,
+      'published',
+      'private',
+      'feedbackModal.thanks_error',
+      'feedbackModal.sent_error',
+      2000,
+    ],
+    [
+      'public feedback, published',
+      'feedback',
       true,
       'published',
       'published',
+      'feedbackModal.published',
       'feedbackModal.publishedHint',
       2000,
     ],
-    ['public pending', true, 'pending', 'pending', 'gameReviews.hint.moderation', 5000],
-    ['public removed', true, 'removed', 'removed', 'feedbackModal.removedHint', 5000],
-  ] as const)('%s', (_label, allowPublish, outcome, screen, text, closeAfterMs) => {
-    expect(feedbackSentView(allowPublish, outcome)).toMatchObject({
-      screen,
-      text,
-      closeAfterMs,
-    });
-  });
+    [
+      'public error report, pending',
+      'error',
+      true,
+      'pending',
+      'pending',
+      'feedbackModal.onModeration',
+      'gameReviews.hint.moderation',
+      5000,
+    ],
+    [
+      'public feedback, removed',
+      'feedback',
+      true,
+      'removed',
+      'removed',
+      'feedbackModal.removedByModeration',
+      'feedbackModal.removedHint',
+      5000,
+    ],
+  ] as const)(
+    '%s',
+    (_label, type, allowPublish, outcome, screen, title, text, closeAfterMs) => {
+      expect(feedbackSentView(type, allowPublish, outcome)).toEqual({
+        screen,
+        title,
+        text,
+        closeAfterMs,
+      });
+    }
+  );
 
-  it.each(['published', 'pending', 'removed'] as const)(
-    'never tells a public %s post it went to the translation creator',
-    (outcome) => {
-      const view = feedbackSentView(true, outcome);
+  it.each([
+    ['feedback', 'published'],
+    ['feedback', 'pending'],
+    ['feedback', 'removed'],
+    ['error', 'published'],
+    ['error', 'pending'],
+    ['error', 'removed'],
+  ] as const)(
+    'never tells a public %s post that was %s it went to the translation creator',
+    (type, outcome) => {
+      const view = feedbackSentView(type, true, outcome);
 
-      expect([view.title, view.text]).not.toContain('feedbackModal.sent');
-      expect([view.title, view.text]).not.toContain('feedbackModal.thanks');
+      expect([view.title, view.text]).not.toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^feedbackModal\.(thanks|sent)(_error)?$/),
+        ])
+      );
     }
   );
 });

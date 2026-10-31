@@ -267,17 +267,22 @@ export const en = {
     submit: 'Send',
     screenshotsFailed: 'Could not upload screenshots.',
     screenshotFailed: 'Could not upload screenshot: {{name}}.',
-    rateLimit: 'Please wait a few minutes before sending another report.',
-    sendFailed: 'Could not send the report.',
+    rateLimit: 'Please wait a couple of minutes before sending another post.',
+    sendFailed: 'Could not send your feedback.',
+    sendFailed_error: 'Could not send the report.',
     networkError: 'Network error. Try again later.',
-    thanks: 'Thank you for your report!',
-    sent: 'Your report has been sent to the translation creator',
+    thanks: 'Thank you for your feedback!',
+    thanks_error: 'Thank you for your report!',
+    sent: 'Your feedback has been sent to the translation creator',
+    sent_error: 'Your report has been sent to the translation creator',
     allowPublish: 'I agree to have my feedback published in community reviews',
     allowPublish_error: 'I agree to have my error report published in community reviews',
     captchaFailed: 'The check did not pass. Try again later.',
     gameUnavailable:
       'This translation is hidden, not approved yet or removed from the catalog, so the post cannot be published.',
     gameRemoved:
+      'This translation is no longer in the catalog, so the feedback cannot be sent.',
+    gameRemoved_error:
       'This translation is no longer in the catalog, so the report cannot be sent.',
     authorRequired: 'To publish the post, pick a nickname or untick publishing.',
     dailyLimit:

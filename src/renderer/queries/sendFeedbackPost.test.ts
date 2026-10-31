@@ -184,7 +184,7 @@ describe('sendFeedbackPost', () => {
     ['unreachable', 'retry', false, 'feedbackModal.networkError'],
     ['captcha_failed', 'retry', true, 'feedbackModal.captchaFailed'],
     ['not_found', 'rejected', true, 'feedbackModal.gameUnavailable'],
-    ['not_found', 'rejected', false, 'feedbackModal.gameRemoved'],
+    ['not_found', 'rejected', false, 'feedbackModal.gameRemoved_error'],
   ] as const)(
     'explains a refused %s post (public: %s)',
     async (code, kind, allowPublish, key) => {

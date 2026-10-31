@@ -97,6 +97,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
       <FeedbackSent
         isOpen={isOpen}
         onClose={onClose}
+        type={submission.sent.type}
         allowPublish={submission.sent.allowPublish}
         outcome={submission.sent.outcome}
       />

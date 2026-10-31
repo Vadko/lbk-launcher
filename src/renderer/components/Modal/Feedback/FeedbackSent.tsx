@@ -3,6 +3,7 @@ import { CheckCircleIcon, ClockIcon, ShieldXIcon } from 'lucide-react';
 import React, { useEffect } from 'react';
 import type { GameReviewOutcome } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
+import type { FeedbackType } from '@/shared/types';
 import { Modal } from '../Modal';
 import { type FeedbackSentScreen, feedbackSentView } from './feedbackSentView';
 
@@ -16,6 +17,7 @@ const ICONS: Record<FeedbackSentScreen, React.ReactNode> = {
 interface FeedbackSentProps {
   isOpen: boolean;
   onClose: () => void;
+  type: FeedbackType;
   allowPublish: boolean;
   outcome: GameReviewOutcome;
 }
@@ -23,10 +25,11 @@ interface FeedbackSentProps {
 export const FeedbackSent: React.FC<FeedbackSentProps> = ({
   isOpen,
   onClose,
+  type,
   allowPublish,
   outcome,
 }) => {
-  const view = feedbackSentView(allowPublish, outcome);
+  const view = feedbackSentView(type, allowPublish, outcome);
 
   useEffect(() => {
     if (!isOpen) {

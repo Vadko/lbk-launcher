@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import type { GameReviewOutcome } from '@/shared/game-reviews-types';
+import type { FeedbackType } from '@/shared/types';
 import { gameReviewsQueryKey } from '../../../queries/gameReviewsQueryKey';
 import type { FeedbackPost, FeedbackPostResult } from '../../../queries/sendFeedbackPost';
 import { submitFeedbackPost } from '../../../queries/submitFeedbackPost';
@@ -9,6 +10,7 @@ import { trackEvent } from '../../../utils/analytics';
 import { freshAttempt } from '../../../utils/feedbackAttempt';
 
 interface SentPost {
+  type: FeedbackType;
   allowPublish: boolean;
   outcome: GameReviewOutcome;
 }
@@ -93,7 +95,11 @@ export function useFeedbackSubmit(isOpen: boolean, gameName: string) {
       }
       setAttempt(result.attempt);
       if (result.ok) {
-        setSent({ allowPublish: post.allowPublish, outcome: result.outcome });
+        setSent({
+          type: post.type,
+          allowPublish: post.allowPublish,
+          outcome: result.outcome,
+        });
       } else {
         setError(result.message);
       }

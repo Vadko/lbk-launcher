@@ -33,19 +33,42 @@ describe('feedbackFailureMessage', () => {
   ];
 
   it.each(failures)('%s reads as its message on a public post', (code, message) => {
-    expect(feedbackFailureMessage({ code, kind: 'rejected' }, true)).toBe(message);
+    expect(feedbackFailureMessage({ code, kind: 'rejected' }, true, 'feedback')).toBe(
+      message
+    );
   });
 
   it.each(failures.filter(([code]) => code !== 'not_found'))(
     '%s reads the same on a private post',
     (code, message) => {
-      expect(feedbackFailureMessage({ code, kind: 'rejected' }, false)).toBe(message);
+      expect(feedbackFailureMessage({ code, kind: 'rejected' }, false, 'feedback')).toBe(
+        message
+      );
     }
   );
 
-  it('tells a private post on a deleted translation that it is gone, not that it cannot be published', () => {
-    expect(feedbackFailureMessage({ code: 'not_found', kind: 'rejected' }, false)).toBe(
-      t('feedbackModal.gameRemoved')
-    );
-  });
+  it.each(failures)(
+    '%s on an error report reads as its message, the report variant where it names the post',
+    (code, message) => {
+      const expected =
+        message === t('feedbackModal.sendFailed')
+          ? t('feedbackModal.sendFailed_error')
+          : message;
+      expect(feedbackFailureMessage({ code, kind: 'rejected' }, true, 'error')).toBe(
+        expected
+      );
+    }
+  );
+
+  it.each([
+    ['feedback', 'feedbackModal.gameRemoved'],
+    ['error', 'feedbackModal.gameRemoved_error'],
+  ] as const)(
+    'tells a private %s on a deleted translation that it is gone, not that it cannot be published',
+    (type, key) => {
+      expect(
+        feedbackFailureMessage({ code: 'not_found', kind: 'rejected' }, false, type)
+      ).toBe(t(key));
+    }
+  );
 });

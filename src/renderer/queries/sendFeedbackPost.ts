@@ -106,7 +106,7 @@ export async function sendFeedbackPost(
   }
   return {
     ok: false,
-    message: feedbackFailureMessage(sent.failure, post.allowPublish),
+    message: feedbackFailureMessage(sent.failure, post.allowPublish, post.type),
     failure: sent.failure,
     attempt: afterRefusal(withUploads, content, sent.failure),
   };
