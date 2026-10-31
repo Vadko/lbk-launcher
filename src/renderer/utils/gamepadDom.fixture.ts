@@ -6,7 +6,9 @@ class FakeElement {
   blur: HTMLElement['blur'] = vi.fn();
   setAttribute: HTMLElement['setAttribute'] = vi.fn();
   removeAttribute: HTMLElement['removeAttribute'] = vi.fn();
-  scrollIntoView: HTMLElement['scrollIntoView'] = vi.fn();
+  scrollIntoView: HTMLElement['scrollIntoView'] = vi.fn(() =>
+    Promise.resolve({ interrupted: false })
+  );
   classList: Pick<DOMTokenList, 'add' | 'remove'> = { add: vi.fn(), remove: vi.fn() };
 }
 

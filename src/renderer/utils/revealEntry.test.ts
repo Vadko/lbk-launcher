@@ -30,17 +30,39 @@ describe('revealEntry', () => {
     expect(entry.scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior });
   });
 
-  it('highlights the entry for a second', () => {
+  it('highlights the entry for a second', async () => {
     const entry = fakeEntry('review-e1', null);
     stubDocument({ elements: [entry] });
 
     revealEntry('e1', false);
-    vi.advanceTimersByTime(999);
+    await vi.advanceTimersByTimeAsync(999);
 
     expect(entry.classList.add).toHaveBeenCalledWith('review-focus');
     expect(entry.classList.remove).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(entry.classList.remove).toHaveBeenCalledWith('review-focus');
+  });
+
+  it.each<[string, boolean, string[][]]>([
+    ['lights the entry once its scroll stops', false, [['review-focus']]],
+    ['leaves the entry unlit when its scroll is cut short', true, []],
+  ])('%s', async (_case, interrupted, lit) => {
+    let settle: (result: ScrollResult) => void = () => undefined;
+    const scrolled = new Promise<ScrollResult>((resolve) => {
+      settle = resolve;
+    });
+    const entry = Object.assign(fakeEntry('review-e1', null), {
+      scrollIntoView: () => scrolled,
+    });
+    stubDocument({ elements: [entry] });
+
+    revealEntry('e1', true);
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(entry.classList.add).not.toHaveBeenCalled();
+    settle({ interrupted });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(vi.mocked(entry.classList.add).mock.calls).toEqual(lit);
   });
 
   it.each<[string, Element[], string, string | null, boolean]>([
