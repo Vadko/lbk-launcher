@@ -29,6 +29,16 @@ vi.mock('./window', () => ({ sendToRenderer: send }));
 // Longer than the watcher's 2 s debounce
 const SETTLE_MS = 2600;
 const settle = () => new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+const ATTEMPTS = 3;
+
+// libuv starts its FSEvents stream after fs.watch returns and drops changes made before that, so a change repeats until noticed
+async function changeUntilNoticed(change: () => void): Promise<void> {
+  for (let attempt = 0; attempt < ATTEMPTS && send.mock.calls.length === 0; attempt++) {
+    change();
+    await settle();
+  }
+  expect(send).toHaveBeenCalledWith('steam-library-changed');
+}
 
 let root: string;
 
@@ -67,7 +77,7 @@ afterEach(() => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-describe('steam-watcher', { timeout: 15_000 }, () => {
+describe('steam-watcher', { timeout: 30_000 }, () => {
   it('picks up a library added after Steam replaced libraryfolders.vdf', async () => {
     // A rewrite that keeps the folder list (Steam updates app lists and sizes) must not restart anything
     replaceFile(vdfPath(), libraryFoldersVdf([steam.path]));
@@ -75,30 +85,26 @@ describe('steam-watcher', { timeout: 15_000 }, () => {
     expect(send).not.toHaveBeenCalled();
 
     const secondLibrary = path.join(root, 'SecondLibrary');
-    replaceFile(vdfPath(), libraryFoldersVdf([steam.path, secondLibrary]));
-    await settle();
-    expect(send).toHaveBeenCalledWith('steam-library-changed');
+    await changeUntilNoticed(() =>
+      replaceFile(vdfPath(), libraryFoldersVdf([steam.path, secondLibrary]))
+    );
 
     // The new library's steamapps is now watched, and the vdf watcher survived both replacements
     send.mockClear();
-    fs.writeFileSync(
-      path.join(secondLibrary, 'steamapps/appmanifest_42.acf'),
-      '"AppState"{}'
+    await changeUntilNoticed(() =>
+      fs.writeFileSync(
+        path.join(secondLibrary, 'steamapps/appmanifest_42.acf'),
+        '"AppState"{}'
+      )
     );
-    await settle();
-    expect(send).toHaveBeenCalledWith('steam-library-changed');
   });
 
   it('notices a purchase after Steam replaced licensecache more than once', async () => {
     steam.licensecacheSize = 120;
-    replaceFile(licensecachePath(), 'x'.repeat(120));
-    await settle();
-    expect(send).toHaveBeenCalledWith('steam-library-changed');
+    await changeUntilNoticed(() => replaceFile(licensecachePath(), 'x'.repeat(120)));
 
     send.mockClear();
     steam.licensecacheSize = 140;
-    replaceFile(licensecachePath(), 'x'.repeat(140));
-    await settle();
-    expect(send).toHaveBeenCalledWith('steam-library-changed');
+    await changeUntilNoticed(() => replaceFile(licensecachePath(), 'x'.repeat(140)));
   });
 });
