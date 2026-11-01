@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackAttempt } from '../utils/feedbackAttempt';
+import { flush } from './reviewActions.fixture';
 
 const client = vi.hoisted(() => ({
   requestFeedbackUploadUrls: vi.fn(),
@@ -196,6 +197,7 @@ describe('feedbackPostOptions', () => {
       feedbackPostOptions(queryClient, 'Game')
     );
     await observer.mutate(variables(false));
+    await flush();
     return invalidate;
   };
 

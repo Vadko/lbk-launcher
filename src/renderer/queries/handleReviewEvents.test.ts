@@ -54,7 +54,11 @@ let invalidate: MockInstance<QueryClient['invalidateQueries']>;
 const handle = (event: ReviewEvent, live = true) =>
   handleReviewEvents(queryClient, [event], live);
 const notices = () => mocks.addNotification.mock.calls.map(([notice]) => notice);
-const refetched = () => invalidate.mock.calls.map(([filters]) => filters?.queryKey);
+// The refresh cancels a first load before it invalidates, so the invalidate lands a tick later
+const refetched = async () => {
+  await flush();
+  return invalidate.mock.calls.map(([filters]) => filters?.queryKey);
+};
 
 const editOf = (entryId: string): ReviewWrite => ({
   kind: 'edit',
@@ -101,7 +105,7 @@ beforeEach(() => {
 });
 
 describe('handleReviewEvents replies', () => {
-  it('notifies every reply and refetches each game once per batch', () => {
+  it('notifies every reply and refetches each game once per batch', async () => {
     handleReviewEvents(
       queryClient,
       [
@@ -117,20 +121,20 @@ describe('handleReviewEvents replies', () => {
       expect.objectContaining({ entryId: 'r3' }),
       false
     );
-    expect(refetched()).toEqual([REVIEWS_KEY, ['game-reviews', 'g2']]);
+    expect(await refetched()).toEqual([REVIEWS_KEY, ['game-reviews', 'g2']]);
   });
 
-  it('refetches nothing for a reply shown before', () => {
+  it('refetches nothing for a reply shown before', async () => {
     mocks.addReplyNotification.mockReturnValue(false);
 
     handle(reviewEvent({ kind: 'reply' }));
 
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(await refetched()).toEqual([]);
   });
 });
 
 describe('handleReviewEvents moderation', () => {
-  it('announces a publish in the list and refetches the game', () => {
+  it('announces a publish in the list and refetches the game', async () => {
     handle(reviewEvent());
 
     expect(notices()).toEqual([
@@ -144,7 +148,7 @@ describe('handleReviewEvents moderation', () => {
       },
     ]);
     expect(mocks.addNotification).toHaveBeenCalledWith(expect.anything(), true);
-    expect(refetched()).toEqual([REVIEWS_KEY]);
+    expect(await refetched()).toEqual([REVIEWS_KEY]);
   });
 
   it.each([
@@ -169,12 +173,12 @@ describe('handleReviewEvents moderation', () => {
     expect(notices()).toEqual([]);
   });
 
-  it('handles a repeated verdict once', () => {
+  it('handles a repeated verdict once', async () => {
     handle(reviewEvent());
     handle(reviewEvent());
 
     expect(notices()).toHaveLength(1);
-    expect(refetched()).toHaveLength(1);
+    expect(await refetched()).toHaveLength(1);
   });
 
   it('gives two verdicts on one entry their own notice ids', () => {
@@ -196,7 +200,7 @@ describe('handleReviewEvents against the viewer own write', () => {
     handle(reviewEvent());
 
     expect(notices()).toEqual([]);
-    expect(invalidate).not.toHaveBeenCalled();
+    expect(await refetched()).toEqual([]);
     answer(published('held'));
   });
 
@@ -217,7 +221,7 @@ describe('handleReviewEvents against the viewer own write', () => {
     handle(reviewEvent());
 
     expect(notices()).toEqual([expect.objectContaining({ type: 'review-published' })]);
-    expect(refetched()).toEqual([REVIEWS_KEY]);
+    expect(await refetched()).toEqual([REVIEWS_KEY]);
   });
 
   it('announces a verdict on a write that failed to send', async () => {

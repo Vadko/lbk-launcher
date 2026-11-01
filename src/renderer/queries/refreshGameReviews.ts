@@ -4,12 +4,7 @@ import { gameReviewsQueryKey } from './gameReviewsQueryKey';
 // An invalidate joins a first load instead of restarting it, which would land with what it read before
 export function refreshGameReviews(queryClient: QueryClient, gameId: string): void {
   const queryKey = gameReviewsQueryKey(gameId);
-  const state = queryClient.getQueryState(queryKey);
-  if (state && state.data === undefined && state.fetchStatus === 'fetching') {
-    void queryClient
-      .cancelQueries({ queryKey })
-      .then(() => queryClient.invalidateQueries({ queryKey }));
-    return;
-  }
-  void queryClient.invalidateQueries({ queryKey });
+  void queryClient
+    .cancelQueries({ queryKey, predicate: ({ state }) => state.data === undefined })
+    .then(() => queryClient.invalidateQueries({ queryKey }));
 }

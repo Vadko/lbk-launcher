@@ -4,8 +4,8 @@ import type {
   GameReview,
   GameReviewRemovedReply,
   GameReviewReply,
+  GameReviewsPage,
 } from '@/shared/game-reviews-types';
-import type { ReviewCachePage } from '../utils/reviewCache';
 
 // The viewer's own reply or edit that the server has not taken yet
 export interface ReviewWriteStatus {
@@ -25,7 +25,7 @@ export interface ReviewThreadView extends GameReview, ReviewWriteStatus {
   replies: ReviewThreadReplyView[];
 }
 
-interface ReviewViewPage extends ReviewCachePage {
+interface ReviewViewPage extends GameReviewsPage {
   items: ReviewThreadView[];
 }
 

@@ -11,7 +11,8 @@ import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { type ModerationVerdict, moderationVerdict } from '../utils/moderationVerdict';
 import type { ReviewRefusalReason } from '../utils/reviewRefusalMessage';
 import { reviewRefusalNotice } from '../utils/reviewRefusalNotice';
-import { gameReviewsQueryKey, reviewWritesKey } from './gameReviewsQueryKey';
+import { reviewWritesKey } from './gameReviewsQueryKey';
+import { refreshGameReviews } from './refreshGameReviews';
 import { sendReviewEdit, sendReviewReply } from './reviewsClient';
 
 export type ReviewWrite = {
@@ -115,8 +116,8 @@ export function reviewWriteOptions(
           })
         );
       }
-      // Not awaited: the answered write shows until the pages this refetch brings replace it
-      void queryClient.invalidateQueries({ queryKey: gameReviewsQueryKey(gameId) });
+      // The answered write shows until the pages this refresh brings replace it
+      refreshGameReviews(queryClient, gameId);
     },
   });
 }

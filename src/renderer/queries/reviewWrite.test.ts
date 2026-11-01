@@ -7,6 +7,7 @@ import { reviewRefusalMessage } from '../utils/reviewRefusalMessage';
 import {
   banned,
   editRefused,
+  flush,
   needsAuthor,
   notFound,
   OWL,
@@ -158,6 +159,7 @@ describe('reviewWriteOptions', () => {
       reviewWriteOptions(queryClient, 'g1', 'Game')
     );
     await observer.mutate(write).catch(() => undefined);
+    await flush();
     return invalidate;
   };
 

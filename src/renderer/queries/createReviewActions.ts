@@ -4,7 +4,7 @@ import { useReviewAuthorStore } from '../store/useReviewAuthorStore';
 import { isOutcomeUnknown } from '../utils/isOutcomeUnknown';
 import { nextReplyTime } from '../utils/nextReplyTime';
 import { findReviewWrite, forgetReviewWrite } from './entryWrites';
-import { gameReviewsQueryKey } from './gameReviewsQueryKey';
+import { refreshGameReviews } from './refreshGameReviews';
 import type { ReviewThreadView } from './reviewViewTypes';
 import type { ReviewWrite } from './reviewWrite';
 
@@ -78,7 +78,7 @@ export function createReviewActions(
       forgetReviewWrite(queryClient, gameId, entryId);
       // The server may hold what was discarded, so the list asks it
       if (failure && isOutcomeUnknown(failure)) {
-        void queryClient.invalidateQueries({ queryKey: gameReviewsQueryKey(gameId) });
+        refreshGameReviews(queryClient, gameId);
       }
     },
   };

@@ -179,6 +179,7 @@ describe('createReviewActions resend and discard', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     actions.discard(sentIds()[0]);
+    await flush();
 
     expect(writesInCache()).toBe(0);
     expect(shownEntry(queryClient, sentIds()[0])).toBeUndefined();

@@ -32,11 +32,17 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   focus,
   onFocusHandled,
 }) => {
-  const { query, data, loadNextPage, isLoadMoreFailed, failedFocusKey } = useGameReviews(
-    gameId,
-    focus
-  );
-  const { isError, isFetching, hasNextPage, isFetchingNextPage, refetch } = query;
+  const { query, data, loadNextPage } = useGameReviews(gameId, focus);
+  const {
+    isError,
+    isFetching,
+    fetchStatus,
+    isRefetchError,
+    isFetchNextPageError,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = query;
   const actions = useGameReviewActions(gameId, gameName, data?.pages[0]?.viewer ?? null);
   // The focus thread rides on the first page and comes again once its own page loads
   const reviews = A.uniqBy(
@@ -46,10 +52,10 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   const total = data?.pages[0]?.total;
   const focused = useReviewFocus({
     focus,
-    failedKey: failedFocusKey,
-    firstPage: data?.pages[0],
     threads: reviews,
-    isFetching,
+    // A refetch paused offline is not fetching, yet its pages may predate the link
+    isSettled: data !== undefined && fetchStatus === 'idle',
+    isRefetchError,
     onHandled: onFocusHandled,
   });
   // A retry resets the query to pending, so the phase keeps the focused button mounted until it settles
@@ -67,10 +73,12 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
       });
     }
   };
-  const showLoadMoreError = loadMore.isBusy || (isLoadMoreFailed && !isFetchingNextPage);
+  const showLoadMoreError =
+    loadMore.isBusy || (isFetchNextPageError && !isFetchingNextPage);
   const attachSentinel = useInfiniteScrollSentinel({
     hasNextPage,
-    isFetchingNextPage,
+    // A next page asked during a refetch joins it and adds nothing, so the sentinel looks again after
+    isBusy: isFetching,
     fetchNextPage: loadNextPage,
   });
 

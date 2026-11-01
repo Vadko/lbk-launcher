@@ -2,7 +2,8 @@ import { mutationOptions, type QueryClient } from '@tanstack/react-query';
 import { useReviewAuthorStore } from '../store/useReviewAuthorStore';
 import { trackEvent } from '../utils/analytics';
 import type { FeedbackAttempt } from '../utils/feedbackAttempt';
-import { feedbackPostsKey, gameReviewsQueryKey } from './gameReviewsQueryKey';
+import { feedbackPostsKey } from './gameReviewsQueryKey';
+import { refreshGameReviews } from './refreshGameReviews';
 import { prefetchReviewCaptcha } from './reviewsClient';
 import {
   type FeedbackPost,
@@ -52,9 +53,7 @@ export function feedbackPostOptions(queryClient: QueryClient, gameName: string) 
       }
       if (result.ok) {
         // The post shows in the reviews tab for this machine, private or not
-        void queryClient.invalidateQueries({
-          queryKey: gameReviewsQueryKey(post.gameId),
-        });
+        refreshGameReviews(queryClient, post.gameId);
         trackEvent('Feedback Submitted', {
           'Game Id': post.gameId,
           'Game Name': gameName,
