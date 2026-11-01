@@ -1,0 +1,477 @@
+/* The nickname picker (components/Modal/ReviewAuthorPicker): flat reels, a knob on a track, hold pills and the result */
+
+/* The dialog takes the picker card's width and surface */
+.review-author-dialog {
+  max-width: 560px;
+  border-radius: 20px;
+  background: linear-gradient(var(--glass), var(--glass)), var(--bg-dark);
+}
+
+/* The card's plain hairline instead of the modals' green-to-orange edge */
+.review-author-dialog.modal-gradient-border::before {
+  background: rgb(255 255 255 / 0.08);
+}
+
+.slot-machine {
+  --slot-reel-face: #1a1a1c;
+  --slot-fade: #121213;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.slot-play {
+  display: flex;
+  gap: 12px;
+}
+
+/* The window the three reels show through; slotReelMotion.ts lays the strips out in its 156 px rows */
+.slot-window {
+  position: relative;
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 0.05);
+  border-radius: 16px;
+  background: var(--bg-dark);
+}
+
+/* The outer rows fade into the window's top and bottom edges */
+.slot-window::before,
+.slot-window::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 60px;
+  pointer-events: none;
+}
+
+.slot-window::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--slot-fade) 25%, rgb(18 18 19 / 0));
+}
+
+.slot-window::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--slot-fade) 25%, rgb(18 18 19 / 0));
+}
+
+/* A query container, so a long word shrinks to the reel's width */
+.slot-reel {
+  position: relative;
+  height: 156px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--slot-reel-face);
+  container-type: inline-size;
+}
+
+.slot-reel__strip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.slot-reel__cell {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+/* --fit-em is the word's width in em, measured once per word in nicknameFitStyle.ts */
+.slot-reel__word {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(12px, calc((100cqw - 16px) / var(--fit-em, 1)), 15px);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.8;
+  transition:
+    color 200ms,
+    opacity 200ms;
+}
+
+.slot-reel__cell[data-result] .slot-reel__word {
+  font-weight: 600;
+  color: var(--text-main);
+  opacity: 1;
+}
+
+.slot-reel__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  opacity: 0.45;
+  transition: opacity 200ms;
+}
+
+.slot-reel__cell[data-result] .slot-reel__avatar {
+  opacity: 1;
+}
+
+/* Fills the window's padding box, so the payline and its ticks keep the window's coordinates */
+.slot-payline-set {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* The payline across the three middle cells; SlotPayline lights its layers through slotPaylineMotion.ts */
+.slot-payline {
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  left: 13px;
+  height: 52px;
+  margin-top: -26px;
+  border: 1px solid rgb(var(--color-main) / 0.25);
+  border-radius: 10px;
+  background: rgb(var(--color-main) / 0.04);
+}
+
+.slot-payline__glow,
+.slot-payline__clip {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+}
+
+/* Only its opacity moves, so no frame repaints the shadow */
+.slot-payline__glow {
+  box-shadow:
+    0 0 0 1px rgb(var(--color-main) / 0.85),
+    0 0 18px 2px rgb(var(--color-main) / 0.35),
+    inset 0 0 22px rgb(var(--color-main) / 0.2);
+  opacity: 0;
+}
+
+/* Keeps the glint inside the band while the glow spills past it */
+.slot-payline__clip {
+  overflow: hidden;
+}
+
+.slot-payline__lit {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(var(--color-main) / 0.85);
+  border-radius: inherit;
+  background: rgb(var(--color-main) / 0.12);
+  opacity: 0;
+}
+
+/* Light added over the symbols as it crosses; each sweep enters past the left edge and leaves past the right */
+.slot-payline__glint {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 36%;
+  background: linear-gradient(
+    112deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.07) 40%,
+    rgb(255 255 255 / 0.38) 49%,
+    rgb(var(--color-main) / 0.55) 50%,
+    rgb(255 255 255 / 0.38) 51%,
+    rgb(255 255 255 / 0.07) 60%,
+    transparent 80%
+  );
+  mix-blend-mode: screen;
+  transform: translateX(-100%);
+}
+
+.slot-tick {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 20px;
+  margin-top: -10px;
+  border-radius: 3px;
+  background: rgb(var(--color-accent));
+  /* Motion reads a computed none as scaleY(0) when a pull eases the tick back from where it is */
+  transform: scaleY(1);
+}
+
+.slot-tick__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 10px 1px rgb(var(--color-accent) / 0.75);
+  opacity: 0;
+}
+
+.slot-tick--left {
+  left: 1px;
+}
+
+.slot-tick--right {
+  right: 1px;
+}
+
+/* The lever: a knob running down a track as tall as the window; slotLeverMotion.ts holds its travel */
+.slot-lever {
+  position: relative;
+  flex: none;
+  width: 28px;
+  touch-action: none;
+}
+
+.slot-lever__track {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 11px;
+  width: 6px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 3px;
+  background: var(--bg-dark);
+}
+
+/* Scaled down to the knob from its full length; the gradient runs across, so scaling never squeezes it */
+.slot-lever__fill {
+  position: absolute;
+  top: 15px;
+  left: 11px;
+  width: 6px;
+  height: 144px;
+  border-radius: 3px;
+  background: linear-gradient(to right, rgb(var(--color-main)), rgb(var(--color-accent)));
+  transform-origin: top;
+}
+
+.slot-lever__knob {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  width: 26px;
+  height: 26px;
+}
+
+.slot-lever__halo {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: rgb(var(--color-accent) / 0.14);
+  transition: opacity 200ms;
+}
+
+.slot-lever__ball {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.32), transparent 55%),
+    rgb(var(--color-accent));
+  transition:
+    filter 200ms,
+    box-shadow 120ms;
+}
+
+.slot-lever:not([aria-disabled="true"]) {
+  cursor: grab;
+}
+
+.slot-lever:not([aria-disabled="true"]):active {
+  cursor: grabbing;
+}
+
+.slot-lever:hover:not([aria-disabled="true"]) .slot-lever__ball {
+  filter: brightness(1.06);
+}
+
+.slot-lever[aria-disabled="true"] {
+  cursor: wait;
+}
+
+.slot-lever[data-locked] {
+  cursor: not-allowed;
+}
+
+.slot-lever[data-locked] .slot-lever__ball {
+  filter: grayscale(0.6) brightness(0.6);
+}
+
+.slot-lever[data-locked] .slot-lever__halo {
+  opacity: 0.4;
+}
+
+/* The focus ring goes round the knob, not the lever's whole column */
+.slot-lever:focus-visible {
+  outline: none;
+}
+
+.slot-lever:focus-visible .slot-lever__ball {
+  box-shadow:
+    0 0 0 2px var(--bg-dark),
+    0 0 0 4px rgb(var(--color-accent));
+}
+
+/* The global gamepad ring is !important, so the lever opts out of it explicitly */
+[data-gamepad-mode] .slot-lever:focus,
+[data-gamepad-mode] .slot-lever:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+[data-gamepad-mode] .slot-lever:focus .slot-lever__ball {
+  box-shadow:
+    0 0 0 2px var(--bg-dark),
+    0 0 0 5px var(--gamepad-focus),
+    0 0 18px rgb(251 191 36 / 0.5);
+}
+
+/* The pills line up with the reels, not with the lever beside them */
+.slot-holds {
+  display: flex;
+  gap: 8px;
+  padding-right: 40px;
+}
+
+.slot-hold {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 999px;
+  background: var(--glass);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-muted);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    color 150ms,
+    opacity 150ms;
+}
+
+.slot-hold:hover:not([aria-disabled="true"]) {
+  border-color: rgb(255 255 255 / 0.16);
+  color: var(--text-main);
+}
+
+/* A solid padlock body under an outlined shackle; lucide draws the body as the one rect */
+.slot-hold svg rect {
+  fill: currentColor;
+}
+
+.slot-hold[aria-pressed="true"] {
+  border-color: rgb(var(--color-accent) / 0.5);
+  background: rgb(var(--color-accent) / 0.08);
+  color: rgb(var(--color-accent));
+}
+
+.slot-hold[aria-pressed="true"]:hover:not([aria-disabled="true"]) {
+  border-color: rgb(var(--color-accent) / 0.75);
+  color: rgb(var(--color-accent));
+}
+
+.slot-hold[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.slot-hold:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 2px;
+}
+
+.slot-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 10px 10px 16px;
+  border: 1px solid rgb(255 255 255 / 0.05);
+  border-radius: 14px;
+  background: var(--bg-dark);
+}
+
+.slot-result__avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.05);
+}
+
+/* A query container, so a long name shrinks to the field instead of being cut */
+.slot-result__name {
+  flex: 1;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.slot-result__name > span {
+  display: block;
+  overflow: hidden;
+  font-size: clamp(12px, calc(100cqw / var(--fit-em, 1)), 16px);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-main);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slot-result__name > .slot-result__pending {
+  color: color-mix(in srgb, var(--text-muted) 60%, transparent);
+}
+
+.slot-credit {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  gap: 4px;
+  padding-right: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.slot-credit__value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.slot-credit[data-empty] {
+  color: var(--color-red-400);
+}
+
+/* Holds a line even when empty, so a notice or the hint never moves the centred dialog */
+.slot-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: calc(13px * 1.3);
+  margin-top: 8px;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+.slot-status > [data-tone="info"] {
+  color: rgb(var(--color-accent));
+}
+
+.slot-status > [data-tone="error"] {
+  color: var(--color-red-400);
+}

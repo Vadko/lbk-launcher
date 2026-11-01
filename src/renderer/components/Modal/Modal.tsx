@@ -7,6 +7,10 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  // A line under the title in the header
+  description?: string;
+  // The header runs into the body with no divider, as one card
+  seamlessHeader?: boolean;
   children: React.ReactNode;
   footer?: React.ReactNode;
   showCloseButton?: boolean;
@@ -19,6 +23,8 @@ export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   title,
+  description,
+  seamlessHeader = false,
   children,
   footer,
   showCloseButton = true,
@@ -26,6 +32,11 @@ export const Modal: React.FC<ModalProps> = ({
   usePortal = false,
   classNames = '',
 }) => {
+  // Stacked dialogs each need their own title id, or a screen reader names them all after the first
+  const titleId = React.useId();
+  const descriptionId = React.useId();
+  const hasDescription = styleModal === 'normal' && !!description;
+
   // Close the modal on Escape
   React.useEffect(() => {
     if (!isOpen) {
@@ -63,7 +74,8 @@ export const Modal: React.FC<ModalProps> = ({
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-title"
+            aria-labelledby={styleModal === 'normal' && title ? titleId : undefined}
+            aria-describedby={hasDescription ? descriptionId : undefined}
             className={`relative max-w-200 w-full mx-4 max-h-[90vh] flex flex-col backdrop-blur-xl modal-content
             ${classNames}
             ${styleModal === 'promo' ? 'glass-card glass-card-gold p-0! overflow-hidden min-h-100' : 'bg-[rgb(15,15,16)] rounded-2xl modal-gradient-border'}`}
@@ -80,17 +92,31 @@ export const Modal: React.FC<ModalProps> = ({
               <>
                 {/* Header */}
                 {(title || showCloseButton) && (
-                  <div className="flex items-center justify-between p-6 border-b border-white/10 shrink-0">
-                    <h3
-                      id="modal-title"
-                      className="text-lg font-semibold text-text-main wrap-break-word"
-                    >
-                      {title}
-                    </h3>
+                  <div
+                    className={`flex justify-between shrink-0 ${seamlessHeader ? 'px-6 pt-6' : 'p-6 border-b border-white/10'} ${hasDescription ? 'items-start' : 'items-center'}`}
+                  >
+                    <div className="min-w-0">
+                      <h3
+                        id={titleId}
+                        className={`text-lg font-semibold text-text-main wrap-break-word ${seamlessHeader ? 'leading-[1.3]' : ''}`}
+                      >
+                        {title}
+                      </h3>
+                      {hasDescription && (
+                        <p
+                          id={descriptionId}
+                          className="mt-1 text-[13px] leading-[1.3] text-text-muted"
+                        >
+                          {description}
+                        </p>
+                      )}
+                    </div>
                     {showCloseButton && (
                       <button
                         onClick={onClose}
                         data-gamepad-cancel
+                        // B closes the dialog, so the gamepad never stops on the X
+                        data-gamepad-skip
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-glass-hover transition-colors shrink-0 ml-2"
                       >
                         <XIcon size={18} className="text-text-muted" />
@@ -100,7 +126,9 @@ export const Modal: React.FC<ModalProps> = ({
                 )}
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto wrap-break-word flex-1">
+                <div
+                  className={`overflow-y-auto wrap-break-word flex-1 ${seamlessHeader ? 'px-6 pt-4.5 pb-6' : 'p-6'}`}
+                >
                   {children}
                 </div>
 

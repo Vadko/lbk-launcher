@@ -18,6 +18,7 @@ import type { TrackingResponse } from '../shared/api-config';
 import { readFunctionsErrorBody } from './db/functions-error';
 import { getSupabaseClient } from './db/supabase-client';
 import { getLogFileDirectory } from './utils/logger';
+import { getOsVersion } from './utils/os-version';
 import {
   isLocalizationAnalyticsEnabled,
   isProductAnalyticsEnabled,
@@ -398,70 +399,6 @@ export async function trackFailedSearch(query: string): Promise<TrackingResponse
 }
 
 /**
- * Submit feedback for a game translation
- */
-export async function submitFeedback(
-  gameId: string,
-  type: string,
-  message: string,
-  screenshotPaths?: string[]
-): Promise<{ success: boolean; error?: string }> {
-  if (IS_E2E) {
-    return { success: false, error: 'E2E mode' };
-  }
-  const machineId = getMachineId();
-  if (!machineId) {
-    console.warn('[Tracking] Could not get machine ID, skipping feedback submission');
-    return { success: false, error: 'Machine ID not available' };
-  }
-
-  try {
-    console.log(`[Tracking] Submitting feedback for game: ${gameId}`);
-
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase.functions.invoke<{
-      success: boolean;
-      error?: string;
-    }>('submit-feedback', {
-      body: {
-        gameId,
-        machineId,
-        type,
-        message,
-        ...(screenshotPaths?.length && { screenshotPaths }),
-        version: app.getVersion(),
-        platform: process.platform,
-        arch: process.arch,
-      },
-    });
-
-    if (error) {
-      const httpError = await readFunctionsErrorBody(error);
-      if (httpError?.status === 429) {
-        console.warn('[Tracking] Feedback rate limit exceeded');
-        return { success: false, error: 'rate_limit' };
-      }
-      console.error('[Tracking] Feedback submission failed:', error);
-      return { success: false, error: error.message };
-    }
-
-    if (!data?.success) {
-      console.error('[Tracking] Feedback submission failed:', data);
-      return { success: false, error: data?.error || 'Unknown error' };
-    }
-
-    console.log('[Tracking] Feedback submitted successfully');
-    return { success: true };
-  } catch (error) {
-    console.error('[Tracking] Failed to submit feedback:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Network error',
-    };
-  }
-}
-
-/**
  * Submit logs
  */
 export async function submitLogs(
@@ -534,6 +471,7 @@ export async function submitLogs(
         version: app.getVersion(),
         platform: process.platform,
         arch: process.arch,
+        osVersion: getOsVersion(),
       },
     });
 
@@ -559,79 +497,6 @@ export async function submitLogs(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Network error',
-    };
-  }
-}
-
-/**
- * Get signed upload URLs for feedback screenshots
- */
-export async function getFeedbackUploadUrls(fileNames: string[]): Promise<{
-  success: boolean;
-  uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
-  error?: string;
-}> {
-  if (IS_E2E) {
-    return { success: false, error: 'E2E mode' };
-  }
-  const machineId = getMachineId();
-  if (!machineId) {
-    return { success: false, error: 'Machine ID not available' };
-  }
-
-  try {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase.functions.invoke<{
-      success: boolean;
-      uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
-      error?: string;
-    }>('submit-feedback?action=upload-urls', {
-      body: { machineId, fileNames },
-    });
-
-    if (error || !data?.success) {
-      return {
-        success: false,
-        error: error?.message || data?.error || 'Failed to get upload URLs',
-      };
-    }
-
-    return { success: true, uploadUrls: data.uploadUrls };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Network error',
-    };
-  }
-}
-
-/**
- * Upload a local file to a signed URL
- */
-export async function uploadFileToSignedUrl(
-  signedUrl: string,
-  filePath: string,
-  contentType: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const fs = await import('node:fs');
-    const fileBuffer = fs.readFileSync(filePath);
-
-    const response = await fetch(signedUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      body: fileBuffer,
-    });
-
-    if (!response.ok) {
-      return { success: false, error: `Upload failed: ${response.status}` };
-    }
-
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Upload error',
     };
   }
 }

@@ -21,6 +21,12 @@ it('rewinds a cursor by one minute', () => {
   expect(rewind('2026-10-20T20:00:30+00:00')).toBe('2026-10-20T19:59:30.000Z');
 });
 
+it('rewinds a cursor by the overlap a caller asks for', () => {
+  expect(rewind('2026-10-20T20:00:30.123456+00:00', 5_000)).toBe(
+    '2026-10-20T20:00:25.123Z'
+  );
+});
+
 it('quotes values so timestamps survive the or-filter syntax', () => {
   expect(afterCursor('updated_at', '2026-10-20T20:00:00.5+00:00', 'id', 'abc')).toBe(
     'updated_at.gt."2026-10-20T20:00:00.5+00:00",and(updated_at.eq."2026-10-20T20:00:00.5+00:00",id.gt."abc")'

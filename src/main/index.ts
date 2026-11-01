@@ -25,6 +25,9 @@ if (isE2E) {
 // whether the toggle can turn reporting back on without a restart
 const sentryStartedEnabled = app.isPackaged && !isE2E && isCrashDiagnosticsEnabled();
 
+// Before Sentry.init, so captureConsoleIntegration wraps the logger instead of being replaced by it
+initLogger();
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   enabled: sentryStartedEnabled,
@@ -145,12 +148,11 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
-import { createFeedbackReplyBroadcastSubscription } from './feedback-replies';
 import {
   startInstallationWatcher,
   stopInstallationWatcher,
 } from './installation-watcher';
-import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
+import { setupGameReviewsHandlers } from './ipc/game-reviews';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
@@ -165,6 +167,7 @@ import {
 } from './playtime-tracker';
 import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
 import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import { createReviewEventsSubscription } from './review-events';
 import {
   deleteStaleBridgeData,
   shutdownSteamBridgeServer,
@@ -176,6 +179,7 @@ import {
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
+import { stopCaptchaWindow } from './turnstile/window';
 import { startPendingEglLaunchArgs } from './utils/egl-windows-settings';
 import { startSteamBridge } from './utils/steam-bridge-lifecycle';
 import { createMainWindow, getMainWindow, showMainWindow } from './window';
@@ -191,9 +195,6 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  // Initialize logger early to capture all logs
-  initLogger();
-
   // Catch unhandled errors in main process to prevent crashes
   process.on('uncaughtException', (error) => {
     console.error('[Main] Uncaught Exception:', error);
@@ -262,7 +263,7 @@ if (!gotTheLock) {
   setupInstallerHandlers();
   setupTgNewsHandlers();
   setupLikesHandlers();
-  setupFeedbackReplyHandlers();
+  setupGameReviewsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
   setupPluginHostHandlers();
@@ -379,10 +380,9 @@ if (!gotTheLock) {
         });
       }
     );
-    const feedbackChannel = createFeedbackReplyBroadcastSubscription();
     realtimeManager.subscribe([
       gamesChannel,
-      feedbackChannel,
+      createReviewEventsSubscription(),
       createGameCountersSubscription(),
     ]);
 
@@ -470,6 +470,7 @@ if (!gotTheLock) {
     shutdownSteamBridgeServer().catch((err) => {
       console.warn('[Main] Steam bridge server stop failed:', err);
     });
+    stopCaptchaWindow();
   });
 
   app.on('will-quit', (event) => {
