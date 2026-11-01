@@ -5,7 +5,7 @@ import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import { useNow } from '../../hooks/useNow';
 import type { ReviewReplyView, ReviewThreadView } from '../../queries/reviewViewTypes';
-import { editDeadline } from '../../utils/editDeadline';
+import { editDeadline, editMinutesLeft } from '../../utils/editDeadline';
 import { Button } from '../ui/Button';
 import { ReviewAvatar } from './ReviewAvatar';
 import { ReviewComposer } from './ReviewComposer';
@@ -164,7 +164,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
                 )}
                 {canEdit && (
                   <ReviewEditButton
-                    minutesLeft={Math.ceil((deadline - now) / 60_000)}
+                    minutesLeft={editMinutesLeft(deadline, now)}
                     disabled={isChecking}
                     onClick={() => setIsEditing(true)}
                   />
