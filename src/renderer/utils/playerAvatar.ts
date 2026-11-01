@@ -1,14 +1,10 @@
-import { Avatar, Style } from '@dicebear/core';
+import { vyshyvankaDataUri } from '@lbklauncher/dicebear-vyshyvanka';
 import { LRUCache } from 'lru-cache';
-import vyshyvanka from './vyshyvanka.json';
-
-// Generated with its mirror-symmetry guards by `pnpm build:avatar-style` from ./vyshyvanka
-const VYSHYVANKA = new Style(vyshyvanka);
 
 // Bounded: every spin of the nickname reels brings a dozen decoy seeds nobody sees again
 const uris = new LRUCache<string, string>({
   max: 200,
-  memoMethod: (seed) => new Avatar(VYSHYVANKA, { seed, borderRadius: 50 }).toDataUri(),
+  memoMethod: (seed) => vyshyvankaDataUri(seed),
 });
 
 export function playerAvatarUri(seed: string): string {

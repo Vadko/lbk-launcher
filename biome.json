@@ -10,7 +10,6 @@
     "includes": [
       "src/**",
       "!src/lib/database.types.ts",
-      "!src/renderer/utils/vyshyvanka.json",
       "packages/**",
       "electron.vite.config.ts",
       "vitest.config.ts",

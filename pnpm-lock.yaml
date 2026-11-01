@@ -169,9 +169,6 @@ importers:
       '@biomejs/biome':
         specifier: 2.5.15
         version: 2.5.15
-      '@dicebear/core':
-        specifier: 10.7.0
-        version: 10.7.0
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.11.0(jiti@2.7.0))
@@ -181,6 +178,9 @@ importers:
       '@lbk/i18n':
         specifier: workspace:*
         version: link:packages/lbk-i18n
+      '@lbklauncher/dicebear-vyshyvanka':
+        specifier: 1.0.0
+        version: 1.0.0
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -1670,6 +1670,10 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@lbklauncher/dicebear-vyshyvanka@1.0.0':
+    resolution: {integrity: sha512-NvTQU6MxzPIijf5xTbgXBW11Wi1fpMPrPvf1IsdVIST+sbgnulnCvtrOfFK3lkvBLfl7uaJqDciGz/U+Vk7IAw==}
+    engines: {node: '>=24.22.1'}
 
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
@@ -7454,6 +7458,10 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@lbklauncher/dicebear-vyshyvanka@1.0.0':
+    dependencies:
+      '@dicebear/core': 10.7.0
 
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:
