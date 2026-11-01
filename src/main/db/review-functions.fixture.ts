@@ -21,15 +21,8 @@ export const refused = (code: string, status: number) => ({
   ),
 });
 
-export interface InvokeCall {
-  name: string;
-  body: Record<string, unknown>;
-  timeout: number;
-}
-
-export function invokeCalls(calls: unknown[][]): InvokeCall[] {
-  return calls.map(([name, options]) => {
-    const { body, timeout } = options as Omit<InvokeCall, 'name'>;
-    return { name: String(name), body, timeout };
-  });
-}
+// supabase-js functions.invoke as callReviewFunction uses it, so a test reads mock.calls typed
+export type Invoke = (
+  name: string,
+  options: { body: Record<string, unknown>; timeout: number }
+) => Promise<unknown>;

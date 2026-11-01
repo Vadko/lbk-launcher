@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { answered, invokeCalls, MACHINE_ID, refused } from './review-functions.fixture';
+import { answered, type Invoke, MACHINE_ID, refused } from './review-functions.fixture';
 
 const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
-  invoke: vi.fn(),
+  invoke: vi.fn<Invoke>(),
   takeCaptchaToken: vi.fn(),
 }));
 
@@ -37,7 +37,7 @@ describe('getReviewAuthor', () => {
       ok: true,
       data: { author, spinsLeft: 59 },
     });
-    expect(invokeCalls(invoke.mock.calls)[0]?.body).toEqual({ machineId: MACHINE_ID });
+    expect(invoke.mock.calls[0]?.[1].body).toEqual({ machineId: MACHINE_ID });
   });
 });
 
@@ -59,15 +59,17 @@ describe('spinReviewNickname', () => {
       ok: true,
       data: deal,
     });
-    expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
-      name: 'reviews?action=spin',
-      body: {
-        spinId: SPIN,
-        hold: { avatar: true, adjective: false, noun: false },
-        machineId: MACHINE_ID,
+    expect(invoke.mock.calls[0]).toEqual([
+      'reviews?action=spin',
+      {
+        body: {
+          spinId: SPIN,
+          hold: { avatar: true, adjective: false, noun: false },
+          machineId: MACHINE_ID,
+        },
+        timeout: 30_000,
       },
-      timeout: 30_000,
-    });
+    ]);
   });
 
   it('reports an author claimed elsewhere as author_exists', async () => {
@@ -91,11 +93,13 @@ describe('claimReviewNickname', () => {
       data: AUTHOR,
     });
     expect(takeCaptchaToken).toHaveBeenCalledWith('nickname');
-    expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
-      name: 'reviews?action=claim',
-      body: { spinId: SPIN, machineId: MACHINE_ID, captchaToken: 'token-1' },
-      timeout: 30_000,
-    });
+    expect(invoke.mock.calls[0]).toEqual([
+      'reviews?action=claim',
+      {
+        body: { spinId: SPIN, machineId: MACHINE_ID, captchaToken: 'token-1' },
+        timeout: 30_000,
+      },
+    ]);
   });
 
   it('leaves a claim without a token to the server', async () => {
@@ -106,7 +110,7 @@ describe('claimReviewNickname', () => {
       ok: true,
       data: AUTHOR,
     });
-    expect(invokeCalls(invoke.mock.calls)[0]?.body).toEqual({
+    expect(invoke.mock.calls[0]?.[1].body).toEqual({
       spinId: SPIN,
       machineId: MACHINE_ID,
     });

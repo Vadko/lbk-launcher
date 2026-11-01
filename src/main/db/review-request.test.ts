@@ -6,10 +6,10 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { ReviewFailureKind } from '../../shared/game-reviews-api-types';
-import { answered, invokeCalls, MACHINE_ID, refused } from './review-functions.fixture';
+import { answered, type Invoke, MACHINE_ID, refused } from './review-functions.fixture';
 
 const state = vi.hoisted(() => ({
-  invoke: vi.fn(),
+  invoke: vi.fn<Invoke>(),
   machineId: 'machine-1' as string | null,
   e2e: false,
   clientThrows: false,
@@ -44,7 +44,7 @@ const reply = (captchaToken?: () => Promise<string | null>) =>
     captchaToken
   );
 
-const calls = () => invokeCalls(state.invoke.mock.calls);
+const calls = () => state.invoke.mock.calls;
 
 beforeEach(() => {
   state.invoke.mockReset();
@@ -71,11 +71,10 @@ describe('callReviewFunction', () => {
 
     expect(result).toEqual({ ok: true, data: { id: 'r1' } });
     expect(calls()).toEqual([
-      {
-        name: 'reviews?action=reply',
-        body: { id: 'r1', machineId: MACHINE_ID },
-        timeout: 30_000,
-      },
+      [
+        'reviews?action=reply',
+        { body: { id: 'r1', machineId: MACHINE_ID }, timeout: 30_000 },
+      ],
     ]);
   });
 
@@ -84,7 +83,7 @@ describe('callReviewFunction', () => {
 
     await callReviewFunction('reviews?action=list', { gameId: 'g' }, okSchema);
 
-    expect(calls()[0]?.timeout).toBe(15_000);
+    expect(calls()[0]?.[1].timeout).toBe(15_000);
   });
 
   it.each([
@@ -201,7 +200,7 @@ describe('callReviewFunction', () => {
 
     await callReviewFunction('reviews?action=list', { gameId: 'g' }, okSchema);
 
-    expect(calls()[0]?.body).toEqual({ gameId: 'g' });
+    expect(calls()[0]?.[1].body).toEqual({ gameId: 'g' });
   });
 
   describe('in an E2E run', () => {
@@ -232,7 +231,7 @@ describe('callReviewFunction', () => {
 
       await reply(() => Promise.resolve('token-1'));
 
-      expect(calls()[0]?.body).toEqual({
+      expect(calls()[0]?.[1].body).toEqual({
         id: 'r1',
         text: 'hi',
         machineId: MACHINE_ID,
@@ -246,7 +245,7 @@ describe('callReviewFunction', () => {
       const result = await reply(() => Promise.resolve(null));
 
       expect(result).toEqual({ ok: true, data: { id: 'r1' } });
-      expect(calls().map((call) => call.body)).toEqual([
+      expect(calls().map(([, { body }]) => body)).toEqual([
         { id: 'r1', text: 'hi', machineId: MACHINE_ID },
       ]);
     });

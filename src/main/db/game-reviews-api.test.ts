@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { answered, invokeCalls, MACHINE_ID } from './review-functions.fixture';
+import { answered, type Invoke, MACHINE_ID } from './review-functions.fixture';
 
-const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+const { invoke } = vi.hoisted(() => ({ invoke: vi.fn<Invoke>() }));
 
 vi.mock('@/main/db/supabase-client', () => ({
   getSupabaseClient: () => ({ functions: { invoke } }),
@@ -50,12 +50,14 @@ describe('fetchGameReviews', () => {
 
     await fetchGameReviews({ gameId: GAME, cursor: 'c|id' });
 
-    expect(invokeCalls(invoke.mock.calls)).toEqual([
-      {
-        name: 'reviews?action=list',
-        body: { gameId: GAME, cursor: 'c|id', machineId: MACHINE_ID },
-        timeout: 15_000,
-      },
+    expect(invoke.mock.calls).toEqual([
+      [
+        'reviews?action=list',
+        {
+          body: { gameId: GAME, cursor: 'c|id', machineId: MACHINE_ID },
+          timeout: 15_000,
+        },
+      ],
     ]);
   });
 
@@ -64,7 +66,7 @@ describe('fetchGameReviews', () => {
 
     await fetchGameReviews({ gameId: GAME, cursor: null, focusId: FOCUS });
 
-    expect(invokeCalls(invoke.mock.calls).map(({ body }) => body)).toEqual([
+    expect(invoke.mock.calls.map(([, { body }]) => body)).toEqual([
       { gameId: GAME, cursor: null, focusId: FOCUS, machineId: MACHINE_ID },
     ]);
   });

@@ -1,11 +1,11 @@
 import { FunctionsFetchError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewEvent } from '../shared/game-reviews-types';
-import { answered, invokeCalls, MACHINE_ID } from './db/review-functions.fixture';
+import { answered, type Invoke, MACHINE_ID } from './db/review-functions.fixture';
 import type { BroadcastMessage } from './db/supabase-realtime';
 
 const state = vi.hoisted(() => ({
-  invoke: vi.fn(),
+  invoke: vi.fn<Invoke>(),
   send: vi.fn<(channel: string, events: ReviewEvent[], live: boolean) => void>(),
   metadata: new Map<string, string>(),
   machineId: 'machine-1' as string | null,
@@ -60,8 +60,7 @@ const page = (events: unknown[]) => answered({ events });
 const delivered = () =>
   state.send.mock.calls.flatMap(([, items, live]) => items.map((item) => [item, live]));
 
-const sinceOfCalls = () =>
-  invokeCalls(state.invoke.mock.calls).map(({ body }) => body['since']);
+const sinceOfCalls = () => state.invoke.mock.calls.map(([, { body }]) => body['since']);
 
 const broadcast = (payload: unknown): BroadcastMessage => ({
   event: 'review',
@@ -135,12 +134,14 @@ describe('syncReviewEvents', () => {
 
     await syncReviewEvents();
 
-    expect(invokeCalls(state.invoke.mock.calls)).toEqual([
-      {
-        name: 'get-feedback-replies',
-        body: { since: '2026-10-29T10:00:00.000Z', version: 2, machineId: MACHINE_ID },
-        timeout: 15_000,
-      },
+    expect(state.invoke.mock.calls).toEqual([
+      [
+        'get-feedback-replies',
+        {
+          body: { since: '2026-10-29T10:00:00.000Z', version: 2, machineId: MACHINE_ID },
+          timeout: 15_000,
+        },
+      ],
     ]);
   });
 

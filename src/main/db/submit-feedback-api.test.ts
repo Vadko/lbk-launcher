@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { answered, invokeCalls, MACHINE_ID } from './review-functions.fixture';
+import { answered, type Invoke, MACHINE_ID } from './review-functions.fixture';
 
 const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
-  invoke: vi.fn(),
+  invoke: vi.fn<Invoke>(),
   takeCaptchaToken: vi.fn(),
 }));
 
@@ -28,7 +28,7 @@ const post = (screenshotPaths: string[], allowPublish = false) => ({
   allowPublish,
 });
 
-const sentBody = () => invokeCalls(invoke.mock.calls)[0]?.body;
+const sentBody = () => invoke.mock.calls[0]?.[1].body;
 
 beforeEach(() => {
   invoke.mockReset();
@@ -44,22 +44,24 @@ describe('submitFeedback', () => {
     const result = await submitFeedback(post([`${POST}/shot.png`]));
 
     expect(result).toEqual({ ok: true, data: { id: POST, outcome: 'published' } });
-    expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
-      name: 'submit-feedback',
-      body: {
-        id: POST,
-        gameId: GAME,
-        type: 'error',
-        message: 'The menu is in English',
-        screenshotPaths: [`${POST}/shot.png`],
-        version: '2.24.0',
-        platform: process.platform,
-        arch: process.arch,
-        osVersion: 'Test OS 1',
-        machineId: MACHINE_ID,
+    expect(invoke.mock.calls[0]).toEqual([
+      'submit-feedback',
+      {
+        body: {
+          id: POST,
+          gameId: GAME,
+          type: 'error',
+          message: 'The menu is in English',
+          screenshotPaths: [`${POST}/shot.png`],
+          version: '2.24.0',
+          platform: process.platform,
+          arch: process.arch,
+          osVersion: 'Test OS 1',
+          machineId: MACHINE_ID,
+        },
+        timeout: 30_000,
       },
-      timeout: 30_000,
-    });
+    ]);
   });
 
   it('leaves the screenshots out when there are none', async () => {
@@ -125,10 +127,12 @@ describe('getFeedbackUploadUrls', () => {
         { fileName: 'shot.png', path: `${POST}/a.png`, signedUrl: 'https://upload/a' },
       ],
     });
-    expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
-      name: 'submit-feedback?action=upload-urls',
-      body: { id: POST, fileNames: ['shot.png'], machineId: MACHINE_ID },
-      timeout: 30_000,
-    });
+    expect(invoke.mock.calls[0]).toEqual([
+      'submit-feedback?action=upload-urls',
+      {
+        body: { id: POST, fileNames: ['shot.png'], machineId: MACHINE_ID },
+        timeout: 30_000,
+      },
+    ]);
   });
 });

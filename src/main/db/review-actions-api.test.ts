@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { answered, invokeCalls, MACHINE_ID, refused } from './review-functions.fixture';
+import { answered, type Invoke, MACHINE_ID, refused } from './review-functions.fixture';
 
 const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
-  invoke: vi.fn(),
+  invoke: vi.fn<Invoke>(),
   takeCaptchaToken: vi.fn(),
 }));
 
@@ -22,7 +22,7 @@ const reply = (isPublic: boolean, parentId: string | null = null) => ({
   isPublic,
 });
 
-const sentBodies = () => invokeCalls(invoke.mock.calls).map((call) => call.body);
+const sentBodies = () => invoke.mock.calls.map(([, { body }]) => body);
 
 beforeEach(() => {
   invoke.mockReset();
@@ -39,18 +39,20 @@ describe('replyToReview', () => {
     const result = await replyToReview(reply(false));
 
     expect(result).toEqual({ ok: true, data: { id: 'reply-1', outcome: 'pending' } });
-    expect(invokeCalls(invoke.mock.calls)).toEqual([
-      {
-        name: 'reviews?action=reply',
-        body: {
-          id: 'reply-1',
-          reviewId: 'review-1',
-          parentId: null,
-          text: 'thanks',
-          machineId: MACHINE_ID,
+    expect(invoke.mock.calls).toEqual([
+      [
+        'reviews?action=reply',
+        {
+          body: {
+            id: 'reply-1',
+            reviewId: 'review-1',
+            parentId: null,
+            text: 'thanks',
+            machineId: MACHINE_ID,
+          },
+          timeout: 30_000,
         },
-        timeout: 30_000,
-      },
+      ],
     ]);
     expect(takeCaptchaToken).not.toHaveBeenCalled();
   });
@@ -109,11 +111,10 @@ describe('editReviewEntry', () => {
       ok: true,
       data: { id: 'entry-1', outcome: 'removed', editRejected: false },
     });
-    expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
-      name: 'reviews?action=edit',
-      body: { id: 'entry-1', text: 'better', machineId: MACHINE_ID },
-      timeout: 30_000,
-    });
+    expect(invoke.mock.calls[0]).toEqual([
+      'reviews?action=edit',
+      { body: { id: 'entry-1', text: 'better', machineId: MACHINE_ID }, timeout: 30_000 },
+    ]);
     expect(takeCaptchaToken).not.toHaveBeenCalled();
   });
 
