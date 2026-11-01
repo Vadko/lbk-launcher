@@ -38,7 +38,6 @@ const FEEDBACK_FAILURES: Record<ReviewFailure['code'], FeedbackFailureText> = {
   internal: 'feedbackModal.sendFailed',
   nicknames_exhausted: 'feedbackModal.sendFailed',
   bad_response: 'feedbackModal.sendFailed',
-  no_machine_id: 'feedbackModal.sendFailed',
   e2e_mode: 'feedbackModal.sendFailed',
 };
 

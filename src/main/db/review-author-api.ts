@@ -1,36 +1,21 @@
 import { z } from 'zod';
-import type {
-  NicknameClaimInput,
-  NicknameSpin,
-  NicknameSpinInput,
-  ReviewAuthorState,
-  ReviewResult,
+import {
+  authorStateSchema,
+  type NicknameClaimInput,
+  type NicknameSpin,
+  type NicknameSpinInput,
+  nicknameSpinSchema,
+  type ReviewAuthorState,
+  type ReviewResult,
 } from '../../shared/game-reviews-api-types';
-import type { ReviewAuthorIdentity } from '../../shared/game-reviews-types';
+import {
+  authorIdentitySchema,
+  type ReviewAuthorIdentity,
+} from '../../shared/game-reviews-types';
 import { takeCaptchaToken } from '../turnstile/tokens';
 import { callReviewFunction } from './review-request';
-import { authorIdentitySchema } from './review-schemas';
 
-const authorStateSchema: z.ZodType<ReviewAuthorState> = z.object({
-  author: authorIdentitySchema.nullable(),
-  spinsLeft: z.number(),
-});
-
-const spinSchema: z.ZodType<NicknameSpin> = z.object({
-  spinId: z.string(),
-  avatarSeed: z.string(),
-  adjective: z.string(),
-  noun: z.string(),
-  name: z.string(),
-  decoys: z.object({
-    avatarSeeds: z.array(z.string()),
-    adjectives: z.array(z.string()),
-    nouns: z.array(z.string()),
-  }),
-  spinsLeft: z.number(),
-});
-
-const claimSchema: z.ZodType<ReviewAuthorIdentity> = z
+const claimSchema = z
   .object({ author: authorIdentitySchema })
   .transform(({ author }) => author);
 
@@ -49,7 +34,7 @@ export function spinReviewNickname({
       spinId,
       hold: { avatar: hold.avatar, adjective: hold.adjective, noun: hold.noun },
     },
-    spinSchema
+    nicknameSpinSchema
   );
 }
 
@@ -57,7 +42,7 @@ export function spinReviewNickname({
 export function claimReviewNickname({
   spinId,
 }: NicknameClaimInput): Promise<ReviewResult<ReviewAuthorIdentity>> {
-  return callReviewFunction('reviews?action=claim', { spinId }, claimSchema, {
-    captchaToken: () => takeCaptchaToken('nickname'),
-  });
+  return callReviewFunction('reviews?action=claim', { spinId }, claimSchema, () =>
+    takeCaptchaToken('nickname')
+  );
 }

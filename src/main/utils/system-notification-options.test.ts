@@ -25,32 +25,8 @@ describe('parseSystemNotificationOptions', () => {
     ).toEqual({ title: 'Game', body: 'text', target: { gameId: 'game-1' } });
   });
 
-  it.each([
-    [
-      'a malformed thread id',
-      { gameId: 'game-1', feedbackId: 'x', entryId: ENTRY },
-      { gameId: 'game-1', entryId: ENTRY },
-    ],
-    [
-      'a malformed entry id',
-      { gameId: 'game-1', feedbackId: THREAD, entryId: 42 },
-      { gameId: 'game-1', feedbackId: THREAD },
-    ],
-  ])('drops %s and keeps the rest of the target', (_case, target, kept) => {
-    expect(
-      parseSystemNotificationOptions({ title: 'Game', body: 'text', target })
-    ).toEqual({
-      title: 'Game',
-      body: 'text',
-      target: kept,
-    });
-  });
-
-  it.each([
-    ['a malformed target', { title: 'LBK', body: 'text', target: { gameId: '' } }],
-    ['no target', { title: 'LBK', body: 'text' }],
-  ])('shows a notification without a target for %s', (_case, options) => {
-    expect(parseSystemNotificationOptions(options)).toEqual({
+  it('shows a notification without a target', () => {
+    expect(parseSystemNotificationOptions({ title: 'LBK', body: 'text' })).toEqual({
       title: 'LBK',
       body: 'text',
     });
@@ -59,6 +35,11 @@ describe('parseSystemNotificationOptions', () => {
   it.each([
     ['no body', { title: 'LBK' }],
     ['no options', null],
+    ['a malformed target', { title: 'LBK', body: 'text', target: { gameId: '' } }],
+    [
+      'a malformed thread id',
+      { title: 'LBK', body: 'text', target: { gameId: 'game-1', feedbackId: 'x' } },
+    ],
   ])('refuses a call with %s', (_case, options) => {
     expect(parseSystemNotificationOptions(options)).toBeNull();
   });

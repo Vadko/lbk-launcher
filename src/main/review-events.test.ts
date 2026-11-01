@@ -1,4 +1,3 @@
-import { EventEmitter } from 'node:events';
 import { FunctionsFetchError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewEvent } from '../shared/game-reviews-types';
@@ -19,22 +18,14 @@ vi.mock('@/main/tracking', () => ({
   IS_E2E: false,
   getMachineId: () => state.machineId,
 }));
-vi.mock('@/main/turnstile/report-captcha-fault', () => ({ reportCaptchaFault: vi.fn() }));
+vi.mock('@/main/window', () => ({ sendToRenderer: state.send }));
 vi.mock('@/main/db/sync-metadata', () => ({
   getSyncMetadata: (key: string) => state.metadata.get(key) ?? null,
   setSyncMetadata: (key: string, value: string) => state.metadata.set(key, value),
 }));
 
-const { syncReviewEvents: syncFor, createReviewEventsSubscription } = await import(
-  './review-events'
-);
-
-// A loaded page whose bridge listens; a new one per test, as after a reload
-const newRenderer = () => Object.assign(new EventEmitter(), { send: state.send });
-let renderer = newRenderer();
-const syncReviewEvents = () => syncFor(renderer);
-const navigate = (isSameDocument: boolean) =>
-  renderer.emit('did-start-navigation', { isMainFrame: true, isSameDocument });
+const { syncReviewEvents, stopReviewEvents, createReviewEventsSubscription } =
+  await import('./review-events');
 
 const WATERMARK = 'review_events_synced_at';
 const LEGACY = 'last_feedback_reply_sync';
@@ -66,11 +57,6 @@ const atSecond = (second: number) =>
 
 const page = (events: unknown[]) => answered({ events });
 
-const serverAt = (date: string) => ({
-  ...page([]),
-  response: new Response(null, { headers: { Date: date } }),
-});
-
 const delivered = () =>
   state.send.mock.calls.flatMap(([, items, live]) => items.map((item) => [item, live]));
 
@@ -96,8 +82,7 @@ beforeEach(() => {
   state.send.mockReset();
   state.metadata.clear();
   state.machineId = MACHINE_ID;
-  renderer.emit('destroyed');
-  renderer = newRenderer();
+  stopReviewEvents();
   error.mockClear();
 });
 
@@ -123,19 +108,11 @@ describe('live review events', () => {
   });
 
   it('drops a live payload while no page listens, leaving it to the next catch-up', () => {
-    navigate(false);
+    stopReviewEvents();
 
     live(event());
 
     expect(state.send).not.toHaveBeenCalled();
-  });
-
-  it('keeps delivering across a navigation inside the page', () => {
-    navigate(true);
-
-    live(event());
-
-    expect(state.send).toHaveBeenCalledTimes(1);
   });
 
   it('ignores a malformed payload', () => {
@@ -297,7 +274,7 @@ describe('syncReviewEvents', () => {
   it('keeps the watermark when the page goes while a catch-up is asking', async () => {
     state.metadata.set(WATERMARK, '2026-10-29T09:00:00Z');
     state.invoke.mockImplementation(() => {
-      navigate(false);
+      stopReviewEvents();
       return Promise.resolve(page([event()]));
     });
 
@@ -309,67 +286,23 @@ describe('syncReviewEvents', () => {
 
   it('seeds its watermark from the replies stream it replaced', async () => {
     state.metadata.set(LEGACY, '2026-10-29T09:00:05Z');
-    state.invoke.mockResolvedValue(serverAt('Thu, 29 Oct 2026 10:00:00 GMT'));
+    state.invoke.mockResolvedValue(page([]));
 
     await syncReviewEvents();
 
-    expect(sinceOfCalls()).toEqual([undefined, '2026-10-29T09:00:00.000Z']);
+    expect(sinceOfCalls()).toEqual(['2026-10-29T09:00:00.000Z']);
     expect(state.metadata.get(WATERMARK)).toBe('2026-10-29T09:00:05Z');
   });
 
-  it('pulls a replaced watermark ahead of the server clock back to it', async () => {
-    state.metadata.set(LEGACY, '2026-10-29T12:00:00Z');
-    state.invoke.mockResolvedValue(serverAt('Thu, 29 Oct 2026 10:00:00 GMT'));
-
-    await syncReviewEvents();
-
-    expect(sinceOfCalls()).toEqual([undefined, '2026-10-29T09:59:55.000Z']);
-    expect(state.metadata.get(WATERMARK)).toBe('2026-10-29T10:00:00.000Z');
-  });
-
-  it('starts from the server clock, never asking for history, when there is no watermark at all', async () => {
-    state.invoke.mockResolvedValue(serverAt('Thu, 29 Oct 2026 10:00:00 GMT'));
-
-    await syncReviewEvents();
-
-    expect(invokeCalls(state.invoke.mock.calls).map(({ body }) => body)).toEqual([
-      { version: 2, machineId: MACHINE_ID },
-    ]);
-    expect(state.metadata.get(WATERMARK)).toBe('2026-10-29T10:00:00.000Z');
-  });
-
-  it('falls back to the local clock when the server clock cannot be read', async () => {
+  it('starts from now, never asking for history, when there is no watermark at all', async () => {
     const before = Date.now();
-    state.invoke.mockResolvedValue({
-      data: null,
-      error: new FunctionsFetchError('offline'),
-    });
 
     await syncReviewEvents();
 
+    expect(state.invoke).not.toHaveBeenCalled();
     expect(Date.parse(state.metadata.get(WATERMARK) ?? '')).toBeGreaterThanOrEqual(
       before
     );
-  });
-
-  it('ignores a sync sent by a document its page is already replacing', async () => {
-    state.metadata.set(WATERMARK, '2026-10-29T09:00:00Z');
-    state.invoke.mockResolvedValue(page([event()]));
-    await syncReviewEvents();
-    state.send.mockReset();
-    state.invoke.mockClear();
-    navigate(false);
-
-    await syncReviewEvents();
-    live(event());
-
-    expect(state.invoke).not.toHaveBeenCalled();
-    expect(state.send).not.toHaveBeenCalled();
-
-    renderer.emit('did-navigate');
-    await syncReviewEvents();
-
-    expect(state.send).toHaveBeenCalledTimes(1);
   });
 
   it('asks nothing and stores nothing without a machine id', async () => {

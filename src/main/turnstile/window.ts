@@ -7,13 +7,11 @@ import { reportCaptchaFault } from './report-captcha-fault';
 import { isFromCaptchaPage } from './sender';
 import { captchaSession } from './session';
 
-const READY_TIMEOUT_MS = 15_000;
 const IDLE_MS = 3 * 60_000;
 
 type CaptchaAnswer = Extract<PageMessage, { type: 'resolve' | 'reject' }>;
 
-// False once the page that took the request is gone
-type SendRequest = (request: CaptchaRequest) => boolean;
+type SendRequest = (request: CaptchaRequest) => void;
 
 export interface CaptchaPageListener {
   answer: (answer: CaptchaAnswer) => void;
@@ -85,10 +83,6 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
   const ready = new Promise<SendRequest | null>((resolve) => {
     settleReady = resolve;
   });
-  const readyTimer = setTimeout(
-    () => close('error', 'not ready in time'),
-    READY_TIMEOUT_MS
-  );
 
   const close = (log: CloseLog, reason: string) => {
     if (closed) {
@@ -101,11 +95,8 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
     } else {
       console[log](`[Turnstile] Captcha window closed: ${reason}`);
     }
-    clearTimeout(readyTimer);
-    if (page?.window === window) {
-      page = null;
-      idle.cancel();
-    }
+    page = null;
+    idle.cancel();
     settleReady(null);
     listener.lost();
     if (!window.isDestroyed()) {
@@ -114,19 +105,14 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
   };
 
   const send: SendRequest = (request) => {
-    if (closed) {
-      return false;
-    }
     idle.schedule();
     contents.send(CAPTCHA_CHANNELS.request, request);
-    return true;
   };
 
   const onMessage = (message: PageMessage) => {
     idle.schedule();
     switch (message.type) {
       case 'ready':
-        clearTimeout(readyTimer);
         settleReady(send);
         return;
       // The page's failure is sticky until a reload, so the window goes and the next request makes a new one

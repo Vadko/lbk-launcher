@@ -14,7 +14,7 @@ interface ReviewLink {
   focus: ReviewLinkFocus | null;
 }
 
-// Ids pass unchecked: main drops a bad thread id, and reviewFocusTarget falls back from a bad entry to its thread
+// Ids pass unchecked: links come only from gameLink() with server ids, and reviewFocusTarget falls back from a bad entry to its thread
 export function readReviewLink(search: string): ReviewLink | null {
   const params = new URLSearchParams(search);
   if (params.get('tab') !== REVIEWS_TAB) {

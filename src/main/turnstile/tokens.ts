@@ -7,8 +7,8 @@ import { captchaPageUrl } from './page-url';
 import { reportCaptchaFault } from './report-captcha-fault';
 import { type CaptchaPageListener, openCaptchaPage } from './window';
 
-// An invisible widget answers in seconds; the page drops a malformed request without any answer
-const SOLVE_TIMEOUT_MS = 20_000;
+// A cold page load and an invisible solve take seconds; past this the write goes without a token, and the page stays for the next one
+const TOKEN_TIMEOUT_MS = 30_000;
 // Cloudflare honours a token for 300 s, which leaves the write a minute to reach siteverify
 const TOKEN_MAX_AGE_MS = 240_000;
 
@@ -51,29 +51,30 @@ function captchaCData(machineId: string): string {
 }
 
 async function requestToken(action: TurnstileAction): Promise<string | null> {
-  if (IS_E2E) {
-    return null;
-  }
   const url = captchaPageUrl();
   const machineId = getMachineId();
-  const send = url && machineId ? await openCaptchaPage(url, listener) : null;
-  if (!send || !machineId) {
+  if (IS_E2E || !url || !machineId) {
     return null;
   }
   const requestId = randomUUID();
   const answer = new Promise<string | null>((settle) => {
     openRequests.set(requestId, { action, settle });
   });
-  const token = send({ requestId, action, cData: captchaCData(machineId) })
-    ? await pTimeout(answer, {
-        milliseconds: SOLVE_TIMEOUT_MS,
-        fallback: () => {
-          console.warn(`[Turnstile] ${action}: no answer in ${SOLVE_TIMEOUT_MS} ms`);
-          reportCaptchaFault('no answer in time');
-          return null;
-        },
-      })
-    : null;
+  const solved = openCaptchaPage(url, listener).then((send) => {
+    if (!send) {
+      return null;
+    }
+    send({ requestId, action, cData: captchaCData(machineId) });
+    return answer;
+  });
+  const token = await pTimeout(solved, {
+    milliseconds: TOKEN_TIMEOUT_MS,
+    fallback: () => {
+      console.warn(`[Turnstile] ${action}: no token in ${TOKEN_TIMEOUT_MS} ms`);
+      reportCaptchaFault('no token in time');
+      return null;
+    },
+  });
   openRequests.delete(requestId);
   return token;
 }

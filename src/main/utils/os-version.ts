@@ -1,7 +1,6 @@
 import { F } from '@mobily/ts-belt';
 import { getPlatform, readOsRelease } from '@/main/utils/platform';
 
-const MAX_LENGTH = 120;
 const FIRST_WINDOWS_11_BUILD = 22000;
 
 type Platform = ReturnType<typeof getPlatform>;
@@ -30,11 +29,9 @@ const describeOs: Record<
 export function formatOsVersion(
   platform: Platform,
   systemVersion: string,
-  osRelease: OsRelease = {}
+  osRelease: OsRelease
 ): string | undefined {
-  const description = describeOs[platform](systemVersion.trim(), osRelease);
-  // Code points, as Postgres char_length counts them.
-  return description && Array.from(description).slice(0, MAX_LENGTH).join('');
+  return describeOs[platform](systemVersion.trim(), osRelease);
 }
 
 export const getOsVersion = F.once((): string | undefined => {

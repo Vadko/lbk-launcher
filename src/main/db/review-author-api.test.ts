@@ -66,7 +66,7 @@ describe('spinReviewNickname', () => {
         hold: { avatar: true, adjective: false, noun: false },
         machineId: MACHINE_ID,
       },
-      timeout: 15_000,
+      timeout: 30_000,
     });
   });
 

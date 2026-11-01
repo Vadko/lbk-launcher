@@ -1,42 +1,42 @@
-import type { Database } from '../lib/database.types';
+import { z } from 'zod';
+import { Constants, type Database } from '../lib/database.types';
 import type { TurnstileAction } from '../main/turnstile/contract';
-import type {
-  GameReviewOutcome,
-  GameReviewsPage,
-  ReviewAuthorIdentity,
-  ReviewEvent,
+import {
+  authorIdentitySchema,
+  type GameReviewsPage,
+  type ReviewAuthorIdentity,
+  type ReviewEvent,
 } from './game-reviews-types';
 
 // Mirrors REVIEW_ERROR_STATUS in lbk-admin's supabase/functions/_shared/reviewErrorCodes.ts
-export type ReviewErrorCode =
-  | 'invalid_body'
-  | 'invalid_hold'
-  | 'invalid_candidate'
-  | 'captcha_failed'
-  | 'edit_window_closed'
-  | 'not_owner'
-  | 'banned'
-  | 'edit_limit_reached'
-  | 'thread_full'
-  | 'not_found'
-  | 'method_not_allowed'
-  | 'id_conflict'
-  | 'nickname_taken'
-  | 'author_exists'
-  | 'not_moderated'
-  | 'author_required'
-  | 'rate_limit'
-  | 'daily_limit'
-  | 'internal'
-  | 'captcha_unavailable'
-  | 'nicknames_exhausted';
+export const REVIEW_ERROR_CODES = [
+  'invalid_body',
+  'invalid_hold',
+  'invalid_candidate',
+  'captcha_failed',
+  'edit_window_closed',
+  'not_owner',
+  'banned',
+  'edit_limit_reached',
+  'thread_full',
+  'not_found',
+  'method_not_allowed',
+  'id_conflict',
+  'nickname_taken',
+  'author_exists',
+  'not_moderated',
+  'author_required',
+  'rate_limit',
+  'daily_limit',
+  'internal',
+  'captcha_unavailable',
+  'nicknames_exhausted',
+] as const;
+
+type ReviewErrorCode = (typeof REVIEW_ERROR_CODES)[number];
 
 // Failures the launcher meets before or instead of a server answer
-export type ReviewLocalFailureCode =
-  | 'unreachable'
-  | 'bad_response'
-  | 'no_machine_id'
-  | 'e2e_mode';
+type ReviewLocalFailureCode = 'unreachable' | 'bad_response' | 'e2e_mode';
 
 // retry: resend with the same id; needs-author: only a nickname helps; rejected: roll back
 export type ReviewFailureKind = 'retry' | 'needs-author' | 'rejected';
@@ -73,20 +73,26 @@ export interface ReviewEditInput {
   isPublic: boolean;
 }
 
-export interface ReviewWriteResult {
-  id: string;
-  outcome: GameReviewOutcome;
-}
+export const writeResultSchema = z.object({
+  id: z.string(),
+  outcome: z.enum(Constants.public.Enums.review_moderation),
+});
 
-export interface ReviewEditResult extends ReviewWriteResult {
+export type ReviewWriteResult = z.infer<typeof writeResultSchema>;
+
+export const editResultSchema = writeResultSchema.extend({
   // Moderation refused the new text, so the entry keeps its published one
-  editRejected: boolean;
-}
+  editRejected: z.boolean(),
+});
 
-export interface ReviewAuthorState {
-  author: ReviewAuthorIdentity | null;
-  spinsLeft: number;
-}
+export type ReviewEditResult = z.infer<typeof editResultSchema>;
+
+export const authorStateSchema = z.object({
+  author: authorIdentitySchema.nullable(),
+  spinsLeft: z.number(),
+});
+
+export type ReviewAuthorState = z.infer<typeof authorStateSchema>;
 
 export interface NicknameSpinInput {
   // The machine's latest spin, whose held reels the new one keeps
@@ -94,15 +100,21 @@ export interface NicknameSpinInput {
   hold: { avatar: boolean; adjective: boolean; noun: boolean };
 }
 
-export interface NicknameSpin {
-  spinId: string;
-  avatarSeed: string;
-  adjective: string;
-  noun: string;
-  name: string;
-  decoys: { avatarSeeds: string[]; adjectives: string[]; nouns: string[] };
-  spinsLeft: number;
-}
+export const nicknameSpinSchema = z.object({
+  spinId: z.string(),
+  avatarSeed: z.string(),
+  adjective: z.string(),
+  noun: z.string(),
+  name: z.string(),
+  decoys: z.object({
+    avatarSeeds: z.array(z.string()),
+    adjectives: z.array(z.string()),
+    nouns: z.array(z.string()),
+  }),
+  spinsLeft: z.number(),
+});
+
+export type NicknameSpin = z.infer<typeof nicknameSpinSchema>;
 
 export interface NicknameClaimInput {
   spinId: string;
@@ -123,11 +135,13 @@ export interface FeedbackUploadUrlsInput {
   fileNames: string[];
 }
 
-export interface FeedbackUploadUrl {
-  fileName: string;
-  path: string;
-  signedUrl: string;
-}
+export const feedbackUploadUrlSchema = z.object({
+  fileName: z.string(),
+  path: z.string(),
+  signedUrl: z.string(),
+});
+
+export type FeedbackUploadUrl = z.infer<typeof feedbackUploadUrlSchema>;
 
 // The renderer never sends a machine id or a captcha token: main adds both
 export interface GameReviewsAPI {

@@ -46,7 +46,6 @@ const REFUSAL_MESSAGES: Record<ReviewRefusalReason, RefusalMessage> = {
   nicknames_exhausted: 'generic',
   unreachable: 'generic',
   bad_response: 'generic',
-  no_machine_id: 'generic',
   e2e_mode: 'generic',
 };
 

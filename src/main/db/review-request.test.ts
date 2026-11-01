@@ -13,7 +13,6 @@ const state = vi.hoisted(() => ({
   machineId: 'machine-1' as string | null,
   e2e: false,
   clientThrows: false,
-  reportCaptchaFault: vi.fn(),
 }));
 
 vi.mock('@/main/db/supabase-client', () => ({
@@ -30,10 +29,6 @@ vi.mock('@/main/tracking', () => ({
   },
   getMachineId: () => state.machineId,
 }));
-vi.mock('@/main/turnstile/report-captcha-fault', () => ({
-  reportCaptchaFault: state.reportCaptchaFault,
-}));
-
 const { callReviewFunction } = await import('./review-request');
 
 const okSchema = z.object({ id: z.string() });
@@ -41,8 +36,13 @@ const okSchema = z.object({ id: z.string() });
 const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-const reply = (options?: Parameters<typeof callReviewFunction>[3]) =>
-  callReviewFunction('reviews?action=reply', { id: 'r1', text: 'hi' }, okSchema, options);
+const reply = (captchaToken?: () => Promise<string | null>) =>
+  callReviewFunction(
+    'reviews?action=reply',
+    { id: 'r1', text: 'hi' },
+    okSchema,
+    captchaToken
+  );
 
 const calls = () => invokeCalls(state.invoke.mock.calls);
 
@@ -77,27 +77,6 @@ describe('callReviewFunction', () => {
         timeout: 30_000,
       },
     ]);
-  });
-
-  it('reports the Date header of a 2xx answer only', async () => {
-    const onServerTime = vi.fn();
-    const headers = { Date: 'Thu, 29 Oct 2026 10:00:00 GMT' };
-    state.invoke
-      .mockResolvedValueOnce({
-        ...answered({ id: 'r1' }),
-        response: new Response(null, { headers }),
-      })
-      .mockResolvedValueOnce({
-        ...refused('not_owner', 403),
-        response: new Response(null, { status: 403, headers }),
-      })
-      .mockResolvedValueOnce(answered({ id: 'r1' }));
-
-    await reply({ onServerTime });
-    await reply({ onServerTime });
-    await reply({ onServerTime });
-
-    expect(onServerTime.mock.calls).toEqual([['2026-10-29T10:00:00.000Z']]);
   });
 
   it('gives reads the shorter timeout', async () => {
@@ -180,12 +159,8 @@ describe('callReviewFunction', () => {
     expect(error).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ['without success', { id: 'r1' }],
-    ['with success false', { success: false, id: 'r1' }],
-    ['against the schema', { success: true, id: 42 }],
-  ])('reports a 2xx body %s as a bad response', async (_label, data) => {
-    state.invoke.mockResolvedValue({ data, error: null });
+  it('reports a 2xx body against the schema as a bad response', async () => {
+    state.invoke.mockResolvedValue({ data: { success: true, id: 42 }, error: null });
 
     expect(await reply()).toEqual({
       ok: false,
@@ -220,26 +195,13 @@ describe('callReviewFunction', () => {
     );
   });
 
-  describe('without a machine id', () => {
-    beforeEach(() => {
-      state.machineId = null;
-    });
+  it('leaves a missing machine id out of the body', async () => {
+    state.machineId = null;
+    state.invoke.mockResolvedValue(answered({ id: 'x' }));
 
-    it('still reads the list, without the id', async () => {
-      state.invoke.mockResolvedValue(answered({ id: 'x' }));
+    await callReviewFunction('reviews?action=list', { gameId: 'g' }, okSchema);
 
-      await callReviewFunction('reviews?action=list', { gameId: 'g' }, okSchema);
-
-      expect(calls()[0]?.body).toEqual({ gameId: 'g' });
-    });
-
-    it('sends no write', async () => {
-      expect(await reply()).toEqual({
-        ok: false,
-        failure: { code: 'no_machine_id', kind: 'rejected' },
-      });
-      expect(state.invoke).not.toHaveBeenCalled();
-    });
+    expect(calls()[0]?.body).toEqual({ gameId: 'g' });
   });
 
   describe('in an E2E run', () => {
@@ -268,7 +230,7 @@ describe('callReviewFunction', () => {
     it('sends a token with the request', async () => {
       state.invoke.mockResolvedValue(answered({ id: 'r1' }));
 
-      await reply({ captchaToken: () => Promise.resolve('token-1') });
+      await reply(() => Promise.resolve('token-1'));
 
       expect(calls()[0]?.body).toEqual({
         id: 'r1',
@@ -278,75 +240,15 @@ describe('callReviewFunction', () => {
       });
     });
 
-    it('retries a rejected token once with a fresh one', async () => {
-      const tokens = ['token-1', 'token-2', 'token-3'];
-      const captchaToken = vi.fn(() => Promise.resolve(tokens.shift() ?? null));
-      // A Response body reads once, so every attempt gets its own
-      state.invoke.mockImplementation(() =>
-        Promise.resolve(refused('captcha_failed', 403))
-      );
-
-      const result = await reply({ captchaToken });
-
-      expect(result).toEqual({
-        ok: false,
-        failure: { code: 'captcha_failed', kind: 'retry' },
-      });
-      expect(calls().map((call) => call.body['captchaToken'])).toEqual([
-        'token-1',
-        'token-2',
-      ]);
-      expect(state.reportCaptchaFault).toHaveBeenCalledWith(
-        'siteverify refused a fresh token'
-      );
-    });
-
-    it('settles on the retry when the fresh token passes', async () => {
-      state.invoke
-        .mockResolvedValueOnce(refused('captcha_failed', 403))
-        .mockResolvedValueOnce(answered({ id: 'r1' }));
-
-      const result = await reply({ captchaToken: () => Promise.resolve('token') });
-
-      expect(result).toEqual({ ok: true, data: { id: 'r1' } });
-      expect(state.reportCaptchaFault).not.toHaveBeenCalled();
-    });
-
-    it('does not retry other refusals', async () => {
-      state.invoke.mockResolvedValue(refused('rate_limit', 429));
-
-      await reply({ captchaToken: () => Promise.resolve('token') });
-
-      expect(state.invoke).toHaveBeenCalledTimes(1);
-    });
-
     it('leaves a write without a token to the server, which may have the captcha off', async () => {
       state.invoke.mockResolvedValue(answered({ id: 'r1' }));
 
-      const result = await reply({ captchaToken: () => Promise.resolve(null) });
+      const result = await reply(() => Promise.resolve(null));
 
       expect(result).toEqual({ ok: true, data: { id: 'r1' } });
       expect(calls().map((call) => call.body)).toEqual([
         { id: 'r1', text: 'hi', machineId: MACHINE_ID },
       ]);
     });
-
-    it('reads a refused write without a token as captcha_unavailable, never retried', async () => {
-      state.invoke.mockResolvedValue(refused('captcha_failed', 403));
-
-      expect(await reply({ captchaToken: () => Promise.resolve(null) })).toEqual({
-        ok: false,
-        failure: { code: 'captcha_unavailable', kind: 'retry' },
-      });
-      expect(state.invoke).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('never retries captcha_failed without a source', async () => {
-    state.invoke.mockResolvedValue(refused('captcha_failed', 403));
-
-    await reply();
-
-    expect(state.invoke).toHaveBeenCalledTimes(1);
   });
 });

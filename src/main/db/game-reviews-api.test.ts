@@ -59,23 +59,14 @@ describe('fetchGameReviews', () => {
     ]);
   });
 
-  it.each([
-    [
-      'asks for the focus thread with the first page',
-      null,
-      { gameId: GAME, cursor: null, focusId: FOCUS, machineId: MACHINE_ID },
-    ],
-    [
-      'leaves the focus thread off a next page',
-      'c|id',
-      { gameId: GAME, cursor: 'c|id', machineId: MACHINE_ID },
-    ],
-  ])('%s', async (_case, cursor, expected) => {
+  it('asks for the focus thread with the first page', async () => {
     invoke.mockResolvedValue(page([]));
 
-    await fetchGameReviews({ gameId: GAME, cursor, focusId: FOCUS });
+    await fetchGameReviews({ gameId: GAME, cursor: null, focusId: FOCUS });
 
-    expect(invokeCalls(invoke.mock.calls).map(({ body }) => body)).toEqual([expected]);
+    expect(invokeCalls(invoke.mock.calls).map(({ body }) => body)).toEqual([
+      { gameId: GAME, cursor: null, focusId: FOCUS, machineId: MACHINE_ID },
+    ]);
   });
 
   it('puts the focus thread first when the page does not hold it', async () => {

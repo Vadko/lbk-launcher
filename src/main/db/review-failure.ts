@@ -1,64 +1,41 @@
 import { z } from 'zod';
-import type {
-  ReviewErrorCode,
-  ReviewFailure,
-  ReviewFailureKind,
-  ReviewLocalFailureCode,
+import {
+  REVIEW_ERROR_CODES,
+  type ReviewFailure,
+  type ReviewFailureKind,
 } from '../../shared/game-reviews-api-types';
 import { readFunctionsErrorBody } from './functions-error';
 
 type ReviewFailureCode = ReviewFailure['code'];
 
-interface FailureRule {
-  kind: ReviewFailureKind;
-  // console.error becomes a Sentry event, so it is kept for our own bugs and server faults
-  log: 'warn' | 'error';
-}
+// A resend with the same id can pass: a fresh token, a quota that clears, a write that may have committed
+const RETRY = new Set<ReviewFailureCode>([
+  'captcha_failed',
+  'rate_limit',
+  'daily_limit',
+  'internal',
+  'captcha_unavailable',
+  'nicknames_exhausted',
+  'unreachable',
+  'bad_response',
+]);
 
-const SERVER_FAILURES: Record<ReviewErrorCode, FailureRule> = {
-  invalid_body: { kind: 'rejected', log: 'error' },
-  invalid_hold: { kind: 'rejected', log: 'warn' },
-  invalid_candidate: { kind: 'rejected', log: 'warn' },
-  // Every attempt takes a fresh single-use token, so a resend can pass
-  captcha_failed: { kind: 'retry', log: 'warn' },
-  edit_window_closed: { kind: 'rejected', log: 'warn' },
-  not_owner: { kind: 'rejected', log: 'warn' },
-  banned: { kind: 'rejected', log: 'warn' },
-  edit_limit_reached: { kind: 'rejected', log: 'warn' },
-  thread_full: { kind: 'rejected', log: 'warn' },
-  not_found: { kind: 'rejected', log: 'warn' },
-  method_not_allowed: { kind: 'rejected', log: 'error' },
-  id_conflict: { kind: 'rejected', log: 'warn' },
-  nickname_taken: { kind: 'rejected', log: 'warn' },
-  author_exists: { kind: 'rejected', log: 'warn' },
-  not_moderated: { kind: 'rejected', log: 'error' },
-  author_required: { kind: 'needs-author', log: 'warn' },
-  rate_limit: { kind: 'retry', log: 'warn' },
-  // A machine's quota for the day: the entry waits unsent until it clears
-  daily_limit: { kind: 'retry', log: 'warn' },
-  // It can follow a committed write, and a resend with the same id answers the stored result
-  internal: { kind: 'retry', log: 'error' },
-  captcha_unavailable: { kind: 'retry', log: 'warn' },
-  nicknames_exhausted: { kind: 'retry', log: 'warn' },
-};
+// console.error becomes a Sentry event, so it is kept for our own bugs and server faults
+const SENTRY = new Set<ReviewFailureCode>([
+  'invalid_body',
+  'method_not_allowed',
+  'not_moderated',
+  'internal',
+  'bad_response',
+]);
 
-const LOCAL_FAILURES: Record<ReviewLocalFailureCode, FailureRule> = {
-  unreachable: { kind: 'retry', log: 'warn' },
-  // A write may have committed before the odd answer, and a resend with the same id is safe
-  bad_response: { kind: 'retry', log: 'error' },
-  no_machine_id: { kind: 'rejected', log: 'warn' },
-  e2e_mode: { kind: 'rejected', log: 'warn' },
-};
+const envelopeSchema = z.object({ error: z.enum(REVIEW_ERROR_CODES) });
 
-const FAILURES: Record<ReviewFailureCode, FailureRule> = {
-  ...SERVER_FAILURES,
-  ...LOCAL_FAILURES,
-};
-
-const envelopeSchema = z.object({ error: z.string() });
-
-function isServerCode(code: string): code is ReviewErrorCode {
-  return Object.hasOwn(SERVER_FAILURES, code);
+function kindOf(code: ReviewFailureCode): ReviewFailureKind {
+  if (code === 'author_required') {
+    return 'needs-author';
+  }
+  return RETRY.has(code) ? 'retry' : 'rejected';
 }
 
 export function reviewFailure(
@@ -66,12 +43,11 @@ export function reviewFailure(
   call: string,
   detail?: string
 ): ReviewFailure {
-  const { kind, log } = FAILURES[code];
-  console[log](
+  console[SENTRY.has(code) ? 'error' : 'warn'](
     `[Reviews] ${call} failed: ${code}`,
     ...(detail === undefined ? [] : [detail])
   );
-  return { code, kind };
+  return { code, kind: kindOf(code) };
 }
 
 export async function failureCodeOf(error: unknown): Promise<ReviewFailureCode> {
@@ -81,7 +57,7 @@ export async function failureCodeOf(error: unknown): Promise<ReviewFailureCode> 
     return 'unreachable';
   }
   const envelope = envelopeSchema.safeParse(http.body);
-  if (envelope.success && isServerCode(envelope.data.error)) {
+  if (envelope.success) {
     return envelope.data.error;
   }
   // The gateway answers without the envelope

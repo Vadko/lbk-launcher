@@ -11,7 +11,7 @@ const state = vi.hoisted(() => ({
   url: null as URL | null,
   machineId: 'machine-1' as string | null,
   pageOpens: true,
-  pageTakesRequests: true,
+  pageReady: Promise.resolve(),
   listener: null as CaptchaPageListener | null,
   requests: [] as CaptchaRequest[],
   openCaptchaPage: vi.fn(),
@@ -59,7 +59,7 @@ beforeEach(async () => {
     url: PAGE,
     machineId: 'machine-1',
     pageOpens: true,
-    pageTakesRequests: true,
+    pageReady: Promise.resolve(),
     listener: null,
     requests: [],
   });
@@ -69,9 +69,8 @@ beforeEach(async () => {
     state.listener = listener;
     const send = (request: CaptchaRequest) => {
       state.requests.push(request);
-      return state.pageTakesRequests;
     };
-    return Promise.resolve(state.pageOpens ? send : null);
+    return state.pageReady.then(() => (state.pageOpens ? send : null));
   });
   warn.mockClear();
   vi.resetModules();
@@ -122,20 +121,24 @@ describe('takeCaptchaToken', () => {
     expect(new Set(state.requests.map((request) => request.requestId)).size).toBe(2);
   });
 
-  it('gives up on a request the page never answers', async () => {
+  it.each([
+    ['a request the page never answers', () => Promise.resolve()],
+    ['a page that is never ready', () => new Promise<void>(() => undefined)],
+  ])('gives up on %s in 30 s', async (_label, ready) => {
+    state.pageReady = ready();
     const token = tokens.takeCaptchaToken('review');
     await flush();
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(30_000);
 
     expect(await token).toBeNull();
-    expect(warn).toHaveBeenCalledWith('[Turnstile] review: no answer in 20000 ms');
-    expect(state.reportCaptchaFault).toHaveBeenCalledWith('no answer in time');
+    expect(warn).toHaveBeenCalledWith('[Turnstile] review: no token in 30000 ms');
+    expect(state.reportCaptchaFault).toHaveBeenCalledWith('no token in time');
   });
 
   it('forgets a request once its deadline passed', async () => {
     const token = tokens.takeCaptchaToken('review');
     await flush();
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(30_000);
     await token;
     warn.mockClear();
     state.reportCaptchaFault.mockClear();
@@ -206,14 +209,6 @@ describe('takeCaptchaToken', () => {
     expect(state.requests).toEqual([]);
   });
 
-  it('gives no token when the page closes before the request', async () => {
-    state.pageTakesRequests = false;
-
-    expect(await tokens.takeCaptchaToken('reply')).toBeNull();
-  });
-});
-
-describe('prefetchCaptchaToken', () => {
   it('hands the next write a ready token without a new solve', async () => {
     tokens.prefetchCaptchaToken('reply');
     await flush();

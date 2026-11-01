@@ -52,6 +52,5 @@ export const FAILURE_NOTICE: Record<ReviewFailure['code'], PickerNotice> = {
   nicknames_exhausted: 'exhausted',
   unreachable: 'offline',
   bad_response: 'failed',
-  no_machine_id: 'failed',
   e2e_mode: 'failed',
 };

@@ -7,6 +7,7 @@ import {
   isLiquidGlassSupported,
   removeLiquidGlass,
 } from './liquid-glass';
+import { stopReviewEvents } from './review-events';
 import { destroyCaptchaWindow } from './turnstile/window';
 import { openExternalUrl } from './utils/open-external';
 import { isLinux, isMacOS, supportsMacOSLiquidGlass } from './utils/platform';
@@ -86,6 +87,12 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     console.log('[Window] Started loading renderer');
   });
 
+  mainWindow.webContents.on('did-start-navigation', ({ isMainFrame, isSameDocument }) => {
+    if (isMainFrame && !isSameDocument) {
+      stopReviewEvents();
+    }
+  });
+
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[Window] Finished loading renderer');
   });
@@ -109,6 +116,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   );
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    stopReviewEvents();
     console.error('[Window] Render process gone:', details);
     Sentry.captureMessage(`Render process gone: ${details.reason}`, {
       level: 'fatal',
@@ -120,6 +128,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   mainWindow.on('closed', async () => {
+    stopReviewEvents();
     destroyCaptchaWindow();
     // Clean up liquid glass if it was applied
     if (liquidGlassId) {

@@ -30,7 +30,6 @@ describe('reviewRefusalMessage', () => {
     ['nicknames_exhausted', t('gameReviews.rejected.generic')],
     ['unreachable', t('gameReviews.rejected.generic')],
     ['bad_response', t('gameReviews.rejected.generic')],
-    ['no_machine_id', t('gameReviews.rejected.generic')],
     ['e2e_mode', t('gameReviews.rejected.generic')],
   ])('%s reads as its message', (reason, message) => {
     expect(reviewRefusalMessage(reason)).toBe(message);

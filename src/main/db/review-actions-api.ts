@@ -1,13 +1,14 @@
-import type {
-  ReviewEditInput,
-  ReviewEditResult,
-  ReviewReplyInput,
-  ReviewResult,
-  ReviewWriteResult,
+import {
+  editResultSchema,
+  type ReviewEditInput,
+  type ReviewEditResult,
+  type ReviewReplyInput,
+  type ReviewResult,
+  type ReviewWriteResult,
+  writeResultSchema,
 } from '../../shared/game-reviews-api-types';
 import { takeCaptchaToken } from '../turnstile/tokens';
 import { callReviewFunction } from './review-request';
-import { editResultSchema, writeResultSchema } from './review-schemas';
 
 export function replyToReview({
   id,
@@ -20,7 +21,7 @@ export function replyToReview({
     'reviews?action=reply',
     { id, reviewId, parentId, text },
     writeResultSchema,
-    isPublic ? { captchaToken: () => takeCaptchaToken('reply') } : {}
+    isPublic ? () => takeCaptchaToken('reply') : undefined
   );
 }
 
@@ -33,6 +34,6 @@ export function editReviewEntry({
     'reviews?action=edit',
     { id, text },
     editResultSchema,
-    isPublic ? { captchaToken: () => takeCaptchaToken('edit') } : {}
+    isPublic ? () => takeCaptchaToken('edit') : undefined
   );
 }

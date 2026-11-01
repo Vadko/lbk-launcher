@@ -73,28 +73,13 @@ describe('replyToReview', () => {
     expect(sentBodies()[0]).not.toHaveProperty('isPublic');
   });
 
-  it('retries a refused token once with a fresh one', async () => {
-    takeCaptchaToken.mockResolvedValueOnce('token-1').mockResolvedValueOnce('token-2');
-    invoke
-      .mockResolvedValueOnce(refused('captcha_failed', 403))
-      .mockResolvedValueOnce(answered({ id: 'reply-1', outcome: 'published' }));
-
-    const result = await replyToReview(reply(true));
-
-    expect(result.ok).toBe(true);
-    expect(sentBodies().map((body) => body['captchaToken'])).toEqual([
-      'token-1',
-      'token-2',
-    ]);
-  });
-
   it('leaves a reply without a token to the server', async () => {
     takeCaptchaToken.mockResolvedValue(null);
     invoke.mockResolvedValue(refused('captcha_failed', 403));
 
     expect(await replyToReview(reply(true))).toEqual({
       ok: false,
-      failure: { code: 'captcha_unavailable', kind: 'retry' },
+      failure: { code: 'captcha_failed', kind: 'retry' },
     });
     expect(sentBodies()).toEqual([
       {
@@ -110,7 +95,9 @@ describe('replyToReview', () => {
 
 describe('editReviewEntry', () => {
   it('sends only the entry id, the text and this machine', async () => {
-    invoke.mockResolvedValue(answered({ id: 'entry-1', outcome: 'removed' }));
+    invoke.mockResolvedValue(
+      answered({ id: 'entry-1', outcome: 'removed', editRejected: false })
+    );
 
     const result = await editReviewEntry({
       id: 'entry-1',
@@ -133,7 +120,6 @@ describe('editReviewEntry', () => {
   it.each([
     ['a refused edit', { editRejected: true }, true],
     ['a kept edit', { editRejected: false }, false],
-    ['an answer from a function that predates the field', {}, false],
   ])('reads %s', async (_label, field, editRejected) => {
     invoke.mockResolvedValue(answered({ id: 'entry-1', outcome: 'published', ...field }));
 
@@ -150,7 +136,9 @@ describe('editReviewEntry', () => {
   });
 
   it('adds an edit token for a public entry', async () => {
-    invoke.mockResolvedValue(answered({ id: 'entry-1', outcome: 'published' }));
+    invoke.mockResolvedValue(
+      answered({ id: 'entry-1', outcome: 'published', editRejected: false })
+    );
 
     await editReviewEntry({ id: 'entry-1', text: 'better', isPublic: true });
 

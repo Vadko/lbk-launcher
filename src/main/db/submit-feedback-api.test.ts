@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { answered, invokeCalls, MACHINE_ID, refused } from './review-functions.fixture';
+import { answered, invokeCalls, MACHINE_ID } from './review-functions.fixture';
 
 const { invoke, takeCaptchaToken } = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -100,17 +100,6 @@ describe('submitFeedback', () => {
     expect(sentBody()).toMatchObject({ id: POST, allowPublish: true });
     expect(sentBody()).not.toHaveProperty('captchaToken');
   });
-
-  it('reads a new public post refused for want of a token as captcha_unavailable', async () => {
-    takeCaptchaToken.mockResolvedValue(null);
-    invoke.mockResolvedValue(refused('captcha_failed', 403));
-
-    expect(await submitFeedback(post([], true))).toEqual({
-      ok: false,
-      failure: { code: 'captcha_unavailable', kind: 'retry' },
-    });
-    expect(invoke).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe('getFeedbackUploadUrls', () => {
@@ -139,7 +128,7 @@ describe('getFeedbackUploadUrls', () => {
     expect(invokeCalls(invoke.mock.calls)[0]).toEqual({
       name: 'submit-feedback?action=upload-urls',
       body: { id: POST, fileNames: ['shot.png'], machineId: MACHINE_ID },
-      timeout: 15_000,
+      timeout: 30_000,
     });
   });
 });

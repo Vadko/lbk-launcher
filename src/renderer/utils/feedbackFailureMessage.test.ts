@@ -28,7 +28,6 @@ describe('feedbackFailureMessage', () => {
     ['internal', t('feedbackModal.sendFailed')],
     ['nicknames_exhausted', t('feedbackModal.sendFailed')],
     ['bad_response', t('feedbackModal.sendFailed')],
-    ['no_machine_id', t('feedbackModal.sendFailed')],
     ['e2e_mode', t('feedbackModal.sendFailed')],
   ];
 

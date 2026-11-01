@@ -4,17 +4,16 @@ import type {
   SystemNotificationOptions,
 } from '../../shared/game-link-target';
 
-// A malformed review id costs only the deep link, never the notification
 const targetSchema: z.ZodType<GameLinkTarget> = z.object({
   gameId: z.string().min(1),
-  feedbackId: z.guid().optional().catch(undefined),
-  entryId: z.guid().optional().catch(undefined),
+  feedbackId: z.guid().optional(),
+  entryId: z.guid().optional(),
 });
 
 const optionsSchema: z.ZodType<SystemNotificationOptions> = z.object({
   title: z.string(),
   body: z.string(),
-  target: targetSchema.optional().catch(undefined),
+  target: targetSchema.optional(),
 });
 
 export function parseSystemNotificationOptions(

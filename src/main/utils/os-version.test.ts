@@ -42,15 +42,4 @@ describe('formatOsVersion', () => {
   ] as const)('%s', (_label, platform, version, osRelease, expected) => {
     expect(formatOsVersion(platform, version, osRelease)).toBe(expected);
   });
-
-  it('caps an over-long description at 120 characters', () => {
-    const result = formatOsVersion('linux', '6.8.0', { PRETTY_NAME: 'x'.repeat(300) });
-    expect(result).toBe('x'.repeat(120));
-  });
-
-  it('never splits a character made of two UTF-16 units', () => {
-    const name = `${'x'.repeat(119)}\u{1F427}\u{1F427}`;
-    const result = formatOsVersion('linux', '', { PRETTY_NAME: name });
-    expect(result).toBe(`${'x'.repeat(119)}\u{1F427}`);
-  });
 });

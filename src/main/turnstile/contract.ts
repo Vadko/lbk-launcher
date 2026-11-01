@@ -2,9 +2,7 @@ import { z } from 'zod';
 import { CAPTCHA_CHANNELS } from '../../shared/captcha-channels';
 
 // The actions lbk-admin's turnstileVerdict.ts expects, one per kind of public write
-export const turnstileActionSchema = z.enum(['review', 'reply', 'edit', 'nickname']);
-
-export type TurnstileAction = z.infer<typeof turnstileActionSchema>;
+export type TurnstileAction = 'review' | 'reply' | 'edit' | 'nickname';
 
 export interface CaptchaRequest {
   requestId: string;
@@ -23,21 +21,16 @@ type PageChannel = Exclude<
   typeof CAPTCHA_CHANNELS.request
 >;
 
-// The captcha page's own request id rule, reused for the codes it sends back
-const name = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
-// The server's isTurnstileToken bound
-const token = z.string().min(1).max(2048);
-
 // Each page call arrives as its IPC arguments, and the page is remote, so every one is checked
 export const PAGE_MESSAGES: Record<PageChannel, z.ZodType<PageMessage>> = {
   [CAPTCHA_CHANNELS.ready]: z.tuple([]).transform(() => ({ type: 'ready' as const })),
   [CAPTCHA_CHANNELS.unavailable]: z
-    .tuple([name])
+    .tuple([z.string()])
     .transform(([code]) => ({ type: 'unavailable' as const, code })),
   [CAPTCHA_CHANNELS.resolve]: z
-    .tuple([name, token])
+    .tuple([z.string(), z.string()])
     .transform(([requestId, token]) => ({ type: 'resolve' as const, requestId, token })),
   [CAPTCHA_CHANNELS.reject]: z
-    .tuple([name, name])
+    .tuple([z.string(), z.string()])
     .transform(([requestId, code]) => ({ type: 'reject' as const, requestId, code })),
 };

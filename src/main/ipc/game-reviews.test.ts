@@ -47,13 +47,11 @@ beforeEach(() => {
   state.api.mockReset();
   state.prefetch.mockReset();
   state.api.mockResolvedValue({ ok: true, data: null });
-  vi.spyOn(console, 'error').mockImplementation(() => undefined);
-  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
 describe('setupGameReviewsHandlers', () => {
   it.each([
-    ['reviews:list', { gameId: OTHER, cursor: null }],
+    ['reviews:list', { gameId: OTHER, cursor: null, focusId: ID }],
     [
       'reviews:reply',
       { id: ID, reviewId: OTHER, parentId: null, text: 'hi', isPublic: true },
@@ -76,23 +74,10 @@ describe('setupGameReviewsHandlers', () => {
       },
     ],
     ['reviews:upload-urls', { id: ID, fileNames: ['a.png'] }],
-  ])('passes a valid %s call through', async (channel, input) => {
+  ])('passes a %s call through', async (channel, input) => {
     await call(channel, input);
 
     expect(state.api).toHaveBeenCalledWith(input);
-  });
-
-  it.each([
-    ['passes a valid focus id through', ID, { gameId: OTHER, cursor: null, focusId: ID }],
-    [
-      'drops a malformed focus id and keeps the page',
-      'not-a-uuid',
-      { gameId: OTHER, cursor: null },
-    ],
-  ])('%s', async (_case, focusId, expected) => {
-    await call('reviews:list', { gameId: OTHER, cursor: null, focusId });
-
-    expect(state.api).toHaveBeenCalledWith(expected);
   });
 
   it('reads the author without input', async () => {
@@ -101,91 +86,15 @@ describe('setupGameReviewsHandlers', () => {
     expect(state.api).toHaveBeenCalledWith();
   });
 
-  it('hands over the trimmed text', async () => {
-    await call('reviews:edit', { id: ID, text: '  hi \n', isPublic: false });
+  it('replays missed review events', async () => {
+    await call('reviews:sync-events');
 
-    expect(state.api).toHaveBeenCalledWith({ id: ID, text: 'hi', isPublic: false });
-  });
-
-  it('drops a machine id or captcha token the renderer slips in', async () => {
-    await call('reviews:edit', {
-      id: ID,
-      text: 'hi',
-      isPublic: true,
-      machineId: 'x',
-      captchaToken: 'y',
-    });
-
-    expect(state.api).toHaveBeenCalledWith({ id: ID, text: 'hi', isPublic: true });
-  });
-
-  it.each([
-    ['reviews:list', { gameId: 'not-a-uuid', cursor: null }],
-    [
-      'reviews:reply',
-      { id: ID, reviewId: OTHER, parentId: null, text: '   ', isPublic: false },
-    ],
-    ['reviews:reply', { id: ID, reviewId: OTHER, text: 'hi', isPublic: false }],
-    ['reviews:reply', { id: ID, reviewId: OTHER, parentId: null, text: 'hi' }],
-    ['reviews:edit', { id: ID, text: 'x'.repeat(1001), isPublic: false }],
-    ['reviews:edit', { id: ID, text: 'hi', isPublic: 'yes' }],
-    ['reviews:spin', { spinId: null, hold: { avatar: false } }],
-    ['reviews:claim', {}],
-    [
-      'reviews:submit-feedback',
-      {
-        id: ID,
-        gameId: OTHER,
-        type: 'praise',
-        message: 'hi',
-        screenshotPaths: [],
-        allowPublish: false,
-      },
-    ],
-    [
-      'reviews:submit-feedback',
-      { id: ID, gameId: OTHER, type: 'feedback', message: 'hi', screenshotPaths: [] },
-    ],
-    ['reviews:upload-urls', { id: ID, fileNames: [] }],
-    ['reviews:upload-urls', { id: ID, fileNames: Array(6).fill('a.png') }],
-  ])('refuses a malformed %s call without a request', async (channel, input) => {
-    expect(await call(channel, input)).toEqual({
-      ok: false,
-      failure: { code: 'invalid_body', kind: 'rejected' },
-    });
-    expect(state.api).not.toHaveBeenCalled();
-  });
-
-  it('counts the text limit in code points, as the server does', async () => {
-    await call('reviews:edit', {
-      id: ID,
-      text: '\u{1F600}'.repeat(1000),
-      isPublic: false,
-    });
-
-    expect(state.api).toHaveBeenCalledTimes(1);
-  });
-
-  it('replays missed review events to the page that asked', async () => {
-    const sender = { id: 1 };
-
-    await state.handlers.get('reviews:sync-events')?.({ sender });
-
-    expect(state.syncEvents).toHaveBeenCalledWith(sender);
+    expect(state.syncEvents).toHaveBeenCalledTimes(1);
   });
 
   it('prefetches a token for a known action', () => {
     state.listeners.get('reviews:prefetch-captcha')?.(null, 'reply');
 
     expect(state.prefetch).toHaveBeenCalledWith('reply');
-  });
-
-  it.each([
-    ['an unknown action', 'publish'],
-    ['no action', undefined],
-  ])('prefetches nothing for %s', (_label, action) => {
-    state.listeners.get('reviews:prefetch-captcha')?.(null, action);
-
-    expect(state.prefetch).not.toHaveBeenCalled();
   });
 });

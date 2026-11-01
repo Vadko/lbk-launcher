@@ -148,7 +148,7 @@ describe('openCaptchaPage', () => {
     const send = await openReady();
     const request = { requestId: ID, action: 'reply' as const, cData: 'abc' };
 
-    expect(send(request)).toBe(true);
+    send(request);
     expect(lastWindow().webContents.send).toHaveBeenCalledWith(
       CAPTCHA_CHANNELS.request,
       request
@@ -192,7 +192,7 @@ describe('openCaptchaPage', () => {
 
   it('ignores a malformed answer', async () => {
     await openReady();
-    fromPage(CAPTCHA_CHANNELS.resolve, [ID, '']);
+    fromPage(CAPTCHA_CHANNELS.resolve, [ID, 42]);
 
     expect(listener.answer).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(
@@ -236,7 +236,6 @@ describe('openCaptchaPage', () => {
       'a page without Turnstile',
       () => fromPage(CAPTCHA_CHANNELS.unavailable, ['script_error']),
     ],
-    ['no ready in 15 s', () => vi.advanceTimersByTime(15_000)],
   ])('gives up on %s and makes a new window next time', async (_label, fail) => {
     const ready = captcha.openCaptchaPage(PAGE, listener);
     const window = lastWindow();
@@ -258,7 +257,6 @@ describe('openCaptchaPage', () => {
       'page reported script_error',
       () => fromPage(CAPTCHA_CHANNELS.unavailable, ['script_error']),
     ],
-    ['not ready in time', () => vi.advanceTimersByTime(15_000)],
   ])('reports %s as the landing fault it is', async (reason, fail) => {
     const ready = captcha.openCaptchaPage(PAGE, listener);
     fail();
@@ -296,19 +294,21 @@ describe('openCaptchaPage', () => {
     expect(state.reportCaptchaFault).not.toHaveBeenCalled();
   });
 
+  it('waits for a slow page instead of closing it', async () => {
+    const ready = captcha.openCaptchaPage(PAGE, listener);
+    vi.advanceTimersByTime(60_000);
+    fromPage(CAPTCHA_CHANNELS.ready, []);
+
+    expect(await ready).toEqual(expect.any(Function));
+    expect(lastWindow().isDestroyed()).toBe(false);
+  });
+
   it("leaves a failed load of Turnstile's own frame alone", async () => {
     const ready = captcha.openCaptchaPage(PAGE, listener);
     lastWindow().webContents.emit('did-fail-load', {}, -3, '', 'about:srcdoc', false);
     fromPage(CAPTCHA_CHANNELS.ready, []);
 
     expect(await ready).toEqual(expect.any(Function));
-  });
-
-  it('sends nothing once the page is gone', async () => {
-    const send = await openReady();
-    captcha.destroyCaptchaWindow();
-
-    expect(send({ requestId: ID, action: 'edit', cData: 'abc' })).toBe(false);
   });
 });
 
