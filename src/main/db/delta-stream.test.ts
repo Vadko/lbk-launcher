@@ -84,14 +84,6 @@ describe('catchUp', () => {
     expect(console.error).toHaveBeenCalledOnce();
   });
 
-  it('joins a pass that has not started yet', async () => {
-    const { stream, fetches } = makeStream(() => []);
-
-    await Promise.all([stream.catchUp(), stream.catchUp()]);
-
-    expect(fetches).toHaveLength(1);
-  });
-
   it('runs a call made during a pass after it, never alongside', async () => {
     const gate = { open: (): void => undefined };
     const opened = new Promise<void>((resolve) => {
@@ -111,7 +103,6 @@ describe('catchUp', () => {
     });
 
     const first = stream.catchUp();
-    await vi.waitFor(() => expect(passes).toEqual(['start']));
     const second = stream.catchUp();
     await Promise.resolve();
     expect(passes).toEqual(['start']);
@@ -119,35 +110,6 @@ describe('catchUp', () => {
     gate.open();
     await Promise.all([first, second]);
     expect(passes).toEqual(['start', 'end', 'start', 'end']);
-  });
-
-  it('folds the calls made during one pass into a single extra pass', async () => {
-    const gate = { open: (): void => undefined };
-    const opened = new Promise<void>((resolve) => {
-      gate.open = resolve;
-    });
-    let passes = 0;
-    const stream = createDeltaStream({
-      name: 'Test',
-      watermarkKey: 'test_watermark',
-      async *fetchSince() {
-        passes++;
-        await opened;
-        yield* [];
-      },
-      apply: vi.fn(),
-    });
-
-    const first = stream.catchUp();
-    await vi.waitFor(() => expect(passes).toBe(1));
-    const joined = [stream.catchUp(), stream.catchUp(), stream.catchUp()];
-
-    gate.open();
-    await Promise.all([first, ...joined]);
-    expect(passes).toBe(2);
-
-    await stream.catchUp();
-    expect(passes).toBe(3);
   });
 });
 

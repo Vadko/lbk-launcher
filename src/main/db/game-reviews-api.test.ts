@@ -102,26 +102,6 @@ describe('fetchGameReviews', () => {
     });
   });
 
-  it('keeps the page when the focus thread is malformed', async () => {
-    invoke.mockResolvedValue(
-      answered({
-        items: [thread('a')],
-        total: 1,
-        nextCursor: null,
-        focus: thread('z', { type: 'unknown' }),
-        viewer: null,
-      })
-    );
-
-    const result = await fetchGameReviews({ gameId: GAME, cursor: null, focusId: FOCUS });
-
-    expect(result.ok && result.data.items.map((item) => item.id)).toEqual(['a']);
-    expect(error).toHaveBeenCalledWith(
-      expect.stringContaining('focus threads'),
-      expect.any(String)
-    );
-  });
-
   it('reads the server page with screenshots, the viewer and removed stubs', async () => {
     const stub = { id: 'gone', parentId: null, createdAt: CREATED, removed: true };
     const reply = { ...entry('r'), parentId: 'gone' };
@@ -150,36 +130,22 @@ describe('fetchGameReviews', () => {
     });
   });
 
-  it('drops a malformed thread or reply and keeps the rest of the page', async () => {
-    invoke.mockResolvedValue(
-      page([
+  it.each([
+    ['a thread', [thread('a'), thread('b', { type: 'unknown' })], null],
+    [
+      'a reply',
+      [
         thread('a', {
-          replies: [
-            { ...entry('ok'), parentId: null },
-            { ...entry('bad'), parentId: null, createdAt: 'yesterday' },
-          ],
+          replies: [{ ...entry('r'), parentId: null, createdAt: 'yesterday' }],
         }),
-        thread('b', { type: 'unknown' }),
-        thread('c', { moderation: 'removed' }),
-      ])
+      ],
+      null,
+    ],
+    ['the focus thread', [thread('a')], thread('z', { moderation: 'removed' })],
+  ])('fails the page when %s is malformed', async (_case, items, focus) => {
+    invoke.mockResolvedValue(
+      answered({ items, total: items.length, nextCursor: null, focus, viewer: null })
     );
-
-    const result = await fetchGameReviews({ gameId: GAME, cursor: null });
-
-    expect(result.ok && result.data.items.map((item) => item.id)).toEqual(['a']);
-    expect(result.ok && result.data.items[0]?.replies.map((item) => item.id)).toEqual([
-      'ok',
-    ]);
-    // console.error is what reaches Sentry, so a contract break is seen
-    expect(error.mock.calls.map(([message]) => message)).toEqual([
-      '[Reviews] Dropped 1 of 2 replies:',
-      '[Reviews] Dropped 2 of 3 threads:',
-    ]);
-    expect(String(error.mock.calls[0]?.[1])).toContain('createdAt');
-  });
-
-  it('fails the page when every thread is malformed', async () => {
-    invoke.mockResolvedValue(page([thread('a', { type: 'unknown' })]));
 
     expect(await fetchGameReviews({ gameId: GAME, cursor: null })).toEqual({
       ok: false,

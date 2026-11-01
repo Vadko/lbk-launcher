@@ -48,14 +48,9 @@ export function createDeltaStream<T, S extends z.ZodType>(
     }
   };
 
+  // One pass at a time; a call during a pass queues another, since that pass's queries may predate what the caller saw
   const serial = pLimit(1);
-  let queued: Promise<void> | null = null;
-  // One pass at a time; a call during a pass queues one more, since that pass's queries may predate what the caller saw, and later calls join it
-  const catchUp = (): Promise<void> =>
-    (queued ??= serial(() => {
-      queued = null;
-      return runCatchUp();
-    }));
+  const catchUp = (): Promise<void> => serial(runCatchUp);
 
   const subscription = (): BroadcastSubscription | null => {
     const channel = realtime?.();

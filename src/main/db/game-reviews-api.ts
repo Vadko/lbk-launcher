@@ -9,7 +9,6 @@ import type {
   GameReviewsPage,
   GameReviewThreadReply,
 } from '../../shared/game-reviews-types';
-import { keepValid } from './keep-valid';
 import { callReviewFunction } from './review-request';
 import { authorIdentitySchema } from './review-schemas';
 import { withFocus } from './with-focus';
@@ -49,37 +48,16 @@ const reviewSchema: z.ZodType<GameReview> = z.object({
   type: z.enum(enums.feedback_type),
   isPublic: z.boolean(),
   screenshots: z.array(z.string()),
-  replies: z
-    .array(z.unknown())
-    .transform((items) => keepValid(items, replySchema, 'replies')),
+  replies: z.array(replySchema),
 });
 
 const pageSchema: z.ZodType<GameReviewsPage> = z
   .object({
-    items: z.array(z.unknown()).transform((items, ctx) => {
-      const kept = keepValid(items, reviewSchema, 'threads');
-      // Every thread failing is a contract break, which must not read as a game without reviews
-      if (items.length > 0 && kept.length === 0) {
-        ctx.issues.push({
-          code: 'custom',
-          message: 'Every thread failed its schema',
-          input: items,
-        });
-        return z.NEVER;
-      }
-      return kept;
-    }),
+    items: z.array(reviewSchema),
     total: z.number(),
     nextCursor: z.string().nullable(),
     viewer: authorIdentitySchema.nullable(),
-    // A bad focus thread costs the deep link its scroll, never the page
-    focus: z
-      .unknown()
-      .transform((focus) =>
-        focus == null
-          ? null
-          : (keepValid([focus], reviewSchema, 'focus threads')[0] ?? null)
-      ),
+    focus: reviewSchema.nullable(),
   })
   .transform(withFocus);
 
