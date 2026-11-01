@@ -5,20 +5,22 @@ import type {
   ReviewResult,
 } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
-import { fetchReviewAuthor, spinNickname } from '../queries/reviewsClient';
+import { queryClient } from '../queries/queryClient';
+import { reviewAuthorQuery } from '../queries/reviewAuthorQuery';
+import { spinNickname } from '../queries/reviewsClient';
 
 type PickedAuthor = ReviewAuthorIdentity | null;
 type SpinResult = ReviewResult<NicknameSpin>;
 
 interface ReviewAuthorStore {
-  // This machine's nickname, null until it is known or claimed
-  author: ReviewAuthorIdentity | null;
   // The server's latest spin for this machine in this session, so a reopened picker shows it instead of spending a new one
   lastSpin: NicknameSpin | null;
   lastSpinAt: number | null;
-  // Spins the server still allows this machine this hour, null until a lookup or a spin tells; at 0 the lever locks
-  spinsLeft: number | null;
   isPickerOpen: boolean;
+  // Every caller waiting on the open picker shares it
+  waiting: PromiseWithResolvers<PickedAuthor> | null;
+  // Kept beyond the picker, so an answer still lands after it closed, and a second picker (StrictMode's double start in dev) joins it
+  spinning: Promise<SpinResult> | null;
   // Resolves with the nickname, opening the picker when there is none; null when the picker was closed
   ensureAuthor: () => Promise<PickedAuthor>;
   spin: (input: NicknameSpinInput) => Promise<SpinResult>;
@@ -32,109 +34,73 @@ interface ReviewAuthorStore {
   forgetAuthor: () => void;
 }
 
-type Set_ = (partial: Partial<ReviewAuthorStore>) => void;
-
-// Shared by every caller while one lookup, or one picker, is open
-let lookup: Promise<PickedAuthor> | null = null;
-let picker: Promise<PickedAuthor> | null = null;
-let settlePicker: ((author: PickedAuthor) => void) | null = null;
-
 // Under the server's 24 h claim window, so a claim started on a kept spin still lands in time
 const KEEP_SPIN_MS = 23 * 60 * 60 * 1000;
 
-// Kept outside the picker, so an answer still lands after the picker closed, and a second picker (StrictMode's double start in dev) joins it
-let spinRequest: Promise<SpinResult> | null = null;
+const forgetLookup = () =>
+  void queryClient.invalidateQueries({ queryKey: reviewAuthorQuery.queryKey });
 
-// A failed lookup answers null too, so the picker still opens: its spin answers author_exists when a nickname is there
-function lookUpAuthor(set: Set_): Promise<PickedAuthor> {
-  lookup ??= fetchReviewAuthor()
-    .then((known) => {
-      if (known.ok) {
-        set({ spinsLeft: known.data.spinsLeft });
+export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => {
+  const openPicker = () => {
+    const waiting = get().waiting ?? Promise.withResolvers<PickedAuthor>();
+    set({ waiting, isPickerOpen: true });
+    return waiting.promise;
+  };
+  const settleWaiting = (author: PickedAuthor) => {
+    get().waiting?.resolve(author);
+    set({ waiting: null });
+  };
+
+  return {
+    lastSpin: null,
+    lastSpinAt: null,
+    isPickerOpen: false,
+    waiting: null,
+    spinning: null,
+
+    ensureAuthor: async () => {
+      const { waiting } = get();
+      if (waiting) {
+        return waiting.promise;
       }
-      if (known.ok && known.data.author) {
-        set({ author: known.data.author });
-        return known.data.author;
+      const known = await queryClient.query(reviewAuthorQuery).catch(() => null);
+      return known?.author ?? openPicker();
+    },
+
+    spin: (input) => {
+      const spinning =
+        get().spinning ??
+        spinNickname(input)
+          .then((result) => {
+            if (result.ok) {
+              set({ lastSpin: result.data, lastSpinAt: Date.now() });
+            }
+            return result;
+          })
+          .finally(() => set({ spinning: null }));
+      set({ spinning });
+      return spinning;
+    },
+
+    openingSpin: () => {
+      const { spinning, lastSpin, lastSpinAt } = get();
+      if (spinning || lastSpinAt === null || Date.now() - lastSpinAt > KEEP_SPIN_MS) {
+        return null;
       }
-      return null;
-    })
-    .finally(() => {
-      lookup = null;
-    });
-  return lookup;
-}
+      return lastSpin;
+    },
 
-function openPicker(set: Set_): Promise<PickedAuthor> {
-  picker ??= new Promise<PickedAuthor>((resolve) => {
-    set({ isPickerOpen: true });
-    settlePicker = resolve;
-  }).finally(() => {
-    picker = null;
-  });
-  return picker;
-}
+    pickAuthor: (author) => {
+      set({ lastSpin: null, lastSpinAt: null });
+      settleWaiting(author);
+      forgetLookup();
+    },
 
-function settleCallers(author: PickedAuthor): void {
-  const settle = settlePicker;
-  settlePicker = null;
-  settle?.(author);
-}
+    closePicker: () => {
+      set({ isPickerOpen: false });
+      settleWaiting(null);
+    },
 
-export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => ({
-  author: null,
-  lastSpin: null,
-  lastSpinAt: null,
-  spinsLeft: null,
-  isPickerOpen: false,
-
-  ensureAuthor: async () => {
-    const { author } = get();
-    if (author) {
-      return author;
-    }
-    if (picker) {
-      return picker;
-    }
-    return (await lookUpAuthor(set)) ?? openPicker(set);
-  },
-
-  spin: (input) => {
-    spinRequest ??= spinNickname(input)
-      .then((result) => {
-        if (result.ok) {
-          set({
-            lastSpin: result.data,
-            lastSpinAt: Date.now(),
-            spinsLeft: result.data.spinsLeft,
-          });
-        } else if (result.failure.code === 'rate_limit') {
-          set({ spinsLeft: 0 });
-        }
-        return result;
-      })
-      .finally(() => {
-        spinRequest = null;
-      });
-    return spinRequest;
-  },
-
-  openingSpin: () => {
-    const { lastSpin, lastSpinAt } = get();
-    if (spinRequest || lastSpinAt === null || Date.now() - lastSpinAt > KEEP_SPIN_MS) {
-      return null;
-    }
-    return lastSpin;
-  },
-
-  pickAuthor: (author) => {
-    set({ author, lastSpin: null, lastSpinAt: null });
-    settleCallers(author);
-  },
-
-  closePicker: () => {
-    set({ isPickerOpen: false });
-    settleCallers(null);
-  },
-
-  forgetAuthor: () => set({ author: null }),
-}));
+    forgetAuthor: forgetLookup,
+  };
+});

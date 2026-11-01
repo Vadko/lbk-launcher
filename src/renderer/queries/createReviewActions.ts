@@ -27,10 +27,10 @@ export function createReviewActions(
       text: string,
       parentId: string | null
     ): Promise<boolean> => {
-      const authors = useReviewAuthorStore.getState();
       // A public thread shows its writer's nickname, so a reply there waits until the machine has one
       const author =
-        viewer ?? (thread.isPublic ? await authors.ensureAuthor() : authors.author);
+        viewer ??
+        (thread.isPublic ? await useReviewAuthorStore.getState().ensureAuthor() : null);
       if (thread.isPublic && !author) {
         return false;
       }

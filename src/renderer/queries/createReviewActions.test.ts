@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
   sendReviewReply: vi.fn<(input: ReviewReplyInput) => Promise<WriteAnswer>>(),
   sendReviewEdit: vi.fn<(input: ReviewEditInput) => Promise<WriteAnswer>>(),
   ensureAuthor: vi.fn<() => Promise<ReviewAuthorIdentity | null>>(),
-  author: null as ReviewAuthorIdentity | null,
 }));
 vi.mock('./reviewsClient', () => ({
   sendReviewReply: mocks.sendReviewReply,
@@ -35,7 +34,6 @@ vi.mock('../store/useSubscriptionsStore', () => ({
 vi.mock('../store/useReviewAuthorStore', () => ({
   useReviewAuthorStore: {
     getState: () => ({
-      author: mocks.author,
       ensureAuthor: mocks.ensureAuthor,
       forgetAuthor: vi.fn(),
     }),
@@ -69,7 +67,6 @@ const writesInCache = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   queryClient = new QueryClient();
-  mocks.author = null;
   mocks.sendReviewReply.mockImplementation(({ id }) => Promise.resolve(published(id)));
   mocks.sendReviewEdit.mockImplementation(({ id }) => Promise.resolve(published(id)));
 });

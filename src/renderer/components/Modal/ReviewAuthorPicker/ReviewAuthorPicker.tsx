@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useMachine } from '@xstate/react';
 import { Check } from 'lucide';
 import { InfoIcon } from 'lucide-react';
@@ -6,6 +7,7 @@ import { fromPromise } from 'xstate';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../../hooks/useActionPhase';
 import { usePrefetchCaptcha } from '../../../hooks/usePrefetchCaptcha';
+import { reviewAuthorQuery } from '../../../queries/reviewAuthorQuery';
 import { claimNickname } from '../../../queries/reviewsClient';
 import { useReviewAuthorStore } from '../../../store/useReviewAuthorStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
@@ -16,6 +18,7 @@ import { SlotMachine } from './SlotMachine';
 
 // Mounted by MainLayout after the other modals, so it is the top dialog for the gamepad and covers FeedbackModal
 export const ReviewAuthorPicker: React.FC = () => {
+  const queryClient = useQueryClient();
   const pickAuthor = useReviewAuthorStore((s) => s.pickAuthor);
   const closePicker = useReviewAuthorStore((s) => s.closePicker);
   const animate = useSettingsStore((s) => s.animationsEnabled);
@@ -36,7 +39,9 @@ export const ReviewAuthorPicker: React.FC = () => {
       input: {
         spin: useReviewAuthorStore.getState().openingSpin(),
         animate,
-        spinsLeft: useReviewAuthorStore.getState().spinsLeft,
+        // The lookup that found no nickname runs right before the picker opens
+        spinsLeft:
+          queryClient.getQueryData(reviewAuthorQuery.queryKey)?.spinsLeft ?? null,
       },
     }
   );

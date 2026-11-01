@@ -12,6 +12,8 @@ const spinNickname =
 vi.mock('../queries/reviewsClient', () => ({ fetchReviewAuthor, spinNickname }));
 
 const { useReviewAuthorStore } = await import('./useReviewAuthorStore');
+const { queryClient } = await import('../queries/queryClient');
+const { reviewAuthorQuery } = await import('../queries/reviewAuthorQuery');
 
 const OWL = { name: 'Quiet Owl', avatarSeed: '0a1b2c3d4e5f' };
 const SPIN: NicknameSpin = {
@@ -35,15 +37,19 @@ const answer = (author: ReviewAuthorState['author']) =>
     data: { author, spinsLeft: 60 },
   });
 
+const knowAuthor = (author: ReviewAuthorState['author']) =>
+  queryClient.setQueryData(reviewAuthorQuery.queryKey, { author, spinsLeft: 60 });
+
 beforeEach(() => {
   fetchReviewAuthor.mockReset();
   spinNickname.mockReset();
+  queryClient.clear();
   useReviewAuthorStore.setState({
-    author: null,
     lastSpin: null,
     lastSpinAt: null,
-    spinsLeft: null,
     isPickerOpen: false,
+    waiting: null,
+    spinning: null,
   });
 });
 
@@ -54,7 +60,7 @@ afterEach(() => {
 
 describe('useReviewAuthorStore', () => {
   it('answers at once with a known nickname', async () => {
-    useReviewAuthorStore.setState({ author: OWL });
+    knowAuthor(OWL);
 
     await expect(store().ensureAuthor()).resolves.toEqual(OWL);
     expect(fetchReviewAuthor).not.toHaveBeenCalled();
@@ -81,7 +87,19 @@ describe('useReviewAuthorStore', () => {
     store().pickAuthor(OWL);
 
     await expect(Promise.all([first, second])).resolves.toEqual([OWL, OWL]);
-    expect(store()).toMatchObject({ author: OWL, isPickerOpen: true });
+    expect(store().isPickerOpen).toBe(true);
+  });
+
+  it('asks the server for the claimed nickname after a pick', async () => {
+    fetchReviewAuthor.mockReturnValue(answer(null));
+    const picked = store().ensureAuthor();
+    await flush();
+    store().pickAuthor(OWL);
+    await picked;
+    fetchReviewAuthor.mockReturnValue(answer(OWL));
+
+    await expect(store().ensureAuthor()).resolves.toEqual(OWL);
+    expect(fetchReviewAuthor).toHaveBeenCalledTimes(2);
   });
 
   it('resolves null when the picker is closed and opens a new one next time', async () => {
@@ -91,7 +109,7 @@ describe('useReviewAuthorStore', () => {
     await flush();
     store().closePicker();
     await expect(cancelled).resolves.toBeNull();
-    expect(store()).toMatchObject({ author: null, isPickerOpen: false });
+    expect(store().isPickerOpen).toBe(false);
 
     const next = store().ensureAuthor();
     await flush();
@@ -124,7 +142,7 @@ describe('useReviewAuthorStore', () => {
   });
 
   it('asks the server again after the nickname is forgotten', async () => {
-    useReviewAuthorStore.setState({ author: OWL });
+    knowAuthor(OWL);
     fetchReviewAuthor.mockReturnValue(answer(null));
 
     store().forgetAuthor();
@@ -186,22 +204,26 @@ describe('useReviewAuthorStore', () => {
     await store().spin(FRESH);
 
     expect(store().openingSpin()).toBe(SPIN);
-    expect(store().spinsLeft).toBe(0);
   });
 
-  it('tracks the spins left from the lookup and from each spin', async () => {
-    fetchReviewAuthor.mockResolvedValue({
+  it('asks the server again on each open while the machine has no nickname', async () => {
+    fetchReviewAuthor.mockResolvedValueOnce({
       ok: true,
-      data: { author: null, spinsLeft: 12 },
+      data: { author: null, spinsLeft: 0 },
     });
     void store().ensureAuthor();
     await vi.waitFor(() => expect(store().isPickerOpen).toBe(true));
-    expect(store().spinsLeft).toBe(12);
+    store().closePicker();
+    fetchReviewAuthor.mockResolvedValueOnce({
+      ok: true,
+      data: { author: null, spinsLeft: 60 },
+    });
 
-    spinNickname.mockResolvedValue({ ok: true, data: { ...SPIN, spinsLeft: 11 } });
-    await store().spin(FRESH);
+    void store().ensureAuthor();
+    await vi.waitFor(() => expect(store().isPickerOpen).toBe(true));
 
-    expect(store().spinsLeft).toBe(11);
+    expect(fetchReviewAuthor).toHaveBeenCalledTimes(2);
+    expect(queryClient.getQueryData(reviewAuthorQuery.queryKey)?.spinsLeft).toBe(60);
   });
 
   it.each([
