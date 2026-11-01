@@ -129,10 +129,10 @@ describe('subscription', () => {
     expect(apply.mock.calls).toEqual(calls);
   });
 
-  it('catches up again after a resubscribe', async () => {
+  it('catches up on every join, the first included', async () => {
     const { stream, fetches } = makeStream(() => []);
 
-    stream.subscription()?.onResubscribe?.();
+    stream.subscription()?.onSubscribed?.();
     await vi.waitFor(() => expect(fetches).toHaveLength(1));
   });
 

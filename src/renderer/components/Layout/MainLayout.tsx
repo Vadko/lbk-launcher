@@ -10,6 +10,7 @@ import { useChangelogStore } from '../../store/useChangelogStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { useGamepadModeStore } from '../../store/useGamepadModeStore';
 import { useModalStore } from '../../store/useModalStore';
+import { useReviewAuthorStore } from '../../store/useReviewAuthorStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useSteamPluginSetupStore } from '../../store/useSteamPluginSetupStore';
 import { useStore } from '../../store/useStore';
@@ -20,6 +21,7 @@ import { ChangelogModal } from '../Modal/ChangelogModal';
 import { ConfirmModal } from '../Modal/ConfirmModal';
 import { GlobalModal } from '../Modal/GlobalModal';
 import { PromoModal } from '../Modal/PromoModal';
+import { ReviewAuthorPicker } from '../Modal/ReviewAuthorPicker/ReviewAuthorPicker';
 import { SteamPluginSetupModal } from '../Modal/SteamPluginSetup/SteamPluginSetupModal';
 import { NotificationModal } from '../Notifications/NotificationModal';
 import { ToastNotifications } from '../Notifications/ToastNotifications';
@@ -57,6 +59,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const settingsModalOpen = useSettingsStore((s) => s.isSettingsModalOpen);
   const changelogModalOpen = useChangelogStore((s) => s.isOpen);
   const steamPluginSetupOpen = useSteamPluginSetupStore((s) => s.open);
+  const reviewAuthorPickerOpen = useReviewAuthorStore((s) => s.isPickerOpen);
 
   const openHistory = useCallback(() => setShowNotificationHistory(true), []);
   const closeHistory = useCallback(() => setShowNotificationHistory(false), []);
@@ -141,6 +144,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           <NotificationModal isOpen={showNotificationHistory} onClose={closeHistory} />
         )}
         <PromoModal />
+        {/* Last dialog in the DOM: it opens over a composer or FeedbackModal and takes the gamepad from them */}
+        {reviewAuthorPickerOpen && <ReviewAuthorPicker />}
 
         {/* Gamepad hints */}
         <GamepadHints />

@@ -363,25 +363,109 @@ export type Database = {
       }
       feedback_replies: {
         Row: {
+          ai_verdict: Database["public"]["Enums"]["review_ai_verdict"] | null
+          author_avatar_seed: string | null
+          author_name: string | null
+          author_role: Database["public"]["Enums"]["review_author_role"]
           created_at: string
           created_by: string | null
+          edit_count: number
+          edit_rejected_at: string | null
+          edited_at: string | null
           feedback_id: string
           id: string
+          last_edit_at: string | null
+          machine_id: string | null
           message: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderated_by_name: string | null
+          moderated_via:
+            | Database["public"]["Enums"]["review_moderation_source"]
+            | null
+          moderation: Database["public"]["Enums"]["review_moderation"] | null
+          moderation_attempts: number
+          moderation_reason:
+            | Database["public"]["Enums"]["review_moderation_reason"]
+            | null
+          moderation_requested_at: string | null
+          moderation_rev: number
+          moderation_scores: Json | null
+          parent_reply_id: string | null
+          pending_text: string | null
+          published_at: string | null
+          rejected_text: string | null
+          tg_moderation_message_id: number | null
         }
         Insert: {
+          ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"] | null
+          author_avatar_seed?: string | null
+          author_name?: string | null
+          author_role?: Database["public"]["Enums"]["review_author_role"]
           created_at?: string
           created_by?: string | null
+          edit_count?: number
+          edit_rejected_at?: string | null
+          edited_at?: string | null
           feedback_id: string
           id?: string
+          last_edit_at?: string | null
+          machine_id?: string | null
           message: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderated_by_name?: string | null
+          moderated_via?:
+            | Database["public"]["Enums"]["review_moderation_source"]
+            | null
+          moderation?: Database["public"]["Enums"]["review_moderation"] | null
+          moderation_attempts?: number
+          moderation_reason?:
+            | Database["public"]["Enums"]["review_moderation_reason"]
+            | null
+          moderation_requested_at?: string | null
+          moderation_rev?: number
+          moderation_scores?: Json | null
+          parent_reply_id?: string | null
+          pending_text?: string | null
+          published_at?: string | null
+          rejected_text?: string | null
+          tg_moderation_message_id?: number | null
         }
         Update: {
+          ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"] | null
+          author_avatar_seed?: string | null
+          author_name?: string | null
+          author_role?: Database["public"]["Enums"]["review_author_role"]
           created_at?: string
           created_by?: string | null
+          edit_count?: number
+          edit_rejected_at?: string | null
+          edited_at?: string | null
           feedback_id?: string
           id?: string
+          last_edit_at?: string | null
+          machine_id?: string | null
           message?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderated_by_name?: string | null
+          moderated_via?:
+            | Database["public"]["Enums"]["review_moderation_source"]
+            | null
+          moderation?: Database["public"]["Enums"]["review_moderation"] | null
+          moderation_attempts?: number
+          moderation_reason?:
+            | Database["public"]["Enums"]["review_moderation_reason"]
+            | null
+          moderation_requested_at?: string | null
+          moderation_rev?: number
+          moderation_scores?: Json | null
+          parent_reply_id?: string | null
+          pending_text?: string | null
+          published_at?: string | null
+          rejected_text?: string | null
+          tg_moderation_message_id?: number | null
         }
         Relationships: [
           {
@@ -396,51 +480,144 @@ export type Database = {
             referencedRelation: "feedbacks"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "feedback_replies_moderated_by_fkey"
+            columns: ["moderated_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            referencedRelation: "feedback_replies"
+            referencedColumns: ["id"]
+          },
         ]
       }
       feedbacks: {
         Row: {
           admin_note: string | null
+          ai_verdict: Database["public"]["Enums"]["review_ai_verdict"] | null
           app_version: string | null
           arch: string | null
+          author_avatar_seed: string | null
+          author_name: string | null
           created_at: string
+          edit_count: number
+          edit_rejected_at: string | null
+          edited_at: string | null
           game_id: string
           id: string
+          is_public: boolean
+          last_edit_at: string | null
           machine_id: string
           message: string
+          moderated_at: string | null
+          moderated_by: string | null
+          moderated_by_name: string | null
+          moderated_via:
+            | Database["public"]["Enums"]["review_moderation_source"]
+            | null
+          moderation: Database["public"]["Enums"]["review_moderation"] | null
+          moderation_attempts: number
+          moderation_reason:
+            | Database["public"]["Enums"]["review_moderation_reason"]
+            | null
+          moderation_requested_at: string | null
+          moderation_rev: number
+          moderation_scores: Json | null
+          os_version: string | null
+          pending_text: string | null
           platform: string | null
+          published_at: string | null
+          rejected_text: string | null
           screenshot_paths: string[] | null
           status: Database["public"]["Enums"]["feedback_status"]
+          tg_moderation_message_id: number | null
           type: Database["public"]["Enums"]["feedback_type"]
           updated_at: string
         }
         Insert: {
           admin_note?: string | null
+          ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"] | null
           app_version?: string | null
           arch?: string | null
+          author_avatar_seed?: string | null
+          author_name?: string | null
           created_at?: string
+          edit_count?: number
+          edit_rejected_at?: string | null
+          edited_at?: string | null
           game_id: string
           id?: string
+          is_public?: boolean
+          last_edit_at?: string | null
           machine_id: string
           message: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderated_by_name?: string | null
+          moderated_via?:
+            | Database["public"]["Enums"]["review_moderation_source"]
+            | null
+          moderation?: Database["public"]["Enums"]["review_moderation"] | null
+          moderation_attempts?: number
+          moderation_reason?:
+            | Database["public"]["Enums"]["review_moderation_reason"]
+            | null
+          moderation_requested_at?: string | null
+          moderation_rev?: number
+          moderation_scores?: Json | null
+          os_version?: string | null
+          pending_text?: string | null
           platform?: string | null
+          published_at?: string | null
+          rejected_text?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
+          tg_moderation_message_id?: number | null
           type: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
         Update: {
           admin_note?: string | null
+          ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"] | null
           app_version?: string | null
           arch?: string | null
+          author_avatar_seed?: string | null
+          author_name?: string | null
           created_at?: string
+          edit_count?: number
+          edit_rejected_at?: string | null
+          edited_at?: string | null
           game_id?: string
           id?: string
+          is_public?: boolean
+          last_edit_at?: string | null
           machine_id?: string
           message?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderated_by_name?: string | null
+          moderated_via?:
+            | Database["public"]["Enums"]["review_moderation_source"]
+            | null
+          moderation?: Database["public"]["Enums"]["review_moderation"] | null
+          moderation_attempts?: number
+          moderation_reason?:
+            | Database["public"]["Enums"]["review_moderation_reason"]
+            | null
+          moderation_requested_at?: string | null
+          moderation_rev?: number
+          moderation_scores?: Json | null
+          os_version?: string | null
+          pending_text?: string | null
           platform?: string | null
+          published_at?: string | null
+          rejected_text?: string | null
           screenshot_paths?: string[] | null
           status?: Database["public"]["Enums"]["feedback_status"]
+          tg_moderation_message_id?: number | null
           type?: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
@@ -456,6 +633,12 @@ export type Database = {
             columns: ["game_id"]
             referencedRelation: "trending_games_cache"
             referencedColumns: ["game_id"]
+          },
+          {
+            foreignKeyName: "feedbacks_moderated_by_fkey"
+            columns: ["moderated_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1873,6 +2056,7 @@ export type Database = {
           log_path: string | null
           machine_id: string
           message: string | null
+          os_version: string | null
           platform: string | null
           status: Database["public"]["Enums"]["feedback_status"]
           updated_at: string
@@ -1887,6 +2071,7 @@ export type Database = {
           log_path?: string | null
           machine_id: string
           message?: string | null
+          os_version?: string | null
           platform?: string | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
@@ -1901,6 +2086,7 @@ export type Database = {
           log_path?: string | null
           machine_id?: string
           message?: string | null
+          os_version?: string | null
           platform?: string | null
           status?: Database["public"]["Enums"]["feedback_status"]
           updated_at?: string
@@ -2151,6 +2337,166 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      review_alerts: {
+        Row: {
+          key: string
+          resolved_at: string | null
+          sent_at: string
+        }
+        Insert: {
+          key: string
+          resolved_at?: string | null
+          sent_at: string
+        }
+        Update: {
+          key?: string
+          resolved_at?: string | null
+          sent_at?: string
+        }
+        Relationships: []
+      }
+      review_authors: {
+        Row: {
+          avatar_seed: string
+          created_at: string
+          ip: string | null
+          machine_id: string
+          name: string
+        }
+        Insert: {
+          avatar_seed: string
+          created_at?: string
+          ip?: string | null
+          machine_id: string
+          name: string
+        }
+        Update: {
+          avatar_seed?: string
+          created_at?: string
+          ip?: string | null
+          machine_id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      review_bans: {
+        Row: {
+          banned_by: string | null
+          banned_by_name: string | null
+          created_at: string
+          entry_id: string | null
+          entry_kind: string | null
+          machine_id: string
+          reason: Database["public"]["Enums"]["review_moderation_reason"]
+          source: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Insert: {
+          banned_by?: string | null
+          banned_by_name?: string | null
+          created_at?: string
+          entry_id?: string | null
+          entry_kind?: string | null
+          machine_id: string
+          reason: Database["public"]["Enums"]["review_moderation_reason"]
+          source: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Update: {
+          banned_by?: string | null
+          banned_by_name?: string | null
+          created_at?: string
+          entry_id?: string | null
+          entry_kind?: string | null
+          machine_id?: string
+          reason?: Database["public"]["Enums"]["review_moderation_reason"]
+          source?: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_bans_banned_by_fkey"
+            columns: ["banned_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_cleanup_jobs: {
+        Row: {
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          feedback_id: string | null
+          id: number
+          paths: string[] | null
+          tg_message_id: number | null
+        }
+        Insert: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          feedback_id?: string | null
+          id?: never
+          paths?: string[] | null
+          tg_message_id?: number | null
+        }
+        Update: {
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          feedback_id?: string | null
+          id?: never
+          paths?: string[] | null
+          tg_message_id?: number | null
+        }
+        Relationships: []
+      }
+      review_nickname_spins: {
+        Row: {
+          adjective: string
+          adjective_feminine: string
+          avatar_seed: string
+          claim_attempted_at: string | null
+          claim_attempts: number
+          created_at: string
+          id: string
+          ip: string | null
+          machine_id: string
+          name: string
+          noun: string
+          noun_gender: string
+          superseded_at: string | null
+        }
+        Insert: {
+          adjective: string
+          adjective_feminine: string
+          avatar_seed: string
+          claim_attempted_at?: string | null
+          claim_attempts?: number
+          created_at?: string
+          id?: string
+          ip?: string | null
+          machine_id: string
+          name?: string
+          noun: string
+          noun_gender: string
+          superseded_at?: string | null
+        }
+        Update: {
+          adjective?: string
+          adjective_feminine?: string
+          avatar_seed?: string
+          claim_attempted_at?: string | null
+          claim_attempts?: number
+          created_at?: string
+          id?: string
+          ip?: string | null
+          machine_id?: string
+          name?: string
+          noun?: string
+          noun_gender?: string
+          superseded_at?: string | null
+        }
+        Relationships: []
       }
       slug_redirects: {
         Row: {
@@ -2883,6 +3229,22 @@ export type Database = {
         Args: { p_game_id: string }
         Returns: Database["public"]["Enums"]["game_status"]
       }
+      apply_review_moderation: {
+        Args: {
+          p_ai_verdict?: Database["public"]["Enums"]["review_ai_verdict"]
+          p_by?: string
+          p_by_name?: string
+          p_decision: string
+          p_expected_outcome?: string
+          p_id: string
+          p_kind: string
+          p_reason?: Database["public"]["Enums"]["review_moderation_reason"]
+          p_rev: number
+          p_scores?: Json
+          p_source: Database["public"]["Enums"]["review_moderation_source"]
+        }
+        Returns: Json
+      }
       apply_scan_slot: {
         Args: {
           p_entry: Json
@@ -2891,6 +3253,14 @@ export type Database = {
           p_version_id: string
         }
         Returns: undefined
+      }
+      begin_review_claim: {
+        Args: { p_ip: string; p_machine_id: string; p_spin_id: string }
+        Returns: Json
+      }
+      begin_review_moderation: {
+        Args: { p_id: string; p_kind: string; p_rev: number }
+        Returns: Json
       }
       broadcast_game_counters: { Args: never; Returns: undefined }
       can_read_game_archive: {
@@ -2920,9 +3290,54 @@ export type Database = {
         Args: { p_daily_limit?: number; p_machine_id: string }
         Returns: number
       }
+      claim_review_alert: {
+        Args: { p_every?: string; p_key: string }
+        Returns: boolean
+      }
+      claim_review_author: {
+        Args: { p_ip: string; p_machine_id: string; p_spin_id: string }
+        Returns: Json
+      }
+      claim_review_cleanup_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          feedback_id: string
+          id: number
+          paths: string[]
+          tg_message_id: number
+        }[]
+      }
+      claim_stale_review_moderation: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          id: string
+          kind: string
+          rev: number
+        }[]
+      }
       cleanup_steam_library_rate_limits: { Args: never; Returns: number }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      deal_review_nickname: {
+        Args: {
+          p_adjectives?: Json
+          p_hold_adjective?: boolean
+          p_hold_avatar?: boolean
+          p_hold_noun?: boolean
+          p_ip?: string
+          p_machine_id: string
+          p_nouns?: Json
+          p_spin_id?: string
+        }
+        Returns: Json
+      }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
+      edit_review_entry: {
+        Args: { p_entry_id: string; p_machine_id: string; p_text: string }
+        Returns: Json
+      }
+      finish_review_cleanup_jobs: { Args: { p_ids: number[] }; Returns: number }
       fuzzy_search_games: {
         Args: {
           limit_val?: number
@@ -3028,6 +3443,16 @@ export type Database = {
           touched_at: string
         }[]
       }
+      get_game_reviews: {
+        Args: {
+          p_cursor?: string
+          p_focus_id?: string
+          p_game_id: string
+          p_limit?: number
+          p_machine_id?: string
+        }
+        Returns: Json
+      }
       get_home_picks: {
         Args: never
         Returns: {
@@ -3047,6 +3472,14 @@ export type Database = {
           total_supporters: number
           total_unique_players: number
         }[]
+      }
+      get_legacy_feedback_replies: {
+        Args: { p_limit?: number; p_machine_id: string; p_since: string }
+        Returns: Json
+      }
+      get_machine_review_events: {
+        Args: { p_limit?: number; p_machine_id: string; p_since: string }
+        Returns: Json
       }
       get_players_with_downloads: {
         Args: { p_end_date?: string; p_start_date?: string }
@@ -3076,6 +3509,24 @@ export type Database = {
           unique_games: number
           unique_players: number
         }[]
+      }
+      get_review_author: { Args: { p_machine_id: string }; Returns: Json }
+      get_review_bans: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
+      get_review_machine_entries: {
+        Args: {
+          p_id: string
+          p_kind: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: Json
+      }
+      get_review_moderation_queue: {
+        Args: { p_limit?: number; p_offset?: number; p_state?: string }
+        Returns: Json
       }
       get_subscription_statistics: {
         Args: { p_end_date?: string; p_start_date?: string }
@@ -3174,6 +3625,32 @@ export type Database = {
           unsubscribe_token: string
         }[]
       }
+      post_review: {
+        Args: {
+          p_app_version?: string
+          p_arch?: string
+          p_game_id: string
+          p_id: string
+          p_machine_id: string
+          p_message: string
+          p_os_version?: string
+          p_platform?: string
+          p_public?: boolean
+          p_screenshot_paths?: string[]
+          p_type: Database["public"]["Enums"]["feedback_type"]
+        }
+        Returns: Json
+      }
+      post_review_reply: {
+        Args: {
+          p_id: string
+          p_machine_id: string
+          p_parent_id: string
+          p_review_id: string
+          p_text: string
+        }
+        Returns: Json
+      }
       prune_scan_slots: {
         Args: { p_slots: string[]; p_version_id: string }
         Returns: undefined
@@ -3181,6 +3658,34 @@ export type Database = {
       remove_game_subscription: {
         Args: { p_game_id: string; p_user_identifier: string }
         Returns: undefined
+      }
+      resolve_review_alerts: { Args: { p_prefix: string }; Returns: string[] }
+      review_cleanup_cron: { Args: never; Returns: undefined }
+      review_entry_outcome: {
+        Args: { p_id: string; p_machine_id: string; p_text?: string }
+        Returns: Json
+      }
+      review_kind_table: { Args: { p_kind: string }; Returns: string }
+      review_moderation_context: {
+        Args: { p_id: string; p_kind: string }
+        Returns: Json
+      }
+      review_outcome: {
+        Args: {
+          p_moderation: Database["public"]["Enums"]["review_moderation"]
+          p_pending_text: string
+        }
+        Returns: string
+      }
+      review_thread_json: {
+        Args: {
+          p_machine_id: string
+          p_root_id: string
+          p_team: string
+          p_viewer_name: string
+          p_viewer_seed: string
+        }
+        Returns: Json
       }
       save_home_picks: {
         Args: { p_game_ids: string[]; p_title?: string; p_user: string }
@@ -3194,6 +3699,10 @@ export type Database = {
           installdir: string
           name: string
         }[]
+      }
+      send_review_event: {
+        Args: { p_event: string; p_machine_id: string; p_payload: Json }
+        Returns: undefined
       }
       set_game_hidden: {
         Args: {
@@ -3230,8 +3739,29 @@ export type Database = {
         }
         Returns: number
       }
+      set_review_ban: {
+        Args: {
+          p_banned: boolean
+          p_by?: string
+          p_by_name?: string
+          p_id: string
+          p_kind: string
+          p_reason?: Database["public"]["Enums"]["review_moderation_reason"]
+        }
+        Returns: Json
+      }
+      set_review_tg_message: {
+        Args: {
+          p_id: string
+          p_kind: string
+          p_message_id: number
+          p_rev: number
+        }
+        Returns: boolean
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sweep_review_moderation_cron: { Args: never; Returns: undefined }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
@@ -3265,6 +3795,23 @@ export type Database = {
         | "role_changed"
         | "game_update"
         | "workshop_update"
+      review_ai_verdict: "publish" | "reject" | "uncertain" | "error"
+      review_author_role: "player" | "author" | "moderator"
+      review_moderation: "pending" | "published" | "removed"
+      review_moderation_reason:
+        | "spam"
+        | "links"
+        | "abuse"
+        | "hate"
+        | "personal_data"
+        | "offtopic"
+        | "propaganda"
+        | "sexual"
+        | "violence"
+        | "self_harm"
+        | "language"
+        | "other"
+      review_moderation_source: "ai" | "telegram" | "admin"
       translation_kind: "regular" | "workshop"
       user_role: "admin" | "moderator" | "translator" | "user"
     }
@@ -3427,6 +3974,24 @@ export const Constants = {
         "game_update",
         "workshop_update",
       ],
+      review_ai_verdict: ["publish", "reject", "uncertain", "error"],
+      review_author_role: ["player", "author", "moderator"],
+      review_moderation: ["pending", "published", "removed"],
+      review_moderation_reason: [
+        "spam",
+        "links",
+        "abuse",
+        "hate",
+        "personal_data",
+        "offtopic",
+        "propaganda",
+        "sexual",
+        "violence",
+        "self_harm",
+        "language",
+        "other",
+      ],
+      review_moderation_source: ["ai", "telegram", "admin"],
       translation_kind: ["regular", "workshop"],
       user_role: ["admin", "moderator", "translator", "user"],
     },

@@ -34,11 +34,16 @@ interface GamepadModeStore {
   scrollGameListToIndex: ((index: number) => void) | null;
   setScrollGameListToIndex: (fn: ((index: number) => void) | null) => void;
 
+  // The element id of a review entry revealed behind a dialog, for the loop to focus once the dialog closes
+  entryHandOver: string | null;
+  handOverEntry: (elementId: string) => void;
+  takeEntryHandOver: () => string | null;
+
   // Reset navigation when mode changes
   resetNavigation: () => void;
 }
 
-export const useGamepadModeStore = create<GamepadModeStore>((set) => ({
+export const useGamepadModeStore = create<GamepadModeStore>((set, get) => ({
   isGamepadMode: false,
   setGamepadMode: (enabled) =>
     set((state) => ({
@@ -47,6 +52,8 @@ export const useGamepadModeStore = create<GamepadModeStore>((set) => ({
       focusedGameIndex: enabled ? 0 : state.focusedGameIndex,
       navigationArea: enabled ? 'games' : state.navigationArea,
       isHelpOpen: enabled ? state.isHelpOpen : false,
+      // A mode change restarts the loop that would take it
+      entryHandOver: enabled === state.isGamepadMode ? state.entryHandOver : null,
     })),
 
   focusedGameIndex: 0,
@@ -63,6 +70,16 @@ export const useGamepadModeStore = create<GamepadModeStore>((set) => ({
 
   scrollGameListToIndex: null,
   setScrollGameListToIndex: (fn) => set({ scrollGameListToIndex: fn }),
+
+  entryHandOver: null,
+  handOverEntry: (elementId) => set({ entryHandOver: elementId }),
+  takeEntryHandOver: () => {
+    const { entryHandOver } = get();
+    if (entryHandOver !== null) {
+      set({ entryHandOver: null });
+    }
+    return entryHandOver;
+  },
 
   resetNavigation: () =>
     set({

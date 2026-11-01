@@ -139,6 +139,7 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_CAPTCHA_PAGE_URL: ${{ secrets.VITE_CAPTCHA_PAGE_URL }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -157,6 +158,7 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_CAPTCHA_PAGE_URL: ${{ secrets.VITE_CAPTCHA_PAGE_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -176,6 +178,7 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_CAPTCHA_PAGE_URL: ${{ secrets.VITE_CAPTCHA_PAGE_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm dist:linux --publish never
 
@@ -195,6 +198,7 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_CAPTCHA_PAGE_URL: ${{ secrets.VITE_CAPTCHA_PAGE_URL }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Code Signing
           CSC_LINK: ${{ secrets.CSC_LINK }}

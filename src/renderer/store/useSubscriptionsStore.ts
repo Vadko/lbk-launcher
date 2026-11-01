@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { t } from '@/shared/i18n/i18n';
-import type { FeedbackReplyPayload } from '../../shared/types';
+import type { ReviewEvent } from '../../shared/game-reviews-types';
+import { reviewModerationKey } from '../utils/reviewModerationKey';
+import { reviewReplyText } from '../utils/reviewReplyText';
 import {
   createNotification,
   createToast,
@@ -30,6 +32,7 @@ export const APP_UPDATE_GAME_ID = 'app';
 
 const MAX_NOTIFICATIONS = 200;
 const MAX_SEEN_FEEDBACK_REPLY_IDS = 500;
+const MAX_SEEN_MODERATION_EVENTS = 500;
 
 const prependNotification = (
   notifications: Notification[],
@@ -68,7 +71,7 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
 
   // Notification Actions
   addNotification: (
-    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>,
+    notification: Parameters<typeof createNotification>[0],
     showToast?: boolean
   ) => void;
   addVersionUpdateNotification: (
@@ -110,10 +113,12 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
     gameName: string,
     showToast?: boolean
   ) => void;
-  addFeedbackReplyNotification: (
-    reply: FeedbackReplyPayload,
-    showToast?: boolean
-  ) => void;
+  // A reply to the viewer's review entry, deduped by its id across catch-ups and cleared lists; false for one shown before
+  addReplyNotification: (reply: ReviewEvent, showToast: boolean) => boolean;
+  // False when this very verdict was handled before, so a catch-up repeating it stays quiet
+  claimModerationEvent: (event: ReviewEvent) => boolean;
+  // A toast with its sound that never enters the notification list
+  showToast: (toast: Omit<ToastNotification, 'id' | 'timestamp'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
   markAppUpdateNotificationsAsRead: () => void;
@@ -136,6 +141,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       toasts: [],
       notifiedVersions: new Map<string, string>(),
       seenFeedbackReplyIds: [],
+      seenModerationEvents: [],
 
       // Game subscription methods
       subscribe: (gameId, status, progress) => {
@@ -304,7 +310,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           showSystemNotificationIfHidden(
             notificationParams.gameName,
             message,
-            notificationParams.gameId
+            notification
           );
         }
       },
@@ -348,7 +354,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('version-update');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -381,7 +387,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('progress-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -443,7 +449,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('team-new-game');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -480,7 +486,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('team-status-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
@@ -508,37 +514,41 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
           playNotificationSoundIfEnabled('status-change');
           scheduleToastDismissal(notification.id, get().dismissToast);
-          showSystemNotificationIfHidden(gameName, message, gameId);
+          showSystemNotificationIfHidden(gameName, message, { gameId });
         }
       },
 
-      addFeedbackReplyNotification: (reply, showToast = true) => {
-        if ((get().seenFeedbackReplyIds ?? []).includes(reply.replyId)) {
-          return;
+      addReplyNotification: (reply, showToast) => {
+        // Launchers before review events stored the same ids, so an upgrade never notifies a reply twice
+        if ((get().seenFeedbackReplyIds ?? []).includes(reply.entryId)) {
+          return false;
         }
 
+        const message = reviewReplyText(reply);
         const notification: Notification = {
-          id: `feedback-reply-${reply.replyId}`,
+          id: `feedback-reply-${reply.entryId}`,
           type: 'feedback-reply',
           gameId: reply.gameId,
           gameName: reply.gameName,
-          message: reply.message,
-          sourceId: reply.replyId,
-          timestamp: new Date(reply.createdAt).getTime(),
+          feedbackId: reply.feedbackId,
+          entryId: reply.entryId,
+          message,
+          sourceId: reply.entryId,
+          timestamp: Date.parse(reply.createdAt),
           read: false,
         };
 
         set((state) => ({
           ...prependNotification(state.notifications, notification),
           seenFeedbackReplyIds: [
-            reply.replyId,
+            reply.entryId,
             ...(state.seenFeedbackReplyIds ?? []),
           ].slice(0, MAX_SEEN_FEEDBACK_REPLY_IDS),
         }));
 
         if (showToast) {
           // The toast renders "gameName • message", so pass just the reply text.
-          const toast = createToast(notification, reply.message);
+          const toast = createToast(notification, message);
 
           set((state) => ({
             toasts: [...state.toasts, toast],
@@ -548,10 +558,35 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           scheduleToastDismissal(notification.id, get().dismissToast);
           showSystemNotificationIfHidden(
             t('notifications.feedbackReplyTitle', { game: reply.gameName }),
-            reply.message,
-            reply.gameId
+            message,
+            notification
           );
         }
+        return true;
+      },
+
+      claimModerationEvent: (event) => {
+        const seen = get().seenModerationEvents;
+        const key = reviewModerationKey(event);
+        if (seen.includes(key)) {
+          return false;
+        }
+        set({
+          seenModerationEvents: [key, ...seen].slice(0, MAX_SEEN_MODERATION_EVENTS),
+        });
+        return true;
+      },
+
+      showToast: (params) => {
+        const toast: ToastNotification = {
+          ...params,
+          id: `${params.type}-${crypto.randomUUID()}`,
+          timestamp: Date.now(),
+        };
+        set((state) => ({ toasts: [...state.toasts, toast] }));
+        playNotificationSoundIfEnabled(toast.type);
+        scheduleToastDismissal(toast.id, get().dismissToast);
+        showSystemNotificationIfHidden(toast.gameName, toast.message, toast);
       },
 
       markNotificationAsRead: (notificationId) => {
@@ -614,6 +649,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
         unreadCount: state.unreadCount,
         notifiedVersions: state.notifiedVersions,
         seenFeedbackReplyIds: state.seenFeedbackReplyIds,
+        seenModerationEvents: state.seenModerationEvents,
         // toasts are NOT persisted - they are temporary
       }),
       onRehydrateStorage: () => (state) => {
