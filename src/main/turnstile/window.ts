@@ -1,29 +1,25 @@
-import { join } from 'node:path';
 import { F } from '@mobily/ts-belt';
 import { app, BrowserWindow } from 'electron';
-import { CAPTCHA_CHANNELS } from '../../shared/captcha-channels';
-import { type CaptchaRequest, PAGE_MESSAGES, type PageMessage } from './contract';
+import { z } from 'zod';
+import { errorMessage } from '../../shared/errors';
+import type { TurnstileAction } from '../../shared/game-reviews-api-types';
 import { reportCaptchaFault } from './report-captcha-fault';
-import { isFromCaptchaPage } from './sender';
 import { captchaSession } from './session';
 
 const IDLE_MS = 3 * 60_000;
 
-type CaptchaAnswer = Extract<PageMessage, { type: 'resolve' | 'reject' }>;
+// The page is remote, so its answer is checked
+const PageAnswer = z.union([
+  z.object({ token: z.string().min(1) }),
+  z.object({ error: z.string() }),
+]);
 
-type SendRequest = (request: CaptchaRequest) => void;
-
-export interface CaptchaPageListener {
-  answer: (answer: CaptchaAnswer) => void;
-  // Every request still open dies with the page
-  lost: () => void;
-}
+export type CaptchaAnswer = z.infer<typeof PageAnswer>;
 
 type CloseLog = 'log' | 'warn' | 'error';
 
 interface CaptchaPage {
-  window: BrowserWindow;
-  ready: Promise<SendRequest | null>;
+  solve: (action: TurnstileAction, cData: string) => Promise<CaptchaAnswer | null>;
   close: (log: CloseLog, reason: string) => void;
 }
 
@@ -40,7 +36,6 @@ function newWindow(): BrowserWindow {
     show: false,
     skipTaskbar: true,
     webPreferences: {
-      preload: join(app.getAppPath(), 'out/preload/turnstile.js'),
       session: captchaSession(),
       sandbox: true,
       contextIsolation: true,
@@ -75,14 +70,13 @@ function lockDown(window: BrowserWindow, origin: string): void {
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
 }
 
-function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
+function createPage(url: URL): CaptchaPage {
   const window = newWindow();
   const contents = window.webContents;
   let closed = false;
-  let settleReady: (send: SendRequest | null) => void = () => undefined;
-  const ready = new Promise<SendRequest | null>((resolve) => {
-    settleReady = resolve;
-  });
+  const loaded = Promise.withResolvers<boolean>();
+  // A solve still running when the window goes would otherwise never settle
+  const gone = Promise.withResolvers<null>();
 
   const close = (log: CloseLog, reason: string) => {
     if (closed) {
@@ -97,48 +91,47 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
     }
     page = null;
     idle.cancel();
-    settleReady(null);
-    listener.lost();
+    loaded.resolve(false);
+    gone.resolve(null);
     if (!window.isDestroyed()) {
       window.destroy();
     }
   };
 
-  const send: SendRequest = (request) => {
-    idle.schedule();
-    contents.send(CAPTCHA_CHANNELS.request, request);
-  };
-
-  const onMessage = (message: PageMessage) => {
-    idle.schedule();
-    switch (message.type) {
-      case 'ready':
-        settleReady(send);
-        return;
-      // The page's failure is sticky until a reload, so the window goes and the next request makes a new one
-      case 'unavailable':
-        close('error', `page reported ${message.code}`);
-        return;
-      case 'resolve':
-      case 'reject':
-        listener.answer(message);
+  // window.lbkCaptcha.solve is the landing page's whole contract (lbk-landing src/lib/captcha/page-script.ts)
+  const run = async (action: TurnstileAction, cData: string) => {
+    try {
+      const answer = PageAnswer.safeParse(
+        await contents.executeJavaScript(
+          `window.lbkCaptcha.solve(${JSON.stringify(action)}, ${JSON.stringify(cData)})`
+        )
+      );
+      if (answer.success) {
+        return answer.data;
+      }
+      close('error', 'malformed answer');
+    } catch (error) {
+      close('error', `solve threw: ${errorMessage(error)}`);
     }
+    return null;
   };
 
-  for (const [channel, schema] of Object.entries(PAGE_MESSAGES)) {
-    contents.ipc.on(channel, (event, ...args: unknown[]) => {
-      if (!isFromCaptchaPage(event, contents, url.origin)) {
-        console.warn(`[Turnstile] Ignored ${channel} from outside the captcha page`);
-        return;
-      }
-      const message = schema.safeParse(args);
-      if (message.success) {
-        onMessage(message.data);
-      } else {
-        console.warn(`[Turnstile] Ignored a malformed ${channel}`);
-      }
-    });
-  }
+  const solve = async (action: TurnstileAction, cData: string) => {
+    if (!(await loaded.promise)) {
+      return null;
+    }
+    const answer = await Promise.race([run(action, cData), gone.promise]);
+    if (answer === null) {
+      return null;
+    }
+    idle.schedule();
+    // The page's failure is sticky until a reload, so the window goes and the next solve makes a new one
+    if ('error' in answer && answer.error === 'script_error') {
+      close('error', 'page reported script_error');
+      return null;
+    }
+    return answer;
+  };
 
   lockDown(window, url.origin);
   // The landing answers a foreign User-Agent with 404 and a missing site key with 503, and neither fails the load
@@ -147,6 +140,7 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
       close('error', `HTTP ${status}`);
     }
   });
+  contents.on('did-finish-load', () => loaded.resolve(true));
   contents.on('did-fail-load', (_event, code, description, _url, isMainFrame) => {
     if (isMainFrame) {
       close('warn', `load failed: ${code} ${description}`);
@@ -159,20 +153,21 @@ function createPage(url: URL, listener: CaptchaPageListener): CaptchaPage {
   // did-fail-load reports a failed load with its code
   window.loadURL(url.href).catch(() => undefined);
 
-  return { window, ready, close };
+  return { solve, close };
 }
 
-// Made on the first request and reused until it fails, idles or the app leaves
-export function openCaptchaPage(
+// The page is made on the first solve and reused until it fails, idles or the app leaves; null when it is gone
+export function solveCaptcha(
   url: URL,
-  listener: CaptchaPageListener
-): Promise<SendRequest | null> {
+  action: TurnstileAction,
+  cData: string
+): Promise<CaptchaAnswer | null> {
   if (quitting) {
     return Promise.resolve(null);
   }
-  page ??= createPage(url, listener);
+  page ??= createPage(url);
   idle.schedule();
-  return page.ready;
+  return page.solve(action, cData);
 }
 
 // A hidden window left alive keeps window-all-closed from quitting on Windows and Linux

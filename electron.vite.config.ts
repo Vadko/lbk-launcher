@@ -78,8 +78,6 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: path.resolve(__dirname, 'src/preload/index.ts'),
-          // Sandboxed, so it may require only electron and shares no module with index (bundled-dependencies.test.ts)
-          turnstile: path.resolve(__dirname, 'src/preload/turnstile.ts'),
         },
       },
     },

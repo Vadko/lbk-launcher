@@ -1,20 +1,23 @@
 import { createHash } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CaptchaRequest } from './contract';
+import type { TurnstileAction } from '../../shared/game-reviews-api-types';
 import type * as Tokens from './tokens';
-import type { CaptchaPageListener } from './window';
+import type { CaptchaAnswer } from './window';
 
 const PAGE = new URL('https://lbklauncher.com/captcha');
+
+interface Solve {
+  action: TurnstileAction;
+  cData: string;
+  settle: (answer: CaptchaAnswer | null) => void;
+}
 
 const state = vi.hoisted(() => ({
   e2e: false,
   url: null as URL | null,
   machineId: 'machine-1' as string | null,
-  pageOpens: true,
-  pageReady: Promise.resolve(),
-  listener: null as CaptchaPageListener | null,
-  requests: [] as CaptchaRequest[],
-  openCaptchaPage: vi.fn(),
+  solves: [] as Solve[],
+  solveCaptcha: vi.fn(),
   reportCaptchaFault: vi.fn(),
 }));
 
@@ -25,7 +28,7 @@ vi.mock('@/main/tracking', () => ({
   getMachineId: () => state.machineId,
 }));
 vi.mock('@/main/turnstile/page-url', () => ({ captchaPageUrl: () => state.url }));
-vi.mock('@/main/turnstile/window', () => ({ openCaptchaPage: state.openCaptchaPage }));
+vi.mock('@/main/turnstile/window', () => ({ solveCaptcha: state.solveCaptcha }));
 vi.mock('@/main/turnstile/report-captcha-fault', () => ({
   reportCaptchaFault: state.reportCaptchaFault,
 }));
@@ -36,42 +39,33 @@ let tokens: typeof Tokens;
 
 const flush = () => vi.advanceTimersByTimeAsync(0);
 
-function lastRequest(): CaptchaRequest {
-  const request = state.requests.at(-1);
-  if (!request) {
-    throw new Error('no captcha request was sent');
+function lastSolve(): Solve {
+  const solve = state.solves.at(-1);
+  if (!solve) {
+    throw new Error('the page was not asked to solve');
   }
-  return request;
+  return solve;
 }
 
-function solve(token: string, request = lastRequest()): void {
-  state.listener?.answer({ type: 'resolve', requestId: request.requestId, token });
+function solve(token: string, request = lastSolve()): void {
+  request.settle({ token });
 }
 
-function refuse(code: string, request = lastRequest()): void {
-  state.listener?.answer({ type: 'reject', requestId: request.requestId, code });
+function refuse(code: string, request = lastSolve()): void {
+  request.settle({ error: code });
 }
 
 beforeEach(async () => {
   vi.useFakeTimers();
-  Object.assign(state, {
-    e2e: false,
-    url: PAGE,
-    machineId: 'machine-1',
-    pageOpens: true,
-    pageReady: Promise.resolve(),
-    listener: null,
-    requests: [],
-  });
-  state.openCaptchaPage.mockReset();
+  Object.assign(state, { e2e: false, url: PAGE, machineId: 'machine-1', solves: [] });
+  state.solveCaptcha.mockReset();
   state.reportCaptchaFault.mockReset();
-  state.openCaptchaPage.mockImplementation((_url: URL, listener: CaptchaPageListener) => {
-    state.listener = listener;
-    const send = (request: CaptchaRequest) => {
-      state.requests.push(request);
-    };
-    return state.pageReady.then(() => (state.pageOpens ? send : null));
-  });
+  state.solveCaptcha.mockImplementation(
+    (_url: URL, action: TurnstileAction, cData: string) =>
+      new Promise<CaptchaAnswer | null>((settle) => {
+        state.solves.push({ action, cData, settle });
+      })
+  );
   warn.mockClear();
   vi.resetModules();
   tokens = await import('./tokens');
@@ -88,12 +82,11 @@ describe('takeCaptchaToken', () => {
     solve('token-1');
 
     expect(await token).toBe('token-1');
-    expect(state.openCaptchaPage).toHaveBeenCalledWith(PAGE, expect.anything());
-    expect(lastRequest()).toEqual({
-      requestId: expect.stringMatching(/^[A-Za-z0-9_-]{1,64}$/),
-      action: 'reply',
-      cData: createHash('sha256').update('machine-1').digest('hex').slice(0, 32),
-    });
+    expect(state.solveCaptcha).toHaveBeenCalledWith(
+      PAGE,
+      'reply',
+      createHash('sha256').update('machine-1').digest('hex').slice(0, 32)
+    );
   });
 
   it('solves a new token for every write', async () => {
@@ -106,26 +99,21 @@ describe('takeCaptchaToken', () => {
     solve('token-2');
 
     expect(await second).toBe('token-2');
-    expect(state.requests).toHaveLength(2);
+    expect(state.solves).toHaveLength(2);
   });
 
   it('keeps concurrent requests apart', async () => {
     const reply = tokens.takeCaptchaToken('reply');
     const edit = tokens.takeCaptchaToken('edit');
     await flush();
-    const [replyRequest, editRequest] = state.requests;
-    solve('edit-token', editRequest);
-    solve('reply-token', replyRequest);
+    const [replySolve, editSolve] = state.solves;
+    solve('edit-token', editSolve);
+    solve('reply-token', replySolve);
 
     expect(await Promise.all([reply, edit])).toEqual(['reply-token', 'edit-token']);
-    expect(new Set(state.requests.map((request) => request.requestId)).size).toBe(2);
   });
 
-  it.each([
-    ['a request the page never answers', () => Promise.resolve()],
-    ['a page that is never ready', () => new Promise<void>(() => undefined)],
-  ])('gives up on %s in 30 s', async (_label, ready) => {
-    state.pageReady = ready();
+  it('gives up on a solve the page never answers in 30 s', async () => {
     const token = tokens.takeCaptchaToken('review');
     await flush();
     await vi.advanceTimersByTimeAsync(30_000);
@@ -167,13 +155,14 @@ describe('takeCaptchaToken', () => {
     expect(state.reportCaptchaFault).toHaveBeenCalledWith('challenge failed (timeout)');
   });
 
-  it('fails every open request when the page goes', async () => {
-    const reply = tokens.takeCaptchaToken('reply');
-    const edit = tokens.takeCaptchaToken('edit');
+  it('gives no token and reports nothing when the page goes', async () => {
+    const token = tokens.takeCaptchaToken('reply');
     await flush();
-    state.listener?.lost();
+    lastSolve().settle(null);
 
-    expect(await Promise.all([reply, edit])).toEqual([null, null]);
+    expect(await token).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+    expect(state.reportCaptchaFault).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -199,14 +188,7 @@ describe('takeCaptchaToken', () => {
     arrange();
 
     expect(await tokens.takeCaptchaToken('reply')).toBeNull();
-    expect(state.openCaptchaPage).not.toHaveBeenCalled();
-  });
-
-  it('gives no token when the page does not load', async () => {
-    state.pageOpens = false;
-
-    expect(await tokens.takeCaptchaToken('reply')).toBeNull();
-    expect(state.requests).toEqual([]);
+    expect(state.solveCaptcha).not.toHaveBeenCalled();
   });
 
   it('hands the next write a ready token without a new solve', async () => {
@@ -216,7 +198,7 @@ describe('takeCaptchaToken', () => {
     await flush();
 
     expect(await tokens.takeCaptchaToken('reply')).toBe('token-1');
-    expect(state.requests).toHaveLength(1);
+    expect(state.solves).toHaveLength(1);
   });
 
   it('lets a write join a prefetch that is still solving', async () => {
@@ -226,7 +208,7 @@ describe('takeCaptchaToken', () => {
     solve('token-1');
 
     expect(await token).toBe('token-1');
-    expect(state.requests).toHaveLength(1);
+    expect(state.solves).toHaveLength(1);
   });
 
   it('keeps one token per action', async () => {
@@ -235,7 +217,7 @@ describe('takeCaptchaToken', () => {
     tokens.prefetchCaptchaToken('edit');
     await flush();
 
-    expect(state.requests.map((request) => request.action)).toEqual(['reply', 'edit']);
+    expect(state.solves.map((request) => request.action)).toEqual(['reply', 'edit']);
   });
 
   it('hands a prefetched token to one write only', async () => {
@@ -271,20 +253,20 @@ describe('takeCaptchaToken', () => {
     tokens.prefetchCaptchaToken('reply');
     await flush();
 
-    expect(state.requests).toHaveLength(2);
+    expect(state.solves).toHaveLength(2);
   });
 
   it('frees the slot of a failed prefetch, so the write solves its own', async () => {
     tokens.prefetchCaptchaToken('review');
     await flush();
-    state.listener?.lost();
+    lastSolve().settle(null);
     await flush();
     const token = tokens.takeCaptchaToken('review');
     await flush();
     solve('token-2');
 
     expect(await token).toBe('token-2');
-    expect(state.requests).toHaveLength(2);
+    expect(state.solves).toHaveLength(2);
   });
 
   it('opens no window in an E2E run', async () => {
@@ -293,6 +275,6 @@ describe('takeCaptchaToken', () => {
     tokens.prefetchCaptchaToken('reply');
     await flush();
 
-    expect(state.openCaptchaPage).not.toHaveBeenCalled();
+    expect(state.solveCaptcha).not.toHaveBeenCalled();
   });
 });

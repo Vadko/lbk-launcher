@@ -88,29 +88,20 @@ function mainProcessImports(): Set<string> {
   );
 }
 
-interface ImportGraph {
-  files: Set<string>;
-  packages: Set<string>;
-}
-
-function preloadGraph(...entries: string[]): ImportGraph {
-  const packages = new Set<string>();
-  const files = new Set(entries.map((entry) => path.join(ROOT, entry)));
+// The preload build has its own exclude list, so it is checked over the files its entry reaches.
+function preloadImports(): Set<string> {
+  const names = new Set<string>();
+  const files = new Set([path.join(ROOT, 'src/preload/index.ts')]);
   for (const file of files) {
     for (const specifier of valueImports(file)) {
       if (isLocal(specifier)) {
         files.add(resolveLocal(file, specifier));
       } else {
-        packages.add(packageName(specifier));
+        names.add(packageName(specifier));
       }
     }
   }
-  return { files, packages };
-}
-
-// The preload build has its own exclude list, so it is checked over the files its entries reach.
-function preloadImports(): Set<string> {
-  return preloadGraph('src/preload/index.ts', 'src/preload/turnstile.ts').packages;
+  return names;
 }
 
 function hasCondition(entry: unknown, condition: string): boolean {
@@ -178,15 +169,6 @@ describe('production dependencies', () => {
     );
 
     expect(buildExcludes(build)).toEqual(expect.arrayContaining(esmOnly));
-  });
-
-  // A sandboxed preload can require only electron, and rollup moves a module both preloads import into a shared chunk.
-  it('builds the captcha preload as one file that needs only electron', () => {
-    const captcha = preloadGraph('src/preload/turnstile.ts');
-    const main = preloadGraph('src/preload/index.ts');
-
-    expect([...captcha.packages]).toEqual(['electron']);
-    expect([...captcha.files].filter((file) => main.files.has(file))).toEqual([]);
   });
 
   // A hoisted npm placeholder has no entry file; named after a builtin (ttc's `fs`), it broke the renderer's dep pre-bundle in `pnpm dev`.
