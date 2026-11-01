@@ -1,8 +1,8 @@
+import { MutationObserver, QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackAttempt } from '../utils/feedbackAttempt';
-import type { FeedbackPostResult } from './sendFeedbackPost';
 
 const client = vi.hoisted(() => ({
   requestFeedbackUploadUrls: vi.fn(),
@@ -10,16 +10,18 @@ const client = vi.hoisted(() => ({
   prefetchReviewCaptcha: vi.fn(),
 }));
 const authors = vi.hoisted(() => ({
-  ensureAuthor: vi.fn<(signal?: AbortSignal) => Promise<ReviewAuthorIdentity | null>>(),
+  ensureAuthor: vi.fn<() => Promise<ReviewAuthorIdentity | null>>(),
   forgetAuthor: vi.fn(),
 }));
+const trackEvent = vi.hoisted(() => vi.fn());
 
 vi.mock('./reviewsClient', () => client);
 vi.mock('../store/useReviewAuthorStore', () => ({
   useReviewAuthorStore: { getState: () => authors },
 }));
+vi.mock('../utils/analytics', () => ({ trackEvent }));
 
-const { submitFeedbackPost } = await import('./submitFeedbackPost');
+const { feedbackPostOptions, submitFeedbackPost } = await import('./submitFeedbackPost');
 
 const POST = '3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a';
 const GAME = '0b6f3f0e-5c1a-4d2e-9f3b-2a1c4d5e6f70';
@@ -29,8 +31,6 @@ const NEEDS_AUTHOR = {
   failure: { code: 'author_required', kind: 'needs-author' },
 };
 const fetchMock = vi.fn();
-const inPhase = vi.fn((send: () => Promise<FeedbackPostResult>) => send());
-const beforePicker = vi.fn();
 
 const SHOT = {
   name: 'a.png',
@@ -44,21 +44,19 @@ const first = (): FeedbackAttempt => ({
   unconfirmed: null,
 });
 
-function submit(allowPublish: boolean, signal = new AbortController().signal) {
-  return submitFeedbackPost({
-    attempt: first(),
-    post: {
-      gameId: GAME,
-      type: 'feedback',
-      message: 'Text',
-      screenshots: [SHOT],
-      allowPublish,
-    },
-    signal,
-    inPhase,
-    beforePicker,
-  });
-}
+const variables = (allowPublish: boolean) => ({
+  entryId: POST,
+  attempt: first(),
+  post: {
+    gameId: GAME,
+    type: 'feedback' as const,
+    message: 'Text',
+    screenshots: [SHOT],
+    allowPublish,
+  },
+});
+
+const submit = (allowPublish: boolean) => submitFeedbackPost(variables(allowPublish));
 
 const sentIds = () => client.sendFeedback.mock.calls.map(([input]) => input.id);
 
@@ -92,20 +90,14 @@ describe('submitFeedbackPost', () => {
     expect(await submit(false)).toMatchObject({ ok: true, outcome: 'pending' });
 
     expect(authors.ensureAuthor).not.toHaveBeenCalled();
-    expect(inPhase).toHaveBeenCalledTimes(1);
   });
 
   it('gets the nickname for a public post before any screenshot uploads', async () => {
-    const { signal } = new AbortController();
+    expect(await submit(true)).toMatchObject({ ok: true, outcome: 'pending' });
 
-    expect(await submit(true, signal)).toMatchObject({ ok: true, outcome: 'pending' });
-
-    expect(authors.ensureAuthor).toHaveBeenCalledWith(signal);
     const [gate] = authors.ensureAuthor.mock.invocationCallOrder;
     const [upload] = client.requestFeedbackUploadUrls.mock.invocationCallOrder;
-    const [phase] = inPhase.mock.invocationCallOrder;
-    expect(gate).toBeLessThan(phase);
-    expect(phase).toBeLessThan(upload);
+    expect(gate).toBeLessThan(upload);
   });
 
   it('sends and uploads nothing when the picker is closed', async () => {
@@ -113,22 +105,8 @@ describe('submitFeedbackPost', () => {
 
     expect(await submit(true)).toBeNull();
 
-    expect(inPhase).not.toHaveBeenCalled();
     expect(client.requestFeedbackUploadUrls).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(client.sendFeedback).not.toHaveBeenCalled();
-  });
-
-  it('sends nothing when the modal closes while the nickname is picked', async () => {
-    const controller = new AbortController();
-    authors.ensureAuthor.mockImplementation(() => {
-      controller.abort();
-      return Promise.resolve(OWL);
-    });
-
-    expect(await submit(true, controller.signal)).toBeNull();
-
-    expect(client.requestFeedbackUploadUrls).not.toHaveBeenCalled();
     expect(client.sendFeedback).not.toHaveBeenCalled();
   });
 
@@ -139,12 +117,10 @@ describe('submitFeedbackPost', () => {
 
     expect(authors.forgetAuthor).toHaveBeenCalledTimes(1);
     expect(client.prefetchReviewCaptcha).toHaveBeenCalledWith('review');
-    expect(beforePicker).toHaveBeenCalledTimes(1);
     expect(authors.ensureAuthor).toHaveBeenCalledTimes(2);
     expect(sentIds()).toEqual([POST, POST]);
     expect(client.requestFeedbackUploadUrls).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(inPhase).toHaveBeenCalledTimes(2);
     const [forget] = authors.forgetAuthor.mock.invocationCallOrder;
     const [prefetch] = client.prefetchReviewCaptcha.mock.invocationCallOrder;
     const [, picker] = authors.ensureAuthor.mock.invocationCallOrder;
@@ -165,7 +141,6 @@ describe('submitFeedbackPost', () => {
     expect(await submit(true)).toMatchObject({ ok: false, failure: refused.failure });
 
     expect(authors.ensureAuthor).toHaveBeenCalledTimes(1);
-    expect(beforePicker).not.toHaveBeenCalled();
     expect(authors.forgetAuthor).not.toHaveBeenCalled();
     expect(client.prefetchReviewCaptcha).not.toHaveBeenCalled();
     expect(sentIds()).toEqual([POST]);
@@ -181,7 +156,6 @@ describe('submitFeedbackPost', () => {
     });
 
     expect(authors.ensureAuthor).toHaveBeenCalledTimes(1);
-    expect(beforePicker).not.toHaveBeenCalled();
     expect(authors.forgetAuthor).not.toHaveBeenCalled();
     expect(client.prefetchReviewCaptcha).not.toHaveBeenCalled();
     expect(client.sendFeedback).not.toHaveBeenCalled();
@@ -211,31 +185,39 @@ describe('submitFeedbackPost', () => {
 
     expect(sentIds()).toEqual([POST]);
   });
+});
 
-  it('opens no picker and resends nothing once the modal closed during the send', async () => {
-    const controller = new AbortController();
-    client.sendFeedback.mockImplementationOnce(() => {
-      controller.abort();
-      return Promise.resolve(NEEDS_AUTHOR);
-    });
+describe('feedbackPostOptions', () => {
+  const run = async () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const observer = new MutationObserver(
+      queryClient,
+      feedbackPostOptions(queryClient, 'Game')
+    );
+    await observer.mutate(variables(false));
+    return invalidate;
+  };
 
-    expect(await submit(true, controller.signal)).toMatchObject({ ok: false });
+  it('refetches the game reviews and tracks a sent post', async () => {
+    const invalidate = await run();
 
-    expect(authors.ensureAuthor).toHaveBeenCalledTimes(1);
-    expect(beforePicker).not.toHaveBeenCalled();
-    expect(sentIds()).toEqual([POST]);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['game-reviews', GAME] });
+    expect(trackEvent).toHaveBeenCalledWith(
+      'Feedback Submitted',
+      expect.objectContaining({ 'Game Id': GAME, Outcome: 'pending' })
+    );
   });
 
-  it('resends nothing when the modal closes while the picker is open', async () => {
-    const controller = new AbortController();
-    client.sendFeedback.mockResolvedValueOnce(NEEDS_AUTHOR);
-    authors.ensureAuthor.mockResolvedValueOnce(OWL).mockImplementationOnce(() => {
-      controller.abort();
-      return Promise.resolve(OWL);
+  it('tracks a refused post without a refetch', async () => {
+    client.sendFeedback.mockResolvedValueOnce({
+      ok: false,
+      failure: { code: 'rate_limit', kind: 'retry' },
     });
 
-    expect(await submit(true, controller.signal)).toMatchObject({ ok: false });
+    const invalidate = await run();
 
-    expect(sentIds()).toEqual([POST]);
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(trackEvent).toHaveBeenCalledWith('Feedback Rate Limited', { 'Game Id': GAME });
   });
 });

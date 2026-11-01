@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Clock } from 'lucide';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { ActionPhase } from '../../hooks/useActionPhase';
 import { AppActionIcon } from '../ui/AppActionIcon';
@@ -20,8 +20,6 @@ const BADGE: Record<
   failed: { phase: 'error', tone: TONE.error },
 };
 
-// A fast answer would flash the spinner, so the check holds it at least this long
-const MIN_CHECKING_MS = 600;
 const CONFIRMED_MS = 1000;
 
 interface ReviewModerationBadgeProps {
@@ -38,47 +36,29 @@ export const ReviewModerationBadge: React.FC<ReviewModerationBadgeProps> = ({
   isRolledBack,
   hint,
 }) => {
-  const [view, setView] = useState<BadgeView>(
-    isChecking ? 'checking' : settled === 'confirmed' ? 'hidden' : settled
-  );
-  const [prev, setPrev] = useState({ isChecking, settled });
-  const checkingSinceRef = useRef(0);
-
-  if (prev.isChecking !== isChecking || prev.settled !== settled) {
-    setPrev({ isChecking, settled });
-    if (isChecking) {
-      setView('checking');
-    } else if (view !== 'checking') {
-      // A failed attempt dropped by a refetch was never confirmed, so it just leaves
-      setView(settled === 'confirmed' && prev.settled === 'failed' ? 'hidden' : settled);
-    }
+  // Only a check that just ended confirms; a confirmed entry otherwise shows no badge
+  const [flash, setFlash] = useState(false);
+  const [wasChecking, setWasChecking] = useState(isChecking);
+  if (wasChecking !== isChecking) {
+    setWasChecking(isChecking);
+    setFlash(!isChecking && settled === 'confirmed' && !isRolledBack);
   }
 
   useEffect(() => {
-    if (isChecking) {
-      checkingSinceRef.current = Date.now();
-    }
-  }, [isChecking]);
-
-  useEffect(() => {
-    if (isChecking || view !== 'checking') {
+    if (!flash) {
       return;
     }
-    const wait = Math.max(0, MIN_CHECKING_MS - (Date.now() - checkingSinceRef.current));
-    const id = setTimeout(
-      () => setView(isRolledBack && settled === 'confirmed' ? 'hidden' : settled),
-      wait
-    );
+    const id = setTimeout(() => setFlash(false), CONFIRMED_MS);
     return () => clearTimeout(id);
-  }, [isChecking, settled, isRolledBack, view]);
+  }, [flash]);
 
-  useEffect(() => {
-    if (view !== 'confirmed') {
-      return;
-    }
-    const id = setTimeout(() => setView('hidden'), CONFIRMED_MS);
-    return () => clearTimeout(id);
-  }, [view]);
+  const view: BadgeView = isChecking
+    ? 'checking'
+    : settled !== 'confirmed'
+      ? settled
+      : flash
+        ? 'confirmed'
+        : 'hidden';
 
   return (
     <AnimatePresence initial={false}>

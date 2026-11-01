@@ -13,13 +13,11 @@ import { ReviewReveal } from './ReviewReveal';
 interface ReviewThreadProps {
   review: ReviewThreadView;
   onReply: (
-    reviewId: string,
+    review: ReviewThreadView,
     text: string,
-    parentId: string | null,
-    onShown: () => void,
-    signal: AbortSignal
+    parentId: string | null
   ) => Promise<boolean>;
-  onEdit: (entryId: string, text: string, onShown: () => void) => Promise<boolean>;
+  onEdit: (review: ReviewThreadView, entryId: string, text: string) => void;
   onResend: (entryId: string) => void;
   onDiscard: (entryId: string) => void;
   // The deep-linked entry of this thread, until it has been scrolled to
@@ -65,18 +63,18 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
                 submitLabel={t('gameReviews.send')}
                 captchaAction="reply"
                 isPublic={review.isPublic}
-                onSubmit={(text, signal) =>
-                  onReply(
-                    review.id,
+                onSubmit={async (text) => {
+                  const sent = await onReply(
+                    review,
                     text,
-                    entryId === review.id ? null : entryId,
-                    () => {
-                      setReplyingTo(null);
-                      setExpanded((current) => new Set(current).add(landingBranchId));
-                    },
-                    signal
-                  )
-                }
+                    entryId === review.id ? null : entryId
+                  );
+                  if (sent) {
+                    setReplyingTo(null);
+                    setExpanded((current) => new Set(current).add(landingBranchId));
+                  }
+                  return sent;
+                }}
                 onClose={() => setReplyingTo(null)}
               />
             </div>
@@ -98,7 +96,7 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
           replyTo={replyTo}
           images={[]}
           onReply={() => setReplyingTo(reply.id)}
-          onEdit={(text, onShown) => onEdit(reply.id, text, onShown)}
+          onEdit={(text) => onEdit(review, reply.id, text)}
           onResend={() => onResend(reply.id)}
           onDiscard={() => onDiscard(reply.id)}
         >
@@ -117,7 +115,7 @@ export const ReviewThread: React.FC<ReviewThreadProps> = React.memo(
           replyTo={null}
           images={review.screenshots}
           onReply={() => setReplyingTo(review.id)}
-          onEdit={(text, onShown) => onEdit(review.id, text, onShown)}
+          onEdit={(text) => onEdit(review, review.id, text)}
           onResend={() => onResend(review.id)}
           onDiscard={() => onDiscard(review.id)}
         >

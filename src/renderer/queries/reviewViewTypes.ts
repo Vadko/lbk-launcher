@@ -29,4 +29,4 @@ interface ReviewViewPage extends ReviewCachePage {
   items: ReviewThreadView[];
 }
 
-export type ReviewViewPages = InfiniteData<ReviewViewPage, string | null>;
+export type ReviewViewPages = InfiniteData<ReviewViewPage>;

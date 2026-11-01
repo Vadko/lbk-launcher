@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { t } from '@/shared/i18n/i18n';
 import type { ReviewEvent } from '../../shared/game-reviews-types';
-import { moderationKeyCovers } from '../utils/moderationKeyCovers';
 import { reviewModerationKey } from '../utils/reviewModerationKey';
 import { reviewReplyText } from '../utils/reviewReplyText';
 import {
@@ -116,7 +115,7 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
   ) => void;
   // A reply to the viewer's review entry, deduped by its id across catch-ups and cleared lists; false for one shown before
   addReplyNotification: (reply: ReviewEvent, showToast: boolean) => boolean;
-  // False when this or a newer verdict on the entry was handled, so nothing changes twice or goes back
+  // False when this very verdict was handled before, so a catch-up repeating it stays quiet
   claimModerationEvent: (event: ReviewEvent) => boolean;
   // A toast with its sound that never enters the notification list
   showToast: (toast: Omit<ToastNotification, 'id' | 'timestamp'>) => void;
@@ -568,15 +567,12 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
 
       claimModerationEvent: (event) => {
         const seen = get().seenModerationEvents;
-        // A live verdict can outrun a catch-up read before it, whose older verdict must not undo it
-        if (seen.some((key) => moderationKeyCovers(key, event))) {
+        const key = reviewModerationKey(event);
+        if (seen.includes(key)) {
           return false;
         }
         set({
-          seenModerationEvents: [reviewModerationKey(event), ...seen].slice(
-            0,
-            MAX_SEEN_MODERATION_EVENTS
-          ),
+          seenModerationEvents: [key, ...seen].slice(0, MAX_SEEN_MODERATION_EVENTS),
         });
         return true;
       },

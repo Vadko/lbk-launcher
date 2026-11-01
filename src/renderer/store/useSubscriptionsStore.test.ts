@@ -154,18 +154,13 @@ describe('useSubscriptionsStore review notices', () => {
     expect(store().claimModerationEvent(removed)).toBe(false);
   });
 
-  it('refuses a verdict older than one already handled on the entry', () => {
-    const published = reviewEvent({ at: '2026-10-22T10:07:00Z' });
-
-    expect(store().claimModerationEvent(published)).toBe(true);
+  it('claims each verdict on an entry by its own time', () => {
+    expect(
+      store().claimModerationEvent(reviewEvent({ at: '2026-10-22T10:07:00Z' }))
+    ).toBe(true);
     expect(
       store().claimModerationEvent(
         reviewEvent({ outcome: 'removed', at: '2026-10-22T10:06:00Z' })
-      )
-    ).toBe(false);
-    expect(
-      store().claimModerationEvent(
-        reviewEvent({ outcome: 'removed', at: '2026-10-22T10:08:00Z' })
       )
     ).toBe(true);
   });

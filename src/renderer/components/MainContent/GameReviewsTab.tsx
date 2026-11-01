@@ -32,12 +32,12 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   focus,
   onFocusHandled,
 }) => {
-  const { query, loadNextPage, isLoadMoreFailed, failedFocusKey } = useGameReviews(
+  const { query, data, loadNextPage, isLoadMoreFailed, failedFocusKey } = useGameReviews(
     gameId,
     focus
   );
-  const { data, isError, isFetching, hasNextPage, isFetchingNextPage, refetch } = query;
-  const actions = useGameReviewActions(gameId, gameName);
+  const { isError, isFetching, hasNextPage, isFetchingNextPage, refetch } = query;
+  const actions = useGameReviewActions(gameId, gameName, data?.pages[0]?.viewer ?? null);
   // The focus thread rides on the first page and comes again once its own page loads
   const reviews = A.uniqBy(
     (data?.pages ?? []).flatMap((page) => page.items),

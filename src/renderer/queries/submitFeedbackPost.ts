@@ -1,5 +1,8 @@
+import { mutationOptions, type QueryClient } from '@tanstack/react-query';
 import { useReviewAuthorStore } from '../store/useReviewAuthorStore';
+import { trackEvent } from '../utils/analytics';
 import type { FeedbackAttempt } from '../utils/feedbackAttempt';
+import { feedbackPostsKey, gameReviewsQueryKey } from './gameReviewsQueryKey';
 import { prefetchReviewCaptcha } from './reviewsClient';
 import {
   type FeedbackPost,
@@ -7,47 +10,68 @@ import {
   sendFeedbackPost,
 } from './sendFeedbackPost';
 
-type Send = () => Promise<FeedbackPostResult>;
-
-interface FeedbackSubmit {
+export interface FeedbackPostVariables {
+  // The post's id, so a moderation event on it knows the form already showed its verdict
+  entryId: string;
   attempt: FeedbackAttempt;
   post: FeedbackPost;
-  // Aborted when the modal closes: a send under way still runs to its end, but no picker or resend starts
-  signal: AbortSignal;
-  // Wraps each send in the button's pending phase; the picker stays outside it
-  inPhase: (send: Send) => Promise<FeedbackPostResult>;
-  // A refused send is about to open the picker, so the button drops its cross
-  beforePicker: () => void;
 }
 
-// Null when nothing went out because the picker or the modal was closed first, so the form keeps its text
+// Null when nothing went out because the picker was closed, so the form keeps its text
 export async function submitFeedbackPost({
   attempt,
   post,
-  signal,
-  inPhase,
-  beforePicker,
-}: FeedbackSubmit): Promise<FeedbackPostResult | null> {
+}: FeedbackPostVariables): Promise<FeedbackPostResult | null> {
   const authors = useReviewAuthorStore.getState();
   // A public post shows its writer's nickname, and its screenshots upload only once there is one
-  if (post.allowPublish && !(await authors.ensureAuthor(signal))) {
+  if (post.allowPublish && !(await authors.ensureAuthor())) {
     return null;
   }
-  if (signal.aborted) {
-    return null;
-  }
-  const first = await inPhase(() => sendFeedbackPost(attempt, post));
-  if (first.ok || first.failure?.kind !== 'needs-author' || signal.aborted) {
+  const first = await sendFeedbackPost(attempt, post);
+  if (first.ok || first.failure?.kind !== 'needs-author') {
     return first;
   }
   // The refused send spent its captcha token, so a fresh one solves while the picker is open
-  beforePicker();
   authors.forgetAuthor();
   prefetchReviewCaptcha('review');
-  const author = await authors.ensureAuthor(signal);
-  if (!author || signal.aborted) {
+  if (!(await authors.ensureAuthor())) {
     return first;
   }
   // The same id once more, its screenshots already uploaded; another refusal ends here
-  return inPhase(() => sendFeedbackPost(first.attempt, post));
+  return sendFeedbackPost(first.attempt, post);
+}
+
+export function feedbackPostOptions(queryClient: QueryClient, gameName: string) {
+  return mutationOptions<FeedbackPostResult | null, Error, FeedbackPostVariables>({
+    mutationKey: feedbackPostsKey,
+    mutationFn: submitFeedbackPost,
+    networkMode: 'always',
+    onSuccess: (result, { post }) => {
+      if (!result) {
+        return;
+      }
+      if (result.ok) {
+        // The post shows in the reviews tab for this machine, private or not
+        void queryClient.invalidateQueries({
+          queryKey: gameReviewsQueryKey(post.gameId),
+        });
+        trackEvent('Feedback Submitted', {
+          'Game Id': post.gameId,
+          'Game Name': gameName,
+          'Feedback Type': post.type,
+          'Allow Publish': post.allowPublish,
+          Outcome: result.outcome,
+          'Message Length': post.message.length,
+          Screenshots: post.screenshots.length,
+        });
+      } else if (result.failure?.code === 'rate_limit') {
+        trackEvent('Feedback Rate Limited', { 'Game Id': post.gameId });
+      } else {
+        trackEvent('Feedback Error', {
+          'Game Id': post.gameId,
+          Error: result.failure?.code,
+        });
+      }
+    },
+  });
 }

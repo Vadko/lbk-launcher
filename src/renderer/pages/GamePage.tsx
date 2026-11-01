@@ -106,6 +106,12 @@ export const GamePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  // Each open mounts a fresh form, while a closing one keeps its content through the exit animation
+  const [feedbackOpens, setFeedbackOpens] = useState(0);
+  const openFeedback = () => {
+    setShowFeedbackModal(true);
+    setFeedbackOpens((count) => count + 1);
+  };
   const isTombstoned = useGameTombstone(gameId);
 
   useEffect(() => {
@@ -474,6 +480,7 @@ export const GamePage: React.FC = () => {
       {/* Feedback Modal */}
       {selectedGame && (
         <FeedbackModal
+          key={feedbackOpens}
           isOpen={showFeedbackModal}
           onClose={() => setShowFeedbackModal(false)}
           gameId={selectedGame.id}
@@ -621,7 +628,7 @@ export const GamePage: React.FC = () => {
                 <Button
                   variant="secondary"
                   icon={<FileEditIcon size={20} />}
-                  onClick={() => setShowFeedbackModal(true)}
+                  onClick={openFeedback}
                   data-gamepad-action
                   className="support-button"
                 >
@@ -790,7 +797,7 @@ export const GamePage: React.FC = () => {
               gameId={selectedGame.id}
               gameName={selectedGame.name}
               canLeaveFeedback={canLeaveFeedback}
-              onLeaveFeedback={() => setShowFeedbackModal(true)}
+              onLeaveFeedback={openFeedback}
               focus={focus}
               onFocusHandled={clearFocus}
             />

@@ -46,7 +46,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const [message, setMessage] = useState('');
   const [screenshots, setScreenshots] = useState<ScreenshotFile[]>([]);
   const [allowPublish, setAllowPublish] = useState(false);
-  const submission = useFeedbackSubmit(isOpen, gameName);
+  const submission = useFeedbackSubmit(gameName);
   usePrefetchCaptcha('review', isOpen && allowPublish);
 
   const gameRef = useRef({ gameId, gameName });
@@ -54,18 +54,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   useEffect(() => {
     gameRef.current = { gameId, gameName };
   }, [gameId, gameName]);
-
-  const [wasOpen, setWasOpen] = useState(isOpen);
-  if (isOpen !== wasOpen) {
-    setWasOpen(isOpen);
-    if (isOpen) {
-      setFeedbackType('feedback');
-      setMessage('');
-      setScreenshots([]);
-      setAllowPublish(false);
-      submission.reset();
-    }
-  }
 
   useEffect(() => {
     if (!isOpen) {

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/shared/i18n/i18n';
-import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
-import type { FeedbackAttempt } from '../utils/feedbackAttempt';
+import { attemptFor, type FeedbackAttempt } from '../utils/feedbackAttempt';
 
 const client = vi.hoisted(() => ({
   requestFeedbackUploadUrls: vi.fn(),
@@ -10,7 +9,7 @@ const client = vi.hoisted(() => ({
 
 vi.mock('./reviewsClient', () => client);
 
-const { sendFeedbackPost } = await import('./sendFeedbackPost');
+const { feedbackContent, sendFeedbackPost } = await import('./sendFeedbackPost');
 
 const POST = '3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a';
 const GAME = '0b6f3f0e-5c1a-4d2e-9f3b-2a1c4d5e6f70';
@@ -48,6 +47,10 @@ const target = (id: string, name: string) => ({
 const refusal = (code: string, kind: string) => ({ ok: false, failure: { code, kind } });
 
 const sentIds = () => client.sendFeedback.mock.calls.map(([input]) => input.id);
+
+// As the form sends again: the last attempt, or a new id for changed content it may have stored
+const sendAgain = (previous: FeedbackAttempt, next: ReturnType<typeof post>) =>
+  sendFeedbackPost(attemptFor(previous, feedbackContent(next)), next);
 
 beforeEach(() => {
   client.requestFeedbackUploadUrls.mockReset();
@@ -90,20 +93,6 @@ describe('sendFeedbackPost', () => {
       screenshotPaths: [`${POST}/a.png`, `${POST}/b.png`],
       allowPublish: false,
     });
-  });
-
-  it('holds the post as sending until its answer marks the verdict it showed', async () => {
-    const overlay = () => useReviewOverlayStore.getState();
-    useReviewOverlayStore.setState({ posting: new Set(), shown: new Map() });
-    client.sendFeedback.mockImplementation(() => {
-      expect(overlay().posting.has(POST)).toBe(true);
-      return Promise.resolve({ ok: true, data: { id: POST, outcome: 'removed' } });
-    });
-
-    await sendFeedbackPost(first(), post([]));
-
-    expect(overlay().posting.size).toBe(0);
-    expect(overlay().shown.get(POST)).toBe('removed');
   });
 
   it('asks for no upload without screenshots', async () => {
@@ -189,7 +178,7 @@ describe('sendFeedbackPost', () => {
     client.sendFeedback.mockResolvedValueOnce(refusal('rate_limit', 'retry'));
 
     const failed = await sendFeedbackPost(first(), post());
-    const resent = await sendFeedbackPost(failed.attempt, post());
+    const resent = await sendAgain(failed.attempt, post());
 
     expect(resent.ok).toBe(true);
     expect(client.requestFeedbackUploadUrls).toHaveBeenCalledTimes(1);
@@ -212,7 +201,7 @@ describe('sendFeedbackPost', () => {
       .mockResolvedValueOnce(new Response(null, { status: 500 }));
 
     const failed = await sendFeedbackPost(first(), post());
-    await sendFeedbackPost(failed.attempt, post());
+    await sendAgain(failed.attempt, post());
 
     expect(client.requestFeedbackUploadUrls.mock.calls.map(([input]) => input)).toEqual([
       { id: POST, fileNames: ['a.png', 'b.png'] },
@@ -224,7 +213,7 @@ describe('sendFeedbackPost', () => {
     client.sendFeedback.mockResolvedValueOnce(refusal('rate_limit', 'retry'));
 
     const failed = await sendFeedbackPost(first(), post());
-    await sendFeedbackPost(failed.attempt, post([SHOT_A], 'Fixed text'));
+    await sendAgain(failed.attempt, post([SHOT_A], 'Fixed text'));
 
     expect(sentIds()).toEqual([POST, POST]);
   });
@@ -235,10 +224,7 @@ describe('sendFeedbackPost', () => {
       client.sendFeedback.mockResolvedValueOnce(refusal(code, 'retry'));
 
       const failed = await sendFeedbackPost(first(), post());
-      const changed = await sendFeedbackPost(
-        failed.attempt,
-        post([SHOT_A], 'Fixed text')
-      );
+      const changed = await sendAgain(failed.attempt, post([SHOT_A], 'Fixed text'));
 
       const [, second] = sentIds();
       expect(second).not.toBe(POST);
@@ -253,7 +239,7 @@ describe('sendFeedbackPost', () => {
     client.sendFeedback.mockResolvedValueOnce(refusal('unreachable', 'retry'));
 
     const failed = await sendFeedbackPost(first(), post());
-    await sendFeedbackPost(failed.attempt, post());
+    await sendAgain(failed.attempt, post());
 
     expect(sentIds()).toEqual([POST, POST]);
     expect(client.requestFeedbackUploadUrls).toHaveBeenCalledTimes(1);

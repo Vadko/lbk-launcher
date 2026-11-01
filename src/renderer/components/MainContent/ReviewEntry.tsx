@@ -24,7 +24,7 @@ interface ReviewEntryProps {
   replyTo: GameReviewAuthor | null;
   images: string[];
   onReply: () => void;
-  onEdit: (text: string, onShown: () => void) => Promise<boolean>;
+  onEdit: (text: string) => void;
   onResend: () => void;
   onDiscard: () => void;
   children?: React.ReactNode;
@@ -104,7 +104,10 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
             captchaAction="edit"
             isPublic={isPublicThread}
             isExpired={!canEdit}
-            onSubmit={(text) => onEdit(text, () => setIsEditing(false))}
+            onSubmit={(text) => {
+              onEdit(text);
+              setIsEditing(false);
+            }}
             onClose={() => setIsEditing(false)}
           />
         ) : (

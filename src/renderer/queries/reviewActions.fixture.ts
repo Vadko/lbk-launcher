@@ -7,10 +7,10 @@ import type {
   ReviewWriteResult,
 } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
-import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
 import type { ReviewPages } from '../utils/reviewCache';
-import { applyOverlay, NO_REVIEW_WRITES, NO_ROLLED_BACK } from '../utils/reviewOverlay';
 import { reviewPages, reviewReply, reviewThread } from '../utils/reviewPages.fixture';
+import { reviewWriteState, withReviewWrites } from '../utils/withReviewWrites';
+import { findReviewWrite } from './entryWrites';
 import { gameReviewsQueryKey } from './gameReviewsQueryKey';
 import type { ReviewReplyView, ReviewThreadView } from './reviewViewTypes';
 
@@ -27,6 +27,10 @@ export const published = (id: string): WriteAnswer => ({
   ok: true,
   data: { id, outcome: 'published' },
 });
+export const pendingAnswer = (id: string): WriteAnswer => ({
+  ok: true,
+  data: { id, outcome: 'pending' },
+});
 export const removedAnswer = (id: string): WriteAnswer => ({
   ok: true,
   data: { id, outcome: 'removed' },
@@ -41,8 +45,6 @@ export const rateLimit = failed({ code: 'rate_limit', kind: 'retry' });
 export const unreachable = failed({ code: 'unreachable', kind: 'retry' });
 export const banned = failed({ code: 'banned', kind: 'rejected' });
 export const notFound = failed({ code: 'not_found', kind: 'rejected' });
-export const dailyLimit = failed({ code: 'daily_limit', kind: 'retry' });
-export const liveSignal = () => new AbortController().signal;
 
 // Resolves the next request whenever the test says so
 export function deferAnswer<Input>(mock: Mock<(input: Input) => Promise<WriteAnswer>>) {
@@ -58,9 +60,8 @@ export function deferAnswer<Input>(mock: Mock<(input: Input) => Promise<WriteAns
 // One thread with the viewer's reply inside the edit window and one past it
 export function seedReviews(
   queryClient: QueryClient,
-  isPublic: boolean,
-  viewer: ReviewAuthorIdentity | null
-): void {
+  isPublic: boolean
+): ReviewThreadView {
   const own = {
     ...reviewReply('mine'),
     createdAt: new Date(Date.now() - MINUTE).toISOString(),
@@ -76,37 +77,31 @@ export function seedReviews(
     id: 'old',
     createdAt: new Date(Date.now() - 20 * MINUTE).toISOString(),
   };
-  const data = reviewPages([reviewThread('t', [own, old], isPublic)]);
-  queryClient.setQueryData<ReviewPages>(REVIEWS_KEY, {
-    ...data,
-    pages: data.pages.map((page) => ({ ...page, viewer })),
+  const thread = reviewThread('t', [own, old], isPublic);
+  queryClient.setQueryData<ReviewPages>(REVIEWS_KEY, reviewPages([thread]), {
+    updatedAt: Date.now() - MINUTE,
   });
+  return thread;
 }
 
-export const heldWrites = () =>
-  useReviewOverlayStore.getState().games.get('g1') ?? NO_REVIEW_WRITES;
-
-const rolledBack = () =>
-  useReviewOverlayStore.getState().rolledBack.get('g1') ?? NO_ROLLED_BACK;
+// The thread as the list shows it with the writes on the given entries
+export function shownThread(
+  queryClient: QueryClient,
+  ...entryIds: string[]
+): ReviewThreadView | undefined {
+  const data = queryClient.getQueryData<ReviewPages>(REVIEWS_KEY);
+  const states = entryIds.flatMap((id) => {
+    const write = findReviewWrite(queryClient, 'g1', id);
+    return write ? [reviewWriteState(write)] : [];
+  });
+  const updatedAt = queryClient.getQueryState(REVIEWS_KEY)?.dataUpdatedAt ?? 0;
+  return data && withReviewWrites(data, states, updatedAt).pages[0]?.items[0];
+}
 
 export function shownEntry(queryClient: QueryClient, id: string) {
-  const data = queryClient.getQueryData<ReviewPages>(REVIEWS_KEY);
-  return data
-    ? applyOverlay(data, heldWrites(), rolledBack())
-        .pages.flatMap((page) => page.items)
-        .flatMap((thread) => [thread, ...thread.replies])
-        .find(
-          (item): item is ReviewThreadView | ReviewReplyView =>
-            item.id === id && !('removed' in item)
-        )
-    : undefined;
+  const thread = shownThread(queryClient, id);
+  return [thread, ...(thread?.replies ?? [])].find(
+    (item): item is ReviewThreadView | ReviewReplyView =>
+      item !== undefined && item.id === id && !('removed' in item)
+  );
 }
-
-export const isCached = (queryClient: QueryClient, id: string) =>
-  queryClient
-    .getQueryData<ReviewPages>(REVIEWS_KEY)
-    ?.pages.some((page) =>
-      page.items.some(
-        (thread) => thread.id === id || thread.replies.some((reply) => reply.id === id)
-      )
-    );

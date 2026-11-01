@@ -1,29 +1,30 @@
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
-import { useReviewOverlayStore } from '../store/useReviewOverlayStore';
+import {
+  useInfiniteQuery,
+  useMutationState,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type FocusAsk, focusRefresh } from '../utils/focusRefresh';
 import type { ReviewFocus } from '../utils/readReviewLink';
 import type { ReviewCachePage, ReviewPages } from '../utils/reviewCache';
-import { applyOverlay, NO_REVIEW_WRITES, NO_ROLLED_BACK } from '../utils/reviewOverlay';
-import { gameReviewsQueryKey } from './gameReviewsQueryKey';
+import {
+  type ReviewWriteState,
+  reviewWriteState,
+  withReviewWrites,
+} from '../utils/withReviewWrites';
+import { gameReviewsQueryKey, reviewWritesKey } from './gameReviewsQueryKey';
 import { refreshGameReviews } from './refreshGameReviews';
 import { fetchReviewsPage } from './reviewsClient';
+import type { ReviewWriteMutation } from './reviewWrite';
 
 const THIRTY_MINUTES = 30 * 60 * 1000;
 
 export function useGameReviews(gameId: string, focus: ReviewFocus | null) {
   const queryClient = useQueryClient();
-  const writes = useReviewOverlayStore(
-    (state) => state.games.get(gameId) ?? NO_REVIEW_WRITES
-  );
-  const rolledBack = useReviewOverlayStore(
-    (state) => state.rolledBack.get(gameId) ?? NO_ROLLED_BACK
-  );
-  // React Query reruns select only when the data or this function changes, so it follows this game's writes
-  const select = useCallback(
-    (data: ReviewPages) => applyOverlay(data, writes, rolledBack),
-    [writes, rolledBack]
-  );
+  const writes = useMutationState<ReviewWriteState, ReviewWriteMutation>({
+    filters: { mutationKey: reviewWritesKey(gameId) },
+    select: reviewWriteState,
+  });
   // Outlives the handled link, so a later refetch keeps the linked thread on the first page
   const [pinned, setPinned] = useState(focus);
   if (focus && focus.key !== pinned?.key) {
@@ -42,7 +43,6 @@ export function useGameReviews(gameId: string, focus: ReviewFocus | null) {
     // A repeated cursor would re-arm the sentinel after every fetch
     getNextPageParam: (lastPage, _pages, lastPageParam) =>
       lastPage.nextCursor === lastPageParam ? null : lastPage.nextCursor,
-    select,
     staleTime: THIRTY_MINUTES,
     gcTime: THIRTY_MINUTES,
   });
@@ -77,16 +77,15 @@ export function useGameReviews(gameId: string, focus: ReviewFocus | null) {
     }
   }, [ask, queryClient, gameId]);
 
-  // A cache patch from a taken write clears the query's error, so the failed page is remembered here
+  // A refetch a write or an event asks for clears the query's error, so the failed page is remembered here
   const [isLoadMoreFailed, setIsLoadMoreFailed] = useState(false);
   const { fetchNextPage } = query;
-  const isFocusPending = focus !== null;
   const loadNextPage = useCallback(async () => {
     const loaded =
       queryClient.getQueryData<ReviewPages>(gameReviewsQueryKey(gameId))?.pages.length ??
       0;
-    // A next page would cancel the refresh that brings the linked thread
-    const options = { cancelRefetch: !isFocusPending };
+    // A next page would cancel the refetch that brings the linked thread or a write's answer
+    const options = { cancelRefetch: false };
     const first = await fetchNextPage(options);
     // A call made while that refresh is out hands back the refresh's own result, with no page added
     const isJoined =
@@ -96,7 +95,13 @@ export function useGameReviews(gameId: string, focus: ReviewFocus | null) {
     const result = isJoined ? await fetchNextPage(options) : first;
     setIsLoadMoreFailed(result.isFetchNextPageError);
     return result;
-  }, [queryClient, gameId, fetchNextPage, isFocusPending]);
+  }, [queryClient, gameId, fetchNextPage]);
 
-  return { query, loadNextPage, isLoadMoreFailed, failedFocusKey };
+  const { data: pages, dataUpdatedAt } = query;
+  const data = useMemo(
+    () => pages && withReviewWrites(pages, writes, dataUpdatedAt),
+    [pages, writes, dataUpdatedAt]
+  );
+
+  return { query, data, loadNextPage, isLoadMoreFailed, failedFocusKey };
 }

@@ -2,7 +2,7 @@ import type { ReviewFailure } from '@/shared/game-reviews-api-types';
 import type { FeedbackType } from '@/shared/types';
 import { isOutcomeUnknown } from './isOutcomeUnknown';
 
-interface FeedbackContent {
+export interface FeedbackContent {
   type: FeedbackType;
   message: string;
   files: readonly File[];

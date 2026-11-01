@@ -5,9 +5,6 @@ import type {
   ReviewAuthorState,
   ReviewResult,
 } from '@/shared/game-reviews-api-types';
-import { gameReviewsQueryKey } from '../queries/gameReviewsQueryKey';
-import { queryClient } from '../queries/queryClient';
-import { reviewPages, reviewThread } from '../utils/reviewPages.fixture';
 
 const fetchReviewAuthor = vi.fn<() => Promise<ReviewResult<ReviewAuthorState>>>();
 const spinNickname =
@@ -52,7 +49,6 @@ beforeEach(() => {
 
 afterEach(() => {
   store().closePicker();
-  queryClient.clear();
   vi.useRealTimers();
 });
 
@@ -75,7 +71,6 @@ describe('useReviewAuthorStore', () => {
 
   it('opens one picker for every caller and gives them the claimed nickname', async () => {
     fetchReviewAuthor.mockReturnValue(answer(null));
-    queryClient.setQueryData(gameReviewsQueryKey('g1'), reviewPages([reviewThread('a')]));
 
     const first = store().ensureAuthor();
     const second = store().ensureAuthor();
@@ -87,10 +82,6 @@ describe('useReviewAuthorStore', () => {
 
     await expect(Promise.all([first, second])).resolves.toEqual([OWL, OWL]);
     expect(store()).toMatchObject({ author: OWL, isPickerOpen: true });
-    const pages = queryClient.getQueryData<{ pages: { viewer: unknown }[] }>(
-      gameReviewsQueryKey('g1')
-    );
-    expect(pages?.pages[0]?.viewer).toEqual(OWL);
   });
 
   it('resolves null when the picker is closed and opens a new one next time', async () => {
@@ -118,45 +109,6 @@ describe('useReviewAuthorStore', () => {
 
     await expect(Promise.all([first, late])).resolves.toEqual([OWL, OWL]);
     expect(fetchReviewAuthor).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens no picker for a caller that aborted during the lookup', async () => {
-    let lookedUp: (result: ReviewResult<ReviewAuthorState>) => void = () => undefined;
-    fetchReviewAuthor.mockReturnValue(
-      new Promise((resolve) => {
-        lookedUp = resolve;
-      })
-    );
-    const composer = new AbortController();
-
-    const cancelled = store().ensureAuthor(composer.signal);
-    composer.abort();
-    lookedUp({ ok: true, data: { author: null, spinsLeft: 60 } });
-
-    await expect(cancelled).resolves.toBeNull();
-    expect(store().isPickerOpen).toBe(false);
-  });
-
-  it('still opens the picker for a caller that shares the lookup without aborting', async () => {
-    let lookedUp: (result: ReviewResult<ReviewAuthorState>) => void = () => undefined;
-    fetchReviewAuthor.mockReturnValue(
-      new Promise((resolve) => {
-        lookedUp = resolve;
-      })
-    );
-    const composer = new AbortController();
-
-    const cancelled = store().ensureAuthor(composer.signal);
-    const kept = store().ensureAuthor();
-    composer.abort();
-    lookedUp({ ok: true, data: { author: null, spinsLeft: 60 } });
-
-    await expect(cancelled).resolves.toBeNull();
-    await flush();
-    expect(store().isPickerOpen).toBe(true);
-    expect(fetchReviewAuthor).toHaveBeenCalledTimes(1);
-    store().pickAuthor(OWL);
-    await expect(kept).resolves.toEqual(OWL);
   });
 
   it('opens the picker when the lookup fails', async () => {

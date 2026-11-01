@@ -5,10 +5,7 @@ import type {
   ReviewResult,
 } from '@/shared/game-reviews-api-types';
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
-import { allGameReviewsQueryKey } from '../queries/gameReviewsQueryKey';
-import { queryClient } from '../queries/queryClient';
 import { fetchReviewAuthor, spinNickname } from '../queries/reviewsClient';
-import { type ReviewPages, withViewer } from '../utils/reviewCache';
 
 type PickedAuthor = ReviewAuthorIdentity | null;
 type SpinResult = ReviewResult<NicknameSpin>;
@@ -22,8 +19,8 @@ interface ReviewAuthorStore {
   // Spins the server still allows this machine this hour, null until a lookup or a spin tells; at 0 the lever locks
   spinsLeft: number | null;
   isPickerOpen: boolean;
-  // Resolves with the nickname, opening the picker when there is none; null when the picker was closed, or when the signal aborted before it opened
-  ensureAuthor: (signal?: AbortSignal) => Promise<PickedAuthor>;
+  // Resolves with the nickname, opening the picker when there is none; null when the picker was closed
+  ensureAuthor: () => Promise<PickedAuthor>;
   spin: (input: NicknameSpinInput) => Promise<SpinResult>;
   // The spin a picker opens on: none while a spin is on its way (the picker joins it) or once it is too old to claim
   openingSpin: () => NicknameSpin | null;
@@ -48,15 +45,6 @@ const KEEP_SPIN_MS = 23 * 60 * 60 * 1000;
 // Kept outside the picker, so an answer still lands after the picker closed, and a second picker (StrictMode's double start in dev) joins it
 let spinRequest: Promise<SpinResult> | null = null;
 
-// Optimistic writes read the nickname from the cached pages, which were fetched before the claim
-function rememberAuthor(set: Set_, author: ReviewAuthorIdentity): void {
-  set({ author });
-  queryClient.setQueriesData<ReviewPages>(
-    { queryKey: allGameReviewsQueryKey },
-    (data) => data && withViewer(data, author)
-  );
-}
-
 // A failed lookup answers null too, so the picker still opens: its spin answers author_exists when a nickname is there
 function lookUpAuthor(set: Set_): Promise<PickedAuthor> {
   lookup ??= fetchReviewAuthor()
@@ -65,7 +53,7 @@ function lookUpAuthor(set: Set_): Promise<PickedAuthor> {
         set({ spinsLeft: known.data.spinsLeft });
       }
       if (known.ok && known.data.author) {
-        rememberAuthor(set, known.data.author);
+        set({ author: known.data.author });
         return known.data.author;
       }
       return null;
@@ -99,7 +87,7 @@ export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => ({
   spinsLeft: null,
   isPickerOpen: false,
 
-  ensureAuthor: async (signal) => {
+  ensureAuthor: async () => {
     const { author } = get();
     if (author) {
       return author;
@@ -107,12 +95,7 @@ export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => ({
     if (picker) {
       return picker;
     }
-    const known = await lookUpAuthor(set);
-    // A caller whose composer closed during the lookup opens no picker, since a picker spends a spin as it opens
-    if (known || signal?.aborted) {
-      return known;
-    }
-    return openPicker(set);
+    return (await lookUpAuthor(set)) ?? openPicker(set);
   },
 
   spin: (input) => {
@@ -144,8 +127,7 @@ export const useReviewAuthorStore = create<ReviewAuthorStore>((set, get) => ({
   },
 
   pickAuthor: (author) => {
-    rememberAuthor(set, author);
-    set({ lastSpin: null, lastSpinAt: null });
+    set({ author, lastSpin: null, lastSpinAt: null });
     settleCallers(author);
   },
 
