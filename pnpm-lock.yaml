@@ -179,8 +179,8 @@ importers:
         specifier: workspace:*
         version: link:packages/lbk-i18n
       '@lbklauncher/dicebear-vyshyvanka':
-        specifier: 1.0.0
-        version: 1.0.0
+        specifier: 1.0.1
+        version: 1.0.1
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -1671,9 +1671,9 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lbklauncher/dicebear-vyshyvanka@1.0.0':
-    resolution: {integrity: sha512-NvTQU6MxzPIijf5xTbgXBW11Wi1fpMPrPvf1IsdVIST+sbgnulnCvtrOfFK3lkvBLfl7uaJqDciGz/U+Vk7IAw==}
-    engines: {node: '>=24.22.1'}
+  '@lbklauncher/dicebear-vyshyvanka@1.0.1':
+    resolution: {integrity: sha512-hnUm+MDNFiCVyrun+0cLgNhcy6cOLQL9xbyb5eYfe8rbjkqNDwPfbWAI8WdBZW4ekdW1Q7PGNaNnkKMQhLuFlg==}
+    engines: {node: '>=22.0.0'}
 
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
@@ -7459,7 +7459,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lbklauncher/dicebear-vyshyvanka@1.0.0':
+  '@lbklauncher/dicebear-vyshyvanka@1.0.1':
     dependencies:
       '@dicebear/core': 10.7.0
 
