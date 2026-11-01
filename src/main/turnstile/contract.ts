@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { CAPTCHA_CHANNELS } from '../../shared/captcha-channels';
-
-// The actions lbk-admin's turnstileVerdict.ts expects, one per kind of public write
-export type TurnstileAction = 'review' | 'reply' | 'edit' | 'nickname';
+import type { TurnstileAction } from '../../shared/game-reviews-api-types';
 
 export interface CaptchaRequest {
   requestId: string;

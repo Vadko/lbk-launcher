@@ -7,6 +7,7 @@ import type {
   ReviewEditInput,
   ReviewReplyInput,
   SubmitFeedbackInput,
+  TurnstileAction,
 } from '../../shared/game-reviews-api-types';
 import { fetchGameReviews } from '../db/game-reviews-api';
 import { editReviewEntry, replyToReview } from '../db/review-actions-api';
@@ -17,7 +18,6 @@ import {
 } from '../db/review-author-api';
 import { getFeedbackUploadUrls, submitFeedback } from '../db/submit-feedback-api';
 import { syncReviewEvents } from '../review-events';
-import type { TurnstileAction } from '../turnstile/contract';
 import { prefetchCaptchaToken } from '../turnstile/tokens';
 
 export function setupGameReviewsHandlers(): void {

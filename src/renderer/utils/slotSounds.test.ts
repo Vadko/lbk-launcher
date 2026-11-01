@@ -16,7 +16,7 @@ import {
   warmSlotSounds,
 } from './slotSounds';
 
-const settings = vi.hoisted(() => ({ gamepadSoundsEnabled: true }));
+const settings = vi.hoisted(() => ({ uiSoundsEnabled: true }));
 let focused = true;
 
 vi.mock('../store/useSettingsStore', () => ({
@@ -60,7 +60,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  settings.gamepadSoundsEnabled = true;
+  settings.uiSoundsEnabled = true;
   focused = true;
   context().sources = [];
   clock += 10;
@@ -90,7 +90,7 @@ describe('slot sounds', () => {
   );
 
   it.each(sounds)('keeps %s silent with sounds off', (_label, play) => {
-    settings.gamepadSoundsEnabled = false;
+    settings.uiSoundsEnabled = false;
 
     play();
 
@@ -248,7 +248,7 @@ describe('reel whirr', () => {
   });
 
   it.each([
-    ['sounds are off', () => (settings.gamepadSoundsEnabled = false)],
+    ['sounds are off', () => (settings.uiSoundsEnabled = false)],
     ['the window is in the background', () => (focused = false)],
   ])('hands back a silent whirr when %s', (_label, mute) => {
     mute();

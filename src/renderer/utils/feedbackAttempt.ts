@@ -9,11 +9,10 @@ interface FeedbackContent {
   allowPublish: boolean;
 }
 
+// The post's id and uploads; content sent without a clear answer may already be stored under that id
 export interface FeedbackAttempt {
   id: string;
-  // Paths uploaded under this id; the server takes them only for a post with this id
   uploads: ReadonlyMap<File, string>;
-  // Content sent without a clear answer: the server may already hold it under this id
   unconfirmed: FeedbackContent | null;
 }
 

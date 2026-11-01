@@ -1169,7 +1169,7 @@ export const en = {
       title: 'Notification sounds',
       description: 'Play sounds for update notifications',
     },
-    gamepadSounds: {
+    uiSounds: {
       title: 'Interface sounds',
       description:
         'Play sounds for controller navigation and the slot machine that picks your name in reviews',
@@ -1248,7 +1248,7 @@ export const en = {
       soundProgress: 'Progress',
       soundNewGame: 'New game',
       soundTeam: 'Team',
-      gamepadSounds: 'Interface sounds:',
+      uiSounds: 'Interface sounds:',
       navigate: 'Navigate',
       confirm: 'Confirm',
       back: 'Back',
@@ -1295,8 +1295,8 @@ export const en = {
     donators: 'Open supporters page',
     news: 'Open news',
     home: 'Open home page',
-    gamepadSoundsOff: 'Turn off interface sounds',
-    gamepadSoundsOn: 'Turn on interface sounds',
+    uiSoundsOff: 'Turn off interface sounds',
+    uiSoundsOn: 'Turn on interface sounds',
     notifications: 'Notifications',
     settings: 'Settings',
   },

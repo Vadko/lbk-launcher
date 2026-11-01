@@ -5,6 +5,18 @@ import { useSettingsStore } from '../../../store/useSettingsStore';
 import { LEVER_TRAVEL_PX } from './slotLeverMotion';
 import { useLeverPull } from './useLeverPull';
 
+const glow = (blur: number, spread: number, alpha: number) =>
+  `0 0 ${blur}px ${spread}px rgba(255, 164, 122, ${alpha})`;
+
+// The knob's halo until the first look; with animations off it stays still
+const HALO = {
+  pulse: [glow(4, 0, 0.2), glow(14, 4, 0.5), glow(4, 0, 0.2)],
+  still: glow(10, 2, 0.35),
+  off: glow(0, 0, 0),
+};
+
+const HALO_PULSE = { duration: 1.6, ease: 'easeInOut', repeat: Infinity } as const;
+
 interface SlotLeverProps {
   canPull: boolean;
   // Out of spins or every reel held rather than busy: a stop sign, not a wait
@@ -62,9 +74,10 @@ export const SlotLever: React.FC<SlotLeverProps> = ({
       <span className="slot-lever__track" />
       <motion.span className="slot-lever__fill" style={{ scaleY: fill }} />
       <motion.span className="slot-lever__knob" style={{ y: knobY }}>
-        <span
-          className={`slot-lever__halo ${!hintSeen && animate ? 'animate-lever-hint' : ''}`}
-          data-hint={!hintSeen || undefined}
+        <motion.span
+          className="slot-lever__halo"
+          animate={{ boxShadow: hintSeen ? HALO.off : animate ? HALO.pulse : HALO.still }}
+          transition={hintSeen || !animate ? { duration: animate ? 0.2 : 0 } : HALO_PULSE}
         />
         <span className="slot-lever__ball" />
       </motion.span>

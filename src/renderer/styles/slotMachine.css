@@ -267,11 +267,6 @@
   transition: opacity 200ms;
 }
 
-/* Until the first hover; animate-lever-hint pulses it, and with animations off it stays still */
-.slot-lever__halo[data-hint] {
-  box-shadow: 0 0 10px 2px rgb(var(--color-accent) / 0.35);
-}
-
 .slot-lever__ball {
   position: absolute;
   inset: 0;

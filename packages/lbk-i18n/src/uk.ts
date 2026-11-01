@@ -1521,7 +1521,7 @@ export const uk = {
       title: 'Звуки сповіщень',
       description: 'Відтворювати звуки під час отримання сповіщень про оновлення',
     },
-    gamepadSounds: {
+    uiSounds: {
       title: 'Звуки інтерфейсу',
       description:
         'Відтворювати звуки навігації геймпадом і автомата вибору імені у відгуках',
@@ -1597,7 +1597,7 @@ export const uk = {
       soundProgress: 'Прогрес',
       soundNewGame: 'Нова гра',
       soundTeam: 'Команда',
-      gamepadSounds: 'Звуки інтерфейсу:',
+      uiSounds: 'Звуки інтерфейсу:',
       navigate: 'Навігація',
       confirm: 'Підтвердити',
       back: 'Назад',
@@ -1650,8 +1650,8 @@ export const uk = {
     donators: 'Відкрити сторінку донатерів',
     news: 'Відкрити новини',
     home: 'Відкрити головну сторінку',
-    gamepadSoundsOff: 'Вимкнути звуки інтерфейсу',
-    gamepadSoundsOn: 'Увімкнути звуки інтерфейсу',
+    uiSoundsOff: 'Вимкнути звуки інтерфейсу',
+    uiSoundsOn: 'Увімкнути звуки інтерфейсу',
     notifications: 'Сповіщення',
     settings: 'Налаштування',
   },

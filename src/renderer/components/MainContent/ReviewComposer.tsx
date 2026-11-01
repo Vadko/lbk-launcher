@@ -1,6 +1,6 @@
 import { Check, Send } from 'lucide';
 import React, { useEffect, useRef, useState } from 'react';
-import type { TurnstileAction } from '@/main/turnstile/contract';
+import type { TurnstileAction } from '@/shared/game-reviews-api-types';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { usePrefetchCaptcha } from '../../hooks/usePrefetchCaptcha';

@@ -1,4 +1,3 @@
-import type { TurnstileAction } from '@/main/turnstile/contract';
 import type {
   FeedbackUploadUrl,
   FeedbackUploadUrlsInput,
@@ -12,6 +11,7 @@ import type {
   ReviewResult,
   ReviewWriteResult,
   SubmitFeedbackInput,
+  TurnstileAction,
 } from '@/shared/game-reviews-api-types';
 import type { GameReviewsPage, ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 

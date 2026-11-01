@@ -18,37 +18,6 @@
   }
 }
 
-/* The nickname knob's halo until the first hover: a static glow stays when animations are off */
-@keyframes leverHint {
-  0%,
-  100% {
-    box-shadow: 0 0 4px 0 rgba(255, 164, 122, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 14px 4px rgba(255, 164, 122, 0.5);
-  }
-}
-
-/* A deep-linked review entry: the tint fades out, and stays put for its second when animations are off */
-@keyframes reviewFocus {
-  0%,
-  40% {
-    background-color: rgb(var(--color-main) / 0.14);
-    box-shadow: 0 0 0 8px rgb(var(--color-main) / 0.14);
-  }
-  100% {
-    background-color: rgb(var(--color-main) / 0);
-    box-shadow: 0 0 0 8px rgb(var(--color-main) / 0);
-  }
-}
-
-.review-focus {
-  border-radius: 12px;
-  background-color: rgb(var(--color-main) / 0.14);
-  box-shadow: 0 0 0 8px rgb(var(--color-main) / 0.14);
-  animation: reviewFocus 1s ease-out forwards;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;

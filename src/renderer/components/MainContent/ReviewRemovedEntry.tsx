@@ -8,7 +8,10 @@ interface ReviewRemovedEntryProps {
 
 // Stands in for a removed reply so the answers under it keep their place; its height leaves the gap an entry leaves under its avatar
 export const ReviewRemovedEntry: React.FC<ReviewRemovedEntryProps> = ({ id }) => (
-  <article id={`review-${id}`} className="flex items-start gap-4 min-h-10 min-w-0">
+  <article
+    id={`review-${id}`}
+    className="flex items-start gap-4 min-h-10 min-w-0 rounded-xl"
+  >
     <span
       aria-hidden
       className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-glass border border-border text-text-muted"

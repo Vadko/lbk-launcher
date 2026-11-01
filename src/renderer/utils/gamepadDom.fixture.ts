@@ -9,7 +9,6 @@ class FakeElement {
   scrollIntoView: HTMLElement['scrollIntoView'] = vi.fn(() =>
     Promise.resolve({ interrupted: false })
   );
-  classList: Pick<DOMTokenList, 'add' | 'remove'> = { add: vi.fn(), remove: vi.fn() };
 }
 
 class FakeInput extends FakeElement {

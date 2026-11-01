@@ -72,7 +72,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
   const canReply = entry.moderation === 'published' || isChecking;
 
   return (
-    <article id={`review-${entry.id}`} className="relative flex gap-4 min-w-0">
+    <article id={`review-${entry.id}`} className="relative flex gap-4 min-w-0 rounded-xl">
       {hasThreadLine && (
         <span
           aria-hidden

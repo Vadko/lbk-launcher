@@ -112,8 +112,8 @@ export const SettingsModal: React.FC = () => {
   const toggleNotificationSounds = useSettingsStore(
     (state) => state.toggleNotificationSounds
   );
-  const gamepadSoundsEnabled = useSettingsStore((state) => state.gamepadSoundsEnabled);
-  const toggleGamepadSounds = useSettingsStore((state) => state.toggleGamepadSounds);
+  const uiSoundsEnabled = useSettingsStore((state) => state.uiSoundsEnabled);
+  const toggleUiSounds = useSettingsStore((state) => state.toggleUiSounds);
   const steamCefDebuggingEnabled = useSettingsStore(
     (state) => state.steamCefDebuggingEnabled
   );
@@ -572,10 +572,10 @@ export const SettingsModal: React.FC = () => {
 
           <SettingItem
             id="gamepad-sounds"
-            title={t('settings.gamepadSounds.title')}
-            description={t('settings.gamepadSounds.description')}
-            enabled={gamepadSoundsEnabled}
-            onChange={toggleGamepadSounds}
+            title={t('settings.uiSounds.title')}
+            description={t('settings.uiSounds.description')}
+            enabled={uiSoundsEnabled}
+            onChange={toggleUiSounds}
           />
 
           <SettingItem
@@ -771,7 +771,7 @@ export const SettingsModal: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs text-text-muted mb-2">
-                    {t('settings.dev.gamepadSounds')}
+                    {t('settings.dev.uiSounds')}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button

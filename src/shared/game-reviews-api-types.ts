@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { Constants, type Database } from '../lib/database.types';
-import type { TurnstileAction } from '../main/turnstile/contract';
 import {
   authorIdentitySchema,
   type GameReviewsPage,
   type ReviewAuthorIdentity,
   type ReviewEvent,
 } from './game-reviews-types';
+
+// The actions lbk-admin's turnstileVerdict.ts expects, one per kind of public write
+export type TurnstileAction = 'review' | 'reply' | 'edit' | 'nickname';
 
 // Mirrors REVIEW_ERROR_STATUS in lbk-admin's supabase/functions/_shared/reviewErrorCodes.ts
 export const REVIEW_ERROR_CODES = [

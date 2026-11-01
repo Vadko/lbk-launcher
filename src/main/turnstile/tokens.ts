@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import pTimeout from 'p-timeout';
+import type { TurnstileAction } from '../../shared/game-reviews-api-types';
 import { getMachineId, IS_E2E } from '../tracking';
 import { sha256 } from '../utils/hash';
-import type { TurnstileAction } from './contract';
 import { captchaPageUrl } from './page-url';
 import { reportCaptchaFault } from './report-captcha-fault';
 import { type CaptchaPageListener, openCaptchaPage } from './window';

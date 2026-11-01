@@ -5,8 +5,8 @@ import ratchet from '@resources/sounds/slot/ratchet.ogg?inline';
 import reelSpin from '@resources/sounds/slot/reel-spin.ogg?inline';
 import reelStop from '@resources/sounds/slot/reel-stop.ogg?inline';
 import { getAudioContext } from './audioContext';
+import { canPlayUiSounds } from './canPlayUiSounds';
 import { ratchetRun } from './ratchetRun';
-import { uiSoundsEnabled } from './uiSoundsEnabled';
 
 export interface ReelWhirr {
   // The share of the reels still spinning, from 0 to 1
@@ -94,7 +94,7 @@ function hit(ctx: AudioContext, clip: Clip, { at, gain, rate = 1 }: Hit): void {
 
 // Opening the audio context takes over 100 ms and decoding a little more, which would otherwise stall the lever's first pull
 export function warmSlotSounds(): void {
-  if (!uiSoundsEnabled()) {
+  if (!canPlayUiSounds()) {
     return;
   }
   try {
@@ -106,7 +106,7 @@ export function warmSlotSounds(): void {
 
 // A broken audio stack never gets in the way of the picker
 function play(name: string, sound: (ctx: AudioContext, at: number) => void): void {
-  if (!uiSoundsEnabled()) {
+  if (!canPlayUiSounds()) {
     return;
   }
   try {
@@ -169,7 +169,7 @@ export const playWinChime = () =>
 
 // The spin bed, in time with the stops and a step quieter as each one lands; runs until stopped
 export function startReelWhirr(): ReelWhirr {
-  if (!uiSoundsEnabled()) {
+  if (!canPlayUiSounds()) {
     return SILENT_WHIRR;
   }
   try {

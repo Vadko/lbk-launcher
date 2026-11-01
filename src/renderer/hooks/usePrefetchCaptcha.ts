@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { TurnstileAction } from '@/main/turnstile/contract';
+import type { TurnstileAction } from '@/shared/game-reviews-api-types';
 import { prefetchReviewCaptcha } from '../queries/reviewsClient';
 
 // Main keeps the token; a write sent within its four minutes skips the wait for the challenge

@@ -1,10 +1,15 @@
+import { animate } from 'framer-motion';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { fakeElement, fakeEntry, fakeTextArea, stubDocument } from './gamepadDom.fixture';
 import { revealEntry } from './revealEntry';
 
+vi.mock('framer-motion', () => ({ animate: vi.fn() }));
+
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.mocked(animate).mockClear();
+  vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => ' 168 207 150' }));
   useGamepadModeStore.setState({
     isGamepadMode: true,
     navigationArea: 'games',
@@ -30,22 +35,28 @@ describe('revealEntry', () => {
     expect(entry.scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior });
   });
 
-  it('highlights the entry for a second', async () => {
+  it.each<[string, boolean, number[]]>([
+    ['fades the tint out with animations on', true, [0, 0.4, 1]],
+    ['holds the tint for its second with animations off', false, [0, 1, 1]],
+  ])('%s', async (_case, animationsEnabled, times) => {
     const entry = fakeEntry('review-e1', null);
     stubDocument({ elements: [entry] });
 
-    revealEntry('e1', false);
-    await vi.advanceTimersByTimeAsync(999);
+    revealEntry('e1', animationsEnabled);
+    await vi.advanceTimersByTimeAsync(0);
 
-    expect(entry.classList.add).toHaveBeenCalledWith('review-focus');
-    expect(entry.classList.remove).not.toHaveBeenCalled();
-    vi.advanceTimersByTime(1);
-    expect(entry.classList.remove).toHaveBeenCalledWith('review-focus');
+    const lit = 'rgba(168, 207, 150, 0.14)';
+    const clear = 'rgba(168, 207, 150, 0)';
+    expect(animate).toHaveBeenCalledWith(
+      entry,
+      expect.objectContaining({ backgroundColor: [lit, lit, clear] }),
+      expect.objectContaining({ duration: 1, times })
+    );
   });
 
-  it.each<[string, boolean, string[][]]>([
-    ['lights the entry once its scroll stops', false, [['review-focus']]],
-    ['leaves the entry unlit when its scroll is cut short', true, []],
+  it.each<[string, boolean, number]>([
+    ['lights the entry once its scroll stops', false, 1],
+    ['leaves the entry unlit when its scroll is cut short', true, 0],
   ])('%s', async (_case, interrupted, lit) => {
     let settle: (result: ScrollResult) => void = () => undefined;
     const scrolled = new Promise<ScrollResult>((resolve) => {
@@ -58,11 +69,11 @@ describe('revealEntry', () => {
 
     revealEntry('e1', true);
     await vi.advanceTimersByTimeAsync(1200);
-    expect(entry.classList.add).not.toHaveBeenCalled();
+    expect(animate).not.toHaveBeenCalled();
     settle({ interrupted });
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(vi.mocked(entry.classList.add).mock.calls).toEqual(lit);
+    expect(animate).toHaveBeenCalledTimes(lit);
   });
 
   it.each<[string, Element[], string, string | null, boolean]>([

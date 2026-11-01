@@ -1471,7 +1471,7 @@ export const be = {
       title: 'Гукі апавяшчэнняў',
       description: 'Прайграваць гукі пры атрыманні апавяшчэнняў пра абнаўленні',
     },
-    gamepadSounds: {
+    uiSounds: {
       title: 'Гукі інтэрфейсу',
       description:
         'Прайграваць гукі навігацыі геймпадам і аўтамата выбару імя ў водгуках',
@@ -1547,7 +1547,7 @@ export const be = {
       soundProgress: 'Гатоўнасць',
       soundNewGame: 'Новая гульня',
       soundTeam: 'Каманда',
-      gamepadSounds: 'Гукі інтэрфейсу:',
+      uiSounds: 'Гукі інтэрфейсу:',
       navigate: 'Навігацыя',
       confirm: 'Пацвердзіць',
       back: 'Назад',
@@ -1597,8 +1597,8 @@ export const be = {
     donators: 'Адкрыць старонку фундатараў',
     news: 'Адкрыць навіны',
     home: 'Адкрыць галоўную старонку',
-    gamepadSoundsOff: 'Выключыць гукі інтэрфейсу',
-    gamepadSoundsOn: 'Уключыць гукі інтэрфейсу',
+    uiSoundsOff: 'Выключыць гукі інтэрфейсу',
+    uiSoundsOn: 'Уключыць гукі інтэрфейсу',
     notifications: 'Апавяшчэнні',
     settings: 'Налады',
   },

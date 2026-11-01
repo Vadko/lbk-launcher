@@ -1,13 +1,13 @@
 import { getAudioContext } from './audioContext';
-import { uiSoundsEnabled } from './uiSoundsEnabled';
+import { canPlayUiSounds } from './canPlayUiSounds';
 
 interface PlayOptions {
-  /** Skip the gamepadSoundsEnabled + document.hasFocus checks (used by settings preview buttons). */
+  /** Skip the uiSoundsEnabled + document.hasFocus checks (used by settings preview buttons). */
   ignoreSettings?: boolean;
 }
 
 function shouldPlay(opts?: PlayOptions): boolean {
-  return opts?.ignoreSettings === true || uiSoundsEnabled();
+  return opts?.ignoreSettings === true || canPlayUiSounds();
 }
 
 /** Soft click when moving between items. */

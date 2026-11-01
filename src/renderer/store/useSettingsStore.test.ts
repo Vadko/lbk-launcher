@@ -39,3 +39,18 @@ describe('useSettingsStore review lever hint', () => {
     expect(useSettingsStore.getState().reviewLeverHintSeen).toBe(true);
   });
 });
+
+describe('useSettingsStore interface sounds', () => {
+  it('keeps the sounds off that a version 0 store saved under the gamepad', async () => {
+    useSettingsStore.setState({ uiSoundsEnabled: true });
+    saved.set(
+      'lbk-settings',
+      JSON.stringify({ state: { gamepadSoundsEnabled: false }, version: 0 })
+    );
+
+    await useSettingsStore.persist.rehydrate();
+
+    expect(useSettingsStore.getState().uiSoundsEnabled).toBe(false);
+    expect(persisted()).not.toHaveProperty('gamepadSoundsEnabled');
+  });
+});

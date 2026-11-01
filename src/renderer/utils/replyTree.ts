@@ -1,3 +1,4 @@
+import { A } from '@mobily/ts-belt';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import type { ReviewThreadReplyView } from '../queries/reviewViewTypes';
 
@@ -14,11 +15,6 @@ export interface ReplyNode {
   children: ReplyNode[];
 }
 
-interface Placed {
-  node: ReplyNode;
-  siblings: ReplyNode[];
-}
-
 const byTime = (a: ReplyNode, b: ReplyNode) =>
   Date.parse(a.reply.createdAt) - Date.parse(b.reply.createdAt);
 
@@ -27,50 +23,31 @@ export function buildReplyTree(
   replies: ReviewThreadReplyView[],
   maxDepth: number
 ): ReplyNode[] {
-  const roots: ReplyNode[] = [];
-  const byId = new Map(replies.map((reply) => [reply.id, reply]));
-  const placed = new Map<string, Placed>();
+  const ids = new Set(replies.map((reply) => reply.id));
+  // A reply whose parent was removed or is not loaded falls back to the first level
+  const answers = A.groupBy(replies, (reply) =>
+    reply.parentId !== null && ids.has(reply.parentId) ? reply.parentId : reviewId
+  );
 
-  // Parents are placed first by id, so a skewed clock cannot detach an answer from them
-  const place = (reply: ReviewThreadReplyView): Placed => {
-    const existing = placed.get(reply.id);
-    if (existing) {
-      return existing;
-    }
-    // A reply whose parent was removed or is not loaded falls back to the first level
-    const parentReply = reply.parentId ? byId.get(reply.parentId) : undefined;
-    const parent = parentReply ? place(parentReply) : undefined;
-    let entry: Placed;
-    if (!parent) {
-      entry = { node: node(reply, null, reviewId, 1), siblings: roots };
-    } else if (parent.node.depth < maxDepth) {
-      entry = {
-        node: node(reply, null, parent.node.reply.id, parent.node.depth + 1),
-        siblings: parent.node.children,
-      };
-    } else {
-      entry = {
-        node: node(reply, authorOf(parent.node.reply), parent.node.branchId, maxDepth),
-        siblings: parent.siblings,
-      };
-    }
-    entry.siblings.push(entry.node);
-    placed.set(reply.id, entry);
-    return entry;
-  };
+  const level = (
+    parentId: string,
+    depth: number,
+    branchId: string,
+    replyTo: GameReviewAuthor | null
+  ): ReplyNode[] =>
+    (answers[parentId] ?? [])
+      .flatMap((reply) => {
+        if (depth < maxDepth) {
+          const children = level(reply.id, depth + 1, reply.id, null);
+          return [node(reply, replyTo, branchId, depth, children)];
+        }
+        // Answers to an entry on the last level sit beside it
+        const beside = level(reply.id, depth, branchId, authorOf(reply));
+        return [node(reply, replyTo, branchId, depth, []), ...beside];
+      })
+      .sort(byTime);
 
-  for (const reply of replies) {
-    place(reply);
-  }
-  sortByTime(roots);
-  return roots;
-}
-
-function sortByTime(nodes: ReplyNode[]): void {
-  nodes.sort(byTime);
-  for (const item of nodes) {
-    sortByTime(item.children);
-  }
+  return level(reviewId, 1, reviewId, null);
 }
 
 // A removed parent has no author left to name
@@ -82,9 +59,10 @@ function node(
   reply: ReviewThreadReplyView,
   replyTo: GameReviewAuthor | null,
   branchId: string,
-  depth: number
+  depth: number,
+  children: ReplyNode[]
 ): ReplyNode {
-  return { reply, replyTo, branchId, depth, children: [] };
+  return { reply, replyTo, branchId, depth, children };
 }
 
 export function countReplies(nodes: ReplyNode[]): number {
