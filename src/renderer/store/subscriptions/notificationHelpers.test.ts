@@ -22,15 +22,13 @@ beforeEach(() => {
 });
 
 describe('showSystemNotificationIfHidden', () => {
-  it('sends only the link fields of a review notice from the tray', async () => {
+  it('links a review notice from the tray to its entry', async () => {
     windowControls.isVisible.mockResolvedValue(false);
 
     await showSystemNotificationIfHidden('Game', 'text', {
       gameId: 'game-1',
       feedbackId: THREAD,
       entryId: ENTRY,
-      // A whole notice is passed in, and its other fields stay in the renderer
-      ...{ id: 'n1', type: 'feedback-reply', read: false },
     });
 
     expect(windowControls.showSystemNotification).toHaveBeenCalledWith({

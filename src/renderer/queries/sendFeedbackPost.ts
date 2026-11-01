@@ -49,19 +49,17 @@ async function uploadScreenshots(
       return { ok: false, message, failure: urls.failure, uploads };
     }
     for (const [i, shot] of missing.entries()) {
-      const target = urls.data[i];
-      const response = target
-        ? await fetch(target.signedUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': shot.type },
-            body: shot.file,
-          }).catch(() => null)
-        : null;
-      if (!target || !response?.ok) {
+      const { signedUrl, path } = urls.data[i];
+      const response = await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': shot.type },
+        body: shot.file,
+      }).catch(() => null);
+      if (!response?.ok) {
         const message = t('feedbackModal.screenshotFailed', { name: shot.name });
         return { ok: false, message, failure: null, uploads };
       }
-      uploads.set(shot.file, target.path);
+      uploads.set(shot.file, path);
     }
   }
   const paths = screenshots.flatMap((shot) => uploads.get(shot.file) ?? []);
@@ -96,9 +94,6 @@ export async function sendFeedbackPost(
     message: post.message,
     screenshotPaths: uploaded.paths,
     allowPublish: post.allowPublish,
-  }).catch((error: unknown) => {
-    overlay.endPost(attempt.id, null);
-    throw error;
   });
   overlay.endPost(attempt.id, sent.ok ? sent.data.outcome : null);
   if (sent.ok) {

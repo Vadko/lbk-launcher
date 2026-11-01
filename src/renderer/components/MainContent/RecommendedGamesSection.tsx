@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-import { useRecommendedGames } from '@/renderer/queries/useRecommendedGames';
 import { useStore } from '@/renderer/store/useStore';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
+import type { Game } from '@/shared/types';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
@@ -14,14 +14,16 @@ interface RecommendedGamesSectionProps {
   gameId: string;
   gameName?: string;
   title?: string;
-  showLimit?: number;
+  games: Game[];
+  isLoading: boolean;
 }
 
 export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = ({
   gameId,
   gameName,
   title = t('homeSections.recommended'),
-  showLimit = 3,
+  games,
+  isLoading,
 }) => {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
@@ -31,16 +33,6 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
       isGameDetected: state.isGameDetected,
     }))
   );
-
-  const {
-    games: visibleGames,
-    isLoading,
-    isHidden,
-  } = useRecommendedGames(gameId, showLimit);
-
-  if (isHidden) {
-    return null;
-  }
 
   return (
     <motion.section
@@ -61,7 +53,7 @@ export const RecommendedGamesSection: React.FC<RecommendedGamesSectionProps> = (
             <Loader size="md" />
           </motion.div>
         ) : (
-          visibleGames.map((game, index) => (
+          games.map((game, index) => (
             <motion.div
               key={game.id}
               id={`recommended-game-${game.slug}`}

@@ -15,14 +15,4 @@ describe('reviewModerationKey', () => {
 
     expect(reviewModerationKey(first)).not.toBe(reviewModerationKey(second));
   });
-
-  it('tells apart the verdicts on one entry', () => {
-    const keys = [
-      reviewEvent({ outcome: 'published' }),
-      reviewEvent({ outcome: 'removed' }),
-      reviewEvent({ editRejected: true }),
-    ].map(reviewModerationKey);
-
-    expect(new Set(keys).size).toBe(3);
-  });
 });

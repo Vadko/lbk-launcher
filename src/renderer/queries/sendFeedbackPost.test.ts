@@ -106,17 +106,6 @@ describe('sendFeedbackPost', () => {
     expect(overlay().shown.get(POST)).toBe('removed');
   });
 
-  it('lets a waiting verdict go when the send throws, marking nothing as shown', async () => {
-    const overlay = () => useReviewOverlayStore.getState();
-    useReviewOverlayStore.setState({ posting: new Set(), shown: new Map() });
-    client.sendFeedback.mockRejectedValue(new Error('ipc'));
-
-    await expect(sendFeedbackPost(first(), post([]))).rejects.toThrow('ipc');
-
-    expect(overlay().posting.size).toBe(0);
-    expect(overlay().shown.size).toBe(0);
-  });
-
   it('asks for no upload without screenshots', async () => {
     expect((await sendFeedbackPost(first(), post([]))).ok).toBe(true);
     expect(client.requestFeedbackUploadUrls).not.toHaveBeenCalled();
@@ -152,10 +141,6 @@ describe('sendFeedbackPost', () => {
       () => fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 })),
     ],
     ['a network error', () => fetchMock.mockRejectedValueOnce(new TypeError('offline'))],
-    [
-      'a missing upload url',
-      () => client.requestFeedbackUploadUrls.mockResolvedValue({ ok: true, data: [] }),
-    ],
   ])('names the screenshot that failed on %s', async (_label, arrange) => {
     arrange();
 

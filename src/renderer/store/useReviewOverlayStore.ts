@@ -17,19 +17,18 @@ interface ReviewOverlayStore {
   writeOf: (gameId: string, entryId: string) => ReviewWrite | undefined;
   // Shows the write as checking and returns the attempt its answer has to match
   start: (gameId: string, entryId: string, draft: ReviewWriteDraft) => number;
+  // The answer's caller has checked the write is still its own, so these act on the current write
   fail: (
     gameId: string,
     entryId: string,
-    attempt: number,
     failure: ReviewFailure,
     resend: () => Promise<void>
   ) => void;
-  // Without an attempt, drops the entry's write whichever send it is on
-  drop: (gameId: string, entryId: string, attempt?: number) => void;
+  drop: (gameId: string, entryId: string) => void;
   // Entries whose edit the server refused, by game, until a new write on them starts
   rolledBack: RolledBack;
-  // Marks the entry and drops the answered attempt's write in one update, so the badge never sees it confirmed; another write stays
-  rollBack: (gameId: string, entryId: string, attempt?: number) => void;
+  // Marks the entry and, for a refused answer, drops its write in one update, so the badge never sees it confirmed
+  rollBack: (gameId: string, entryId: string, dropWrite: boolean) => void;
   // Root posts the feedback form sent and the server has not answered yet, by id
   posting: ReadonlySet<string>;
   startPost: (id: string) => void;
@@ -117,9 +116,9 @@ export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
     return attempt;
   },
 
-  fail: (gameId, entryId, attempt, failure, resend) => {
+  fail: (gameId, entryId, failure, resend) => {
     const write = get().writeOf(gameId, entryId);
-    if (write?.attempt !== attempt) {
+    if (!write) {
       return;
     }
     set(({ games }) => ({
@@ -132,9 +131,8 @@ export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
     }));
   },
 
-  drop: (gameId, entryId, attempt) => {
-    const write = get().writeOf(gameId, entryId);
-    if (!write || (attempt !== undefined && write.attempt !== attempt)) {
+  drop: (gameId, entryId) => {
+    if (!get().writeOf(gameId, entryId)) {
       return;
     }
     set(({ games }) => ({ games: withWrite(games, gameId, entryId, null) }));
@@ -142,12 +140,9 @@ export const useReviewOverlayStore = create<ReviewOverlayStore>((set, get) => ({
 
   rolledBack: new Map(),
 
-  rollBack: (gameId, entryId, attempt) => {
+  rollBack: (gameId, entryId, dropWrite) => {
     set(({ games, rolledBack }) => ({
-      games:
-        attempt !== undefined && get().writeOf(gameId, entryId)?.attempt === attempt
-          ? withWrite(games, gameId, entryId, null)
-          : games,
+      games: dropWrite ? withWrite(games, gameId, entryId, null) : games,
       rolledBack: withRolledBack(rolledBack, gameId, entryId, true),
     }));
   },

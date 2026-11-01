@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export function useNow(intervalMs: number, until = Infinity): number {
+export function useNow(intervalMs: number, until: number): number {
   const [now, setNow] = useState(Date.now);
   const isRunning = now < until;
 
@@ -11,9 +11,7 @@ export function useNow(intervalMs: number, until = Infinity): number {
     const tick = () => setNow(Date.now());
     const id = setInterval(tick, intervalMs);
     // The last tick lands on `until` itself, even when the timer fires a millisecond early
-    const end = Number.isFinite(until)
-      ? setTimeout(() => setNow(Math.max(Date.now(), until)), until - Date.now())
-      : undefined;
+    const end = setTimeout(() => setNow(Math.max(Date.now(), until)), until - Date.now());
     return () => {
       clearInterval(id);
       clearTimeout(end);

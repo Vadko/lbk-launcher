@@ -33,7 +33,6 @@ function useRecommendedGamesQuery(
   });
 }
 
-// The game page asks for the same limit as its section, so both share one cached query
 export function useRecommendedGames(gameId: string | undefined, limit: number) {
   const { hideAiTranslations, showRecommendations } = useSettingsStore(
     useShallow((state) => ({

@@ -10,7 +10,7 @@ import type {
 import type { ReviewAuthorIdentity } from '@/shared/game-reviews-types';
 import { claimNickname, fetchReviewAuthor } from '../../../queries/reviewsClient';
 import { useReviewAuthorStore } from '../../../store/useReviewAuthorStore';
-import { FAILURE_NOTICE, type PickerNotice } from './pickerNotice';
+import { failureNotice, type PickerNotice } from './pickerNotice';
 import { type ReelSchedule, reelSchedule } from './slotReelMotion';
 import {
   ALL_REELS,
@@ -214,17 +214,13 @@ export const reviewAuthorPickerMachine = setup({
               const code = codeOf(event.output) ?? 'internal';
               return {
                 moving: NO_REELS,
-                notice: FAILURE_NOTICE[code],
+                notice: failureNotice(code),
                 holds: UNKNOWN_OUTCOME.has(code) ? NO_REELS : context.holds,
                 spinsLeft: code === 'rate_limit' ? 0 : context.spinsLeft,
               };
             }),
           },
         ],
-        onError: {
-          target: 'idle',
-          actions: assign({ moving: NO_REELS, notice: 'failed' }),
-        },
       },
     },
     // The reels stop one by one; with animations off they are already still
@@ -296,11 +292,10 @@ export const reviewAuthorPickerMachine = setup({
           {
             target: 'idle',
             actions: assign({
-              notice: ({ event }) => FAILURE_NOTICE[codeOf(event.output) ?? 'internal'],
+              notice: ({ event }) => failureNotice(codeOf(event.output)),
             }),
           },
         ],
-        onError: { target: 'idle', actions: assign({ notice: 'failed' }) },
       },
     },
     // The machine already has a nickname, which the failed call did not carry
@@ -319,14 +314,10 @@ export const reviewAuthorPickerMachine = setup({
             target: 'idle',
             actions: assign({
               moving: NO_REELS,
-              notice: ({ event }) => FAILURE_NOTICE[codeOf(event.output) ?? 'internal'],
+              notice: ({ event }) => failureNotice(codeOf(event.output)),
             }),
           },
         ],
-        onError: {
-          target: 'idle',
-          actions: assign({ moving: NO_REELS, notice: 'failed' }),
-        },
       },
     },
     done: { type: 'final' },

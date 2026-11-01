@@ -567,7 +567,7 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
       },
 
       claimModerationEvent: (event) => {
-        const seen = get().seenModerationEvents ?? [];
+        const seen = get().seenModerationEvents;
         // A live verdict can outrun a catch-up read before it, whose older verdict must not undo it
         if (seen.some((key) => moderationKeyCovers(key, event))) {
           return false;

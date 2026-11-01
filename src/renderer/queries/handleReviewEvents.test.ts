@@ -288,7 +288,7 @@ describe('handleReviewEvents moderation', () => {
 
   it('keeps a newer edit that failed to send when the earlier one is rejected', () => {
     const attempt = overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
-    overlay().fail('g1', 'held', attempt, { code: 'rate_limit', kind: 'retry' }, vi.fn());
+    overlay().fail('g1', 'held', { code: 'rate_limit', kind: 'retry' }, vi.fn());
 
     handle(editRejected);
 
@@ -298,8 +298,8 @@ describe('handleReviewEvents moderation', () => {
   });
 
   it('drops a write that failed to send when its entry is removed', () => {
-    const attempt = overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
-    overlay().fail('g1', 'held', attempt, { code: 'rate_limit', kind: 'retry' }, vi.fn());
+    overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
+    overlay().fail('g1', 'held', { code: 'rate_limit', kind: 'retry' }, vi.fn());
 
     handle(removed);
 
@@ -337,16 +337,10 @@ describe('handleReviewEvents against a write still checking', () => {
   });
 
   it('applies a removal once the write fails, which its answer cannot undo', () => {
-    const attempt = overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
+    overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
     handle(removed);
 
-    overlay().fail(
-      'g1',
-      'held',
-      attempt,
-      { code: 'unreachable', kind: 'retry' },
-      vi.fn()
-    );
+    overlay().fail('g1', 'held', { code: 'unreachable', kind: 'retry' }, vi.fn());
 
     expect(entry('held')).toBeUndefined();
     expect(overlay().writeOf('g1', 'held')).toBeUndefined();
@@ -372,13 +366,13 @@ describe('handleReviewEvents against a write still checking', () => {
   });
 
   it('refetches rather than strip the newer edit an older rejection waited on', () => {
-    const attempt = overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
+    overlay().start('g1', 'held', { kind: 'edit', text: 'newer' });
     handle(editRejected);
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     overlay().markShown('held', 'pending');
     setPending('newer');
-    overlay().drop('g1', 'held', attempt);
+    overlay().drop('g1', 'held');
 
     expect(entry('held')?.pendingText).toBe('newer');
     expect(overlay().rolledBack.get('g1')).toBeUndefined();
@@ -387,7 +381,7 @@ describe('handleReviewEvents against a write still checking', () => {
   });
 
   it('tells about a publish only when the answer left the entry waiting', () => {
-    const answered = overlay().start('g1', 'held', { kind: 'edit', text: 'changed' });
+    overlay().start('g1', 'held', { kind: 'edit', text: 'changed' });
     handle(publishedEdit);
     overlay().markShown('held', 'published');
     queryClient.setQueryData<ReviewPages>(
@@ -401,16 +395,16 @@ describe('handleReviewEvents against a write still checking', () => {
           text: 'changed',
         }))
     );
-    overlay().drop('g1', 'held', answered);
+    overlay().drop('g1', 'held');
 
     expect(store.addNotification).not.toHaveBeenCalled();
 
-    const waiting = overlay().start('g1', 'held', { kind: 'edit', text: 'later' });
+    overlay().start('g1', 'held', { kind: 'edit', text: 'later' });
     handle(reviewEvent({ message: 'later', at: '2026-10-22T10:07:00Z' }));
     overlay().markShown('held', 'pending');
     setPending('later');
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    overlay().drop('g1', 'held', waiting);
+    overlay().drop('g1', 'held');
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: REVIEWS_KEY });
     expect(store.addNotification).toHaveBeenCalledWith(

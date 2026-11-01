@@ -113,13 +113,7 @@ export async function showSystemNotificationIfHidden(
   try {
     const isVisible = await window.windowControls.isVisible();
     if (!isVisible) {
-      // Only the link's own fields cross IPC, not the whole notice
-      const target = link && {
-        gameId: link.gameId,
-        feedbackId: link.feedbackId,
-        entryId: link.entryId,
-      };
-      await window.windowControls.showSystemNotification({ title, body, target });
+      await window.windowControls.showSystemNotification({ title, body, target: link });
     }
   } catch (error) {
     console.error('[Notification] Failed to show system notification:', error);

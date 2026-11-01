@@ -10,10 +10,10 @@ type FeedbackFailureText =
   | 'feedbackModal.authorRequired'
   | 'feedbackModal.dailyLimit'
   | 'feedbackModal.rateLimit'
-  | 'feedbackModal.networkError'
-  | 'feedbackModal.sendFailed';
+  | 'feedbackModal.networkError';
 
-const FEEDBACK_FAILURES: Record<ReviewFailure['code'], FeedbackFailureText> = {
+// Every other code reads as the generic refusal
+const FEEDBACK_FAILURES: Partial<Record<ReviewFailure['code'], FeedbackFailureText>> = {
   // A ban covers private posts too
   banned: 'gameReviews.rejected.banned',
   captcha_failed: 'feedbackModal.captchaFailed',
@@ -23,22 +23,6 @@ const FEEDBACK_FAILURES: Record<ReviewFailure['code'], FeedbackFailureText> = {
   daily_limit: 'feedbackModal.dailyLimit',
   rate_limit: 'feedbackModal.rateLimit',
   unreachable: 'feedbackModal.networkError',
-  invalid_body: 'feedbackModal.sendFailed',
-  invalid_hold: 'feedbackModal.sendFailed',
-  invalid_candidate: 'feedbackModal.sendFailed',
-  edit_window_closed: 'feedbackModal.sendFailed',
-  not_owner: 'feedbackModal.sendFailed',
-  edit_limit_reached: 'feedbackModal.sendFailed',
-  thread_full: 'feedbackModal.sendFailed',
-  method_not_allowed: 'feedbackModal.sendFailed',
-  id_conflict: 'feedbackModal.sendFailed',
-  nickname_taken: 'feedbackModal.sendFailed',
-  author_exists: 'feedbackModal.sendFailed',
-  not_moderated: 'feedbackModal.sendFailed',
-  internal: 'feedbackModal.sendFailed',
-  nicknames_exhausted: 'feedbackModal.sendFailed',
-  bad_response: 'feedbackModal.sendFailed',
-  e2e_mode: 'feedbackModal.sendFailed',
 };
 
 export function feedbackFailureMessage(
@@ -52,5 +36,5 @@ export function feedbackFailureMessage(
   }
   const key = FEEDBACK_FAILURES[failure.code];
   // Only the generic refusal names what was sent, so only it reads per type
-  return key === 'feedbackModal.sendFailed' ? t(key, { context: type }) : t(key);
+  return key ? t(key) : t('feedbackModal.sendFailed', { context: type });
 }

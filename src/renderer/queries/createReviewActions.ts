@@ -182,7 +182,7 @@ export function createReviewActions(
     failure: ReviewFailure
   ) => {
     const resend = resendFor(entryId, attempt, plan, failure);
-    overlay().fail(gameId, entryId, attempt, failure, resend);
+    overlay().fail(gameId, entryId, failure, resend);
     // The first needs-author answer opens the picker by itself; a later one waits for the resend button
     if (failure.kind === 'needs-author' && !plan.askedForAuthor) {
       await resend();
@@ -212,7 +212,7 @@ export function createReviewActions(
         data &&
         handOver(data, entryId, plan.draft, answer.outcome, new Date().toISOString())
     );
-    overlay().drop(gameId, entryId, attempt);
+    overlay().drop(gameId, entryId);
   };
 
   const settle = async (entryId: string, attempt: number, plan: WritePlan) => {

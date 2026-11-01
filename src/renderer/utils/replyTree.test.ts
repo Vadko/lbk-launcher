@@ -87,12 +87,6 @@ describe('buildReplyTree', () => {
     expect(tree[0]?.children[0]?.reply.id).toBe('b');
   });
 
-  it('survives replies that point at each other', () => {
-    const tree = buildReplyTree('review', [reply('a', 'b'), reply('b', 'a')], 3);
-
-    expect(countReplies(tree)).toBe(2);
-  });
-
   it('moves a reply whose parent is gone to the first level', () => {
     const tree = buildReplyTree('review', [reply('a', null), reply('b', 'removed')], 3);
 

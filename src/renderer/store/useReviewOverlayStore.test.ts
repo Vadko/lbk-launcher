@@ -31,37 +31,13 @@ describe('useReviewOverlayStore', () => {
     });
   });
 
-  it('fails only the attempt the answer belongs to', () => {
-    const stale = store().start('g1', 'e', EDIT);
-    const current = store().start('g1', 'e', EDIT);
-
-    store().fail('g1', 'e', stale, FAILURE, resend);
-    expect(store().writeOf('g1', 'e')?.state).toBe('checking');
-
-    store().fail('g1', 'e', current, FAILURE, resend);
-    expect(store().writeOf('g1', 'e')).toMatchObject({
-      state: 'failed',
-      failure: FAILURE,
-      attempt: current,
-    });
-  });
-
   it('never brings back a dropped write on a late failure', () => {
-    const attempt = store().start('g1', 'e', EDIT);
+    store().start('g1', 'e', EDIT);
     store().drop('g1', 'e');
 
-    store().fail('g1', 'e', attempt, FAILURE, resend);
+    store().fail('g1', 'e', FAILURE, resend);
 
     expect(store().writeOf('g1', 'e')).toBeUndefined();
-  });
-
-  it('drops a write only for its own attempt when one is given', () => {
-    const stale = store().start('g1', 'e', EDIT);
-    store().start('g1', 'e', EDIT);
-
-    store().drop('g1', 'e', stale);
-
-    expect(store().writeOf('g1', 'e')).toBeDefined();
   });
 
   it('keeps the other games and removes a game left without writes', () => {
@@ -86,21 +62,21 @@ describe('useReviewOverlayStore', () => {
   });
 
   it('rolls an edit back by dropping it and marking its entry in one update', () => {
-    const attempt = store().start('g1', 'e', EDIT);
+    store().start('g1', 'e', EDIT);
     const updates: [boolean, boolean][] = [];
     const stop = useReviewOverlayStore.subscribe((state) =>
       updates.push([state.games.has('g1'), state.rolledBack.get('g1')?.has('e') === true])
     );
 
-    store().rollBack('g1', 'e', attempt);
+    store().rollBack('g1', 'e', true);
     stop();
 
     expect(updates).toEqual([[false, true]]);
   });
 
   it('clears the mark once a new write on the entry starts', () => {
-    store().rollBack('g1', 'e');
-    store().rollBack('g1', 'other');
+    store().rollBack('g1', 'e', false);
+    store().rollBack('g1', 'other', false);
 
     store().start('g1', 'e', EDIT);
 
@@ -108,7 +84,7 @@ describe('useReviewOverlayStore', () => {
   });
 
   it('keeps the marks as they are when a write starts on an unmarked entry', () => {
-    store().rollBack('g1', 'e');
+    store().rollBack('g1', 'e', false);
     const before = store().rolledBack;
 
     store().start('g1', 'x', EDIT);
@@ -116,11 +92,11 @@ describe('useReviewOverlayStore', () => {
     expect(store().rolledBack).toBe(before);
   });
 
-  it('marks a rollback without an attempt and keeps the write that failed to send', () => {
+  it('marks a rollback without dropping the write that failed to send', () => {
     const attempt = store().start('g1', 'e', EDIT);
-    store().fail('g1', 'e', attempt, FAILURE, resend);
+    store().fail('g1', 'e', FAILURE, resend);
 
-    store().rollBack('g1', 'e');
+    store().rollBack('g1', 'e', false);
 
     expect(store().writeOf('g1', 'e')).toMatchObject({ state: 'failed', attempt });
     expect(store().rolledBack.get('g1')?.has('e')).toBe(true);

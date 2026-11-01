@@ -1,7 +1,6 @@
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getGameImageUrl } from '@/renderer/utils/imageUrl';
 import { t } from '@/shared/i18n/i18n';
 
 interface ReviewImagesProps {
@@ -12,7 +11,6 @@ const NAV_BUTTON =
   'absolute top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors cursor-pointer';
 
 export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
-  const urls = images.map((path) => getGameImageUrl(path)).filter(Boolean) as string[];
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const isOpen = openIndex !== null;
 
@@ -20,9 +18,9 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
   const step = useCallback(
     (direction: -1 | 1) =>
       setOpenIndex((current) =>
-        current === null ? current : (current + direction + urls.length) % urls.length
+        current === null ? current : (current + direction + images.length) % images.length
       ),
-    [urls.length]
+    [images.length]
   );
 
   useEffect(() => {
@@ -42,14 +40,14 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, close, step]);
 
-  if (urls.length === 0) {
+  if (images.length === 0) {
     return null;
   }
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {urls.map((url, index) => (
+        {images.map((url, index) => (
           <button
             key={url}
             type="button"
@@ -83,7 +81,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
             >
               <XIcon size={22} className="text-white" />
             </button>
-            {urls.length > 1 && (
+            {images.length > 1 && (
               <>
                 <button
                   type="button"
@@ -108,7 +106,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
               </>
             )}
             <img
-              src={urls[openIndex]}
+              src={images[openIndex]}
               alt={t('gameReviews.screenshotAlt', { number: String(openIndex + 1) })}
               className="max-w-[90vw] max-h-[95vh] object-contain rounded-lg cursor-default"
               onClick={(e) => e.stopPropagation()}

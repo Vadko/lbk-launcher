@@ -22,10 +22,10 @@ export interface ReviewRefusal {
   reason: ReviewRefusalReason;
 }
 
-type Release = (gameId: string, entryId: string, attempt?: number) => void;
+type Release = (gameId: string, entryId: string, answered: boolean) => void;
 
-const rollBack: Release = (gameId, entryId, attempt) =>
-  useReviewOverlayStore.getState().rollBack(gameId, entryId, attempt);
+const rollBack: Release = (gameId, entryId, answered) =>
+  useReviewOverlayStore.getState().rollBack(gameId, entryId, answered);
 
 const EFFECTS: Record<ReviewRefusalEffect, { update: EntryUpdate; release: Release }> = {
   // A gone entry takes any write on it along
@@ -56,6 +56,6 @@ export function refuseReviewWrite(
   if (next !== data) {
     queryClient.setQueryData(queryKey, next);
   }
-  release(gameId, entryId, attempt);
+  release(gameId, entryId, attempt !== undefined);
   announce(reviewRefusalNotice(refused));
 }

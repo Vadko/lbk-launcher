@@ -27,30 +27,17 @@ export const NOTICE_TONE: Record<PickerNotice, 'info' | 'error'> = {
   failed: 'error',
 };
 
-// The spin, claim and author calls never answer most of these; they read as a plain failure
-export const FAILURE_NOTICE: Record<ReviewFailure['code'], PickerNotice> = {
-  invalid_body: 'failed',
+// The few codes the spin, claim and author calls answer with a notice of their own; the rest read as a plain failure
+const FAILURE_NOTICE: Partial<Record<ReviewFailure['code'], PickerNotice>> = {
   invalid_hold: 'holdsReleased',
   invalid_candidate: 'nameExpired',
   captcha_failed: 'captchaFailed',
-  edit_window_closed: 'failed',
-  not_owner: 'failed',
-  banned: 'failed',
-  edit_limit_reached: 'failed',
-  thread_full: 'failed',
-  not_found: 'failed',
-  method_not_allowed: 'failed',
-  id_conflict: 'failed',
   nickname_taken: 'nameTaken',
-  author_exists: 'failed',
-  not_moderated: 'failed',
-  author_required: 'failed',
   rate_limit: 'rateLimit',
-  daily_limit: 'failed',
-  internal: 'failed',
   captcha_unavailable: 'captchaUnavailable',
   nicknames_exhausted: 'exhausted',
   unreachable: 'offline',
-  bad_response: 'failed',
-  e2e_mode: 'failed',
 };
+
+export const failureNotice = (code: ReviewFailure['code'] | null): PickerNotice =>
+  (code && FAILURE_NOTICE[code]) ?? 'failed';

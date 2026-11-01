@@ -1,6 +1,7 @@
+import { A } from '@mobily/ts-belt';
 import { RotateCcw } from 'lucide';
 import { FileEditIcon, InfoIcon } from 'lucide-react';
-import React, { useCallback } from 'react';
+import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
@@ -8,7 +9,6 @@ import { useReviewFocus } from '../../hooks/useReviewFocus';
 import { useGameReviewActions } from '../../queries/useGameReviewActions';
 import { useGameReviews } from '../../queries/useGameReviews';
 import type { ReviewFocus } from '../../utils/readReviewLink';
-import { uniqueThreads } from '../../utils/uniqueThreads';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
@@ -36,21 +36,13 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
     gameId,
     focus
   );
-  const {
-    data,
-    isPending,
-    isError,
-    isFetching,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = query;
+  const { data, isError, isFetching, hasNextPage, isFetchingNextPage, refetch } = query;
   const actions = useGameReviewActions(gameId, gameName);
-  const handleResend = useCallback(
-    (entryId: string) => void actions.resend(entryId),
-    [actions]
+  // The focus thread rides on the first page and comes again once its own page loads
+  const reviews = A.uniqBy(
+    (data?.pages ?? []).flatMap((page) => page.items),
+    (thread) => thread.id
   );
-  const reviews = uniqueThreads(data?.pages ?? []);
   const total = data?.pages[0]?.total;
   const focused = useReviewFocus({
     focus,
@@ -76,12 +68,10 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
     }
   };
   const showLoadMoreError = loadMore.isBusy || (isLoadMoreFailed && !isFetchingNextPage);
-  const loadFromSentinel = useCallback(() => void loadNextPage(), [loadNextPage]);
-  // A failed page stays intersecting, so the sentinel waits for the manual retry instead of looping
   const attachSentinel = useInfiniteScrollSentinel({
-    hasNextPage: hasNextPage && !showLoadMoreError,
+    hasNextPage,
     isFetchingNextPage,
-    fetchNextPage: loadFromSentinel,
+    fetchNextPage: loadNextPage,
   });
 
   return (
@@ -135,7 +125,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
               {t('common.tryAgain')}
             </Button>
           </div>
-        ) : isPending || !data ? (
+        ) : !data ? (
           <div className="flex justify-center py-12">
             <Loader size="md" />
           </div>
@@ -149,7 +139,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
                   review={review}
                   onReply={actions.sendReply}
                   onEdit={actions.edit}
-                  onResend={handleResend}
+                  onResend={actions.resend}
                   onDiscard={actions.discard}
                   focusEntryId={review.id === focused.threadId ? focused.entryId : null}
                   onFocused={focused.onFocused}
@@ -158,6 +148,7 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
             ))}
           </div>
         )}
+        {/* A failed page stays intersecting, so the sentinel waits for the manual retry instead of looping */}
         {hasNextPage && !showLoadMoreError && (
           <div ref={attachSentinel} className="h-1" aria-hidden />
         )}

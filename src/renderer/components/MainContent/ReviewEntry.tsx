@@ -103,7 +103,7 @@ export const ReviewEntry: React.FC<ReviewEntryProps> = ({
             submitLabel={t('gameReviews.save')}
             captchaAction="edit"
             isPublic={isPublicThread}
-            expiresAt={deadline}
+            isExpired={!canEdit}
             onSubmit={(text) => onEdit(text, () => setIsEditing(false))}
             onClose={() => setIsEditing(false)}
           />

@@ -30,7 +30,6 @@ export function buildReplyTree(
   const roots: ReplyNode[] = [];
   const byId = new Map(replies.map((reply) => [reply.id, reply]));
   const placed = new Map<string, Placed>();
-  const visiting = new Set<string>();
 
   // Parents are placed first by id, so a skewed clock cannot detach an answer from them
   const place = (reply: ReviewThreadReplyView): Placed => {
@@ -38,11 +37,9 @@ export function buildReplyTree(
     if (existing) {
       return existing;
     }
-    visiting.add(reply.id);
     // A reply whose parent was removed or is not loaded falls back to the first level
     const parentReply = reply.parentId ? byId.get(reply.parentId) : undefined;
-    const parent =
-      parentReply && !visiting.has(parentReply.id) ? place(parentReply) : undefined;
+    const parent = parentReply ? place(parentReply) : undefined;
     let entry: Placed;
     if (!parent) {
       entry = { node: node(reply, null, reviewId, 1), siblings: roots };
@@ -59,7 +56,6 @@ export function buildReplyTree(
     }
     entry.siblings.push(entry.node);
     placed.set(reply.id, entry);
-    visiting.delete(reply.id);
     return entry;
   };
 

@@ -77,9 +77,6 @@ const pitched = (at: number, gain: number, rate: number): Hit => ({
   rate,
 });
 
-const rateAt = (rates: readonly number[], index: number): number =>
-  rates[Math.min(Math.max(index, 0), rates.length - 1)];
-
 function hit(ctx: AudioContext, clip: Clip, { at, gain, rate = 1 }: Hit): void {
   const buffer = buffers.get(clip);
   if (!buffer) {
@@ -138,11 +135,7 @@ export function playRatchetRun(teeth: readonly number[], withinS: number): void 
     const run = ratchetRun(now, nextToothAt, teeth.length, withinS);
     nextToothAt = run.free;
     teeth.forEach((tooth, index) =>
-      hit(
-        ctx,
-        'ratchet',
-        pitched(run.at[index], RATCHET_GAIN, rateAt(RATCHET_RATE, tooth - 1))
-      )
+      hit(ctx, 'ratchet', pitched(run.at[index], RATCHET_GAIN, RATCHET_RATE[tooth - 1]))
     );
   });
 }
@@ -162,7 +155,7 @@ export const playLeverPull = () =>
 
 export const playReelStop = (reelIndex: number) =>
   play('reel stop', (ctx, at) =>
-    hit(ctx, 'reelStop', pitched(at, 0.5, rateAt(REEL_STOP_RATE, reelIndex)))
+    hit(ctx, 'reelStop', pitched(at, 0.5, REEL_STOP_RATE[reelIndex]))
   );
 
 export const playHoldClick = (on: boolean) =>
@@ -198,21 +191,13 @@ export function startReelWhirr(): ReelWhirr {
     source.connect(level).connect(ctx.destination);
     source.start(at);
 
-    let stopped = false;
     return {
       setLevel: (share) => {
-        if (stopped) {
-          return;
-        }
         const now = ctx.currentTime;
         level.gain.cancelAndHoldAtTime(now);
         level.gain.setTargetAtTime(SPIN_GAIN * share, now, 0.05);
       },
       stop: () => {
-        if (stopped) {
-          return;
-        }
-        stopped = true;
         const now = ctx.currentTime;
         level.gain.cancelAndHoldAtTime(now);
         level.gain.setTargetAtTime(SILENCE, now, 0.04);

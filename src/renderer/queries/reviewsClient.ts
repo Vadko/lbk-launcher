@@ -8,25 +8,12 @@ import type {
   ReviewAuthorState,
   ReviewEditInput,
   ReviewEditResult,
-  ReviewFailure,
   ReviewReplyInput,
   ReviewResult,
   ReviewWriteResult,
   SubmitFeedbackInput,
 } from '@/shared/game-reviews-api-types';
 import type { GameReviewsPage, ReviewAuthorIdentity } from '@/shared/game-reviews-types';
-
-// A rejected IPC call means the bridge itself broke, which a resend may outlive
-const BRIDGE_FAILURE: ReviewFailure = { code: 'unreachable', kind: 'retry' };
-
-async function settled<T>(request: Promise<ReviewResult<T>>): Promise<ReviewResult<T>> {
-  try {
-    return await request;
-  } catch (error) {
-    console.error('[GameReviews] IPC call failed:', error);
-    return { ok: false, failure: BRIDGE_FAILURE };
-  }
-}
 
 // React Query needs a throw to keep the cached pages and show the retry
 export async function fetchReviewsPage(
@@ -44,19 +31,19 @@ export async function fetchReviewsPage(
 export function sendReviewReply(
   input: ReviewReplyInput
 ): Promise<ReviewResult<ReviewWriteResult>> {
-  return settled(window.electronAPI.replyToReview(input));
+  return window.electronAPI.replyToReview(input);
 }
 
 export function sendReviewEdit(
   input: ReviewEditInput
 ): Promise<ReviewResult<ReviewEditResult>> {
-  return settled(window.electronAPI.editReviewEntry(input));
+  return window.electronAPI.editReviewEntry(input);
 }
 
 export function sendFeedback(
   input: SubmitFeedbackInput
 ): Promise<ReviewResult<ReviewWriteResult>> {
-  return settled(window.electronAPI.submitFeedback(input));
+  return window.electronAPI.submitFeedback(input);
 }
 
 export function prefetchReviewCaptcha(action: TurnstileAction): void {
@@ -66,21 +53,21 @@ export function prefetchReviewCaptcha(action: TurnstileAction): void {
 export function requestFeedbackUploadUrls(
   input: FeedbackUploadUrlsInput
 ): Promise<ReviewResult<FeedbackUploadUrl[]>> {
-  return settled(window.electronAPI.getFeedbackUploadUrls(input));
+  return window.electronAPI.getFeedbackUploadUrls(input);
 }
 
 export function fetchReviewAuthor(): Promise<ReviewResult<ReviewAuthorState>> {
-  return settled(window.electronAPI.getReviewAuthor());
+  return window.electronAPI.getReviewAuthor();
 }
 
 export function spinNickname(
   input: NicknameSpinInput
 ): Promise<ReviewResult<NicknameSpin>> {
-  return settled(window.electronAPI.spinReviewNickname(input));
+  return window.electronAPI.spinReviewNickname(input);
 }
 
 export function claimNickname(
   input: NicknameClaimInput
 ): Promise<ReviewResult<ReviewAuthorIdentity>> {
-  return settled(window.electronAPI.claimReviewNickname(input));
+  return window.electronAPI.claimReviewNickname(input);
 }

@@ -197,12 +197,9 @@ export const GamePage: React.FC = () => {
   const selectedGameId = selectedGame?.id;
   const selectedGameSlug = selectedGame?.slug;
 
-  const { isHidden: isRecommendedHidden } = useRecommendedGames(
-    selectedGameId,
-    RECOMMENDED_LIMIT
-  );
+  const recommended = useRecommendedGames(selectedGameId, RECOMMENDED_LIMIT);
   const { tab, setTab, focus, clearFocus } = useGameTabFromUrl(selectedGameId);
-  const gameTabs: GameTab[] = isRecommendedHidden
+  const gameTabs: GameTab[] = recommended.isHidden
     ? ['info', 'reviews']
     : ['info', 'recommended', 'reviews'];
   const activeTab = gameTabs.includes(tab) ? tab : 'info';
@@ -801,7 +798,8 @@ export const GamePage: React.FC = () => {
             <RecommendedGamesSection
               gameId={selectedGame.id}
               gameName={selectedGame.name}
-              showLimit={RECOMMENDED_LIMIT}
+              games={recommended.games}
+              isLoading={recommended.isLoading}
             />
           ) : (
             <>

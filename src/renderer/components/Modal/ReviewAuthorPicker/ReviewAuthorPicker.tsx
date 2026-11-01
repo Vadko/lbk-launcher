@@ -1,7 +1,7 @@
 import { useMachine } from '@xstate/react';
 import { Check } from 'lucide';
 import { InfoIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { fromPromise } from 'xstate';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../../hooks/useActionPhase';
@@ -19,11 +19,6 @@ export const ReviewAuthorPicker: React.FC = () => {
   const pickAuthor = useReviewAuthorStore((s) => s.pickAuthor);
   const closePicker = useReviewAuthorStore((s) => s.closePicker);
   const animate = useSettingsStore((s) => s.animationsEnabled);
-  const [input] = useState(() => ({
-    spin: useReviewAuthorStore.getState().openingSpin(),
-    animate,
-    spinsLeft: useReviewAuthorStore.getState().spinsLeft,
-  }));
   const claimPhase = useActionPhase();
   const [snapshot, send] = useMachine(
     reviewAuthorPickerMachine.provide({
@@ -36,7 +31,14 @@ export const ReviewAuthorPicker: React.FC = () => {
         ),
       },
     }),
-    { input }
+    // useMachine reads its input once, when the picker opens
+    {
+      input: {
+        spin: useReviewAuthorStore.getState().openingSpin(),
+        animate,
+        spinsLeft: useReviewAuthorStore.getState().spinsLeft,
+      },
+    }
   );
   const { spin, heldSpin, holds, moving, pulledAt, notice, spinsLeft, won, refused } =
     snapshot.context;
