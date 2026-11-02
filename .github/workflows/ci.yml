@@ -49,6 +49,9 @@ jobs:
       - name: TypeScript check
         run: pnpm type-check
 
+      - name: Build spellfix extension
+        run: node scripts/build-spellfix.js
+
       - name: Unit tests
         run: pnpm test:unit
 
