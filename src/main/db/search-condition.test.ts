@@ -119,6 +119,8 @@ describe.runIf(existsSync(spellfixPath))('buildSearchCondition typo fallback', (
     ['one word too many', 'resident evil 4 remake', ['Resident Evil', 'Resident Evil 4']],
     ['one word too many, by keywords', 'witcher 3 wild hnt', ['Відьмак 3: Дикий гін']],
     ['a near title', 'monster hunter wilds', ['Monster Hunter: World']],
+    ['the Ukrainian keyboard layout', 'удвут кштп', ['Elden Ring']],
+    ['the English keyboard layout', 'Dslmvfr', ['Відьмак 3: Дикий гін']],
     ['a far word', 'stalker', []],
     ['a missing game sharing a word', 'The Outer Worlds', []],
     ['a missing game with a typo', 'stardw valley', []],

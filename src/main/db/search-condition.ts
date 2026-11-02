@@ -1,6 +1,10 @@
 import { A, pipe } from '@mobily/ts-belt';
 import type Database from 'better-sqlite3';
-import { buildFtsQueries, stripApostrophes } from '../../shared/search-utils';
+import {
+  buildFtsQueries,
+  stripApostrophes,
+  switchLayout,
+} from '../../shared/search-utils';
 import { VISIBLE_GAMES_SQL } from './db-queries';
 
 export interface SearchCondition {
@@ -50,11 +54,13 @@ export function buildSearchCondition(
     return { sql: 'name_search LIKE ?', params: [`${query.toLowerCase()}%`] };
   }
 
-  const ftsQueries = buildFtsQueries(query);
-  const conditions = ftsQueries.length
-    ? ftsQueries.map(ftsMatch)
-    : [{ sql: 'name LIKE ?', params: [`%${query}%`] }];
-  const match = conditions.find((condition) => hasVisibleMatch(db, condition));
+  const conditions = queryConditions(query);
+  const switched = switchLayout(query);
+  // The other keyboard layout ("цфк" for war) only once nothing is found as typed, and never transliterated again ("tym" → "ень" → "en")
+  const fallbacks = switched ? queryConditions(switched, { transliterate: false }) : [];
+  const match = [...conditions, ...fallbacks].find((condition) =>
+    hasVisibleMatch(db, condition)
+  );
   if (match) {
     return match;
   }
@@ -62,6 +68,16 @@ export function buildSearchCondition(
   // Typo fallback is decided on the search alone, so the other filters still apply to its matches
   const correctedFts = typoFallback ? correctFtsQuery(db, query) : null;
   return correctedFts ? ftsMatch(correctedFts) : conditions[0];
+}
+
+function queryConditions(
+  query: string,
+  options?: { transliterate: boolean }
+): SearchCondition[] {
+  const ftsQueries = buildFtsQueries(query, options);
+  return ftsQueries.length
+    ? ftsQueries.map(ftsMatch)
+    : [{ sql: 'name LIKE ?', params: [`%${query}%`] }];
 }
 
 function prefixTerm(word: string): string {

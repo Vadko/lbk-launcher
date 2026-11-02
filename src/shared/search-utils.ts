@@ -1,3 +1,5 @@
+import ru from 'convert-layout/ru';
+import uk from 'convert-layout/uk';
 import CyrillicToTranslit from 'cyrillic-to-translit-js';
 
 const translitUk = CyrillicToTranslit({ preset: 'uk' });
@@ -21,6 +23,14 @@ function getTransliteration(input: string): string | null {
   }
 
   return null;
+}
+
+// The query as typed with the other keyboard layout on: "цфк" is "war", "Dslmvfr" is "Відьмак"
+export function switchLayout(input: string): string | null {
+  const switched = /\p{Script=Cyrillic}/u.test(input)
+    ? ru.toEn(uk.toEn(input))
+    : uk.fromEn(input);
+  return switched === input ? null : switched;
 }
 
 export function stripApostrophes(value: string): string {
@@ -53,7 +63,11 @@ function escapeFtsToken(token: string): string {
   return token.replace(/"/g, '""');
 }
 
-function buildFtsQuery(input: string, keepNumbers: boolean): string {
+function buildFtsQuery(
+  input: string,
+  keepNumbers: boolean,
+  transliterate: boolean
+): string {
   if (!input) {
     return '';
   }
@@ -64,7 +78,7 @@ function buildFtsQuery(input: string, keepNumbers: boolean): string {
   // The index is apostrophe-free, so the primary form is too. But we keep the
   // raw variant in OR: otherwise "heaven's" would stop matching "Heavenly Sword",
   // because the "s" would stick to the word and break the prefix match.
-  const translit = getTransliteration(input);
+  const translit = transliterate ? getTransliteration(input) : null;
   const sources = [stripApostrophes(input), input];
   if (translit) {
     sources.push(stripApostrophes(translit), translit);
@@ -87,8 +101,11 @@ function buildFtsQuery(input: string, keepNumbers: boolean): string {
   return exprs.join(' OR ');
 }
 
-export function buildFtsQueries(input: string): string[] {
-  const queries = [buildFtsQuery(input, true), buildFtsQuery(input, false)];
+export function buildFtsQueries(input: string, { transliterate = true } = {}): string[] {
+  const queries = [
+    buildFtsQuery(input, true, transliterate),
+    buildFtsQuery(input, false, transliterate),
+  ];
   return [...new Set(queries)].filter(Boolean);
 }
 
