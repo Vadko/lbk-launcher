@@ -370,7 +370,6 @@ export const en = {
     subscribers: 'Subscribers',
     downloads: 'Downloads',
     downloadsUnder20: 'under 20',
-    openInSteam: 'Open in Steam',
     created: 'Created',
     updated: 'Updated',
   },
@@ -1369,6 +1368,9 @@ export const en = {
     message:
       'Steam needs to restart for the changes to take effect. You can do this later; your settings are already saved.',
     restartAction: 'Restart Steam',
+  },
+  storeSale: {
+    discount: '{{percent}}% off on {{store}}',
   },
   teamSubscribe: {
     subscribedTitle: 'You follow updates from “{{team}}”',

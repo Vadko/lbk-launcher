@@ -396,7 +396,6 @@ export const uk = {
     subscribers: 'Підписників',
     downloads: 'Завантажень',
     downloadsUnder20: 'до 20',
-    openInSteam: 'Відкрити в Steam',
     created: 'Створено',
     updated: 'Оновлено',
   },
@@ -1728,6 +1727,9 @@ export const uk = {
     message:
       'Щоб зміни набули чинності, потрібно перезапустити Steam. Можна зробити це пізніше — налаштування вже збережено.',
     restartAction: 'Перезапустити Steam',
+  },
+  storeSale: {
+    discount: 'Знижка {{percent}}% у {{store}}',
   },
   teamSubscribe: {
     subscribedTitle: 'Ви підписані на оновлення від «{{team}}»',

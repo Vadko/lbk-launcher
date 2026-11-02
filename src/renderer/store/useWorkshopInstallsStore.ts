@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { openWorkshopPage } from '../utils/openWithFallback';
+import { openWorkshopPage } from '../utils/workshopPage';
 import { electronStorage } from './electronStorage';
 
 const POLL_INTERVAL_MS = 3000;

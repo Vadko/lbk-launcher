@@ -376,7 +376,6 @@ export const be = {
     subscribers: 'Падпісчыкаў',
     downloads: 'Спампоўванняў',
     downloadsUnder20: 'да 20',
-    openInSteam: 'Адкрыць у Steam',
     created: 'Створана',
     updated: 'Абноўлена',
   },
@@ -1672,6 +1671,9 @@ export const be = {
     message:
       'Каб змены набылі моц, трэба перазапусціць Steam. Гэта можна зрабіць пазней — налады ўжо захаваныя.',
     restartAction: 'Перазапусціць Steam',
+  },
+  storeSale: {
+    discount: 'Зніжка {{percent}}% у {{store}}',
   },
   teamSubscribe: {
     subscribedTitle: 'Вы падпісаныя на абнаўленні ад «{{team}}»',

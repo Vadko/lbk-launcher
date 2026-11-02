@@ -16,6 +16,7 @@ import {
 import { getRunningSteamGameId } from '@/main/steam-process/running-game';
 import { execFileOnHost, isFlatpak, spawnOnHost, system32 } from '@/main/utils/host-exec';
 import { findMacMillenniumWrapper } from '@/main/utils/millennium';
+import { openExternalUrl } from '@/main/utils/open-external';
 import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type {
@@ -363,6 +364,14 @@ export async function launchSteamGame(appId: string | number): Promise<LaunchRes
     success,
     error: success ? undefined : 'Failed to launch Steam game',
   };
+}
+
+// Without a Steam client steam:// goes nowhere, and on Linux the browser takes it with success: true
+export async function openSteamStorePage(appId: number): Promise<void> {
+  if (getSteamPath() && (await osControl().launch(`steam://store/${appId}`))) {
+    return;
+  }
+  await openExternalUrl(`https://store.steampowered.com/app/${appId}/`);
 }
 
 export async function restartSteamProcess(

@@ -1,5 +1,6 @@
 import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import { DiscountPill } from '@/renderer/components/Elements/DiscountPill';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { t } from '@/shared/i18n/i18n';
@@ -14,7 +15,6 @@ import { StatusBadge } from '../Elements/StatusBadge';
 import { PopularIcon } from '../Icons/PopularIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
 import { Button } from '../ui/Button';
-import { DiscountBadges } from '../ui/DiscountBadges';
 import { Loader } from '../ui/Loader';
 
 interface GameListItemProps {
@@ -160,9 +160,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Indicators */}
             {!isAdultBlurred && (
               <>
-                <div className="absolute top-5 left-5">
-                  <DiscountBadges game={game} type="badge" />
-                </div>
+                <DiscountPill steamAppId={game.steam_app_id} />
                 <StatusIcons
                   hasUpdate={hasUpdate}
                   isGameDetected={isGameDetected}

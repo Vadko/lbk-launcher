@@ -369,6 +369,7 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
+  openSteamStorePage: (appId: number) => Promise<void>;
   // Steam integration
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
   /**
