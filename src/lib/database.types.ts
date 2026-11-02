@@ -3141,6 +3141,7 @@ export type Database = {
           game_update_watch: boolean
           id: string
           notification_prefs: Json
+          reuse_submit_fields: boolean
           role: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids: number[] | null
           telegram_link_token: string | null
@@ -3165,6 +3166,7 @@ export type Database = {
           game_update_watch?: boolean
           id?: string
           notification_prefs?: Json
+          reuse_submit_fields?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
@@ -3189,6 +3191,7 @@ export type Database = {
           game_update_watch?: boolean
           id?: string
           notification_prefs?: Json
+          reuse_submit_fields?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           telegram_chat_ids?: number[] | null
           telegram_link_token?: string | null
