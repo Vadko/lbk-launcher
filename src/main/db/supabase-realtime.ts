@@ -14,13 +14,13 @@ export interface BroadcastMessage<T = unknown> {
 export interface BroadcastSubscription {
   topic: string;
   handlers: Array<{ event: string; handler: (message: BroadcastMessage) => void }>;
-  onResubscribe?: () => void;
+  // Every join, the first included: whatever was broadcast before it reached nobody
+  onSubscribed?: () => void;
 }
 
 export class SupabaseRealtimeManager {
   private supabase: SupabaseClient | null = null;
   private channels: RealtimeChannel[] = [];
-  private joinedTopics = new Set<string>();
 
   subscribe(subscriptions: Array<BroadcastSubscription | null | undefined>): void {
     if (this.channels.length > 0) {
@@ -45,11 +45,7 @@ export class SupabaseRealtimeManager {
           return;
         }
         console.log(`[SupabaseRealtime] Subscribed to ${sub.topic}`);
-        if (this.joinedTopics.has(sub.topic)) {
-          sub.onResubscribe?.();
-        } else {
-          this.joinedTopics.add(sub.topic);
-        }
+        sub.onSubscribed?.();
       });
       this.channels.push(channel);
     }
@@ -60,7 +56,6 @@ export class SupabaseRealtimeManager {
       channel.unsubscribe();
     }
     this.channels = [];
-    this.joinedTopics.clear();
     if (this.supabase) {
       this.supabase.realtime.disconnect();
       this.supabase.removeAllChannels();

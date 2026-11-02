@@ -1,3 +1,4 @@
+import type { GameLinkTarget } from '@/shared/game-link-target';
 import { t } from '@/shared/i18n/i18n';
 import { playNotificationSound } from '../../utils/notificationSounds';
 import { useSettingsStore } from '../useSettingsStore';
@@ -51,6 +52,10 @@ export function getNotificationMessage(
       return notification.message
         ? `${notification.gameName}: ${notification.message}`
         : t('notificationMessage.feedbackReply');
+    case 'review-rejected':
+      return notification.message ?? t('gameReviews.rejected.generic');
+    case 'review-published':
+      return t('notificationMessage.reviewPublished');
     default:
       return t('notificationMessage.fallback');
   }
@@ -83,6 +88,8 @@ export function createToast(
     type: notification.type,
     gameId: notification.gameId,
     gameName: notification.gameName,
+    feedbackId: notification.feedbackId,
+    entryId: notification.entryId,
     message,
     timestamp: Date.now(),
   };
@@ -94,7 +101,7 @@ export function createToast(
 export async function showSystemNotificationIfHidden(
   title: string,
   body: string,
-  gameId?: string
+  link?: GameLinkTarget
 ): Promise<void> {
   if (
     !window.windowControls?.isVisible ||
@@ -106,7 +113,7 @@ export async function showSystemNotificationIfHidden(
   try {
     const isVisible = await window.windowControls.isVisible();
     if (!isVisible) {
-      await window.windowControls.showSystemNotification({ title, body, gameId });
+      await window.windowControls.showSystemNotification({ title, body, target: link });
     }
   } catch (error) {
     console.error('[Notification] Failed to show system notification:', error);

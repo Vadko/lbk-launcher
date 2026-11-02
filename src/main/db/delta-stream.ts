@@ -78,7 +78,7 @@ export function createDeltaStream<T, S extends z.ZodType>(
           },
         },
       ],
-      onResubscribe: () => void catchUp(),
+      onSubscribed: () => void catchUp(),
     };
   };
 

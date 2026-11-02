@@ -21,22 +21,19 @@ interface StoreStorageAPI {
   removeItem: (key: string) => void;
 }
 
+// showSystemNotification and onNavigateToGame merge in from src/shared/game-link-target.ts
+interface WindowControlsAPI {
+  minimize: () => void;
+  maximize: () => void;
+  close: () => void;
+  onMaximizedChange: (callback: (isMaximized: boolean) => void) => void;
+  isVisible: () => Promise<boolean>;
+}
+
 interface Window {
   liquidGlassAPI: LiquidGlassAPI;
   loggerAPI: LoggerAPI;
   api: API;
   storeStorage: StoreStorageAPI;
-  windowControls: {
-    minimize: () => void;
-    maximize: () => void;
-    close: () => void;
-    onMaximizedChange: (callback: (isMaximized: boolean) => void) => void;
-    isVisible: () => Promise<boolean>;
-    showSystemNotification: (options: {
-      title: string;
-      body: string;
-      gameId?: string;
-    }) => Promise<boolean>;
-    onNavigateToGame: (callback: (gameId: string) => void) => () => void;
-  };
+  windowControls: WindowControlsAPI;
 }

@@ -2,13 +2,14 @@ import { useCallback, useEffect, useRef } from 'react';
 
 interface Options {
   hasNextPage: boolean;
-  isFetchingNextPage: boolean;
+  // Holds the sentinel, which looks again once this turns false
+  isBusy: boolean;
   fetchNextPage: () => void;
 }
 
 export function useInfiniteScrollSentinel({
   hasNextPage,
-  isFetchingNextPage,
+  isBusy,
   fetchNextPage,
 }: Options) {
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -20,13 +21,13 @@ export function useInfiniteScrollSentinel({
         return;
       }
       observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entries[0]?.isIntersecting && hasNextPage && !isBusy) {
           fetchNextPage();
         }
       });
       observerRef.current.observe(node);
     },
-    [fetchNextPage, hasNextPage, isFetchingNextPage]
+    [fetchNextPage, hasNextPage, isBusy]
   );
 
   useEffect(() => () => observerRef.current?.disconnect(), []);

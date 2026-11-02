@@ -1,8 +1,8 @@
 // A row committed late carries a timestamp older than rows already seen, so each catch-up re-reads the last minute
 const OVERLAP_MS = 60_000;
 
-export function rewind(cursor: string): string {
-  return new Date(Date.parse(cursor) - OVERLAP_MS).toISOString();
+export function rewind(cursor: string, overlapMs = OVERLAP_MS): string {
+  return new Date(Date.parse(cursor) - overlapMs).toISOString();
 }
 
 export function latest(

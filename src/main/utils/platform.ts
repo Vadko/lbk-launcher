@@ -63,7 +63,7 @@ export function forCurrentOS<T>(
 }
 
 // Inside our Flatpak /etc/os-release describes the runtime, the host's copy is under /run/host.
-function readOsRelease(): NodeJS.Dict<string> {
+export function readOsRelease(): NodeJS.Dict<string> {
   const candidates = isFlatpak()
     ? ['/run/host/os-release', '/run/host/etc/os-release']
     : ['/etc/os-release', '/usr/lib/os-release'];
