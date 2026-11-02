@@ -11,14 +11,16 @@ interface Migration {
 }
 
 /** Add a column if it doesn't already exist (idempotent) */
-function addColumnIfMissing(db: Database.Database, column: string, ddl: string): void {
+function addColumnIfMissing(db: Database.Database, column: string, ddl: string): boolean {
   const has = db
     .prepare("SELECT COUNT(*) as count FROM pragma_table_info('games') WHERE name = ?")
     .get(column) as { count: number };
   if (has.count === 0) {
     console.log(`[Migrations] Adding column: ${column}`);
     db.exec(ddl);
+    return true;
   }
+  return false;
 }
 
 /**
@@ -1091,6 +1093,22 @@ const migrations: Migration[] = [
           server_liked INTEGER NOT NULL DEFAULT 0
         );
       `);
+    },
+  },
+  {
+    name: 'add_review_counter_columns',
+    up: (db) => {
+      const added = ['reviews', 'error_reviews'].filter((column) =>
+        addColumnIfMissing(
+          db,
+          column,
+          `ALTER TABLE games ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 0;`
+        )
+      );
+      // A counter is skipped on upsert conflict, so only a full counters catch-up fills it
+      if (added.length > 0) {
+        db.exec(`DELETE FROM sync_metadata WHERE key = 'game_counters_synced_at'`);
+      }
     },
   },
 ];

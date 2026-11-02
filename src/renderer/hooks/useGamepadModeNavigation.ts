@@ -16,6 +16,7 @@ import {
 import { getTopDialog } from '../utils/getTopDialog';
 import { isTextInput } from '../utils/isTextInput';
 import { isValidGamepad } from '../utils/isValidGamepad';
+import { scrollBehavior } from '../utils/scrollBehavior';
 import { selectEntryAction } from '../utils/selectEntryAction';
 import { selectGamepadTarget } from '../utils/selectGamepadTarget';
 import { type Direction, findNextInDirection } from '../utils/spatialNavigation';
@@ -85,9 +86,6 @@ const intersects = (el: Element, container: Element) => {
   const c = container.getBoundingClientRect();
   return r.bottom > c.top + 1 && r.top < c.bottom - 1;
 };
-
-const scrollBehavior = (): ScrollBehavior =>
-  useSettingsStore.getState().animationsEnabled ? 'smooth' : 'auto';
 
 const getMainContent = (): HTMLElement | null => {
   const roots = Array.from(
