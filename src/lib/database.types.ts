@@ -1538,6 +1538,7 @@ export type Database = {
           epic_archive_path: string | null
           epic_archive_size: string | null
           epic_store_url: string | null
+          error_reviews: number
           fonts_progress: number | null
           fundraising_current: number | null
           fundraising_goal: number | null
@@ -1566,6 +1567,7 @@ export type Database = {
           name_search: string | null
           platforms: string[]
           project_id: string | null
+          reviews: number
           screenshots: string[] | null
           search_keywords: string | null
           slug: string
@@ -1648,6 +1650,7 @@ export type Database = {
           epic_archive_path?: string | null
           epic_archive_size?: string | null
           epic_store_url?: string | null
+          error_reviews?: number
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -1676,6 +1679,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          reviews?: number
           screenshots?: string[] | null
           search_keywords?: string | null
           slug: string
@@ -1758,6 +1762,7 @@ export type Database = {
           epic_archive_path?: string | null
           epic_archive_size?: string | null
           epic_store_url?: string | null
+          error_reviews?: number
           fonts_progress?: number | null
           fundraising_current?: number | null
           fundraising_goal?: number | null
@@ -1786,6 +1791,7 @@ export type Database = {
           name_search?: string | null
           platforms?: string[]
           project_id?: string | null
+          reviews?: number
           screenshots?: string[] | null
           search_keywords?: string | null
           slug?: string
@@ -3437,8 +3443,10 @@ export type Database = {
         Args: { p_since?: string }
         Returns: {
           downloads: number
+          error_reviews: number
           game_id: string
           likes: number
+          reviews: number
           subscriptions: number
           touched_at: string
         }[]
@@ -3450,6 +3458,7 @@ export type Database = {
           p_game_id: string
           p_limit?: number
           p_machine_id?: string
+          p_type?: Database["public"]["Enums"]["feedback_type"]
         }
         Returns: Json
       }
@@ -3653,6 +3662,10 @@ export type Database = {
       }
       prune_scan_slots: {
         Args: { p_slots: string[]; p_version_id: string }
+        Returns: undefined
+      }
+      recount_game_reviews: {
+        Args: { p_game_ids: string[] }
         Returns: undefined
       }
       remove_game_subscription: {
