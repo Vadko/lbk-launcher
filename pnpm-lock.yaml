@@ -178,6 +178,9 @@ importers:
       '@lbk/i18n':
         specifier: workspace:*
         version: link:packages/lbk-i18n
+      '@lbklauncher/dicebear-vyshyvanka':
+        specifier: 2.0.0
+        version: 2.0.0
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -1035,6 +1038,10 @@ packages:
   '@decky/ui@4.13.0':
     resolution: {integrity: sha512-ZF54zwaozZXYUNXcTI6pRrXbpxE/pzRpr5AckvVNuJcoaO8AREl1AEEaWre7IEfNMl/Zb72iipHPg0i11cLaxA==}
 
+  '@dicebear/core@10.7.0':
+    resolution: {integrity: sha512-JUOzKOd8RUByJJo8ZL+C7YE/pvEsWewfpbWUmR8OIQZWv/PvUQHnohdevySC3icyyxe6EIU/8B/rQgA42us1QA==}
+    engines: {node: '>=22.0.0'}
+
   '@electron-internal/extract-zip@1.0.8':
     resolution: {integrity: sha512-8iajeLFbzNwM0m3AsQZSZgYREWglAImyGvvFSWU34FgMW8sHlzdwj9QKvv9dgN7jMP591EFUF/sLOC3Jl9YIjQ==}
     engines: {node: '>=22.12.0'}
@@ -1663,6 +1670,10 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@lbklauncher/dicebear-vyshyvanka@2.0.0':
+    resolution: {integrity: sha512-s15XwCMppZOpta2wU+c8/88WUtfjbmk6dPpKC+zIkK+RtrXtLMaBFG4PG/lQ/wheNteUY7F06TM6hdG73r9nFw==}
+    engines: {node: '>=22.0.0'}
 
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
@@ -6999,6 +7010,8 @@ snapshots:
 
   '@decky/ui@4.13.0': {}
 
+  '@dicebear/core@10.7.0': {}
+
   '@electron-internal/extract-zip@1.0.8': {}
 
   '@electron/asar@3.4.1':
@@ -7445,6 +7458,10 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@lbklauncher/dicebear-vyshyvanka@2.0.0':
+    dependencies:
+      '@dicebear/core': 10.7.0
 
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:
