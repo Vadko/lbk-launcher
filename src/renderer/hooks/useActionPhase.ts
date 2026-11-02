@@ -35,6 +35,7 @@ export function useActionPhase({
   const aliveRef = useRef(true);
   const startedAtRef = useRef(0);
   const generationRef = useRef(0);
+  const awaitedRef = useRef(0);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -45,6 +46,11 @@ export function useActionPhase({
 
   useEffect(() => {
     aliveRef.current = true;
+    // A page hidden in <Activity> loses its timers with its effects, so a reveal ends a phase no awaited run will end
+    if (awaitedRef.current === 0) {
+      clearTimer();
+      setPhase('idle');
+    }
     return () => {
       aliveRef.current = false;
       clearTimer();
@@ -80,6 +86,7 @@ export function useActionPhase({
     async <T>(action: () => Promise<T>, options?: RunOptions<T>): Promise<T> => {
       // Generation token: a stale run must not paint its result over a fresh one
       const generation = ++generationRef.current;
+      awaitedRef.current = generation;
       clearTimer();
       startedAtRef.current = Date.now();
       setPhase('pending');
@@ -91,6 +98,10 @@ export function useActionPhase({
           hold('error');
         }
         throw error;
+      } finally {
+        if (awaitedRef.current === generation) {
+          awaitedRef.current = 0;
+        }
       }
 
       // A throwing predicate doesn't fail the action: the result is returned, but the phase shows a failure

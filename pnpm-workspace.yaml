@@ -3,6 +3,9 @@ packages:
 
 enablePrePostScripts: true
 minimumReleaseAge: 4320
+# Our own avatar package, released from Vadko/lbk-dicebear-vyshyvanka
+minimumReleaseAgeExclude:
+  - '@lbklauncher/dicebear-vyshyvanka'
 dangerouslyAllowAllBuilds: false
 
 allowBuilds:

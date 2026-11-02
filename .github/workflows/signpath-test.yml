@@ -58,6 +58,7 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_CAPTCHA_PAGE_URL: ${{ secrets.VITE_CAPTCHA_PAGE_URL }}
         run: pnpm build
 
       # No AZURE_* vars → azureSignOptions stays undefined → unsigned build.
@@ -69,6 +70,7 @@ jobs:
           VITE_STORAGE_IMAGES_URL: ${{ secrets.VITE_STORAGE_IMAGES_URL }}
           VITE_MIXPANEL_TOKEN_PROD: ${{ secrets.VITE_MIXPANEL_TOKEN_PROD }}
           VITE_KURIN_KEY: ${{ secrets.VITE_KURIN_KEY }}
+          VITE_CAPTCHA_PAGE_URL: ${{ secrets.VITE_CAPTCHA_PAGE_URL }}
         run: pnpm dist:win --publish never
 
       - name: Collect unsigned executables

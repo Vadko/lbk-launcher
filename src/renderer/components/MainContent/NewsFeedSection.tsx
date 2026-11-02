@@ -39,7 +39,7 @@ export const NewsFeedSection: React.FC = () => {
 
   const attachSentinel = useInfiniteScrollSentinel({
     hasNextPage,
-    isFetchingNextPage,
+    isBusy: isFetchingNextPage,
     fetchNextPage,
   });
 

@@ -52,6 +52,14 @@ const markup = {
       className={LINK_CLASS}
     />
   ),
+  turnstile: (
+    <a
+      href="https://www.cloudflare.com/turnstile-privacy-policy/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className={LINK_CLASS}
+    />
+  ),
 };
 
 export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
@@ -550,6 +558,12 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
           <li>
             <Trans
               i18nKey="privacyPolicy.sections.recipients.zaraz"
+              components={markup}
+            />
+          </li>
+          <li>
+            <Trans
+              i18nKey="privacyPolicy.sections.recipients.turnstile"
               components={markup}
             />
           </li>

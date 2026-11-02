@@ -13,8 +13,6 @@ import type {
 import type {
   DownloadProgress,
   ElectronAPI,
-  FeedbackReplyPayload,
-  FeedbackType,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -22,8 +20,11 @@ import type {
   RunInstallerRequest,
   SortOrderType,
 } from '../shared/types';
+import { gameReviewsAPI } from './game-reviews-api';
+import { systemNotificationAPI } from './system-notification-api';
 
 const electronAPI: ElectronAPI = {
+  ...gameReviewsAPI,
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
@@ -217,13 +218,6 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-tombstoned', handler);
     return () => ipcRenderer.removeListener('game-tombstoned', handler);
   },
-  onFeedbackReply: (callback) => {
-    const handler = (_: unknown, reply: FeedbackReplyPayload, live: boolean) =>
-      callback(reply, live);
-    ipcRenderer.on('feedback-reply', handler);
-    return () => ipcRenderer.removeListener('feedback-reply', handler);
-  },
-  syncFeedbackReplies: () => ipcRenderer.invoke('feedback-replies:sync'),
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();
@@ -338,19 +332,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
-  // Submit feedback for a game translation
-  submitFeedback: (
-    gameId: string,
-    type: FeedbackType,
-    message: string,
-    screenshotPaths?: string[]
-  ) => ipcRenderer.invoke('submit-feedback', gameId, type, message, screenshotPaths),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
-  getFeedbackUploadUrls: (fileNames: string[]) =>
-    ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
-  uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
-    ipcRenderer.invoke('upload-file-to-signed-url', signedUrl, filePath, contentType),
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
     const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
@@ -395,13 +378,7 @@ contextBridge.exposeInMainWorld('windowControls', {
     return () => ipcRenderer.removeListener('window:maximized', handler);
   },
   isVisible: () => ipcRenderer.invoke('window:is-visible'),
-  showSystemNotification: (options: { title: string; body: string; gameId?: string }) =>
-    ipcRenderer.invoke('show-system-notification', options),
-  onNavigateToGame: (callback: (gameId: string) => void) => {
-    const handler = (_: unknown, gameId: string) => callback(gameId);
-    ipcRenderer.on('navigate-to-game', handler);
-    return () => ipcRenderer.removeListener('navigate-to-game', handler);
-  },
+  ...systemNotificationAPI,
 });
 
 // Liquid Glass API

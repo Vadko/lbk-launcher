@@ -7,12 +7,17 @@ import {
 } from '../store/useGamepadModeStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
+import { clearGamepadSelected } from '../utils/clearGamepadSelected';
 import {
   playBackSound,
   playConfirmSound,
   playNavigateSound,
 } from '../utils/gamepadSounds';
+import { getTopDialog } from '../utils/getTopDialog';
+import { isTextInput } from '../utils/isTextInput';
 import { isValidGamepad } from '../utils/isValidGamepad';
+import { selectEntryAction } from '../utils/selectEntryAction';
+import { selectGamepadTarget } from '../utils/selectGamepadTarget';
 import { type Direction, findNextInDirection } from '../utils/spatialNavigation';
 
 // Standard Gamepad API mapping (Xbox layout; PlayStation reports the same indices)
@@ -69,21 +74,6 @@ interface Frame {
   held: (button: number) => boolean;
 }
 
-const isTextInput = (
-  el: Element | null
-): el is HTMLInputElement | HTMLTextAreaElement => {
-  if (el instanceof HTMLTextAreaElement) {
-    return true;
-  }
-  if (el instanceof HTMLInputElement) {
-    return (
-      !el.readOnly &&
-      !['checkbox', 'radio', 'button', 'submit', 'reset', 'range'].includes(el.type)
-    );
-  }
-  return false;
-};
-
 const isVisible = (el: Element) =>
   el.getClientRects().length > 0 && el.checkVisibility({ visibilityProperty: true });
 
@@ -96,19 +86,8 @@ const intersects = (el: Element, container: Element) => {
   return r.bottom > c.top + 1 && r.top < c.bottom - 1;
 };
 
-const clearSelected = () => {
-  document.querySelectorAll('[data-gamepad-selected]').forEach((e) => {
-    e.removeAttribute('data-gamepad-selected');
-  });
-};
-
 const scrollBehavior = (): ScrollBehavior =>
   useSettingsStore.getState().animationsEnabled ? 'smooth' : 'auto';
-
-const getTopDialog = (): HTMLElement | null => {
-  const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"]');
-  return dialogs[dialogs.length - 1] ?? null;
-};
 
 const getMainContent = (): HTMLElement | null => {
   const roots = Array.from(
@@ -129,6 +108,19 @@ const getMainCandidates = (root: HTMLElement) =>
   Array.from(root.querySelectorAll<HTMLElement>(MAIN_FOCUSABLE)).filter(
     (el) => isEnabled(el) && isVisible(el)
   );
+
+const getVisiblePrimaryAction = (): HTMLElement | null => {
+  const root = getMainContent();
+  if (!root) {
+    return null;
+  }
+  const actions = root.querySelectorAll<HTMLElement>('[data-gamepad-primary-action]');
+  return (
+    Array.from(actions).find(
+      (el) => isEnabled(el) && isVisible(el) && intersects(el, root)
+    ) ?? null
+  );
+};
 
 const getHeaderTargets = () =>
   Array.from(document.querySelectorAll<HTMLElement>('[data-gamepad-header-item]'))
@@ -195,15 +187,8 @@ const revealInContainer = (el: HTMLElement, container: HTMLElement) => {
   }
 };
 
-// Text fields only get a visual selection, so the on-screen keyboard opens on A, not on pass-through
 const moveFocusTo = (el: HTMLElement, revealIn?: HTMLElement | null) => {
-  clearSelected();
-  if (isTextInput(el)) {
-    (document.activeElement as HTMLElement | null)?.blur?.();
-    el.setAttribute('data-gamepad-selected', 'true');
-  } else {
-    el.focus({ preventScroll: true });
-  }
+  selectGamepadTarget(el);
   if (revealIn) {
     revealInContainer(el, revealIn);
   } else {
@@ -249,7 +234,7 @@ const clearInput = (input: HTMLInputElement) => {
 const activate = (el: HTMLElement) => {
   playConfirmSound();
   if (isTextInput(el) && document.activeElement !== el) {
-    clearSelected();
+    clearGamepadSelected();
     el.focus();
     return;
   }
@@ -423,7 +408,7 @@ export function useGamepadModeNavigation(enabled = true) {
 
     const switchArea = (area: Area) => {
       suppressDirection = true;
-      clearSelected();
+      clearGamepadSelected();
       store().setNavigationArea(area);
     };
 
@@ -720,13 +705,24 @@ export function useGamepadModeNavigation(enabled = true) {
         return;
       }
 
+      const active = document.activeElement;
+      // The review composer: leaving the area or switching games would unmount it with the text
+      if (isTextInput(active) && root.contains(active)) {
+        if (f.held(BUTTON.B) && f.now - lastBWhileTyping > B_WHILE_TYPING_THROTTLE) {
+          lastBWhileTyping = f.now;
+          playBackSound();
+          active.blur();
+          active.setAttribute('data-gamepad-selected', 'true');
+        }
+        return;
+      }
+
       if (f.pressed(BUTTON.B)) {
         playBackSound();
         switchArea('games');
         return;
       }
 
-      const active = document.activeElement;
       if (!justEntered && !f.hasInput && active !== root && root.contains(active)) {
         return;
       }
@@ -736,7 +732,11 @@ export function useGamepadModeNavigation(enabled = true) {
       const current = findCurrent(items);
       const currentVisible = !!current && intersects(current, root);
 
-      if ((justEntered || !current) && items.length > 0) {
+      // Focus or a text field's mark already placed inside, as on a deep-linked review entry, is kept on entering
+      const isPlaced =
+        (active !== root && root.contains(active)) ||
+        !!root.querySelector('[data-gamepad-selected]');
+      if (((justEntered && !isPlaced) || !current) && items.length > 0) {
         const primary = visibleItems.find((el) =>
           el.hasAttribute('data-gamepad-primary-action')
         );
@@ -847,17 +847,22 @@ export function useGamepadModeNavigation(enabled = true) {
     const trackModalFocus = (modalOpen: boolean) => {
       if (modalOpen && !wasModalOpen) {
         focusBeforeModal = document.activeElement as HTMLElement | null;
-        clearSelected();
+        clearGamepadSelected();
       } else if (!modalOpen && wasModalOpen) {
-        clearSelected();
+        clearGamepadSelected();
         if (indexBeforeSwitch?.pathname === pathnameRef.current) {
           store().setFocusedGameIndex(indexBeforeSwitch.index);
         }
         indexBeforeSwitch = null;
-        if (focusBeforeModal?.isConnected) {
+        const handedOver = store().takeEntryHandOver();
+        const entry = handedOver === null ? null : document.getElementById(handedOver);
+        if (entry) {
+          selectEntryAction(entry);
+        } else if (focusBeforeModal?.isConnected) {
           focusBeforeModal.focus({ preventScroll: true });
         } else {
-          document.querySelector<HTMLElement>('[data-gamepad-primary-action]')?.focus();
+          // The opener left while the modal was up (a sent reply's composer); with no visible action, handleMainContent picks one on screen
+          getVisiblePrimaryAction()?.focus({ preventScroll: true });
         }
         focusBeforeModal = null;
       }

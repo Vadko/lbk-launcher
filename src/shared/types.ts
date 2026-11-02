@@ -4,16 +4,11 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type { GameReviewsAPI } from './game-reviews-api-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
-  DeckyInstallResult,
-  DeckyLoaderInstallResult,
-  MillenniumInstallResult,
-  MillenniumProgress,
-  PluginHostState,
-  RestartSteamResult,
-  SteamBridgeStatus,
+  SteamPluginHostAPI,
 } from './plugin-host-types';
 import type { WeeklyPicksAPI } from './weekly-picks-types';
 
@@ -231,14 +226,6 @@ interface LaunchGameResult {
   error?: string;
 }
 
-export interface FeedbackReplyPayload {
-  replyId: string;
-  gameId: string;
-  gameName: string;
-  message: string;
-  createdAt: string;
-}
-
 export type SteamBridgeFailure =
   | 'cef-unavailable'
   | 'steam-not-running'
@@ -254,7 +241,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI extends WeeklyPicksAPI {
+export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, WeeklyPicksAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
@@ -377,12 +364,6 @@ export interface ElectronAPI extends WeeklyPicksAPI {
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
-  // Feedback replies (admin/owner → this install). `live=false` = silent catch-up.
-  onFeedbackReply: (
-    callback: (reply: FeedbackReplyPayload, live: boolean) => void
-  ) => () => void;
-  /** Kick main to replay replies missed while offline (delivered via onFeedbackReply). */
-  syncFeedbackReplies: () => Promise<void>;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
   onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY
@@ -390,41 +371,7 @@ export interface ElectronAPI extends WeeklyPicksAPI {
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
-  restartSteam: () => Promise<RestartSteamResult>;
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
-  getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
-  // Clears the persisted "blocked" verdict and re-verifies.
-  recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
-  onSteamBridgeStatusChanged: (
-    callback: (status: SteamBridgeStatus) => void
-  ) => () => void;
-  onSteamPendingActionsApplied: (
-    callback: (payload: { gameIds: string[] }) => void
-  ) => () => void;
-  // Millennium / Decky plugin host
-  getPluginHostState: () => Promise<PluginHostState | null>;
-  // Download, verify and stage Millennium; touches nothing outside userData.
-  prepareMillennium: () => Promise<MillenniumInstallResult>;
-  activateMillennium: (opts: {
-    restart: 'now' | 'on-exit';
-  }) => Promise<MillenniumInstallResult>;
-  uninstallMillennium: (opts: {
-    purge: boolean;
-    restart: 'now' | 'on-exit';
-  }) => Promise<MillenniumInstallResult>;
-  cancelMillennium: () => Promise<{ success: boolean }>;
-  requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
-  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
-  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
-  saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
-  onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
-  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
-  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
-  onSteamRestartRequired: (callback: () => void) => () => void;
-  /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
-  setSteamCefDebugging: (enabled: boolean) => Promise<void>;
-  /** Turning it off reverts Ukrainian library artwork already installed. */
-  setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
   /**
    * Create or update the Steam library collection «З українізаторами» (games
    * with translations) with every owned game that has a translation in the
@@ -485,28 +432,9 @@ export interface ElectronAPI extends WeeklyPicksAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
-  // Submit feedback for a game translation
-  submitFeedback: (
-    gameId: string,
-    type: FeedbackType,
-    message: string,
-    screenshotPaths?: string[]
-  ) => Promise<{ success: boolean; error?: string }>;
   submitLogs: (
     message: string,
     crashReason?: string
-  ) => Promise<{ success: boolean; error?: string }>;
-  // Get signed upload URLs for feedback screenshots
-  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
-    success: boolean;
-    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
-    error?: string;
-  }>;
-  // Upload a file to a signed URL
-  uploadFileToSignedUrl: (
-    signedUrl: string,
-    filePath: string,
-    contentType: string
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
   onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;

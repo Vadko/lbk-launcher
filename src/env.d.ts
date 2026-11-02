@@ -12,6 +12,7 @@ interface ImportMetaEnv {
   readonly VITE_MIXPANEL_TOKEN_PROD: string;
   readonly VITE_KURIN_KEY: string;
   readonly VITE_ADMIN_MODE: string;
+  readonly VITE_CAPTCHA_PAGE_URL: string;
 }
 
 interface ImportMeta {

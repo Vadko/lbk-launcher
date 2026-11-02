@@ -10,9 +10,14 @@ interface BaseNotification {
     | 'team-new-game'
     | 'team-status-change'
     | 'first-favorite'
-    | 'feedback-reply';
+    | 'feedback-reply'
+    | 'review-rejected'
+    | 'review-published';
   gameName: string;
   timestamp: number;
+  // The review thread and entry a review notice is about
+  feedbackId?: string;
+  entryId?: string;
 }
 
 export interface Notification extends BaseNotification {
@@ -61,4 +66,6 @@ export type PersistedSubscriptionsState = {
   notifiedVersions: Map<string, string>; // gameId -> version
   // Feedback-reply ids ever shown, so dedup survives clearing the list.
   seenFeedbackReplyIds: string[];
+  // Moderation events already handled (reviewModerationKey), so a catch-up repeating one stays quiet
+  seenModerationEvents: string[];
 };

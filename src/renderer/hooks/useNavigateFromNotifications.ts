@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { gameLink } from '../utils/gameLink';
 
-/**
- * Hook for handling navigation from system notifications.
- * Listens for events from the main process and navigates to the target game.
- */
+// A click on a system notification shown from the tray; GamePage loads the game itself
 export function useNavigateFromNotifications() {
   const navigate = useNavigate();
 
@@ -13,12 +11,9 @@ export function useNavigateFromNotifications() {
       return;
     }
 
-    const unsubscribe = window.windowControls.onNavigateToGame((gameId) => {
-      console.log('[App] Navigating to game from notification:', gameId);
-      // Just navigate - GamePage will load the game itself if needed
-      navigate(`/game/${gameId}`);
+    return window.windowControls.onNavigateToGame((target) => {
+      console.log('[App] Navigating to game from notification:', target.gameId);
+      navigate(gameLink(target));
     });
-
-    return unsubscribe;
   }, [navigate]);
 }

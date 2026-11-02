@@ -45,11 +45,13 @@ interface SettingsStore {
   hideAiTranslations: boolean;
   showRecommendations: boolean;
   liquidGlassEnabled: boolean;
-  gamepadSoundsEnabled: boolean;
+  uiSoundsEnabled: boolean;
   steamCefDebuggingEnabled: boolean;
   steamCustomArtworkEnabled: boolean;
   millenniumOfferDeclined: boolean;
   deckyPluginOfferDeclined: boolean;
+  // One-way: the nickname lever glows until it is first hovered or focused, on any later open too
+  reviewLeverHintSeen: boolean;
   productAnalyticsEnabled: boolean;
   localizationAnalyticsEnabled: boolean;
   crashDiagnosticsEnabled: boolean;
@@ -79,11 +81,12 @@ interface SettingsStore {
   toggleHideAiTranslations: () => void;
   toggleRecommendations: () => void;
   toggleLiquidGlass: () => void;
-  toggleGamepadSounds: () => void;
+  toggleUiSounds: () => void;
   toggleSteamCefDebugging: () => void;
   toggleSteamCustomArtwork: () => void;
   declineMillenniumOffer: () => void;
   declineDeckyPluginOffer: () => void;
+  markReviewLeverHintSeen: () => void;
   toggleProductAnalytics: () => void;
   toggleLocalizationAnalytics: () => void;
   toggleCrashDiagnostics: () => void;
@@ -104,11 +107,12 @@ export const useSettingsStore = create<SettingsStore>()(
       hideAiTranslations: false,
       showRecommendations: true,
       liquidGlassEnabled: fancyEffectsByDefault,
-      gamepadSoundsEnabled: true,
+      uiSoundsEnabled: true,
       steamCefDebuggingEnabled: true,
       steamCustomArtworkEnabled: true,
       millenniumOfferDeclined: false,
       deckyPluginOfferDeclined: false,
+      reviewLeverHintSeen: false,
       productAnalyticsEnabled: true,
       localizationAnalyticsEnabled: true,
       crashDiagnosticsEnabled: true,
@@ -208,8 +212,7 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({ liquidGlassEnabled: !state.liquidGlassEnabled }));
       },
 
-      toggleGamepadSounds: () =>
-        set((state) => ({ gamepadSoundsEnabled: !state.gamepadSoundsEnabled })),
+      toggleUiSounds: () => set((state) => ({ uiSoundsEnabled: !state.uiSoundsEnabled })),
 
       toggleSteamCefDebugging: () =>
         set((state) => ({ steamCefDebuggingEnabled: !state.steamCefDebuggingEnabled })),
@@ -220,6 +223,8 @@ export const useSettingsStore = create<SettingsStore>()(
       declineMillenniumOffer: () => set({ millenniumOfferDeclined: true }),
 
       declineDeckyPluginOffer: () => set({ deckyPluginOfferDeclined: true }),
+
+      markReviewLeverHintSeen: () => set({ reviewLeverHintSeen: true }),
 
       toggleProductAnalytics: () =>
         set((state) => ({ productAnalyticsEnabled: !state.productAnalyticsEnabled })),
@@ -241,6 +246,15 @@ export const useSettingsStore = create<SettingsStore>()(
     {
       name: 'lbk-settings',
       storage: createJSONStorage(() => electronStorage),
+      version: 1,
+      // Version 0 kept the interface sounds under their first use, the gamepad
+      migrate: (persisted) => {
+        const { gamepadSoundsEnabled = true, ...settings } =
+          persisted as Partial<SettingsStore> & {
+            gamepadSoundsEnabled?: boolean;
+          };
+        return { ...settings, uiSoundsEnabled: gamepadSoundsEnabled };
+      },
       // Override the persisted choice for fancy effects when hardware is weak,
       // so a setting saved on a stronger machine (or older app version) can't
       // re-enable lag on the current machine.
@@ -260,11 +274,12 @@ export const useSettingsStore = create<SettingsStore>()(
         hideAiTranslations: state.hideAiTranslations,
         showRecommendations: state.showRecommendations,
         liquidGlassEnabled: state.liquidGlassEnabled,
-        gamepadSoundsEnabled: state.gamepadSoundsEnabled,
+        uiSoundsEnabled: state.uiSoundsEnabled,
         steamCefDebuggingEnabled: state.steamCefDebuggingEnabled,
         steamCustomArtworkEnabled: state.steamCustomArtworkEnabled,
         millenniumOfferDeclined: state.millenniumOfferDeclined,
         deckyPluginOfferDeclined: state.deckyPluginOfferDeclined,
+        reviewLeverHintSeen: state.reviewLeverHintSeen,
         productAnalyticsEnabled: state.productAnalyticsEnabled,
         localizationAnalyticsEnabled: state.localizationAnalyticsEnabled,
         crashDiagnosticsEnabled: state.crashDiagnosticsEnabled,
