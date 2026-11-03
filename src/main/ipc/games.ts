@@ -22,7 +22,6 @@ import {
 } from '../db/banners-api';
 import { findDeepLinkGameId } from '../db/deep-link-game';
 import { GamesRepository } from '../db/games-repository';
-import { getGamesRating, getTeamsRating } from '../db/ratings-queries';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
 import { SyncManager } from '../db/sync-manager';
 import {
@@ -305,30 +304,6 @@ export function setupGamesHandlers(): void {
       return [];
     }
   });
-
-  ipcMain.handle(
-    'fetch-teams-rating',
-    (_, page: number, pageSize: number, hideAi: boolean) => {
-      try {
-        return getTeamsRating(page, pageSize, hideAi);
-      } catch (error) {
-        console.error('[API] Error fetching teams rating:', error);
-        return null;
-      }
-    }
-  );
-
-  ipcMain.handle(
-    'fetch-games-rating',
-    (_, page: number, pageSize: number, hideAi: boolean) => {
-      try {
-        return getGamesRating(page, pageSize, hideAi);
-      } catch (error) {
-        console.error('[API] Error fetching games rating:', error);
-        return null;
-      }
-    }
-  );
 
   // Sync Kurin installed games data
   ipcMain.handle('sync-kurin-games', async () => {

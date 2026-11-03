@@ -968,6 +968,31 @@ export const uk = {
     failedWithError: 'Не вдалося видалити Millennium: {{error}}',
     progress: 'Видалення Millennium…',
   },
+  ratings: {
+    title: 'Рейтинги української локалізації',
+    subtitle: 'Спілки перекладачів та ігри за оцінками гравців',
+    tab: {
+      teams: 'Спілки',
+      games: 'Ігри',
+    },
+    caption: {
+      teams: 'Рейтинг спілок за вподобаннями',
+      games: 'Рейтинг ігор за вподобаннями',
+    },
+    column: {
+      rank: '№',
+      team: 'Назва спілки',
+      game: 'Назва гри',
+      likes: 'Вподобання',
+      translations: 'Переклади',
+      downloads: 'Завантаження',
+      status: 'Статус перекладу',
+      details: 'Дії',
+    },
+    details: 'Детальніше',
+    loadFailed: 'Не вдалося завантажити рейтинг. Спробуйте пізніше.',
+    empty: 'Поки що немає даних.',
+  },
   newsFeed: {
     title: 'Новини',
     tab: {

@@ -1,32 +1,31 @@
-import { ThumbsUp } from 'lucide-react';
+import { ThumbsUpIcon } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDownloads } from '@/shared/formatters';
-import type { GameRatingItem, TeamRatingItem } from '@/shared/types';
+import { t } from '@/shared/i18n/i18n';
+import type { GameRatingItem, TeamRatingItem } from '@/shared/ratings-api-types';
 import { StatusBadge } from '../components/Elements/StatusBadge';
 import { type RatingsColumn, RatingsTable } from '../components/Ratings/RatingsTable';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
-import { useGamesRating } from '../queries/useGamesRating';
-import { RATINGS_PAGE_SIZE, useTeamsRating } from '../queries/useTeamsRating';
+import { useRatingsInvalidation } from '../hooks/useRatingsInvalidation';
+import { useRatings } from '../queries/useRatings';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
 
 type RatingsTab = 'teams' | 'games';
 
-const tabs: { id: RatingsTab; label: string }[] = [
-  { id: 'teams', label: 'Спілки' },
-  { id: 'games', label: 'Ігри' },
-];
+const TABS: readonly RatingsTab[] = ['teams', 'games'];
 
 const MUTED = 'text-text-muted';
+const NAME = 'truncate text-text-main font-bold';
 
 const numberFormat = new Intl.NumberFormat('uk-UA');
 
 const likesCell = (likes: number) => (
   <span className="inline-flex items-center gap-1.5 font-bold text-color-main">
-    <ThumbsUp size={14} />
+    <ThumbsUpIcon size={14} />
     {numberFormat.format(likes)}
   </span>
 );
@@ -35,52 +34,57 @@ const detailsButton = (onClick: () => void) => (
   <Button
     onClick={onClick}
     data-gamepad-action
-    className="!min-h-0 !px-4 !py-2 !text-sm mx-auto"
+    className="min-h-0! px-4! py-2! text-sm! mx-auto"
   >
-    Детальніше
+    {t('ratings.details')}
   </Button>
 );
 
-const getTotalPages = (total: number | undefined) =>
-  total ? Math.max(1, Math.ceil(total / RATINGS_PAGE_SIZE)) : 1;
+const detailsHeader = <span className="sr-only">{t('ratings.column.details')}</span>;
 
 export const RatingsPage: React.FC = () => {
   const navigate = useNavigate();
   const setSelectedGame = useStore((state) => state.setSelectedGame);
+  const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const [tab, setTab] = useState<RatingsTab>('teams');
-  const [teamsPage, setTeamsPage] = useState(1);
-  const [gamesPage, setGamesPage] = useState(1);
-  const hideAi = useSettingsStore((state) => state.hideAiTranslations);
-  const teams = useTeamsRating(teamsPage);
-  const games = useGamesRating(gamesPage);
+  const teams = useRatings('teams', window.electronAPI.fetchTeamsRating);
+  const games = useRatings('games', window.electronAPI.fetchGamesRating);
+  useRatingsInvalidation();
 
   useEffect(() => {
     setSelectedGame(null);
   }, [setSelectedGame]);
 
-  useEffect(() => {
-    setTeamsPage(1);
-    setGamesPage(1);
-  }, [hideAi]);
-
   const teamColumns: RatingsColumn<TeamRatingItem>[] = [
     {
-      header: 'Назва спілки',
-      render: (t) => t.name,
-      className: 'truncate text-white font-bold',
+      id: 'name',
+      header: t('ratings.column.team'),
+      render: (team) => team.name,
+      className: NAME,
     },
-    { header: 'Вподобання', render: (t) => likesCell(t.likes) },
-    { header: 'Переклади', render: (t) => t.translations, className: MUTED },
     {
-      header: 'Завантаження',
-      render: (t) => formatDownloads(t.downloads),
+      id: 'likes',
+      header: t('ratings.column.likes'),
+      render: (team) => likesCell(team.likes),
+    },
+    {
+      id: 'translations',
+      header: t('ratings.column.translations'),
+      render: (team) => team.translations,
       className: MUTED,
     },
     {
-      header: '',
-      render: (t) =>
+      id: 'downloads',
+      header: t('ratings.column.downloads'),
+      render: (team) => formatDownloads(team.downloads),
+      className: MUTED,
+    },
+    {
+      id: 'details',
+      header: detailsHeader,
+      render: (team) =>
         detailsButton(() => {
-          useSettingsStore.getState().setSelectedAuthors([t.name]);
+          useSettingsStore.getState().setSelectedAuthors([team.name]);
           navigate('/');
         }),
     },
@@ -88,71 +92,69 @@ export const RatingsPage: React.FC = () => {
 
   const gameColumns: RatingsColumn<GameRatingItem>[] = [
     {
-      header: 'Назва гри',
-      render: (g) => g.name,
-      className: 'truncate text-white font-bold',
+      id: 'name',
+      header: t('ratings.column.game'),
+      render: (game) => game.name,
+      className: NAME,
     },
-    { header: 'Вподобання', render: (g) => likesCell(g.likes) },
     {
-      header: 'Завантаження',
-      render: (g) => formatDownloads(g.downloads),
+      id: 'likes',
+      header: t('ratings.column.likes'),
+      render: (game) => likesCell(game.likes),
+    },
+    {
+      id: 'downloads',
+      header: t('ratings.column.downloads'),
+      render: (game) => formatDownloads(game.downloads),
       className: MUTED,
     },
     {
-      header: 'Статус перекладу',
-      render: (g) => <StatusBadge status={g.status} style="capsule" />,
+      id: 'status',
+      header: t('ratings.column.status'),
+      render: (game) => <StatusBadge status={game.status} style="capsule" />,
     },
-    { header: '', render: (g) => detailsButton(() => navigate(`/game/${g.id}`)) },
+    {
+      id: 'details',
+      header: detailsHeader,
+      render: (game) => detailsButton(() => navigate(`/game/${game.id}`)),
+    },
   ];
 
   return (
     <div
       data-gamepad-main-content
-      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${useGamepadModeStore.getState().isGamepadMode && 'py-4'} overflow-y-auto justify-center custom-scrollbar`}
+      className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto justify-center custom-scrollbar`}
     >
       <div className="main-page flex flex-col gap-6 h-auto w-full max-w-[1564px]">
         <div className="flex justify-between items-end">
           <div className="grid gap-2">
             <h1 className="text-4xl font-head font-semibold text-text-main">
-              Рейтинги української локалізації
+              {t('ratings.title')}
             </h1>
-            <p className="text-text-muted">
-              Спілки перекладачів та ігри за оцінками гравців
-            </p>
+            <p className="text-text-muted">{t('ratings.subtitle')}</p>
           </div>
 
-          <PillTabs tabs={tabs} activeTab={tab} onChange={setTab} />
+          <PillTabs
+            tabs={TABS}
+            active={tab}
+            label={(id) => t(`ratings.tab.${id}`)}
+            onChange={setTab}
+          />
         </div>
 
         {tab === 'teams' ? (
           <RatingsTable
             columns={teamColumns}
-            items={teams.data?.items}
-            getKey={(t) => t.name}
-            offset={(teamsPage - 1) * RATINGS_PAGE_SIZE}
-            page={teamsPage}
-            totalPages={getTotalPages(teams.data?.total)}
-            onPageChange={setTeamsPage}
-            isPending={teams.isPending}
-            isError={teams.isError}
-            isPlaceholderData={teams.isPlaceholderData}
-            paginationLabel="Сторінки рейтингу спілок"
-            caption="Рейтинг спілок за вподобаннями"
+            query={teams}
+            getKey={(team) => team.name}
+            caption={t('ratings.caption.teams')}
           />
         ) : (
           <RatingsTable
             columns={gameColumns}
-            items={games.data?.items}
-            getKey={(g) => g.id}
-            offset={(gamesPage - 1) * RATINGS_PAGE_SIZE}
-            page={gamesPage}
-            totalPages={getTotalPages(games.data?.total)}
-            onPageChange={setGamesPage}
-            isPending={games.isPending}
-            isError={games.isError}
-            isPlaceholderData={games.isPlaceholderData}
-            paginationLabel="Сторінки рейтингу ігор"
-            caption="Рейтинг ігор за вподобаннями"
+            query={games}
+            getKey={(game) => game.id}
+            caption={t('ratings.caption.games')}
           />
         )}
       </div>

@@ -1,68 +1,67 @@
-import React from 'react';
+import type { UseInfiniteQueryResult } from '@tanstack/react-query';
+import React, { useCallback } from 'react';
+import { t } from '@/shared/i18n/i18n';
+import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { Loader } from '../ui/Loader';
-import { Pagination } from '../ui/Pagination';
 
 export interface RatingsColumn<T> {
-  header: string;
+  id: string;
+  header: React.ReactNode;
   render: (item: T) => React.ReactNode;
   className?: string;
 }
 
 interface RatingsTableProps<T> {
   columns: RatingsColumn<T>[];
-  items: T[] | undefined;
+  query: UseInfiniteQueryResult<T[], Error>;
   getKey: (item: T) => string;
-  offset: number;
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  isPending: boolean;
-  isError: boolean;
-  isPlaceholderData: boolean;
-  paginationLabel: string;
   caption: string;
 }
 
-const cellClass = 'px-1.5 py-4 text-center align-middle';
+const PODIUM_SIZE = 3;
 
 export const RatingsTable = <T,>({
   columns,
-  items,
+  query,
   getKey,
-  offset,
-  page,
-  totalPages,
-  onPageChange,
-  isPending,
-  isError,
-  isPlaceholderData,
-  paginationLabel,
   caption,
 }: RatingsTableProps<T>) => {
-  const message = isPending ? null : isError || !items ? (
-    <p className="text-center text-text-muted py-12">
-      Не вдалося завантажити рейтинг. Спробуйте пізніше.
-    </p>
-  ) : items.length === 0 ? (
-    <p className="text-center text-text-muted py-12">Поки що немає даних.</p>
-  ) : null;
+  const {
+    data: items,
+    isPending,
+    isError,
+    hasNextPage,
+    isFetching,
+    fetchNextPage,
+  } = query;
+  // A next page would cancel an event's refetch, which then leaves the loaded pages stale
+  const loadNextPage = useCallback(
+    () => void fetchNextPage({ cancelRefetch: false }),
+    [fetchNextPage]
+  );
+  const attachSentinel = useInfiniteScrollSentinel({
+    hasNextPage,
+    // A next page asked during a refetch joins it and adds nothing, so the sentinel looks again after
+    isBusy: isFetching,
+    fetchNextPage: loadNextPage,
+  });
 
   return (
-    <div className="overflow-hidden glass-card-no-motion flex flex-col !p-0">
-      <div className="overflow-x-auto custom-scrollbar ![scrollbar-gutter:auto] [&::-webkit-scrollbar]:h-3">
+    <div className="overflow-hidden glass-card-no-motion flex flex-col p-0!">
+      <div className="overflow-x-auto custom-scrollbar [scrollbar-gutter:auto]! [&::-webkit-scrollbar]:h-3">
         <table
-          aria-busy={isPending || isPlaceholderData}
-          className={`w-full min-w-[760px] table-fixed border-collapse text-sm transition-opacity ${isPlaceholderData ? 'opacity-60' : ''}`}
+          aria-busy={isFetching}
+          className="w-full min-w-[760px] table-fixed border-collapse text-sm"
         >
           <caption className="sr-only">{caption}</caption>
           <thead>
-            <tr className="bg-[#333333] text-white">
+            <tr className="bg-glass-hover text-text-main">
               <th scope="col" className="w-[72px] py-4 font-bold">
-                №
+                {t('ratings.column.rank')}
               </th>
               {columns.map((column) => (
                 <th
-                  key={column.header}
+                  key={column.id}
                   scope="col"
                   className="px-1.5 py-4 text-center font-bold last:pr-4"
                 >
@@ -71,20 +70,20 @@ export const RatingsTable = <T,>({
               ))}
             </tr>
           </thead>
-          {!isPending && items && items.length > 0 && (
+          {items && items.length > 0 && (
             <tbody>
-              {items.map((item, i) => (
-                <tr key={getKey(item)} className="border-b border-white/[0.03]">
+              {items.map((item, index) => (
+                <tr key={getKey(item)} className="border-b border-white/3">
                   <th
                     scope="row"
-                    className={`py-4  font-normal ${offset + i < 3 ? 'text-color-main' : 'text-text-muted'}`}
+                    className={`py-4 font-normal ${index < PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
                   >
-                    {offset + i + 1}
+                    {index + 1}
                   </th>
                   {columns.map((column) => (
                     <td
-                      key={column.header}
-                      className={`${cellClass} last:pr-4 ${column.className ?? ''}`}
+                      key={column.id}
+                      className={`px-1.5 py-4 text-center align-middle last:pr-4 ${column.className ?? ''}`}
                     >
                       {column.render(item)}
                     </td>
@@ -96,21 +95,19 @@ export const RatingsTable = <T,>({
         </table>
       </div>
 
-      {isPending && (
+      {isPending ? (
         <div className="flex justify-center py-12">
           <Loader size="md" />
         </div>
-      )}
-      {message}
-
-      {totalPages > 1 && (
-        <div className="p-4">
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onChange={onPageChange}
-            ariaLabel={paginationLabel}
-          />
+      ) : isError && !items ? (
+        <p className="text-center text-text-muted py-12">{t('ratings.loadFailed')}</p>
+      ) : items?.length === 0 ? (
+        <p className="text-center text-text-muted py-12">{t('ratings.empty')}</p>
+      ) : null}
+      {hasNextPage && <div ref={attachSentinel} className="h-1" aria-hidden />}
+      {query.isFetchingNextPage && (
+        <div className="flex justify-center py-6">
+          <Loader size="sm" />
         </div>
       )}
     </div>

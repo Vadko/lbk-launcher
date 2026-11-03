@@ -934,6 +934,31 @@ export const en = {
     failedWithError: 'Could not uninstall Millennium: {{error}}',
     progress: 'Uninstalling Millennium…',
   },
+  ratings: {
+    title: 'Ukrainian localization ratings',
+    subtitle: 'Translation teams and games by player ratings',
+    tab: {
+      teams: 'Teams',
+      games: 'Games',
+    },
+    caption: {
+      teams: 'Teams ranked by likes',
+      games: 'Games ranked by likes',
+    },
+    column: {
+      rank: 'No.',
+      team: 'Team',
+      game: 'Game',
+      likes: 'Likes',
+      translations: 'Translations',
+      downloads: 'Downloads',
+      status: 'Translation status',
+      details: 'Actions',
+    },
+    details: 'Details',
+    loadFailed: 'Could not load the ratings. Please try again later.',
+    empty: 'No data yet.',
+  },
   newsFeed: {
     title: 'News',
     tab: { sales: 'Games on sale', 'games-80': 'Games for 80', news: 'News' },

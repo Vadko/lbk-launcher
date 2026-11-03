@@ -11,6 +11,7 @@ import type {
   ApplyPendingLaunchOptionsResult,
   SteamPluginHostAPI,
 } from './plugin-host-types';
+import type { RatingsAPI } from './ratings-api-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
@@ -62,27 +63,6 @@ export interface NewsFeedItem {
 }
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
-
-export interface RatingsPage<T> {
-  items: T[];
-  total: number;
-  pageSize: number;
-}
-
-export interface TeamRatingItem {
-  name: string;
-  likes: number;
-  translations: number;
-  downloads: number;
-}
-
-export interface GameRatingItem {
-  id: string;
-  name: string;
-  likes: number;
-  downloads: number;
-  status: Game['status'];
-}
 
 export interface ChangelogEntry {
   version: string;
@@ -262,7 +242,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
+export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, RatingsAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
@@ -275,16 +255,6 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
     days?: number,
     limit?: number
   ) => Promise<{ game_id: string; downloads: number }[]>;
-  fetchTeamsRating: (
-    page: number,
-    pageSize: number,
-    hideAi: boolean
-  ) => Promise<RatingsPage<TeamRatingItem> | null>;
-  fetchGamesRating: (
-    page: number,
-    pageSize: number,
-    hideAi: boolean
-  ) => Promise<RatingsPage<GameRatingItem> | null>;
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,

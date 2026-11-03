@@ -1,35 +1,31 @@
 interface PillTabsProps<T extends string> {
-  tabs: { id: T; label: string }[];
-  activeTab: T;
+  tabs: readonly T[];
+  active: T;
+  label: (tab: T) => string;
   onChange: (tab: T) => void;
-  className?: string;
 }
 
 export const PillTabs = <T extends string>({
   tabs,
-  activeTab,
+  active,
+  label,
   onChange,
-  className = '',
 }: PillTabsProps<T>) => (
-  <div
-    role="tablist"
-    className={`glass-card-no-motion !p-2 flex gap-2 w-fit ${className}`}
-  >
+  <div className="glass-card-no-motion p-2! flex gap-2 w-fit">
     {tabs.map((tab) => (
       <button
-        key={tab.id}
+        key={tab}
         type="button"
-        role="tab"
-        aria-selected={activeTab === tab.id}
-        onClick={() => onChange(tab.id)}
+        aria-pressed={active === tab}
+        onClick={() => onChange(tab)}
         data-gamepad-action
         className={`px-6 py-2 rounded-xl font-medium transition-all ${
-          activeTab === tab.id
-            ? 'bg-gradient-to-r from-color-accent to-color-main text-text-dark'
+          active === tab
+            ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
             : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
         }`}
       >
-        {tab.label}
+        {label(tab)}
       </button>
     ))}
   </div>

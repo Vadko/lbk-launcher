@@ -22,10 +22,12 @@ import type {
   SortOrderType,
 } from '../shared/types';
 import { gameReviewsAPI } from './game-reviews-api';
+import { ratingsAPI } from './ratings-api';
 import { systemNotificationAPI } from './system-notification-api';
 
 const electronAPI: ElectronAPI = {
   ...gameReviewsAPI,
+  ...ratingsAPI,
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
@@ -36,10 +38,6 @@ const electronAPI: ElectronAPI = {
   checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
-  fetchTeamsRating: (page: number, pageSize: number, hideAi: boolean) =>
-    ipcRenderer.invoke('fetch-teams-rating', page, pageSize, hideAi),
-  fetchGamesRating: (page: number, pageSize: number, hideAi: boolean) =>
-    ipcRenderer.invoke('fetch-games-rating', page, pageSize, hideAi),
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,

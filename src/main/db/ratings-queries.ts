@@ -1,10 +1,15 @@
-import type { GameRatingItem, RatingsPage, TeamRatingItem } from '../../shared/types';
+import type {
+  GameRatingItem,
+  RatingsPageInput,
+  TeamRatingItem,
+} from '../../shared/ratings-api-types';
 import { getDatabase } from './database';
 import { VISIBLE_GAMES_SQL } from './db-queries';
 
 const visibleSql = (hideAi: boolean) =>
   hideAi ? `${VISIBLE_GAMES_SQL} AND ai IS NULL` : VISIBLE_GAMES_SQL;
 
+// Splits team on commas the way teamMembers() does, so a row matches the catalog's author filter
 const teamsCte = (hideAi: boolean) => `
   WITH RECURSIVE split(game_id, likes, downloads, author, rest) AS (
     SELECT id, COALESCE(likes, 0), COALESCE(downloads, 0), '', team || ','
@@ -22,55 +27,37 @@ const teamsCte = (hideAi: boolean) => `
   )
 `;
 
-export function getTeamsRating(
-  page: number,
-  pageSize: number,
-  hideAi: boolean
-): RatingsPage<TeamRatingItem> {
-  const db = getDatabase();
-  const total = (
-    db
-      .prepare(
-        `${teamsCte(hideAi)} SELECT COUNT(DISTINCT author) AS total FROM team_games`
-      )
-      .get() as { total: number }
-  ).total;
-  const items = db
-    .prepare(
+export function getTeamsRating({
+  offset,
+  limit,
+  hideAi,
+}: RatingsPageInput): TeamRatingItem[] {
+  return getDatabase()
+    .prepare<[number, number], TeamRatingItem>(
       `${teamsCte(hideAi)}
       SELECT author AS name, SUM(likes) AS likes, COUNT(*) AS translations,
         SUM(downloads) AS downloads
       FROM team_games
       GROUP BY author
-      ORDER BY likes DESC, translations DESC, name COLLATE NOCASE
+      ORDER BY likes DESC, translations DESC, name COLLATE NOCASE, name
       LIMIT ? OFFSET ?`
     )
-    .all(pageSize, (page - 1) * pageSize) as TeamRatingItem[];
-  return { items, total, pageSize };
+    .all(limit, offset);
 }
 
-export function getGamesRating(
-  page: number,
-  pageSize: number,
-  hideAi: boolean
-): RatingsPage<GameRatingItem> {
-  const db = getDatabase();
-  const total = (
-    db
-      .prepare(`SELECT COUNT(*) AS total FROM games WHERE ${visibleSql(hideAi)}`)
-      .get() as {
-      total: number;
-    }
-  ).total;
-  const items = db
-    .prepare(
+export function getGamesRating({
+  offset,
+  limit,
+  hideAi,
+}: RatingsPageInput): GameRatingItem[] {
+  return getDatabase()
+    .prepare<[number, number], GameRatingItem>(
       `SELECT id, name, COALESCE(likes, 0) AS likes,
         COALESCE(downloads, 0) AS downloads, status
       FROM games
       WHERE ${visibleSql(hideAi)}
-      ORDER BY likes DESC, downloads DESC, name COLLATE NOCASE
+      ORDER BY likes DESC, downloads DESC, name COLLATE NOCASE, id
       LIMIT ? OFFSET ?`
     )
-    .all(pageSize, (page - 1) * pageSize) as GameRatingItem[];
-  return { items, total, pageSize };
+    .all(limit, offset);
 }

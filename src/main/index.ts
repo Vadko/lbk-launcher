@@ -119,6 +119,7 @@ import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
+import { setupRatingsHandlers } from './ipc/ratings';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import { syncLikes } from './likes';
@@ -228,6 +229,7 @@ if (!gotTheLock) {
   setupTgNewsHandlers();
   setupLikesHandlers();
   setupGameReviewsHandlers();
+  setupRatingsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
   setupPluginHostHandlers();
