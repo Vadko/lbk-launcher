@@ -55,6 +55,24 @@ describe('appUrlFor', () => {
   });
 
   it.each([
+    ['https://store.epicgames.com/p/limbo', 'com.epicgames.launcher://store/p/limbo'],
+    [
+      'https://store.epicgames.com/uk/p/chants-of-sennaar?lang=uk',
+      'com.epicgames.launcher://store/p/chants-of-sennaar',
+    ],
+    [
+      'https://www.epicgames.com/store/uk/p/monument-valley-2-addd02/',
+      'com.epicgames.launcher://store/p/monument-valley-2-addd02',
+    ],
+  ])('maps the Epic link %s to %s', (url, appUrl) => {
+    expect(appUrlFor('epic', url)).toBe(appUrl);
+  });
+
+  it.each([
+    ['epic', 'https://store.epicgames.com/uk/'],
+    ['epic', 'https://store.epicgames.com/p/..'],
+    ['epic', 'https://store.epicgames.com/p/a%20b'],
+    ['epic', 'https://example.test/p/limbo'],
     ['steam', 'https://steamdb.info/app/620/'],
     [
       'telegram',

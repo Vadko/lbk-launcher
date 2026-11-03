@@ -160,7 +160,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Indicators */}
             {!isAdultBlurred && (
               <>
-                <DiscountPill steamAppId={game.steam_app_id} />
+                <DiscountPill game={game} />
                 <StatusIcons
                   hasUpdate={hasUpdate}
                   isGameDetected={isGameDetected}

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BroadcastMessage } from './supabase-realtime';
 
 interface FeedRow {
+  store: string;
   steam_app_id: number;
   discount_percent: number;
   ends_at: string | null;
@@ -12,7 +13,7 @@ interface FeedRow {
 const state = vi.hoisted(() => ({
   db: undefined as DatabaseSync | undefined,
   pages: [] as FeedRow[][],
-  calls: [] as { since: string | undefined; after?: number }[],
+  calls: [] as { since: string | undefined; after?: string }[],
   metadata: new Map<string, string>(),
   savedWatermarks: [] as string[],
   sent: vi.fn(),
@@ -44,13 +45,13 @@ vi.mock('@/main/db/sync-metadata', () => ({
 vi.mock('@/main/db/supabase-client', () => ({
   getSupabaseClient: () => ({
     rpc: (_name: string, args: { p_since?: string }) => {
-      const call: { since: string | undefined; after?: number } = {
+      const call: { since: string | undefined; after?: string } = {
         since: args.p_since,
       };
       state.calls.push(call);
       const builder = {
-        gt: (_column: string, value: number) => {
-          call.after = value;
+        or: (filter: string) => {
+          call.after = filter;
           return builder;
         },
         order: () => builder,
@@ -62,8 +63,8 @@ vi.mock('@/main/db/supabase-client', () => ({
 }));
 vi.mock('@/main/window', () => ({ sendToRenderer: state.sent }));
 
-const { createSteamDiscountsSubscription, getActiveSteamDiscounts, syncSteamDiscounts } =
-  await import('./steam-discounts');
+const { createStoreDiscountsSubscription, getActiveStoreDiscounts, syncStoreDiscounts } =
+  await import('./store-discounts');
 
 const DAY = 24 * 60 * 60 * 1000;
 const future = (days: number) => new Date(Date.now() + days * DAY).toISOString();
@@ -71,7 +72,7 @@ const future = (days: number) => new Date(Date.now() + days * DAY).toISOString()
 const stored = () =>
   sqlite()
     .prepare(
-      'SELECT steam_app_id, discount_percent, ends_at FROM steam_discounts ORDER BY steam_app_id'
+      'SELECT store, steam_app_id, discount_percent, ends_at FROM store_discounts ORDER BY store, steam_app_id'
     )
     .all();
 
@@ -79,8 +80,10 @@ const feedRow = (
   steamAppId: number,
   percent: number,
   endsAt: string | null,
-  touchedAt = '2026-11-03T10:00:00Z'
+  touchedAt = '2026-11-03T10:00:00Z',
+  store = 'steam'
 ): FeedRow => ({
+  store,
   steam_app_id: steamAppId,
   discount_percent: percent,
   ends_at: endsAt,
@@ -88,17 +91,22 @@ const feedRow = (
 });
 
 function broadcast(payload: unknown): void {
-  const subscription = createSteamDiscountsSubscription();
+  const subscription = createStoreDiscountsSubscription();
   const message: BroadcastMessage = { event: 'discounts', type: 'broadcast', payload };
   subscription?.handlers[0]?.handler(message);
 }
 
-function seed(steamAppId: number, percent: number, endsAt: number): void {
+function seed(
+  steamAppId: number,
+  percent: number,
+  endsAt: number | null,
+  store = 'steam'
+): void {
   sqlite()
     .prepare(
-      'INSERT INTO steam_discounts (steam_app_id, discount_percent, ends_at) VALUES (?, ?, ?)'
+      'INSERT INTO store_discounts (store, steam_app_id, discount_percent, ends_at) VALUES (?, ?, ?, ?)'
     )
-    .run(steamAppId, percent, endsAt);
+    .run(store, steamAppId, percent, endsAt);
 }
 
 beforeEach(() => {
@@ -109,40 +117,51 @@ beforeEach(() => {
   state.sent.mockReset();
   state.db = new DatabaseSync(':memory:');
   sqlite().exec(`
-    CREATE TABLE steam_discounts (
-      steam_app_id INTEGER PRIMARY KEY,
+    CREATE TABLE store_discounts (
+      store TEXT NOT NULL,
+      steam_app_id INTEGER NOT NULL,
       discount_percent INTEGER NOT NULL,
-      ends_at INTEGER NOT NULL
+      ends_at INTEGER,
+      PRIMARY KEY (store, steam_app_id)
     ) WITHOUT ROWID;
   `);
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
-describe('syncSteamDiscounts', () => {
-  it('pages by app id and saves the newest touched_at once every page is applied', async () => {
+describe('syncStoreDiscounts', () => {
+  it('pages by store and app id and saves the newest touched_at once every page is applied', async () => {
     const ends = future(2);
     state.pages = [
       Array.from({ length: 1000 }, (_, index) =>
-        feedRow(index + 1, 10, ends, index === 500 ? '2026-11-03T12:00:00Z' : undefined)
+        feedRow(
+          index + 1,
+          10,
+          ends,
+          index === 500 ? '2026-11-03T12:00:00Z' : undefined,
+          index < 999 ? 'egs' : 'gog'
+        )
       ),
-      [feedRow(5000, 20, ends, '2026-11-03T11:00:00Z')],
+      [feedRow(5000, 20, ends, '2026-11-03T11:00:00Z', 'steam')],
     ];
 
-    await syncSteamDiscounts();
+    await syncStoreDiscounts();
 
     expect(state.calls).toEqual([
       { since: undefined },
-      { since: undefined, after: 1000 },
+      {
+        since: undefined,
+        after: 'store.gt."gog",and(store.eq."gog",steam_app_id.gt."1000")',
+      },
     ]);
     expect(stored()).toHaveLength(1001);
     expect(state.savedWatermarks).toEqual(['2026-11-03T12:00:00Z']);
   });
 
   it('asks from the stored watermark and keeps it when nothing newer arrives', async () => {
-    state.metadata.set('steam_discounts_synced_at', '2026-11-03T09:00:00Z');
+    state.metadata.set('store_discounts_synced_at', '2026-11-03T09:00:00Z');
 
-    await syncSteamDiscounts();
+    await syncStoreDiscounts();
 
     expect(state.calls).toEqual([{ since: '2026-11-03T09:00:00Z' }]);
     expect(state.savedWatermarks).toEqual(['2026-11-03T09:00:00Z']);
@@ -152,27 +171,48 @@ describe('syncSteamDiscounts', () => {
   it('inserts, updates and deletes, and notifies once per changed batch', async () => {
     seed(10, 30, Date.parse(future(1)));
     seed(20, 50, Date.parse(future(1)));
-    seed(30, 70, Date.parse(future(1)));
     seed(40, 90, Date.parse(future(1)));
+    seed(10, 15, null, 'gog');
     const ends = future(3);
     state.pages = [
       [
+        feedRow(10, 0, null, undefined, 'gog'),
+        feedRow(30, 35, null, undefined, 'gog'),
         feedRow(10, 40, ends),
         feedRow(20, 0, null),
-        feedRow(30, 70, null),
         feedRow(40, 90, new Date(Date.now() - DAY).toISOString()),
         feedRow(50, 25, ends),
         feedRow(60, 0, null),
       ],
     ];
 
-    await syncSteamDiscounts();
+    await syncStoreDiscounts();
 
     expect(stored()).toEqual([
-      { steam_app_id: 10, discount_percent: 40, ends_at: Date.parse(ends) },
-      { steam_app_id: 50, discount_percent: 25, ends_at: Date.parse(ends) },
+      { store: 'gog', steam_app_id: 30, discount_percent: 35, ends_at: null },
+      {
+        store: 'steam',
+        steam_app_id: 10,
+        discount_percent: 40,
+        ends_at: Date.parse(ends),
+      },
+      {
+        store: 'steam',
+        steam_app_id: 50,
+        discount_percent: 25,
+        ends_at: Date.parse(ends),
+      },
     ]);
-    expect(state.sent.mock.calls).toEqual([['steam-discounts-updated']]);
+    expect(state.sent.mock.calls).toEqual([['store-discounts-updated']]);
+  });
+
+  it('leaves out a store this build does not know', async () => {
+    state.pages = [[feedRow(10, 40, future(3), undefined, 'xbox')]];
+
+    await syncStoreDiscounts();
+
+    expect(stored()).toEqual([]);
+    expect(state.sent).not.toHaveBeenCalled();
   });
 
   it('sends nothing when every row is already stored as it is', async () => {
@@ -180,7 +220,7 @@ describe('syncSteamDiscounts', () => {
     seed(10, 40, Date.parse(ends));
     state.pages = [[feedRow(10, 40, ends), feedRow(20, 0, null)]];
 
-    await syncSteamDiscounts();
+    await syncStoreDiscounts();
 
     expect(state.sent).not.toHaveBeenCalled();
   });
@@ -190,39 +230,54 @@ describe('the discounts broadcast', () => {
   const endsAtSeconds = Math.floor(Date.now() / 1000) + 3600;
 
   it('stores a discount from a tuple with an extra field', () => {
-    broadcast({ discounts: [[10, 35, endsAtSeconds, 'extra']] });
+    broadcast({ discounts: [['egs', 10, 35, endsAtSeconds, 'extra']] });
 
     expect(stored()).toEqual([
-      { steam_app_id: 10, discount_percent: 35, ends_at: endsAtSeconds * 1000 },
+      {
+        store: 'egs',
+        steam_app_id: 10,
+        discount_percent: 35,
+        ends_at: endsAtSeconds * 1000,
+      },
     ]);
-    expect(state.sent).toHaveBeenCalledWith('steam-discounts-updated');
+    expect(state.sent).toHaveBeenCalledWith('store-discounts-updated');
   });
 
-  it('deletes a discount whose end is null', () => {
-    seed(10, 35, endsAtSeconds * 1000);
+  it('keeps a discount with no end and deletes one at 0 percent', () => {
+    seed(20, 50, endsAtSeconds * 1000);
 
-    broadcast({ discounts: [[10, 35, null]] });
+    broadcast({
+      discounts: [
+        ['gog', 10, 35, null],
+        ['steam', 20, 0, null],
+        ['xbox', 30, 10, null],
+      ],
+    });
 
-    expect(stored()).toEqual([]);
-    expect(state.sent).toHaveBeenCalledWith('steam-discounts-updated');
+    expect(stored()).toEqual([
+      { store: 'gog', steam_app_id: 10, discount_percent: 35, ends_at: null },
+    ]);
+    expect(state.sent).toHaveBeenCalledWith('store-discounts-updated');
   });
 
   it('ignores a malformed batch', () => {
-    broadcast({ discounts: [['10', 35, endsAtSeconds]] });
+    broadcast({ discounts: [['steam', '10', 35, endsAtSeconds]] });
 
     expect(stored()).toEqual([]);
     expect(state.sent).not.toHaveBeenCalled();
   });
 });
 
-describe('getActiveSteamDiscounts', () => {
-  it('drops discounts whose end has passed', () => {
+describe('getActiveStoreDiscounts', () => {
+  it('drops discounts whose end has passed and keeps ones with no end', () => {
     const ends = Date.now() + DAY;
     seed(10, 40, ends);
     seed(20, 60, Date.now() - 1000);
+    seed(10, 25, null, 'gog');
 
-    expect(getActiveSteamDiscounts()).toEqual([
-      { steamAppId: 10, percent: 40, endsAt: ends },
+    expect(getActiveStoreDiscounts()).toEqual([
+      { store: 'gog', steamAppId: 10, percent: 25, endsAt: null },
+      { store: 'steam', steamAppId: 10, percent: 40, endsAt: ends },
     ]);
   });
 });

@@ -11,6 +11,9 @@ const DISCORD_WEB_APP_HOSTS = new Set([
 ]);
 const DISCORD_INVITE_HOSTS = new Set(['discord.gg', 'www.discord.gg']);
 const STEAM_HOSTS = new Set(['store.steampowered.com', 'steamcommunity.com']);
+const EPIC_HOSTS = new Set(['store.epicgames.com', 'www.epicgames.com']);
+// The launcher drops a store/p slug with any other character and opens the store's front page
+const EPIC_SLUG = /^[A-Za-z0-9\-_.!~*'()]+$/;
 
 // t.me paths as tg:// links (core.telegram.org/api/links): a channel or user, a post, an invite
 function telegramAppUrl({ hostname, pathname }: URL): string | null {
@@ -53,6 +56,17 @@ function steamAppUrl(url: URL): string | null {
     : null;
 }
 
+// The Epic Games Launcher opens /p/<slug> pages of either store host in its own store
+function epicAppUrl({ hostname, pathname }: URL): string | null {
+  if (!EPIC_HOSTS.has(hostname.toLowerCase())) {
+    return null;
+  }
+  const slug = pathname.split('/p/')[1]?.split('/')[0] ?? '';
+  return EPIC_SLUG.test(slug) && slug !== '.' && slug !== '..'
+    ? `com.epicgames.launcher://store/p/${slug}`
+    : null;
+}
+
 interface AppLink {
   appUrl: (url: URL) => string | null;
   open?: AppOpener;
@@ -62,6 +76,7 @@ const APP_LINKS: Record<LinkApp, AppLink> = {
   telegram: { appUrl: telegramAppUrl },
   discord: { appUrl: discordAppUrl },
   steam: { appUrl: steamAppUrl, open: openInSteamClient },
+  epic: { appUrl: epicAppUrl },
 };
 
 export function appUrlFor(app: LinkApp, url: string): string | null {

@@ -239,10 +239,12 @@ class DatabaseManager {
         server_liked INTEGER NOT NULL DEFAULT 0
       );
 
-      CREATE TABLE IF NOT EXISTS steam_discounts (
-        steam_app_id INTEGER PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS store_discounts (
+        store TEXT NOT NULL,
+        steam_app_id INTEGER NOT NULL,
         discount_percent INTEGER NOT NULL,
-        ends_at INTEGER NOT NULL -- epoch ms
+        ends_at INTEGER, -- epoch ms, NULL for a discount with no end
+        PRIMARY KEY (store, steam_app_id)
       ) WITHOUT ROWID;
 
       -- FTS5 virtual table for full-text search

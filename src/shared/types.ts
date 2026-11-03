@@ -53,12 +53,15 @@ export type LibraryFilterType = Exclude<
 >;
 export type LibraryMemberships = Record<LibraryFilterType, string[]>;
 
-export type LinkApp = 'telegram' | 'discord' | 'steam';
+export type LinkApp = 'telegram' | 'discord' | 'steam' | 'epic';
 
-export interface SteamDiscount {
+export type DiscountStore = 'steam' | 'gog' | 'egs';
+
+export interface StoreDiscount {
+  store: DiscountStore;
   steamAppId: number;
   percent: number;
-  endsAt: number;
+  endsAt: number | null;
 }
 
 export interface NewsFeedItem {
@@ -369,8 +372,8 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;
-  getSteamDiscounts: () => Promise<SteamDiscount[]>;
-  onSteamDiscountsUpdated: (callback: () => void) => () => void;
+  getStoreDiscounts: () => Promise<StoreDiscount[]>;
+  onStoreDiscountsUpdated: (callback: () => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;

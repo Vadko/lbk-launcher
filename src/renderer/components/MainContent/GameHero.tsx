@@ -15,7 +15,7 @@ import { ShareModal } from '../Modal/ShareModal';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { LikeButton } from '../ui/LikeButton';
-import { SteamSaleButton } from './SteamSaleButton';
+import { StoreSaleButtons } from './StoreSaleButtons';
 
 interface GameHeroProps {
   game: Game;
@@ -195,8 +195,8 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             </span>
           </motion.div>
         )}
-        <div className="absolute bottom-4 right-4 flex gap-2">
-          <SteamSaleButton steamAppId={game.steam_app_id} />
+        <div className="absolute bottom-4 right-4 left-4 flex flex-wrap justify-end gap-2">
+          <StoreSaleButtons game={game} />
           <LikeButton gameId={game.id} likes={game.likes} />
           {hasShareButton && (
             <>

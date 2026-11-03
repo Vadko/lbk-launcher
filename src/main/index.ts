@@ -103,9 +103,9 @@ import { closeDatabase, initDatabase } from './db/database';
 import { createGameCountersSubscription, syncGameCounters } from './db/game-counters';
 import { createGamesBroadcastSubscription } from './db/games-realtime';
 import {
-  createSteamDiscountsSubscription,
-  syncSteamDiscounts,
-} from './db/steam-discounts';
+  createStoreDiscountsSubscription,
+  syncStoreDiscounts,
+} from './db/store-discounts';
 import { SupabaseRealtimeManager } from './db/supabase-realtime';
 import {
   fetchAllGamesFromSupabase,
@@ -124,7 +124,7 @@ import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
 import { setupLinksHandlers } from './ipc/links';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
-import { setupSteamDiscountsHandlers } from './ipc/steam-discounts';
+import { setupStoreDiscountsHandlers } from './ipc/store-discounts';
 import { setupTgNewsHandlers } from './ipc/tg-news';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import { syncLikes } from './likes';
@@ -233,7 +233,7 @@ if (!gotTheLock) {
   setupInstallerHandlers();
   setupTgNewsHandlers();
   setupLikesHandlers();
-  setupSteamDiscountsHandlers();
+  setupStoreDiscountsHandlers();
   setupLinksHandlers();
   setupGameReviewsHandlers();
   setupAutoUpdater();
@@ -358,11 +358,11 @@ if (!gotTheLock) {
       gamesChannel,
       createReviewEventsSubscription(),
       createGameCountersSubscription(),
-      createSteamDiscountsSubscription(),
+      createStoreDiscountsSubscription(),
     ]);
 
     void syncGameCounters();
-    void syncSteamDiscounts();
+    void syncStoreDiscounts();
     syncLikes().catch((err) => {
       console.error('[Main] Likes sync failed:', err);
     });

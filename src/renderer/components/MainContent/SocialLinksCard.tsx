@@ -73,7 +73,7 @@ const StoreButton: React.FC<StoreLinkProps> = (props) => {
         };
       case 'epic-store':
         return {
-          open: () => window.electronAPI.openExternal(props.url),
+          open: () => window.electronAPI.openAppLink('epic', props.url),
           icon: <EpicIcon size={18} />,
           title: 'Epic Games',
           label: 'Epic Games',
