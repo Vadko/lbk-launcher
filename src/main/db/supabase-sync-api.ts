@@ -127,6 +127,8 @@ const GAME_SELECT_COLUMNS = [
   'kind',
   'workshop_id',
   'likes',
+  'reviews',
+  'error_reviews',
 ] as const satisfies readonly (keyof Omit<Game, ExcludedFields>)[];
 
 function _assertNever<_T extends never>(): void {

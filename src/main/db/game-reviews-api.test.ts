@@ -71,6 +71,16 @@ describe('fetchGameReviews', () => {
     ]);
   });
 
+  it('narrows the list to one type when asked', async () => {
+    invoke.mockResolvedValue(page([]));
+
+    await fetchGameReviews({ gameId: GAME, cursor: null, type: 'error' });
+
+    expect(invoke.mock.calls.map(([, { body }]) => body)).toEqual([
+      { gameId: GAME, cursor: null, type: 'error', machineId: MACHINE_ID },
+    ]);
+  });
+
   it('puts the focus thread first when the page does not hold it', async () => {
     invoke.mockResolvedValue(
       answered({
