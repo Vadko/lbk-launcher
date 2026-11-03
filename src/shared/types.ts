@@ -4,16 +4,12 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type { DeepLinkTarget } from './game-link-target';
+import type { GameReviewsAPI } from './game-reviews-api-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
-  DeckyInstallResult,
-  DeckyLoaderInstallResult,
-  MillenniumInstallResult,
-  MillenniumProgress,
-  PluginHostState,
-  RestartSteamResult,
-  SteamBridgeStatus,
+  SteamPluginHostAPI,
 } from './plugin-host-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
@@ -66,26 +62,6 @@ export interface NewsFeedItem {
 }
 
 export type NewsFeedFilter = 'games-80' | 'news' | 'sales';
-
-export interface GameReviewReply {
-  id: string;
-  text: string;
-  createdAt: string;
-}
-
-export interface GameReview {
-  id: string;
-  text: string;
-  createdAt: string;
-  images: string[];
-  replies: GameReviewReply[];
-}
-
-export interface GameReviewsPage {
-  items: GameReview[];
-  total: number;
-  pageSize: number;
-}
 
 export interface RatingsPage<T> {
   items: T[];
@@ -271,14 +247,6 @@ interface LaunchGameResult {
   error?: string;
 }
 
-export interface FeedbackReplyPayload {
-  replyId: string;
-  gameId: string;
-  gameName: string;
-  message: string;
-  createdAt: string;
-}
-
 export type SteamBridgeFailure =
   | 'cef-unavailable'
   | 'steam-not-running'
@@ -294,7 +262,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI {
+export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
@@ -307,6 +275,16 @@ export interface ElectronAPI {
     days?: number,
     limit?: number
   ) => Promise<{ game_id: string; downloads: number }[]>;
+  fetchTeamsRating: (
+    page: number,
+    pageSize: number,
+    hideAi: boolean
+  ) => Promise<RatingsPage<TeamRatingItem> | null>;
+  fetchGamesRating: (
+    page: number,
+    pageSize: number,
+    hideAi: boolean
+  ) => Promise<RatingsPage<GameRatingItem> | null>;
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
@@ -417,12 +395,6 @@ export interface ElectronAPI {
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
-  // Feedback replies (admin/owner → this install). `live=false` = silent catch-up.
-  onFeedbackReply: (
-    callback: (reply: FeedbackReplyPayload, live: boolean) => void
-  ) => () => void;
-  /** Kick main to replay replies missed while offline (delivered via onFeedbackReply). */
-  syncFeedbackReplies: () => Promise<void>;
   // Game detection
   onSteamLibraryChanged?: (callback: () => void) => () => void;
   onTestGamesChanged?: (callback: () => void) => () => void; // DEV ONLY
@@ -430,41 +402,7 @@ export interface ElectronAPI {
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
   // Steam integration
-  restartSteam: () => Promise<RestartSteamResult>;
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
-  getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
-  // Clears the persisted "blocked" verdict and re-verifies.
-  recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
-  onSteamBridgeStatusChanged: (
-    callback: (status: SteamBridgeStatus) => void
-  ) => () => void;
-  onSteamPendingActionsApplied: (
-    callback: (payload: { gameIds: string[] }) => void
-  ) => () => void;
-  // Millennium / Decky plugin host
-  getPluginHostState: () => Promise<PluginHostState | null>;
-  // Download, verify and stage Millennium; touches nothing outside userData.
-  prepareMillennium: () => Promise<MillenniumInstallResult>;
-  activateMillennium: (opts: {
-    restart: 'now' | 'on-exit';
-  }) => Promise<MillenniumInstallResult>;
-  uninstallMillennium: (opts: {
-    purge: boolean;
-    restart: 'now' | 'on-exit';
-  }) => Promise<MillenniumInstallResult>;
-  cancelMillennium: () => Promise<{ success: boolean }>;
-  requestDeckyPluginInstall: () => Promise<DeckyInstallResult>;
-  // Runs Decky's own installer, which asks for the sudo password itself; resolves once it exits.
-  installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
-  saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
-  onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
-  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
-  /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
-  onSteamRestartRequired: (callback: () => void) => () => void;
-  /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */
-  setSteamCefDebugging: (enabled: boolean) => Promise<void>;
-  /** Turning it off reverts Ukrainian library artwork already installed. */
-  setSteamCustomArtwork: (enabled: boolean) => Promise<void>;
   /**
    * Create or update the Steam library collection «З українізаторами» (games
    * with translations) with every owned game that has a translation in the
@@ -525,32 +463,12 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; error?: string }>;
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => Promise<{ success: boolean; error?: string }>;
-  // Submit feedback for a game translation
-  submitFeedback: (
-    gameId: string,
-    type: FeedbackType,
-    message: string,
-    screenshotPaths?: string[],
-    allowPublish?: boolean
-  ) => Promise<{ success: boolean; error?: string }>;
   submitLogs: (
     message: string,
     crashReason?: string
   ) => Promise<{ success: boolean; error?: string }>;
-  // Get signed upload URLs for feedback screenshots
-  getFeedbackUploadUrls: (fileNames: string[]) => Promise<{
-    success: boolean;
-    uploadUrls?: { fileName: string; path: string; signedUrl: string; token: string }[];
-    error?: string;
-  }>;
-  // Upload a file to a signed URL
-  uploadFileToSignedUrl: (
-    signedUrl: string,
-    filePath: string,
-    contentType: string
-  ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
-  onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  onDeepLink: (callback: (data: DeepLinkTarget) => void) => () => void;
   findDeepLinkGameId: (slug: string, team: string) => Promise<string | null>;
   /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
   notifyReady: () => void;
@@ -560,21 +478,6 @@ export interface ElectronAPI {
   // Banner API
   fetchPromoBanner: () => Promise<BannerData | null>;
   fetchBannersForGame: (gameId: string, gameSlug: string) => Promise<GameBannersResult>;
-  fetchGameReviews: (
-    gameId: string,
-    page: number,
-    pageSize: number
-  ) => Promise<GameReviewsPage | null>;
-  fetchTeamsRating: (
-    page: number,
-    pageSize: number,
-    hideAi: boolean
-  ) => Promise<RatingsPage<TeamRatingItem> | null>;
-  fetchGamesRating: (
-    page: number,
-    pageSize: number,
-    hideAi: boolean
-  ) => Promise<RatingsPage<GameRatingItem> | null>;
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;

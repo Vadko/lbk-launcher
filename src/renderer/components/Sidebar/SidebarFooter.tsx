@@ -25,7 +25,7 @@ interface SidebarFooterProps {
 export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
   ({ onOpenHistory, onOpenSettings, unreadCount, isCompact = false }) => {
     const navigate = useNavigate();
-    const { gamepadSoundsEnabled, toggleGamepadSounds } = useSettingsStore();
+    const { uiSoundsEnabled, toggleUiSounds } = useSettingsStore();
     const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
     const [badgeRef, animateBadge] = useAnimate<HTMLSpanElement>();
     const prevUnreadCount = useRef(0);
@@ -95,21 +95,19 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               <HomeIcon size={20} className="mx-auto text-text-muted" />
             </button>
             <button
-              onClick={toggleGamepadSounds}
+              onClick={toggleUiSounds}
               data-nav-group="sidebar-actions"
               data-gamepad-header-item
               className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
               title={
-                gamepadSoundsEnabled
-                  ? t('sidebarNav.gamepadSoundsOff')
-                  : t('sidebarNav.gamepadSoundsOn')
+                uiSoundsEnabled ? t('sidebarNav.uiSoundsOff') : t('sidebarNav.uiSoundsOn')
               }
             >
               <AppActionIcon
                 phase="idle"
-                icon={gamepadSoundsEnabled ? Volume2 : VolumeX}
+                icon={uiSoundsEnabled ? Volume2 : VolumeX}
                 size={20}
-                className={`text-text-muted transition-opacity ${gamepadSoundsEnabled ? '' : 'opacity-50'}`}
+                className={`text-text-muted transition-opacity ${uiSoundsEnabled ? '' : 'opacity-50'}`}
               />
             </button>
           </>

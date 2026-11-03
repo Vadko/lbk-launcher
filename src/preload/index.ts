@@ -5,6 +5,7 @@ const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
+import type { DeepLinkTarget } from '../shared/game-link-target';
 import type {
   MillenniumProgress,
   PluginHostState,
@@ -13,8 +14,6 @@ import type {
 import type {
   DownloadProgress,
   ElectronAPI,
-  FeedbackReplyPayload,
-  FeedbackType,
   Game,
   InstallationStatus,
   InstallOptions,
@@ -22,8 +21,11 @@ import type {
   RunInstallerRequest,
   SortOrderType,
 } from '../shared/types';
+import { gameReviewsAPI } from './game-reviews-api';
+import { systemNotificationAPI } from './system-notification-api';
 
 const electronAPI: ElectronAPI = {
+  ...gameReviewsAPI,
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
@@ -34,6 +36,10 @@ const electronAPI: ElectronAPI = {
   checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
+  fetchTeamsRating: (page: number, pageSize: number, hideAi: boolean) =>
+    ipcRenderer.invoke('fetch-teams-rating', page, pageSize, hideAi),
+  fetchGamesRating: (page: number, pageSize: number, hideAi: boolean) =>
+    ipcRenderer.invoke('fetch-games-rating', page, pageSize, hideAi),
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
@@ -216,13 +222,6 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-tombstoned', handler);
     return () => ipcRenderer.removeListener('game-tombstoned', handler);
   },
-  onFeedbackReply: (callback) => {
-    const handler = (_: unknown, reply: FeedbackReplyPayload, live: boolean) =>
-      callback(reply, live);
-    ipcRenderer.on('feedback-reply', handler);
-    return () => ipcRenderer.removeListener('feedback-reply', handler);
-  },
-  syncFeedbackReplies: () => ipcRenderer.invoke('feedback-replies:sync'),
   // Game detection
   onSteamLibraryChanged: (callback: () => void) => {
     const handler = () => callback();
@@ -337,31 +336,11 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('track-workshop-open', gameId, isFirstSession),
   // Track failed search (0 results)
   trackFailedSearch: (query: string) => ipcRenderer.invoke('track-failed-search', query),
-  // Submit feedback for a game translation
-  submitFeedback: (
-    gameId: string,
-    type: FeedbackType,
-    message: string,
-    screenshotPaths?: string[],
-    allowPublish?: boolean
-  ) =>
-    ipcRenderer.invoke(
-      'submit-feedback',
-      gameId,
-      type,
-      message,
-      screenshotPaths,
-      allowPublish
-    ),
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
-  getFeedbackUploadUrls: (fileNames: string[]) =>
-    ipcRenderer.invoke('get-feedback-upload-urls', fileNames),
-  uploadFileToSignedUrl: (signedUrl: string, filePath: string, contentType: string) =>
-    ipcRenderer.invoke('upload-file-to-signed-url', signedUrl, filePath, contentType),
   // Deep link handling
-  onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
-    const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
+  onDeepLink: (callback: (data: DeepLinkTarget) => void) => {
+    const handler = (_: unknown, data: DeepLinkTarget) => callback(data);
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },
@@ -381,12 +360,6 @@ const electronAPI: ElectronAPI = {
   fetchPromoBanner: () => ipcRenderer.invoke('fetch-promo-banner'),
   fetchBannersForGame: (gameId: string, gameSlug: string) =>
     ipcRenderer.invoke('fetch-banners-for-game', gameId, gameSlug), // Use gameId as gameSlug for simplicity
-  fetchGameReviews: (gameId: string, page: number, pageSize: number) =>
-    ipcRenderer.invoke('fetch-game-reviews', gameId, page, pageSize),
-  fetchTeamsRating: (page: number, pageSize: number, hideAi: boolean) =>
-    ipcRenderer.invoke('fetch-teams-rating', page, pageSize, hideAi),
-  fetchGamesRating: (page: number, pageSize: number, hideAi: boolean) =>
-    ipcRenderer.invoke('fetch-games-rating', page, pageSize, hideAi),
   recordPromoBannerImpression: (params: {
     campaignId: string;
     impressionType: ImpressionType;
@@ -409,13 +382,7 @@ contextBridge.exposeInMainWorld('windowControls', {
     return () => ipcRenderer.removeListener('window:maximized', handler);
   },
   isVisible: () => ipcRenderer.invoke('window:is-visible'),
-  showSystemNotification: (options: { title: string; body: string; gameId?: string }) =>
-    ipcRenderer.invoke('show-system-notification', options),
-  onNavigateToGame: (callback: (gameId: string) => void) => {
-    const handler = (_: unknown, gameId: string) => callback(gameId);
-    ipcRenderer.on('navigate-to-game', handler);
-    return () => ipcRenderer.removeListener('navigate-to-game', handler);
-  },
+  ...systemNotificationAPI,
 });
 
 // Liquid Glass API

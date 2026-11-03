@@ -10,6 +10,8 @@ const noop = () => undefined;
 
 export interface SetupView {
   title: string;
+  // A line under the title, which the dialog is also described by
+  description?: string;
   dismissable: boolean;
   body: React.ReactNode;
   footer: React.ReactNode;
@@ -17,12 +19,20 @@ export interface SetupView {
 
 interface SetupFrameProps {
   view: SetupView;
+  // Sizes or skins the dialog box itself
+  className?: string;
+  seamlessHeader?: boolean;
   onClose: () => void;
 }
 
 // Each flow renders exactly one frame and swaps its view, so the Modal and its AnimatePresence stay mounted across steps.
-export const SetupFrame: React.FC<SetupFrameProps> = ({ view, onClose }) => {
-  const { title, dismissable, body, footer } = view;
+export const SetupFrame: React.FC<SetupFrameProps> = ({
+  view,
+  className,
+  seamlessHeader,
+  onClose,
+}) => {
+  const { title, description, dismissable, body, footer } = view;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -45,8 +55,11 @@ export const SetupFrame: React.FC<SetupFrameProps> = ({ view, onClose }) => {
       isOpen
       onClose={dismissable ? onClose : noop}
       title={title}
+      description={description}
+      seamlessHeader={seamlessHeader}
       showCloseButton={dismissable}
       footer={footer}
+      classNames={className}
     >
       {body}
     </Modal>

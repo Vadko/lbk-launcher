@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { type DeepLinkTarget, REVIEWS_TAB } from '@/shared/game-link-target';
 import { useStore } from '../store/useStore';
 
 const isCatalogReady = () => {
@@ -22,7 +23,7 @@ const whenCatalogReady = () =>
     });
   });
 
-// lbk://games/{slug}/{team}
+// lbk://games/{slug}/{team}, with ?tab=reviews for the reviews tab
 export function useDeepLink() {
   const navigate = useNavigate();
 
@@ -31,12 +32,14 @@ export function useDeepLink() {
       return;
     }
 
-    const handleDeepLink = async (data: { slug: string; team: string }) => {
+    const handleDeepLink = async (data: DeepLinkTarget) => {
       try {
         await whenCatalogReady();
         const gameId = await window.electronAPI.findDeepLinkGameId(data.slug, data.team);
         if (gameId) {
-          navigate(`/game/${gameId}`);
+          navigate(
+            data.openReviews ? `/game/${gameId}?tab=${REVIEWS_TAB}` : `/game/${gameId}`
+          );
         } else {
           console.warn('[DeepLink] Game not found for:', data);
         }

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2023",
     "useDefineForClassFields": true,
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -21,7 +21,7 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Path mapping */
-    "types": ["electron-vite/node"],
+    "types": ["electron-vite/node", "convert-layout"],
     "paths": {
       "@/*": ["./src/*"],
       "@resources/*": ["./resources/*"],

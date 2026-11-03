@@ -7,7 +7,6 @@ import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
-import { PillTabs } from '../ui/PillTabs';
 
 const FEED_FILTERS: NewsFeedFilter[] = ['sales', 'games-80', 'news'];
 
@@ -40,7 +39,7 @@ export const NewsFeedSection: React.FC = () => {
 
   const attachSentinel = useInfiniteScrollSentinel({
     hasNextPage,
-    isFetchingNextPage,
+    isBusy: isFetchingNextPage,
     fetchNextPage,
   });
 
@@ -69,14 +68,23 @@ export const NewsFeedSection: React.FC = () => {
         <h2 className="text-4xl font-head font-semibold text-text-main">
           {t('newsFeed.title')}
         </h2>
-        <PillTabs
-          tabs={FEED_FILTERS.map((filter) => ({
-            id: filter,
-            label: t(`newsFeed.tab.${filter}`),
-          }))}
-          activeTab={activeFilter}
-          onChange={setActiveFilter}
-        />
+        <div className="glass-card-no-motion p-2! flex gap-2">
+          {FEED_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setActiveFilter(filter)}
+              data-gamepad-action
+              className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                activeFilter === filter
+                  ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
+                  : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
+              }`}
+            >
+              {t(`newsFeed.tab.${filter}`)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-8 align-start">

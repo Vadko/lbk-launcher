@@ -10,6 +10,7 @@ import {
   UsersIcon,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData } from '@/main/db/banners-api';
 import { t } from '@/shared/i18n/i18n';
@@ -42,12 +43,15 @@ import { TeamSubscribeButton } from '../components/ui/TeamSubscribeButton';
 import { WorkshopInstallButton } from '../components/ui/WorkshopInstallButton';
 import { isSpecialTranslator } from '../constants/specialTranslators';
 import { type ActionPhase, useActionPhase } from '../hooks/useActionPhase';
+import { useGameTabFromUrl } from '../hooks/useGameTabFromUrl';
 import { useGameTombstone } from '../hooks/useGameTombstone';
 import { useInstallation } from '../hooks/useInstallation';
 import {
   useHasEverInstalledTranslation,
   useIsTranslationInstalledForGame,
 } from '../hooks/useInstalledTranslations';
+import { useTabPanelScroll } from '../hooks/useTabPanelScroll';
+import { useRecommendedGames } from '../queries/useRecommendedGames';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -55,6 +59,7 @@ import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
+import { reviewCounts } from '../utils/reviewCounts';
 
 interface BannerInfo {
   data: BannerData | null;
@@ -72,6 +77,7 @@ const EMPTY_BANNER_INFO: BannerInfo = {
 
 // Short on purpose: the server caps banner impressions per machine_id, so a later visit asks again
 const BANNER_GC_TIME = 5 * 60 * 1000;
+const RECOMMENDED_LIMIT = 9;
 
 /**
  * Detailed game information page
@@ -103,12 +109,13 @@ export const GamePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showAuthorSubscriptionModal, setShowAuthorSubscriptionModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  // Each open mounts a fresh form, while a closing one keeps its content through the exit animation
+  const [feedbackOpens, setFeedbackOpens] = useState(0);
+  const openFeedback = () => {
+    setShowFeedbackModal(true);
+    setFeedbackOpens((count) => count + 1);
+  };
   const isTombstoned = useGameTombstone(gameId);
-  const [tabState, setTabState] = useState<{ gameId: string; tab: GameTab }>({
-    gameId: gameId ?? '',
-    tab: 'info',
-  });
-  const activeTab: GameTab = tabState.gameId === gameId ? tabState.tab : 'info';
 
   useEffect(() => {
     resetLaunch();
@@ -198,6 +205,29 @@ export const GamePage: React.FC = () => {
 
   const selectedGameId = selectedGame?.id;
   const selectedGameSlug = selectedGame?.slug;
+
+  const recommended = useRecommendedGames(selectedGameId, RECOMMENDED_LIMIT);
+  const { panelRef, showPanel } = useTabPanelScroll();
+  // A link to the tab alone scrolls once the list has rendered, since a loading list is too short to reach
+  const [revealReviews, setRevealReviews] = useState(false);
+  const requestReviewsReveal = useCallback(() => setRevealReviews(true), []);
+  const handleReviewsRevealed = useCallback(() => {
+    setRevealReviews(false);
+    showPanel();
+  }, [showPanel]);
+  const { tab, setTab, focus, clearFocus } = useGameTabFromUrl(
+    selectedGameId,
+    requestReviewsReveal
+  );
+  // The panel renders first, so the scroll is measured against the picked tab's height
+  const selectTab = (next: GameTab) => {
+    flushSync(() => setTab(next));
+    showPanel();
+  };
+  const gameTabs: GameTab[] = recommended.isHidden
+    ? ['info', 'reviews']
+    : ['info', 'recommended', 'reviews'];
+  const activeTab = gameTabs.includes(tab) ? tab : 'info';
 
   const { data: banners, isError: bannersFailed } = useQuery({
     queryKey: ['game-banners', selectedGameId, selectedGameSlug],
@@ -412,6 +442,7 @@ export const GamePage: React.FC = () => {
   if (!selectedGame) {
     return null;
   }
+  const counts = reviewCounts(selectedGame);
   // Adult content overlay
   if (isAdultBlurred) {
     return (
@@ -469,6 +500,7 @@ export const GamePage: React.FC = () => {
       {/* Feedback Modal */}
       {selectedGame && (
         <FeedbackModal
+          key={feedbackOpens}
           isOpen={showFeedbackModal}
           onClose={() => setShowFeedbackModal(false)}
           gameId={selectedGame.id}
@@ -491,138 +523,147 @@ export const GamePage: React.FC = () => {
 
           {/* Actions block */}
           <div className="glass-card-no-motion grid gap-6">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Primary actions */}
-              {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
-                <Button
-                  variant="primary"
-                  icon={
-                    <AppActionIcon
-                      phase={launchPhase}
-                      icon={Play}
-                      size={20}
-                      inheritColor
-                    />
-                  }
-                  onClick={handleLaunchGame}
-                  aria-busy={isLaunching}
-                  disabled={isInstalling || isUninstalling || isWorkshopChangePending}
-                  data-gamepad-action
-                  data-gamepad-primary-action
-                >
-                  {t('gameActions.play')}
-                </Button>
-              )}
-              {isWorkshop && (
-                <WorkshopInstallButton
-                  key={selectedGame.id}
-                  gameId={selectedGame.id}
-                  workshopId={selectedGame.workshop_id ?? ''}
-                  steamAppId={selectedGame.steam_app_id}
-                  isGameInstalledOnSystem={isGameInstalledOnSystem}
-                  isOnline={isOnline}
-                  isTombstoned={isTombstoned}
-                />
-              )}
-              {!isWorkshop && (
-                <Button
-                  variant={installVariant}
-                  icon={
-                    <AppActionIcon
-                      phase={installButtonPhase}
-                      icon={isUpdateAvailable ? RefreshCw : Download}
-                      size={20}
-                      inheritColor={installVariant === 'primary'}
-                    />
-                  }
-                  onClick={() => void handleInstall()}
-                  aria-busy={installButtonPhase === 'pending'}
-                  disabled={
-                    isInstalling ||
-                    isUninstalling ||
-                    !isInstallable ||
-                    !isOnline ||
-                    isTombstoned
-                  }
-                  title={
-                    isTombstoned
-                      ? t('gameActions.removedFromCatalog')
-                      : !isOnline
-                        ? t('gameActions.offline')
-                        : undefined
-                  }
-                  data-gamepad-primary-action
-                  data-gamepad-action
-                >
-                  {getInstallButtonText()}
-                </Button>
-              )}
-              {!isWorkshop &&
-                installationInfo?.installerPath &&
-                !isInstalling &&
-                !isUninstalling && (
+            <div className="flex items-start gap-3">
+              <div className="flex flex-1 flex-wrap items-center gap-3">
+                {/* Primary actions */}
+                {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
                   <Button
-                    variant="secondary"
+                    variant="primary"
                     icon={
-                      <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
+                      <AppActionIcon
+                        phase={launchPhase}
+                        icon={Play}
+                        size={20}
+                        inheritColor
+                      />
                     }
-                    onClick={() => void handleRerunInstaller()}
-                    aria-busy={rerunPhase === 'pending'}
+                    onClick={handleLaunchGame}
+                    aria-busy={isLaunching}
+                    disabled={isInstalling || isUninstalling || isWorkshopChangePending}
                     data-gamepad-action
-                    title={t('gameActions.rerunTitle')}
+                    data-gamepad-primary-action
                   >
-                    {t('gameActions.rerun')}
+                    {t('gameActions.play')}
                   </Button>
                 )}
-              {!isWorkshop && installationInfo && !isInstalling && (
-                <Button
-                  variant="secondary"
-                  icon={<Trash2Icon size={20} />}
-                  onClick={handleUninstall}
-                  disabled={isUninstalling}
-                  title={t('gameActions.uninstallTitle')}
-                  data-gamepad-action
-                />
-              )}
-              {/* Separator */}
-              <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
-
-              {/* Secondary actions */}
-              {(isPlanned || isTechImprovement) && (
-                <SubscribeButton
-                  gameId={selectedGame.id}
-                  gameName={selectedGame.name}
-                  gameStatus={selectedGame.status}
-                  variant="amber"
-                  data-gamepad-action
-                />
-              )}
-              {selectedGame.support_url &&
-                bannerInfo.placementType &&
-                !(
-                  bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id
-                ) && (
+                {isWorkshop && (
+                  <WorkshopInstallButton
+                    key={selectedGame.id}
+                    gameId={selectedGame.id}
+                    workshopId={selectedGame.workshop_id ?? ''}
+                    steamAppId={selectedGame.steam_app_id}
+                    isGameInstalledOnSystem={isGameInstalledOnSystem}
+                    isOnline={isOnline}
+                    isTombstoned={isTombstoned}
+                  />
+                )}
+                {!isWorkshop && (
                   <Button
-                    variant="accent"
-                    icon={<HeartIcon size={20} />}
-                    onClick={handleSupport}
+                    variant={installVariant}
+                    icon={
+                      <AppActionIcon
+                        phase={installButtonPhase}
+                        icon={isUpdateAvailable ? RefreshCw : Download}
+                        size={20}
+                        inheritColor={installVariant === 'primary'}
+                      />
+                    }
+                    onClick={() => void handleInstall()}
+                    aria-busy={installButtonPhase === 'pending'}
+                    disabled={
+                      isInstalling ||
+                      isUninstalling ||
+                      !isInstallable ||
+                      !isOnline ||
+                      isTombstoned
+                    }
+                    title={
+                      isTombstoned
+                        ? t('gameActions.removedFromCatalog')
+                        : !isOnline
+                          ? t('gameActions.offline')
+                          : undefined
+                    }
+                    data-gamepad-primary-action
+                    data-gamepad-action
+                  >
+                    {getInstallButtonText()}
+                  </Button>
+                )}
+                {!isWorkshop &&
+                  installationInfo?.installerPath &&
+                  !isInstalling &&
+                  !isUninstalling && (
+                    <Button
+                      variant="secondary"
+                      icon={
+                        <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
+                      }
+                      onClick={() => void handleRerunInstaller()}
+                      aria-busy={rerunPhase === 'pending'}
+                      data-gamepad-action
+                      title={t('gameActions.rerunTitle')}
+                    >
+                      {t('gameActions.rerun')}
+                    </Button>
+                  )}
+                {!isWorkshop && installationInfo && !isInstalling && (
+                  <Button
+                    variant="secondary"
+                    icon={<Trash2Icon size={20} />}
+                    onClick={handleUninstall}
+                    disabled={isUninstalling}
+                    title={t('gameActions.uninstallTitle')}
+                    data-gamepad-action
+                  />
+                )}
+                {/* Separator */}
+                <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
+
+                {/* Secondary actions */}
+                {(isPlanned || isTechImprovement) && (
+                  <SubscribeButton
+                    gameId={selectedGame.id}
+                    gameName={selectedGame.name}
+                    gameStatus={selectedGame.status}
+                    variant="amber"
+                    data-gamepad-action
+                  />
+                )}
+                {selectedGame.support_url &&
+                  bannerInfo.placementType &&
+                  !(
+                    bannerInfo.placementType === 'small_square' && !bannerInfo.data?.id
+                  ) && (
+                    <Button
+                      variant="accent"
+                      icon={<HeartIcon size={20} />}
+                      onClick={handleSupport}
+                      data-gamepad-action
+                      className="support-button"
+                    >
+                      {t('gameActions.support')}
+                    </Button>
+                  )}
+                {canLeaveFeedback && (
+                  <Button
+                    variant="secondary"
+                    icon={<FileEditIcon size={20} />}
+                    onClick={openFeedback}
                     data-gamepad-action
                     className="support-button"
                   >
-                    {t('gameActions.support')}
+                    {t('gameActions.feedback')}
                   </Button>
                 )}
-              {canLeaveFeedback && (
-                <Button
-                  variant="secondary"
-                  icon={<FileEditIcon size={20} />}
-                  onClick={() => setShowFeedbackModal(true)}
-                  data-gamepad-action
-                  className="support-button"
-                >
-                  {t('gameActions.feedback')}
-                </Button>
-              )}
+              </div>
+              <GameTabs
+                gameId={selectedGame.id}
+                reviewCounts={counts}
+                tabs={gameTabs}
+                activeTab={activeTab}
+                onChange={selectTab}
+              />
             </div>
 
             <div className="flex gap-3 flex-wrap">
@@ -777,120 +818,121 @@ export const GamePage: React.FC = () => {
             </motion.div>
           </div>
 
-          <GameTabs
-            activeTab={activeTab}
-            onChange={(tab) => setTabState({ gameId: selectedGame.id, tab })}
-          />
-
-          {activeTab === 'reviews' ? (
-            <GameReviewsTab
-              key={selectedGame.id}
-              gameId={selectedGame.id}
-              canLeaveFeedback={canLeaveFeedback}
-              onLeaveFeedback={() => setShowFeedbackModal(true)}
-            />
-          ) : activeTab === 'recommended' ? (
-            <>
-              {/* Recommended */}
+          <div ref={panelRef} className="grid gap-6 min-w-0">
+            {activeTab === 'reviews' ? (
+              <GameReviewsTab
+                key={selectedGame.id}
+                gameId={selectedGame.id}
+                gameName={selectedGame.name}
+                reviewCounts={counts}
+                canLeaveFeedback={canLeaveFeedback}
+                onLeaveFeedback={openFeedback}
+                focus={focus}
+                onFocusHandled={clearFocus}
+                reveal={revealReviews}
+                onRevealed={handleReviewsRevealed}
+              />
+            ) : activeTab === 'recommended' ? (
               <RecommendedGamesSection
                 gameId={selectedGame.id}
                 gameName={selectedGame.name}
-                showLimit={9}
+                games={recommended.games}
+                isLoading={recommended.isLoading}
               />
-            </>
-          ) : (
-            <>
-              {/* Donate */}
-              {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
-                <motion.div
-                  layout="position"
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                >
-                  <FundraisingProgressCard
-                    key={selectedGame.id}
-                    current={selectedGame.fundraising_current || 0}
-                    goal={selectedGame.fundraising_goal}
-                    supportUrl={selectedGame.support_url}
-                  />
-                </motion.div>
-              )}
-
-              {/* Translate description */}
-              {selectedGame.description && (
-                <motion.section
-                  layout="position"
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  className="glass-card-no-motion min-w-0"
-                >
-                  <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                    {t('gameSections.aboutTranslation')}
-                  </h3>
-                  <MarkdownText
-                    text={selectedGame.description}
-                    className="text-text-muted leading-relaxed wrap-break-word"
-                  />
-                </motion.section>
-              )}
-
-              {/* Video */}
-              {selectedGame.video_url && (
-                <motion.div
-                  layout="position"
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                >
-                  <VideoCard videoUrl={selectedGame.video_url} />
-                </motion.div>
-              )}
-
-              {/* Gallery */}
-              {selectedGame.screenshots && (
-                <motion.section
-                  layout="position"
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                >
-                  <div className="glass-card-no-motion">
-                    <Gallery
-                      slides={selectedGame.screenshots}
-                      spaceBetween={30}
-                      slidesPerView={3}
-                      pagination={false}
-                      thumbs={true}
-                      loop={true}
-                      updated_at={selectedGame.updated_at}
+            ) : (
+              <>
+                {/* Donate */}
+                {selectedGame.fundraising_goal && selectedGame.fundraising_goal > 0 && (
+                  <motion.div
+                    layout="position"
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
+                    <FundraisingProgressCard
+                      key={selectedGame.id}
+                      current={selectedGame.fundraising_current || 0}
+                      goal={selectedGame.fundraising_goal}
+                      supportUrl={selectedGame.support_url}
                     />
-                  </div>
-                </motion.section>
-              )}
+                  </motion.div>
+                )}
 
-              {/* Game description */}
-              {selectedGame.game_description && (
-                <motion.section
+                {/* Translate description */}
+                {selectedGame.description && (
+                  <motion.section
+                    layout="position"
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="glass-card-no-motion min-w-0"
+                  >
+                    <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                      {t('gameSections.aboutTranslation')}
+                    </h3>
+                    <MarkdownText
+                      text={selectedGame.description}
+                      className="text-text-muted leading-relaxed wrap-break-word"
+                    />
+                  </motion.section>
+                )}
+
+                {/* Video */}
+                {selectedGame.video_url && (
+                  <motion.div
+                    layout="position"
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
+                    <VideoCard videoUrl={selectedGame.video_url} />
+                  </motion.div>
+                )}
+
+                {/* Gallery */}
+                {selectedGame.screenshots && (
+                  <motion.section
+                    layout="position"
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                  >
+                    <div className="glass-card-no-motion">
+                      <Gallery
+                        slides={selectedGame.screenshots}
+                        spaceBetween={30}
+                        slidesPerView={3}
+                        pagination={false}
+                        thumbs={true}
+                        loop={true}
+                        updated_at={selectedGame.updated_at}
+                      />
+                    </div>
+                  </motion.section>
+                )}
+
+                {/* Game description */}
+                {selectedGame.game_description && (
+                  <motion.section
+                    layout="position"
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="glass-card-no-motion min-w-0"
+                  >
+                    <h3 className="text-lg font-head font-semibold text-text-main mb-3">
+                      {t('gameSections.aboutGame')}
+                    </h3>
+                    <MarkdownText
+                      text={selectedGame.game_description}
+                      className="text-text-muted leading-relaxed wrap-break-word"
+                    />
+                  </motion.section>
+                )}
+
+                {/* Links */}
+                <motion.div
                   layout="position"
                   transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="glass-card-no-motion min-w-0"
+                  className="flex gap-4"
                 >
-                  <h3 className="text-lg font-head font-semibold text-text-main mb-3">
-                    {t('gameSections.aboutGame')}
-                  </h3>
-                  <MarkdownText
-                    text={selectedGame.game_description}
-                    className="text-text-muted leading-relaxed wrap-break-word"
-                  />
-                </motion.section>
-              )}
-
-              {/* Links */}
-              <motion.div
-                layout="position"
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="flex gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <SocialLinksCard game={selectedGame} />
-                </div>
-              </motion.div>
-            </>
-          )}
+                  <div className="flex-1 min-w-0">
+                    <SocialLinksCard game={selectedGame} />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </div>
         </LayoutGroup>
       </div>
     </>

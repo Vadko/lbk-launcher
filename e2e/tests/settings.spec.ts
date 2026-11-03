@@ -26,7 +26,7 @@ async function openSettings() {
 
 test('settings modal opens from gear icon', async () => {
   await openSettings();
-  await expect(page.locator('#modal-title')).toHaveText(t('settings.title'));
+  await expect(page.getByRole('dialog', { name: t('settings.title') })).toBeVisible();
 });
 
 test('settings modal contains expected toggles', async () => {

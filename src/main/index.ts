@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/electron/main';
 import { app, ipcMain, session } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import { DEEP_LINK_PROTOCOL, parseDeepLink } from './deep-link';
 import { initLogger } from './utils/logger';
 import { isLinux, isMacOS, isWindows } from './utils/platform';
 import { sentryMainV10Baseline } from './utils/sentry-baseline';
@@ -25,6 +26,9 @@ if (isE2E) {
 // whether the toggle can turn reporting back on without a restart
 const sentryStartedEnabled = app.isPackaged && !isE2E && isCrashDiagnosticsEnabled();
 
+// Before Sentry.init, so captureConsoleIntegration wraps the logger instead of being replaced by it
+initLogger();
+
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   enabled: sentryStartedEnabled,
@@ -42,46 +46,7 @@ Sentry.init({
   ],
 });
 
-// Deep link handling
-const PROTOCOL = 'lbk';
 let pendingDeepLink: string | null = null;
-
-// Parse deep link URL: lbk://games/{slug}/{team}
-function parseDeepLink(url: string): { slug: string; team: string } | null {
-  try {
-    // URL format: lbk://games/{slug}/{team}
-    const urlObj = new URL(url);
-    if (urlObj.protocol !== `${PROTOCOL}:`) {
-      return null;
-    }
-
-    const pathParts = urlObj.pathname.replace(/^\/+/, '').split('/');
-    // pathParts: ['games', 'slug', 'team'] or hostname might be 'games'
-
-    // Handle both lbk://games/slug/team and lbk:///games/slug/team
-    let parts: string[];
-    if (urlObj.hostname === 'games') {
-      // lbk://games/slug/team -> hostname='games', pathname='/slug/team'
-      parts = ['games', ...pathParts];
-    } else if (pathParts[0] === 'games') {
-      // lbk:///games/slug/team -> pathname='/games/slug/team'
-      parts = pathParts;
-    } else {
-      return null;
-    }
-
-    if (parts.length >= 3 && parts[0] === 'games') {
-      return {
-        slug: decodeURIComponent(parts[1]),
-        team: decodeURIComponent(parts[2]),
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('[DeepLink] Failed to parse URL:', url, error);
-    return null;
-  }
-}
 
 function handleDeepLink(url: string) {
   console.log('[DeepLink] Received URL:', url);
@@ -145,12 +110,11 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
-import { createFeedbackReplyBroadcastSubscription } from './feedback-replies';
 import {
   startInstallationWatcher,
   stopInstallationWatcher,
 } from './installation-watcher';
-import { setupFeedbackReplyHandlers } from './ipc/feedback-replies';
+import { setupGameReviewsHandlers } from './ipc/game-reviews';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
@@ -165,6 +129,7 @@ import {
 } from './playtime-tracker';
 import { bootstrapCefDebugging } from './plugin-host/bridge-plugin-setup';
 import { stopDeckyWatcher, watchDeckyPlugins } from './plugin-host/decky-watcher';
+import { createReviewEventsSubscription } from './review-events';
 import {
   deleteStaleBridgeData,
   shutdownSteamBridgeServer,
@@ -176,6 +141,7 @@ import {
   stopStoreLibraryWatcher,
 } from './store-library-watcher';
 import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
+import { stopCaptchaWindow } from './turnstile/window';
 import { startPendingEglLaunchArgs } from './utils/egl-windows-settings';
 import { startSteamBridge } from './utils/steam-bridge-lifecycle';
 import { createMainWindow, getMainWindow, showMainWindow } from './window';
@@ -191,9 +157,6 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  // Initialize logger early to capture all logs
-  initLogger();
-
   // Catch unhandled errors in main process to prevent crashes
   process.on('uncaughtException', (error) => {
     console.error('[Main] Uncaught Exception:', error);
@@ -212,10 +175,12 @@ if (!gotTheLock) {
   // Register protocol handler (for development, include the path to electron)
   if (process.defaultApp) {
     if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [process.argv[1]]);
+      app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL, process.execPath, [
+        process.argv[1],
+      ]);
     }
   } else {
-    app.setAsDefaultProtocolClient(PROTOCOL);
+    app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL);
   }
 
   // macOS: Handle open-url event
@@ -240,7 +205,7 @@ if (!gotTheLock) {
 
     // On Windows/Linux, the deep link URL is passed as the last argument
     if (isWindows() || isLinux()) {
-      const deepLinkUrl = argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+      const deepLinkUrl = argv.find((arg) => arg.startsWith(`${DEEP_LINK_PROTOCOL}://`));
       if (deepLinkUrl) {
         handleDeepLink(deepLinkUrl);
       }
@@ -262,7 +227,7 @@ if (!gotTheLock) {
   setupInstallerHandlers();
   setupTgNewsHandlers();
   setupLikesHandlers();
-  setupFeedbackReplyHandlers();
+  setupGameReviewsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();
   setupPluginHostHandlers();
@@ -287,7 +252,9 @@ if (!gotTheLock) {
     }
 
     if (isWindows() || isLinux()) {
-      const deepLinkUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+      const deepLinkUrl = process.argv.find((arg) =>
+        arg.startsWith(`${DEEP_LINK_PROTOCOL}://`)
+      );
       if (deepLinkUrl) {
         pendingDeepLink = deepLinkUrl;
       }
@@ -379,10 +346,9 @@ if (!gotTheLock) {
         });
       }
     );
-    const feedbackChannel = createFeedbackReplyBroadcastSubscription();
     realtimeManager.subscribe([
       gamesChannel,
-      feedbackChannel,
+      createReviewEventsSubscription(),
       createGameCountersSubscription(),
     ]);
 
@@ -470,6 +436,7 @@ if (!gotTheLock) {
     shutdownSteamBridgeServer().catch((err) => {
       console.warn('[Main] Steam bridge server stop failed:', err);
     });
+    stopCaptchaWindow();
   });
 
   app.on('will-quit', (event) => {

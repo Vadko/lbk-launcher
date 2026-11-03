@@ -1,7 +1,7 @@
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, XIcon } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getGameImageUrl } from '@/renderer/utils/imageUrl';
+import { t } from '@/shared/i18n/i18n';
 
 interface ReviewImagesProps {
   images: string[];
@@ -11,7 +11,6 @@ const NAV_BUTTON =
   'absolute top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors cursor-pointer';
 
 export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
-  const urls = images.map((path) => getGameImageUrl(path)).filter(Boolean) as string[];
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const isOpen = openIndex !== null;
 
@@ -19,9 +18,9 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
   const step = useCallback(
     (direction: -1 | 1) =>
       setOpenIndex((current) =>
-        current === null ? current : (current + direction + urls.length) % urls.length
+        current === null ? current : (current + direction + images.length) % images.length
       ),
-    [urls.length]
+    [images.length]
   );
 
   useEffect(() => {
@@ -41,14 +40,14 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, close, step]);
 
-  if (urls.length === 0) {
+  if (images.length === 0) {
     return null;
   }
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {urls.map((url, index) => (
+        {images.map((url, index) => (
           <button
             key={url}
             type="button"
@@ -58,7 +57,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
           >
             <img
               src={url}
-              alt={`Скриншот ${index + 1}`}
+              alt={t('gameReviews.screenshotAlt', { number: String(index + 1) })}
               loading="lazy"
               className="w-full h-full object-cover"
             />
@@ -80,9 +79,9 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
               data-gamepad-cancel
               className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <X size={22} className="text-white" />
+              <XIcon size={22} className="text-white" />
             </button>
-            {urls.length > 1 && (
+            {images.length > 1 && (
               <>
                 <button
                   type="button"
@@ -92,7 +91,7 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
                     step(-1);
                   }}
                 >
-                  <ChevronLeft size={26} className="text-white" />
+                  <ChevronLeftIcon size={26} className="text-white" />
                 </button>
                 <button
                   type="button"
@@ -102,13 +101,13 @@ export const ReviewImages: React.FC<ReviewImagesProps> = ({ images }) => {
                     step(1);
                   }}
                 >
-                  <ChevronRight size={26} className="text-white" />
+                  <ChevronRightIcon size={26} className="text-white" />
                 </button>
               </>
             )}
             <img
-              src={urls[openIndex]}
-              alt={`Скриншот ${openIndex + 1}`}
+              src={images[openIndex]}
+              alt={t('gameReviews.screenshotAlt', { number: String(openIndex + 1) })}
               className="max-w-[90vw] max-h-[95vh] object-contain rounded-lg cursor-default"
               onClick={(e) => e.stopPropagation()}
             />

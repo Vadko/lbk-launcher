@@ -6,11 +6,10 @@ interface CheckboxProps {
   onCheckedChange: (checked: boolean) => void;
   className?: string;
   id?: string;
-  gamepadModalItem?: boolean;
 }
 
 export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
-  ({ checked, onCheckedChange, className, id, gamepadModalItem }, ref) => {
+  ({ checked, onCheckedChange, className, id }, ref) => {
     return (
       <button
         ref={ref}
@@ -18,7 +17,6 @@ export const Checkbox = React.forwardRef<HTMLButtonElement, CheckboxProps>(
         aria-checked={checked}
         type="button"
         id={id}
-        data-gamepad-modal-item={gamepadModalItem}
         onClick={() => onCheckedChange(!checked)}
         className={`
           relative inline-flex h-5 w-5 items-center justify-center rounded-sm border-2 

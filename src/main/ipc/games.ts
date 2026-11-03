@@ -21,7 +21,6 @@ import {
   recordBannerImpression,
 } from '../db/banners-api';
 import { findDeepLinkGameId } from '../db/deep-link-game';
-import { fetchGameReviews } from '../db/game-reviews-api';
 import { GamesRepository } from '../db/games-repository';
 import { getGamesRating, getTeamsRating } from '../db/ratings-queries';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
@@ -52,16 +51,13 @@ import { findProtons } from '../installer/proton';
 import { getLibraryMemberships } from '../library-memberships';
 import { checkStoreLibraries } from '../store-library-watcher';
 import {
-  getFeedbackUploadUrls,
   getMachineId,
-  submitFeedback,
   submitLogs,
   trackFailedSearch,
   trackSubscription,
   trackSupportClick,
   trackUninstall,
   trackWorkshopOpen,
-  uploadFileToSignedUrl,
 } from '../tracking';
 import { launchEglGame } from '../utils/egl-launcher';
 import { flushEglLaunchArgs } from '../utils/egl-windows-settings';
@@ -176,64 +172,9 @@ export function setupGamesHandlers(): void {
     trackFailedSearch(query)
   );
 
-  // Submit feedback for a game translation
-  ipcMain.handle(
-    'submit-feedback',
-    async (
-      _,
-      gameId: string,
-      type: string,
-      message: string,
-      screenshotPaths?: string[],
-      allowPublish?: boolean
-    ) => submitFeedback(gameId, type, message, screenshotPaths, allowPublish)
-  );
-
-  ipcMain.handle(
-    'fetch-game-reviews',
-    (_, gameId: string, page: number, pageSize: number) =>
-      fetchGameReviews(gameId, page, pageSize)
-  );
-
-  ipcMain.handle(
-    'fetch-teams-rating',
-    (_, page: number, pageSize: number, hideAi: boolean) => {
-      try {
-        return getTeamsRating(page, pageSize, hideAi);
-      } catch (error) {
-        console.error('[API] Error fetching teams rating:', error);
-        return null;
-      }
-    }
-  );
-
-  ipcMain.handle(
-    'fetch-games-rating',
-    (_, page: number, pageSize: number, hideAi: boolean) => {
-      try {
-        return getGamesRating(page, pageSize, hideAi);
-      } catch (error) {
-        console.error('[API] Error fetching games rating:', error);
-        return null;
-      }
-    }
-  );
-
   // Send logs handler
   ipcMain.handle('submit-logs', async (_, message: string, crashReason?: string) =>
     submitLogs(message, crashReason)
-  );
-
-  // Get signed upload URLs for feedback screenshots
-  ipcMain.handle('get-feedback-upload-urls', async (_, fileNames: string[]) =>
-    getFeedbackUploadUrls(fileNames)
-  );
-
-  // Upload file to signed URL
-  ipcMain.handle(
-    'upload-file-to-signed-url',
-    async (_, signedUrl: string, filePath: string, contentType: string) =>
-      uploadFileToSignedUrl(signedUrl, filePath, contentType)
   );
 
   // Check whether the game is marked as tombstoned
@@ -364,6 +305,30 @@ export function setupGamesHandlers(): void {
       return [];
     }
   });
+
+  ipcMain.handle(
+    'fetch-teams-rating',
+    (_, page: number, pageSize: number, hideAi: boolean) => {
+      try {
+        return getTeamsRating(page, pageSize, hideAi);
+      } catch (error) {
+        console.error('[API] Error fetching teams rating:', error);
+        return null;
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'fetch-games-rating',
+    (_, page: number, pageSize: number, hideAi: boolean) => {
+      try {
+        return getGamesRating(page, pageSize, hideAi);
+      } catch (error) {
+        console.error('[API] Error fetching games rating:', error);
+        return null;
+      }
+    }
+  );
 
   // Sync Kurin installed games data
   ipcMain.handle('sync-kurin-games', async () => {
