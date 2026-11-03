@@ -1,11 +1,5 @@
 import type { Game } from './types';
 
-export interface RatingsPageInput {
-  offset: number;
-  limit: number;
-  hideAi: boolean;
-}
-
 export interface TeamRatingItem {
   name: string;
   likes: number;
@@ -22,6 +16,6 @@ export interface GameRatingItem {
 }
 
 export interface RatingsAPI {
-  fetchTeamsRating: (input: RatingsPageInput) => Promise<TeamRatingItem[] | null>;
-  fetchGamesRating: (input: RatingsPageInput) => Promise<GameRatingItem[] | null>;
+  fetchTeamsRating: (hideAi: boolean) => Promise<TeamRatingItem[] | null>;
+  fetchGamesRating: (hideAi: boolean) => Promise<GameRatingItem[] | null>;
 }

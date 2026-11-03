@@ -1,5 +1,5 @@
 import { ThumbsUpIcon } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
@@ -47,6 +47,7 @@ export const RatingsPage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const [tab, setTab] = useState<RatingsTab>('teams');
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const teams = useRatings('teams', window.electronAPI.fetchTeamsRating);
   const games = useRatings('games', window.electronAPI.fetchGamesRating);
   useRatingsInvalidation();
@@ -127,6 +128,7 @@ export const RatingsPage: React.FC = () => {
 
   return (
     <div
+      ref={scrollerRef}
       data-gamepad-main-content
       className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto justify-center custom-scrollbar`}
     >
@@ -153,6 +155,7 @@ export const RatingsPage: React.FC = () => {
             query={teams}
             getKey={(team) => team.name}
             caption={t('ratings.caption.teams')}
+            scrollerRef={scrollerRef}
           />
         ) : (
           <RatingsTable
@@ -160,6 +163,7 @@ export const RatingsPage: React.FC = () => {
             query={games}
             getKey={(game) => game.id}
             caption={t('ratings.caption.games')}
+            scrollerRef={scrollerRef}
           />
         )}
       </div>

@@ -1,7 +1,8 @@
-import type { UseInfiniteQueryResult } from '@tanstack/react-query';
-import React, { useCallback } from 'react';
+import type { UseQueryResult } from '@tanstack/react-query';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { type RefObject, useRef } from 'react';
 import { t } from '@/shared/i18n/i18n';
-import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
+import { useOffsetInScroller } from '../../hooks/useOffsetInScroller';
 import { Loader } from '../ui/Loader';
 
 export interface RatingsColumn<T> {
@@ -13,38 +14,48 @@ export interface RatingsColumn<T> {
 
 interface RatingsTableProps<T> {
   columns: RatingsColumn<T>[];
-  query: UseInfiniteQueryResult<T[], Error>;
+  query: UseQueryResult<T[], Error>;
   getKey: (item: T) => string;
   caption: string;
+  scrollerRef: RefObject<HTMLElement | null>;
 }
 
 const PODIUM_SIZE = 3;
+const ROW_ESTIMATE = 69;
+// Keeps the rows next to the visible ones mounted, so the gamepad finds them below the fold
+const OVERSCAN = 10;
 
 export const RatingsTable = <T,>({
   columns,
   query,
   getKey,
   caption,
+  scrollerRef,
 }: RatingsTableProps<T>) => {
-  const {
-    data: items,
-    isPending,
-    isError,
-    hasNextPage,
-    isFetching,
-    fetchNextPage,
-  } = query;
-  // A next page would cancel an event's refetch, which then leaves the loaded pages stale
-  const loadNextPage = useCallback(
-    () => void fetchNextPage({ cancelRefetch: false }),
-    [fetchNextPage]
-  );
-  const attachSentinel = useInfiniteScrollSentinel({
-    hasNextPage,
-    // A next page asked during a refetch joins it and adds nothing, so the sentinel looks again after
-    isBusy: isFetching,
-    fetchNextPage: loadNextPage,
+  const { data: items = [], isPending, isError, isFetching } = query;
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  const scrollMargin = useOffsetInScroller(scrollerRef, bodyRef);
+  // eslint-disable-next-line react-hooks/incompatible-library -- the build runs no React Compiler, so nothing memoizes this component
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => scrollerRef.current,
+    estimateSize: () => ROW_ESTIMATE,
+    overscan: OVERSCAN,
+    scrollMargin,
+    getItemKey: (index) => getKey(items[index]),
   });
+  const rows = virtualizer.getVirtualItems();
+  const before = rows.length > 0 ? rows[0].start - scrollMargin : 0;
+  const after =
+    rows.length > 0
+      ? virtualizer.getTotalSize() - (rows[rows.length - 1].end - scrollMargin)
+      : 0;
+  const spacer = (height: number) =>
+    height > 0 && (
+      <tr aria-hidden>
+        <td colSpan={columns.length + 1} className="p-0" style={{ height }} />
+      </tr>
+    );
 
   return (
     <div className="overflow-hidden glass-card-no-motion flex flex-col p-0!">
@@ -70,28 +81,33 @@ export const RatingsTable = <T,>({
               ))}
             </tr>
           </thead>
-          {items && items.length > 0 && (
-            <tbody>
-              {items.map((item, index) => (
-                <tr key={getKey(item)} className="border-b border-white/3">
-                  <th
-                    scope="row"
-                    className={`py-4 font-normal ${index < PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
+          <tbody ref={bodyRef}>
+            {spacer(before)}
+            {rows.map((row) => (
+              <tr
+                key={row.key}
+                ref={virtualizer.measureElement}
+                data-index={row.index}
+                className="border-b border-white/3"
+              >
+                <th
+                  scope="row"
+                  className={`py-4 font-normal ${row.index < PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
+                >
+                  {row.index + 1}
+                </th>
+                {columns.map((column) => (
+                  <td
+                    key={column.id}
+                    className={`px-1.5 py-4 text-center align-middle last:pr-4 ${column.className ?? ''}`}
                   >
-                    {index + 1}
-                  </th>
-                  {columns.map((column) => (
-                    <td
-                      key={column.id}
-                      className={`px-1.5 py-4 text-center align-middle last:pr-4 ${column.className ?? ''}`}
-                    >
-                      {column.render(item)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          )}
+                    {column.render(items[row.index])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {spacer(after)}
+          </tbody>
         </table>
       </div>
 
@@ -99,17 +115,11 @@ export const RatingsTable = <T,>({
         <div className="flex justify-center py-12">
           <Loader size="md" />
         </div>
-      ) : isError && !items ? (
+      ) : isError && items.length === 0 ? (
         <p className="text-center text-text-muted py-12">{t('ratings.loadFailed')}</p>
-      ) : items?.length === 0 ? (
+      ) : items.length === 0 ? (
         <p className="text-center text-text-muted py-12">{t('ratings.empty')}</p>
       ) : null}
-      {hasNextPage && <div ref={attachSentinel} className="h-1" aria-hidden />}
-      {query.isFetchingNextPage && (
-        <div className="flex justify-center py-6">
-          <Loader size="sm" />
-        </div>
-      )}
     </div>
   );
 };

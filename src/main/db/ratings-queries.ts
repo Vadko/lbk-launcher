@@ -1,8 +1,4 @@
-import type {
-  GameRatingItem,
-  RatingsPageInput,
-  TeamRatingItem,
-} from '../../shared/ratings-api-types';
+import type { GameRatingItem, TeamRatingItem } from '../../shared/ratings-api-types';
 import { getDatabase } from './database';
 import { VISIBLE_GAMES_SQL } from './db-queries';
 
@@ -27,37 +23,27 @@ const teamsCte = (hideAi: boolean) => `
   )
 `;
 
-export function getTeamsRating({
-  offset,
-  limit,
-  hideAi,
-}: RatingsPageInput): TeamRatingItem[] {
+export function getTeamsRating(hideAi: boolean): TeamRatingItem[] {
   return getDatabase()
-    .prepare<[number, number], TeamRatingItem>(
+    .prepare<[], TeamRatingItem>(
       `${teamsCte(hideAi)}
       SELECT author AS name, SUM(likes) AS likes, COUNT(*) AS translations,
         SUM(downloads) AS downloads
       FROM team_games
       GROUP BY author
-      ORDER BY likes DESC, translations DESC, name COLLATE NOCASE, name
-      LIMIT ? OFFSET ?`
+      ORDER BY likes DESC, translations DESC, name COLLATE NOCASE, name`
     )
-    .all(limit, offset);
+    .all();
 }
 
-export function getGamesRating({
-  offset,
-  limit,
-  hideAi,
-}: RatingsPageInput): GameRatingItem[] {
+export function getGamesRating(hideAi: boolean): GameRatingItem[] {
   return getDatabase()
-    .prepare<[number, number], GameRatingItem>(
+    .prepare<[], GameRatingItem>(
       `SELECT id, name, COALESCE(likes, 0) AS likes,
         COALESCE(downloads, 0) AS downloads, status
       FROM games
       WHERE ${visibleSql(hideAi)}
-      ORDER BY likes DESC, downloads DESC, name COLLATE NOCASE, id
-      LIMIT ? OFFSET ?`
+      ORDER BY likes DESC, downloads DESC, name COLLATE NOCASE, id`
     )
-    .all(limit, offset);
+    .all();
 }

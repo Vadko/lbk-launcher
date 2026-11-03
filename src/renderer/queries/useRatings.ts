@@ -1,29 +1,22 @@
-import type { RatingsPageInput } from '@/shared/ratings-api-types';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ratingsKey } from './ratingsKey';
-import { useSyncAwareInfiniteQuery } from './useSyncAwareInfiniteQuery';
-
-const PAGE_SIZE = 30;
+import { useSyncAwareQuery } from './useSyncAwareQuery';
 
 export function useRatings<T>(
   kind: 'teams' | 'games',
-  fetchPage: (input: RatingsPageInput) => Promise<T[] | null>
+  fetchRating: (hideAi: boolean) => Promise<T[] | null>
 ) {
   const hideAi = useSettingsStore((state) => state.hideAiTranslations);
-  return useSyncAwareInfiniteQuery({
+  return useSyncAwareQuery({
     queryKey: [...ratingsKey, kind, hideAi],
-    queryFn: async ({ pageParam }) => {
-      const page = await fetchPage({ offset: pageParam, limit: PAGE_SIZE, hideAi });
-      if (!page) {
+    queryFn: async () => {
+      const rating = await fetchRating(hideAi);
+      if (!rating) {
         throw new Error(`Could not read the ${kind} rating`);
       }
-      return page;
+      return rating;
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
     // Counters change while the page is closed, and nothing invalidates it then
     staleTime: 0,
-    select: (data) => data.pages.flat(),
   });
 }

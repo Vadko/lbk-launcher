@@ -1,19 +1,18 @@
 import { ipcMain } from 'electron';
-import type { RatingsPageInput } from '../../shared/ratings-api-types';
 import { getGamesRating, getTeamsRating } from '../db/ratings-queries';
 
 export function setupRatingsHandlers(): void {
-  ipcMain.handle('ratings:teams', (_, input: RatingsPageInput) => {
+  ipcMain.handle('ratings:teams', (_, hideAi: boolean) => {
     try {
-      return getTeamsRating(input);
+      return getTeamsRating(hideAi);
     } catch (error) {
       console.error('[Database] Error reading the teams rating:', error);
       return null;
     }
   });
-  ipcMain.handle('ratings:games', (_, input: RatingsPageInput) => {
+  ipcMain.handle('ratings:games', (_, hideAi: boolean) => {
     try {
-      return getGamesRating(input);
+      return getGamesRating(hideAi);
     } catch (error) {
       console.error('[Database] Error reading the games rating:', error);
       return null;

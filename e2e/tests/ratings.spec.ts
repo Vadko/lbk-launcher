@@ -28,12 +28,18 @@ const table = (kind: 'teams' | 'games') =>
   page.getByRole('table', { name: t(`ratings.caption.${kind}`) });
 
 const rowsOrEmpty = async (kind: 'teams' | 'games') => {
-  const rows = table(kind).locator('tbody tr');
+  // The virtualized body pads itself with spacer rows that hold no button
+  const rows = table(kind)
+    .getByRole('row')
+    .filter({ has: page.getByRole('button', { name: t('ratings.details') }) });
   const empty = page.getByText(t('ratings.empty'));
   await expect
     .poll(
-      async () =>
-        (await rows.count()) > 0 || (await empty.isVisible().catch(() => false)),
+      async () => {
+        const hasRows = (await rows.count()) > 0;
+        const isEmpty = await empty.isVisible().catch(() => false);
+        return hasRows || isEmpty;
+      },
       { timeout: 10_000 }
     )
     .toBe(true);
