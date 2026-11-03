@@ -54,6 +54,9 @@ importers:
       chrome-remote-interface:
         specifier: 0.34.0
         version: 0.34.0
+      convert-layout:
+        specifier: 0.11.1
+        version: 0.11.1
       cyrillic-to-translit-js:
         specifier: 3.2.1
         version: 3.2.1
@@ -202,6 +205,9 @@ importers:
       '@types/chrome-remote-interface':
         specifier: 0.34.0
         version: 0.34.0
+      '@types/convert-layout':
+        specifier: 0.5.3
+        version: 0.5.3
       '@types/node':
         specifier: 24.19.0
         version: 24.19.0
@@ -2853,6 +2859,9 @@ packages:
   '@types/chrome-remote-interface@0.34.0':
     resolution: {integrity: sha512-4q8pMUvasrAkB7bejGWw5igboAvBz7vJRZq+295yFONGoeN7X/hfq8Mq4vTxUQKnENbR9tqksP8RZsLxlRtsWQ==}
 
+  '@types/convert-layout@0.5.3':
+    resolution: {integrity: sha512-lSzvk60zRDpbKgReWv1fhF7RRVLfmEk9eYwQjmKBgD8sylE2saM/l9MkTj2/bkmG+EoB2ygrJAZKGBcsMrFgHg==}
+
   '@types/css-font-loading-module@0.0.7':
     resolution: {integrity: sha512-nl09VhutdjINdWyXxHWN/w9zlNCfr60JUqJbd24YXUuCwgeL0TpFSdElCwb6cxfB6ybE19Gjj4g0jsgkXxKv1Q==}
 
@@ -3467,6 +3476,9 @@ packages:
 
   constants-browserify@1.0.0:
     resolution: {integrity: sha512-xFxOwqIzR/e1k1gLiWEophSCMqXcwVHIH7akf7b/vxcUeGunlj3hvZaaqxwHsTgn+IndtkQJgSztIDWeumWJDQ==}
+
+  convert-layout@0.11.1:
+    resolution: {integrity: sha512-Zy+yE2AqFZUYZxvwS/He7DmnwEahGdy/GyiM33YdxoixyI1YZCYYup2OEYnrhn5r34L9YRa+PZC2ooVmQHY9oQ==}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -8374,6 +8386,8 @@ snapshots:
     dependencies:
       devtools-protocol: 0.0.1173815
 
+  '@types/convert-layout@0.5.3': {}
+
   '@types/css-font-loading-module@0.0.7': {}
 
   '@types/debug@4.1.13':
@@ -9089,6 +9103,8 @@ snapshots:
   console-control-strings@1.1.0: {}
 
   constants-browserify@1.0.0: {}
+
+  convert-layout@0.11.1: {}
 
   convert-source-map@2.0.0: {}
 
