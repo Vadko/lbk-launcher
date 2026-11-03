@@ -2764,28 +2764,37 @@ export type Database = {
       }
       steam_price_cache: {
         Row: {
+          broadcast_pending: boolean
+          discount_ends_at: string | null
           discount_percent: number | null
           fetched_at: string
           is_free: boolean | null
           original_price_uah: number | null
           price_uah: number | null
           steam_app_id: number
+          touched_at: string
         }
         Insert: {
+          broadcast_pending?: boolean
+          discount_ends_at?: string | null
           discount_percent?: number | null
           fetched_at?: string
           is_free?: boolean | null
           original_price_uah?: number | null
           price_uah?: number | null
           steam_app_id: number
+          touched_at?: string
         }
         Update: {
+          broadcast_pending?: boolean
+          discount_ends_at?: string | null
           discount_percent?: number | null
           fetched_at?: string
           is_free?: boolean | null
           original_price_uah?: number | null
           price_uah?: number | null
           steam_app_id?: number
+          touched_at?: string
         }
         Relationships: []
       }
@@ -3272,6 +3281,7 @@ export type Database = {
         Returns: Json
       }
       broadcast_game_counters: { Args: never; Returns: undefined }
+      broadcast_steam_discounts: { Args: never; Returns: number }
       can_read_game_archive: {
         Args: { object_name: string; object_owner: string }
         Returns: boolean
@@ -3539,6 +3549,15 @@ export type Database = {
       get_review_moderation_queue: {
         Args: { p_limit?: number; p_offset?: number; p_state?: string }
         Returns: Json
+      }
+      get_steam_discounts: {
+        Args: { p_since?: string }
+        Returns: {
+          discount_percent: number
+          ends_at: string
+          steam_app_id: number
+          touched_at: string
+        }[]
       }
       get_subscription_statistics: {
         Args: { p_end_date?: string; p_start_date?: string }
