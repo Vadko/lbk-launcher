@@ -48,7 +48,7 @@
     "p-limit": "7.3.3",
     "p-timeout": "7.0.2",
     "p-wait-for": "6.0.0",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@decky/ui": "4.13.0",

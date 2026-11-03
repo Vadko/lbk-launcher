@@ -1,3 +1,5 @@
+import ru from 'convert-layout/ru';
+import uk from 'convert-layout/uk';
 import CyrillicToTranslit from 'cyrillic-to-translit-js';
 
 const translitUk = CyrillicToTranslit({ preset: 'uk' });
@@ -23,6 +25,14 @@ function getTransliteration(input: string): string | null {
   return null;
 }
 
+// The query as typed with the other keyboard layout on: "цфк" is "war", "Dslmvfr" is "Відьмак"
+export function switchLayout(input: string): string | null {
+  const switched = /\p{Script=Cyrillic}/u.test(input)
+    ? ru.toEn(uk.toEn(input))
+    : uk.fromEn(input);
+  return switched === input ? null : switched;
+}
+
 export function stripApostrophes(value: string): string {
   return value.replace(/['’ʼ‘ʻʹ′＇`´]/g, '');
 }
@@ -39,18 +49,25 @@ export function generateSearchableString(name: string): string {
   return withStrippedVariant(translit ? `${nameLower} ${translit}` : nameLower);
 }
 
-function tokenize(value: string): string[] {
-  return value
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((t) => t.length >= 2);
+function tokenize(value: string, keepNumbers: boolean): string[] {
+  const parts = value.toLowerCase().split(/[^\p{L}\p{N}]+/u);
+  const words = parts.filter((t) => t.length >= 2);
+  // A lone number would match every title containing it ('S.T.A.L.K.E.R. 2' → "2"*)
+  if (!keepNumbers || words.length === 0) {
+    return words;
+  }
+  return parts.filter((t) => t.length >= 2 || /^\p{N}+$/u.test(t));
 }
 
 function escapeFtsToken(token: string): string {
   return token.replace(/"/g, '""');
 }
 
-export function buildFtsQuery(input: string): string {
+function buildFtsQuery(
+  input: string,
+  keepNumbers: boolean,
+  transliterate: boolean
+): string {
   if (!input) {
     return '';
   }
@@ -61,7 +78,7 @@ export function buildFtsQuery(input: string): string {
   // The index is apostrophe-free, so the primary form is too. But we keep the
   // raw variant in OR: otherwise "heaven's" would stop matching "Heavenly Sword",
   // because the "s" would stick to the word and break the prefix match.
-  const translit = getTransliteration(input);
+  const translit = transliterate ? getTransliteration(input) : null;
   const sources = [stripApostrophes(input), input];
   if (translit) {
     sources.push(stripApostrophes(translit), translit);
@@ -70,7 +87,7 @@ export function buildFtsQuery(input: string): string {
   const exprs: string[] = [];
   const seen = new Set<string>();
   for (const source of sources) {
-    const tokens = tokenize(source);
+    const tokens = tokenize(source, keepNumbers);
     if (!tokens.length) {
       continue;
     }
@@ -82,6 +99,14 @@ export function buildFtsQuery(input: string): string {
   }
 
   return exprs.join(' OR ');
+}
+
+export function buildFtsQueries(input: string, { transliterate = true } = {}): string[] {
+  const queries = [
+    buildFtsQuery(input, true, transliterate),
+    buildFtsQuery(input, false, transliterate),
+  ];
+  return [...new Set(queries)].filter(Boolean);
 }
 
 export function teamToSlug(team: string): string {
