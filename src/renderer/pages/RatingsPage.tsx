@@ -1,5 +1,5 @@
 import { ThumbsUpIcon } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
@@ -44,7 +44,8 @@ export const RatingsPage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const [tab, setTab] = useState<RatingsTab>('teams');
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  // State, not a ref: the table needs a render once the scroller exists, and its ref attaches after the table's effects
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const teams = useRatingsStore((state) => state.teams);
   const games = useRatingsStore((state) => state.games);
   const failed = useRatingsStore((state) => state.failed);
@@ -127,7 +128,7 @@ export const RatingsPage: React.FC = () => {
 
   return (
     <div
-      ref={scrollerRef}
+      ref={setScroller}
       data-gamepad-main-content
       className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto justify-center custom-scrollbar`}
     >
@@ -155,7 +156,7 @@ export const RatingsPage: React.FC = () => {
             failed={failed}
             getKey={(team) => team.name}
             caption={t('ratings.caption.teams')}
-            scrollerRef={scrollerRef}
+            scroller={scroller}
           />
         ) : (
           <RatingsTable
@@ -164,7 +165,7 @@ export const RatingsPage: React.FC = () => {
             failed={failed}
             getKey={(game) => game.id}
             caption={t('ratings.caption.games')}
-            scrollerRef={scrollerRef}
+            scroller={scroller}
           />
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { type RefObject, useRef } from 'react';
+import React, { useRef } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useOffsetInScroller } from '../../hooks/useOffsetInScroller';
 import { Loader } from '../ui/Loader';
@@ -17,7 +17,7 @@ interface RatingsTableProps<T> {
   failed: boolean;
   getKey: (item: T) => string;
   caption: string;
-  scrollerRef: RefObject<HTMLElement | null>;
+  scroller: HTMLElement | null;
 }
 
 const PODIUM_SIZE = 3;
@@ -31,15 +31,15 @@ export const RatingsTable = <T,>({
   failed,
   getKey,
   caption,
-  scrollerRef,
+  scroller,
 }: RatingsTableProps<T>) => {
   const list = items ?? [];
   const bodyRef = useRef<HTMLTableSectionElement>(null);
-  const scrollMargin = useOffsetInScroller(scrollerRef, bodyRef);
+  const scrollMargin = useOffsetInScroller(scroller, bodyRef);
   // eslint-disable-next-line react-hooks/incompatible-library -- the build runs no React Compiler, so nothing memoizes this component
   const virtualizer = useVirtualizer({
     count: list.length,
-    getScrollElement: () => scrollerRef.current,
+    getScrollElement: () => scroller,
     estimateSize: () => ROW_ESTIMATE,
     overscan: OVERSCAN,
     scrollMargin,
