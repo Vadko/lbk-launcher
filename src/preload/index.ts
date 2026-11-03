@@ -5,6 +5,7 @@ const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
+import type { DeepLinkTarget } from '../shared/game-link-target';
 import type {
   MillenniumProgress,
   PluginHostState,
@@ -336,8 +337,8 @@ const electronAPI: ElectronAPI = {
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
   // Deep link handling
-  onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
-    const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
+  onDeepLink: (callback: (data: DeepLinkTarget) => void) => {
+    const handler = (_: unknown, data: DeepLinkTarget) => callback(data);
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },

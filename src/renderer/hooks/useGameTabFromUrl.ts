@@ -11,7 +11,10 @@ interface TabState {
 }
 
 // selectedGameId lags the URL while the next game loads, so a link waits for its own game
-export function useGameTabFromUrl(selectedGameId: string | undefined) {
+export function useGameTabFromUrl(
+  selectedGameId: string | undefined,
+  onTabOnlyLink: () => void
+) {
   const { gameId } = useParams<{ gameId: string }>();
   const { search, key } = useLocation();
   const navigate = useNavigate();
@@ -40,8 +43,9 @@ export function useGameTabFromUrl(selectedGameId: string | undefined) {
   useEffect(() => {
     if (isTabOnlyLink) {
       clearLink();
+      onTabOnlyLink();
     }
-  }, [isTabOnlyLink, clearLink]);
+  }, [isTabOnlyLink, clearLink, onTabOnlyLink]);
 
   const linkFocus = isLinkReady ? link.focus : null;
   const focus = useMemo<ReviewFocus | null>(

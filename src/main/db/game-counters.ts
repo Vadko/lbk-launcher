@@ -13,16 +13,24 @@ interface GameCounters {
   likes: number;
   downloads: number | null;
   subscriptions: number | null;
+  reviews: number;
+  error_reviews: number;
 }
 
 const PAGE_SIZE = 1000;
 
 type CounterRow = Database['public']['Functions']['get_game_counters']['Returns'][number];
 
-// Matches broadcast_game_counters() in lbk-admin migration 191: [id, likes, downloads, subscriptions]
 const broadcastSchema = z.object({
   counters: z.array(
-    z.tuple([z.string(), z.number(), z.number().nullable(), z.number().nullable()])
+    z.tuple([
+      z.string(),
+      z.number(),
+      z.number().nullable(),
+      z.number().nullable(),
+      z.number(),
+      z.number(),
+    ])
   ),
 });
 
@@ -31,9 +39,12 @@ function applyGameCounters(rows: GameCounters[]): void {
   const likes = likesWithUnsentSql('@likes', '@id');
   const update = db.prepare(`
     UPDATE games
-    SET likes = ${likes}, downloads = @downloads, subscriptions = @subscriptions
+    SET likes = ${likes}, downloads = @downloads, subscriptions = @subscriptions,
+      reviews = @reviews, error_reviews = @error_reviews
     WHERE id = @id
-      AND (likes IS NOT ${likes} OR downloads IS NOT @downloads OR subscriptions IS NOT @subscriptions)
+      AND (likes IS NOT ${likes} OR downloads IS NOT @downloads
+        OR subscriptions IS NOT @subscriptions OR reviews IS NOT @reviews
+        OR error_reviews IS NOT @error_reviews)
   `);
   const changed = db.transaction((batch: GameCounters[]) =>
     batch.filter((row) => update.run(row).changes > 0).map((row) => row.id)
@@ -74,6 +85,8 @@ const counters = createDeltaStream({
           likes: row.likes,
           downloads: row.downloads,
           subscriptions: row.subscriptions,
+          reviews: row.reviews,
+          error_reviews: row.error_reviews,
         })),
       };
     }
@@ -86,11 +99,13 @@ const counters = createDeltaStream({
     event: 'counters',
     schema: broadcastSchema,
     toItems: ({ counters: rows }) =>
-      rows.map(([id, likes, downloads, subscriptions]) => ({
+      rows.map(([id, likes, downloads, subscriptions, reviews, error_reviews]) => ({
         id,
         likes,
         downloads,
         subscriptions,
+        reviews,
+        error_reviews,
       })),
   }),
 });
