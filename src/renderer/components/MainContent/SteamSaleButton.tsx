@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSteamDiscount } from '@/renderer/hooks/useDiscount';
+import { useSteamDiscount } from '@/renderer/hooks/useSteamDiscount';
 import { t } from '@/shared/i18n/i18n';
 import { SteamIcon } from '../Icons/BrandIcons';
 import { Button } from '../ui/Button';
@@ -9,7 +9,7 @@ interface SteamSaleButtonProps {
 }
 
 export const SteamSaleButton: React.FC<SteamSaleButtonProps> = ({ steamAppId }) => {
-  const percent = useSteamDiscount();
+  const percent = useSteamDiscount(steamAppId);
 
   if (steamAppId === null || percent <= 0) {
     return null;

@@ -239,6 +239,12 @@ class DatabaseManager {
         server_liked INTEGER NOT NULL DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS steam_discounts (
+        steam_app_id INTEGER PRIMARY KEY,
+        discount_percent INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL -- epoch ms
+      ) WITHOUT ROWID;
+
       -- FTS5 virtual table for full-text search
       CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
         game_id UNINDEXED,

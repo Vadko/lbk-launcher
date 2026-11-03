@@ -1111,6 +1111,18 @@ const migrations: Migration[] = [
       }
     },
   },
+  {
+    name: 'add_steam_discounts_table',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS steam_discounts (
+          steam_app_id INTEGER PRIMARY KEY,
+          discount_percent INTEGER NOT NULL,
+          ends_at INTEGER NOT NULL
+        ) WITHOUT ROWID;
+      `);
+    },
+  },
 ];
 
 /**

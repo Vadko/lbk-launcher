@@ -9,6 +9,7 @@ import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initLikes } from './store/likesBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
+import { initSteamDiscounts } from './store/steamDiscountsBridge';
 import { useSettingsStore } from './store/useSettingsStore';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import '@fontsource-variable/inter';
@@ -41,6 +42,9 @@ initReviewEvents();
 
 // Bridge the liked set (IPC) into the likes store — once, outside React.
 initLikes();
+
+// Bridge Steam discount and library changes (IPC) into the discounts store — once, outside React.
+initSteamDiscounts();
 
 console.log('[Renderer] Starting React application...');
 

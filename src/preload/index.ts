@@ -207,6 +207,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-counters-updated', handler);
     return () => ipcRenderer.removeListener('game-counters-updated', handler);
   },
+  getSteamDiscounts: () => ipcRenderer.invoke('get-steam-discounts'),
+  onSteamDiscountsUpdated: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('steam-discounts-updated', handler);
+    return () => ipcRenderer.removeListener('steam-discounts-updated', handler);
+  },
   onGameRemoved: (callback: (gameId: string) => void) => {
     const handler = (_: unknown, gameId: string) => callback(gameId);
     ipcRenderer.on('game-removed', handler);
