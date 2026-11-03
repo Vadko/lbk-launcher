@@ -1,6 +1,7 @@
 import { ThumbsUp } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatDownloads } from '@/shared/formatters';
 import type { GameRatingItem, TeamRatingItem } from '@/shared/types';
 import { StatusBadge } from '../components/Elements/StatusBadge';
 import { type RatingsColumn, RatingsTable } from '../components/Ratings/RatingsTable';
@@ -22,9 +23,6 @@ const tabs: { id: RatingsTab; label: string }[] = [
 const MUTED = 'text-text-muted';
 
 const numberFormat = new Intl.NumberFormat('uk-UA');
-
-const formatDownloads = (downloads: number) =>
-  downloads < 20 ? 'до 20' : numberFormat.format(downloads);
 
 const likesCell = (likes: number) => (
   <span className="inline-flex items-center gap-1.5 font-bold text-color-main">

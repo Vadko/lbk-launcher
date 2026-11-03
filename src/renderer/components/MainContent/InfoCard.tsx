@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
+import { formatDownloads, shownDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
@@ -59,6 +60,7 @@ const formatDate = (dateString: string | null | undefined): string => {
 export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
   const platformsText = game.platforms.map(getReadablePlatform).join(', ');
   const isPlanned = game.status === 'planned';
+  const downloads = shownDownloads(game.downloads);
   const hasSubscriptions = !!game.subscriptions && game.subscriptions > 0;
   const featuredInfo = getFeaturedInfo(game.slug, game.team);
   const [compact, setCompact] = useState(false);
@@ -188,10 +190,10 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
               icon={<DownloadIcon size={18} />}
               label={t('gameInfo.downloads')}
               value={
-                !game.downloads || game.downloads < 20 ? (
-                  t('gameInfo.downloadsUnder20')
+                downloads === null ? (
+                  formatDownloads(game.downloads)
                 ) : (
-                  <AppNumberFlow key={game.id} value={game.downloads} />
+                  <AppNumberFlow key={game.id} value={downloads} />
                 )
               }
               compact={compact}
