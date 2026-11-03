@@ -2762,42 +2762,6 @@ export type Database = {
         }
         Relationships: []
       }
-      steam_price_cache: {
-        Row: {
-          broadcast_pending: boolean
-          discount_ends_at: string | null
-          discount_percent: number | null
-          fetched_at: string
-          is_free: boolean | null
-          original_price_uah: number | null
-          price_uah: number | null
-          steam_app_id: number
-          touched_at: string
-        }
-        Insert: {
-          broadcast_pending?: boolean
-          discount_ends_at?: string | null
-          discount_percent?: number | null
-          fetched_at?: string
-          is_free?: boolean | null
-          original_price_uah?: number | null
-          price_uah?: number | null
-          steam_app_id: number
-          touched_at?: string
-        }
-        Update: {
-          broadcast_pending?: boolean
-          discount_ends_at?: string | null
-          discount_percent?: number | null
-          fetched_at?: string
-          is_free?: boolean | null
-          original_price_uah?: number | null
-          price_uah?: number | null
-          steam_app_id?: number
-          touched_at?: string
-        }
-        Relationships: []
-      }
       steam_tag_names: {
         Row: {
           name: string
@@ -3809,7 +3773,6 @@ export type Database = {
       sweep_review_moderation_cron: { Args: never; Returns: undefined }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
-      take_steam_discount_batch: { Args: { p_limit: number }; Returns: Json }
       take_store_discount_batch: { Args: { p_limit: number }; Returns: Json }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
