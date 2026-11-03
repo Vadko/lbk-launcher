@@ -1,18 +1,21 @@
 import { useInfiniteQuery, useMutationState } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import type { FeedbackType } from '@/shared/types';
 import type { ReviewFocus } from '../utils/readReviewLink';
 import {
   type ReviewWriteState,
   reviewWriteState,
   withReviewWrites,
 } from '../utils/withReviewWrites';
-import { gameReviewsQueryKey, reviewWritesKey } from './gameReviewsQueryKey';
-import { fetchReviewsPage } from './reviewsClient';
+import { reviewWritesKey } from './gameReviewsQueryKey';
+import { gameReviewsQueryOptions } from './gameReviewsQueryOptions';
 import type { ReviewWriteMutation } from './reviewWrite';
 
-const THIRTY_MINUTES = 30 * 60 * 1000;
-
-export function useGameReviews(gameId: string, focus: ReviewFocus | null) {
+export function useGameReviews(
+  gameId: string,
+  focus: ReviewFocus | null,
+  type: FeedbackType | null
+) {
   const writes = useMutationState<ReviewWriteState, ReviewWriteMutation>({
     filters: { mutationKey: reviewWritesKey(gameId) },
     select: reviewWriteState,
@@ -22,21 +25,9 @@ export function useGameReviews(gameId: string, focus: ReviewFocus | null) {
   if (focus && focus.feedbackId !== pinnedId) {
     setPinnedId(focus.feedbackId);
   }
-  // Read off the link itself, so its first render never shows another thread's list
-  const threadId = focus?.feedbackId ?? pinnedId;
-  const query = useInfiniteQuery({
-    queryKey: [...gameReviewsQueryKey(gameId), threadId],
-    queryFn: ({ pageParam }) =>
-      pageParam === null && threadId
-        ? fetchReviewsPage(gameId, null, threadId)
-        : fetchReviewsPage(gameId, pageParam),
-    initialPageParam: null as string | null,
-    // A repeated cursor would re-arm the sentinel after every fetch
-    getNextPageParam: (lastPage, _pages, lastPageParam) =>
-      lastPage.nextCursor === lastPageParam ? null : lastPage.nextCursor,
-    staleTime: THIRTY_MINUTES,
-    gcTime: THIRTY_MINUTES,
-  });
+  // Read off the link itself, so its first render never shows another thread's list; a type filter drops it
+  const threadId = type ? null : (focus?.feedbackId ?? pinnedId);
+  const query = useInfiniteQuery(gameReviewsQueryOptions(gameId, threadId, type));
 
   const { fetchNextPage } = query;
   // A next page would cancel the refetch that brings a write's answer, which then never lands

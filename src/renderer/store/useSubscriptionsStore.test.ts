@@ -190,6 +190,39 @@ describe('useSubscriptionsStore review notices', () => {
     ]);
   });
 
+  it('marks read only the review notices of the game whose reviews were seen', () => {
+    store().addReplyNotification(reply, false);
+    store().addNotification(
+      { type: 'review-published', gameId: 'g1', gameName: 'Game', entryId: 'e1' },
+      false
+    );
+    store().addReplyNotification(reviewEvent({ kind: 'reply', gameId: 'g2' }), false);
+    store().addFirstFavoriteNotification('g1', 'Game', false);
+    store().addNotification(
+      {
+        type: 'review-rejected',
+        gameId: 'g1',
+        gameName: 'Game',
+        entryId: 'e2',
+        message: 'removed',
+      },
+      false
+    );
+
+    store().markGameReviewNoticesAsRead('g1');
+
+    expect(
+      store().notifications.map(({ type, gameId, read }) => ({ type, gameId, read }))
+    ).toEqual([
+      { type: 'review-rejected', gameId: 'g1', read: false },
+      { type: 'first-favorite', gameId: 'g1', read: false },
+      { type: 'feedback-reply', gameId: 'g2', read: false },
+      { type: 'review-published', gameId: 'g1', read: true },
+      { type: 'feedback-reply', gameId: 'g1', read: true },
+    ]);
+    expect(store().unreadCount).toBe(3);
+  });
+
   it('stores a catch-up notice without a toast', () => {
     store().addNotification(
       { type: 'review-published', gameId: 'g1', gameName: 'Game', entryId: 'e1' },

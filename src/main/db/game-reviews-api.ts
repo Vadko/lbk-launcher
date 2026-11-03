@@ -10,10 +10,11 @@ export function fetchGameReviews({
   gameId,
   cursor,
   focusId,
+  type,
 }: GameReviewsListInput): Promise<ReviewResult<GameReviewsPage>> {
   return callReviewFunction(
     'reviews?action=list',
-    { gameId, cursor, focusId },
+    { gameId, cursor, focusId, type },
     reviewsPageSchema.transform(withFocus)
   );
 }

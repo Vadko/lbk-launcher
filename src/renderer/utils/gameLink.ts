@@ -1,6 +1,4 @@
-import type { GameLinkTarget } from '@/shared/game-link-target';
-
-export const REVIEWS_TAB = 'reviews';
+import { type GameLinkTarget, REVIEWS_TAB } from '@/shared/game-link-target';
 
 // Notices stored before review links existed carry no ids and open the game page
 export function gameLink({
