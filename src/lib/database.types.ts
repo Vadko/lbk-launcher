@@ -3770,6 +3770,14 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      store_discount_lapsed: {
+        Args: { p_ends_at: string; p_fetched_at: string }
+        Returns: boolean
+      }
+      store_discount_lapses_at: {
+        Args: { p_ends_at: string; p_fetched_at: string }
+        Returns: string
+      }
       sweep_review_moderation_cron: { Args: never; Returns: undefined }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
