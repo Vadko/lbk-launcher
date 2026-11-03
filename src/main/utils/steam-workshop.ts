@@ -7,7 +7,7 @@
  * (`Subscribe(e,t){…(e,t,!0)}` / `Unsubscribe(e,t){…(e,t,!1)}`).
  *
  * The bridge is not always available, so this is an optimization, not a
- * replacement — the renderer falls back to a plain steam:// deep link on failure.
+ * replacement — the renderer falls back to the Workshop page on failure.
  */
 
 import { ensureSteamBridge, getSteamBridge } from '@/main/utils/steam-bridge';

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSteamDiscount } from '@/renderer/hooks/useSteamDiscount';
 import { t } from '@/shared/i18n/i18n';
+import { steamStoreUrl } from '@/shared/steam-urls';
 import { SteamIcon } from '../Icons/BrandIcons';
 import { Button } from '../ui/Button';
 
@@ -20,7 +21,9 @@ export const SteamSaleButton: React.FC<SteamSaleButtonProps> = ({ steamAppId }) 
       <Button
         variant="secondary"
         icon={<SteamIcon size={22} />}
-        onClick={() => void window.electronAPI.openSteamStorePage(steamAppId)}
+        onClick={() =>
+          void window.electronAPI.openAppLink('steam', steamStoreUrl(steamAppId))
+        }
         data-gamepad-action
         title={t('gameLinks.openIn', { store: 'Steam' })}
         className="px-3!"

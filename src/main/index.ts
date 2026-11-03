@@ -122,6 +122,7 @@ import { setupGameReviewsHandlers } from './ipc/game-reviews';
 import { setupGamesHandlers } from './ipc/games';
 import { setupInstallerHandlers } from './ipc/installer';
 import { setupLikesHandlers } from './ipc/likes';
+import { setupLinksHandlers } from './ipc/links';
 import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupSteamDiscountsHandlers } from './ipc/steam-discounts';
 import { setupTgNewsHandlers } from './ipc/tg-news';
@@ -233,6 +234,7 @@ if (!gotTheLock) {
   setupTgNewsHandlers();
   setupLikesHandlers();
   setupSteamDiscountsHandlers();
+  setupLinksHandlers();
   setupGameReviewsHandlers();
   setupAutoUpdater();
   setupChangelogHandlers();

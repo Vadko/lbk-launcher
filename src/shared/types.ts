@@ -53,6 +53,8 @@ export type LibraryFilterType = Exclude<
 >;
 export type LibraryMemberships = Record<LibraryFilterType, string[]>;
 
+export type LinkApp = 'telegram' | 'discord' | 'steam';
+
 export interface SteamDiscount {
   steamAppId: number;
   percent: number;
@@ -378,7 +380,7 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
-  openSteamStorePage: (appId: number) => Promise<void>;
+  openAppLink: (app: LinkApp, url: string) => Promise<void>;
   // Steam integration
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
   /**

@@ -66,7 +66,7 @@ import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
 import { removeAllSteamArtwork } from '../utils/steam-artwork';
 import { syncTranslatedGamesCollection } from '../utils/steam-collections';
-import { launchSteamGame, openSteamStorePage } from '../utils/steam-launcher';
+import { launchSteamGame } from '../utils/steam-launcher';
 import { addLbkLauncherToSteamLibrary } from '../utils/steam-self-shortcut';
 import {
   installedWorkshopGameIds,
@@ -507,10 +507,6 @@ export function setupGamesHandlers(): void {
         return { games: [], total: 0 };
       }
     }
-  );
-
-  ipcMain.handle('open-steam-store-page', (_, appId: number) =>
-    openSteamStorePage(appId)
   );
 
   // Launch game

@@ -1,6 +1,6 @@
 import { F } from '@mobily/ts-belt';
 import { execFile, spawn } from 'child_process';
-import { shell } from 'electron';
+import { app, shell } from 'electron';
 import { promisify } from 'util';
 import { isLinux } from './platform';
 
@@ -132,4 +132,31 @@ export async function openExternalUrl(
       error: error instanceof Error ? error.message : 'Network error',
     };
   }
+}
+
+export type AppOpener = (appUrl: string) => Promise<boolean>;
+
+// Without an app for the scheme it goes nowhere, and on Linux the browser takes it with success: true
+async function openWithRegisteredApp(appUrl: string): Promise<boolean> {
+  if (!app.getApplicationNameForProtocol(appUrl)) {
+    return false;
+  }
+  try {
+    await shell.openExternal(appUrl);
+    return true;
+  } catch (error) {
+    console.error('[OpenExternal] App link failed:', error);
+    return false;
+  }
+}
+
+export async function openWithFallback(
+  appUrl: string | null,
+  webUrl: string,
+  openApp: AppOpener = openWithRegisteredApp
+): Promise<void> {
+  if (appUrl && (await openApp(appUrl))) {
+    return;
+  }
+  await openExternalUrl(webUrl);
 }

@@ -248,8 +248,7 @@ const electronAPI: ElectronAPI = {
   },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
-  openSteamStorePage: (appId: number) =>
-    ipcRenderer.invoke('open-steam-store-page', appId),
+  openAppLink: (app, url) => ipcRenderer.invoke('open-app-link', app, url),
   // Steam integration
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   applyPendingLaunchOptions: (game: Game) =>

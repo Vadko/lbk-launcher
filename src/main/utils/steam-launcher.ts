@@ -16,7 +16,6 @@ import {
 import { getRunningSteamGameId } from '@/main/steam-process/running-game';
 import { execFileOnHost, isFlatpak, spawnOnHost, system32 } from '@/main/utils/host-exec';
 import { findMacMillenniumWrapper } from '@/main/utils/millennium';
-import { openExternalUrl } from '@/main/utils/open-external';
 import { forCurrentOS, isGamescopeSession } from '@/main/utils/platform';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import type {
@@ -366,13 +365,9 @@ export async function launchSteamGame(appId: string | number): Promise<LaunchRes
   };
 }
 
-// Without a Steam client steam:// goes nowhere, and on Linux the browser takes it with success: true
-export async function openSteamStorePage(appId: number): Promise<void> {
-  if (getSteamPath() && (await osControl().launch(`steam://store/${appId}`))) {
-    return;
-  }
-  await openExternalUrl(`https://store.steampowered.com/app/${appId}/`);
-}
+// The Steam launch path starts a closed Steam with Millennium, which a steam:// handed to the OS does not
+export const openInSteamClient = async (steamUrl: string): Promise<boolean> =>
+  Boolean(getSteamPath()) && (await osControl().launch(steamUrl));
 
 export async function restartSteamProcess(
   opts: { beforeLaunch?: () => Promise<void> | void } = {}
