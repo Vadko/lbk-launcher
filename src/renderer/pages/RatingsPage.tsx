@@ -8,9 +8,8 @@ import { StatusBadge } from '../components/Elements/StatusBadge';
 import { type RatingsColumn, RatingsTable } from '../components/Ratings/RatingsTable';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
-import { useRatingsInvalidation } from '../hooks/useRatingsInvalidation';
-import { useRatings } from '../queries/useRatings';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
+import { useRatingsStore } from '../store/useRatingsStore';
 import { useStore } from '../store/useStore';
 import { showOnlyAuthors } from '../utils/showOnlyAuthors';
 
@@ -40,17 +39,15 @@ const detailsButton = (onClick: () => void) => (
   </Button>
 );
 
-const detailsHeader = <span className="sr-only">{t('ratings.column.details')}</span>;
-
 export const RatingsPage: React.FC = () => {
   const navigate = useNavigate();
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const [tab, setTab] = useState<RatingsTab>('teams');
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const teams = useRatings('teams', window.electronAPI.fetchTeamsRating);
-  const games = useRatings('games', window.electronAPI.fetchGamesRating);
-  useRatingsInvalidation();
+  const teams = useRatingsStore((state) => state.teams);
+  const games = useRatingsStore((state) => state.games);
+  const failed = useRatingsStore((state) => state.failed);
 
   useEffect(() => {
     setSelectedGame(null);
@@ -82,15 +79,17 @@ export const RatingsPage: React.FC = () => {
     },
     {
       id: 'details',
-      header: detailsHeader,
+      header: <span className="sr-only">{t('ratings.column.details')}</span>,
       render: (team) =>
         detailsButton(() => {
           showOnlyAuthors([team.name]);
+          useStore.getState().setSearchQuery('');
           navigate('/');
           if (isGamepadMode) {
             const gamepad = useGamepadModeStore.getState();
-            gamepad.setNavigationArea('games');
+            // The area switch focuses the stored index at once, so the index goes first
             gamepad.setFocusedGameIndex(0);
+            gamepad.setNavigationArea('games');
           }
         }),
     },
@@ -121,7 +120,7 @@ export const RatingsPage: React.FC = () => {
     },
     {
       id: 'details',
-      header: detailsHeader,
+      header: <span className="sr-only">{t('ratings.column.details')}</span>,
       render: (game) => detailsButton(() => navigate(`/game/${game.id}`)),
     },
   ];
@@ -152,7 +151,8 @@ export const RatingsPage: React.FC = () => {
         {tab === 'teams' ? (
           <RatingsTable
             columns={teamColumns}
-            query={teams}
+            items={teams}
+            failed={failed}
             getKey={(team) => team.name}
             caption={t('ratings.caption.teams')}
             scrollerRef={scrollerRef}
@@ -160,7 +160,8 @@ export const RatingsPage: React.FC = () => {
         ) : (
           <RatingsTable
             columns={gameColumns}
-            query={games}
+            items={games}
+            failed={failed}
             getKey={(game) => game.id}
             caption={t('ratings.caption.games')}
             scrollerRef={scrollerRef}

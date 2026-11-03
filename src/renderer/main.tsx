@@ -8,6 +8,7 @@ import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initLikes } from './store/likesBridge';
+import { initRatings } from './store/ratingsBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
 import { useSettingsStore } from './store/useSettingsStore';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
@@ -41,6 +42,9 @@ initReviewEvents();
 
 // Bridge the liked set (IPC) into the likes store — once, outside React.
 initLikes();
+
+// Bridge the catalog's ratings (IPC) into the ratings store — once, outside React.
+initRatings();
 
 console.log('[Renderer] Starting React application...');
 

@@ -1,4 +1,3 @@
-import type { UseQueryResult } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import React, { type RefObject, useRef } from 'react';
 import { t } from '@/shared/i18n/i18n';
@@ -14,7 +13,8 @@ export interface RatingsColumn<T> {
 
 interface RatingsTableProps<T> {
   columns: RatingsColumn<T>[];
-  query: UseQueryResult<T[], Error>;
+  items: readonly T[] | null;
+  failed: boolean;
   getKey: (item: T) => string;
   caption: string;
   scrollerRef: RefObject<HTMLElement | null>;
@@ -27,22 +27,23 @@ const OVERSCAN = 10;
 
 export const RatingsTable = <T,>({
   columns,
-  query,
+  items,
+  failed,
   getKey,
   caption,
   scrollerRef,
 }: RatingsTableProps<T>) => {
-  const { data: items = [], isPending, isError, isFetching } = query;
+  const list = items ?? [];
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   const scrollMargin = useOffsetInScroller(scrollerRef, bodyRef);
   // eslint-disable-next-line react-hooks/incompatible-library -- the build runs no React Compiler, so nothing memoizes this component
   const virtualizer = useVirtualizer({
-    count: items.length,
+    count: list.length,
     getScrollElement: () => scrollerRef.current,
     estimateSize: () => ROW_ESTIMATE,
     overscan: OVERSCAN,
     scrollMargin,
-    getItemKey: (index) => getKey(items[index]),
+    getItemKey: (index) => getKey(list[index]),
   });
   const rows = virtualizer.getVirtualItems();
   const before = rows.length > 0 ? rows[0].start - scrollMargin : 0;
@@ -60,10 +61,7 @@ export const RatingsTable = <T,>({
   return (
     <div className="overflow-hidden glass-card-no-motion flex flex-col p-0!">
       <div className="overflow-x-auto custom-scrollbar [scrollbar-gutter:auto]! [&::-webkit-scrollbar]:h-3">
-        <table
-          aria-busy={isFetching}
-          className="w-full min-w-[760px] table-fixed border-collapse text-sm"
-        >
+        <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
             <tr className="bg-glass-hover text-text-main">
@@ -101,7 +99,7 @@ export const RatingsTable = <T,>({
                     key={column.id}
                     className={`px-1.5 py-4 text-center align-middle last:pr-4 ${column.className ?? ''}`}
                   >
-                    {column.render(items[row.index])}
+                    {column.render(list[row.index])}
                   </td>
                 ))}
               </tr>
@@ -111,12 +109,12 @@ export const RatingsTable = <T,>({
         </table>
       </div>
 
-      {isPending ? (
+      {items === null && failed ? (
+        <p className="text-center text-text-muted py-12">{t('ratings.loadFailed')}</p>
+      ) : items === null ? (
         <div className="flex justify-center py-12">
           <Loader size="md" />
         </div>
-      ) : isError && items.length === 0 ? (
-        <p className="text-center text-text-muted py-12">{t('ratings.loadFailed')}</p>
       ) : items.length === 0 ? (
         <p className="text-center text-text-muted py-12">{t('ratings.empty')}</p>
       ) : null}

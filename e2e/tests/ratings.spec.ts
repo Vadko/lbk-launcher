@@ -68,7 +68,8 @@ test('games tab lists games, and a row opens its game', async () => {
 
   await rows.first().getByRole('button', { name: t('ratings.details') }).click();
   await expect(page.getByRole('heading', { name: t('ratings.title') })).not.toBeVisible();
-  await expect(page.locator('[data-gamepad-main-content]')).toBeVisible();
+  // GameTabs is the only tablist in the app
+  await expect(page.getByRole('tablist')).toBeVisible();
 });
 
 test('a team row leaves the ratings for the catalog', async () => {
@@ -80,4 +81,6 @@ test('a team row leaves the ratings for the catalog', async () => {
 
   await rows.first().getByRole('button', { name: t('ratings.details') }).click();
   await expect(page.getByRole('heading', { name: t('ratings.title') })).not.toBeVisible();
+  // The author filter persists in the profile the next specs start from
+  await page.getByTitle(t('filterBar.clearAll')).click();
 });
