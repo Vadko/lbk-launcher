@@ -2842,31 +2842,40 @@ export type Database = {
       }
       store_price_cache: {
         Row: {
+          broadcast_pending: boolean
           currency: string | null
+          discount_ends_at: string | null
           discount_percent: number
           fetched_at: string
           original_minor: number | null
           price_minor: number | null
           steam_app_id: number
           store: string
+          touched_at: string
         }
         Insert: {
+          broadcast_pending?: boolean
           currency?: string | null
+          discount_ends_at?: string | null
           discount_percent?: number
           fetched_at?: string
           original_minor?: number | null
           price_minor?: number | null
           steam_app_id: number
           store: string
+          touched_at?: string
         }
         Update: {
+          broadcast_pending?: boolean
           currency?: string | null
+          discount_ends_at?: string | null
           discount_percent?: number
           fetched_at?: string
           original_minor?: number | null
           price_minor?: number | null
           steam_app_id?: number
           store?: string
+          touched_at?: string
         }
         Relationships: []
       }
@@ -3281,7 +3290,7 @@ export type Database = {
         Returns: Json
       }
       broadcast_game_counters: { Args: never; Returns: undefined }
-      broadcast_steam_discounts: { Args: never; Returns: number }
+      broadcast_store_discounts: { Args: never; Returns: number }
       can_read_game_archive: {
         Args: { object_name: string; object_owner: string }
         Returns: boolean
@@ -3550,12 +3559,13 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number; p_state?: string }
         Returns: Json
       }
-      get_steam_discounts: {
+      get_store_discounts: {
         Args: { p_since?: string }
         Returns: {
           discount_percent: number
           ends_at: string
           steam_app_id: number
+          store: string
           touched_at: string
         }[]
       }
@@ -3799,6 +3809,8 @@ export type Database = {
       sweep_review_moderation_cron: { Args: never; Returns: undefined }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
+      take_steam_discount_batch: { Args: { p_limit: number }; Returns: Json }
+      take_store_discount_batch: { Args: { p_limit: number }; Returns: Json }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {
