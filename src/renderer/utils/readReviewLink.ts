@@ -1,4 +1,4 @@
-import { REVIEWS_TAB } from './gameLink';
+import { REVIEWS_TAB } from '@/shared/game-link-target';
 
 export interface ReviewLinkFocus {
   feedbackId: string;

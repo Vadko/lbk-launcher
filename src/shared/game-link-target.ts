@@ -1,3 +1,11 @@
+export const REVIEWS_TAB = 'reviews';
+
+export interface DeepLinkTarget {
+  slug: string;
+  team: string;
+  openReviews: boolean;
+}
+
 // Where a notification click leads: the game page, or one review entry in its thread
 export interface GameLinkTarget {
   gameId: string;

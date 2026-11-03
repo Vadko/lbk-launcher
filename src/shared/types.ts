@@ -4,6 +4,7 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type { DeepLinkTarget } from './game-link-target';
 import type { GameReviewsAPI } from './game-reviews-api-types';
 import type {
   AchievementsDelivery,
@@ -436,7 +437,7 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
     crashReason?: string
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
-  onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  onDeepLink: (callback: (data: DeepLinkTarget) => void) => () => void;
   findDeepLinkGameId: (slug: string, team: string) => Promise<string | null>;
   /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
   notifyReady: () => void;

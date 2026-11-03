@@ -169,6 +169,8 @@ function gameToInsertParams(game: Game): GameInsertParams {
     steam_tag_ids: game.steam_tag_ids ? JSON.stringify(game.steam_tag_ids) : null,
     source_language: game.source_language ?? null,
     likes: game.likes ?? 0,
+    reviews: game.reviews ?? 0,
+    error_reviews: game.error_reviews ?? 0,
   };
 }
 
@@ -271,6 +273,8 @@ const SYNCED_COLUMNS = [
   'source_language',
   'steam_tag_ids',
   'likes',
+  'reviews',
+  'error_reviews',
 ] as const;
 
 function _assertNever<_T extends never>(): void {
@@ -295,6 +299,8 @@ const COUNTER_COLUMNS: ReadonlySet<SyncedColumn> = new Set([
   'likes',
   'downloads',
   'subscriptions',
+  'reviews',
+  'error_reviews',
 ]);
 
 /**
