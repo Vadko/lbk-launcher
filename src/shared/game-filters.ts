@@ -1,3 +1,4 @@
+import { teamMembers } from './team-members';
 import type {
   ContentTypeFilterType,
   FacetRow,
@@ -45,10 +46,8 @@ export function matchesAuthors(game: FacetRow, authors?: string[]): boolean {
   if (!authors || authors.length === 0) {
     return true;
   }
-  if (!game.team) {
-    return false;
-  }
-  return authors.some((author) => game.team?.includes(author));
+  const members = teamMembers(game.team);
+  return authors.some((author) => members.includes(author));
 }
 
 export function matchesTags(game: FacetRow, tagIds?: number[]): boolean {

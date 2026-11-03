@@ -2,6 +2,7 @@ import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
+import { teamMembers } from '../../shared/team-members';
 import type {
   FacetRow,
   Game,
@@ -298,10 +299,8 @@ export class GamesRepository {
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
-        if (!game.team) {
-          return false;
-        }
-        return authors.some((author) => game.team?.includes(author));
+        const members = teamMembers(game.team);
+        return authors.some((author) => members.includes(author));
       });
 
       if (limit !== undefined) {
@@ -329,15 +328,7 @@ export class GamesRepository {
 
     const rows = stmt.all() as { team: string }[];
 
-    // Parse comma-separated teams into individual authors
-    const allAuthors = rows
-      .flatMap((row) => {
-        if (!row.team) {
-          return [];
-        }
-        return row.team.split(',').map((author) => author.trim());
-      })
-      .filter((author) => author.length > 0);
+    const allAuthors = rows.flatMap((row) => teamMembers(row.team));
 
     // Get unique authors and sort alphabetically (case-insensitive)
     const uniqueAuthors = [...new Set(allAuthors)].sort((a, b) =>
