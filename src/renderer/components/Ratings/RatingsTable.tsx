@@ -36,7 +36,6 @@ export const RatingsTable = <T,>({
   const list = items ?? [];
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   const scrollMargin = useOffsetInScroller(scroller, bodyRef);
-  // eslint-disable-next-line react-hooks/incompatible-library -- the build runs no React Compiler, so nothing memoizes this component
   const virtualizer = useVirtualizer({
     count: list.length,
     getScrollElement: () => scroller,
