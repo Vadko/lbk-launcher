@@ -11,8 +11,8 @@ import { PillTabs } from '../components/ui/PillTabs';
 import { useRatingsInvalidation } from '../hooks/useRatingsInvalidation';
 import { useRatings } from '../queries/useRatings';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
-import { useSettingsStore } from '../store/useSettingsStore';
 import { useStore } from '../store/useStore';
+import { showOnlyAuthors } from '../utils/showOnlyAuthors';
 
 type RatingsTab = 'teams' | 'games';
 
@@ -84,8 +84,13 @@ export const RatingsPage: React.FC = () => {
       header: detailsHeader,
       render: (team) =>
         detailsButton(() => {
-          useSettingsStore.getState().setSelectedAuthors([team.name]);
+          showOnlyAuthors([team.name]);
           navigate('/');
+          if (isGamepadMode) {
+            const gamepad = useGamepadModeStore.getState();
+            gamepad.setNavigationArea('games');
+            gamepad.setFocusedGameIndex(0);
+          }
         }),
     },
   ];
