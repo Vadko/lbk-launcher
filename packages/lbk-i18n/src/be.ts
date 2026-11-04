@@ -362,7 +362,7 @@ export const be = {
   gameLike: {
     like: 'Ацаніць',
     unlike: 'Зняць ацэнку',
-    needsInstall: 'Усталюйце пераклад, каб ацаніць',
+    needsInstall: 'Каб прагаласаваць, усталюйце пераклад',
   },
   gameInfo: {
     title: 'Інфармацыя',

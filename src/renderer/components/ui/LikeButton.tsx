@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { t } from '@/shared/i18n/i18n';
 import { AppNumberFlow } from './AppNumberFlow';
 import { Button } from './Button';
+import { Tooltip } from './Tooltip';
 
 interface LikeButtonProps {
   gameId: string;
@@ -41,32 +42,30 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
   }, [gameId, canRate, animationsEnabled, animateIcon, iconRef]);
 
   return (
-    <Button
-      variant="secondary"
-      icon={
-        <span ref={iconRef} className="inline-flex">
-          <ThumbsUpIcon
-            size={20}
-            className={`fill-current transition-[fill-opacity] duration-200 ${isLiked ? '[fill-opacity:1]' : '[fill-opacity:0]'}`}
-          />
-        </span>
-      }
-      onClick={handleClick}
-      disabled={!canRate}
-      data-gamepad-action
-      className="px-4! gap-1!"
-      title={
-        canRate
-          ? isLiked
-            ? t('gameLike.unlike')
-            : t('gameLike.like')
-          : t('gameLike.needsInstall')
-      }
-    >
-      {likes > 0 && (
-        // number-flow pads each digit for its mask; at the default line height the button outgrows its 54px neighbours
-        <AppNumberFlow className="text-sm leading-none" value={likes} />
-      )}
-    </Button>
+    <Tooltip content={canRate ? null : t('gameLike.needsInstall')}>
+      <Button
+        variant="secondary"
+        icon={
+          <span ref={iconRef} className="inline-flex">
+            <ThumbsUpIcon
+              size={20}
+              className={`fill-current transition-[fill-opacity] duration-200 ${isLiked ? '[fill-opacity:1]' : '[fill-opacity:0]'}`}
+            />
+          </span>
+        }
+        onClick={handleClick}
+        disabled={!canRate}
+        data-gamepad-action
+        className="px-4! gap-1!"
+        title={
+          canRate ? (isLiked ? t('gameLike.unlike') : t('gameLike.like')) : undefined
+        }
+      >
+        {likes > 0 && (
+          // number-flow pads each digit for its mask; at the default line height the button outgrows its 54px neighbours
+          <AppNumberFlow className="text-sm leading-none" value={likes} />
+        )}
+      </Button>
+    </Tooltip>
   );
 };

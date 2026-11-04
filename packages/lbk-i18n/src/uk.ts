@@ -382,7 +382,7 @@ export const uk = {
   gameLike: {
     like: 'Оцінити',
     unlike: 'Зняти оцінку',
-    needsInstall: 'Встановіть переклад, щоб оцінити',
+    needsInstall: 'Щоб проголосувати, встановіть переклад',
   },
   gameInfo: {
     title: 'Інформація',

@@ -356,7 +356,7 @@ export const en = {
   gameLike: {
     like: 'Like',
     unlike: 'Remove like',
-    needsInstall: 'Install the translation to like it',
+    needsInstall: 'Install the translation to vote',
   },
   gameInfo: {
     title: 'Details',

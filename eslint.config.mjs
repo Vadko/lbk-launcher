@@ -66,7 +66,6 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // The build runs no React Compiler, so a library it cannot memoize costs nothing
       'react-hooks/incompatible-library': 'off',
 
       '@typescript-eslint/no-explicit-any': 'error',
