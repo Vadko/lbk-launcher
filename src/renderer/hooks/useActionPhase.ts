@@ -103,7 +103,10 @@ export function useActionPhase({
       clearTimer();
       startedAtRef.current = Date.now();
       setPhase('pending');
-      const settled = action().finally(() => {
+      // The executor turns a synchronous throw into a rejection, as the try block did
+      const settled = new Promise<T>((resolve) => {
+        resolve(action());
+      }).finally(() => {
         if (awaitedRef.current === generation) {
           awaitedRef.current = 0;
         }
