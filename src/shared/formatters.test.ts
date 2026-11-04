@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { formatDownloads, shownDownloads } from './formatters';
+import { formatDownloads, hasExactDownloads } from './formatters';
 import { t } from './i18n/i18n';
 
 describe('downloads', () => {
   it.each([
-    ['no count', null, null],
-    ['zero', 0, null],
-    ['19', 19, null],
-    ['20', 20, 20],
-    ['1234', 1234, 1234],
-  ])('shows %s', (_, downloads, expected) => {
-    expect(shownDownloads(downloads)).toBe(expected);
+    ['no count', null, false],
+    ['zero', 0, false],
+    ['1', 1, false],
+    ['19', 19, false],
+    ['20', 20, true],
+    ['1234', 1234, true],
+  ])('shows %s exactly: %s', (_, downloads, expected) => {
+    expect(hasExactDownloads(downloads)).toBe(expected);
   });
 
   it('formats a low count as a range', () => {

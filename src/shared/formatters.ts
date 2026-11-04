@@ -43,11 +43,14 @@ export function formatTime(seconds: number): string {
 const MIN_SHOWN_DOWNLOADS = 20;
 const downloadsFormat = new Intl.NumberFormat('uk-UA');
 
-export function shownDownloads(downloads: number | null | undefined): number | null {
-  return downloads && downloads >= MIN_SHOWN_DOWNLOADS ? downloads : null;
+export function hasExactDownloads(
+  downloads: number | null | undefined
+): downloads is number {
+  return !!downloads && downloads >= MIN_SHOWN_DOWNLOADS;
 }
 
 export function formatDownloads(downloads: number | null | undefined): string {
-  const shown = shownDownloads(downloads);
-  return shown === null ? t('gameInfo.downloadsUnder20') : downloadsFormat.format(shown);
+  return hasExactDownloads(downloads)
+    ? downloadsFormat.format(downloads)
+    : t('gameInfo.downloadsUnder20');
 }
