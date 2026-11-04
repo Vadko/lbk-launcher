@@ -25,6 +25,19 @@ const ERROR_MS = 1800;
 // Fast responses (~100 ms) would otherwise skip the spinner, leaving the morph to the checkmark nothing to start from
 const MIN_PENDING_MS = 600;
 
+// A throwing predicate doesn't fail the action: the result is returned, but the phase shows a failure
+function failsPredicate<T>(
+  result: T,
+  isSuccess: ((result: T) => boolean) | undefined
+): boolean {
+  try {
+    return isSuccess?.(result) === false;
+  } catch (predicateError) {
+    console.error('[useActionPhase] isSuccess threw:', predicateError);
+    return true;
+  }
+}
+
 export function useActionPhase({
   doneMs = DONE_MS,
   errorMs = ERROR_MS,
@@ -90,28 +103,22 @@ export function useActionPhase({
       clearTimer();
       startedAtRef.current = Date.now();
       setPhase('pending');
+      const settled = action().finally(() => {
+        if (awaitedRef.current === generation) {
+          awaitedRef.current = 0;
+        }
+      });
       let result: T;
       try {
-        result = await action();
+        result = await settled;
       } catch (error) {
         if (generation === generationRef.current) {
           hold('error');
         }
         throw error;
-      } finally {
-        if (awaitedRef.current === generation) {
-          awaitedRef.current = 0;
-        }
       }
 
-      // A throwing predicate doesn't fail the action: the result is returned, but the phase shows a failure
-      let failed = false;
-      try {
-        failed = options?.isSuccess?.(result) === false;
-      } catch (predicateError) {
-        console.error('[useActionPhase] isSuccess threw:', predicateError);
-        failed = true;
-      }
+      const failed = failsPredicate(result, options?.isSuccess);
       if (generation === generationRef.current && !(!failed && options?.holdPending)) {
         hold(failed ? 'error' : 'done');
       }
