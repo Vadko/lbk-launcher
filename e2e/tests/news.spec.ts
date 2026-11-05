@@ -32,17 +32,15 @@ test('news section renders heading and three filter tabs', async () => {
 });
 
 test(`default active tab is "${t('newsFeed.tab.sales')}"`, async () => {
-  const cls = await tab(t('newsFeed.tab.sales')).getAttribute('class');
-  expect(cls).toContain('from-color-accent');
+  await expect(tab(t('newsFeed.tab.sales'))).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('clicking another tab switches the active state', async () => {
   const games80 = tab(t('newsFeed.tab.games-80'));
   await games80.click();
 
-  await expect.poll(async () => games80.getAttribute('class')).toContain('from-color-accent');
-  const salesCls = await tab(t('newsFeed.tab.sales')).getAttribute('class');
-  expect(salesCls).not.toContain('from-color-accent');
+  await expect(games80).toHaveAttribute('aria-pressed', 'true');
+  await expect(tab(t('newsFeed.tab.sales'))).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('switched tab shows posts or empty state after loading', async () => {
