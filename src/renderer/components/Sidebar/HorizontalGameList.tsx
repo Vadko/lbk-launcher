@@ -92,7 +92,12 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
     }
 
     return (
-      <div className="relative h-48" style={{ width: virtualizer.getTotalSize() }}>
+      // Only visible cards render, so each card tells assistive tech the size of the whole list
+      <div
+        role="list"
+        className="relative h-48"
+        style={{ width: virtualizer.getTotalSize() }}
+      >
         {virtualizer.getVirtualItems().map((virtualCol) => {
           const group = gameGroups[virtualCol.index];
           const primaryGame = group.translations[0];
@@ -117,6 +122,9 @@ export const HorizontalGameList: React.FC<HorizontalGameListProps> = React.memo(
           return (
             <div
               key={virtualCol.key}
+              role="listitem"
+              aria-setsize={gameGroups.length}
+              aria-posinset={virtualCol.index + 1}
               data-gamepad-index={virtualCol.index}
               className="absolute inset-y-0 left-0"
               style={{ transform: `translateX(${virtualCol.start}px)` }}

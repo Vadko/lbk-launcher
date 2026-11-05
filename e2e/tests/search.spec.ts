@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { gameListSize } from '../helpers/gameList';
 import { launchApp, waitForAppReady, type AppInstance } from '../helpers/launch';
 import { t } from '../../src/shared/i18n/i18n';
 
@@ -25,28 +26,14 @@ test('search bar accepts input', async () => {
 
 test('search filters the game list', async () => {
   const searchBar = page.getByPlaceholder(t('gameSearch.placeholder'));
-  const gameItems = page.locator('[data-nav-group="game-list"]');
 
-  // Clear and get total count
   await searchBar.fill('');
-  // Wait for debounce (300ms) + render
-  await page.waitForTimeout(800);
-  const allGamesCount = await gameItems.count();
-  expect(allGamesCount).toBeGreaterThan(0);
+  await expect.poll(() => gameListSize(page)).toBeGreaterThan(0);
+  const allGamesCount = await gameListSize(page);
 
-  // Search for a nonexistent game — use a truly impossible string
   await searchBar.fill('xq9z8w7v6u5t4');
-  await page.waitForTimeout(800);
+  await expect.poll(() => gameListSize(page)).toBe(0);
 
-  // Either 0 results or the no-games message appears
-  const noResultsMessage = page.getByText(t('homeSections.noGames'));
-  const noResults = await gameItems.count();
-  const hasNoResultsMessage = await noResultsMessage.isVisible().catch(() => false);
-  expect(noResults === 0 || hasNoResultsMessage).toBe(true);
-
-  // Clear search — all games return
   await searchBar.fill('');
-  await page.waitForTimeout(800);
-  const restoredCount = await gameItems.count();
-  expect(restoredCount).toBe(allGamesCount);
+  await expect.poll(() => gameListSize(page)).toBe(allGamesCount);
 });

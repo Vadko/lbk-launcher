@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { gameListSize } from '../helpers/gameList';
 import { launchApp, waitForAppReady, type AppInstance } from '../helpers/launch';
 import { t } from '../../src/shared/i18n/i18n';
 
@@ -34,7 +35,8 @@ test('filters modal opens and shows status options', async () => {
 });
 
 test('selecting a status filter changes the game list', async () => {
-  initialCount = await page.locator('[data-nav-group="game-list"]').count();
+  initialCount = await gameListSize(page);
+  expect(initialCount).toBeGreaterThan(0);
 
   await page.getByText(t('filterBar.filters')).click();
   const dialog = page.getByRole('dialog');
@@ -48,10 +50,8 @@ test('selecting a status filter changes the game list', async () => {
   await dialog.getByText(t('catalogFilters.apply')).click();
   await expect(dialog).toBeHidden();
 
-  await page.waitForTimeout(800);
-
-  const filteredCount = await page.locator('[data-nav-group="game-list"]').count();
-  expect(filteredCount).toBeLessThanOrEqual(initialCount);
+  // The catalog always holds translations that are not completed yet
+  await expect.poll(() => gameListSize(page)).toBeLessThan(initialCount);
 });
 
 test('clearing all filters restores full list', async () => {
@@ -59,12 +59,8 @@ test('clearing all filters restores full list', async () => {
   await expect(clearAllButton).toBeVisible();
   await clearAllButton.click();
 
-  await page.waitForTimeout(800);
-
   await expect(page.getByTitle(t('filterBar.clearAll'))).toBeHidden();
-
-  const restoredCount = await page.locator('[data-nav-group="game-list"]').count();
-  expect(restoredCount).toBe(initialCount);
+  await expect.poll(() => gameListSize(page)).toBe(initialCount);
 });
 
 test('authors filter list is searchable', async () => {
@@ -82,7 +78,7 @@ test('authors filter list is searchable', async () => {
 });
 
 test('selecting a tag filter changes the game list', async () => {
-  const initialCount = await page.locator('[data-nav-group="game-list"]').count();
+  const initialCount = await gameListSize(page);
 
   await page.getByText(t('filterBar.filters')).click();
   const dialog = page.getByRole('dialog');
@@ -97,45 +93,33 @@ test('selecting a tag filter changes the game list', async () => {
   await dialog.getByText(t('catalogFilters.apply')).click();
   await expect(dialog).toBeHidden();
 
-  await page.waitForTimeout(800);
-
-  const filteredCount = await page.locator('[data-nav-group="game-list"]').count();
-  expect(filteredCount).toBeLessThanOrEqual(initialCount);
+  await expect.poll(() => gameListSize(page)).toBeLessThanOrEqual(initialCount);
 
   // Restore state for subsequent tests
   await page.getByTitle(t('filterBar.clearAll')).click();
-  await page.waitForTimeout(800);
-  expect(await page.locator('[data-nav-group="game-list"]').count()).toBe(initialCount);
+  await expect.poll(() => gameListSize(page)).toBe(initialCount);
 });
 
 test('quick filters toggle installed translations and favorites', async () => {
-  const initialCount = await page.locator('[data-nav-group="game-list"]').count();
+  const initialCount = await gameListSize(page);
 
   const installedToggle = page
     .getByTitle(t('filterBar.showInstalled'), { exact: true })
     .or(page.getByTitle(t('filterBar.hideInstalled'), { exact: true }));
   await installedToggle.click();
-  await page.waitForTimeout(500);
-  expect(
-    await page.locator('[data-nav-group="game-list"]').count()
-  ).toBeLessThanOrEqual(initialCount);
+  await expect.poll(() => gameListSize(page)).toBeLessThanOrEqual(initialCount);
 
   await installedToggle.click();
-  await page.waitForTimeout(500);
-  expect(await page.locator('[data-nav-group="game-list"]').count()).toBe(initialCount);
+  await expect.poll(() => gameListSize(page)).toBe(initialCount);
 
   const favoriteToggle = page
     .getByTitle(t('filterBar.showFavorites'), { exact: true })
     .or(page.getByTitle(t('filterBar.hideFavorites'), { exact: true }));
   await favoriteToggle.click();
-  await page.waitForTimeout(500);
-  expect(
-    await page.locator('[data-nav-group="game-list"]').count()
-  ).toBeLessThanOrEqual(initialCount);
+  await expect.poll(() => gameListSize(page)).toBeLessThanOrEqual(initialCount);
 
   await favoriteToggle.click();
-  await page.waitForTimeout(500);
-  expect(await page.locator('[data-nav-group="game-list"]').count()).toBe(initialCount);
+  await expect.poll(() => gameListSize(page)).toBe(initialCount);
 });
 
 test('sort dropdown opens, lists options, and reorders the game list', async () => {
