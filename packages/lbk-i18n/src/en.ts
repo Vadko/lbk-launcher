@@ -959,6 +959,16 @@ export const en = {
     loadFailed: 'Could not load the ratings. Please try again later.',
     empty: 'No data yet.',
     pages: 'Pages: {{caption}}',
+    search: {
+      placeholder: {
+        teams: 'Search teams...',
+        games: 'Search games...',
+      },
+      allResults: '– all results',
+      noResults: 'Nothing found',
+      noResultsHint: 'Check the spelling or try another name',
+      clear: 'Clear search',
+    },
   },
   pagination: {
     first: 'First page',

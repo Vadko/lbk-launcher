@@ -2,6 +2,7 @@ import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { Loader } from '../ui/Loader';
 import { Pagination } from '../ui/Pagination';
+import { type RatingsFilter, rankedRows } from './ratingsFilter';
 
 export interface RatingsColumn<T> {
   id: string;
@@ -15,6 +16,8 @@ interface RatingsTableProps<T> {
   items: readonly T[] | null;
   failed: boolean;
   getKey: (item: T) => string;
+  getName: (item: T) => string;
+  filter: RatingsFilter | null;
   caption: string;
   page: number;
   onPageChange: (page: number) => void;
@@ -28,11 +31,13 @@ export const RatingsTable = <T,>({
   items,
   failed,
   getKey,
+  getName,
+  filter,
   caption,
   page,
   onPageChange,
 }: RatingsTableProps<T>) => {
-  const list = items ?? [];
+  const list = rankedRows(items ?? [], filter, getKey, getName);
   const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
   // The store reloads on catalog events, so the list can shrink under the open page
   const current = Math.min(page, pageCount);
@@ -60,13 +65,13 @@ export const RatingsTable = <T,>({
             </tr>
           </thead>
           <tbody>
-            {list.slice(offset, offset + PAGE_SIZE).map((item, i) => (
+            {list.slice(offset, offset + PAGE_SIZE).map(({ item, rank }) => (
               <tr key={getKey(item)} className="border-b border-white/3">
                 <th
                   scope="row"
-                  className={`py-4 font-normal ${offset + i < PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
+                  className={`py-4 font-normal ${rank <= PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
                 >
-                  {offset + i + 1}
+                  {rank}
                 </th>
                 {columns.map((column) => (
                   <td
@@ -90,6 +95,10 @@ export const RatingsTable = <T,>({
         </div>
       ) : items.length === 0 ? (
         <p className="text-center text-text-muted py-12">{t('ratings.empty')}</p>
+      ) : list.length === 0 ? (
+        <p className="text-center text-text-muted py-12">
+          {t('ratings.search.noResults')}
+        </p>
       ) : null}
 
       {pageCount > 1 && (

@@ -50,6 +50,7 @@
   --background-color-bg-dark: var(--bg-dark);
   --background-color-glass: var(--glass);
   --background-color-glass-hover: var(--glass-hover);
+  --background-color-card: var(--card);
 
   --text-color-text-main: var(--text-main);
   --text-color-text-dark: var(--text-dark);
@@ -92,6 +93,7 @@
     --bg-dark: #0f0f10;
     --glass: rgba(255, 255, 255, 0.03);
     --glass-hover: rgba(255, 255, 255, 0.1);
+    --card: #1a1a1c;
     --border: rgba(255, 255, 255, 0.1);
     --border-hover: rgba(255, 255, 255, 0.3);
     --neon-green: #10b981;

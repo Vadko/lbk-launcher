@@ -5,7 +5,9 @@ import { formatDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
 import type { GameRatingItem, TeamRatingItem } from '@/shared/ratings-api-types';
 import { StatusBadge } from '../components/Elements/StatusBadge';
+import { RatingsSearch } from '../components/Ratings/RatingsSearch';
 import { type RatingsColumn, RatingsTable } from '../components/Ratings/RatingsTable';
+import type { RatingsFilter } from '../components/Ratings/ratingsFilter';
 import { Button } from '../components/ui/Button';
 import { PillTabs } from '../components/ui/PillTabs';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
@@ -19,6 +21,10 @@ const TABS: readonly RatingsTab[] = ['teams', 'games'];
 
 const MUTED = 'text-text-muted';
 const NAME = 'truncate text-text-main font-bold';
+
+const teamKey = (team: TeamRatingItem) => team.name;
+const gameKey = (game: GameRatingItem) => game.id;
+const gameName = (game: GameRatingItem) => game.name;
 
 const numberFormat = new Intl.NumberFormat('uk-UA');
 
@@ -44,8 +50,19 @@ export const RatingsPage: React.FC = () => {
   const setSelectedGame = useStore((state) => state.setSelectedGame);
   const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
   const [tab, setTab] = useState<RatingsTab>('teams');
-  const [pages, setPages] = useState<Record<RatingsTab, number>>({ teams: 1, games: 1 });
+  const [pages, setPages] = useState<Record<RatingsTab, number>>({
+    teams: 1,
+    games: 1,
+  });
   const setPage = (page: number) => setPages((prev) => ({ ...prev, [tab]: page }));
+  const [filters, setFilters] = useState<Record<RatingsTab, RatingsFilter | null>>({
+    teams: null,
+    games: null,
+  });
+  const setFilter = (filter: RatingsFilter | null) => {
+    setFilters((prev) => ({ ...prev, [tab]: filter }));
+    setPage(1);
+  };
   const teams = useRatingsStore((state) => state.teams);
   const games = useRatingsStore((state) => state.games);
   const failed = useRatingsStore((state) => state.failed);
@@ -109,15 +126,15 @@ export const RatingsPage: React.FC = () => {
       render: (game) => likesCell(game.likes),
     },
     {
+      id: 'status',
+      header: t('ratings.column.status'),
+      render: (game) => <StatusBadge status={game.status} style="capsule" />,
+    },
+    {
       id: 'downloads',
       header: t('ratings.column.downloads'),
       render: (game) => formatDownloads(game.downloads),
       className: MUTED,
-    },
-    {
-      id: 'status',
-      header: t('ratings.column.status'),
-      render: (game) => <StatusBadge status={game.status} style="capsule" />,
     },
     {
       id: 'details',
@@ -132,7 +149,7 @@ export const RatingsPage: React.FC = () => {
       className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto justify-center custom-scrollbar`}
     >
       <div className="main-page flex flex-col gap-6 h-auto w-full max-w-[1564px]">
-        <div className="flex justify-between items-end">
+        <div className="flex flex-wrap justify-between items-end gap-4">
           <div className="grid gap-2">
             <h1 className="text-4xl font-head font-semibold text-text-main">
               {t('ratings.title')}
@@ -140,12 +157,35 @@ export const RatingsPage: React.FC = () => {
             <p className="text-text-muted">{t('ratings.subtitle')}</p>
           </div>
 
-          <PillTabs
-            tabs={TABS}
-            active={tab}
-            label={(id) => t(`ratings.tab.${id}`)}
-            onChange={setTab}
-          />
+          <div className="flex grow flex-wrap items-center justify-between gap-4 min-w-0">
+            {tab === 'teams' ? (
+              <RatingsSearch
+                key="teams"
+                items={teams ?? []}
+                getKey={teamKey}
+                getName={teamKey}
+                filter={filters.teams}
+                onFilter={setFilter}
+                placeholder={t('ratings.search.placeholder.teams')}
+              />
+            ) : (
+              <RatingsSearch
+                key="games"
+                items={games ?? []}
+                getKey={gameKey}
+                getName={gameName}
+                filter={filters.games}
+                onFilter={setFilter}
+                placeholder={t('ratings.search.placeholder.games')}
+              />
+            )}
+            <PillTabs
+              tabs={TABS}
+              active={tab}
+              label={(id) => t(`ratings.tab.${id}`)}
+              onChange={setTab}
+            />
+          </div>
         </div>
 
         {tab === 'teams' ? (
@@ -153,7 +193,9 @@ export const RatingsPage: React.FC = () => {
             columns={teamColumns}
             items={teams}
             failed={failed}
-            getKey={(team) => team.name}
+            getKey={teamKey}
+            getName={teamKey}
+            filter={filters.teams}
             caption={t('ratings.caption.teams')}
             page={pages.teams}
             onPageChange={setPage}
@@ -163,7 +205,9 @@ export const RatingsPage: React.FC = () => {
             columns={gameColumns}
             items={games}
             failed={failed}
-            getKey={(game) => game.id}
+            getKey={gameKey}
+            getName={gameName}
+            filter={filters.games}
             caption={t('ratings.caption.games')}
             page={pages.games}
             onPageChange={setPage}
