@@ -7,9 +7,9 @@ import { SlidingTabs } from '../ui/SlidingTabs';
 export type ReviewFilter = 'all' | FeedbackType;
 
 interface ReviewTypeFilterProps {
-  value: ReviewFilter | null;
+  value: ReviewFilter;
   counts: ReviewCounts;
-  onChange: (filter: ReviewFilter | null) => void;
+  onChange: (filter: ReviewFilter) => void;
 }
 
 const FILTERS: ReviewFilter[] = ['all', 'feedback', 'error'];
@@ -23,7 +23,8 @@ export const ReviewTypeFilter: React.FC<ReviewTypeFilterProps> = ({
     variant="chip"
     tabs={FILTERS}
     active={value}
-    onChange={(filter) => onChange(value === filter ? null : filter)}
+    // A second press on a type goes back to every review
+    onChange={(filter) => onChange(value === filter ? 'all' : filter)}
     label={(filter, isActive) => (
       <>
         <span className="font-semibold">{t(`gameReviews.filter.${filter}`)}</span>
