@@ -958,6 +958,13 @@ export const en = {
     details: 'Details',
     loadFailed: 'Could not load the ratings. Please try again later.',
     empty: 'No data yet.',
+    pages: 'Pages: {{caption}}',
+  },
+  pagination: {
+    first: 'First page',
+    previous: 'Previous page',
+    next: 'Next page',
+    last: 'Last page',
   },
   newsFeed: {
     title: 'News',

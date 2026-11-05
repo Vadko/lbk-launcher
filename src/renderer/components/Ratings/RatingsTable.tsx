@@ -1,8 +1,7 @@
-import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { useRef } from 'react';
+import React from 'react';
 import { t } from '@/shared/i18n/i18n';
-import { useOffsetInScroller } from '../../hooks/useOffsetInScroller';
 import { Loader } from '../ui/Loader';
+import { Pagination } from '../ui/Pagination';
 
 export interface RatingsColumn<T> {
   id: string;
@@ -17,13 +16,12 @@ interface RatingsTableProps<T> {
   failed: boolean;
   getKey: (item: T) => string;
   caption: string;
-  scroller: HTMLElement | null;
+  page: number;
+  onPageChange: (page: number) => void;
 }
 
 const PODIUM_SIZE = 3;
-const ROW_ESTIMATE = 69;
-// Keeps the rows next to the visible ones mounted, so the gamepad finds them below the fold
-const OVERSCAN = 10;
+const PAGE_SIZE = 10;
 
 export const RatingsTable = <T,>({
   columns,
@@ -31,31 +29,14 @@ export const RatingsTable = <T,>({
   failed,
   getKey,
   caption,
-  scroller,
+  page,
+  onPageChange,
 }: RatingsTableProps<T>) => {
   const list = items ?? [];
-  const bodyRef = useRef<HTMLTableSectionElement>(null);
-  const scrollMargin = useOffsetInScroller(scroller, bodyRef);
-  const virtualizer = useVirtualizer({
-    count: list.length,
-    getScrollElement: () => scroller,
-    estimateSize: () => ROW_ESTIMATE,
-    overscan: OVERSCAN,
-    scrollMargin,
-    getItemKey: (index) => getKey(list[index]),
-  });
-  const rows = virtualizer.getVirtualItems();
-  const before = rows.length > 0 ? rows[0].start - scrollMargin : 0;
-  const after =
-    rows.length > 0
-      ? virtualizer.getTotalSize() - (rows[rows.length - 1].end - scrollMargin)
-      : 0;
-  const spacer = (height: number) =>
-    height > 0 && (
-      <tr aria-hidden>
-        <td colSpan={columns.length + 1} className="p-0" style={{ height }} />
-      </tr>
-    );
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  // The store reloads on catalog events, so the list can shrink under the open page
+  const current = Math.min(page, pageCount);
+  const offset = (current - 1) * PAGE_SIZE;
 
   return (
     <div className="overflow-hidden glass-card-no-motion flex flex-col p-0!">
@@ -78,32 +59,25 @@ export const RatingsTable = <T,>({
               ))}
             </tr>
           </thead>
-          <tbody ref={bodyRef}>
-            {spacer(before)}
-            {rows.map((row) => (
-              <tr
-                key={row.key}
-                ref={virtualizer.measureElement}
-                data-index={row.index}
-                className="border-b border-white/3"
-              >
+          <tbody>
+            {list.slice(offset, offset + PAGE_SIZE).map((item, i) => (
+              <tr key={getKey(item)} className="border-b border-white/3">
                 <th
                   scope="row"
-                  className={`py-4 font-normal ${row.index < PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
+                  className={`py-4 font-normal ${offset + i < PODIUM_SIZE ? 'text-color-main' : 'text-text-muted'}`}
                 >
-                  {row.index + 1}
+                  {offset + i + 1}
                 </th>
                 {columns.map((column) => (
                   <td
                     key={column.id}
                     className={`px-1.5 py-4 text-center align-middle last:pr-4 ${column.className ?? ''}`}
                   >
-                    {column.render(list[row.index])}
+                    {column.render(item)}
                   </td>
                 ))}
               </tr>
             ))}
-            {spacer(after)}
           </tbody>
         </table>
       </div>
@@ -117,6 +91,17 @@ export const RatingsTable = <T,>({
       ) : items.length === 0 ? (
         <p className="text-center text-text-muted py-12">{t('ratings.empty')}</p>
       ) : null}
+
+      {pageCount > 1 && (
+        <div className="p-4">
+          <Pagination
+            page={current}
+            pageCount={pageCount}
+            onChange={onPageChange}
+            label={t('ratings.pages', { caption })}
+          />
+        </div>
+      )}
     </div>
   );
 };
