@@ -2,7 +2,7 @@ import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
 import type { ReviewCounts } from '../../utils/reviewCounts';
-import { ReviewFilterChip } from './ReviewFilterChip';
+import { SlidingTabs } from '../ui/SlidingTabs';
 
 export type ReviewFilter = 'all' | FeedbackType;
 
@@ -19,15 +19,20 @@ export const ReviewTypeFilter: React.FC<ReviewTypeFilterProps> = ({
   counts,
   onChange,
 }) => (
-  <div className="flex flex-wrap items-center gap-2">
-    {FILTERS.map((filter) => (
-      <ReviewFilterChip
-        key={filter}
-        label={t(`gameReviews.filter.${filter}`)}
-        count={counts[filter]}
-        isActive={value === filter}
-        onClick={() => onChange(value === filter ? null : filter)}
-      />
-    ))}
-  </div>
+  <SlidingTabs
+    variant="chip"
+    tabs={FILTERS}
+    active={value}
+    onChange={(filter) => onChange(value === filter ? null : filter)}
+    label={(filter, isActive) => (
+      <>
+        <span className="font-semibold">{t(`gameReviews.filter.${filter}`)}</span>
+        <span
+          className={`font-normal tabular-nums ${isActive ? 'text-text-dark/60' : 'text-text-muted'}`}
+        >
+          {counts[filter]}
+        </span>
+      </>
+    )}
+  />
 );

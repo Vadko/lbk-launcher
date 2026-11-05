@@ -9,7 +9,7 @@ import { RatingsSearch } from '../components/Ratings/RatingsSearch';
 import { type RatingsColumn, RatingsTable } from '../components/Ratings/RatingsTable';
 import type { RatingsFilter } from '../components/Ratings/ratingsFilter';
 import { Button } from '../components/ui/Button';
-import { PillTabs } from '../components/ui/PillTabs';
+import { SlidingTabs } from '../components/ui/SlidingTabs';
 import { useGamepadModeStore } from '../store/useGamepadModeStore';
 import { useRatingsStore } from '../store/useRatingsStore';
 import { useStore } from '../store/useStore';
@@ -179,7 +179,7 @@ export const RatingsPage: React.FC = () => {
                 placeholder={t('ratings.search.placeholder.games')}
               />
             )}
-            <PillTabs
+            <SlidingTabs
               tabs={TABS}
               active={tab}
               label={(id) => t(`ratings.tab.${id}`)}

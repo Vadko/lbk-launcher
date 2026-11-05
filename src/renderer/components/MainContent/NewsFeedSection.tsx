@@ -7,7 +7,7 @@ import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel
 import { trackEvent } from '../../utils/analytics';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
-import { PillTabs } from '../ui/PillTabs';
+import { SlidingTabs } from '../ui/SlidingTabs';
 
 const FEED_FILTERS: readonly NewsFeedFilter[] = ['sales', 'games-80', 'news'];
 
@@ -69,7 +69,7 @@ export const NewsFeedSection: React.FC = () => {
         <h2 className="text-4xl font-head font-semibold text-text-main">
           {t('newsFeed.title')}
         </h2>
-        <PillTabs
+        <SlidingTabs
           tabs={FEED_FILTERS}
           active={activeFilter}
           label={(filter) => t(`newsFeed.tab.${filter}`)}
