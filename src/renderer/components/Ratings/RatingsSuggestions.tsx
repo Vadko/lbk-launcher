@@ -8,7 +8,7 @@ import type { NameMatch, Suggestion } from './ratingsFilter';
 interface RatingsSuggestionsProps<T> {
   id: string;
   query: string;
-  suggestions: Suggestion<T>[];
+  suggestions: readonly Suggestion<T>[];
   getName: (item: T) => string;
   active: number;
   onActive: (index: number) => void;

@@ -1,9 +1,9 @@
+import { G } from '@mobily/ts-belt';
 import { AnimatePresence, motion } from 'framer-motion';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, XIcon } from 'lucide-react';
 import React, { useId, useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
-import { ClearIcon } from '../Icons/ClearIcon';
 import { optionId } from './optionId';
 import { RatingsSuggestions } from './RatingsSuggestions';
 import { type RatingsFilter, suggest } from './ratingsFilter';
@@ -18,7 +18,7 @@ interface RatingsSearchProps<T> {
 }
 
 const filterText = (filter: RatingsFilter | null) =>
-  filter === null ? '' : filter.kind === 'query' ? filter.text : filter.name;
+  G.isNullable(filter) ? '' : filter.kind === 'query' ? filter.text : filter.name;
 
 export const RatingsSearch = <T,>({
   items,
@@ -34,11 +34,11 @@ export const RatingsSearch = <T,>({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const query = text.trim();
-  const isOpen = open && query !== '';
   const suggestions = query ? suggest(items, getName, query) : [];
-  const optionCount = suggestions.length === 0 ? 0 : suggestions.length + 1;
+  const optionCount = suggestions.length && suggestions.length + 1;
   // The store reloads on catalog events, so the list can shrink under the highlighted row
-  const current = Math.min(active, Math.max(optionCount - 1, 0));
+  const current = Math.min(active, optionCount - 1);
+  const hasOptions = open && optionCount > 0;
 
   const commit = (next: RatingsFilter) => {
     setText(filterText(next));
@@ -60,18 +60,19 @@ export const RatingsSearch = <T,>({
     setText(value);
     setActive(0);
     setOpen(value.trim() !== '');
-    if (value.trim() === '' && filter !== null) {
+    if (value.trim() === '' && G.isNotNullable(filter)) {
       onFilter(null);
     }
   });
 
   const clear = () => {
+    // Focus first: onFocus still sees the old text and would reopen the list after it
+    inputRef.current?.focus();
     setText('');
     setOpen(false);
-    if (filter !== null) {
+    if (G.isNotNullable(filter)) {
       onFilter(null);
     }
-    inputRef.current?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -86,8 +87,8 @@ export const RatingsSearch = <T,>({
       setActive((current + step + optionCount) % optionCount);
     } else if (e.key === 'Enter' && query !== '') {
       e.preventDefault();
-      choose(isOpen && optionCount > 0 ? current : 0);
-    } else if (e.key === 'Escape' && isOpen) {
+      choose(hasOptions ? current : 0);
+    } else if (e.key === 'Escape' && open) {
       e.preventDefault();
       setOpen(false);
     }
@@ -113,19 +114,17 @@ export const RatingsSearch = <T,>({
           type="search"
           role="combobox"
           aria-label={placeholder}
-          aria-expanded={isOpen && optionCount > 0}
+          aria-expanded={hasOptions}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={
-            isOpen && optionCount > 0 ? optionId(listId, current) : undefined
-          }
+          aria-activedescendant={hasOptions ? optionId(listId, current) : undefined}
           value={text}
           {...change}
-          onFocus={() => setOpen(true)}
+          onFocus={() => setOpen(query !== '')}
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           data-gamepad-action
-          className="min-w-0 flex-1 bg-transparent text-base text-text-main caret-color-main outline-hidden placeholder:text-text-muted"
+          className="min-w-0 flex-1 bg-transparent text-base [&::-webkit-search-cancel-button]:hidden text-text-main caret-color-main outline-hidden placeholder:text-text-muted"
         />
         <AnimatePresence>
           {text && (
@@ -140,13 +139,13 @@ export const RatingsSearch = <T,>({
               data-gamepad-action
               className="shrink-0 text-text-muted transition-colors hover:text-text-main"
             >
-              <ClearIcon />
+              <XIcon size={20} />
             </motion.button>
           )}
         </AnimatePresence>
       </div>
       <AnimatePresence>
-        {isOpen && (
+        {open && (
           <RatingsSuggestions
             id={listId}
             query={query}

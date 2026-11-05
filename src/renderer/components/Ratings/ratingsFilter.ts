@@ -1,4 +1,4 @@
-import { A } from '@mobily/ts-belt';
+import { A, G, O, pipe } from '@mobily/ts-belt';
 import { switchLayout } from '@/shared/search-utils';
 
 export type RatingsFilter =
@@ -45,15 +45,16 @@ export function suggest<T>(
   items: readonly T[],
   getName: (item: T) => string,
   query: string
-): Suggestion<T>[] {
-  const found = items.flatMap((item) => {
-    const match = findMatch(getName(item), query);
-    return match ? [{ item, match }] : [];
-  });
-  const [atWord, inside] = A.partition(found, ({ item, match }) =>
-    startsWord(getName(item), match.start)
+): readonly Suggestion<T>[] {
+  return pipe(
+    items,
+    A.filterMap((item) =>
+      O.map(O.fromNullable(findMatch(getName(item), query)), (match) => ({ item, match }))
+    ),
+    A.partition(({ item, match }) => startsWord(getName(item), match.start)),
+    ([atWord, inside]) => A.concat(atWord, inside),
+    A.take(SUGGESTION_LIMIT)
   );
-  return [...atWord, ...inside].slice(0, SUGGESTION_LIMIT);
 }
 
 // A filtered row keeps its place in the whole rating
@@ -62,14 +63,15 @@ export function rankedRows<T>(
   filter: RatingsFilter | null,
   getKey: (item: T) => string,
   getName: (item: T) => string
-): RankedRow<T>[] {
-  const rows = items.map((item, index) => ({ item, rank: index + 1 }));
-  if (!filter) {
-    return rows;
-  }
-  return rows.filter(({ item }) =>
-    filter.kind === 'item'
+): readonly RankedRow<T>[] {
+  const keeps = (item: T) =>
+    G.isNullable(filter) ||
+    (filter.kind === 'item'
       ? getKey(item) === filter.key
-      : findMatch(getName(item), filter.text) !== null
+      : G.isNotNullable(findMatch(getName(item), filter.text)));
+  return pipe(
+    items,
+    A.mapWithIndex((index, item) => ({ item, rank: index + 1 })),
+    A.filter(({ item }) => keeps(item))
   );
 }
