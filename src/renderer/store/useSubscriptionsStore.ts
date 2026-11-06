@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { t } from '@/shared/i18n/i18n';
 import type { ReviewEvent } from '../../shared/game-reviews-types';
+import { isGameReviewNotice } from '../utils/isGameReviewNotice';
 import { reviewModerationKey } from '../utils/reviewModerationKey';
 import { reviewReplyText } from '../utils/reviewReplyText';
 import {
@@ -121,6 +122,8 @@ interface SubscriptionsStore extends PersistedSubscriptionsState {
   showToast: (toast: Omit<ToastNotification, 'id' | 'timestamp'>) => void;
   markNotificationAsRead: (notificationId: string) => void;
   markAllNotificationsAsRead: () => void;
+  // The reviews tab shows what these notices are about
+  markGameReviewNoticesAsRead: (gameId: string) => void;
   markAppUpdateNotificationsAsRead: () => void;
   clearNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
@@ -604,6 +607,16 @@ export const useSubscriptionsStore = create<SubscriptionsStore>()(
           notifications: state.notifications.map((n) => ({ ...n, read: true })),
           unreadCount: 0,
         }));
+      },
+
+      markGameReviewNoticesAsRead: (gameId) => {
+        set((state) => {
+          const notifications = state.notifications.map((n) =>
+            isGameReviewNotice(n, gameId) ? { ...n, read: true } : n
+          );
+          const unreadCount = notifications.filter((n) => !n.read).length;
+          return { notifications, unreadCount };
+        });
       },
 
       markAppUpdateNotificationsAsRead: () => {

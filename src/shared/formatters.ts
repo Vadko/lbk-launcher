@@ -39,3 +39,18 @@ export function formatTime(seconds: number): string {
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
+
+const MIN_SHOWN_DOWNLOADS = 20;
+const downloadsFormat = new Intl.NumberFormat('uk-UA');
+
+export function hasExactDownloads(
+  downloads: number | null | undefined
+): downloads is number {
+  return !!downloads && downloads >= MIN_SHOWN_DOWNLOADS;
+}
+
+export function formatDownloads(downloads: number | null | undefined): string {
+  return hasExactDownloads(downloads)
+    ? downloadsFormat.format(downloads)
+    : t('gameInfo.downloadsUnder20');
+}

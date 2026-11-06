@@ -1,6 +1,7 @@
 import type {
   FeedbackUploadUrl,
   FeedbackUploadUrlsInput,
+  GameReviewsListInput,
   NicknameClaimInput,
   NicknameSpin,
   NicknameSpinInput,
@@ -17,11 +18,9 @@ import type { GameReviewsPage, ReviewAuthorIdentity } from '@/shared/game-review
 
 // React Query needs a throw to keep the cached pages and show the retry
 export async function fetchReviewsPage(
-  gameId: string,
-  cursor: string | null,
-  focusId?: string
+  input: GameReviewsListInput
 ): Promise<GameReviewsPage> {
-  const result = await window.electronAPI.fetchGameReviews({ gameId, cursor, focusId });
+  const result = await window.electronAPI.fetchGameReviews(input);
   if (!result.ok) {
     throw new Error(`Reviews list failed: ${result.failure.code}`);
   }

@@ -1,38 +1,67 @@
 import { A } from '@mobily/ts-belt';
+import { usePrefetchInfiniteQuery } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide';
-import { FileEditIcon, InfoIcon } from 'lucide-react';
-import React from 'react';
+import { InfoIcon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useActionPhase } from '../../hooks/useActionPhase';
+import { useHasReviewNotices } from '../../hooks/useHasReviewNotices';
 import { useInfiniteScrollSentinel } from '../../hooks/useInfiniteScrollSentinel';
 import { useReviewFocus } from '../../hooks/useReviewFocus';
+import { gameReviewsQueryOptions } from '../../queries/gameReviewsQueryOptions';
 import { useGameReviewActions } from '../../queries/useGameReviewActions';
 import { useGameReviews } from '../../queries/useGameReviews';
+import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import type { ReviewFocus } from '../../utils/readReviewLink';
+import type { ReviewCounts } from '../../utils/reviewCounts';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+import { ReviewsHeader } from './ReviewsHeader';
 import { ReviewThread } from './ReviewThread';
+import { type ReviewFilter, ReviewTypeFilter } from './ReviewTypeFilter';
 
 interface GameReviewsTabProps {
   gameId: string;
   gameName: string;
+  reviewCounts: ReviewCounts;
   canLeaveFeedback: boolean;
   onLeaveFeedback: () => void;
   // A deep link's entry, until the tab has shown it
   focus: ReviewFocus | null;
   onFocusHandled: () => void;
+  // A link to the tab alone, waiting for the first page before the page scrolls to it
+  reveal: boolean;
+  onRevealed: () => void;
 }
 
 export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   gameId,
   gameName,
+  reviewCounts,
   canLeaveFeedback,
   onLeaveFeedback,
   focus,
   onFocusHandled,
+  reveal,
+  onRevealed,
 }) => {
-  const { query, data, loadNextPage } = useGameReviews(gameId, focus);
+  const [filter, setFilter] = useState<ReviewFilter>('all');
+  // Both typed first pages load with the tab, so a filter switch shows a ready list
+  usePrefetchInfiniteQuery(gameReviewsQueryOptions(gameId, null, 'feedback'));
+  usePrefetchInfiniteQuery(gameReviewsQueryOptions(gameId, null, 'error'));
+  // A review link may point at a thread of either type, so it opens the full list
+  if (focus && filter !== 'all') {
+    setFilter('all');
+  }
+  const type = filter === 'all' ? null : filter;
+  const { query, data, loadNextPage } = useGameReviews(gameId, focus, type);
+  const hasReviewNotices = useHasReviewNotices(gameId);
+  useEffect(() => {
+    if (hasReviewNotices) {
+      useSubscriptionsStore.getState().markGameReviewNoticesAsRead(gameId);
+    }
+  }, [hasReviewNotices, gameId]);
   const {
     isError,
     isFetching,
@@ -43,13 +72,18 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
     isFetchingNextPage,
     refetch,
   } = query;
+  const isFirstPageSettled = !query.isPending;
+  useEffect(() => {
+    if (reveal && isFirstPageSettled) {
+      onRevealed();
+    }
+  }, [reveal, isFirstPageSettled, onRevealed]);
   const actions = useGameReviewActions(gameId, gameName, data?.pages[0]?.viewer ?? null);
   // The focus thread rides on the first page and comes again once its own page loads
   const reviews = A.uniqBy(
     (data?.pages ?? []).flatMap((page) => page.items),
     (thread) => thread.id
   );
-  const total = data?.pages[0]?.total;
   const focused = useReviewFocus({
     focus,
     threads: reviews,
@@ -84,26 +118,13 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
 
   return (
     <section className="glass-card-no-motion flex flex-col gap-5 min-w-0 min-h-[60vh] h-max">
-      <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
-        <div className="flex flex-col gap-3">
-          <h3 className="text-lg font-head font-semibold text-text-main">
-            {t('gameReviews.title')}
-          </h3>
-          <p className="min-h-[18px] text-sm text-text-muted">
-            {total !== undefined && t('gameReviews.count', { count: total })}
-          </p>
-        </div>
-        {canLeaveFeedback && (
-          <Button
-            variant="secondary"
-            icon={<FileEditIcon size={20} />}
-            onClick={onLeaveFeedback}
-            data-gamepad-action
-          >
-            {t('gameReviews.leave')}
-          </Button>
-        )}
-      </div>
+      <ReviewsHeader
+        reviewCounts={reviewCounts}
+        canLeaveFeedback={canLeaveFeedback}
+        onLeaveFeedback={onLeaveFeedback}
+      />
+      <ReviewTypeFilter value={filter} counts={reviewCounts} onChange={setFilter} />
+      <div className="h-px bg-white/8" />
 
       {!canLeaveFeedback && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-color-main/30 bg-color-main/10 text-sm text-text-main">
@@ -138,7 +159,9 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
             <Loader size="md" />
           </div>
         ) : reviews.length === 0 ? (
-          <p className="text-sm text-text-muted">{t('gameReviews.empty')}</p>
+          <p className="text-sm text-text-muted">
+            {t(type === 'error' ? 'gameReviews.emptyErrors' : 'gameReviews.empty')}
+          </p>
         ) : (
           <div className="flex flex-col divide-y divide-white/5">
             {reviews.map((review) => (

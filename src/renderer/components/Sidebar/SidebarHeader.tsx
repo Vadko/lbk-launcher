@@ -1,5 +1,11 @@
 import logo from '@resources/logo.svg';
-import { BookOpenTextIcon, HomeIcon, MedalIcon, NewspaperIcon } from 'lucide-react';
+import {
+  BookOpenTextIcon,
+  HomeIcon,
+  MedalIcon,
+  NewspaperIcon,
+  TrophyIcon,
+} from 'lucide-react';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
@@ -38,6 +44,13 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
               title={t('sidebarNav.donators')}
             >
               <MedalIcon size={20} />
+            </button>
+            <button
+              onClick={() => navigate('/ratings')}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-main hover:bg-white/10 active:scale-95 transition-all"
+              title={t('sidebarNav.ratings')}
+            >
+              <TrophyIcon size={20} />
             </button>
             <button
               onClick={() => navigate('/news')}

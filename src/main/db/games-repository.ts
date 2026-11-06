@@ -2,7 +2,7 @@ import { existsSync, type FSWatcher, readFileSync, watch } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { BrowserWindow } from 'electron';
-import { buildFtsQuery, stripApostrophes } from '../../shared/search-utils';
+import { teamMembers } from '../../shared/team-members';
 import type {
   FacetRow,
   Game,
@@ -21,8 +21,11 @@ import {
   upsertGamesTransaction,
   VISIBLE_GAMES_SQL,
 } from './db-queries';
-
-const FTS_MATCH_SQL = 'id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)';
+import {
+  buildSearchCondition,
+  hasVisibleMatch,
+  type SearchCondition,
+} from './search-condition';
 
 /**
  * Repository for working with games in the local database
@@ -160,7 +163,23 @@ export class GamesRepository {
   /**
    * Build the ORDER BY clause for sorting games
    */
-  private buildOrderClause(sortOrder: SortOrderType): string {
+  private buildOrderClause(
+    sortOrder: SortOrderType,
+    searchQuery?: string
+  ): { sql: string; params: string[] } {
+    const catalogOrder = this.buildCatalogOrder(sortOrder);
+    const prefix = searchQuery?.trim().toLowerCase();
+    if (!prefix) {
+      return { sql: catalogOrder, params: [] };
+    }
+    // Titles that start with the query come first: "The Room" before "Silent Hill 4: The Room"
+    return {
+      sql: `(substr(name_search, 1, length(?)) = ?) DESC, ${catalogOrder}`,
+      params: [prefix, prefix],
+    };
+  }
+
+  private buildCatalogOrder(sortOrder: SortOrderType): string {
     // LTRIM strips digits and symbols from the start of the name for sorting
     // E.g. "112 Operator" sorts as "Operator", "[Chilla's Art]" as "Chilla's Art"
     const nameSortExpr = `LTRIM(name, '0123456789[]():!@#$%^&*-_.,"'' ') COLLATE NOCASE`;
@@ -257,7 +276,7 @@ export class GamesRepository {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    const orderClause = this.buildOrderClause(sortOrder);
+    const order = this.buildOrderClause(sortOrder, searchQuery);
 
     // Author фільтр рахується у JS post-process, тому SQL LIMIT там урізав би рядки до фільтрації
     const canLimitInSql = limit !== undefined && authors.length === 0;
@@ -266,12 +285,13 @@ export class GamesRepository {
       SELECT *
       FROM games
       WHERE ${whereClause}
-      ORDER BY ${orderClause}
+      ORDER BY ${order.sql}
       ${canLimitInSql ? 'LIMIT ?' : ''}
     `);
 
     const rows = gamesStmt.all(
       ...queryParams,
+      ...order.params,
       ...(canLimitInSql ? [limit] : [])
     ) as Record<string, unknown>[];
     let games = rows.map((row) => this.rowToGame(row));
@@ -279,10 +299,8 @@ export class GamesRepository {
     // Filter by authors (multi-select) - post-process since team is comma-separated
     if (authors.length > 0) {
       games = games.filter((game) => {
-        if (!game.team) {
-          return false;
-        }
-        return authors.some((author) => game.team?.includes(author));
+        const members = teamMembers(game.team);
+        return authors.some((author) => members.includes(author));
       });
 
       if (limit !== undefined) {
@@ -293,66 +311,8 @@ export class GamesRepository {
     return { games, total: games.length };
   }
 
-  // One search predicate for every list and the facet counts, so a count never disagrees with its list
-  private buildSearchCondition(
-    searchQuery?: string
-  ): { sql: string; params: string[] } | null {
-    const query = searchQuery?.trim();
-    if (!query) {
-      return null;
-    }
-
-    // 1-char queries use a name prefix LIKE (an FTS prefix scan is expensive); no usable tokens fall back to substring LIKE
-    const ftsQuery = query.length >= 2 ? buildFtsQuery(query) : '';
-    const condition = ftsQuery
-      ? { sql: FTS_MATCH_SQL, params: [ftsQuery] }
-      : { sql: 'name LIKE ?', params: [query.length >= 2 ? `%${query}%` : `${query}%`] };
-
-    if (!isSpellfixAvailable() || this.hasVisibleMatch(condition)) {
-      return condition;
-    }
-
-    // Typo fallback is decided on the search alone, so the other filters still apply to its matches
-    const correctedFts = this.correctFtsQuery(query);
-    return correctedFts ? { sql: FTS_MATCH_SQL, params: [correctedFts] } : condition;
-  }
-
-  private hasVisibleMatch(condition: { sql: string; params: string[] }): boolean {
-    return (
-      this.db
-        .prepare(
-          `SELECT 1 FROM games WHERE ${VISIBLE_GAMES_SQL} AND ${condition.sql} LIMIT 1`
-        )
-        .get(...condition.params) !== undefined
-    );
-  }
-
-  /** Spellfix1: replace each query word with its closest dictionary word, as an FTS5 OR query */
-  private correctFtsQuery(searchQuery: string): string | null {
-    try {
-      // spellfix dictionary has no apostrophes (extractUniqueWords), so strip the query too
-      const queryWords = stripApostrophes(searchQuery)
-        .toLowerCase()
-        .split(/\s+/)
-        .filter((w) => w.length >= 3);
-
-      if (queryWords.length === 0) {
-        return null;
-      }
-
-      const spellfixStmt = this.db.prepare(
-        'SELECT word FROM spellfix_words WHERE word MATCH ? AND top=5 ORDER BY score LIMIT 1'
-      );
-      const correctedWords = queryWords.map((word) => {
-        const result = spellfixStmt.get(word) as { word: string } | undefined;
-        return result ? result.word : word;
-      });
-
-      return correctedWords.map((w) => `"${w}"*`).join(' OR ');
-    } catch (e) {
-      console.warn('[GamesRepository] Spellfix fuzzy fallback error:', e);
-      return null;
-    }
+  private buildSearchCondition(searchQuery?: string): SearchCondition | null {
+    return buildSearchCondition(this.db, searchQuery, isSpellfixAvailable());
   }
 
   /**
@@ -368,15 +328,7 @@ export class GamesRepository {
 
     const rows = stmt.all() as { team: string }[];
 
-    // Parse comma-separated teams into individual authors
-    const allAuthors = rows
-      .flatMap((row) => {
-        if (!row.team) {
-          return [];
-        }
-        return row.team.split(',').map((author) => author.trim());
-      })
-      .filter((author) => author.length > 0);
+    const allAuthors = rows.flatMap((row) => teamMembers(row.team));
 
     // Get unique authors and sort alphabetically (case-insensitive)
     const uniqueAuthors = [...new Set(allAuthors)].sort((a, b) =>
@@ -417,14 +369,15 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
+    const order = this.buildOrderClause(sortOrder, searchQuery);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${this.buildOrderClause(sortOrder)}
+      ORDER BY ${order.sql}
     `);
 
-    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
     return rows.map((row) => this.rowToGame(row));
   }
 
@@ -462,14 +415,15 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
+    const order = this.buildOrderClause(sortOrder, searchQuery);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${this.buildOrderClause(sortOrder)}
+      ORDER BY ${order.sql}
     `);
 
-    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
     const allGames = rows.map((row) => this.rowToGame(row));
 
     // Normalize both sides with the shared helper so the DB folder name and the
@@ -530,14 +484,15 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
+    const order = this.buildOrderClause(sortOrder, searchQuery);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${this.buildOrderClause(sortOrder)}
+      ORDER BY ${order.sql}
     `);
 
-    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
     const games = rows.map((row) => this.rowToGame(row));
 
     return { games, total: games.length };
@@ -647,7 +602,7 @@ export class GamesRepository {
   }
 
   isGameVisible(gameId: string): boolean {
-    return this.hasVisibleMatch({ sql: 'id = ?', params: [gameId] });
+    return hasVisibleMatch(this.db, { sql: 'id = ?', params: [gameId] });
   }
 
   /**
@@ -738,14 +693,15 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
+    const order = this.buildOrderClause(sortOrder, searchQuery);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${this.buildOrderClause(sortOrder)}
+      ORDER BY ${order.sql}
     `);
 
-    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
     const games = rows.map((row) => this.rowToGame(row));
     return { games, total: games.length };
   }
@@ -789,14 +745,15 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
+    const order = this.buildOrderClause(sortOrder, searchQuery);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
       WHERE ${whereConditions.join(' AND ')}
-      ORDER BY ${this.buildOrderClause(sortOrder)}
+      ORDER BY ${order.sql}
     `);
 
-    const rows = stmt.all(...queryParams) as Record<string, unknown>[];
+    const rows = stmt.all(...queryParams, ...order.params) as Record<string, unknown>[];
     const games = rows.map((row) => this.rowToGame(row));
 
     return { games, total: games.length };

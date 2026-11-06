@@ -215,6 +215,8 @@ class DatabaseManager {
         steam_tag_ids TEXT, -- JSON array of Steam tag ids
         source_language TEXT,
         likes INTEGER NOT NULL DEFAULT 0,
+        reviews INTEGER NOT NULL DEFAULT 0,
+        error_reviews INTEGER NOT NULL DEFAULT 0,
         user_unlocked INTEGER NOT NULL DEFAULT 0 -- Local-only, never synced from Supabase
       );
 
@@ -236,6 +238,14 @@ class DatabaseManager {
         liked INTEGER NOT NULL,
         server_liked INTEGER NOT NULL DEFAULT 0
       );
+
+      CREATE TABLE IF NOT EXISTS store_discounts (
+        store TEXT NOT NULL,
+        steam_app_id INTEGER NOT NULL,
+        discount_percent INTEGER NOT NULL,
+        ends_at INTEGER, -- epoch ms, NULL for a discount with no end
+        PRIMARY KEY (store, steam_app_id)
+      ) WITHOUT ROWID;
 
       -- FTS5 virtual table for full-text search
       CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(

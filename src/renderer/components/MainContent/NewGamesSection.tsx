@@ -7,6 +7,7 @@ import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { t } from '@/shared/i18n/i18n';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
+import { SlidingTabs } from '../ui/SlidingTabs';
 
 export interface TabConfig {
   label: string;
@@ -30,8 +31,8 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const [activeTabSortOrder, setActiveTabSortOrder] = useState<string>(
-    defaultTabSortOrder || tabs[0]?.sortOrder || ''
+  const [activeTabSortOrder, setActiveTabSortOrder] = useState(
+    defaultTabSortOrder ?? tabs[0]?.sortOrder
   );
 
   const { hideAiTranslations } = useSettingsStore(
@@ -84,22 +85,12 @@ export const NewGamesSection: React.FC<NewGamesSectionProps> = ({
       {/* Header with tabs */}
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-4xl font-head font-semibold text-text-main">{title}</h2>
-        <div className="glass-card-no-motion p-2! flex gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.sortOrder}
-              onClick={() => setActiveTabSortOrder(tab.sortOrder)}
-              data-gamepad-action
-              className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                activeTabSortOrder === tab.sortOrder
-                  ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
-                  : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <SlidingTabs
+          tabs={tabs.map((tab) => tab.sortOrder)}
+          active={activeTab?.sortOrder ?? null}
+          label={(sortOrder) => tabs.find((tab) => tab.sortOrder === sortOrder)?.label}
+          onChange={setActiveTabSortOrder}
+        />
       </div>
 
       {/* Content */}

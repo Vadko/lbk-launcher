@@ -2762,33 +2762,6 @@ export type Database = {
         }
         Relationships: []
       }
-      steam_price_cache: {
-        Row: {
-          discount_percent: number | null
-          fetched_at: string
-          is_free: boolean | null
-          original_price_uah: number | null
-          price_uah: number | null
-          steam_app_id: number
-        }
-        Insert: {
-          discount_percent?: number | null
-          fetched_at?: string
-          is_free?: boolean | null
-          original_price_uah?: number | null
-          price_uah?: number | null
-          steam_app_id: number
-        }
-        Update: {
-          discount_percent?: number | null
-          fetched_at?: string
-          is_free?: boolean | null
-          original_price_uah?: number | null
-          price_uah?: number | null
-          steam_app_id?: number
-        }
-        Relationships: []
-      }
       steam_tag_names: {
         Row: {
           name: string
@@ -2833,31 +2806,40 @@ export type Database = {
       }
       store_price_cache: {
         Row: {
+          broadcast_pending: boolean
           currency: string | null
+          discount_ends_at: string | null
           discount_percent: number
           fetched_at: string
           original_minor: number | null
           price_minor: number | null
           steam_app_id: number
           store: string
+          touched_at: string
         }
         Insert: {
+          broadcast_pending?: boolean
           currency?: string | null
+          discount_ends_at?: string | null
           discount_percent?: number
           fetched_at?: string
           original_minor?: number | null
           price_minor?: number | null
           steam_app_id: number
           store: string
+          touched_at?: string
         }
         Update: {
+          broadcast_pending?: boolean
           currency?: string | null
+          discount_ends_at?: string | null
           discount_percent?: number
           fetched_at?: string
           original_minor?: number | null
           price_minor?: number | null
           steam_app_id?: number
           store?: string
+          touched_at?: string
         }
         Relationships: []
       }
@@ -3272,6 +3254,7 @@ export type Database = {
         Returns: Json
       }
       broadcast_game_counters: { Args: never; Returns: undefined }
+      broadcast_store_discounts: { Args: never; Returns: number }
       can_read_game_archive: {
         Args: { object_name: string; object_owner: string }
         Returns: boolean
@@ -3540,6 +3523,16 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number; p_state?: string }
         Returns: Json
       }
+      get_store_discounts: {
+        Args: { p_since?: string }
+        Returns: {
+          discount_percent: number
+          ends_at: string
+          steam_app_id: number
+          store: string
+          touched_at: string
+        }[]
+      }
       get_subscription_statistics: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -3777,9 +3770,18 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      store_discount_lapsed: {
+        Args: { p_ends_at: string; p_fetched_at: string }
+        Returns: boolean
+      }
+      store_discount_lapses_at: {
+        Args: { p_ends_at: string; p_fetched_at: string }
+        Returns: string
+      }
       sweep_review_moderation_cron: { Args: never; Returns: undefined }
       sync_kuli_games_cron: { Args: never; Returns: undefined }
       sync_news_broadcasts: { Args: { p_entries: Json }; Returns: Json }
+      take_store_discount_batch: { Args: { p_limit: number }; Returns: Json }
       validate_install_paths: { Args: { paths: Json }; Returns: boolean }
     }
     Enums: {

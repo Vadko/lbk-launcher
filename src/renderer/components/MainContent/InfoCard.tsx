@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { getReadablePlatform } from '@/renderer/helpers/getReadablePlatform.ts';
+import { hasExactDownloads } from '@/shared/formatters';
 import { t } from '@/shared/i18n/i18n';
 import type { Game } from '../../../shared/types';
 import { getFeaturedInfo } from '../../constants/featuredTranslations';
@@ -188,10 +189,10 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
               icon={<DownloadIcon size={18} />}
               label={t('gameInfo.downloads')}
               value={
-                !game.downloads || game.downloads < 20 ? (
-                  t('gameInfo.downloadsUnder20')
-                ) : (
+                hasExactDownloads(game.downloads) ? (
                   <AppNumberFlow key={game.id} value={game.downloads} />
+                ) : (
+                  t('gameInfo.downloadsUnder20')
                 )
               }
               compact={compact}

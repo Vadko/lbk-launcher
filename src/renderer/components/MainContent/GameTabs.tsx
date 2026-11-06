@@ -1,35 +1,63 @@
+import { Gamepad2Icon, InfoIcon, type LucideIcon, MessageSquareIcon } from 'lucide-react';
 import React from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { useHasReviewNotices } from '../../hooks/useHasReviewNotices';
+import type { ReviewCounts } from '../../utils/reviewCounts';
+import { SlidingTabs } from '../ui/SlidingTabs';
 
 export type GameTab = 'info' | 'recommended' | 'reviews';
 
 interface GameTabsProps {
+  gameId: string;
+  reviewCounts: ReviewCounts;
   tabs: GameTab[];
   activeTab: GameTab;
   onChange: (tab: GameTab) => void;
 }
 
-export const GameTabs: React.FC<GameTabsProps> = ({ tabs, activeTab, onChange }) => (
-  <div
-    role="tablist"
-    className="glass-card-no-motion p-2! flex gap-2 w-fit justify-self-end"
-  >
-    {tabs.map((tab) => (
-      <button
-        key={tab}
-        type="button"
-        role="tab"
-        aria-selected={activeTab === tab}
-        onClick={() => onChange(tab)}
-        data-gamepad-action
-        className={`px-6 py-2 rounded-xl font-medium transition-all ${
-          activeTab === tab
-            ? 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark'
-            : 'bg-surface-elevated text-text-muted hover:text-text-main hover:bg-surface-elevated/80'
-        }`}
-      >
-        {t(`gameTabs.${tab}`)}
-      </button>
-    ))}
-  </div>
-);
+const TAB_ICONS: Record<GameTab, LucideIcon> = {
+  info: InfoIcon,
+  recommended: Gamepad2Icon,
+  reviews: MessageSquareIcon,
+};
+
+export const GameTabs: React.FC<GameTabsProps> = ({
+  gameId,
+  reviewCounts,
+  tabs,
+  activeTab,
+  onChange,
+}) => {
+  const hasReviewNotices = useHasReviewNotices(gameId);
+
+  return (
+    <SlidingTabs
+      variant="icon"
+      tabs={tabs}
+      active={activeTab}
+      onChange={onChange}
+      tooltip={(tab) => t(`gameTabs.${tab}`)}
+      label={(tab) => {
+        const Icon = TAB_ICONS[tab];
+        return (
+          <>
+            <span className="sr-only">{t(`gameTabs.${tab}`)}</span>
+            <span className="relative inline-flex">
+              <Icon size={20} aria-hidden />
+              {tab === 'reviews' && hasReviewNotices && (
+                <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-color-accent">
+                  <span className="sr-only">{t('gameTabs.reviewsNews')}</span>
+                </span>
+              )}
+            </span>
+            {tab === 'reviews' && reviewCounts.all > 0 && (
+              <span className="text-[13px] font-semibold leading-5 text-text-muted tabular-nums">
+                {reviewCounts.all}
+              </span>
+            )}
+          </>
+        );
+      }}
+    />
+  );
+};

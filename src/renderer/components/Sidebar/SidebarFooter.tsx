@@ -6,6 +6,7 @@ import {
   MedalIcon,
   NewspaperIcon,
   SettingsIcon,
+  TrophyIcon,
 } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -65,6 +66,15 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
               title={t('sidebarNav.donators')}
             >
               <MedalIcon size={20} className="mx-auto text-text-muted" />
+            </button>
+            <button
+              onClick={() => navigate('/ratings')}
+              data-nav-group="sidebar-actions"
+              data-gamepad-header-item
+              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+              title={t('sidebarNav.ratings')}
+            >
+              <TrophyIcon size={20} className="mx-auto text-text-muted" />
             </button>
             <button
               onClick={() => navigate('/news')}

@@ -5,6 +5,7 @@ const isE2EMode = process.env['LBK_E2E'] === '1';
 Sentry.init({ enabled: !isE2EMode });
 
 import type { ImpressionType } from '@/main/db/banners-api';
+import type { DeepLinkTarget } from '../shared/game-link-target';
 import type {
   MillenniumProgress,
   PluginHostState,
@@ -21,10 +22,12 @@ import type {
   SortOrderType,
 } from '../shared/types';
 import { gameReviewsAPI } from './game-reviews-api';
+import { ratingsAPI } from './ratings-api';
 import { systemNotificationAPI } from './system-notification-api';
 
 const electronAPI: ElectronAPI = {
   ...gameReviewsAPI,
+  ...ratingsAPI,
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),
@@ -207,6 +210,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-counters-updated', handler);
     return () => ipcRenderer.removeListener('game-counters-updated', handler);
   },
+  getStoreDiscounts: () => ipcRenderer.invoke('get-store-discounts'),
+  onStoreDiscountsUpdated: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('store-discounts-updated', handler);
+    return () => ipcRenderer.removeListener('store-discounts-updated', handler);
+  },
   onGameRemoved: (callback: (gameId: string) => void) => {
     const handler = (_: unknown, gameId: string) => callback(gameId);
     ipcRenderer.on('game-removed', handler);
@@ -242,6 +251,7 @@ const electronAPI: ElectronAPI = {
   },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
+  openAppLink: (app, url) => ipcRenderer.invoke('open-app-link', app, url),
   // Steam integration
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   applyPendingLaunchOptions: (game: Game) =>
@@ -335,8 +345,8 @@ const electronAPI: ElectronAPI = {
   submitLogs: (message: string, crashReason?: string) =>
     ipcRenderer.invoke('submit-logs', message, crashReason),
   // Deep link handling
-  onDeepLink: (callback: (data: { slug: string; team: string }) => void) => {
-    const handler = (_: unknown, data: { slug: string; team: string }) => callback(data);
+  onDeepLink: (callback: (data: DeepLinkTarget) => void) => {
+    const handler = (_: unknown, data: DeepLinkTarget) => callback(data);
     ipcRenderer.on('deep-link', handler);
     return () => ipcRenderer.removeListener('deep-link', handler);
   },

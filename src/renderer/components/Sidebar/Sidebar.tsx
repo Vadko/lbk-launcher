@@ -12,6 +12,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { deriveGroupNaming } from '../../utils/groupName';
+import { showOnlyAuthors } from '../../utils/showOnlyAuthors';
 import { GlassPanel } from '../Layout/GlassPanel';
 import { TranslationPickerModal } from '../Modal/TranslationPickerModal';
 import { FilterBar } from './FilterBar';
@@ -138,21 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       selectedTagIds.length +
       (specialFilter && !isQuickSpecialFilter ? 1 : 0);
 
-    const handleClearAllFilters = useCallback(() => {
-      setSelectedStatuses([]);
-      setSpecialFilter(null);
-      setSelectedContentTypes([]);
-      setSelectedTranslationTypes([]);
-      setSelectedAuthors([]);
-      setSelectedTagIds([]);
-    }, [
-      setSelectedStatuses,
-      setSpecialFilter,
-      setSelectedContentTypes,
-      setSelectedTranslationTypes,
-      setSelectedAuthors,
-      setSelectedTagIds,
-    ]);
+    const handleClearAllFilters = useCallback(() => showOnlyAuthors([]), []);
 
     const handleToggleInstalledQuick = useCallback(() => {
       setSpecialFilter(

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { t } from '@/shared/i18n/i18n';
+import { teamMembers } from '@/shared/team-members';
 import type {
   DetectedGameInfo,
   DownloadProgress,
@@ -488,7 +489,14 @@ export const useStore = create<Store>((set, get) => ({
       notifications,
     } = useSubscriptionsStore.getState();
 
-    if (!updatedGame.team || !isSubscribedToTeam(updatedGame.team)) {
+    // A subscription is to a whole team string or, from the authors modal, to one member of it
+    if (
+      !updatedGame.team ||
+      !(
+        isSubscribedToTeam(updatedGame.team) ||
+        teamMembers(updatedGame.team).some(isSubscribedToTeam)
+      )
+    ) {
       return;
     }
 

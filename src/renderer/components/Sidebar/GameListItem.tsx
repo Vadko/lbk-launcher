@@ -1,5 +1,6 @@
 import { BookmarkCheckIcon, BookmarkIcon, EyeOffIcon } from 'lucide-react';
 import React, { useState } from 'react';
+import { DiscountPill } from '@/renderer/components/Elements/DiscountPill';
 import { InfoIcons } from '@/renderer/components/Elements/InfoIcons';
 import { StatusIcons } from '@/renderer/components/Elements/StatusIcons';
 import { t } from '@/shared/i18n/i18n';
@@ -159,6 +160,7 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
             {/* Indicators */}
             {!isAdultBlurred && (
               <>
+                <DiscountPill game={game} />
                 <StatusIcons
                   hasUpdate={hasUpdate}
                   isGameDetected={isGameDetected}

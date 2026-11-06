@@ -79,7 +79,12 @@ export const GameList: React.FC<GameListProps> = React.memo(
     const isScrolling = virtualizer.isScrolling;
 
     return (
-      <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
+      // Only visible rows render, so each row tells assistive tech the size of the whole list
+      <div
+        role="list"
+        className="relative"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const group = gameGroups[virtualRow.index];
           const hasMultipleTranslations = group.translations.length > 1;
@@ -118,6 +123,9 @@ export const GameList: React.FC<GameListProps> = React.memo(
             <div
               key={virtualRow.key}
               ref={virtualizer.measureElement}
+              role="listitem"
+              aria-setsize={gameGroups.length}
+              aria-posinset={virtualRow.index + 1}
               data-index={virtualRow.index}
               id={`group-${group.key}`}
               className="absolute top-0 left-0 w-full pb-2"

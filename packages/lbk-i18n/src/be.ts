@@ -362,7 +362,7 @@ export const be = {
   gameLike: {
     like: 'Ацаніць',
     unlike: 'Зняць ацэнку',
-    needsInstall: 'Усталюйце пераклад, каб ацаніць',
+    needsInstall: 'Каб прагаласаваць, усталюйце пераклад',
   },
   gameInfo: {
     title: 'Інфармацыя',
@@ -418,14 +418,16 @@ export const be = {
   },
   gameReviews: {
     title: 'Водгукі супольнасці',
-    count_one: '{{count}} каментарый',
-    count_few: '{{count}} каментарыі',
-    count_many: '{{count}} каментарыяў',
-    count_other: '{{count}} каментарыя',
-    leave: 'Пакінуць водгук',
+    write: 'Напісаць водгук',
+    filter: {
+      all: 'Усе',
+      feedback: 'Водгукі',
+      error: 'Памылкі',
+    },
     installRequired: 'Пакінуць водгук можна толькі пасля ўсталявання перакладу.',
     loadFailed: 'Не ўдалося загрузіць водгукі. Паспрабуйце пазней.',
     empty: 'Пакуль няма водгукаў.',
+    emptyErrors: 'Пакуль няма паведамленняў пра памылкі.',
     you: 'Вы',
     moderator: 'Мадэратар',
     translationAuthor: 'Аўтар перакладу',
@@ -488,7 +490,12 @@ export const be = {
     completed: 'Завершаны',
     techImprovement: 'Тэхнічныя паляпшэнні',
   },
-  gameTabs: { info: 'Інфа', recommended: 'Рэкамендаваныя', reviews: 'Водгукі' },
+  gameTabs: {
+    info: 'Інфа',
+    recommended: 'Рэкамендаваныя',
+    reviews: 'Водгукі',
+    reviewsNews: 'Новае ў водгуках',
+  },
   gameSubscribe: {
     subscribedTitle: 'Вы атрымліваеце апавяшчэнні пра «{{game}}»',
     subscribeTitle: 'Атрымліваць апавяшчэнні пра «{{game}}»',
@@ -930,6 +937,48 @@ export const be = {
     failed: 'Не ўдалося выдаліць Millennium.',
     failedWithError: 'Не ўдалося выдаліць Millennium: {{error}}',
     progress: 'Выдаленне Millennium…',
+  },
+  ratings: {
+    title: 'Рэйтынгі ўкраінскай лакалізацыі',
+    subtitle: 'Суполкі перакладчыкаў і гульні паводле ацэнак гульцоў',
+    tab: {
+      teams: 'Суполкі',
+      games: 'Гульні',
+    },
+    caption: {
+      teams: 'Рэйтынг суполак паводле ўпадабанняў',
+      games: 'Рэйтынг гульняў паводле ўпадабанняў',
+    },
+    column: {
+      rank: '№',
+      team: 'Назва суполкі',
+      game: 'Назва гульні',
+      likes: 'Упадабанні',
+      translations: 'Пераклады',
+      downloads: 'Спампоўкі',
+      status: 'Статус перакладу',
+      details: 'Дзеянні',
+    },
+    details: 'Падрабязней',
+    loadFailed: 'Не ўдалося загрузіць рэйтынг. Паспрабуйце пазней.',
+    empty: 'Пакуль няма даных.',
+    pages: 'Старонкі: {{caption}}',
+    search: {
+      placeholder: {
+        teams: 'Пошук суполак...',
+        games: 'Пошук гульняў...',
+      },
+      allResults: '– усе вынікі',
+      noResults: 'Нічога не знойдзена',
+      noResultsHint: 'Праверце напісанне або паспрабуйце іншую назву',
+      clear: 'Ачысціць пошук',
+    },
+  },
+  pagination: {
+    first: 'Першая старонка',
+    previous: 'Папярэдняя старонка',
+    next: 'Наступная старонка',
+    last: 'Апошняя старонка',
   },
   newsFeed: {
     title: 'Навіны',
@@ -1596,6 +1645,7 @@ export const be = {
   sidebarNav: {
     guides: 'Адкрыць дапаможнікі і інструменты',
     donators: 'Адкрыць старонку фундатараў',
+    ratings: 'Адкрыць рэйтынгі',
     news: 'Адкрыць навіны',
     home: 'Адкрыць галоўную старонку',
     uiSoundsOff: 'Выключыць гукі інтэрфейсу',
@@ -1672,6 +1722,9 @@ export const be = {
     message:
       'Каб змены набылі моц, трэба перазапусціць Steam. Гэта можна зрабіць пазней — налады ўжо захаваныя.',
     restartAction: 'Перазапусціць Steam',
+  },
+  storeSale: {
+    discount: 'Зніжка {{percent}}% у {{store}}',
   },
   teamSubscribe: {
     subscribedTitle: 'Вы падпісаныя на абнаўленні ад «{{team}}»',

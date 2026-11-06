@@ -1,6 +1,7 @@
 import { BellIcon, StarIcon, UsersIcon } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { teamMembers } from '@/shared/team-members';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -25,16 +26,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
 }) => {
   const { subscribeToTeam, isSubscribedToTeam } = useSubscriptionsStore();
 
-  // Parse authors from comma-separated team string
-  const authors = useMemo(() => {
-    if (!team) {
-      return [];
-    }
-    return team
-      .split(',')
-      .map((a) => a.trim())
-      .filter((a) => a.length > 0);
-  }, [team]);
+  const authors = useMemo(() => teamMembers(team), [team]);
 
   // Track selected authors (all selected by default, except already subscribed)
   const [selectedAuthors, setSelectedAuthors] = useState<Set<string>>(new Set());

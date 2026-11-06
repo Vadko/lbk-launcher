@@ -17,6 +17,7 @@ import {
   SPECIAL_FILTERS,
   TRANSLATION_TYPE_FILTERS,
 } from './game-filters';
+import { teamMembers } from './team-members';
 import type {
   ContentTypeFilterType,
   FacetRow,
@@ -135,13 +136,14 @@ export function buildFacetIndex(
 
   return pipe(
     rows,
-    A.map((row) => ({
-      row,
-      game: gameIdOf(getGameGroupKey(row)),
-      authors: row.team
-        ? A.filter(authors, (author) => !!row.team?.includes(author))
-        : [],
-    })),
+    A.map((row) => {
+      const members = teamMembers(row.team);
+      return {
+        row,
+        game: gameIdOf(getGameGroupKey(row)),
+        authors: A.filter(authors, (author) => members.includes(author)),
+      };
+    }),
     A.sortBy((entry) => entry.game)
   );
 }

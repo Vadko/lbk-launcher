@@ -1,6 +1,6 @@
 import { DownloadIcon, ThumbsUpIcon } from 'lucide-react';
 import React from 'react';
-import { t } from '@/shared/i18n/i18n';
+import { formatDownloads } from '@/shared/formatters';
 
 interface InfoIconsProps {
   likesCount?: number;
@@ -24,11 +24,7 @@ export const InfoIcons: React.FC<InfoIconsProps> = ({
     )}
     <div className="flex items-center gap-1">
       <DownloadIcon size={16} />
-      <span className="text-sm">
-        {downloadsCount && downloadsCount > 20
-          ? downloadsCount
-          : t('gameInfo.downloadsUnder20')}
-      </span>
+      <span className="text-sm">{formatDownloads(downloadsCount)}</span>
     </div>
   </div>
 );

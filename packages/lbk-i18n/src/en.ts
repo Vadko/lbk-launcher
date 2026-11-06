@@ -356,7 +356,7 @@ export const en = {
   gameLike: {
     like: 'Like',
     unlike: 'Remove like',
-    needsInstall: 'Install the translation to like it',
+    needsInstall: 'Install the translation to vote',
   },
   gameInfo: {
     title: 'Details',
@@ -412,14 +412,16 @@ export const en = {
   },
   gameReviews: {
     title: 'Community reviews',
-    count_one: '{{count}} comment',
-    count_few: '{{count}} comments',
-    count_many: '{{count}} comments',
-    count_other: '{{count}} comments',
-    leave: 'Leave a review',
+    write: 'Write a review',
+    filter: {
+      all: 'All',
+      feedback: 'Reviews',
+      error: 'Errors',
+    },
     installRequired: 'You can leave a review after installing the translation.',
     loadFailed: 'Could not load reviews. Try again later.',
     empty: 'No reviews yet.',
+    emptyErrors: 'No error reports yet.',
     you: 'You',
     moderator: 'Moderator',
     translationAuthor: 'Translation creator',
@@ -487,7 +489,12 @@ export const en = {
     completed: 'Complete',
     techImprovement: 'Technical updates in progress',
   },
-  gameTabs: { info: 'Info', recommended: 'Recommended', reviews: 'Reviews' },
+  gameTabs: {
+    info: 'Info',
+    recommended: 'Recommended',
+    reviews: 'Reviews',
+    reviewsNews: 'New in reviews',
+  },
   gameSubscribe: {
     subscribedTitle: 'You receive notifications about “{{game}}”',
     subscribeTitle: 'Get notifications about “{{game}}”',
@@ -928,6 +935,48 @@ export const en = {
     failedWithError: 'Could not uninstall Millennium: {{error}}',
     progress: 'Uninstalling Millennium…',
   },
+  ratings: {
+    title: 'Ukrainian localization ratings',
+    subtitle: 'Translation teams and games by player ratings',
+    tab: {
+      teams: 'Teams',
+      games: 'Games',
+    },
+    caption: {
+      teams: 'Teams ranked by likes',
+      games: 'Games ranked by likes',
+    },
+    column: {
+      rank: 'No.',
+      team: 'Team',
+      game: 'Game',
+      likes: 'Likes',
+      translations: 'Translations',
+      downloads: 'Downloads',
+      status: 'Translation status',
+      details: 'Actions',
+    },
+    details: 'Details',
+    loadFailed: 'Could not load the ratings. Please try again later.',
+    empty: 'No data yet.',
+    pages: 'Pages: {{caption}}',
+    search: {
+      placeholder: {
+        teams: 'Search teams...',
+        games: 'Search games...',
+      },
+      allResults: '– all results',
+      noResults: 'Nothing found',
+      noResultsHint: 'Check the spelling or try another name',
+      clear: 'Clear search',
+    },
+  },
+  pagination: {
+    first: 'First page',
+    previous: 'Previous page',
+    next: 'Next page',
+    last: 'Last page',
+  },
   newsFeed: {
     title: 'News',
     tab: { sales: 'Games on sale', 'games-80': 'Games for 80', news: 'News' },
@@ -1294,6 +1343,7 @@ export const en = {
   sidebarNav: {
     guides: 'Open guides and tools',
     donators: 'Open supporters page',
+    ratings: 'Open ratings',
     news: 'Open news',
     home: 'Open home page',
     uiSoundsOff: 'Turn off interface sounds',
@@ -1369,6 +1419,9 @@ export const en = {
     message:
       'Steam needs to restart for the changes to take effect. You can do this later; your settings are already saved.',
     restartAction: 'Restart Steam',
+  },
+  storeSale: {
+    discount: '{{percent}}% off on {{store}}',
   },
   teamSubscribe: {
     subscribedTitle: 'You follow updates from “{{team}}”',

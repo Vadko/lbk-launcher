@@ -4,12 +4,14 @@ import type {
   ImpressionType,
 } from '@/main/db/banners-api';
 import type { Database } from '../lib/database.types';
+import type { DeepLinkTarget } from './game-link-target';
 import type { GameReviewsAPI } from './game-reviews-api-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
   SteamPluginHostAPI,
 } from './plugin-host-types';
+import type { RatingsAPI } from './ratings-api-types';
 import type { WeeklyPicksAPI } from './weekly-picks-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
@@ -52,6 +54,17 @@ export type LibraryFilterType = Exclude<
   'installed-translations' | 'favorite-translations'
 >;
 export type LibraryMemberships = Record<LibraryFilterType, string[]>;
+
+export type LinkApp = 'telegram' | 'discord' | 'steam' | 'epic';
+
+export type DiscountStore = 'steam' | 'gog' | 'egs';
+
+export interface StoreDiscount {
+  store: DiscountStore;
+  steamAppId: number;
+  percent: number;
+  endsAt: number | null;
+}
 
 export interface NewsFeedItem {
   id: string;
@@ -241,7 +254,11 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, WeeklyPicksAPI {
+export interface ElectronAPI
+  extends SteamPluginHostAPI,
+    GameReviewsAPI,
+    RatingsAPI,
+    WeeklyPicksAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;
@@ -361,6 +378,8 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, WeeklyP
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;
+  getStoreDiscounts: () => Promise<StoreDiscount[]>;
+  onStoreDiscountsUpdated: (callback: () => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
@@ -370,6 +389,7 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, WeeklyP
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
+  openAppLink: (app: LinkApp, url: string) => Promise<void>;
   // Steam integration
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
   /**
@@ -437,7 +457,7 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, WeeklyP
     crashReason?: string
   ) => Promise<{ success: boolean; error?: string }>;
   // Deep link handling
-  onDeepLink: (callback: (data: { slug: string; team: string }) => void) => () => void;
+  onDeepLink: (callback: (data: DeepLinkTarget) => void) => () => void;
   findDeepLinkGameId: (slug: string, team: string) => Promise<string | null>;
   /** Tell main the renderer's IPC listeners are registered (flushes a buffered deep link). */
   notifyReady: () => void;
