@@ -73,7 +73,10 @@ export const SteamBridgeStatusCard: React.FC<SteamBridgeStatusCardProps> = ({
 
   return (
     <div className="flex flex-col gap-2 p-4 rounded-xl bg-glass border border-border text-xs text-text-muted">
-      {statusText && <p className="text-text-main">{statusText}</p>}
+      <h4 className="text-sm font-semibold text-text-main -mb-1">
+        {t('settings.bridgeCard.title')}
+      </h4>
+      {statusText && <p>{statusText}</p>}
       {status.steamElevated && <p>{t('settings.bridgeCard.steamElevated')}</p>}
       {pendingCount > 0 && <p>{pendingLaunchOptionsText(pendingCount)}</p>}
       {lines.map((line) => (

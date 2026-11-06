@@ -97,8 +97,12 @@ export const GamePage: React.FC = () => {
   } = useStore();
 
   const { showModal } = useModalStore();
-  const { showAdultGames, openSettingsModal, createBackupBeforeInstall } =
-    useSettingsStore();
+  const {
+    showAdultGames,
+    openSettingsModal,
+    createBackupBeforeInstall,
+    steamCustomArtworkEnabled,
+  } = useSettingsStore();
   const { isGamePrompted, markGameAsPrompted } = useSubscriptionsStore();
   const {
     phase: launchPhase,
@@ -329,6 +333,7 @@ export const GamePage: React.FC = () => {
     closeInstallOptions,
     pendingInstallPath,
     availablePlatforms,
+    steamArtworkApplied,
   } = useInstallation({
     selectedGame,
     isUpdateAvailable: !!isUpdateAvailable,
@@ -455,13 +460,14 @@ export const GamePage: React.FC = () => {
             {t('adultWarning.title')}
           </h2>
           <p className="text-text-muted mb-6">{t('adultWarning.message')}</p>
-          <button
+          <Button
+            variant="gradient"
             onClick={openSettingsModal}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+            className="inline-flex items-center"
+            icon={<SettingsIcon size={20} />}
           >
-            <SettingsIcon size={20} />
             {t('adultWarning.openSettings')}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -477,13 +483,16 @@ export const GamePage: React.FC = () => {
           onConfirm={handleInstallOptionsConfirm}
           game={selectedGame}
           defaultCreateBackup={createBackupBeforeInstall}
+          defaultSteamArtwork={steamCustomArtworkEnabled}
           installationInfo={installationInfo}
           isCustomPath={
             !!pendingInstallPath ||
             installationInfo?.isCustomPath ||
             !isGameInstalledOnSystem
           }
+          installsIntoChosenFolder={!!pendingInstallPath}
           availablePlatforms={availablePlatforms}
+          steamArtworkApplied={steamArtworkApplied}
         />
       )}
 
@@ -529,6 +538,7 @@ export const GamePage: React.FC = () => {
                 {selectedGame && isGameInstalledOnSystem && isTranslationInstalled && (
                   <Button
                     variant="primary"
+                    width="narrow"
                     icon={
                       <AppActionIcon
                         phase={launchPhase}
@@ -560,6 +570,7 @@ export const GamePage: React.FC = () => {
                 {!isWorkshop && (
                   <Button
                     variant={installVariant}
+                    width="narrow"
                     icon={
                       <AppActionIcon
                         phase={installButtonPhase}
@@ -596,6 +607,7 @@ export const GamePage: React.FC = () => {
                   !isUninstalling && (
                     <Button
                       variant="secondary"
+                      width="narrow"
                       icon={
                         <AppActionIcon phase={rerunPhase} icon={ReplaceAll} size={20} />
                       }
@@ -610,6 +622,7 @@ export const GamePage: React.FC = () => {
                 {!isWorkshop && installationInfo && !isInstalling && (
                   <Button
                     variant="secondary"
+                    width="narrow"
                     icon={<Trash2Icon size={20} />}
                     onClick={handleUninstall}
                     disabled={isUninstalling}
@@ -618,7 +631,7 @@ export const GamePage: React.FC = () => {
                   />
                 )}
                 {/* Separator */}
-                <div className="hidden sm:block w-0 h-10 border-l border-border-hover mx-2 last:hidden" />
+                <div className="hidden sm:block w-0 h-10 border-l border-border-hover last:hidden" />
 
                 {/* Secondary actions */}
                 {(isPlanned || isTechImprovement) && (
@@ -637,6 +650,7 @@ export const GamePage: React.FC = () => {
                   ) && (
                     <Button
                       variant="accent"
+                      width="narrow"
                       icon={<HeartIcon size={20} />}
                       onClick={handleSupport}
                       data-gamepad-action
@@ -648,6 +662,7 @@ export const GamePage: React.FC = () => {
                 {canLeaveFeedback && (
                   <Button
                     variant="secondary"
+                    width="narrow"
                     icon={<FileEditIcon size={20} />}
                     onClick={openFeedback}
                     data-gamepad-action

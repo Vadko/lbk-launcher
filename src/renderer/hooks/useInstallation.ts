@@ -1,5 +1,8 @@
+import { G } from '@mobily/ts-belt';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { errorMessage } from '@/shared/errors';
 import { t } from '@/shared/i18n/i18n';
+import type { SteamArtworkChangeResult } from '@/shared/installer-api-types';
 import type {
   ConflictingTranslation,
   DownloadProgress,
@@ -19,6 +22,7 @@ import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
 import { isTranslationInstallable } from '../utils/gameStatus';
+import type { InstallComponentChanges } from '../utils/installOptions';
 import {
   type InstallSuccessInput,
   installSuccessActions,
@@ -52,7 +56,7 @@ interface UseInstallationResult {
   handleInstall: (customGamePath?: string) => Promise<void>;
   handleInstallOptionsConfirm: (
     installOptions: InstallOptions,
-    removeOptions: { removeVoice: boolean; removeAchievements: boolean }
+    removeOptions: InstallComponentChanges
   ) => Promise<void>;
   handleUninstall: () => Promise<void>;
   handleRerunInstaller: () => Promise<void>;
@@ -66,6 +70,7 @@ interface UseInstallationResult {
   closeInstallOptions: () => void;
   pendingInstallPath: string | undefined;
   availablePlatforms: GamePath[];
+  steamArtworkApplied: boolean;
 }
 
 export function useInstallation({
@@ -85,7 +90,7 @@ export function useInstallation({
 
   const { showModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
-  const { createBackupBeforeInstall } = useSettingsStore();
+  const { createBackupBeforeInstall, steamCustomArtworkEnabled } = useSettingsStore();
 
   const [showInstallOptions, setShowInstallOptions] = useState(false);
   const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>();
@@ -94,6 +99,7 @@ export function useInstallation({
   >();
   const protonSelectionRef = useRef<string | undefined>(undefined);
   const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
+  const [steamArtworkApplied, setSteamArtworkApplied] = useState(false);
   const {
     phase: installPhase,
     isPending: isInstallPrecheckPending,
@@ -161,6 +167,7 @@ export function useInstallation({
             installText: true,
             installVoice: false,
             installAchievements: false,
+            installSteamArtwork: steamCustomArtworkEnabled,
             platform,
           };
 
@@ -383,6 +390,7 @@ export function useInstallation({
       selectedGame,
       isUpdateAvailable,
       createBackupBeforeInstall,
+      steamCustomArtworkEnabled,
       pendingInstallOptions,
       setInstallationProgress,
       clearInstallationProgress,
@@ -618,10 +626,15 @@ export function useInstallation({
           }
         }
         await runInstallPrecheck(
-          async () =>
-            setAvailablePlatforms(
-              await window.electronAPI.detectGamePlatforms(selectedGame)
-            ),
+          async () => {
+            const appId = selectedGame.steam_app_id;
+            const [platforms, artworkApplied] = await Promise.all([
+              window.electronAPI.detectGamePlatforms(selectedGame),
+              appId ? window.electronAPI.isSteamArtworkApplied(appId) : false,
+            ]);
+            setAvailablePlatforms(platforms);
+            setSteamArtworkApplied(artworkApplied);
+          },
           { holdPending: true }
         );
         setPendingInstallPath(customGamePath);
@@ -646,10 +659,7 @@ export function useInstallation({
   );
 
   const handleInstallOptionsConfirm = useCallback(
-    async (
-      installOptions: InstallOptions,
-      removeOptions: { removeVoice: boolean; removeAchievements: boolean }
-    ) => {
+    async (installOptions: InstallOptions, removeOptions: InstallComponentChanges) => {
       if (!selectedGame) {
         return;
       }
@@ -699,15 +709,47 @@ export function useInstallation({
         (installOptions.installAchievements &&
           !installationInfo?.components?.achievements?.installed);
 
-      if (
-        !needsDownload &&
-        (removeOptions.removeVoice || removeOptions.removeAchievements)
-      ) {
+      let artwork: SteamArtworkChangeResult | null = null;
+      // Set only when nothing else is installed: an install applies the artwork choice itself.
+      if (!needsDownload && removeOptions.updateSteamArtwork) {
+        setInstallationProgress(selectedGame.id, {
+          isInstalling: true,
+          statusMessage: installOptions.installSteamArtwork
+            ? t('installSteamIntegration.artwork')
+            : t('installSteamIntegration.artworkRevert'),
+        });
+        artwork = await window.electronAPI
+          .setSteamArtwork(selectedGame, installOptions.installSteamArtwork)
+          .catch((error: unknown) => ({
+            success: false as const,
+            error: errorMessage(error),
+          }));
+      }
+
+      const removed = removeOptions.removeVoice || removeOptions.removeAchievements;
+      if (!needsDownload && (removed || artwork)) {
         clearInstallationProgress(selectedGame.id);
+        const artworkFailed = artwork?.success === false;
         showModal({
-          title: t('installComponents.removedTitle'),
-          message: t('installComponents.removedMessage'),
-          type: 'success',
+          title: artworkFailed
+            ? t('common.error')
+            : removed
+              ? t('installComponents.removedTitle')
+              : t('installComponents.artworkTitle'),
+          message: [
+            removed && t('installComponents.removedMessage'),
+            artwork?.success &&
+              t('installComponents.artworkMessage', {
+                context: installOptions.installSteamArtwork ? 'on' : 'off',
+              }),
+            artwork?.success &&
+              artwork.visibleAfterSteamStart &&
+              t('installComponents.artworkAfterSteamStart'),
+            artwork?.success === false && artwork.error,
+          ]
+            .filter(G.isString)
+            .join('\n\n'),
+          type: artworkFailed ? 'error' : 'success',
         });
         return;
       }
@@ -996,5 +1038,6 @@ export function useInstallation({
     closeInstallOptions,
     pendingInstallPath,
     availablePlatforms,
+    steamArtworkApplied,
   };
 }

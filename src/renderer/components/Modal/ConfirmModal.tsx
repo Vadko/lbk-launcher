@@ -1,6 +1,7 @@
 import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import { useConfirmStore } from '../../store/useConfirmStore';
+import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
 export const ConfirmModal: React.FC = () => {
@@ -20,20 +21,22 @@ export const ConfirmModal: React.FC = () => {
       <div className="flex flex-col gap-6">
         <p className="text-text-main whitespace-pre-line">{config.message}</p>
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={closeConfirm}
+            variant="secondary"
             data-gamepad-cancel
-            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
+            className="flex-1"
           >
             {config.cancelText || t('common.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={confirm}
+            variant="primary"
             data-gamepad-confirm
-            className="flex-1 px-6 py-3 rounded-xl bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark font-semibold hover:opacity-90 transition-opacity"
+            className="flex-1"
           >
             {config.confirmText || t('confirmModal.confirm')}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

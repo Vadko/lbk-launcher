@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { errorMessage } from '@/shared/errors';
 import { t } from '@/shared/i18n/i18n';
+import type { SteamArtworkChangeResult } from '../../shared/installer-api-types';
 import type { ApplyPendingLaunchOptionsResult } from '../../shared/plugin-host-types';
 import type {
   Game,
@@ -33,13 +34,15 @@ import {
 } from '../installer/errors';
 import { checkPlatformCompatibility, rerunInstaller } from '../installer/platform';
 import { resumeDownload } from '../installer/resume';
+import { setInstalledSteamArtwork } from '../installer/steam-integration';
 import { removeComponents, uninstallTranslation } from '../installer/uninstall';
 import { applyLaunchOptionsNow } from '../steam-restart';
 import { trackUninstall } from '../tracking';
 import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
+import { hasSteamArtwork } from '../utils/steam-artwork';
 import { readLastGameFolder, writeLastGameFolder } from '../utils/store-storage';
-import { getMainWindow } from '../window';
+import { getMainWindow, sendToRenderer } from '../window';
 
 // Resolvers for run-installer confirmations awaiting a decision from the renderer,
 // keyed by game id (one pending install per game at a time).
@@ -390,6 +393,30 @@ export function setupInstallerHandlers(): void {
         };
       }
     }
+  );
+
+  ipcMain.handle(
+    'set-steam-artwork',
+    async (_, game: Game, enabled: boolean): Promise<SteamArtworkChangeResult> => {
+      try {
+        const result = await setInstalledSteamArtwork(game, enabled, (status) =>
+          sendToRenderer('installation-status', game.id, status)
+        );
+        if (!result.success) {
+          console.warn(
+            `[Installer] Steam artwork not changed for ${game.id}: ${result.error}`
+          );
+        }
+        return result;
+      } catch (error) {
+        console.error('[Installer] Error changing Steam artwork:', error);
+        return { success: false, error: errorMessage(error) };
+      }
+    }
+  );
+
+  ipcMain.handle('is-steam-artwork-applied', (_, appId: number) =>
+    hasSteamArtwork(appId)
   );
 
   ipcMain.handle('check-platform-compatibility', async (_, game: Game) =>

@@ -33,7 +33,10 @@ import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { isExecutableInstaller } from './installer/executable';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
-import { withAchievementsComponent } from './installer/installation-info';
+import {
+  keepInstalledText,
+  withAchievementsComponent,
+} from './installer/installation-info';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
 import { resignMacBundles } from './installer/mac-codesign';
 import {
@@ -60,6 +63,7 @@ async function finishInstall(i: {
   game: Game;
   gamePath: GamePath;
   onStatus?: (status: InstallationStatus) => void;
+  installSteamArtwork: boolean;
   existingInfo: InstallationInfo | null;
   achievements: PreparedAchievements;
   record: (achievements: AchievementsComponent | null) => InstallationInfo;
@@ -81,7 +85,12 @@ async function finishInstall(i: {
   const delivery = component || previous ? await syncAchievementsToPlugin() : undefined;
   await i.beforeSave?.(info);
   await saveInstallationInfo(i.gamePath.path, info);
-  const steam = await applySteamIntegration(i.game, i.gamePath, i.onStatus);
+  const steam = await applySteamIntegration(
+    i.game,
+    i.gamePath,
+    i.installSteamArtwork,
+    i.onStatus
+  );
   const egl = await applyEglIntegration(i.game, i.gamePath);
   return { ...steam, ...egl, achievementsDelivery: component ? delivery : undefined };
 }
@@ -355,6 +364,7 @@ export async function installTranslation(
         game,
         gamePath,
         onStatus,
+        installSteamArtwork: options.installSteamArtwork,
         existingInfo,
         achievements,
         record,
@@ -532,26 +542,31 @@ export async function installTranslation(
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
-    const result = await finish((component) => ({
-      gameId: game.id,
-      version: game.version || '1.0.0',
-      installedAt: new Date().toISOString(),
-      gamePath: gamePath.path,
-      hasBackup: createBackup,
-      isCustomPath: !!customGamePath,
-      installedFiles: prefixPaths(installedFiles),
-      installedPlatform: gamePath.platform,
-      // Signing failed means the bundle is left unsigned and the game will be
-      // killed on launch — not a success, even though every file is in place.
-      ...(macSigningFailed ? { hasInstallError: true } : {}),
-      components: {
-        text: { installed: installText, files: prefixPaths(textFiles) },
-        ...(installVoice && voiceFiles.length > 0
-          ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
-          : {}),
-        ...(component ? { achievements: component } : {}),
-      },
-    }));
+    const result = await finish((component) => {
+      const record: InstallationInfo = {
+        gameId: game.id,
+        version: game.version || '1.0.0',
+        installedAt: new Date().toISOString(),
+        gamePath: gamePath.path,
+        hasBackup: createBackup && installedFiles.length > 0,
+        isCustomPath: !!customGamePath,
+        installedFiles: prefixPaths(installedFiles),
+        installedPlatform: gamePath.platform,
+        // Signing failed means the bundle is left unsigned and the game will be
+        // killed on launch — not a success, even though every file is in place.
+        ...(macSigningFailed ? { hasInstallError: true } : {}),
+        components: {
+          text: { installed: installText, files: prefixPaths(textFiles) },
+          ...(installVoice && voiceFiles.length > 0
+            ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
+            : {}),
+          ...(component ? { achievements: component } : {}),
+        },
+      };
+      return !installText && existingInfo?.gameId === game.id
+        ? keepInstalledText(record, existingInfo)
+        : record;
+    });
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
     return result;
   } catch (error) {

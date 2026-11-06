@@ -147,6 +147,10 @@ const electronAPI: ElectronAPI = {
     game: Game,
     componentsToRemove: { voice?: boolean; achievements?: boolean }
   ) => ipcRenderer.invoke('remove-components', game, componentsToRemove),
+  isSteamArtworkApplied: (appId: number) =>
+    ipcRenderer.invoke('is-steam-artwork-applied', appId),
+  setSteamArtwork: (game: Game, enabled: boolean) =>
+    ipcRenderer.invoke('set-steam-artwork', game, enabled),
   checkPlatformCompatibility: (game: Game) =>
     ipcRenderer.invoke('check-platform-compatibility', game),
   fetchNewsFeed: (filter, before) =>
@@ -296,8 +300,6 @@ const electronAPI: ElectronAPI = {
   },
   setSteamCefDebugging: (enabled: boolean) =>
     ipcRenderer.invoke('set-steam-cef-debugging', enabled),
-  setSteamCustomArtwork: (enabled: boolean) =>
-    ipcRenderer.invoke('set-steam-custom-artwork', enabled),
   syncSteamTranslatedCollection: () =>
     ipcRenderer.invoke('sync-steam-translated-collection'),
   addLbkLauncherToSteamLibrary: () =>

@@ -2,6 +2,7 @@ import { MessagesSquareIcon, PencilIcon } from 'lucide-react';
 import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { ReviewCounts } from '../../utils/reviewCounts';
+import { Button } from '../ui/Button';
 
 interface ReviewsHeaderProps {
   reviewCounts: ReviewCounts;
@@ -25,15 +26,16 @@ export const ReviewsHeader: React.FC<ReviewsHeaderProps> = ({
       )}
     </div>
     {canLeaveFeedback && (
-      <button
+      <Button
         type="button"
+        variant="primary"
+        width="narrow"
         onClick={onLeaveFeedback}
         data-gamepad-action
-        className="flex items-center gap-2 px-[18px] py-2.5 rounded-[10px] bg-linear-to-r/srgb from-color-main to-color-mixed text-sm font-semibold text-text-dark transition-all hover:brightness-110"
+        icon={<PencilIcon size={16} />}
       >
-        <PencilIcon size={16} className="shrink-0" />
         {t('gameReviews.write')}
-      </button>
+      </Button>
     )}
   </div>
 );
