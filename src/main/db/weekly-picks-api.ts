@@ -1,23 +1,17 @@
-import type { WeeklyPicks } from '../../shared/weekly-picks-types';
+import type { WeeklyPicksResult } from '../../shared/weekly-picks-types';
 import { getSupabaseClient } from './supabase-client';
 
-export async function fetchWeeklyPicks(): Promise<WeeklyPicks | null> {
+export async function fetchWeeklyPicks(): Promise<WeeklyPicksResult> {
   const { data, error } = await getSupabaseClient().rpc('get_home_picks');
 
   if (error) {
     console.warn('[WeeklyPicks] Failed to fetch the current set:', error.message);
-    return null;
+    return { success: false, error: error.message };
   }
 
   const row = data?.[0];
-  if (!row || row.game_ids.length === 0) {
-    return null;
-  }
-
   return {
-    title: row.title,
-    startsAt: row.starts_at,
-    expiresAt: row.expires_at,
-    gameIds: row.game_ids,
+    success: true,
+    picks: row ? { title: row.title, gameIds: row.game_ids } : null,
   };
 }

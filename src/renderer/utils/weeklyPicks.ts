@@ -1,15 +1,10 @@
+import { A, O } from '@mobily/ts-belt';
 import type { Game } from '../../shared/types';
 
-export function orderWeeklyPickGames(gameIds: string[], games: Game[]): Game[] {
+export function orderWeeklyPickGames(
+  gameIds: readonly string[],
+  games: readonly Game[]
+): readonly Game[] {
   const byId = new Map(games.map((game) => [game.id, game]));
-  const seen = new Set<string>();
-
-  return gameIds.flatMap((id) => {
-    const game = byId.get(id);
-    if (!game || seen.has(id)) {
-      return [];
-    }
-    seen.add(id);
-    return [game];
-  });
+  return A.filterMap(gameIds, (id) => O.fromNullable(byId.get(id)));
 }

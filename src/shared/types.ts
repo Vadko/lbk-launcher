@@ -12,6 +12,7 @@ import type {
   SteamPluginHostAPI,
 } from './plugin-host-types';
 import type { RatingsAPI } from './ratings-api-types';
+import type { UpdaterAPI } from './updater-api-types';
 import type { WeeklyPicksAPI } from './weekly-picks-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
@@ -258,6 +259,7 @@ export interface ElectronAPI
   extends SteamPluginHostAPI,
     GameReviewsAPI,
     RatingsAPI,
+    UpdaterAPI,
     WeeklyPicksAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
@@ -354,27 +356,6 @@ export interface ElectronAPI
   onInstallationStatus: (
     callback: (gameId: string, status: InstallationStatus) => void
   ) => () => void;
-  // Auto-updater
-  checkForUpdates: () => Promise<{
-    available: boolean;
-    updateInfo?: unknown;
-    message?: string;
-    error?: string;
-  }>;
-  downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
-  installUpdate: () => void;
-  onUpdateAvailable: (callback: (info: unknown) => void) => () => void;
-  onUpdateDownloaded: (callback: (info: unknown) => void) => () => void;
-  onUpdateProgress: (
-    callback: (progress: {
-      percent?: number;
-      bytesPerSecond?: number;
-      total?: number;
-      transferred?: number;
-    }) => void
-  ) => () => void;
-  onUpdateError: (callback: (error: Error) => void) => () => void;
-  fetchChangelog: (version: string) => Promise<ChangelogEntry[] | null>;
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;

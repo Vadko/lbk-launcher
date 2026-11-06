@@ -23,10 +23,8 @@ describe('fetchWeeklyPicks', () => {
     rpc.mockResolvedValue({ data: [row], error: null });
 
     await expect(fetchWeeklyPicks()).resolves.toEqual({
-      title: 'Halloween',
-      startsAt: row.starts_at,
-      expiresAt: row.expires_at,
-      gameIds: row.game_ids,
+      success: true,
+      picks: { title: 'Halloween', gameIds: row.game_ids },
     });
     expect(rpc).toHaveBeenCalledWith('get_home_picks');
   });
@@ -34,17 +32,30 @@ describe('fetchWeeklyPicks', () => {
   it('keeps a missing title as null', async () => {
     rpc.mockResolvedValue({ data: [{ ...row, title: null }], error: null });
 
-    await expect(fetchWeeklyPicks()).resolves.toMatchObject({ title: null });
+    await expect(fetchWeeklyPicks()).resolves.toMatchObject({ picks: { title: null } });
+  });
+
+  it('keeps a set without games, so the section hides', async () => {
+    rpc.mockResolvedValue({ data: [{ ...row, game_ids: [] }], error: null });
+
+    await expect(fetchWeeklyPicks()).resolves.toEqual({
+      success: true,
+      picks: { title: 'Halloween', gameIds: [] },
+    });
   });
 
   it.each([
     ['no rows', { data: [], error: null }],
     ['null data', { data: null, error: null }],
-    ['a set without games', { data: [{ ...row, game_ids: [] }], error: null }],
-    ['an rpc error', { data: null, error: { message: 'boom' } }],
-  ])('returns null for %s', async (_label, response) => {
+  ])('succeeds with no set for %s', async (_label, response) => {
     rpc.mockResolvedValue(response);
 
-    await expect(fetchWeeklyPicks()).resolves.toBeNull();
+    await expect(fetchWeeklyPicks()).resolves.toEqual({ success: true, picks: null });
+  });
+
+  it('fails on an rpc error, so the renderer keeps the last good set', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
+
+    await expect(fetchWeeklyPicks()).resolves.toEqual({ success: false, error: 'boom' });
   });
 });

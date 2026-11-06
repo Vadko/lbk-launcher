@@ -1,10 +1,12 @@
-export interface WeeklyPicks {
+interface WeeklyPicks {
   title: string | null;
-  startsAt: string;
-  expiresAt: string;
   gameIds: string[];
 }
 
+export type WeeklyPicksResult =
+  | { success: true; picks: WeeklyPicks | null }
+  | { success: false; error: string };
+
 export interface WeeklyPicksAPI {
-  fetchWeeklyPicks: () => Promise<WeeklyPicks | null>;
+  fetchWeeklyPicks: () => Promise<WeeklyPicksResult>;
 }
