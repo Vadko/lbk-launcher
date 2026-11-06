@@ -128,6 +128,13 @@ describe('syncGameCounters', () => {
 });
 
 describe('the counters broadcast', () => {
+  it('listens on the private topic, which only the server can send on', () => {
+    expect(createGameCountersSubscription()).toMatchObject({
+      topic: 'game-counters',
+      private: true,
+    });
+  });
+
   it('updates a game whose review counts alone changed', () => {
     broadcast({ counters: [['game-2', 0, null, null, 3, 1]] });
 

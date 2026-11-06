@@ -229,6 +229,13 @@ describe('syncStoreDiscounts', () => {
 describe('the discounts broadcast', () => {
   const endsAtSeconds = Math.floor(Date.now() / 1000) + 3600;
 
+  it('listens on the private topic, which only the server can send on', () => {
+    expect(createStoreDiscountsSubscription()).toMatchObject({
+      topic: 'store-discounts',
+      private: true,
+    });
+  });
+
   it('stores a discount from a tuple with an extra field', () => {
     broadcast({ discounts: [['egs', 10, 35, endsAtSeconds, 'extra']] });
 
