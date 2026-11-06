@@ -12,6 +12,7 @@ import { initRatings } from './store/ratingsBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
 import { initStoreDiscounts } from './store/storeDiscountsBridge';
 import { useSettingsStore } from './store/useSettingsStore';
+import { initWeeklyPicks } from './store/weeklyPicksBridge';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/space-grotesk';
@@ -49,6 +50,9 @@ initRatings();
 
 // Bridge store discount and library changes (IPC) into the discounts store — once, outside React.
 initStoreDiscounts();
+
+// Bridge the weekly picks and catalog changes (IPC) into the weekly picks store — once, outside React.
+initWeeklyPicks();
 
 console.log('[Renderer] Starting React application...');
 

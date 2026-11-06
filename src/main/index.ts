@@ -114,6 +114,7 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
+import { createWeeklyPicksSubscription, syncWeeklyPicks } from './db/weekly-picks';
 import {
   startInstallationWatcher,
   stopInstallationWatcher,
@@ -363,10 +364,12 @@ if (!gotTheLock) {
       createReviewEventsSubscription(),
       createGameCountersSubscription(),
       createStoreDiscountsSubscription(),
+      createWeeklyPicksSubscription(),
     ]);
 
     void syncGameCounters();
     void syncStoreDiscounts();
+    void syncWeeklyPicks();
     syncLikes().catch((err) => {
       console.error('[Main] Likes sync failed:', err);
     });

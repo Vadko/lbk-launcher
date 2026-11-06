@@ -1,12 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { type DeepLinkTarget, REVIEWS_TAB } from '@/shared/game-link-target';
+import { isCatalogReady } from '../store/isCatalogReady';
 import { useStore } from '../store/useStore';
-
-const isCatalogReady = () => {
-  const { syncStatus } = useStore.getState();
-  return syncStatus === 'ready' || syncStatus === 'error';
-};
 
 // A link can be what launched LBK, while the first sync still leaves the catalog empty
 const whenCatalogReady = () =>

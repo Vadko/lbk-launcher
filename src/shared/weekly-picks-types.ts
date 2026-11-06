@@ -1,12 +1,11 @@
-interface WeeklyPicks {
+import type { Game } from './types';
+
+export interface WeeklyPicks {
   title: string | null;
-  gameIds: string[];
+  games: readonly Game[];
 }
 
-export type WeeklyPicksResult =
-  | { success: true; picks: WeeklyPicks | null }
-  | { success: false; error: string };
-
 export interface WeeklyPicksAPI {
-  fetchWeeklyPicks: () => Promise<WeeklyPicksResult>;
+  getWeeklyPicks: (hideAiTranslations: boolean) => Promise<WeeklyPicks | null>;
+  onWeeklyPicksUpdated: (callback: () => void) => () => void;
 }

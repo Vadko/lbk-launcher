@@ -1,15 +1,11 @@
 import { F } from '@mobily/ts-belt';
+import { isCatalogReady } from './isCatalogReady';
 import { useRatingsStore } from './useRatingsStore';
 import { useSettingsStore } from './useSettingsStore';
 import { useStore } from './useStore';
 
 // A sync or a burst of counter broadcasts sends one update per game
 const RELOAD_DEBOUNCE = 300;
-
-const isCatalogReady = () => {
-  const { syncStatus } = useStore.getState();
-  return syncStatus === 'ready' || syncStatus === 'error';
-};
 
 export function initRatings(): void {
   const api = window.electronAPI;

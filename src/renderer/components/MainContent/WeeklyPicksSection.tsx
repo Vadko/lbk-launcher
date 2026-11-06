@@ -2,9 +2,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-import { useWeeklyPicks } from '@/renderer/queries/useWeeklyPicks';
-import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
+import { useWeeklyPicksStore } from '@/renderer/store/useWeeklyPicksStore';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
@@ -14,16 +13,15 @@ import { Loader } from '../ui/Loader';
 export const WeeklyPicksSection: React.FC = () => {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
-  const hideAiTranslations = useSettingsStore((state) => state.hideAiTranslations);
   const { gamesWithUpdates, isGameDetected } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
       isGameDetected: state.isGameDetected,
     }))
   );
-  const { picks, games, isLoading } = useWeeklyPicks(hideAiTranslations);
+  const picks = useWeeklyPicksStore((state) => state.picks);
 
-  if (!isLoading && games.length === 0) {
+  if (picks === null || picks?.games.length === 0) {
     return null;
   }
 
@@ -39,7 +37,7 @@ export const WeeklyPicksSection: React.FC = () => {
       </div>
       <div className="grid grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {isLoading ? (
+          {picks === undefined ? (
             <motion.div
               key="loader"
               initial={{ opacity: 0 }}
@@ -51,7 +49,7 @@ export const WeeklyPicksSection: React.FC = () => {
               <Loader size="md" />
             </motion.div>
           ) : (
-            games.map((game, index) => (
+            picks.games.map((game, index) => (
               <motion.div
                 key={game.id}
                 id={`weekly-pick-${game.slug}`}
@@ -76,7 +74,7 @@ export const WeeklyPicksSection: React.FC = () => {
                   onClick={() => {
                     trackEvent('Select game', {
                       'Is weekly pick': true,
-                      'Weekly pick title': picks?.title ?? 'default',
+                      'Weekly pick title': picks.title ?? 'default',
                       'Game Id': game.id,
                       'Game Name': game.name,
                     });

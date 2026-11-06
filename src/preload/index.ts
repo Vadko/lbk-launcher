@@ -38,7 +38,13 @@ const electronAPI: ElectronAPI = {
   checkStoreLibraries: () => ipcRenderer.invoke('check-store-libraries'),
   fetchTrendingGames: (days?: number, limit?: number) =>
     ipcRenderer.invoke('fetch-trending-games', days, limit),
-  fetchWeeklyPicks: () => ipcRenderer.invoke('fetch-weekly-picks'),
+  getWeeklyPicks: (hideAiTranslations: boolean) =>
+    ipcRenderer.invoke('get-weekly-picks', hideAiTranslations),
+  onWeeklyPicksUpdated: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('weekly-picks-updated', handler);
+    return () => ipcRenderer.removeListener('weekly-picks-updated', handler);
+  },
   fetchGamesByIds: (
     gameIds: string[],
     searchQuery?: string,
