@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { openWorkshopPage } from '../utils/workshopPage';
+import { workshopPageUrl } from '@/shared/steam-urls';
 import { electronStorage } from './electronStorage';
 
 const POLL_INTERVAL_MS = 3000;
@@ -80,7 +80,7 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
               });
             }
           }
-          await openWorkshopPage(workshopId);
+          await window.electronAPI.openAppLink('steam', workshopPageUrl(workshopId));
           trackOpen(gameId);
           return true;
         } catch (error) {
@@ -114,7 +114,7 @@ export const useWorkshopInstallsStore = create<WorkshopInstallsStore>()(
             }
           }
 
-          await openWorkshopPage(workshopId);
+          await window.electronAPI.openAppLink('steam', workshopPageUrl(workshopId));
           return true;
         } catch (error) {
           console.error('[Workshop] remove failed', error);

@@ -1376,6 +1376,9 @@ export const en = {
       'Steam needs to restart for the changes to take effect. You can do this later; your settings are already saved.',
     restartAction: 'Restart Steam',
   },
+  storeSale: {
+    discount: '{{percent}}% off on {{store}}',
+  },
   teamSubscribe: {
     subscribedTitle: 'You follow updates from “{{team}}”',
     followTitle_single: 'Follow creator “{{team}}”',

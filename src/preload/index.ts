@@ -207,6 +207,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('game-counters-updated', handler);
     return () => ipcRenderer.removeListener('game-counters-updated', handler);
   },
+  getStoreDiscounts: () => ipcRenderer.invoke('get-store-discounts'),
+  onStoreDiscountsUpdated: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('store-discounts-updated', handler);
+    return () => ipcRenderer.removeListener('store-discounts-updated', handler);
+  },
   onGameRemoved: (callback: (gameId: string) => void) => {
     const handler = (_: unknown, gameId: string) => callback(gameId);
     ipcRenderer.on('game-removed', handler);
@@ -242,6 +248,7 @@ const electronAPI: ElectronAPI = {
   },
   // Game launcher
   launchGame: (game: Game) => ipcRenderer.invoke('launch-game', game),
+  openAppLink: (app, url) => ipcRenderer.invoke('open-app-link', app, url),
   // Steam integration
   restartSteam: () => ipcRenderer.invoke('restart-steam'),
   applyPendingLaunchOptions: (game: Game) =>

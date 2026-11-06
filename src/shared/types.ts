@@ -53,6 +53,17 @@ export type LibraryFilterType = Exclude<
 >;
 export type LibraryMemberships = Record<LibraryFilterType, string[]>;
 
+export type LinkApp = 'telegram' | 'discord' | 'steam' | 'epic';
+
+export type DiscountStore = 'steam' | 'gog' | 'egs';
+
+export interface StoreDiscount {
+  store: DiscountStore;
+  steamAppId: number;
+  percent: number;
+  endsAt: number | null;
+}
+
 export interface NewsFeedItem {
   id: string;
   url: string;
@@ -361,6 +372,8 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;
+  getStoreDiscounts: () => Promise<StoreDiscount[]>;
+  onStoreDiscountsUpdated: (callback: () => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
@@ -370,6 +383,7 @@ export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
   onInstalledGamesChanged?: (callback: () => void) => () => void;
   // Game launcher
   launchGame: (game: Game) => Promise<LaunchGameResult>;
+  openAppLink: (app: LinkApp, url: string) => Promise<void>;
   // Steam integration
   applyPendingLaunchOptions: (game: Game) => Promise<ApplyPendingLaunchOptionsResult>;
   /**

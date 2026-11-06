@@ -6,7 +6,8 @@ const host = vi.hoisted(() => ({
   installed: new Set<string>(),
   probes: [] as string[],
   spawn: vi.fn(() => ({ unref: () => undefined })),
-  openExternal: vi.fn(() => Promise.resolve()),
+  openExternal: vi.fn((_url: string) => Promise.resolve()),
+  appForProtocol: vi.fn((_url: string) => ''),
 }));
 
 vi.mock('child_process', () => ({
@@ -25,11 +26,15 @@ vi.mock('child_process', () => ({
   spawn: host.spawn,
 }));
 
-vi.mock('electron', () => ({ shell: { openExternal: host.openExternal } }));
+vi.mock('electron', () => ({
+  shell: { openExternal: host.openExternal },
+  app: { getApplicationNameForProtocol: host.appForProtocol },
+}));
 
 vi.mock('./platform', () => ({ isLinux: () => true }));
 
 let openExternalUrl: typeof OpenExternalModule.openExternalUrl;
+let openWithFallback: typeof OpenExternalModule.openWithFallback;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -37,8 +42,11 @@ beforeEach(async () => {
   host.installed.clear();
   host.probes.length = 0;
   host.spawn.mockClear();
-  host.openExternal.mockClear();
-  ({ openExternalUrl } = await import('./open-external'));
+  host.openExternal.mockReset();
+  host.openExternal.mockResolvedValue(undefined);
+  host.appForProtocol.mockReset();
+  host.appForProtocol.mockReturnValue('');
+  ({ openExternalUrl, openWithFallback } = await import('./open-external'));
 });
 
 describe('openExternalUrl on Linux', () => {
@@ -88,5 +96,43 @@ describe('openExternalUrl on Linux', () => {
     expect(await openExternalUrl('https://a.test')).toEqual({ success: true });
     expect(host.spawn).not.toHaveBeenCalled();
     expect(host.openExternal).toHaveBeenCalledWith('https://a.test');
+  });
+});
+
+describe('openWithFallback on Linux', () => {
+  it('hands the app link to the OS when an app handles its scheme', async () => {
+    host.appForProtocol.mockReturnValue('telegramdesktop.desktop');
+
+    await openWithFallback('tg://resolve?domain=news', 'https://t.me/news');
+
+    expect(host.openExternal).toHaveBeenCalledWith('tg://resolve?domain=news');
+    expect(host.spawn).not.toHaveBeenCalled();
+  });
+
+  it('opens the web page in the browser when no app handles the scheme', async () => {
+    host.installed.add('which firefox');
+
+    await openWithFallback('tg://resolve?domain=news', 'https://t.me/news');
+
+    expect(host.openExternal).not.toHaveBeenCalled();
+    expect(host.spawn).toHaveBeenCalledWith(
+      'firefox',
+      ['https://t.me/news'],
+      expect.anything()
+    );
+  });
+
+  it('opens the web page when the OS refuses the app link', async () => {
+    host.appForProtocol.mockReturnValue('telegramdesktop.desktop');
+    host.openExternal.mockRejectedValueOnce(new Error('no handler'));
+    host.installed.add('which firefox');
+
+    await openWithFallback('tg://resolve?domain=news', 'https://t.me/news');
+
+    expect(host.spawn).toHaveBeenCalledWith(
+      'firefox',
+      ['https://t.me/news'],
+      expect.anything()
+    );
   });
 });

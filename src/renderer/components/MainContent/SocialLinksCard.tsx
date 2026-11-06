@@ -1,7 +1,8 @@
 import { BookIcon, GlobeIcon, SendIcon } from 'lucide-react';
 import React from 'react';
 import { t } from '@/shared/i18n/i18n';
-import type { Game } from '../../../shared/types';
+import { steamStoreUrl } from '@/shared/steam-urls';
+import type { Game, LinkApp } from '../../../shared/types';
 import {
   DiscordIcon,
   EAIcon,
@@ -23,24 +24,21 @@ interface SocialLinksCardProps {
 interface SocialLinkProps {
   icon: React.ReactNode;
   label: string;
-  url: string;
+  open: () => Promise<unknown>;
   color: string;
 }
 
-interface StoreLinkProps {
-  type: 'steam' | 'gog' | 'epic-store' | 'xbox' | 'uplay' | 'ea';
-  appId?: number | string;
-  url?: string;
-}
+type StoreLinkProps =
+  | { type: 'steam'; appId: number }
+  | { type: 'gog' | 'epic-store' | 'xbox' | 'uplay' | 'ea'; url: string };
 
-const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => (
-  <a
+const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, open, color }) => (
+  <button
+    type="button"
     data-nav-group="main-links"
     className="group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border hover:border-border-hover transition-all duration-300"
     title={label}
-    target="_blank"
-    href={url}
-    rel="noopener noreferrer"
+    onClick={() => void open()}
     data-gamepad-action="true"
   >
     {icon && (
@@ -49,15 +47,15 @@ const SocialLink: React.FC<SocialLinkProps> = ({ icon, label, url, color }) => (
       </div>
     )}
     {label && <span className="text-sm text-text-main font-medium">{label}</span>}
-  </a>
+  </button>
 );
 
-const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) => {
+const StoreButton: React.FC<StoreLinkProps> = (props) => {
   const getStoreConfig = () => {
-    switch (type) {
+    switch (props.type) {
       case 'steam':
         return {
-          url: `steam://store/${appId}`,
+          open: () => window.electronAPI.openAppLink('steam', steamStoreUrl(props.appId)),
           icon: <SteamIcon size={18} />,
           title: 'Steam Store',
           label: 'Steam',
@@ -66,7 +64,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
         };
       case 'gog':
         return {
-          url,
+          open: () => window.electronAPI.openExternal(props.url),
           icon: <GOGIcon size={18} />,
           title: 'GOG Galaxy',
           label: 'GOG Galaxy',
@@ -75,7 +73,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
         };
       case 'epic-store':
         return {
-          url,
+          open: () => window.electronAPI.openAppLink('epic', props.url),
           icon: <EpicIcon size={18} />,
           title: 'Epic Games',
           label: 'Epic Games',
@@ -84,7 +82,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
         };
       case 'xbox':
         return {
-          url,
+          open: () => window.electronAPI.openExternal(props.url),
           icon: <XboxIcon size={18} />,
           title: 'Microsoft Store',
           label: 'Microsoft Store',
@@ -93,7 +91,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
         };
       case 'uplay':
         return {
-          url,
+          open: () => window.electronAPI.openExternal(props.url),
           icon: <UbisoftIcon size={18} />,
           title: 'Ubisoft Store',
           label: 'Ubisoft Store',
@@ -102,7 +100,7 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
         };
       case 'ea':
         return {
-          url,
+          open: () => window.electronAPI.openExternal(props.url),
           icon: <EAIcon size={18} />,
           title: 'EA App',
           label: 'EA App',
@@ -115,13 +113,13 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
   const config = getStoreConfig();
 
   return (
-    <a
+    <button
+      type="button"
       data-nav-group="main-links"
       data-gamepad-action="true"
       className={`group flex items-center gap-2 px-4 py-2 rounded-lg bg-glass hover:bg-glass-hover border border-border ${config.hoverColor} hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 ease-out`}
       title={t('gameLinks.openIn', { store: config.title })}
-      href={config.url}
-      target="_blank"
+      onClick={() => void config.open()}
     >
       {config.icon && (
         <div
@@ -133,16 +131,20 @@ const StoreButton: React.FC<StoreLinkProps> = ({ type = 'steam', appId, url }) =
       {config.label && (
         <span className="text-sm text-text-main font-medium">{config.label}</span>
       )}
-    </a>
+    </button>
   );
 };
 
-const WEBSITE_KINDS = [
+const WEBSITE_KINDS: (Omit<SocialLinkProps, 'open'> & {
+  match: string;
+  app?: LinkApp;
+})[] = [
   {
     match: 'steamcommunity.com/sharedfiles/filedetails',
     label: t('gameLinks.steamGuide'),
     color: 'text-color-accent',
     icon: <BookIcon size={18} />,
+    app: 'steam',
   },
   {
     match: 'github.com',
@@ -158,41 +160,47 @@ const WEBSITE_KINDS = [
   },
 ];
 
-function describeWebsite(url: string): Omit<SocialLinkProps, 'url'> {
+function describeWebsite(url: string): SocialLinkProps {
   const lowerUrl = url.toLowerCase();
   const kind = WEBSITE_KINDS.find((candidate) => lowerUrl.includes(candidate.match));
+  const app = kind?.app;
   return {
     icon: kind?.icon ?? <GlobeIcon size={18} />,
     label: kind?.label ?? t('gameLinks.website'),
     color: kind?.color ?? 'text-color-accent',
+    open: () =>
+      app
+        ? window.electronAPI.openAppLink(app, url)
+        : window.electronAPI.openExternal(url),
   };
 }
 
 export const SocialLinksCard: React.FC<SocialLinksCardProps> = ({ game }) => {
+  const { website, telegram, discord, twitter, youtube } = game;
   const links = [
-    game.website && { ...describeWebsite(game.website), url: game.website },
-    game.telegram && {
+    website && describeWebsite(website),
+    telegram && {
       icon: <SendIcon size={18} />,
       label: 'Telegram',
-      url: game.telegram,
+      open: () => window.electronAPI.openAppLink('telegram', telegram),
       color: 'text-[#0088cc]',
     },
-    game.discord && {
+    discord && {
       icon: <DiscordIcon size={18} />,
       label: 'Discord',
-      url: game.discord,
+      open: () => window.electronAPI.openAppLink('discord', discord),
       color: 'text-[#5865F2]',
     },
-    game.twitter && {
+    twitter && {
       icon: <XIcon size={18} />,
       label: 'X',
-      url: game.twitter,
+      open: () => window.electronAPI.openExternal(twitter),
       color: 'text-black',
     },
-    game.youtube && {
+    youtube && {
       icon: <YouTubeIcon size={18} />,
       label: 'YouTube',
-      url: game.youtube,
+      open: () => window.electronAPI.openExternal(youtube),
       color: 'text-[#FF0000]',
     },
   ].filter(Boolean) as SocialLinkProps[];

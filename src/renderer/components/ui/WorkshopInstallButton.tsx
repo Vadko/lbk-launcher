@@ -2,9 +2,9 @@ import { Download, Trash2 } from 'lucide';
 import { ExternalLinkIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { workshopPageUrl } from '@/shared/steam-urls';
 import { useActionPhase } from '../../hooks/useActionPhase';
 import { useWorkshopInstallsStore } from '../../store/useWorkshopInstallsStore';
-import { openWorkshopPage } from '../../utils/workshopPage';
 import { AppActionIcon } from './AppActionIcon';
 import { Button } from './Button';
 import { Tooltip } from './Tooltip';
@@ -109,7 +109,9 @@ export function WorkshopInstallButton({
       <Button
         variant="secondary"
         icon={<ExternalLinkIcon size={20} />}
-        onClick={() => void openWorkshopPage(workshopId)}
+        onClick={() =>
+          void window.electronAPI.openAppLink('steam', workshopPageUrl(workshopId))
+        }
         title={t('workshopButton.openPageTitle')}
         data-gamepad-action
       >

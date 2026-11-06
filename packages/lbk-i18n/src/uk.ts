@@ -1731,6 +1731,9 @@ export const uk = {
       'Щоб зміни набули чинності, потрібно перезапустити Steam. Можна зробити це пізніше — налаштування вже збережено.',
     restartAction: 'Перезапустити Steam',
   },
+  storeSale: {
+    discount: 'Знижка {{percent}}% у {{store}}',
+  },
   teamSubscribe: {
     subscribedTitle: 'Ви підписані на оновлення від «{{team}}»',
     followTitle_single: 'Стежити за автором «{{team}}»',

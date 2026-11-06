@@ -365,6 +365,10 @@ export async function launchSteamGame(appId: string | number): Promise<LaunchRes
   };
 }
 
+// The Steam launch path starts a closed Steam with Millennium, which a steam:// handed to the OS does not
+export const openInSteamClient = async (steamUrl: string): Promise<boolean> =>
+  Boolean(getSteamPath()) && (await osControl().launch(steamUrl));
+
 export async function restartSteamProcess(
   opts: { beforeLaunch?: () => Promise<void> | void } = {}
 ): Promise<RestartSteamResult> {
