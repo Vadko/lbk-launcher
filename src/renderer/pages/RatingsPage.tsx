@@ -149,43 +149,41 @@ export const RatingsPage: React.FC = () => {
       className={`flex-1 grid grid-cols-1 justify-items-center items-start px-8 ${isGamepadMode ? 'py-4' : ''} overflow-y-auto justify-center custom-scrollbar`}
     >
       <div className="main-page flex flex-col gap-6 h-auto w-full max-w-[1564px]">
-        <div className="flex flex-wrap justify-between items-end gap-4">
-          <div className="grid gap-2">
-            <h1 className="text-4xl font-head font-semibold text-text-main">
-              {t('ratings.title')}
-            </h1>
-            <p className="text-text-muted">{t('ratings.subtitle')}</p>
-          </div>
+        <div className="grid gap-2">
+          <h1 className="text-4xl font-head font-semibold text-text-main">
+            {t('ratings.title')}
+          </h1>
+          <p className="text-text-muted">{t('ratings.subtitle')}</p>
+        </div>
 
-          <div className="flex grow flex-wrap items-center justify-between gap-4 min-w-0">
-            {tab === 'teams' ? (
-              <RatingsSearch
-                key="teams"
-                items={teams ?? []}
-                getKey={teamKey}
-                getName={teamKey}
-                filter={filters.teams}
-                onFilter={setFilter}
-                placeholder={t('ratings.search.placeholder.teams')}
-              />
-            ) : (
-              <RatingsSearch
-                key="games"
-                items={games ?? []}
-                getKey={gameKey}
-                getName={gameName}
-                filter={filters.games}
-                onFilter={setFilter}
-                placeholder={t('ratings.search.placeholder.games')}
-              />
-            )}
-            <SlidingTabs
-              tabs={TABS}
-              active={tab}
-              label={(id) => t(`ratings.tab.${id}`)}
-              onChange={setTab}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {tab === 'teams' ? (
+            <RatingsSearch
+              key="teams"
+              items={teams ?? []}
+              getKey={teamKey}
+              getName={teamKey}
+              filter={filters.teams}
+              onFilter={setFilter}
+              placeholder={t('ratings.search.placeholder.teams')}
             />
-          </div>
+          ) : (
+            <RatingsSearch
+              key="games"
+              items={games ?? []}
+              getKey={gameKey}
+              getName={gameName}
+              filter={filters.games}
+              onFilter={setFilter}
+              placeholder={t('ratings.search.placeholder.games')}
+            />
+          )}
+          <SlidingTabs
+            tabs={TABS}
+            active={tab}
+            label={(id) => t(`ratings.tab.${id}`)}
+            onChange={setTab}
+          />
         </div>
 
         {tab === 'teams' ? (
