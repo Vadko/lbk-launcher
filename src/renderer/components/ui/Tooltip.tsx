@@ -1,14 +1,15 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { type TooltipAlign, tooltipArrowLeft } from './tooltipArrowLeft';
 
 interface TooltipProps {
   content: string | null;
   children: React.ReactNode;
   className?: string;
-  align?: 'center' | 'left' | 'right';
+  align?: TooltipAlign;
 }
 
-const getAlignClass = (align: 'center' | 'left' | 'right') => {
+const getAlignClass = (align: TooltipAlign) => {
   switch (align) {
     case 'left':
       return 'right-0';
@@ -28,23 +29,21 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<'top' | 'bottom'>('top');
-  const [arrowPosition, setArrowPosition] = useState(50); // percent from the left edge
-  const mouseXRef = useRef(0);
+  const [arrowLeft, setArrowLeft] = useState<number | null>(null);
   const containerRef = useRef<HTMLSpanElement>(null);
 
-  const measureTooltip = useCallback((node: HTMLDivElement | null) => {
-    if (!node || !containerRef.current) {
-      return;
-    }
-    const rect = containerRef.current.getBoundingClientRect();
-    const tooltipRect = node.getBoundingClientRect();
-
-    setPosition(rect.top < 40 ? 'bottom' : 'top');
-
-    const relativeX = mouseXRef.current - tooltipRect.left;
-    const percentage = (relativeX / tooltipRect.width) * 100;
-    setArrowPosition(Math.max(5, Math.min(95, percentage)));
-  }, []);
+  // Layout widths, not rects, so the fade-in transform does not skew where the arrow points
+  const measureTooltip = useCallback(
+    (node: HTMLDivElement | null) => {
+      const container = containerRef.current;
+      if (!node || !container) {
+        return;
+      }
+      setPosition(container.getBoundingClientRect().top < 40 ? 'bottom' : 'top');
+      setArrowLeft(tooltipArrowLeft(align, container.offsetWidth, node.offsetWidth));
+    },
+    [align]
+  );
 
   if (!content) {
     return <>{children}</>;
@@ -54,10 +53,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
     <span
       ref={containerRef}
       className={`relative inline-flex items-center ${className}`}
-      onMouseEnter={(e) => {
-        mouseXRef.current = e.clientX;
-        setIsVisible(true);
-      }}
+      onMouseEnter={() => setIsVisible(true)}
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
@@ -73,7 +69,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           <div
             className={`absolute w-0 h-0 border-4 border-transparent
               ${position === 'top' ? 'top-full border-t-gray-900' : 'bottom-full border-b-gray-900'}`}
-            style={{ left: `${arrowPosition}%`, transform: 'translateX(-50%)' }}
+            style={{ left: arrowLeft ?? '50%', transform: 'translateX(-50%)' }}
           />
         </div>
       )}

@@ -11,6 +11,7 @@ import type {
   ApplyPendingLaunchOptionsResult,
   SteamPluginHostAPI,
 } from './plugin-host-types';
+import type { RatingsAPI } from './ratings-api-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
@@ -252,7 +253,7 @@ export type SteamCollectionSyncFailure =
   | 'no-translated-games'
   | 'no-matches';
 
-export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI {
+export interface ElectronAPI extends SteamPluginHostAPI, GameReviewsAPI, RatingsAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
   fetchTagOptions: () => Promise<TagOption[]>;
   fetchTeams: () => Promise<string[]>;

@@ -1,3 +1,4 @@
+import { teamMembers } from '../../shared/team-members';
 import { getDatabase } from './database';
 import { VISIBLE_GAMES_SQL } from './db-queries';
 
@@ -11,7 +12,7 @@ export function findDeepLinkGameId(slug: string, team: string): string | null {
     .all(slug) as { id: string; team: string }[];
   const match = rows.find((row) => {
     const teams = row.team.toLowerCase();
-    return teams === wanted || teams.split(',').some((name) => name.trim() === wanted);
+    return teams === wanted || teamMembers(teams).includes(wanted);
   });
   return match?.id ?? null;
 }

@@ -46,13 +46,13 @@ export const GameReviewsTab: React.FC<GameReviewsTabProps> = ({
   reveal,
   onRevealed,
 }) => {
-  const [filter, setFilter] = useState<ReviewFilter | null>(null);
+  const [filter, setFilter] = useState<ReviewFilter>('all');
   // Both typed first pages load with the tab, so a filter switch shows a ready list
   usePrefetchInfiniteQuery(gameReviewsQueryOptions(gameId, null, 'feedback'));
   usePrefetchInfiniteQuery(gameReviewsQueryOptions(gameId, null, 'error'));
   // A review link may point at a thread of either type, so it opens the full list
-  if (focus && filter !== null) {
-    setFilter(null);
+  if (focus && filter !== 'all') {
+    setFilter('all');
   }
   const type = filter === 'all' ? null : filter;
   const { query, data, loadNextPage } = useGameReviews(gameId, focus, type);

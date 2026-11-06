@@ -356,7 +356,7 @@ export const en = {
   gameLike: {
     like: 'Like',
     unlike: 'Remove like',
-    needsInstall: 'Install the translation to like it',
+    needsInstall: 'Install the translation to vote',
   },
   gameInfo: {
     title: 'Details',
@@ -934,6 +934,48 @@ export const en = {
     failedWithError: 'Could not uninstall Millennium: {{error}}',
     progress: 'Uninstalling Millennium…',
   },
+  ratings: {
+    title: 'Ukrainian localization ratings',
+    subtitle: 'Translation teams and games by player ratings',
+    tab: {
+      teams: 'Teams',
+      games: 'Games',
+    },
+    caption: {
+      teams: 'Teams ranked by likes',
+      games: 'Games ranked by likes',
+    },
+    column: {
+      rank: 'No.',
+      team: 'Team',
+      game: 'Game',
+      likes: 'Likes',
+      translations: 'Translations',
+      downloads: 'Downloads',
+      status: 'Translation status',
+      details: 'Actions',
+    },
+    details: 'Details',
+    loadFailed: 'Could not load the ratings. Please try again later.',
+    empty: 'No data yet.',
+    pages: 'Pages: {{caption}}',
+    search: {
+      placeholder: {
+        teams: 'Search teams...',
+        games: 'Search games...',
+      },
+      allResults: '– all results',
+      noResults: 'Nothing found',
+      noResultsHint: 'Check the spelling or try another name',
+      clear: 'Clear search',
+    },
+  },
+  pagination: {
+    first: 'First page',
+    previous: 'Previous page',
+    next: 'Next page',
+    last: 'Last page',
+  },
   newsFeed: {
     title: 'News',
     tab: { sales: 'Games on sale', 'games-80': 'Games for 80', news: 'News' },
@@ -1300,6 +1342,7 @@ export const en = {
   sidebarNav: {
     guides: 'Open guides and tools',
     donators: 'Open supporters page',
+    ratings: 'Open ratings',
     news: 'Open news',
     home: 'Open home page',
     uiSoundsOff: 'Turn off interface sounds',

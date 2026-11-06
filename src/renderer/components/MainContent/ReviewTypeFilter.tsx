@@ -2,14 +2,14 @@ import React from 'react';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
 import type { ReviewCounts } from '../../utils/reviewCounts';
-import { ReviewFilterChip } from './ReviewFilterChip';
+import { SlidingTabs } from '../ui/SlidingTabs';
 
 export type ReviewFilter = 'all' | FeedbackType;
 
 interface ReviewTypeFilterProps {
-  value: ReviewFilter | null;
+  value: ReviewFilter;
   counts: ReviewCounts;
-  onChange: (filter: ReviewFilter | null) => void;
+  onChange: (filter: ReviewFilter) => void;
 }
 
 const FILTERS: ReviewFilter[] = ['all', 'feedback', 'error'];
@@ -19,15 +19,21 @@ export const ReviewTypeFilter: React.FC<ReviewTypeFilterProps> = ({
   counts,
   onChange,
 }) => (
-  <div className="flex flex-wrap items-center gap-2">
-    {FILTERS.map((filter) => (
-      <ReviewFilterChip
-        key={filter}
-        label={t(`gameReviews.filter.${filter}`)}
-        count={counts[filter]}
-        isActive={value === filter}
-        onClick={() => onChange(value === filter ? null : filter)}
-      />
-    ))}
-  </div>
+  <SlidingTabs
+    variant="chip"
+    tabs={FILTERS}
+    active={value}
+    // A second press on a type goes back to every review
+    onChange={(filter) => onChange(value === filter ? 'all' : filter)}
+    label={(filter, isActive) => (
+      <>
+        <span className="font-semibold">{t(`gameReviews.filter.${filter}`)}</span>
+        <span
+          className={`font-normal tabular-nums ${isActive ? 'text-text-dark/60' : 'text-text-muted'}`}
+        >
+          {counts[filter]}
+        </span>
+      </>
+    )}
+  />
 );

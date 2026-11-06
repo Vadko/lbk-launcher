@@ -22,10 +22,12 @@ import type {
   SortOrderType,
 } from '../shared/types';
 import { gameReviewsAPI } from './game-reviews-api';
+import { ratingsAPI } from './ratings-api';
 import { systemNotificationAPI } from './system-notification-api';
 
 const electronAPI: ElectronAPI = {
   ...gameReviewsAPI,
+  ...ratingsAPI,
   fetchGames: (params) => ipcRenderer.invoke('fetch-games', params),
   fetchTagOptions: () => ipcRenderer.invoke('fetch-tag-options'),
   fetchTeams: () => ipcRenderer.invoke('fetch-teams'),

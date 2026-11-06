@@ -1,6 +1,7 @@
 import { StarIcon } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import { t } from '@/shared/i18n/i18n';
+import { teamMembers } from '@/shared/team-members';
 import { getSpecialTranslatorInfo } from '../../constants/specialTranslators';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { Tooltip } from '../ui/Tooltip';
@@ -18,7 +19,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
   const setSelectedAuthors = useSettingsStore((state) => state.setSelectedAuthors);
   const setSpecialFilter = useSettingsStore((state) => state.setSpecialFilter);
 
-  const authors = team.split(',').map((a) => a.trim());
+  const authors = teamMembers(team);
   const visibleAuthors = authors.slice(0, maxVisible);
   const hiddenAuthors = authors.slice(maxVisible);
   const hasMore = hiddenAuthors.length > 0;

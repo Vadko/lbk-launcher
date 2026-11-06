@@ -382,7 +382,7 @@ export const uk = {
   gameLike: {
     like: 'Оцінити',
     unlike: 'Зняти оцінку',
-    needsInstall: 'Встановіть переклад, щоб оцінити',
+    needsInstall: 'Щоб проголосувати, встановіть переклад',
   },
   gameInfo: {
     title: 'Інформація',
@@ -967,6 +967,48 @@ export const uk = {
     failed: 'Не вдалося видалити Millennium.',
     failedWithError: 'Не вдалося видалити Millennium: {{error}}',
     progress: 'Видалення Millennium…',
+  },
+  ratings: {
+    title: 'Рейтинги української локалізації',
+    subtitle: 'Спілки перекладачів та ігри за оцінками гравців',
+    tab: {
+      teams: 'Спілки',
+      games: 'Ігри',
+    },
+    caption: {
+      teams: 'Рейтинг спілок за вподобаннями',
+      games: 'Рейтинг ігор за вподобаннями',
+    },
+    column: {
+      rank: '№',
+      team: 'Назва спілки',
+      game: 'Назва гри',
+      likes: 'Вподобання',
+      translations: 'Переклади',
+      downloads: 'Завантаження',
+      status: 'Статус перекладу',
+      details: 'Дії',
+    },
+    details: 'Детальніше',
+    loadFailed: 'Не вдалося завантажити рейтинг. Спробуйте пізніше.',
+    empty: 'Поки що немає даних.',
+    pages: 'Сторінки: {{caption}}',
+    search: {
+      placeholder: {
+        teams: 'Пошук спілок...',
+        games: 'Пошук ігор...',
+      },
+      allResults: '– усі результати',
+      noResults: 'Нічого не знайдено',
+      noResultsHint: 'Перевірте написання або спробуйте іншу назву',
+      clear: 'Очистити пошук',
+    },
+  },
+  pagination: {
+    first: 'Перша сторінка',
+    previous: 'Попередня сторінка',
+    next: 'Наступна сторінка',
+    last: 'Остання сторінка',
   },
   newsFeed: {
     title: 'Новини',
@@ -1651,6 +1693,7 @@ export const uk = {
   sidebarNav: {
     guides: 'Відкрити посібники та інструменти',
     donators: 'Відкрити сторінку донатерів',
+    ratings: 'Відкрити рейтинги',
     news: 'Відкрити новини',
     home: 'Відкрити головну сторінку',
     uiSoundsOff: 'Вимкнути звуки інтерфейсу',

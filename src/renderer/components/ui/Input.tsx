@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import React from 'react';
+import { useCompositionSafeChange } from '../../hooks/useCompositionSafeChange';
 
 interface InputProps {
   value: string;
@@ -17,10 +18,7 @@ export const Input: React.FC<InputProps> = ({
   type = 'text',
   className = '',
 }) => {
-  // Track IME composition state to prevent double input (safety net for
-  // non-Gamescope Linux environments where GTK_IM_MODULE deletion doesn't apply)
-  const isComposingRef = useRef(false);
-  const justEndedCompositionRef = useRef(false);
+  const changeHandlers = useCompositionSafeChange(onChange);
 
   return (
     <div className={`relative ${className}`}>
@@ -32,25 +30,7 @@ export const Input: React.FC<InputProps> = ({
       <input
         type={type}
         value={value}
-        onChange={(e) => {
-          if (isComposingRef.current) {
-            return;
-          }
-          if (justEndedCompositionRef.current) {
-            justEndedCompositionRef.current = false;
-            return;
-          }
-          onChange(e.target.value);
-        }}
-        onCompositionStart={() => {
-          isComposingRef.current = true;
-          justEndedCompositionRef.current = false;
-        }}
-        onCompositionEnd={(e) => {
-          isComposingRef.current = false;
-          justEndedCompositionRef.current = true;
-          onChange(e.currentTarget.value);
-        }}
+        {...changeHandlers}
         placeholder={placeholder}
         className={`w-full px-4 py-3 ${
           icon ? 'pl-12' : ''

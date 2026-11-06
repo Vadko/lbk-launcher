@@ -98,8 +98,9 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
 
     // For gamepad mode, switch to games navigation area
     if (useGamepadModeStore.getState().isGamepadMode) {
-      useGamepadModeStore.getState().setNavigationArea('games');
+      // The area switch focuses the stored index at once, so the index goes first
       useGamepadModeStore.getState().setFocusedGameIndex(0);
+      useGamepadModeStore.getState().setNavigationArea('games');
     }
   };
 
