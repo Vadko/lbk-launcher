@@ -44,22 +44,8 @@ export const NewsFeedSection: React.FC = () => {
     fetchNextPage,
   });
 
-  const openInTelegram = async (url: string) => {
-    // Extract the channel name and post ID using a regular expression
-    // Example URL: https://t.me/LBK_news/1234
-    const match = url.match(/t\.me\/([\w_]+)\/(\d+)/);
-
-    if (match) {
-      const [_, domain, postId] = match;
-      const tgLink = `tg://resolve?domain=${domain}&post=${postId}`;
-      const result = await window.electronAPI.openExternal(tgLink);
-
-      if (!result.success) {
-        window.electronAPI.openExternal(url);
-      }
-    } else {
-      window.electronAPI.openExternal(url);
-    }
+  const openInTelegram = (url: string) => {
+    void window.electronAPI.openAppLink('telegram', url);
     trackEvent('Open news', { url });
   };
 

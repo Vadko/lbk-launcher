@@ -1722,6 +1722,9 @@ export const be = {
       'Каб змены набылі моц, трэба перазапусціць Steam. Гэта можна зрабіць пазней — налады ўжо захаваныя.',
     restartAction: 'Перазапусціць Steam',
   },
+  storeSale: {
+    discount: 'Зніжка {{percent}}% у {{store}}',
+  },
   teamSubscribe: {
     subscribedTitle: 'Вы падпісаныя на абнаўленні ад «{{team}}»',
     followTitle_single: 'Сачыць за аўтарам «{{team}}»',
