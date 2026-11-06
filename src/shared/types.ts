@@ -184,6 +184,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  installSteamArtwork: boolean;
   platform: Platform | 'auto';
 }
 

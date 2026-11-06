@@ -64,7 +64,6 @@ import { launchEpicGame } from '../utils/epic-launcher';
 import { launchHeroicGame } from '../utils/heroic-launcher';
 import { createTimer } from '../utils/logger';
 import { getPlatform } from '../utils/platform';
-import { removeAllSteamArtwork } from '../utils/steam-artwork';
 import { syncTranslatedGamesCollection } from '../utils/steam-collections';
 import { launchSteamGame } from '../utils/steam-launcher';
 import { addLbkLauncherToSteamLibrary } from '../utils/steam-self-shortcut';
@@ -680,13 +679,6 @@ export function setupGamesHandlers(): void {
         success: false,
         error: error instanceof Error ? error.message : t('launch.failed'),
       };
-    }
-  });
-
-  // Switching off reverts covers already installed, not just future ones.
-  ipcMain.handle('set-steam-custom-artwork', async (_event, enabled: boolean) => {
-    if (!enabled) {
-      await removeAllSteamArtwork();
     }
   });
 

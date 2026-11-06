@@ -210,17 +210,18 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
               />
               <Button
                 variant="secondary"
+                width="narrow"
                 icon={<Share2Icon size={20} />}
                 onClick={() => setIsModalOpen(true)}
                 data-nav-group="main-links"
                 data-gamepad-action
-                className="px-4!"
                 title={t('gameHero.share')}
               />
             </>
           )}
           <Button
             variant="secondary"
+            width="narrow"
             icon={
               <AppActionIcon
                 phase="idle"
@@ -230,7 +231,6 @@ export const GameHero: React.FC<GameHeroProps> = ({ game }) => {
             }
             onClick={handleToggleFavorite}
             data-gamepad-action
-            className="px-4!"
             title={isFavorite ? t('favoriteToggle.remove') : t('favoriteToggle.add')}
           />
         </div>

@@ -60,6 +60,7 @@ async function finishInstall(i: {
   game: Game;
   gamePath: GamePath;
   onStatus?: (status: InstallationStatus) => void;
+  installSteamArtwork: boolean;
   existingInfo: InstallationInfo | null;
   achievements: PreparedAchievements;
   record: (achievements: AchievementsComponent | null) => InstallationInfo;
@@ -81,7 +82,12 @@ async function finishInstall(i: {
   const delivery = component || previous ? await syncAchievementsToPlugin() : undefined;
   await i.beforeSave?.(info);
   await saveInstallationInfo(i.gamePath.path, info);
-  const steam = await applySteamIntegration(i.game, i.gamePath, i.onStatus);
+  const steam = await applySteamIntegration(
+    i.game,
+    i.gamePath,
+    i.installSteamArtwork,
+    i.onStatus
+  );
   const egl = await applyEglIntegration(i.game, i.gamePath);
   return { ...steam, ...egl, achievementsDelivery: component ? delivery : undefined };
 }
@@ -355,6 +361,7 @@ export async function installTranslation(
         game,
         gamePath,
         onStatus,
+        installSteamArtwork: options.installSteamArtwork,
         existingInfo,
         achievements,
         record,

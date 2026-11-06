@@ -296,8 +296,6 @@ const electronAPI: ElectronAPI = {
   },
   setSteamCefDebugging: (enabled: boolean) =>
     ipcRenderer.invoke('set-steam-cef-debugging', enabled),
-  setSteamCustomArtwork: (enabled: boolean) =>
-    ipcRenderer.invoke('set-steam-custom-artwork', enabled),
   syncSteamTranslatedCollection: () =>
     ipcRenderer.invoke('sync-steam-translated-collection'),
   addLbkLauncherToSteamLibrary: () =>

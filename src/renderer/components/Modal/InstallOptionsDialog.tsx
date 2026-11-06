@@ -21,8 +21,10 @@ import type {
 import { getReadablePlatform } from '../../helpers/getReadablePlatform';
 import { useSteamBridgeStatus } from '../../hooks/useSteamBridgeStatus';
 import { achievementsOptionState, calculateTotalSize } from '../../utils/installOptions';
+import { Button } from '../ui/Button';
 import { SelectDropdown, type SelectOption } from '../ui/SelectDropdown';
 import { AchievementsOption } from './InstallOptions/AchievementsOption';
+import { SteamArtworkOption } from './InstallOptions/SteamArtworkOption';
 import { Modal } from './Modal';
 
 interface InstallOptionsDialogProps {
@@ -34,6 +36,7 @@ interface InstallOptionsDialogProps {
   ) => void;
   game: Game;
   defaultCreateBackup: boolean;
+  defaultSteamArtwork: boolean;
   installationInfo?: InstallationInfo;
   isCustomPath?: boolean; // True if installed via custom path (not Steam folder)
   availablePlatforms?: GamePath[]; // List of platforms with availability info
@@ -45,6 +48,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   onConfirm,
   game,
   defaultCreateBackup,
+  defaultSteamArtwork,
   installationInfo,
   isCustomPath,
   availablePlatforms = [],
@@ -56,6 +60,11 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     isSteamGame &&
     game.achievements_archive_path &&
     !isCustomPath
+  );
+  const hasSteamArtwork = !!(
+    isSteamGame &&
+    game.steam_app_id &&
+    (game.capsule_path || game.banner_path || game.logo_path)
   );
   const hasVoiceArchive = !!game.voice_archive_path;
   // Voice is integrated in main archive if there's no separate voice archive but voice_progress > 0
@@ -90,12 +99,14 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const [installText, setInstallText] = useState(true);
   const [installVoice, setInstallVoice] = useState(true);
   const [installAchievements, setInstallAchievements] = useState(true);
+  const [installSteamArtwork, setInstallSteamArtwork] = useState(defaultSteamArtwork);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | 'auto'>(
     defaultPlatform
   );
 
   const defaultsRef = useRef({
     defaultCreateBackup,
+    defaultSteamArtwork,
     isVoiceInstalled,
     isAchievementsInstalled,
     isReinstall,
@@ -105,6 +116,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   useEffect(() => {
     defaultsRef.current = {
       defaultCreateBackup,
+      defaultSteamArtwork,
       isVoiceInstalled,
       isAchievementsInstalled,
       isReinstall,
@@ -112,6 +124,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     };
   }, [
     defaultCreateBackup,
+    defaultSteamArtwork,
     isVoiceInstalled,
     isAchievementsInstalled,
     isReinstall,
@@ -125,6 +138,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
     const defaults = defaultsRef.current;
     setCreateBackup(defaults.defaultCreateBackup);
     setInstallText(true);
+    setInstallSteamArtwork(defaults.defaultSteamArtwork);
     setInstallVoice(defaults.isVoiceInstalled || !defaults.isReinstall);
     setInstallAchievements(defaults.isAchievementsInstalled || !defaults.isReinstall);
     setSelectedPlatform(defaults.defaultPlatform);
@@ -158,6 +172,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
         installText,
         installVoice: hasVoiceArchive ? installVoice : false,
         installAchievements: achievements.install,
+        installSteamArtwork: hasSteamArtwork && installSteamArtwork,
         platform: selectedPlatform,
       },
       {
@@ -508,6 +523,13 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
           />
         )}
 
+        {hasSteamArtwork && (
+          <SteamArtworkOption
+            checked={installSteamArtwork}
+            onToggle={setInstallSteamArtwork}
+          />
+        )}
+
         {/* Steam launch options info */}
         {willApplyLaunchOptions && (
           <div className="bg-glass rounded-xl p-3 border border-border flex items-start gap-2 text-sm">
@@ -567,27 +589,25 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
 
         {/* Buttons */}
         <div className="flex gap-3">
-          <button
+          <Button
+            variant="secondary_simple"
             onClick={onClose}
             data-gamepad-cancel
             data-gamepad-modal-item
-            className="flex-1 px-6 py-3 rounded-xl bg-glass border border-border text-text-main font-semibold hover:bg-glass-hover transition-colors"
+            className="flex-1"
           >
             {t('common.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleConfirm}
+            variant={!hasChanges ? 'secondary' : 'gradient'}
             disabled={!hasChanges}
             data-gamepad-confirm
             data-gamepad-modal-item
-            className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-opacity ${
-              !hasChanges
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-linear-to-r/srgb from-color-accent to-color-main text-text-dark hover:opacity-90'
-            }`}
+            className="flex-1"
           >
             {t('installOptions.confirm')}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

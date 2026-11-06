@@ -23,7 +23,6 @@ import { writeFileAtomic } from '@/main/utils/atomic-write';
 import { sha256, sha256FileSync } from '@/main/utils/hash';
 import { getSteamBridge, type SteamBridge } from '@/main/utils/steam-bridge';
 import { jsLiteral } from '@/main/utils/steam-cef';
-import { readRendererSetting } from '@/main/utils/store-storage';
 import { getMainWindow } from '@/main/window';
 import { errnoCode } from '@/shared/errors';
 
@@ -76,11 +75,6 @@ interface ArtworkRecordEntry {
 interface ArtworkRecord {
   written: ArtworkRecordEntry[];
   backups: Record<string, string>;
-}
-
-/** User opt-out from the Settings modal. */
-function isSteamArtworkEnabledInSettings(): boolean {
-  return readRendererSetting('steamCustomArtworkEnabled', true);
 }
 
 // ---------------------------------------------------------------------------
@@ -394,10 +388,6 @@ export async function applyArtworkSlot(
 export async function applySteamArtwork(
   params: SteamArtworkParams
 ): Promise<SteamArtworkResult> {
-  if (!isSteamArtworkEnabledInSettings()) {
-    return { mode: 'noop', installed: [], reason: 'Disabled in settings' };
-  }
-
   const sources: Array<[ArtworkSlot, string | null]> = [
     [HEADER_SLOT, params.capsulePath],
     [HERO_SLOT, params.bannerPath],
@@ -563,28 +553,4 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
   deleteRecord(appId);
   console.log(`[SteamArtwork] App ${appId} artwork reverted`);
   return true;
-}
-
-/** Revert every app we've touched — used when the setting is switched off. */
-export async function removeAllSteamArtwork(): Promise<number> {
-  let entries: string[];
-  try {
-    entries = fs.readdirSync(getArtworkStateDir());
-  } catch {
-    return 0; // Nothing was ever installed.
-  }
-
-  let reverted = 0;
-  for (const fileName of entries) {
-    const match = fileName.match(/^(\d+)\.json$/);
-    if (!match) {
-      continue;
-    }
-    if (await removeSteamArtwork(Number(match[1]))) {
-      reverted++;
-    }
-  }
-
-  console.log(`[SteamArtwork] Reverted artwork for ${reverted} app(s)`);
-  return reverted;
 }

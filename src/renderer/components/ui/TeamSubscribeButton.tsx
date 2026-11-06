@@ -7,7 +7,7 @@ import { Button } from './Button';
 
 interface TeamSubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   teamName: string;
-  variant?: 'primary' | 'secondary' | 'glass' | 'amber';
+  variant?: 'primary' | 'secondary' | 'amber';
   className?: string;
   showTeamName?: boolean;
   multipleAuthors?: boolean;
@@ -15,7 +15,7 @@ interface TeamSubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButton
 
 export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
   teamName,
-  variant = 'glass',
+  variant = 'secondary',
   className = '',
   showTeamName = false,
   multipleAuthors,

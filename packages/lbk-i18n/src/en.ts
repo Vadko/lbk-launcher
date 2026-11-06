@@ -658,6 +658,9 @@ export const en = {
     backupDescription:
       'Save the original game files. Recommended so you can restore them later.',
     backupSize: 'Estimated size: {{size}}',
+    steamArtworkTitle: 'Ukrainian artwork in Steam',
+    steamArtworkDescription:
+      'Replaces the game’s banner, logo and horizontal artwork in the Steam library. Uncheck it to bring this game’s original artwork back.',
     textTitle: 'Text localization',
     installed: 'installed',
     textDescription: 'Ukrainian translation of in-game text.',
@@ -1199,7 +1202,7 @@ export const en = {
     steamArtwork: {
       title: 'Ukrainian artwork in Steam',
       description:
-        'Replace the game’s banner, logo and horizontal artwork in the Steam library with Ukrainian versions from the patch. Vertical artwork stays unchanged. Original artwork is restored when you uninstall the patch or disable this setting',
+        'Offer by default to replace the game’s banner, logo and horizontal artwork in the Steam library with Ukrainian versions from the patch. You can change this per game in the install options. Vertical artwork stays unchanged. Original artwork is restored when you uninstall the patch',
     },
     adultGames: {
       title: 'Show games with pornographic content',
@@ -1308,8 +1311,8 @@ export const en = {
       promoPlaceholder: 'Select a mode',
     },
     logs: {
-      title: 'Open logs folder',
-      description: 'View saved log files',
+      title: 'Logs',
+      description: 'View or send log files',
       send: 'Send file',
     },
     unlock: {
@@ -1325,6 +1328,7 @@ export const en = {
         'Special thanks to the translators who have helped test the launcher from the start and continue to shape what it is today:',
     },
     bridgeCard: {
+      title: 'Steam integration',
       steamElevated:
         'Steam is running as administrator, so the launcher cannot restart it.',
       restart: 'Restart Steam',

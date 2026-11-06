@@ -1,6 +1,6 @@
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { queueSteamAction } from '@/main/steam-pending-actions';
-import { applySteamArtwork } from '@/main/utils/steam-artwork';
+import { applySteamArtwork, removeSteamArtwork } from '@/main/utils/steam-artwork';
 import {
   launchOptionsParamsFor,
   writeSteamLaunchOptions,
@@ -30,6 +30,7 @@ interface SteamIntegrationResult {
 export async function applySteamIntegration(
   game: Game,
   target: SteamIntegrationTarget,
+  installSteamArtwork: boolean,
   onStatus?: (status: InstallationStatus) => void
 ): Promise<SteamIntegrationResult> {
   if (target.platform !== 'steam' || !game.steam_app_id) {
@@ -79,7 +80,13 @@ export async function applySteamIntegration(
   }
 
   // Never fail an install over artwork.
-  if (game.capsule_path || game.banner_path || game.logo_path) {
+  if (!installSteamArtwork) {
+    try {
+      await removeSteamArtwork(game.steam_app_id);
+    } catch (artworkError) {
+      console.warn('[Installer] Steam artwork revert failed:', artworkError);
+    }
+  } else if (game.capsule_path || game.banner_path || game.logo_path) {
     onStatus?.({
       message: t('installSteamIntegration.artwork'),
       phase: 'install',

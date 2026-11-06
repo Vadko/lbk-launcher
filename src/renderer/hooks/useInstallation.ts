@@ -85,7 +85,7 @@ export function useInstallation({
 
   const { showModal } = useModalStore();
   const { showConfirm } = useConfirmStore();
-  const { createBackupBeforeInstall } = useSettingsStore();
+  const { createBackupBeforeInstall, steamCustomArtworkEnabled } = useSettingsStore();
 
   const [showInstallOptions, setShowInstallOptions] = useState(false);
   const [pendingInstallPath, setPendingInstallPath] = useState<string | undefined>();
@@ -161,6 +161,7 @@ export function useInstallation({
             installText: true,
             installVoice: false,
             installAchievements: false,
+            installSteamArtwork: steamCustomArtworkEnabled,
             platform,
           };
 
@@ -383,6 +384,7 @@ export function useInstallation({
       selectedGame,
       isUpdateAvailable,
       createBackupBeforeInstall,
+      steamCustomArtworkEnabled,
       pendingInstallOptions,
       setInstallationProgress,
       clearInstallationProgress,
