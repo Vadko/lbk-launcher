@@ -14,8 +14,6 @@ import type {
   InstallResult,
   Platform,
 } from '../../shared/types';
-import { queryClient } from '../queries/queryClient';
-import { steamArtworkAppliedQuery } from '../queries/steamArtworkAppliedQuery';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -72,6 +70,7 @@ interface UseInstallationResult {
   closeInstallOptions: () => void;
   pendingInstallPath: string | undefined;
   availablePlatforms: GamePath[];
+  steamArtworkApplied: boolean;
 }
 
 export function useInstallation({
@@ -100,6 +99,7 @@ export function useInstallation({
   >();
   const protonSelectionRef = useRef<string | undefined>(undefined);
   const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
+  const [steamArtworkApplied, setSteamArtworkApplied] = useState(false);
   const {
     phase: installPhase,
     isPending: isInstallPrecheckPending,
@@ -627,13 +627,13 @@ export function useInstallation({
         }
         await runInstallPrecheck(
           async () => {
-            const [platforms] = await Promise.all([
+            const appId = selectedGame.steam_app_id;
+            const [platforms, artworkApplied] = await Promise.all([
               window.electronAPI.detectGamePlatforms(selectedGame),
-              queryClient.prefetchQuery(
-                steamArtworkAppliedQuery(selectedGame.steam_app_id)
-              ),
+              appId ? window.electronAPI.isSteamArtworkApplied(appId) : false,
             ]);
             setAvailablePlatforms(platforms);
+            setSteamArtworkApplied(artworkApplied);
           },
           { holdPending: true }
         );
@@ -1038,5 +1038,6 @@ export function useInstallation({
     closeInstallOptions,
     pendingInstallPath,
     availablePlatforms,
+    steamArtworkApplied,
   };
 }

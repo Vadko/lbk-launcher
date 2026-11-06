@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   ArchiveIcon,
   CheckIcon,
@@ -21,7 +20,6 @@ import type {
 } from '../../../shared/types';
 import { getReadablePlatform } from '../../helpers/getReadablePlatform';
 import { useSteamBridgeStatus } from '../../hooks/useSteamBridgeStatus';
-import { steamArtworkAppliedQuery } from '../../queries/steamArtworkAppliedQuery';
 import {
   achievementsOptionState,
   calculateTotalSize,
@@ -45,6 +43,8 @@ interface InstallOptionsDialogProps {
   isCustomPath?: boolean; // True if installed via custom path (not Steam folder)
   installsIntoChosenFolder?: boolean;
   availablePlatforms?: GamePath[]; // List of platforms with availability info
+  // Read by the install pre-check right before the dialog opens.
+  steamArtworkApplied: boolean;
 }
 
 export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
@@ -58,6 +58,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   isCustomPath,
   installsIntoChosenFolder = false,
   availablePlatforms = [],
+  steamArtworkApplied,
 }) => {
   // CheckIcon what's available and what's already installed
   const isSteamGame = game.platforms?.includes('steam');
@@ -75,14 +76,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const isAchievementsInstalled =
     installationInfo?.components?.achievements?.installed ?? false;
   const isReinstall = !!installationInfo;
-  // Prefetched by the install pre-check, so it is current when the dialog opens.
-  const { data: artworkApplied } = useQuery({
-    ...steamArtworkAppliedQuery(game.steam_app_id),
-    enabled: false,
-  });
-  const initialSteamArtwork = isReinstall
-    ? (artworkApplied ?? defaultSteamArtwork)
-    : defaultSteamArtwork;
+  const initialSteamArtwork = isReinstall ? steamArtworkApplied : defaultSteamArtwork;
 
   // Filter platforms to only show those that the game supports
   const supportedPlatforms = useMemo(() => {

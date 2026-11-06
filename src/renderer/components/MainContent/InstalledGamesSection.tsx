@@ -5,11 +5,8 @@ import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useIsTranslationInstalled } from '@/renderer/hooks/useInstalledTranslations';
-import {
-  useInstalledGamePathsCount,
-  useInstalledGamesForHome,
-} from '@/renderer/queries/useHomePageGames';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
+import { useHomeInstalledGamesStore } from '@/renderer/store/useHomeInstalledGamesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { getGameGroupKey } from '@/shared/game-filters';
@@ -19,6 +16,8 @@ import { WarningFillIcon } from '../Icons/WarningFillIcon';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Button } from '../ui/Button';
 import { Loader } from '../ui/Loader';
+
+const NO_GAMES: Game[] = [];
 
 interface InstalledGamesSectionProps {
   title?: string;
@@ -31,11 +30,6 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  const { hideAiTranslations } = useSettingsStore(
-    useShallow((state) => ({
-      hideAiTranslations: state.hideAiTranslations,
-    }))
-  );
   const { installedTranslations } = useStore(
     useShallow((state) => ({
       setSelectedGame: state.setSelectedGame,
@@ -43,13 +37,12 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }))
   );
 
-  // Load all installed games (from system) with caching
-  const { data: allInstalledGames = [], isLoading } = useInstalledGamesForHome(
-    hideAiTranslations,
-    'newest'
+  const installedGames = useHomeInstalledGamesStore((state) => state.games);
+  const installedPathsCount = useHomeInstalledGamesStore(
+    (state) => state.installedPathsCount
   );
-
-  const { data: installedPathsCount = 0 } = useInstalledGamePathsCount();
+  const allInstalledGames = installedGames ?? NO_GAMES;
+  const isLoading = installedGames === null;
   const isInstalled = useIsTranslationInstalled();
 
   // One card per game, not per translation - two authors' translations are still one installed game

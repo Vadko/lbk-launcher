@@ -333,6 +333,7 @@ export const GamePage: React.FC = () => {
     closeInstallOptions,
     pendingInstallPath,
     availablePlatforms,
+    steamArtworkApplied,
   } = useInstallation({
     selectedGame,
     isUpdateAvailable: !!isUpdateAvailable,
@@ -491,6 +492,7 @@ export const GamePage: React.FC = () => {
           }
           installsIntoChosenFolder={!!pendingInstallPath}
           availablePlatforms={availablePlatforms}
+          steamArtworkApplied={steamArtworkApplied}
         />
       )}
 
