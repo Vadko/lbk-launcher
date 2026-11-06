@@ -111,7 +111,9 @@ export function WorkshopInstallButton({
         variant="secondary"
         icon={<ExternalLinkIcon size={20} />}
         width="narrow"
-        onClick={() => void openWorkshopPage(workshopId)}
+        onClick={() =>
+          void window.electronAPI.openAppLink('steam', workshopPageUrl(workshopId))
+        }
         title={t('workshopButton.openPageTitle')}
         data-gamepad-action
       >

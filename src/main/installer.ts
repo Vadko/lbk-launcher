@@ -33,7 +33,10 @@ import { handleInstallationError } from './installer/error-handler';
 import { ManualSelectionError, PausedSignal } from './installer/errors';
 import { isExecutableInstaller } from './installer/executable';
 import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/files';
-import { withAchievementsComponent } from './installer/installation-info';
+import {
+  keepInstalledText,
+  withAchievementsComponent,
+} from './installer/installation-info';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
 import { resignMacBundles } from './installer/mac-codesign';
 import {
@@ -539,26 +542,31 @@ export async function installTranslation(
     await cleanupDownloadDir(downloadDir);
 
     // 9. Save installation info
-    const result = await finish((component) => ({
-      gameId: game.id,
-      version: game.version || '1.0.0',
-      installedAt: new Date().toISOString(),
-      gamePath: gamePath.path,
-      hasBackup: createBackup,
-      isCustomPath: !!customGamePath,
-      installedFiles: prefixPaths(installedFiles),
-      installedPlatform: gamePath.platform,
-      // Signing failed means the bundle is left unsigned and the game will be
-      // killed on launch — not a success, even though every file is in place.
-      ...(macSigningFailed ? { hasInstallError: true } : {}),
-      components: {
-        text: { installed: installText, files: prefixPaths(textFiles) },
-        ...(installVoice && voiceFiles.length > 0
-          ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
-          : {}),
-        ...(component ? { achievements: component } : {}),
-      },
-    }));
+    const result = await finish((component) => {
+      const record: InstallationInfo = {
+        gameId: game.id,
+        version: game.version || '1.0.0',
+        installedAt: new Date().toISOString(),
+        gamePath: gamePath.path,
+        hasBackup: createBackup && installedFiles.length > 0,
+        isCustomPath: !!customGamePath,
+        installedFiles: prefixPaths(installedFiles),
+        installedPlatform: gamePath.platform,
+        // Signing failed means the bundle is left unsigned and the game will be
+        // killed on launch — not a success, even though every file is in place.
+        ...(macSigningFailed ? { hasInstallError: true } : {}),
+        components: {
+          text: { installed: installText, files: prefixPaths(textFiles) },
+          ...(installVoice && voiceFiles.length > 0
+            ? { voice: { installed: true, files: prefixPaths(voiceFiles) } }
+            : {}),
+          ...(component ? { achievements: component } : {}),
+        },
+      };
+      return !installText && existingInfo?.gameId === game.id
+        ? keepInstalledText(record, existingInfo)
+        : record;
+    });
     console.log(`[Installer] Translation for ${game.id} installed successfully`);
     return result;
   } catch (error) {

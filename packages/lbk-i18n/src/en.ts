@@ -597,6 +597,10 @@ export const en = {
     removeFailed: 'Could not remove components',
     removedTitle: 'Components removed',
     removedMessage: 'The selected components have been removed.',
+    artworkTitle: 'Artwork updated',
+    artworkMessage_on: 'The game’s Ukrainian artwork is now in your Steam library.',
+    artworkMessage_off: 'The game’s original artwork is back in your Steam library.',
+    artworkAfterSteamStart: 'You will see the change the next time Steam starts.',
   },
   installConflict: {
     title: 'Another localization is already installed',
@@ -711,6 +715,10 @@ export const en = {
   installSteamIntegration: {
     launchOptions: 'Setting Steam launch options...',
     artwork: 'Installing Ukrainian Steam artwork...',
+    artworkRevert: 'Restoring the original Steam artwork...',
+    artworkNotSteam: 'Steam artwork can only be changed for a game installed from Steam.',
+    artworkFailed:
+      'Could not change the artwork in your Steam library. Make sure you are signed in to Steam and try again.',
   },
   installSteps: {
     licenseOnlyManual:
@@ -1313,6 +1321,7 @@ export const en = {
     logs: {
       title: 'Logs',
       description: 'View or send log files',
+      open: 'Open folder',
       send: 'Send file',
     },
     unlock: {

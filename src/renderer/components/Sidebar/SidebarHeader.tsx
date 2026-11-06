@@ -1,4 +1,3 @@
-import logo from '@resources/logo.svg';
 import {
   BookOpenTextIcon,
   HomeIcon,

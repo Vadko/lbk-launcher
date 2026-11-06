@@ -628,6 +628,10 @@ export const uk = {
     removeFailed: 'Не вдалося видалити компоненти',
     removedTitle: 'Компоненти видалено',
     removedMessage: 'Вибрані компоненти видалено.',
+    artworkTitle: 'Обкладинки оновлено',
+    artworkMessage_on: 'Українські обкладинки гри встановлено в бібліотеці Steam.',
+    artworkMessage_off: 'Обкладинки гри в бібліотеці Steam повернуто до оригінальних.',
+    artworkAfterSteamStart: 'Зміни буде видно після наступного запуску Steam.',
   },
   installConflict: {
     title: 'Інша локалізація вже встановлена',
@@ -742,6 +746,11 @@ export const uk = {
   installSteamIntegration: {
     launchOptions: 'Налаштування параметрів запуску Steam...',
     artwork: 'Встановлення українських обкладинок у Steam…',
+    artworkRevert: 'Повернення оригінальних обкладинок у Steam…',
+    artworkNotSteam:
+      'Обкладинки Steam можна змінити лише для гри, встановленої зі Steam.',
+    artworkFailed:
+      'Не вдалося змінити обкладинки в бібліотеці Steam. Перевірте, що ви ввійшли в Steam, і спробуйте ще раз.',
   },
   installSteps: {
     licenseOnlyManual:
@@ -1658,6 +1667,7 @@ export const uk = {
     logs: {
       title: 'Журнали/Логи',
       description: 'Переглянути або відправити файли журналів',
+      open: 'Відкрити теку',
       send: 'Надіслати файл',
     },
     unlock: {

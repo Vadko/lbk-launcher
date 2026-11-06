@@ -489,6 +489,7 @@ export const GamePage: React.FC = () => {
             installationInfo?.isCustomPath ||
             !isGameInstalledOnSystem
           }
+          installsIntoChosenFolder={!!pendingInstallPath}
           availablePlatforms={availablePlatforms}
         />
       )}

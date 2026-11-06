@@ -598,6 +598,10 @@ export const be = {
     removeFailed: 'Не ўдалося выдаліць кампаненты',
     removedTitle: 'Кампаненты выдаленыя',
     removedMessage: 'Выбраныя кампаненты выдаленыя.',
+    artworkTitle: 'Вокладкі абноўленыя',
+    artworkMessage_on: 'Украінскія вокладкі гульні ўсталяваныя ў бібліятэцы Steam.',
+    artworkMessage_off: 'Вокладкі гульні ў бібліятэцы Steam вернутыя да арыгінальных.',
+    artworkAfterSteamStart: 'Змены будуць бачныя пасля наступнага запуску Steam.',
   },
   installConflict: {
     title: 'Іншая лакалізацыя ўжо ўсталяваная',
@@ -712,6 +716,11 @@ export const be = {
   installSteamIntegration: {
     launchOptions: 'Наладжванне параметраў запуску Steam...',
     artwork: 'Усталяванне ўкраінскіх вокладак у Steam…',
+    artworkRevert: 'Вяртанне арыгінальных вокладак у Steam…',
+    artworkNotSteam:
+      'Вокладкі Steam можна змяніць толькі для гульні, усталяванай са Steam.',
+    artworkFailed:
+      'Не ўдалося змяніць вокладкі ў бібліятэцы Steam. Праверце, што вы ўвайшлі ў Steam, і паспрабуйце яшчэ раз.',
   },
   installSteps: {
     licenseOnlyManual:
@@ -1612,6 +1621,7 @@ export const be = {
     logs: {
       title: 'Журналы/Логі',
       description: 'Паглядзець або адправіць файлы журналаў',
+      open: 'Адкрыць папку',
       send: 'Адправіць файл',
     },
     unlock: {

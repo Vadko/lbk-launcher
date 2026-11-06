@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { InstallationInfo } from '@/shared/types';
 import {
+  keepInstalledText,
   listInstallationRecords,
   rewriteInstallationRecord,
   withAchievementsComponent,
@@ -41,6 +42,86 @@ describe('withAchievementsComponent', () => {
   it('drops the achievements entry when none are kept', () => {
     expect(withAchievementsComponent(base, null).components).toEqual({
       text: { installed: true, files: [] },
+    });
+  });
+});
+
+describe('keepInstalledText', () => {
+  const installed: InstallationInfo = {
+    gameId: 'g',
+    version: '1.0.0',
+    installedAt: '2026-01-01T00:00:00.000Z',
+    gamePath: '/games/g',
+    hasBackup: true,
+    installedFiles: ['data/text.pak', 'data/voice.pak'],
+    installedPlatform: 'steam',
+    components: {
+      text: { installed: true, files: ['data/text.pak'] },
+      voice: { installed: true, files: ['data/voice.pak'] },
+      achievements: { installed: true, files: [], appIds: [1] },
+    },
+  };
+  const withoutText = (patch: Partial<InstallationInfo>): InstallationInfo => ({
+    gameId: 'g',
+    version: '2.0.0',
+    installedAt: '2026-02-01T00:00:00.000Z',
+    gamePath: '/games/g',
+    hasBackup: false,
+    installedFiles: [],
+    installedPlatform: 'steam',
+    components: { text: { installed: false, files: [] } },
+    ...patch,
+  });
+
+  it.each([
+    [
+      'achievements only',
+      withoutText({
+        components: {
+          text: { installed: false, files: [] },
+          achievements: { installed: true, files: [], appIds: [2] },
+        },
+      }),
+      {
+        installedFiles: ['data/text.pak', 'data/voice.pak'],
+        components: {
+          text: { installed: true, files: ['data/text.pak'] },
+          voice: { installed: true, files: ['data/voice.pak'] },
+          achievements: { installed: true, files: [], appIds: [2] },
+        },
+      },
+    ],
+    [
+      'voice re-copied',
+      withoutText({
+        hasBackup: true,
+        installedFiles: ['data/voice.pak', 'data/voice2.pak'],
+        components: {
+          text: { installed: false, files: [] },
+          voice: { installed: true, files: ['data/voice.pak', 'data/voice2.pak'] },
+        },
+      }),
+      {
+        installedFiles: ['data/text.pak', 'data/voice.pak', 'data/voice2.pak'],
+        components: {
+          text: { installed: true, files: ['data/text.pak'] },
+          voice: { installed: true, files: ['data/voice.pak', 'data/voice2.pak'] },
+        },
+      },
+    ],
+  ])('%s keeps the installed text', (_, record, expected) => {
+    expect(keepInstalledText(record, installed)).toMatchObject({
+      version: '1.0.0',
+      installedAt: '2026-02-01T00:00:00.000Z',
+      hasBackup: true,
+      ...expected,
+    });
+  });
+
+  it('drops achievements the install no longer keeps', () => {
+    expect(keepInstalledText(withoutText({}), installed).components).toEqual({
+      text: { installed: true, files: ['data/text.pak'] },
+      voice: { installed: true, files: ['data/voice.pak'] },
     });
   });
 });

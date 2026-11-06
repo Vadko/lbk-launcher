@@ -429,8 +429,7 @@ export const SettingsModal: React.FC = () => {
     setIsPrivacyModalOpen(false);
   }, []);
 
-  const handleOpenSendLogsModal = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent button click from triggering parent button
+  const handleOpenSendLogsModal = useCallback(() => {
     setIsSendLogsModalOpen(true);
   }, []);
 
@@ -475,7 +474,7 @@ export const SettingsModal: React.FC = () => {
                   phase={logsFolderPhase}
                   icon={FolderOpen}
                   size={20}
-                  className="text-black"
+                  className="text-text-dark"
                   inheritColor
                 />
               </div>
@@ -492,8 +491,9 @@ export const SettingsModal: React.FC = () => {
               variant="secondary"
               onClick={handleOpenLogsFolder}
               aria-busy={isOpeningLogsFolder}
+              className="aria-busy:opacity-60 aria-busy:cursor-wait"
             >
-              Відкрити теку
+              {t('settings.logs.open')}
             </Button>
             <Button
               onClick={handleOpenSendLogsModal}
@@ -868,7 +868,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center shrink-0">
-              <SparklesIcon size={20} className="text-black" />
+              <SparklesIcon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
@@ -887,7 +887,7 @@ export const SettingsModal: React.FC = () => {
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
-                <FileTextIcon size={20} className="text-black" />
+                <FileTextIcon size={20} className="text-text-dark" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">

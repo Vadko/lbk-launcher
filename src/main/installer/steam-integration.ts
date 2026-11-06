@@ -1,11 +1,18 @@
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
+import { checkInstallation } from '@/main/installer/cache';
 import { queueSteamAction } from '@/main/steam-pending-actions';
-import { applySteamArtwork, removeSteamArtwork } from '@/main/utils/steam-artwork';
+import {
+  type ApplyMode,
+  applySteamArtwork,
+  type RevertMode,
+  removeSteamArtwork,
+} from '@/main/utils/steam-artwork';
 import {
   launchOptionsParamsFor,
   writeSteamLaunchOptions,
 } from '@/main/utils/steam-launch-options';
 import { t } from '@/shared/i18n/i18n';
+import type { SteamArtworkChangeResult } from '@/shared/installer-api-types';
 import type { Game, InstallationStatus, Platform } from '@/shared/types';
 
 interface SteamIntegrationTarget {
@@ -79,33 +86,82 @@ export async function applySteamIntegration(
     }
   }
 
-  // Never fail an install over artwork.
-  if (!installSteamArtwork) {
-    try {
-      await removeSteamArtwork(game.steam_app_id);
-    } catch (artworkError) {
-      console.warn('[Installer] Steam artwork revert failed:', artworkError);
+  await applySteamArtworkChoice(game, game.steam_app_id, installSteamArtwork, onStatus);
+
+  return { launchOptionsQueued, launchOptionsError };
+}
+
+type ArtworkOutcome = 'live' | 'after-steam-start' | 'failed';
+
+const APPLY_OUTCOME: Record<ApplyMode, ArtworkOutcome> = {
+  cef: 'live',
+  file: 'after-steam-start',
+  noop: 'failed',
+};
+
+const REVERT_OUTCOME: Record<RevertMode, ArtworkOutcome> = {
+  none: 'live',
+  cef: 'live',
+  file: 'after-steam-start',
+  failed: 'failed',
+};
+
+// Never throws: an install is never turned into a failure over artwork.
+async function applySteamArtworkChoice(
+  game: Game,
+  appId: number,
+  enabled: boolean,
+  onStatus?: (status: InstallationStatus) => void
+): Promise<ArtworkOutcome> {
+  try {
+    if (!enabled) {
+      return REVERT_OUTCOME[await removeSteamArtwork(appId)];
     }
-  } else if (game.capsule_path || game.banner_path || game.logo_path) {
+    if (!game.capsule_path && !game.banner_path && !game.logo_path) {
+      return 'failed';
+    }
     onStatus?.({
       message: t('installSteamIntegration.artwork'),
       phase: 'install',
     });
-    try {
-      const artwork = await applySteamArtwork({
-        appId: game.steam_app_id,
-        capsulePath: game.capsule_path,
-        bannerPath: game.banner_path,
-        logoPath: game.logo_path,
-        updatedAt: game.updated_at,
-      });
-      console.log(
-        `[Installer] Steam artwork mode=${artwork.mode}${artwork.installed.length ? ` — ${artwork.installed.join(', ')}` : ''}${artwork.reason ? ` — ${artwork.reason}` : ''}`
-      );
-    } catch (artworkError) {
-      console.warn('[Installer] Steam artwork failed:', artworkError);
-    }
+    const artwork = await applySteamArtwork({
+      appId,
+      capsulePath: game.capsule_path,
+      bannerPath: game.banner_path,
+      logoPath: game.logo_path,
+      updatedAt: game.updated_at,
+    });
+    console.log(
+      `[Installer] Steam artwork mode=${artwork.mode}${artwork.installed.length ? ` — ${artwork.installed.join(', ')}` : ''}${artwork.reason ? ` — ${artwork.reason}` : ''}`
+    );
+    return APPLY_OUTCOME[artwork.mode];
+  } catch (artworkError) {
+    console.warn('[Installer] Steam artwork failed:', artworkError);
+    return 'failed';
   }
+}
 
-  return { launchOptionsQueued, launchOptionsError };
+export async function setInstalledSteamArtwork(
+  game: Game,
+  enabled: boolean,
+  onStatus?: (status: InstallationStatus) => void
+): Promise<SteamArtworkChangeResult> {
+  const info = await checkInstallation(game);
+  if (!info) {
+    return { success: false, error: t('uninstall.notInstalled') };
+  }
+  // Uninstall reverts artwork only for a Steam record, so none is applied for another.
+  if (!game.steam_app_id || info.installedPlatform !== 'steam') {
+    return { success: false, error: t('installSteamIntegration.artworkNotSteam') };
+  }
+  const outcome = await applySteamArtworkChoice(
+    game,
+    game.steam_app_id,
+    enabled,
+    onStatus
+  );
+  if (outcome === 'failed') {
+    return { success: false, error: t('installSteamIntegration.artworkFailed') };
+  }
+  return { success: true, visibleAfterSteamStart: outcome === 'after-steam-start' };
 }

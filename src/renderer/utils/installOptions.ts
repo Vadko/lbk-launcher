@@ -8,6 +8,12 @@ const READY_STATES: ReadonlySet<AchievementsBadge['state']> = new Set([
   'after-restart',
 ]);
 
+export interface InstallComponentChanges {
+  removeVoice: boolean;
+  removeAchievements: boolean;
+  updateSteamArtwork: boolean;
+}
+
 interface AchievementsOptionInput {
   hasArchive: boolean;
   installed: boolean;
