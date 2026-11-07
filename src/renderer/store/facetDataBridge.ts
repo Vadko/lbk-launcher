@@ -1,17 +1,13 @@
 import { F } from '@mobily/ts-belt';
 import type { FacetRow } from '../../shared/types';
 import { allInstalledTranslationIds } from '../hooks/useInstalledTranslations';
+import { isCatalogReady } from './isCatalogReady';
 import { useFacetDataStore } from './useFacetDataStore';
 import { useStore } from './useStore';
 import { subscribeToWorkshopInstalledChanges } from './useWorkshopInstallsStore';
 
 // A sync or a library rescan sends one event per game
 const RELOAD_DEBOUNCE = 300;
-
-const isCatalogReady = () => {
-  const { syncStatus } = useStore.getState();
-  return syncStatus === 'ready' || syncStatus === 'error';
-};
 
 const idsKey = (rows: FacetRow[]) => rows.map((row) => row.id).join('|');
 

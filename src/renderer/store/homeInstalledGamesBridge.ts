@@ -1,16 +1,12 @@
 import { F } from '@mobily/ts-belt';
 import pLimit from 'p-limit';
+import { isCatalogReady } from './isCatalogReady';
 import { useHomeInstalledGamesStore } from './useHomeInstalledGamesStore';
 import { useSettingsStore } from './useSettingsStore';
 import { useStore } from './useStore';
 
 // A sync or a library rescan sends one event per game
 const RELOAD_DEBOUNCE = 300;
-
-const isCatalogReady = () => {
-  const { syncStatus } = useStore.getState();
-  return syncStatus === 'ready' || syncStatus === 'error';
-};
 
 const readInstalledGames = async () => {
   const api = window.electronAPI;
