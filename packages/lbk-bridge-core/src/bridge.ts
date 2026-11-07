@@ -56,7 +56,7 @@ interface BridgeState extends BridgeHandle {
   connectedAt: number | null;
   lastError: string | null;
   achievements: () => AchievementsHookReport;
-  dispose: () => void;
+  dispose: (successor?: string) => void;
 }
 
 type ObservedState = Pick<BridgeState, 'status' | 'idle' | 'connectedAt' | 'lastError'>;
@@ -157,7 +157,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     connectedAt: null,
     lastError: null,
     achievements: () => achievements.report(),
-    dispose: () => dispose(),
+    dispose: (successor) => dispose(successor),
   };
 
   const update = (patch: Partial<ObservedState>): void => {
@@ -303,12 +303,13 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     }
   };
 
-  function dispose(): void {
+  // Handed over to another host's copy, it stays idle, so its status line can say who runs the bridge.
+  function dispose(successor?: string): void {
     if (disposed()) {
       return;
     }
     life.abort();
-    update({ status: 'disposed' });
+    update({ status: 'disposed', idle: successor !== undefined && successor !== host });
     const ws = socket;
     socket = null;
     if (ws) {
@@ -336,7 +337,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
         return;
       }
       try {
-        prev.dispose?.();
+        prev.dispose?.(host);
       } catch (e) {
         console.warn('[LBK] previous bridge dispose', e);
       }
@@ -350,7 +351,7 @@ export function createBridge({ host, dataBase, env }: BridgeOptions): Bridge {
     state,
     events,
     start,
-    dispose,
+    dispose: () => dispose(),
     achievementStrings: achievements.strings,
     achievementApps: achievements.apps,
   };

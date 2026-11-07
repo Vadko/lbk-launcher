@@ -83,7 +83,7 @@ describe('introMode', () => {
 describe('restartBlockedNote', () => {
   it('explains an elevated Steam or Game Mode, nothing else', () => {
     expect(restartBlockedNote(steamBridgeStatus({ steamElevated: true }))).toBe(
-      t('steamRestartFailure.accessDenied.plain')
+      t('steamRestartFailure.access-denied.plain')
     );
     expect(restartBlockedNote(steamBridgeStatus({ gamescope: true }))).toBe(
       t('steamRestartFailure.gamescope.plain')

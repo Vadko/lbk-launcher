@@ -88,6 +88,16 @@ function launchWithProton(
 }
 
 // EGL registers no URL handler on Linux, but its AppImage takes the link as an argument, cold or running
+async function launchThroughEgl(gameDir: string): Promise<boolean | undefined> {
+  const link = getEglDeepLink(gameDir);
+  const appImage = link ? await findEglAppImage() : undefined;
+  if (!link || !appImage) {
+    return undefined;
+  }
+  console.log(`[EglLauncher] Launching ${link} through ${appImage}`);
+  return spawned(spawnOnHost(appImage, [link]), appImage);
+}
+
 export async function launchEglGame(
   gameDir: string,
   catalogOptions: string | null
@@ -96,16 +106,26 @@ export async function launchEglGame(
   const catalogEnv = catalogOptions
     ? (parseCatalogLaunchOptions(catalogOptions, gameDir)?.env ?? {})
     : {};
-  const link = Object.keys(catalogEnv).length > 0 ? null : getEglDeepLink(gameDir);
-  const appImage = link ? await findEglAppImage() : undefined;
-  if (link && appImage) {
-    console.log(`[EglLauncher] Launching ${link} through ${appImage}`);
-    return spawned(spawnOnHost(appImage, [link]), appImage);
+  const needsEnv = Object.keys(catalogEnv).length > 0;
+  const linked = needsEnv ? undefined : await launchThroughEgl(gameDir);
+  if (linked !== undefined) {
+    return linked;
   }
   const target = getEglLaunchTarget(gameDir);
-  if (!target) {
-    console.warn('[EglLauncher] No EGL launch target for:', gameDir);
-    return false;
+  if (target) {
+    return launchWithProton(target, catalogEnv);
   }
-  return launchWithProton(target, catalogEnv);
+  // Before EGL has fetched its GE-Proton (it never launched a game), the game starts through EGL without the env rather than not at all
+  if (needsEnv) {
+    console.warn(
+      '[EglLauncher] No EGL Proton to pass the catalog env, launching through EGL without it:',
+      gameDir
+    );
+    const fallback = await launchThroughEgl(gameDir);
+    if (fallback !== undefined) {
+      return fallback;
+    }
+  }
+  console.warn('[EglLauncher] No EGL launch target for:', gameDir);
+  return false;
 }

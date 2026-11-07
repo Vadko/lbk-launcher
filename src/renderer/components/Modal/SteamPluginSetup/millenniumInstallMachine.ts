@@ -220,7 +220,7 @@ export const millenniumInstallMachine = setup({
                 guard: ({ event }) => activationOutcome(event.output) === 'done-offline',
                 target: '#millenniumInstall.result',
                 actions: assign({
-                  result: setupDone([t('millenniumSetup.offlineDone')]),
+                  result: () => setupDone([t('millenniumSetup.offlineDone')]),
                 }),
               },
               {
@@ -282,7 +282,7 @@ export const millenniumInstallMachine = setup({
               {
                 guard: ({ event }) => isPluginConnected(event.output),
                 target: '#millenniumInstall.result',
-                actions: assign({ result: setupDone([t('millenniumSetup.done')]) }),
+                actions: assign({ result: () => setupDone([t('millenniumSetup.done')]) }),
               },
               {
                 // Two misses in a row: one poll can land while Steam swaps its processes during start-up.
@@ -291,7 +291,8 @@ export const millenniumInstallMachine = setup({
                   context.steamGoneChecks >= 1,
                 target: '#millenniumInstall.result',
                 actions: assign({
-                  result: setupError(t('millenniumSetup.steamNotBack'), 'steam-not-back'),
+                  result: () =>
+                    setupError(t('millenniumSetup.steamNotBack'), 'steam-not-back'),
                 }),
               },
               {
@@ -336,7 +337,7 @@ export const millenniumInstallMachine = setup({
           {
             guard: ({ event }) => isPluginConnected(event.output),
             target: 'result',
-            actions: assign({ result: setupDone([t('millenniumSetup.done')]) }),
+            actions: assign({ result: () => setupDone([t('millenniumSetup.done')]) }),
           },
           { target: 'result' },
         ],

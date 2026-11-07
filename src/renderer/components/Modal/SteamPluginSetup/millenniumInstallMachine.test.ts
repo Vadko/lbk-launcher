@@ -105,7 +105,7 @@ describe('millenniumInstallMachine', () => {
     await flush();
     expect(state(h).context.restartChoice.canRestart).toBe(false);
     expect(state(h).context.restartChoice.note).toBe(
-      t('steamRestartFailure.accessDenied.plain')
+      t('steamRestartFailure.access-denied.plain')
     );
 
     h.actor.send({ type: 'ACTIVATE', restart: 'now' });
@@ -192,7 +192,7 @@ describe('millenniumInstallMachine', () => {
     await flush();
     expect(state(h).context.result).toEqual({
       kind: 'error',
-      message: t('steamRestartFailure.gameRunning.plain'),
+      message: t('steamRestartFailure.game-running.plain'),
       actions: 'none',
     });
 

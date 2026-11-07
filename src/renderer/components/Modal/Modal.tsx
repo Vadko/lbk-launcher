@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { XIcon } from 'lucide-react';
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { getTopDialog } from '../../utils/getTopDialog';
 
 interface ModalProps {
   isOpen: boolean;
@@ -37,13 +38,15 @@ export const Modal: React.FC<ModalProps> = ({
   const descriptionId = React.useId();
   const hasDescription = styleModal === 'normal' && !!description;
 
-  // Close the modal on Escape
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+
+  // Every open modal listens on window, so only the top dialog takes the Escape
   React.useEffect(() => {
     if (!isOpen) {
       return;
     }
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && dialogRef.current === getTopDialog()) {
         e.preventDefault();
         onClose();
       }
@@ -72,6 +75,7 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Modal content */}
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={styleModal === 'normal' && title ? titleId : undefined}

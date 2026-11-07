@@ -27,7 +27,10 @@ export interface FeedbackPost {
 type Refusal = { ok: false; message: string; failure: ReviewFailure | null };
 
 // The attempt to send next time: the same post keeps its id and uploads
-export type FeedbackPostResult = ({ ok: true; outcome: GameReviewOutcome } | Refusal) & {
+export type FeedbackPostResult = (
+  | { ok: true; outcome: GameReviewOutcome; answeredAt: number }
+  | Refusal
+) & {
   attempt: FeedbackAttempt;
 };
 
@@ -96,7 +99,12 @@ export async function sendFeedbackPost(
     allowPublish: post.allowPublish,
   });
   if (sent.ok) {
-    return { ok: true, outcome: sent.data.outcome, attempt: withUploads };
+    return {
+      ok: true,
+      outcome: sent.data.outcome,
+      answeredAt: Date.now(),
+      attempt: withUploads,
+    };
   }
   return {
     ok: false,

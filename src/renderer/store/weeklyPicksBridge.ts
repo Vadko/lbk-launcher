@@ -14,18 +14,21 @@ export function initWeeklyPicks(): void {
       return;
     }
     const { setPicks, failRead } = useWeeklyPicksStore.getState();
-    void api
-      .getWeeklyPicks(useSettingsStore.getState().hideAiTranslations)
-      .then(setPicks, (error: unknown) => {
+    void api.getWeeklyPicks(useSettingsStore.getState().hideAiTranslations).then(
+      (read) => (read ? setPicks(read.picks) : failRead()),
+      (error: unknown) => {
         console.error('[WeeklyPicks] Failed to read the set:', error);
         failRead();
-      });
+      }
+    );
   };
   const reload = F.debounce(load, RELOAD_DEBOUNCE);
 
   api.onWeeklyPicksUpdated(reload);
   api.onGameUpdated(reload);
   api.onGameRemoved(reload);
+  // The pushed rows are whole games, and the set's order does not follow the counters
+  api.onGameCountersUpdated(useWeeklyPicksStore.getState().updateGames);
   useStore.subscribe((state, prev) => {
     if (state.syncStatus !== prev.syncStatus) {
       reload();

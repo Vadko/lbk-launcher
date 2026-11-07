@@ -4,8 +4,8 @@ import type { PluginHostState, SteamBridgeStatus } from '@/shared/plugin-host-ty
 import {
   deckyOffer,
   millenniumOffer,
-  OFFER_ACTIONS,
   type OfferAction,
+  offerAction,
   updateMillenniumAction,
 } from './pluginHostOffer';
 import { millenniumUnsupportedText } from './steamPluginHost';
@@ -20,10 +20,9 @@ interface PluginHostEntries {
   actions: OfferAction[];
 }
 
-const RECOMMEND_LINE: PluginHostLine = {
-  key: 'recommend',
-  text: t('pluginEntries.recommend'),
-};
+function recommendLine(): PluginHostLine {
+  return { key: 'recommend', text: t('pluginEntries.recommend') };
+}
 
 function deckyEntries(host: PluginHostState): PluginHostEntries {
   return match(deckyOffer(host))
@@ -38,8 +37,8 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
         },
       ],
       actions: canInstallLoader
-        ? [OFFER_ACTIONS.installDeckyLoader, OFFER_ACTIONS.deckyInfo]
-        : [OFFER_ACTIONS.deckyInfo],
+        ? [offerAction('installDeckyLoader'), offerAction('deckyInfo')]
+        : [offerAction('deckyInfo')],
     }))
     .with({ kind: 'plugin-disabled' }, () => ({
       lines: [{ key: 'disabled', text: t('pluginEntries.deckyPluginDisabled') }],
@@ -52,7 +51,7 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
           text: t('pluginEntries.deckyPlugin'),
         },
       ],
-      actions: [OFFER_ACTIONS.installDeckyPlugin],
+      actions: [offerAction('installDeckyPlugin')],
     }))
     .with({ kind: 'plugin-outdated' }, () => ({
       lines: [
@@ -61,26 +60,21 @@ function deckyEntries(host: PluginHostState): PluginHostEntries {
           text: t('pluginEntries.deckyOutdated'),
         },
       ],
-      actions: [OFFER_ACTIONS.updateDeckyPlugin],
+      actions: [offerAction('updateDeckyPlugin')],
     }))
     .with({ kind: 'plugin-ready' }, () => ({ lines: [], actions: [] }))
     .exhaustive();
 }
 
-const PENDING_LINES: Record<'activate' | 'deactivate', PluginHostLine> = {
-  activate: {
-    key: 'pending-activate',
-    text: t('pluginEntries.pendingActivate'),
-  },
-  deactivate: {
-    key: 'pending-deactivate',
-    text: t('pluginEntries.pendingDeactivate'),
-  },
-};
+function pendingLine(
+  pending: NonNullable<PluginHostState['millennium']['pending']>
+): PluginHostLine {
+  return { key: `pending-${pending}`, text: t(`pluginEntries.pending.${pending}`) };
+}
 
 function millenniumEntries(host: PluginHostState): PluginHostEntries {
   const { pending } = host.millennium;
-  const lines = pending ? [PENDING_LINES[pending]] : [];
+  const lines = pending ? [pendingLine(pending)] : [];
   const actions: OfferAction[] = [];
   const offer = millenniumOffer(host);
 
@@ -96,7 +90,7 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
         key: 'repair',
         text: t('pluginEntries.repair'),
       });
-      actions.push(OFFER_ACTIONS.repairMillennium);
+      actions.push(offerAction('repairMillennium'));
     } else if (offer.update) {
       lines.push({
         key: 'update',
@@ -105,7 +99,7 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
       actions.push(updateMillenniumAction(offer.update));
     }
     if (pending !== 'deactivate') {
-      actions.push(OFFER_ACTIONS.uninstallMillennium);
+      actions.push(offerAction('uninstallMillennium'));
     }
     return { lines, actions };
   }
@@ -114,12 +108,15 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
   }
   if (offer.kind === 'installable') {
     return {
-      lines: [...lines, RECOMMEND_LINE],
-      actions: [OFFER_ACTIONS.installMillennium, OFFER_ACTIONS.millenniumInfo],
+      lines: [...lines, recommendLine()],
+      actions: [offerAction('installMillennium'), offerAction('millenniumInfo')],
     };
   }
   if (offer.reason === null || offer.reason === 'no-release') {
-    return { lines: [...lines, RECOMMEND_LINE], actions: [OFFER_ACTIONS.millenniumInfo] };
+    return {
+      lines: [...lines, recommendLine()],
+      actions: [offerAction('millenniumInfo')],
+    };
   }
   return {
     lines: [
@@ -135,11 +132,6 @@ function millenniumEntries(host: PluginHostState): PluginHostEntries {
   };
 }
 
-const BRIDGE_UPDATE_LINE: PluginHostLine = {
-  key: 'bridge-update',
-  text: t('pluginEntries.bridgeUpdate'),
-};
-
 export function pluginHostEntries(
   host: PluginHostState,
   bridge: SteamBridgeStatus | null
@@ -150,9 +142,12 @@ export function pluginHostEntries(
     return entries;
   }
   return {
-    lines: [BRIDGE_UPDATE_LINE, ...entries.lines],
+    lines: [
+      { key: 'bridge-update', text: t('pluginEntries.bridgeUpdate') },
+      ...entries.lines,
+    ],
     actions: bridge.canRestartSteam
-      ? [OFFER_ACTIONS.restartSteam, ...entries.actions]
+      ? [offerAction('restartSteam'), ...entries.actions]
       : entries.actions,
   };
 }

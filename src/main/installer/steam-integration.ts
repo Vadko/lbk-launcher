@@ -1,5 +1,6 @@
 import { getCurrentSteamAccountId } from '@/main/game-detector/steam';
 import { checkInstallation } from '@/main/installer/cache';
+import { rewriteInstallationRecord } from '@/main/installer/installation-info';
 import { queueSteamAction } from '@/main/steam-pending-actions';
 import {
   type ApplyMode,
@@ -18,6 +19,14 @@ import type { Game, InstallationStatus, Platform } from '@/shared/types';
 interface SteamIntegrationTarget {
   platform: Platform;
   path: string;
+}
+
+const hasArtworkImages = (game: Game) =>
+  !!(game.capsule_path || game.banner_path || game.logo_path);
+
+// The install dialog's condition for its artwork box: a player's choice exists only where it was offered.
+export function offersSteamArtwork(game: Game, platform: Platform): boolean {
+  return platform === 'steam' && !!game.steam_app_id && hasArtworkImages(game);
 }
 
 interface SteamIntegrationResult {
@@ -117,7 +126,7 @@ async function applySteamArtworkChoice(
     if (!enabled) {
       return REVERT_OUTCOME[await removeSteamArtwork(appId)];
     }
-    if (!game.capsule_path && !game.banner_path && !game.logo_path) {
+    if (!hasArtworkImages(game)) {
       return 'failed';
     }
     onStatus?.({
@@ -163,5 +172,11 @@ export async function setInstalledSteamArtwork(
   if (outcome === 'failed') {
     return { success: false, error: t('installSteamIntegration.artworkFailed') };
   }
+  await rewriteInstallationRecord(info, (record) => ({
+    ...record,
+    steamArtwork: enabled,
+  })).catch((error: unknown) => {
+    console.warn('[Installer] Recording the artwork choice failed:', error);
+  });
   return { success: true, visibleAfterSteamStart: outcome === 'after-steam-start' };
 }

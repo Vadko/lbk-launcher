@@ -14,14 +14,13 @@ import {
   realpathOrNull,
 } from '@/main/utils/fs-safe';
 import { isFlatpak } from '@/main/utils/host-exec';
-import {
-  ApplyRefusal,
-  ensureInitialConfig,
-  type InstalledTarget,
-  type MillenniumOsDriver,
-} from './driver';
+import { ApplyRefusal, ensureInitialConfig, type MillenniumOsDriver } from './driver';
+import { reachesRuntime, runtimeInUse, runtimeRoots } from './linux-runtime-use';
+import type { MillenniumInstallPaths } from './paths';
 import type { MillenniumInstallRecord } from './record';
 import { MILLENNIUM_PIN } from './release';
+
+type LinuxPaths = NonNullable<MillenniumInstallPaths['linux']>;
 
 export const RUNTIME_PATH_ENV = 'MILLENNIUM_RUNTIME_PATH';
 export const LINUX_RUNTIME_LIB = 'libmillennium_x86.so';
@@ -44,6 +43,10 @@ const LINUX_LINKS = [
   { rel: 'ubuntu12_64/libmillennium_hhx64.so', target: 'libmillennium_hhx64.so' },
 ] as const;
 export const LINUX_LINK_RELS: readonly string[] = LINUX_LINKS.map(({ rel }) => rel);
+
+export function linuxLinkPaths(steamHome: string): string[] {
+  return LINUX_LINK_RELS.map((rel) => path.posix.join(steamHome, rel));
+}
 export const LINK_BACKUP_SUFFIX = '.lbk-backup';
 
 export type LinkEntry =
@@ -278,26 +281,49 @@ function mergeBackups(
   return [...previous.filter((b) => !next.some((n) => n.link === b.link)), ...next];
 }
 
-// The official installer replaced our links; our env var would keep loading the stale runtime.
-function dropTakenOverRuntime({ paths, record }: InstalledTarget): boolean {
-  const linux = paths.linux;
-  if (!linux) {
-    return false;
-  }
+// The official installer replaced our links; our env file would keep loading the stale runtime.
+export function dropTakenOverRuntime(
+  linux: LinuxPaths,
+  envFile: string,
+  sessionValue: string | undefined
+): boolean {
   const target = realpathOrNull(
     path.posix.join(linux.steamHome, 'ubuntu12_32/libXtst.so.6')
   );
-  // Our own link resolves through any symlinked part of $HOME, so compare against both spellings.
-  const roots = [linux.runtimeRoot, realpathOrNull(linux.runtimeRoot)].filter(
-    (root): root is string => root !== null
-  );
+  const roots = runtimeRoots(linux.runtimeRoot);
   if (!isTakenOver(target, roots)) {
     return false;
   }
   console.warn(`[Millennium] ${target} is managed elsewhere now, dropping LBK's runtime`);
-  fs.rmSync(record.envFile ?? linux.envFile, { force: true });
-  fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
+  fs.rmSync(envFile, { force: true });
+  // Deleted under the session's variable, the bootstrap would load no Millennium at all until the next login.
+  if (reachesRuntime(sessionValue, roots)) {
+    console.warn(
+      `[Millennium] This session still loads it; it goes after the next login`
+    );
+  } else {
+    fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
+  }
   return true;
+}
+
+// No record: a prepare that was never activated, or a takeover this session still loaded; activation copies it again.
+export function removeUnusedRuntime(
+  linux: LinuxPaths,
+  sessionValue: string | undefined
+): void {
+  const unused =
+    fs.existsSync(linux.runtimeRoot) &&
+    !runtimeInUse({
+      runtimeRoot: linux.runtimeRoot,
+      links: linuxLinkPaths(linux.steamHome),
+      envFile: linux.envFile,
+      sessionValue,
+    });
+  if (unused) {
+    console.log(`[Millennium] Removing ${linux.runtimeRoot}, nothing loads it`);
+    fs.rmSync(linux.runtimeRoot, { recursive: true, force: true });
+  }
 }
 
 export const linuxDriver: MillenniumOsDriver = {
@@ -393,18 +419,24 @@ export const linuxDriver: MillenniumOsDriver = {
     bridge === 'ready'
       ? { success: true, bridge }
       : { success: true, bridge, diagnostics: await linuxSteamDiagnostics() },
-  startupMaintenance: (target, activationQueued) => {
-    if (dropTakenOverRuntime(target)) {
+  startupMaintenance: ({ paths, record }, activationQueued) => {
+    const linux = paths.linux;
+    if (!linux) {
+      return false;
+    }
+    const sessionValue = process.env[RUNTIME_PATH_ENV];
+    if (!record) {
+      removeUnusedRuntime(linux, sessionValue);
+      return false;
+    }
+    if (dropTakenOverRuntime(linux, record.envFile ?? linux.envFile, sessionValue)) {
       return true;
     }
-    const linux = target.paths.linux;
-    if (linux) {
-      const keep = new Set<string>([target.record.version]);
-      if (activationQueued && MILLENNIUM_PIN.linux) {
-        keep.add(MILLENNIUM_PIN.linux.version);
-      }
-      pruneRuntimeVersions(linux.runtimeRoot, keep);
+    const keep = new Set<string>([record.version]);
+    if (activationQueued && MILLENNIUM_PIN.linux) {
+      keep.add(MILLENNIUM_PIN.linux.version);
     }
+    pruneRuntimeVersions(linux.runtimeRoot, keep);
     return false;
   },
 };

@@ -7,16 +7,18 @@ export const en = {
     hidden: 'Will not appear in Steam',
     millennium: 'Will appear through Millennium',
     decky: 'Will appear through Decky Loader',
-    afterRestart: 'Available after restarting Steam',
-    needsMillennium: 'Requires Millennium',
-    needsDeckyPlugin: 'Requires LBK Bridge for Decky Loader',
-    needsDecky: 'Requires Decky Loader',
+    'after-restart': 'Available after restarting Steam',
+    'needs-millennium': 'Requires Millennium',
+    'needs-decky-plugin': 'Requires LBK Bridge for Decky Loader',
+    'needs-decky': 'Requires Decky Loader',
   },
   achievementsNote: {
     needsMillennium:
       'Steam does not read translated achievement names from ordinary game files. Install Millennium to see them in the Steam library, notifications and overlay. Achievements in the game’s own interface may remain in the developer’s language.',
     needsDeckyPlugin:
       'Steam does not read translated achievement names from ordinary game files. Install the LBK Bridge plugin for Decky Loader to see them in the Steam library, notifications and overlay. Achievements in the game’s own interface may remain in the developer’s language.',
+    deckyPluginDisabled:
+      'Steam does not read translated achievement names from ordinary game files. The LBK Bridge plugin displays them, but it is disabled in Decky Loader. Enable it in Decky settings. Achievements in the game’s own interface may remain in the developer’s language.',
     needsDecky:
       'Steam does not read translated achievement names from ordinary game files. On Steam Deck, these are displayed by the LBK Bridge plugin, which requires Decky Loader. Achievements in the game’s own interface may remain in the developer’s language.',
     settingOff:
@@ -296,8 +298,8 @@ export const en = {
   filterBar: {
     filters: 'Filters',
     clearAll: 'Clear all filters',
-    showInstalled: 'Show downloaded translations',
-    hideInstalled: 'Hide downloaded translations',
+    showInstalled: 'Show installed translations',
+    hideInstalled: 'Hide installed translations',
     showFavorites: 'Show favorites',
     hideFavorites: 'Hide favorites',
     sort: 'Sort',
@@ -485,9 +487,9 @@ export const en = {
   },
   gameStatus: {
     planned: 'Planned',
-    inProgress: 'Early access',
+    'in-progress': 'Early access',
     completed: 'Complete',
-    techImprovement: 'Technical updates in progress',
+    'tech-improvement': 'Technical updates in progress',
   },
   gameTabs: {
     info: 'Info',
@@ -761,6 +763,8 @@ export const en = {
       'Achievement translations have been saved. Millennium is required to display them in Steam.',
     needsDeckyPlugin:
       'Achievement translations have been saved. Install LBK Bridge for Decky Loader to display them in Steam.',
+    deckyPluginDisabled:
+      'Achievement translations have been saved. Enable LBK Bridge in Decky Loader settings to display them in Steam.',
     needsDecky:
       'Achievement translations have been saved. On Steam Deck, LBK Bridge for Decky Loader displays them. The launcher can install Decky Loader for you.',
     unavailable:
@@ -805,6 +809,7 @@ export const en = {
     gameDirUnresolved: 'Could not locate the game folder for launch options',
     writeFailed: 'Could not save launch options',
     eglWriteFailed: 'could not change the game settings in Epic Games Launcher',
+    eglGameNotFound: 'the game is not among those installed with Epic Games Launcher',
     eglNeedsShell:
       'they only work through the shell Steam starts them with, and Epic Games Launcher cannot do that',
     eglQueued:
@@ -1087,8 +1092,10 @@ export const en = {
       'LBK Bridge for Decky Loader displays achievement translations in Steam. Install Decky Loader first.',
     deckyPlugin: 'LBK Bridge for Decky Loader displays translated achievements in Steam.',
     deckyOutdated: 'An update is available for LBK Bridge for Decky.',
-    pendingActivate: 'Millennium will be installed when you close Steam.',
-    pendingDeactivate: 'Millennium will be removed when you close Steam.',
+    pending: {
+      activate: 'Millennium will be installed when you close Steam.',
+      deactivate: 'Millennium will be removed when you close Steam.',
+    },
     installedVersion: 'Millennium {{version}} is installed.',
     repair: 'Millennium files in the Steam folder are damaged or missing.',
     update: 'Millennium update available: {{version}}.',
@@ -1153,13 +1160,13 @@ export const en = {
     exeTitle: 'Run installer',
     scriptTitle: 'Run script',
     exeProtonMessage:
-      'The Ukrainian patch has been downloaded and extracted. The Windows installer will run using your selected Proton version.\n\nThe folder path will be copied to the clipboard.',
+      'The Ukrainian patch for “{{name}}” has been downloaded and extracted. The Windows installer will run using your selected Proton version.\n\nThe folder path will be copied to the clipboard.',
     scriptProtonMessage:
-      'The Ukrainian patch has been downloaded and extracted. The Windows script will run using your selected Proton version.\n\nThe folder path will be copied to the clipboard.',
+      'The Ukrainian patch for “{{name}}” has been downloaded and extracted. The Windows script will run using your selected Proton version.\n\nThe folder path will be copied to the clipboard.',
     exeAskMessage:
-      'The Ukrainian patch has been downloaded and extracted.\n\nRun the installer now?',
+      'The Ukrainian patch for “{{name}}” has been downloaded and extracted.\n\nRun the installer now?',
     scriptAskMessage:
-      'The Ukrainian patch has been downloaded and extracted.\n\nRun the script now?',
+      'The Ukrainian patch for “{{name}}” has been downloaded and extracted.\n\nRun the script now?',
     protonPlaceholder: 'Select a Proton version',
     openFolder: 'Open folder',
     run: 'Yes, run',
@@ -1402,8 +1409,9 @@ export const en = {
     restartedTitle: 'Steam restarted',
   },
   steamRestartFailure: {
-    launchFailed: 'Steam closed, but could not be started again. Start Steam manually.',
-    accessDenied: {
+    'launch-failed':
+      'Steam closed, but could not be started again. Start Steam manually.',
+    'access-denied': {
       launchOptions:
         'Steam is running as administrator, so the launcher cannot restart it. Close Steam manually; launch options will be applied automatically.',
       plain:
@@ -1415,7 +1423,7 @@ export const en = {
       plain:
         'The launcher does not restart Steam in Gaming Mode. Restart it yourself, for example by switching to Desktop Mode.',
     },
-    gameRunning: {
+    'game-running': {
       launchOptions:
         'Close the game to restart Steam. Launch options will be applied when Steam closes.',
       plain: 'Close the game to restart Steam.',
@@ -1424,6 +1432,12 @@ export const en = {
       launchOptions:
         'Steam did not close in time. Close it manually; launch options will be applied automatically.',
       plain: 'Steam did not close in time. Restart it manually.',
+    },
+    'unknown-state': {
+      launchOptions:
+        'Could not check whether Steam is running, so the launcher does not restart it. Close Steam manually; launch options will be applied automatically.',
+      plain:
+        'Could not check whether Steam is running, so the launcher does not restart it. Restart Steam manually.',
     },
     generic: 'Could not restart Steam.',
   },

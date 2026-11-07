@@ -41,7 +41,16 @@ export const reviewThread = (
   replies,
 });
 
+// Before every answer the tests give a write
+const FETCHED_AT = Date.UTC(2026, 9, 22, 10, 30);
+
 export const reviewPages = (...items: GameReview[][]): ReviewPages => ({
-  pages: items.map((page) => ({ items: page, total: 9, nextCursor: null, viewer: null })),
+  pages: items.map((page) => ({
+    items: page,
+    total: 9,
+    nextCursor: null,
+    viewer: null,
+    fetchedAt: FETCHED_AT,
+  })),
   pageParams: items.map(() => null),
 });

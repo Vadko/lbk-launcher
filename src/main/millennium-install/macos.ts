@@ -7,7 +7,6 @@ import { replaceDirAtomic, replaceSymlinkAtomic } from '@/main/utils/atomic-writ
 import { isPathInside, pruneDir } from '@/main/utils/fs-safe';
 import { sha256FileSync } from '@/main/utils/hash';
 import { ApplyRefusal, ensureInitialConfig, type MillenniumOsDriver } from './driver';
-import { MAC_WRAPPER_APP } from './paths';
 import type { MillenniumInstallRecord } from './record';
 import { type MacHardwareArch, MILLENNIUM_PIN } from './release';
 
@@ -188,9 +187,8 @@ export const macDriver: MillenniumOsDriver = {
   offersUpdates: true,
   retriesLockedFiles: false,
   installedVersion: ({ record }) => record.version,
-  needsRepair: ({ paths, record }) =>
-    paths.macos !== null &&
-    !macWrapperIntact(record.appBundle ?? paths.macos.appBundle, paths.macos.current),
+  needsRepair: ({ paths }) =>
+    paths.macos !== null && !macWrapperIntact(paths.macos.appBundle, paths.macos.current),
   conflict: () => null,
   preflight: () => null,
   checkStaged: async (_target, staged) => {
@@ -205,17 +203,15 @@ export const macDriver: MillenniumOsDriver = {
     await stripQuarantine(staged.dir);
     return null;
   },
-  activate: ({ paths, record: existing }, { staging, base, commit }) => {
+  activate: ({ paths }, { staging, base, commit }) => {
     const release = MILLENNIUM_PIN.macos;
     const mac = paths.macos;
     const bundleRoot = fs.existsSync(staging) ? findMacBundleRoot(staging) : null;
     if (!release || !mac || !bundleRoot) {
       throw new ApplyRefusal('not-prepared', 'staged macOS bundle missing');
     }
-    const appBundle = existing?.appBundle ?? mac.appBundle;
-    if (path.posix.basename(appBundle) !== MAC_WRAPPER_APP) {
-      throw new ApplyRefusal('conflict', `unexpected wrapper path ${appBundle}`);
-    }
+    // Always this user's ~/Applications copy: the record sits where any Millennium plugin can write.
+    const appBundle = mac.appBundle;
     const record: MillenniumInstallRecord = {
       ...base,
       os: 'macos',
@@ -236,15 +232,12 @@ export const macDriver: MillenniumOsDriver = {
     ensureInitialConfig(paths.configPath, true);
     return record;
   },
-  remove: ({ paths, record }) => {
+  remove: ({ paths }) => {
     const mac = paths.macos;
     if (!mac) {
       return;
     }
-    const appBundle = record.appBundle ?? mac.appBundle;
-    if (path.posix.basename(appBundle) === MAC_WRAPPER_APP) {
-      fs.rmSync(appBundle, { recursive: true, force: true });
-    }
+    fs.rmSync(mac.appBundle, { recursive: true, force: true });
     fs.rmSync(mac.runtimeRoot, { recursive: true, force: true });
     fs.rmSync(mac.steamuiMillennium, { recursive: true, force: true });
   },

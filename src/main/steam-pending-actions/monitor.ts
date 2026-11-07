@@ -3,7 +3,7 @@ import { F } from '@mobily/ts-belt';
 import { type Actor, createActor, fromPromise } from 'xstate';
 import { appEvents } from '@/main/app-events';
 import { type BridgeFacts, steamMonitorMachine } from '@/main/steam-monitor-machine';
-import { isSteamRunning, waitForSteamGone } from '@/main/steam-process/lifecycle';
+import { probeSteamRunning, waitForSteamGone } from '@/main/steam-process/lifecycle';
 import { isCefFlagFilePresent } from '@/main/utils/cef-flag-file';
 import { detectMillennium } from '@/main/utils/millennium';
 import { getSteamBridgeStatus } from '@/main/utils/steam-bridge';
@@ -61,9 +61,10 @@ function needsSteamPolling(bridge: BridgeFacts): boolean {
 function implementation(runPending: RunPending) {
   return steamMonitorMachine.provide({
     actors: {
+      // A failed listing (null) is no baseline: it neither starts nor stops Steam.
       startup: fromPromise(async () => {
-        const running = await isSteamRunning();
-        if (!running && getPendingSteamActions().length > 0) {
+        const running = await probeSteamRunning();
+        if (running === false && getPendingSteamActions().length > 0) {
           await runPending('startup');
         }
         const bridge = await refreshBridgeFacts();
@@ -84,13 +85,14 @@ function implementation(runPending: RunPending) {
             return { running: null, queued: false, candidate };
           }
         }
-        const running = await isSteamRunning();
+        const running = await probeSteamRunning();
         return { running, queued: getPendingSteamActions().length > 0, candidate };
       }),
       handleStopped: fromPromise(async () => {
         await waitForSteamGone(STEAM_GONE_TIMEOUT_MS);
         await sleep(EXIT_SETTLE_MS);
-        if (await isSteamRunning()) {
+        // The handlers check Steam again before they write, so an unknown state still runs the queue.
+        if ((await probeSteamRunning()) === true) {
           return 'came-back' as const;
         }
         await runPending('steam-exit');

@@ -37,8 +37,13 @@ export const REVIEW_ERROR_CODES = [
 
 type ReviewErrorCode = (typeof REVIEW_ERROR_CODES)[number];
 
-// Failures the launcher meets before or instead of a server answer
-type ReviewLocalFailureCode = 'unreachable' | 'bad_response' | 'e2e_mode';
+// Failures the launcher meets before or instead of a server answer: refused carries an error code newer than this build, gateway_refused is a 4xx with no envelope
+type ReviewLocalFailureCode =
+  | 'unreachable'
+  | 'bad_response'
+  | 'refused'
+  | 'gateway_refused'
+  | 'e2e_mode';
 
 // retry: resend with the same id; needs-author: only a nickname helps; rejected: roll back
 export type ReviewFailureKind = 'retry' | 'needs-author' | 'rejected';

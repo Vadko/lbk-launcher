@@ -58,6 +58,18 @@ export async function readAchievementStringsFromDir(
   return [...byApp.values()];
 }
 
+// Strings this game still owns; legacy installs keep schema files in Steam's stats dir and need a fresh download.
+function ownsInstalledStrings(
+  existing: AchievementsComponent | undefined,
+  gameId: string
+): existing is AchievementsComponent {
+  return (
+    existing?.installed === true &&
+    existing.files.length === 0 &&
+    hasAchievementStrings(existing.appIds ?? [], gameId)
+  );
+}
+
 // A re-install is skipped only for the same archive whose strings this game still owns.
 export function isAchievementsComponentCurrent(
   existing: AchievementsComponent | undefined,
@@ -66,11 +78,8 @@ export function isAchievementsComponentCurrent(
 ): boolean {
   return (
     archiveHash !== null &&
-    existing?.installed === true &&
-    existing.archiveHash === archiveHash &&
-    // Legacy installs keep schema files in Steam's stats dir and need a fresh download.
-    existing.files.length === 0 &&
-    hasAchievementStrings(existing.appIds ?? [], gameId)
+    existing?.archiveHash === archiveHash &&
+    ownsInstalledStrings(existing, gameId)
   );
 }
 
@@ -88,8 +97,17 @@ export async function prepareAchievements(i: {
   const { game } = i;
   const archiveHash = game.achievements_archive_hash || null;
   const archivePath = game.achievements_archive_path;
-  if (!i.wanted || !archivePath || i.platform !== 'steam') {
+  if (!i.wanted) {
     return { extracted: [], component: null, archiveHash };
+  }
+  // Only wanted: false removes installed strings; an install that cannot deliver new ones keeps them.
+  const kept: PreparedAchievements = {
+    extracted: [],
+    component: ownsInstalledStrings(i.existing, game.id) ? i.existing : null,
+    archiveHash,
+  };
+  if (!archivePath || i.platform !== 'steam') {
+    return kept;
   }
   if (archiveHash && isAchievementsComponentCurrent(i.existing, game.id, archiveHash)) {
     console.log('[Installer] Achievement strings already up-to-date, skipping download');
@@ -123,11 +141,11 @@ export async function prepareAchievements(i: {
   });
   const extracted = await readAchievementStringsFromDir(extractDir);
   if (extracted.length === 0) {
-    // Catalog data bug: the rest of the install goes on without achievements.
+    // Catalog data bug: the rest of the install goes on with the strings it had.
     console.error(
       `[Installer] Achievements archive of ${game.id} has no Ukrainian strings`
     );
-    return { extracted, component: null, archiveHash };
+    return kept;
   }
   return {
     extracted,
@@ -165,6 +183,7 @@ export async function removeInstalledAchievements(
 export async function commitAchievementStrings(i: {
   extracted: readonly ExtractedAchievementStrings[];
   gameId: string;
+  gamePath: string;
   archiveHash: string | null;
   component: AchievementsComponent | null;
   previous: { gameId: string; component: AchievementsComponent } | null;
@@ -172,7 +191,7 @@ export async function commitAchievementStrings(i: {
   let component = i.component;
   try {
     if (i.extracted.length > 0) {
-      saveAchievementStrings(i.extracted, i.gameId, i.archiveHash);
+      saveAchievementStrings(i.extracted, i, i.archiveHash);
     }
   } catch (error) {
     console.error('[Achievements] Saving achievement strings failed:', error);

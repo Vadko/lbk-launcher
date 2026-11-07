@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { LRUCache } from 'lru-cache';
 import { z } from 'zod';
 import { system32 } from '@/main/utils/host-exec';
 import { errorMessage } from '@/shared/errors';
@@ -10,6 +11,7 @@ import {
 } from './process-info';
 
 const execFileAsync = promisify(execFile);
+const TASKLIST_TIMEOUT_MS = 10000;
 
 const IMAGE_KINDS: Record<string, SteamProcessKind> = {
   'steam.exe': 'steam',
@@ -26,6 +28,47 @@ export function parseTasklistCsv(stdout: string, image: string): number[] {
     }
   }
   return pids;
+}
+
+// CSV columns: image name, PID, session name, session number, memory.
+export function parseTasklistSession(stdout: string, pid: number): number | null {
+  for (const line of stdout.split(/\r?\n/)) {
+    const match = /^\s*"[^"]*","(\d+)","[^"]*","(\d+)"/.exec(line);
+    if (match && Number.parseInt(match[1], 10) === pid) {
+      return Number.parseInt(match[2], 10);
+    }
+  }
+  return null;
+}
+
+// A process never changes session; a failed lookup is not kept.
+const ownSession = new LRUCache<'session', { id: number }>({
+  max: 1,
+  ignoreFetchAbort: true,
+  fetchMethod: async () => {
+    const { stdout } = await execFileAsync(
+      system32('tasklist.exe'),
+      ['/FI', `PID eq ${process.pid}`, '/FO', 'CSV', '/NH'],
+      { timeout: TASKLIST_TIMEOUT_MS, windowsHide: true }
+    );
+    const id = parseTasklistSession(stdout, process.pid);
+    return id === null ? undefined : { id };
+  },
+});
+
+// Fast user switching runs another user's Steam in another session; null when unknown.
+async function ownSessionId(): Promise<number | null> {
+  try {
+    return (await ownSession.fetch('session'))?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// tasklist and taskkill filter; an unknown session leaves every session in, as before.
+export async function ownSessionFilter(): Promise<string[]> {
+  const id = await ownSessionId();
+  return id === null ? [] : ['/FI', `SESSION eq ${id}`];
 }
 
 const win32ProcessSchema = z
@@ -68,8 +111,8 @@ export async function listWindowsSteam(): Promise<SteamProcesses | null> {
   try {
     const { stdout } = await execFileAsync(
       system32('tasklist.exe'),
-      ['/FI', 'IMAGENAME eq steam*', '/FO', 'CSV', '/NH'],
-      { timeout: 10000, windowsHide: true }
+      ['/FI', 'IMAGENAME eq steam*', ...(await ownSessionFilter()), '/FO', 'CSV', '/NH'],
+      { timeout: TASKLIST_TIMEOUT_MS, windowsHide: true }
     );
     const rows = (image: string) =>
       parseTasklistCsv(stdout, image).map((pid) => ({ pid, args: null }));
@@ -79,13 +122,17 @@ export async function listWindowsSteam(): Promise<SteamProcesses | null> {
   }
 }
 
-const WIN32_PROCESS_SCRIPT = [
-  '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
-  "$p = @(Get-CimInstance Win32_Process -Filter \"Name='steam.exe' OR Name='steamwebhelper.exe'\" | Select-Object ProcessId,ParentProcessId,Name,CommandLine)",
-  'ConvertTo-Json -InputObject $p -Compress',
-].join('\n');
+export function win32ProcessScript(session: number | null): string {
+  const inSession = session === null ? '' : ` AND SessionId=${session}`;
+  return [
+    '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+    `$p = @(Get-CimInstance Win32_Process -Filter "(Name='steam.exe' OR Name='steamwebhelper.exe')${inSession}" | Select-Object ProcessId,ParentProcessId,Name,CommandLine)`,
+    'ConvertTo-Json -InputObject $p -Compress',
+  ].join('\n');
+}
 
 export async function listWindowsSteamWithArgs(): Promise<SteamProcesses> {
+  const script = win32ProcessScript(await ownSessionId());
   try {
     const { stdout } = await execFileAsync(
       system32('WindowsPowerShell', 'v1.0', 'powershell.exe'),
@@ -95,7 +142,7 @@ export async function listWindowsSteamWithArgs(): Promise<SteamProcesses> {
         '-ExecutionPolicy',
         'Bypass',
         '-EncodedCommand',
-        Buffer.from(WIN32_PROCESS_SCRIPT, 'utf16le').toString('base64'),
+        Buffer.from(script, 'utf16le').toString('base64'),
       ],
       { timeout: 5000, windowsHide: true, maxBuffer: 16 * 1024 * 1024 }
     );

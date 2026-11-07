@@ -45,32 +45,6 @@ export function pendingLaunchOptionsText(count: number): string {
   return t('pendingLaunchOptions.queued', { count });
 }
 
-const RESTART_FAILURE_TEXT: Record<
-  RestartFailureReason,
-  { launchOptions: string; plain: string }
-> = {
-  'access-denied': {
-    launchOptions: t('steamRestartFailure.accessDenied.launchOptions'),
-    plain: t('steamRestartFailure.accessDenied.plain'),
-  },
-  gamescope: {
-    launchOptions: t('steamRestartFailure.gamescope.launchOptions'),
-    plain: t('steamRestartFailure.gamescope.plain'),
-  },
-  'game-running': {
-    launchOptions: t('steamRestartFailure.gameRunning.launchOptions'),
-    plain: t('steamRestartFailure.gameRunning.plain'),
-  },
-  timeout: {
-    launchOptions: t('steamRestartFailure.timeout.launchOptions'),
-    plain: t('steamRestartFailure.timeout.plain'),
-  },
-  'launch-failed': {
-    launchOptions: t('steamRestartFailure.launchFailed'),
-    plain: t('steamRestartFailure.launchFailed'),
-  },
-};
-
 export function restartFailureMessage(
   reason: RestartFailureReason | undefined,
   error: string | undefined,
@@ -79,8 +53,11 @@ export function restartFailureMessage(
   if (reason === undefined) {
     return error ?? t('steamRestartFailure.generic');
   }
-  const text = RESTART_FAILURE_TEXT[reason];
-  return launchOptions ? text.launchOptions : text.plain;
+  // It fails after the restart gap, so queued launch options are already written.
+  if (reason === 'launch-failed') {
+    return t('steamRestartFailure.launch-failed');
+  }
+  return t(`steamRestartFailure.${reason}.${launchOptions ? 'launchOptions' : 'plain'}`);
 }
 
 interface SteamRestartOutcome {

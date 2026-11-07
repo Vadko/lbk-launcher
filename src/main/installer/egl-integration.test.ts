@@ -68,18 +68,19 @@ describe('applyEglIntegration on Linux', () => {
     expect(mocks.addEglLaunchArgs).toHaveBeenCalledWith(DIR, '-load-mods');
   });
 
-  it('leaves other stores, other Epic installs and games without options alone', async () => {
-    expect(
-      await applyEglIntegration(game('-load-mods'), { platform: 'steam', path: DIR })
-    ).toEqual({});
-    expect(
-      await applyEglIntegration(game('-load-mods'), {
-        platform: 'epic',
-        path: '/heroic/Game',
-      })
-    ).toEqual({});
-    expect(await applyEglIntegration(game(null), EPIC)).toEqual({});
+  it.each([
+    ['another store', game('-load-mods'), { platform: 'steam' as const, path: DIR }, {}],
+    ['a game without options', game(null), EPIC, {}],
+    [
+      'an Epic install EGL does not know (Heroic, Lutris)',
+      game('-load-mods'),
+      { platform: 'epic' as const, path: '/heroic/Game' },
+      { launchOptionsError: t('launchOptions.eglGameNotFound') },
+    ],
+  ])('writes nothing for %s', async (_, catalogGame, target, expected) => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
+    expect(await applyEglIntegration(catalogGame, target)).toEqual(expected);
     expect(mocks.addEglLaunchArgs).not.toHaveBeenCalled();
   });
 
@@ -166,11 +167,19 @@ describe('applyEglIntegration on Windows', () => {
     expect(mocks.setEglWindowsLaunchArgs).toHaveBeenCalledWith(APP_ID, '-a');
   });
 
-  it('skips games without a manifest or without Windows options', async () => {
+  it('skips games without Windows options', async () => {
     expect(await applyEglIntegration(game('-a', null), WIN_EPIC)).toEqual({});
     expect(mocks.getEpicManifestAppId).not.toHaveBeenCalled();
+    expect(mocks.setEglWindowsLaunchArgs).not.toHaveBeenCalled();
+  });
+
+  it('says the options went nowhere when EGL has no manifest for the game', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     mocks.getEpicManifestAppId.mockReturnValue(null);
-    expect(await applyEglIntegration(game(null, '-a'), WIN_EPIC)).toEqual({});
+
+    expect(await applyEglIntegration(game(null, '-a'), WIN_EPIC)).toEqual({
+      launchOptionsError: t('launchOptions.eglGameNotFound'),
+    });
     expect(mocks.setEglWindowsLaunchArgs).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@ import {
   classifyPendingAction,
   getPendingSteamActions,
   orderPendingQueue,
+  type PendingActionKind,
   type PendingSteamAction,
   type PendingTrigger,
   reducePendingQueue,
@@ -25,6 +26,15 @@ import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import { showSystemNotification } from '@/main/utils/system-notification';
 import { sendToRenderer } from '@/main/window';
 import { t } from '@/shared/i18n/i18n';
+
+// Windows helpers can hold Millennium's files a while after Steam is gone; the attempts counter bounds the passes.
+const LOCKED_RETRY_MS = 10_000;
+
+// Config edits need Steam off, which a live bridge implies it is not; a retry pass only retries locked files.
+const PASS_KINDS: Partial<Record<PendingTrigger, ReadonlySet<PendingActionKind>>> = {
+  'bridge-ready': new Set(['launch-options']),
+  retry: new Set(['millennium-activate', 'millennium-deactivate']),
+};
 
 export interface PendingRunResult {
   appliedGameIds: string[];
@@ -80,9 +90,9 @@ async function applyQueue(
     millennium: millenniumQueueContext(),
   };
 
+  const passKinds = PASS_KINDS[trigger];
   for (const action of orderPendingQueue(queue)) {
-    // Config edits need Steam off, which a live bridge implies it is not.
-    if (trigger === 'bridge-ready' && action.kind !== 'launch-options') {
+    if (passKinds && !passKinds.has(action.kind)) {
       continue;
     }
     const decision = classifyPendingAction(action, ctx);
@@ -117,6 +127,10 @@ async function applyQueue(
     );
     void refreshBridgeFacts();
   }
+  // Nothing else runs the queue again while Steam stays closed; a pass with Steam up keeps the item without a retry.
+  if (bumped.size > 0) {
+    retryLockedLater();
+  }
   if (result.appliedGameIds.length > 0) {
     sendToRenderer('steam-pending-actions-applied', { gameIds: result.appliedGameIds });
     if (trigger === 'steam-exit' || trigger === 'startup' || trigger === 'bridge-ready') {
@@ -139,6 +153,12 @@ async function runBatch(trigger: PendingTrigger): Promise<PendingRunResult> {
 }
 
 const runSerially = pLimit(1);
+
+const retryLockedLater = F.debounce(() => {
+  runPendingSteamActions('retry').catch((error: unknown) => {
+    console.warn('[PendingActions] Retry pass failed:', error);
+  });
+}, LOCKED_RETRY_MS);
 
 export function runPendingSteamActions(
   trigger: PendingTrigger

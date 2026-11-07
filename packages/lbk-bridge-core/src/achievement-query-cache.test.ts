@@ -234,6 +234,17 @@ describe('hookAchievementQueries', () => {
     flush();
     expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
   });
+
+  it('writes nothing from a task scheduled before dispose', async () => {
+    const { client, flush, queries } = setup();
+    await client.fetchQuery({
+      queryKey: schemaKey,
+      queryFn: () => structuredClone(fixture.schema),
+    });
+    queries.dispose();
+    flush();
+    expect(shown(client.getQueryData(schemaKey))).toEqual(steamText);
+  });
 });
 
 describe('hookAchievementQueries data written through Query.setData', () => {

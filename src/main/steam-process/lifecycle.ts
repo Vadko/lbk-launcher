@@ -6,13 +6,25 @@ import { steamProcesses } from './snapshot';
 
 const STEAM_POLL_MS = 500;
 
-// The shared snapshot serves status reads; shutdown and kill decisions pass `fresh`.
-export async function findSteamPids(opts: { fresh?: boolean } = {}): Promise<number[]> {
-  return (await steamProcesses(opts))?.steam.map((p) => p.pid) ?? [];
+// Status reads only: the shared snapshot, and a failed listing shows as no Steam.
+export async function findSteamPids(): Promise<number[]> {
+  return (await steamProcesses())?.steam.map((p) => p.pid) ?? [];
 }
 
+// Shutdown, kill and apply decisions: a fresh listing, null when it failed.
+export async function listSteamPids(): Promise<number[] | null> {
+  return (await steamProcesses({ fresh: true }))?.steam.map((p) => p.pid) ?? null;
+}
+
+// null when the listing failed; only the Steam monitor needs to tell that apart.
+export async function probeSteamRunning(): Promise<boolean | null> {
+  const pids = await listSteamPids();
+  return pids && pids.length > 0;
+}
+
+// A failed listing reads as running: no write or skipped shutdown may rest on a guess.
 export async function isSteamRunning(): Promise<boolean> {
-  return ((await steamProcesses({ fresh: true }))?.steam.length ?? 0) > 0;
+  return (await probeSteamRunning()) ?? true;
 }
 
 // Counts the processes waitForSteamGone counts, but a failed listing reads as running: Steam's files must not change under it.

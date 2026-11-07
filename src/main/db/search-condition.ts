@@ -1,7 +1,9 @@
 import { A, pipe } from '@mobily/ts-belt';
 import type Database from 'better-sqlite3';
 import {
+  APOSTROPHES,
   buildFtsQueries,
+  queryForms,
   stripApostrophes,
   switchLayout,
 } from '../../shared/search-utils';
@@ -10,7 +12,11 @@ import { VISIBLE_GAMES_SQL } from './db-queries';
 export interface SearchCondition {
   sql: string;
   params: string[];
+  // The query in the forms the match read it (typed, other layout, transliterated, corrected), to rank titles starting with one
+  prefixes: string[];
 }
+
+type SqlPredicate = Pick<SearchCondition, 'sql' | 'params'>;
 
 const FTS_MATCH_SQL = 'id IN (SELECT game_id FROM games_fts WHERE games_fts MATCH ?)';
 
@@ -21,14 +27,29 @@ const SPELLFIX_CANDIDATES_SQL =
 // Scope 2 alone offers nothing for a typo in the 2nd letter ("poject"), so scope 1 follows it
 const SPELLFIX_SCOPES = [2, 1];
 
-function ftsMatch(query: string): SearchCondition {
+const WORD = /[\p{L}\p{N}]+/gu;
+
+// name_search starts with the lowercased name, here without apostrophes the way stripApostrophes() drops them
+const STRIPPED_NAME_SEARCH_SQL = [...APOSTROPHES].reduce(
+  (sql, char) => `replace(${sql}, '${char.replaceAll("'", "''")}', '')`,
+  'name_search'
+);
+
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, '\\$&');
+
+const prefixForms = (forms: readonly string[]): string[] => [
+  ...new Set(
+    forms
+      .map((form) => stripApostrophes(form).toLowerCase().replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+  ),
+];
+
+function ftsMatch(query: string): SqlPredicate {
   return { sql: FTS_MATCH_SQL, params: [query] };
 }
 
-export function hasVisibleMatch(
-  db: Database.Database,
-  condition: SearchCondition
-): boolean {
+export function hasVisibleMatch(db: Database.Database, condition: SqlPredicate): boolean {
   return (
     db
       .prepare(
@@ -36,6 +57,17 @@ export function hasVisibleMatch(
       )
       .get(...condition.params) !== undefined
   );
+}
+
+// Titles that start with the query come first: "The Room" before "Silent Hill 4: The Room"
+export function prefixFirstOrder(condition: SearchCondition | null): SqlPredicate | null {
+  if (!condition?.prefixes.length) {
+    return null;
+  }
+  return {
+    sql: `EXISTS (SELECT 1 FROM json_each(?) WHERE substr(${STRIPPED_NAME_SEARCH_SQL}, 1, length(json_each.value)) = json_each.value) DESC`,
+    params: [JSON.stringify(condition.prefixes)],
+  };
 }
 
 // One search predicate for every list and the facet counts, so a count never disagrees with its list
@@ -51,7 +83,11 @@ export function buildSearchCondition(
 
   // An FTS prefix scan is expensive for 1 char; SQLite's LIKE folds ASCII only, and name_search is lowercased in JS
   if (query.length === 1) {
-    return { sql: 'name_search LIKE ?', params: [`${query.toLowerCase()}%`] };
+    return {
+      sql: "name_search LIKE ? ESCAPE '\\'",
+      params: [`${escapeLike(query.toLowerCase())}%`],
+      prefixes: prefixForms([query]),
+    };
   }
 
   const conditions = queryConditions(query);
@@ -66,23 +102,28 @@ export function buildSearchCondition(
   }
 
   // Typo fallback is decided on the search alone, so the other filters still apply to its matches
-  const correctedFts = typoFallback ? correctFtsQuery(db, query) : null;
-  return correctedFts ? ftsMatch(correctedFts) : conditions[0];
+  const corrected = typoFallback ? correctFtsQuery(db, query) : null;
+  return corrected
+    ? { ...ftsMatch(corrected.fts), prefixes: prefixForms(corrected.prefixes) }
+    : conditions[0];
 }
 
 function queryConditions(
   query: string,
   options?: { transliterate: boolean }
 ): SearchCondition[] {
+  const prefixes = prefixForms(queryForms(query, options));
   const ftsQueries = buildFtsQueries(query, options);
   return ftsQueries.length
-    ? ftsQueries.map(ftsMatch)
-    : [{ sql: 'name LIKE ?', params: [`%${query}%`] }];
+    ? ftsQueries.map((fts) => ({ ...ftsMatch(fts), prefixes }))
+    : [{ sql: "name LIKE ? ESCAPE '\\'", params: [`%${escapeLike(query)}%`], prefixes }];
 }
 
 function prefixTerm(word: string): string {
   return `"${word}"*`;
 }
+
+const allOf = (words: readonly string[]) => A.map(words, prefixTerm).join(' AND ');
 
 function adjacentSwaps(word: string): readonly string[] {
   const chars = [...word];
@@ -111,24 +152,25 @@ function correctionCandidates(db: Database.Database, word: string): readonly str
   return A.uniq([...spellfixWords, ...swapped]);
 }
 
-// The first candidate that finds a game together with the other terms, so "elden rign" picks "ring"
+// The first candidate that finds a game together with the other words, so "elden rign" picks "ring"
 function correctWord(
   db: Database.Database,
   word: string,
   context: readonly string[]
 ): string {
-  const candidates = A.map(correctionCandidates(db, word), prefixTerm);
-  const fits = (term: string) =>
-    hasVisibleMatch(db, ftsMatch([...context, term].join(' AND ')));
-  return A.find(candidates, fits) ?? A.head(candidates) ?? prefixTerm(word);
+  const candidates = correctionCandidates(db, word);
+  const fits = (candidate: string) =>
+    hasVisibleMatch(db, ftsMatch(allOf([...context, candidate])));
+  return A.find(candidates, fits) ?? A.head(candidates) ?? word;
 }
 
-function correctFtsQuery(db: Database.Database, searchQuery: string): string | null {
+function correctFtsQuery(
+  db: Database.Database,
+  searchQuery: string
+): { fts: string; prefixes: string[] } | null {
   // The spellfix dictionary has no apostrophes (extractUniqueWords), so strip the query too
-  const words = stripApostrophes(searchQuery)
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((w) => w.length >= 3);
+  const text = stripApostrophes(searchQuery).toLowerCase();
+  const words = text.split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 3);
 
   if (words.length === 0) {
     return null;
@@ -139,36 +181,44 @@ function correctFtsQuery(db: Database.Database, searchQuery: string): string | n
       words,
       (word) => /^\p{N}+$/u.test(word) || hasVisibleMatch(db, ftsMatch(prefixTerm(word)))
     );
-    const knownTerms = A.map(knownWords, prefixTerm);
     // Corrected words must fit each other too, or "ассасін крід" pairs assassin with kart
     const firstPass = A.reduce(
       unknownWords,
       [] as readonly string[],
       (corrected, word) => [
         ...corrected,
-        correctWord(db, word, [...knownTerms, ...corrected]),
+        correctWord(db, word, [...knownWords, ...corrected]),
       ]
     );
     // An early pick never saw the words after it, so each is picked again against all the others
-    const corrected = A.reduceWithIndex(unknownWords, firstPass, (terms, word, i) =>
+    const corrected = A.reduceWithIndex(unknownWords, firstPass, (picked, word, i) =>
       A.replaceAt(
-        terms,
+        picked,
         i,
-        correctWord(db, word, [...knownTerms, ...A.removeAt(terms, i)])
+        correctWord(db, word, [...knownWords, ...A.removeAt(picked, i)])
       )
     );
 
-    const terms = [...knownTerms, ...corrected];
-    const allTerms = terms.join(' AND ');
+    const corrections = new Map(A.zip(unknownWords, corrected));
+    // The query as typed with each typo corrected, and without the word a looser match leaves out
+    const spelled = (left?: string) =>
+      text.replace(WORD, (word) =>
+        word === left ? '' : (corrections.get(word) ?? word)
+      );
+    const terms = [...knownWords, ...corrected];
+    const allTerms = allOf(terms);
     if (terms.length < 3 || hasVisibleMatch(db, ftsMatch(allTerms))) {
-      return allTerms;
+      return { fts: allTerms, prefixes: [spelled()] };
     }
     // One word too many in a longer title: "hollow knigt game", "resident evil 4 remake"
-    return pipe(
-      terms,
-      A.mapWithIndex((i) => `(${A.removeAt(terms, i).join(' AND ')})`),
-      A.join(' OR ')
-    );
+    return {
+      fts: pipe(
+        terms,
+        A.mapWithIndex((i) => `(${allOf(A.removeAt(terms, i))})`),
+        A.join(' OR ')
+      ),
+      prefixes: words.map((word) => spelled(word)),
+    };
   } catch (e) {
     console.warn('[GamesRepository] Spellfix fuzzy fallback error:', e);
     return null;

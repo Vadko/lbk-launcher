@@ -9,7 +9,11 @@ import {
   stagingRoot,
 } from '@/main/millennium-install/apply';
 import { extractMillenniumArchive } from '@/main/millennium-install/extract';
-import { deleteInstallRecord, recordPathIn } from '@/main/millennium-install/record';
+import {
+  deleteInstallRecord,
+  readInstallRecord,
+  recordPathIn,
+} from '@/main/millennium-install/record';
 import { MILLENNIUM_PIN, pinnedTagFor } from '@/main/millennium-install/release';
 import {
   getHostSnapshot,
@@ -27,7 +31,7 @@ import {
   getPendingSteamActions,
   onPendingSteamActionsChanged,
 } from '@/main/steam-pending-actions/queue';
-import { findSteamPids } from '@/main/steam-process/lifecycle';
+import { listSteamPids } from '@/main/steam-process/lifecycle';
 import { restartSteamOrchestrated } from '@/main/steam-restart';
 import { pruneDir } from '@/main/utils/fs-safe';
 import { downloadPinned, PinnedDownloadError } from '@/main/utils/pinned-download';
@@ -192,7 +196,8 @@ async function runQueuedChange(
   appEvents.on('millennium-applied', onApplied);
   appEvents.on('millennium-phase', onPhase);
   try {
-    if ((await findSteamPids({ fresh: true })).length === 0) {
+    // A failed listing goes the running-Steam way: the queue waits or the restart refuses.
+    if ((await listSteamPids())?.length === 0) {
       await runPendingSteamActions('manual');
       return (
         outcomeFailure(kind, applied) ?? {
@@ -340,13 +345,20 @@ function cleanupOrphans(snapshot: HostSnapshot): void {
 
 function maintainInstall(snapshot: HostSnapshot): void {
   const host = hostTarget(snapshot);
-  const record = host?.target.record;
-  if (!host || !record) {
+  if (!host || isMillenniumBusy()) {
     return;
   }
-  const target = { ...host.target, record };
-  if (host.driver.startupMaintenance(target, pendingMillenniumAction() === 'activate')) {
-    deleteInstallRecord(recordPathIn(target.paths.root));
+  const { target, driver } = host;
+  const recordPath = recordPathIn(target.paths.root);
+  // A record for another Steam path still describes somebody's install.
+  if (!target.record && readInstallRecord(recordPath)) {
+    return;
+  }
+  if (
+    driver.startupMaintenance(target, pendingMillenniumAction() === 'activate') &&
+    target.record
+  ) {
+    deleteInstallRecord(recordPath);
     resetHostFacts();
   }
 }

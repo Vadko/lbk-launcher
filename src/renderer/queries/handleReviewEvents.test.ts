@@ -89,7 +89,7 @@ function post(outcome?: 'published' | 'pending') {
     mutationKey: feedbackPostsKey,
     mutationFn: (_: { entryId: string }) =>
       outcome
-        ? Promise.resolve({ ok: true, outcome })
+        ? Promise.resolve({ ok: true, outcome, answeredAt: Date.now() })
         : new Promise<never>(() => undefined),
   });
   void observer.mutate({ entryId: 'held' });
@@ -215,6 +215,21 @@ describe('handleReviewEvents against the viewer own write', () => {
     expect(notices()).toEqual([]);
   });
 
+  it.each([
+    ['stays quiet about the answer own event on a clock 30 s behind', 30_000, []],
+    [
+      'announces a restore after a removal minutes after the same answer',
+      5 * 60_000,
+      [expect.objectContaining({ type: 'review-published' })],
+    ],
+  ])('%s', async (_label, afterAnswer, expected) => {
+    await write(published('held'));
+
+    handle(reviewEvent({ at: new Date(Date.now() + afterAnswer).toISOString() }));
+
+    expect(notices()).toEqual(expected);
+  });
+
   it('announces a publish that came after the answer said the edit waits', async () => {
     await write(pendingAnswer('held'));
 
@@ -248,6 +263,14 @@ describe('handleReviewEvents on a root post the feedback form sent', () => {
     handle(reviewEvent());
 
     expect(notices()).toEqual([]);
+  });
+
+  it('announces a restore that came minutes after the form showed the same verdict', async () => {
+    await post('published');
+
+    handle(reviewEvent({ at: new Date(Date.now() + 5 * 60_000).toISOString() }));
+
+    expect(notices()).toEqual([expect.objectContaining({ type: 'review-published' })]);
   });
 
   it('announces a publish that came after the form said the post waits', async () => {

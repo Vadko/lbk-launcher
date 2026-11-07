@@ -118,6 +118,7 @@ describe('LBK Bridge double-load guard', () => {
     const second = steam.load('millennium');
     second.start();
     expect(first.state.status).toBe('disposed');
+    expect(first.state.idle).toBe(false);
     expect(second.state.idle).toBe(false);
     expect(steam.steam.__LBK_BRIDGE__).toBe(second.state);
   });
@@ -140,11 +141,28 @@ describe('LBK Bridge double-load guard', () => {
     const steam = makeSteam();
     const decky = steam.load('decky');
     decky.start();
+    const seen: [string, boolean][] = [];
+    decky.events.addEventListener('change', () =>
+      seen.push([decky.state.status, decky.state.idle])
+    );
     const millennium = steam.load('millennium');
     millennium.start();
-    expect(decky.state.status).toBe('disposed');
+    expect(seen).toEqual([['disposed', true]]);
     expect(steam.steam.__LBK_BRIDGE__).toBe(millennium.state);
     expect(millennium.state.host).toBe('millennium');
+  });
+
+  it.each<[string, (bridge: Bridge) => void]>([
+    ['its own dismount', (bridge) => bridge.dispose()],
+    [
+      'an older Millennium copy that names no successor',
+      (bridge) => bridge.state.dispose(),
+    ],
+  ])('shows a Decky copy disposed by %s as not idle', (_case, dispose) => {
+    const decky = makeSteam().load('decky');
+    decky.start();
+    dispose(decky);
+    expect(decky.state).toMatchObject({ status: 'disposed', idle: false });
   });
 
   it('stops reconnecting once disposed', async () => {

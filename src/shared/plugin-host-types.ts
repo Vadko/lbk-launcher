@@ -195,6 +195,8 @@ export type RestartFailureReason =
   | 'gamescope'
   | 'game-running'
   | 'timeout'
+  // The process listing failed, so nothing can be said about Steam.
+  | 'unknown-state'
   | 'launch-failed';
 
 export interface RestartSteamResult {

@@ -16,6 +16,8 @@ const OVERLAP_MS = 5_000;
 const LEGACY_WATERMARK_KEY = 'last_feedback_reply_sync';
 
 const pageSchema = z.object({ events: z.array(z.unknown()) });
+// Only the at of a page's last item, so a page whose every event this build drops still pages on
+const lastAtSchema = reviewEventSchema.pick({ at: true });
 
 // The renderer's bridge turns it on once its listener is set; window.ts turns it off when the page goes
 let listening = false;
@@ -24,6 +26,8 @@ interface EventsPage {
   events: ReviewEvent[];
   // Before the bad items are dropped, since only the server's count says whether more follow
   size: number;
+  // The raw last item's, where the next page starts; null when it has none
+  lastAt: string | null;
 }
 
 // null when the server could not be asked or answered oddly; callReviewFunction already logged why
@@ -40,6 +44,7 @@ async function fetchPage(since: string): Promise<EventsPage | null> {
   return {
     events: keepValid(events, reviewEventSchema, 'review events'),
     size: events.length,
+    lastAt: lastAtSchema.safeParse(events.at(-1)).data?.at ?? null,
   };
 }
 
@@ -72,10 +77,10 @@ const reviewEvents = createDeltaStream({
         items: page.events,
         watermark: latest(since, last ? [last.at] : []) ?? undefined,
       };
-      if (!last || page.size < PAGE_SIZE) {
+      if (!page.lastAt || page.size < PAGE_SIZE) {
         return;
       }
-      cursor = last.at;
+      cursor = page.lastAt;
     }
   },
   // The overlap and the live stream repeat events, which the renderer's seen lists drop

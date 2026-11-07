@@ -24,6 +24,7 @@ import {
   achievementsOptionState,
   calculateTotalSize,
   type InstallComponentChanges,
+  steamArtworkStartsChecked,
 } from '../../utils/installOptions';
 import { Button } from '../ui/Button';
 import { SelectDropdown, type SelectOption } from '../ui/SelectDropdown';
@@ -76,7 +77,12 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const isAchievementsInstalled =
     installationInfo?.components?.achievements?.installed ?? false;
   const isReinstall = !!installationInfo;
-  const initialSteamArtwork = isReinstall ? steamArtworkApplied : defaultSteamArtwork;
+  const initialSteamArtwork = steamArtworkStartsChecked({
+    isReinstall,
+    chosen: installationInfo?.steamArtwork,
+    applied: steamArtworkApplied,
+    byDefault: defaultSteamArtwork,
+  });
 
   // Filter platforms to only show those that the game supports
   const supportedPlatforms = useMemo(() => {
@@ -179,7 +185,7 @@ export const InstallOptionsDialog: React.FC<InstallOptionsDialogProps> = ({
   const changesArtworkAlone =
     isReinstall &&
     hasSteamArtwork &&
-    installSteamArtwork !== initialSteamArtwork &&
+    installSteamArtwork !== steamArtworkApplied &&
     installationInfo?.installedPlatform === 'steam' &&
     !installText &&
     !willDownloadVoice &&

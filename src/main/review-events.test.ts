@@ -203,6 +203,36 @@ describe('syncReviewEvents', () => {
     expect(delivered()).toHaveLength(199);
   });
 
+  it('pages on past a full page whose every event it drops, the watermark left to the kept ones', async () => {
+    state.metadata.set(WATERMARK, '2026-10-29T09:00:00Z');
+    const poison = Array.from({ length: 200 }, () => ({
+      ...event({ at: AT }),
+      outcome: 'hidden',
+    }));
+    const tail = event({ at: '2026-10-29T10:00:01.5+00:00' });
+    state.invoke.mockResolvedValueOnce(page(poison)).mockResolvedValueOnce(page([tail]));
+
+    await syncReviewEvents();
+
+    expect(sinceOfCalls()).toEqual(['2026-10-29T08:59:55.000Z', AT]);
+    expect(delivered()).toEqual([[tail, false]]);
+    expect(state.metadata.get(WATERMARK)).toBe('2026-10-29T10:00:01.5+00:00');
+  });
+
+  it.each([
+    ['without an at', { kind: 'reply' }],
+    ['with an at that is no timestamp', { at: 'yesterday' }],
+  ])('stops at a full page whose last item comes %s', async (_case, last) => {
+    state.metadata.set(WATERMARK, '2026-10-29T09:00:00Z');
+    const full = Array.from({ length: 199 }, () => event({ at: AT }));
+    state.invoke.mockResolvedValue(page([...full, last]));
+
+    await syncReviewEvents();
+
+    expect(state.invoke).toHaveBeenCalledTimes(1);
+    expect(state.metadata.get(WATERMARK)).toBe(AT);
+  });
+
   it('stops at a page shorter than 200', async () => {
     state.metadata.set(WATERMARK, '2026-10-29T09:00:00Z');
     state.invoke.mockResolvedValue(

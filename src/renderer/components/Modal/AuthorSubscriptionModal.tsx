@@ -154,7 +154,7 @@ export const AuthorSubscriptionModal: React.FC<AuthorSubscriptionModalProps> = (
                       {author}
                     </span>
                     {isSpecial && specialInfo && (
-                      <Tooltip content={specialInfo.description}>
+                      <Tooltip content={t(`specialTranslators.${specialInfo.role}`)}>
                         <StarIcon
                           size={14}
                           className="text-yellow-400 fill-yellow-400 cursor-help shrink-0"

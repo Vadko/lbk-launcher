@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 class FakeElement {
   id = '';
+  isConnected = true;
   focus: HTMLElement['focus'] = vi.fn();
   blur: HTMLElement['blur'] = vi.fn();
   setAttribute: HTMLElement['setAttribute'] = vi.fn();
@@ -32,6 +33,12 @@ export const fakeEntry = (id: string, action: HTMLElement | null): HTMLElement =
     id,
     querySelector: (selector: string) =>
       selector === '[data-gamepad-action]' ? action : null,
+  }) as HTMLElement;
+
+// A dialog around the given elements
+export const fakeDialog = (...inside: HTMLElement[]): HTMLElement =>
+  Object.assign(new FakeElement(), {
+    contains: (other: Node | null) => inside.some((el) => el === other),
   }) as HTMLElement;
 
 interface FakeDocument {

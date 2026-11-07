@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { CheckCircleIcon, ClockIcon, ShieldXIcon } from 'lucide-react';
-import React, { useEffect } from 'react';
+import React, { useEffect, useEffectEvent } from 'react';
 import type { GameReviewOutcome } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
 import type { FeedbackType } from '@/shared/types';
@@ -30,14 +30,16 @@ export const FeedbackSent: React.FC<FeedbackSentProps> = ({
   outcome,
 }) => {
   const view = feedbackSentView(type, allowPublish, outcome);
+  // The parent passes a fresh onClose on every render, which would restart the timer each time
+  const close = useEffectEvent(onClose);
 
   useEffect(() => {
     if (!isOpen) {
       return;
     }
-    const timer = setTimeout(onClose, view.closeAfterMs);
+    const timer = setTimeout(() => close(), view.closeAfterMs);
     return () => clearTimeout(timer);
-  }, [isOpen, onClose, view.closeAfterMs]);
+  }, [isOpen, view.closeAfterMs]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} showCloseButton={false}>

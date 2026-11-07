@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { AchievementsBadge } from '@/shared/plugin-host-types';
-import { achievementsOptionState, calculateTotalSize } from './installOptions';
+import {
+  achievementsOptionState,
+  calculateTotalSize,
+  steamArtworkStartsChecked,
+} from './installOptions';
 
 const badge = (state: AchievementsBadge['state']): AchievementsBadge => ({
   state,
@@ -49,8 +53,16 @@ describe('achievementsOptionState', () => {
     expect(checking).toMatchObject({ checking: true, canToggle: false, install: true });
   });
 
-  it('sends nothing without an archive', () => {
-    expect(option({ hasArchive: false, installed: true }).install).toBe(false);
+  it.each([
+    ['installed strings stay', true, true],
+    ['nothing installed asks for nothing', false, false],
+  ])('locks the box without an archive: %s', (_case, installed, install) => {
+    expect(option({ hasArchive: false, installed, checked: true })).toMatchObject({
+      canToggle: false,
+      install,
+      willRemove: false,
+      willDownload: false,
+    });
   });
 
   it('plans download, reinstall and removal from the box', () => {
@@ -67,6 +79,43 @@ describe('achievementsOptionState', () => {
       willRemove: true,
       wants: false,
     });
+  });
+});
+
+describe('steamArtworkStartsChecked', () => {
+  it.each<[string, boolean, boolean | undefined, boolean, boolean, boolean]>([
+    ['a new install, from the setting', false, undefined, false, true, true],
+    ['a new install with the setting off', false, undefined, false, false, false],
+    ['a reinstall the player turned off', true, false, false, true, false],
+    ['a reinstall the player turned on', true, true, false, false, true],
+    [
+      'a reinstall never offered artwork, from the setting',
+      true,
+      undefined,
+      false,
+      true,
+      true,
+    ],
+    [
+      'a reinstall with artwork from before the choice',
+      true,
+      undefined,
+      true,
+      false,
+      true,
+    ],
+    [
+      'a reinstall never offered artwork, setting off',
+      true,
+      undefined,
+      false,
+      false,
+      false,
+    ],
+  ])('%s', (_case, isReinstall, chosen, applied, byDefault, expected) => {
+    expect(steamArtworkStartsChecked({ isReinstall, chosen, applied, byDefault })).toBe(
+      expected
+    );
   });
 });
 

@@ -5,16 +5,18 @@ export const uk = {
     hidden: 'Не відображатимуться в Steam',
     millennium: 'Відображатимуться через Millennium',
     decky: 'Відображатимуться через Decky Loader',
-    afterRestart: 'З’являться після перезапуску Steam',
-    needsMillennium: 'Потрібен Millennium',
-    needsDeckyPlugin: 'Потрібен LBK Bridge для Decky Loader',
-    needsDecky: 'Потрібен Decky Loader',
+    'after-restart': 'З’являться після перезапуску Steam',
+    'needs-millennium': 'Потрібен Millennium',
+    'needs-decky-plugin': 'Потрібен LBK Bridge для Decky Loader',
+    'needs-decky': 'Потрібен Decky Loader',
   },
   achievementsNote: {
     needsMillennium:
       'Steam не підхоплює перекладені назви досягнень зі звичайних файлів гри. Щоб бачити їх у бібліотеці, сповіщеннях і оверлеї Steam, установіть Millennium. Досягнення в інтерфейсі самої гри можуть залишитися мовою розробника.',
     needsDeckyPlugin:
       'Steam не підхоплює перекладені назви досягнень зі звичайних файлів гри. Щоб бачити їх у бібліотеці, сповіщеннях і оверлеї Steam, установіть плагін «LBK Bridge» для Decky Loader. Досягнення в інтерфейсі самої гри можуть залишитися мовою розробника.',
+    deckyPluginDisabled:
+      'Steam не підхоплює перекладені назви досягнень зі звичайних файлів гри. Їх показує плагін «LBK Bridge», але його вимкнено в Decky Loader — увімкніть його в налаштуваннях Decky. Досягнення в інтерфейсі самої гри можуть залишитися мовою розробника.',
     needsDecky:
       'Steam не підхоплює перекладені назви досягнень зі звичайних файлів гри. На Steam Deck їх відображає плагін «LBK Bridge», для якого потрібен Decky Loader. Досягнення в інтерфейсі самої гри можуть залишитися мовою розробника.',
     settingOff:
@@ -514,9 +516,9 @@ export const uk = {
   },
   gameStatus: {
     planned: 'Заплановано',
-    inProgress: 'Ранній доступ',
+    'in-progress': 'Ранній доступ',
     completed: 'Завершено',
-    techImprovement: 'Технічна доробка',
+    'tech-improvement': 'Технічна доробка',
   },
   gameTabs: {
     info: 'Інфо',
@@ -793,6 +795,8 @@ export const uk = {
       'Переклад досягнень збережено. Щоб бачити його в Steam, потрібен Millennium.',
     needsDeckyPlugin:
       'Переклад досягнень збережено. Щоб бачити його в Steam, встановіть плагін «LBK Bridge» для Decky Loader.',
+    deckyPluginDisabled:
+      'Переклад досягнень збережено. Щоб бачити його в Steam, увімкніть плагін «LBK Bridge» у налаштуваннях Decky Loader.',
     needsDecky:
       'Переклад досягнень збережено. На Steam Deck його показує плагін «LBK Bridge» для Decky Loader — лаунчер може встановити Decky Loader сам.',
     unavailable:
@@ -837,6 +841,7 @@ export const uk = {
     gameDirUnresolved: 'Не вдалося визначити теку гри для параметрів запуску',
     writeFailed: 'Не вдалося записати параметри запуску',
     eglWriteFailed: 'не вдалося змінити налаштування гри в Epic Games Launcher',
+    eglGameNotFound: 'гру не знайдено серед встановлених через Epic Games Launcher',
     eglNeedsShell:
       'вони виконуються лише через оболонку, якою їх запускає Steam, а Epic Games Launcher так не вміє',
     eglQueued:
@@ -1126,8 +1131,10 @@ export const uk = {
     deckyPlugin:
       'Плагін «LBK Bridge» для Decky Loader показує в Steam перекладені досягнення.',
     deckyOutdated: 'Доступне оновлення плагіна «LBK Bridge» для Decky Loader.',
-    pendingActivate: 'Millennium встановиться, щойно ви закриєте Steam.',
-    pendingDeactivate: 'Millennium буде видалено, щойно ви закриєте Steam.',
+    pending: {
+      activate: 'Millennium встановиться, щойно ви закриєте Steam.',
+      deactivate: 'Millennium буде видалено, щойно ви закриєте Steam.',
+    },
     installedVersion: 'Встановлено Millennium {{version}}.',
     repair: 'Файли Millennium у теці Steam пошкоджено або видалено.',
     update: 'Доступне оновлення Millennium: {{version}}.',
@@ -1496,13 +1503,13 @@ export const uk = {
     exeTitle: 'Запуск інсталятора',
     scriptTitle: 'Запуск скрипта',
     exeProtonMessage:
-      'Українізатор завантажено й розпаковано. Інсталятор для Windows буде запущено через вибрану версію Proton.\n\nШлях до теки буде скопійовано в буфер обміну.',
+      'Українізатор для «{{name}}» завантажено й розпаковано. Інсталятор для Windows буде запущено через вибрану версію Proton.\n\nШлях до теки буде скопійовано в буфер обміну.',
     scriptProtonMessage:
-      'Українізатор завантажено й розпаковано. Скрипт для Windows буде запущено через вибрану версію Proton.\n\nШлях до теки буде скопійовано в буфер обміну.',
+      'Українізатор для «{{name}}» завантажено й розпаковано. Скрипт для Windows буде запущено через вибрану версію Proton.\n\nШлях до теки буде скопійовано в буфер обміну.',
     exeAskMessage:
-      'Українізатор завантажено та розпаковано.\n\nЗапустити інсталятор зараз?',
+      'Українізатор для «{{name}}» завантажено та розпаковано.\n\nЗапустити інсталятор зараз?',
     scriptAskMessage:
-      'Українізатор завантажено та розпаковано.\n\nЗапустити скрипт зараз?',
+      'Українізатор для «{{name}}» завантажено та розпаковано.\n\nЗапустити скрипт зараз?',
     protonPlaceholder: 'Оберіть версію Proton',
     openFolder: 'Відкрити теку',
     run: 'Так, запустити',
@@ -1757,9 +1764,9 @@ export const uk = {
     restartedTitle: 'Steam перезапущено',
   },
   steamRestartFailure: {
-    launchFailed:
+    'launch-failed':
       'Steam закрито, але не вдалося запустити його знову. Запустіть Steam вручну.',
-    accessDenied: {
+    'access-denied': {
       launchOptions:
         'Steam запущено від імені адміністратора, тому лаунчер не може його перезапустити. Закрийте Steam самостійно — параметри запуску застосуються автоматично.',
       plain:
@@ -1771,7 +1778,7 @@ export const uk = {
       plain:
         'В ігровому режимі лаунчер не перезапускає Steam. Перезапустіть його самостійно — наприклад, перейдіть у режим робочого столу.',
     },
-    gameRunning: {
+    'game-running': {
       launchOptions:
         'Закрийте гру, щоб перезапустити Steam. Параметри запуску застосуються, щойно Steam буде закрито.',
       plain: 'Закрийте гру, щоб перезапустити Steam.',
@@ -1780,6 +1787,12 @@ export const uk = {
       launchOptions:
         'Steam не закрився вчасно. Закрийте його вручну — параметри запуску застосуються автоматично.',
       plain: 'Steam не закрився вчасно. Перезапустіть його вручну.',
+    },
+    'unknown-state': {
+      launchOptions:
+        'Не вдалося перевірити, чи запущено Steam, тому лаунчер його не перезапускає. Закрийте Steam самостійно — параметри запуску застосуються автоматично.',
+      plain:
+        'Не вдалося перевірити, чи запущено Steam, тому лаунчер його не перезапускає. Перезапустіть Steam самостійно.',
     },
     generic: 'Не вдалося перезапустити Steam.',
   },

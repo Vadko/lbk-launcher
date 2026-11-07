@@ -9,9 +9,9 @@ import { AchievementsDeliveryNote } from './AchievementsDeliveryNote';
 import { OptionCheckbox } from './OptionCheckbox';
 
 const PLANNED_CHANGES = [
-  ['willRemove', t('installOptions.willRemove'), Trash2Icon, 'text-red-400'],
-  ['willDownload', t('installOptions.willDownload'), ArchiveIcon, 'text-green-400'],
-  ['willReinstall', t('installOptions.willReinstall'), ArchiveIcon, 'text-green-400'],
+  ['willRemove', Trash2Icon, 'text-red-400'],
+  ['willDownload', ArchiveIcon, 'text-green-400'],
+  ['willReinstall', ArchiveIcon, 'text-green-400'],
 ] as const;
 
 interface AchievementsOptionProps {
@@ -79,14 +79,12 @@ export const AchievementsOption: React.FC<AchievementsOptionProps> = ({
               </span>
             </p>
           )}
-          {PLANNED_CHANGES.filter(([key]) => option[key]).map(
-            ([key, text, Icon, color]) => (
-              <p key={key} className={`flex items-center gap-1 mt-1 ${color}`}>
-                <Icon size={14} />
-                <span>{text}</span>
-              </p>
-            )
-          )}
+          {PLANNED_CHANGES.filter(([key]) => option[key]).map(([key, Icon, color]) => (
+            <p key={key} className={`flex items-center gap-1 mt-1 ${color}`}>
+              <Icon size={14} />
+              <span>{t(`installOptions.${key}`)}</span>
+            </p>
+          ))}
         </div>
       </div>
     </label>
