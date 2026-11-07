@@ -16,7 +16,7 @@ const state = vi.hoisted(() => ({
   metadata: new Map<string, string>(),
   localIds: [] as string[],
   repositoryCalls: [] as { ids: string[]; hideAi: boolean }[],
-  sent: vi.fn(),
+  changed: vi.fn(),
 }));
 
 function sqlite(): DatabaseSync {
@@ -49,11 +49,12 @@ vi.mock('@/main/db/games-repository', () => ({
     }),
   },
 }));
-vi.mock('@/main/window', () => ({ sendToRenderer: state.sent }));
 
 const { createWeeklyPicksSubscription, getWeeklyPicks, syncWeeklyPicks } = await import(
   './weekly-picks'
 );
+const { appEvents } = await import('@/main/app-events');
+appEvents.on('weekly-picks-changed', state.changed);
 
 const setRow = (
   gameIds: string[],
@@ -78,7 +79,7 @@ beforeEach(() => {
   state.metadata.clear();
   state.localIds = ['a', 'b', 'c', 'd', 'e', 'f'];
   state.repositoryCalls = [];
-  state.sent.mockReset();
+  state.changed.mockReset();
   state.db = new DatabaseSync(':memory:');
   sqlite().exec(`
     CREATE TABLE weekly_picks (
@@ -100,13 +101,13 @@ describe('syncWeeklyPicks', () => {
 
     expect(getWeeklyPicks(false)?.title).toBe('Halloween');
     expect(shownIds()).toEqual(['c', 'a', 'b']);
-    expect(state.sent.mock.calls).toEqual([['weekly-picks-updated']]);
+    expect(state.changed).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the stored set and stays quiet when the server has none or fails', async () => {
     state.rpc.data = [setRow(['a', 'b', 'c'])];
     await syncWeeklyPicks();
-    state.sent.mockReset();
+    state.changed.mockReset();
 
     state.rpc.data = [];
     await syncWeeklyPicks();
@@ -114,17 +115,17 @@ describe('syncWeeklyPicks', () => {
     await syncWeeklyPicks();
 
     expect(shownIds()).toEqual(['a', 'b', 'c']);
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 
   it('does not notify when the same set comes back unchanged', async () => {
     state.rpc.data = [setRow(['a', 'b', 'c'])];
     await syncWeeklyPicks();
-    state.sent.mockReset();
+    state.changed.mockReset();
 
     await syncWeeklyPicks();
 
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 
   it('takes the same set with fewer games, as a deleted game cascades out of it', async () => {
@@ -157,7 +158,7 @@ describe('the home-picks broadcast', () => {
   it('replaces the stored set with a newer one, ignoring extra payload keys', async () => {
     state.rpc.data = [setRow(['a', 'b', 'c'])];
     await syncWeeklyPicks();
-    state.sent.mockReset();
+    state.changed.mockReset();
 
     broadcast({
       ...setRow(['d', 'e', 'f'], '2026-11-03T08:00:00+00:00', null),
@@ -166,25 +167,25 @@ describe('the home-picks broadcast', () => {
 
     expect(getWeeklyPicks(false)?.title).toBeNull();
     expect(shownIds()).toEqual(['d', 'e', 'f']);
-    expect(state.sent.mock.calls).toEqual([['weekly-picks-updated']]);
+    expect(state.changed).toHaveBeenCalledTimes(1);
   });
 
   it('never lets an older set replace a newer one', async () => {
     broadcast(setRow(['d', 'e', 'f'], '2026-11-03T08:00:00+00:00'));
-    state.sent.mockReset();
+    state.changed.mockReset();
 
     state.rpc.data = [setRow(['a', 'b', 'c'], '2026-11-02T10:00:00+00:00')];
     await syncWeeklyPicks();
 
     expect(shownIds()).toEqual(['d', 'e', 'f']);
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 
   it('ignores a malformed payload', () => {
     broadcast({ title: 'Halloween', game_ids: 'a,b,c' });
 
     expect(getWeeklyPicks(false)).toBeNull();
-    expect(state.sent).not.toHaveBeenCalled();
+    expect(state.changed).not.toHaveBeenCalled();
   });
 });
 

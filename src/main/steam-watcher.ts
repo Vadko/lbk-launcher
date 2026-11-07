@@ -1,6 +1,7 @@
 import { F } from '@mobily/ts-belt';
 import * as fs from 'fs';
 import * as path from 'path';
+import { appEvents } from './app-events';
 import {
   getLastKnownLicensecacheSize,
   getLicensecachePath,
@@ -13,6 +14,11 @@ import {
 import { parseLibraryFolders } from './utils/vdf-parser';
 import { sendToRenderer } from './window';
 
+function notifyLibraryChanged(): void {
+  sendToRenderer('steam-library-changed');
+  appEvents.emit('library-changed');
+}
+
 let steamappsWatchers: fs.FSWatcher[] = [];
 let licensecacheWatcher: fs.FSWatcher | null = null;
 let watchedLibraryFolders = '';
@@ -23,7 +29,7 @@ const LIBRARY_FOLDERS_FILE = 'libraryfolders.vdf';
 const libraryChanged = F.makeControlledDebounce(() => {
   console.log('[SteamWatcher] Notifying renderer about Steam library changes');
   invalidateSteamInstalledCaches();
-  sendToRenderer('steam-library-changed');
+  notifyLibraryChanged();
 }, DEBOUNCE);
 
 /** Licensecache changes (game purchase/refund). */
@@ -38,7 +44,7 @@ const ownedGamesChanged = F.makeControlledDebounce(() => {
     );
     updateLastKnownLicensecacheSize(currentSize);
     invalidateSteamLibraryAppIdsCache();
-    sendToRenderer('steam-library-changed');
+    notifyLibraryChanged();
   }
 }, DEBOUNCE);
 
@@ -54,7 +60,7 @@ const libraryFoldersChanged = F.makeControlledDebounce(() => {
   console.log('[SteamWatcher] Steam library folders changed, restarting watchers');
   invalidateSteamInstalledCaches();
   startSteamWatcher();
-  sendToRenderer('steam-library-changed');
+  notifyLibraryChanged();
 }, DEBOUNCE);
 
 /**

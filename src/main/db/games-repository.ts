@@ -11,6 +11,7 @@ import type {
   SortOrderType,
   TagOption,
 } from '../../shared/types';
+import { appEvents } from '../app-events';
 import { normalizeInstalledFolder } from '../utils/install-path';
 import type { WorkshopTarget } from '../utils/steam-workshop';
 import { getDatabase, isSpellfixAvailable } from './database';
@@ -119,6 +120,7 @@ export class GamesRepository {
    * Notify the renderer process about changes in games
    */
   private notifyGamesChanged(): void {
+    appEvents.emit('catalog-changed');
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
       window.webContents.send('test-games-changed');

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Database } from '../../lib/database.types';
 import { likesWithUnsentSql } from '../likes';
-import { sendToRenderer } from '../window';
+import { notifyCountersUpdated } from './counters-updated';
 import { getDatabase } from './database';
 import { createDeltaStream } from './delta-stream';
 import { GamesRepository } from './games-repository';
@@ -51,10 +51,7 @@ function applyGameCounters(rows: GameCounters[]): void {
   )(rows);
 
   if (changed.length > 0) {
-    sendToRenderer(
-      'game-counters-updated',
-      GamesRepository.getInstance().getGamesByIds(changed)
-    );
+    notifyCountersUpdated(GamesRepository.getInstance().getGamesByIds(changed));
   }
 }
 

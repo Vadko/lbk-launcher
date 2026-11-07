@@ -15,11 +15,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ online, version }) => {
   // macOS always shows the native traffic lights on the left instead of these controls.
   const isMacOS = window.electronAPI?.getPlatform() === 'macos';
 
-  useEffect(() => {
-    window.windowControls?.onMaximizedChange((maximized) => {
-      setIsMaximized(maximized);
-    });
-  }, []);
+  useEffect(() => window.windowControls?.onMaximizedChange(setIsMaximized), []);
 
   const handleMinimize = () => window.windowControls?.minimize();
   const handleMaximize = () => window.windowControls?.maximize();

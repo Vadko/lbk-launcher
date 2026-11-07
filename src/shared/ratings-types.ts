@@ -14,8 +14,3 @@ export interface GameRatingItem {
   downloads: number;
   status: Game['status'];
 }
-
-export interface RatingsAPI {
-  fetchTeamsRating: (hideAi: boolean) => Promise<TeamRatingItem[] | null>;
-  fetchGamesRating: (hideAi: boolean) => Promise<GameRatingItem[] | null>;
-}

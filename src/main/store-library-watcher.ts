@@ -1,6 +1,7 @@
 import { F } from '@mobily/ts-belt';
 import { app, powerMonitor } from 'electron';
 import * as fs from 'fs';
+import { appEvents } from './app-events';
 import { getStoreWatchDirs, revalidateStores } from './game-detector/store-cache';
 import { onXboxRootsChanged, refreshXboxRoots } from './game-detector/xbox';
 import { getMainWindow } from './window';
@@ -58,6 +59,7 @@ function checkStores(force: boolean): boolean {
   if (changed.length > 0) {
     console.log(`[StoreWatcher] Store libraries changed: ${changed.join(', ')}`);
     getMainWindow()?.webContents.send('store-library-changed');
+    appEvents.emit('library-changed');
   }
   return changed.length > 0;
 }

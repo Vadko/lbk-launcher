@@ -22,33 +22,19 @@ import { installDeckyLoader } from '../plugin-host/decky-loader-install';
 import { getPluginHostState } from '../plugin-host/state';
 import { restartSteamOrchestrated } from '../steam-restart';
 import { getSteamBridgeStatus, recheckSteamBridge } from '../utils/steam-bridge';
+import { createHandleOr, orNull } from './handle-or';
 
 function isRestartMode(value: unknown): value is 'now' | 'on-exit' {
   return value === 'now' || value === 'on-exit';
 }
 
-function handleOr<T, A = undefined>(
-  channel: string,
-  run: (arg: A) => T | Promise<T>,
-  fallback: (error: unknown) => T
-): void {
-  ipcMain.handle(channel, async (_event, arg: A) => {
-    try {
-      return await run(arg);
-    } catch (error) {
-      console.error(`[PluginHost] ${channel} failed:`, error);
-      return fallback(error);
-    }
-  });
-}
+const handleOr = createHandleOr('PluginHost');
 
 const crashed = (error: unknown): MillenniumInstallResult => ({
   success: false,
   reason: 'script-failed',
   error: errorMessage(error),
 });
-
-const orNull = () => null;
 
 export function setupPluginHostHandlers(): void {
   handleOr('plugin-host:get-state', () => getPluginHostState(), orNull);

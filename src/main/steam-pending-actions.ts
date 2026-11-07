@@ -23,7 +23,6 @@ import {
 } from '@/main/steam-pending-actions/queue';
 import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import { showSystemNotification } from '@/main/utils/system-notification';
-import { sendToRenderer } from '@/main/window';
 import { t } from '@/shared/i18n/i18n';
 
 export interface PendingRunResult {
@@ -117,11 +116,11 @@ async function applyQueue(
     );
     void refreshBridgeFacts();
   }
-  if (result.appliedGameIds.length > 0) {
-    sendToRenderer('steam-pending-actions-applied', { gameIds: result.appliedGameIds });
-    if (trigger === 'steam-exit' || trigger === 'startup' || trigger === 'bridge-ready') {
-      notifyApplied(appliedNames, trigger);
-    }
+  if (
+    result.appliedGameIds.length > 0 &&
+    (trigger === 'steam-exit' || trigger === 'startup' || trigger === 'bridge-ready')
+  ) {
+    notifyApplied(appliedNames, trigger);
   }
   return result;
 }

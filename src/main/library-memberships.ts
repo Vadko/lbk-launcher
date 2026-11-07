@@ -12,13 +12,13 @@ import { whenXboxRootsScanned } from './game-detector/xbox';
 async function resolveIds(
   filter: LibraryFilterType,
   findGames: () => Promise<{ games: Game[] }> | { games: Game[] }
-): Promise<string[]> {
+): Promise<ReadonlySet<string>> {
   try {
     const { games } = await findGames();
-    return games.map((game) => game.id);
+    return new Set(games.map((game) => game.id));
   } catch (error) {
     console.error(`[GameDetector] Library membership for ${filter} failed:`, error);
-    return [];
+    return new Set();
   }
 }
 
