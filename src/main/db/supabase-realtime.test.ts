@@ -4,11 +4,13 @@ type Status = 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED';
 
 const state = vi.hoisted(() => ({
   joins: [] as Array<(status: Status) => void>,
+  channels: [] as Array<{ topic: string; private: boolean }>,
 }));
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
-    channel: () => {
+    channel: (topic: string, options: { config: { private: boolean } }) => {
+      state.channels.push({ topic, private: options.config.private });
       const channel = {
         on: () => channel,
         subscribe: (callback: (status: Status) => void) => {
@@ -31,6 +33,7 @@ const { SupabaseRealtimeManager } = await import('./supabase-realtime');
 
 beforeEach(() => {
   state.joins = [];
+  state.channels = [];
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
@@ -54,6 +57,20 @@ describe('SupabaseRealtimeManager', () => {
     }
 
     expect(onSubscribed).toHaveBeenCalledTimes(3);
+    manager.unsubscribe();
+  });
+
+  it('joins a private topic as private and every other topic as public', () => {
+    const manager = new SupabaseRealtimeManager();
+    manager.subscribe([
+      { topic: 'server-only', private: true, handlers: [] },
+      { topic: 'public', handlers: [] },
+    ]);
+
+    expect(state.channels).toEqual([
+      { topic: 'server-only', private: true },
+      { topic: 'public', private: false },
+    ]);
     manager.unsubscribe();
   });
 });

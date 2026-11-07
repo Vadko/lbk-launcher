@@ -96,6 +96,7 @@ const counters = createDeltaStream({
   apply: applyGameCounters,
   realtime: () => ({
     topic: 'game-counters',
+    private: true,
     event: 'counters',
     schema: broadcastSchema,
     toItems: ({ counters: rows }) =>

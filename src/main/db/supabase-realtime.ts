@@ -13,6 +13,8 @@ export interface BroadcastMessage<T = unknown> {
 
 export interface BroadcastSubscription {
   topic: string;
+  // A private topic is authorized by realtime.messages policies, so only the server can broadcast on it
+  private?: boolean;
   handlers: Array<{ event: string; handler: (message: BroadcastMessage) => void }>;
   // Every join, the first included: whatever was broadcast before it reached nobody
   onSubscribed?: () => void;
@@ -35,7 +37,9 @@ export class SupabaseRealtimeManager {
     this.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     for (const sub of subs) {
-      let channel = this.supabase.channel(sub.topic);
+      let channel = this.supabase.channel(sub.topic, {
+        config: { private: sub.private ?? false },
+      });
       for (const { event, handler } of sub.handlers) {
         channel = channel.on('broadcast', { event }, handler);
       }

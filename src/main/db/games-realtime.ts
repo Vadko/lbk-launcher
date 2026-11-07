@@ -29,6 +29,7 @@ export function createGamesBroadcastSubscription(
 
   return {
     topic: 'games-broadcast',
+    private: true,
     handlers: [
       { event: 'INSERT', handler: handle('INSERT') },
       { event: 'UPDATE', handler: handle('UPDATE') },

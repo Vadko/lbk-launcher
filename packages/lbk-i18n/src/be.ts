@@ -571,6 +571,7 @@ export const be = {
     popular: 'Папулярнае сярод гульцоў',
     installedGames: 'Знойдзеныя ўсталяваныя гульні',
     recommended: 'Вас можа зацікавіць',
+    weeklyPicks: 'Падборка тыдня',
     viewAll: 'Паглядзець усе',
     noGames: 'Гульняў не знойдзена',
     back: 'Назад',

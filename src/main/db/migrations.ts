@@ -1125,6 +1125,19 @@ const migrations: Migration[] = [
       `);
     },
   },
+  {
+    name: 'add_weekly_picks_table',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS weekly_picks (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          title TEXT,
+          starts_at INTEGER NOT NULL,
+          game_ids TEXT NOT NULL
+        );
+      `);
+    },
+  },
 ];
 
 /**

@@ -117,6 +117,7 @@ const discounts = createDeltaStream({
   apply: applyStoreDiscounts,
   realtime: () => ({
     topic: 'store-discounts',
+    private: true,
     event: 'discounts',
     schema: broadcastSchema,
     toItems: ({ discounts: rows }) =>

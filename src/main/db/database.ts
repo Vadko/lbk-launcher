@@ -247,6 +247,13 @@ class DatabaseManager {
         PRIMARY KEY (store, steam_app_id)
       ) WITHOUT ROWID;
 
+      CREATE TABLE IF NOT EXISTS weekly_picks (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        title TEXT,
+        starts_at INTEGER NOT NULL, -- epoch ms
+        game_ids TEXT NOT NULL -- JSON array in the set's order
+      );
+
       -- FTS5 virtual table for full-text search
       CREATE VIRTUAL TABLE IF NOT EXISTS games_fts USING fts5(
         game_id UNINDEXED,

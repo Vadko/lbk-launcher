@@ -114,6 +114,7 @@ import {
   fetchUpdatedGamesFromSupabase,
 } from './db/supabase-sync-api';
 import { SyncManager } from './db/sync-manager';
+import { createWeeklyPicksSubscription, syncWeeklyPicks } from './db/weekly-picks';
 import {
   startInstallationWatcher,
   stopInstallationWatcher,
@@ -127,6 +128,7 @@ import { setupPluginHostHandlers } from './ipc/plugin-host';
 import { setupRatingsHandlers } from './ipc/ratings';
 import { setupStoreDiscountsHandlers } from './ipc/store-discounts';
 import { setupTgNewsHandlers } from './ipc/tg-news';
+import { setupWeeklyPicksHandlers } from './ipc/weekly-picks';
 import { initTray, setupWindowControls } from './ipc/window-controls';
 import { syncLikes } from './likes';
 import { startMillenniumInstall } from './millennium-install';
@@ -233,6 +235,7 @@ if (!gotTheLock) {
   setupGamesHandlers();
   setupInstallerHandlers();
   setupTgNewsHandlers();
+  setupWeeklyPicksHandlers();
   setupLikesHandlers();
   setupStoreDiscountsHandlers();
   setupLinksHandlers();
@@ -361,10 +364,12 @@ if (!gotTheLock) {
       createReviewEventsSubscription(),
       createGameCountersSubscription(),
       createStoreDiscountsSubscription(),
+      createWeeklyPicksSubscription(),
     ]);
 
     void syncGameCounters();
     void syncStoreDiscounts();
+    void syncWeeklyPicks();
     syncLikes().catch((err) => {
       console.error('[Main] Likes sync failed:', err);
     });

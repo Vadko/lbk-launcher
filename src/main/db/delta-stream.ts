@@ -10,6 +10,7 @@ interface DeltaBatch<T> {
 
 interface DeltaRealtime<T, S extends z.ZodType> {
   topic: string;
+  private?: boolean;
   event: string;
   schema: S;
   toItems: (payload: z.infer<S>) => T[];
@@ -59,6 +60,7 @@ export function createDeltaStream<T, S extends z.ZodType>(
     }
     return {
       topic: channel.topic,
+      private: channel.private,
       handlers: [
         {
           event: channel.event,
