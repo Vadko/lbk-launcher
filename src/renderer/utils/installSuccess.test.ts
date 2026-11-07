@@ -1,12 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { t } from '@/shared/i18n/i18n';
+import type { SteamBridgeStatus } from '@/shared/plugin-host-types';
+import { useResourcesStore } from '../store/useResourcesStore';
 import {
   type InstallSuccessInput,
   installSuccessActions,
   installSuccessMessage,
   needsBridgeStatus,
 } from './installSuccess';
-import { steamBridgeStatus } from './pluginHost.fixture';
+import { deckyState, steamBridgeStatus } from './pluginHost.fixture';
 
 const input = (overrides: Partial<InstallSuccessInput> = {}): InstallSuccessInput => ({
   launchOptionsQueued: false,
@@ -19,12 +21,25 @@ const input = (overrides: Partial<InstallSuccessInput> = {}): InstallSuccessInpu
 const labels = (value: InstallSuccessInput) =>
   installSuccessActions(value, { restart: vi.fn(), open: vi.fn() }).map((a) => a.label);
 
+const installable = steamBridgeStatus();
+const noRelease = steamBridgeStatus({
+  achievements: { state: 'needs-millennium', unsupportedReason: 'no-release' },
+});
+
+const lastPushed = (status: SteamBridgeStatus | null) =>
+  useResourcesStore.setState({ values: status ? { steamBridgeStatus: status } : {} });
+
+afterEach(() => {
+  lastPushed(null);
+});
+
 describe('needsBridgeStatus', () => {
   it.each([
     [{ launchOptionsQueued: true, delivery: undefined }, true],
     [{ launchOptionsQueued: false, delivery: 'plugin-live' }, true],
     [{ launchOptionsQueued: false, delivery: 'needs-millennium' }, true],
     [{ launchOptionsQueued: false, delivery: 'unavailable' }, true],
+    [{ launchOptionsQueued: false, delivery: 'needs-decky-plugin' }, true],
     [{ launchOptionsQueued: false, delivery: 'needs-decky' }, false],
   ] as const)('%o → %s', (value, expected) => {
     expect(needsBridgeStatus(value)).toBe(expected);
@@ -67,9 +82,12 @@ describe('installSuccessMessage', () => {
   });
 
   it('says whether LBK can install Millennium itself', () => {
-    expect(installSuccessMessage('', input({ delivery: 'needs-millennium' }))).toContain(
-      t('installSuccess.needsMillenniumInstallable')
-    );
+    expect(
+      installSuccessMessage(
+        '',
+        input({ delivery: 'needs-millennium', status: installable })
+      )
+    ).toContain(t('installSuccess.needsMillenniumInstallable'));
     const blocked = steamBridgeStatus({
       achievements: { state: 'needs-millennium', unsupportedReason: 'arch' },
     });
@@ -115,11 +133,82 @@ describe('installSuccessActions', () => {
     site.onClick();
     expect(open).toHaveBeenCalledWith('millennium-site');
 
-    const [, install] = installSuccessActions(input({ delivery: 'needs-millennium' }), {
-      restart: vi.fn(),
-      open,
-    });
+    const [, install] = installSuccessActions(
+      input({ delivery: 'needs-millennium', status: installable }),
+      { restart: vi.fn(), open }
+    );
     expect(install.keepOpen).toBe(false);
+  });
+});
+
+describe('a status fetch that failed', () => {
+  const millennium = (value: InstallSuccessInput) => ({
+    text: installSuccessMessage('', value).trim(),
+    actions: labels(value),
+  });
+
+  it.each([
+    [
+      'keeps the reason from the last known status',
+      noRelease,
+      {
+        text: t('installSuccess.needsMillennium'),
+        actions: [t('installSuccess.ok'), t('pluginOffer.millenniumInfo')],
+      },
+    ],
+    [
+      'offers the install the last known status allows',
+      installable,
+      {
+        text: t('installSuccess.needsMillenniumInstallable'),
+        actions: [t('installSuccess.ok'), t('pluginOffer.installMillennium')],
+      },
+    ],
+    [
+      'never offers the install with no status at all',
+      null,
+      {
+        text: t('installSuccess.needsMillennium'),
+        actions: [t('installSuccess.ok'), t('pluginOffer.millenniumInfo')],
+      },
+    ],
+  ])('%s', (_label, known, expected) => {
+    lastPushed(known);
+    expect(millennium(input({ delivery: 'needs-millennium' }))).toEqual(expected);
+  });
+
+  it('prefers the fresh status over the last known one', () => {
+    lastPushed(noRelease);
+    expect(labels(input({ delivery: 'needs-millennium', status: installable }))).toEqual([
+      t('installSuccess.ok'),
+      t('pluginOffer.installMillennium'),
+    ]);
+  });
+});
+
+describe('a Decky plugin that is needed', () => {
+  const withDecky = (decky: ReturnType<typeof deckyState>) =>
+    input({
+      delivery: 'needs-decky-plugin',
+      status: steamBridgeStatus({ pluginHost: 'decky', decky }),
+    });
+
+  it.each([
+    [
+      'asks to enable an installed but disabled plugin, with nothing to install',
+      withDecky(deckyState({ disabled: true })),
+      t('installSuccess.deckyPluginDisabled'),
+      [t('installSuccess.ok')],
+    ],
+    [
+      'offers the install of a missing plugin',
+      withDecky(deckyState({ installed: false })),
+      t('installSuccess.needsDeckyPlugin'),
+      [t('installSuccess.ok'), t('pluginOffer.installDeckyPlugin')],
+    ],
+  ])('%s', (_label, value, text, actions) => {
+    expect(installSuccessMessage('', value).trim()).toBe(text);
+    expect(labels(value)).toEqual(actions);
   });
 });
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Constants } from '@/lib/database.types';
 import { t } from '@/shared/i18n/i18n';
 import { teamMembers } from '@/shared/team-members';
 import type {
@@ -75,14 +76,14 @@ interface Store {
   checkSubscribedTeamUpdate: (updatedGame: Game, oldGame: Game | null) => void;
 }
 
-// Statuses whose transition to a different status is worth notifying about
-const statusLabels: Record<string, string> = {
-  planned: t('gameStatus.planned'),
-  'in-progress': t('gameStatus.inProgress'),
-  completed: t('gameStatus.completed'),
-  'tech-improvement': t('gameStatus.techImprovement'),
-};
+function statusLabel(status: string): string {
+  const known = Constants.public.Enums.game_status.find(
+    (candidate) => candidate === status
+  );
+  return known ? t(`gameStatus.${known}`) : status;
+}
 
+// Statuses whose transition to a different status is worth notifying about
 const watchedStatuses = new Set(['planned', 'tech-improvement']);
 
 // detectedGames is no longer persisted - it must be checked on every launch
@@ -404,7 +405,7 @@ export const useStore = create<Store>((set, get) => ({
         watchedStatuses.has(savedStatus) &&
         game.status !== savedStatus
       ) {
-        const statusText = statusLabels[game.status] || game.status;
+        const statusText = statusLabel(game.status);
 
         const hasExistingNotification = notifications.some(
           (n) =>
@@ -420,7 +421,7 @@ export const useStore = create<Store>((set, get) => ({
             type: 'status-change',
             gameId: game.id,
             gameName: game.name,
-            oldValue: statusLabels[savedStatus] || savedStatus,
+            oldValue: statusLabel(savedStatus),
             newValue: statusText,
           });
         }
@@ -511,8 +512,8 @@ export const useStore = create<Store>((set, get) => ({
         watchedStatuses.has(oldGame.status) &&
         updatedGame.status !== oldGame.status
       ) {
-        const oldStatusText = statusLabels[oldGame.status] || oldGame.status;
-        const newStatusText = statusLabels[updatedGame.status] || updatedGame.status;
+        const oldStatusText = statusLabel(oldGame.status);
+        const newStatusText = statusLabel(updatedGame.status);
 
         const hasExisting = notifications.some(
           (n) =>

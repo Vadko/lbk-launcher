@@ -1,6 +1,7 @@
 import { hash } from 'node:crypto';
 import { F } from '@mobily/ts-belt';
 import pLimit from 'p-limit';
+import pTimeout from 'p-timeout';
 import { migrateLegacyAchievements } from '@/main/achievements/legacy';
 import {
   type AchievementStrings,
@@ -20,6 +21,8 @@ import { isCefDebuggingEnabledInSettings } from '@/main/utils/store-storage';
 import type { AchievementsDelivery } from '@/shared/plugin-host-types';
 
 const RELOAD_TIMEOUT_MS = 10_000;
+// The plugin's own timeout starts only once the reload is sent, so a reload queued behind other ops would hold the install up.
+const INSTALL_WAIT_MS = 10_000;
 
 async function computeDelivery(reloaded: boolean): Promise<AchievementsDelivery> {
   try {
@@ -63,6 +66,16 @@ const syncSerially = pLimit(1);
 // Never rejects. Serialised so an install and a plugin reconnect cannot interleave writes.
 export function syncAchievementsToPlugin(): Promise<AchievementsDelivery> {
   return syncSerially(syncNow);
+}
+
+// A reload still pending then counts as delivered on the next Steam start; the sync itself goes on.
+export function deliveryWithinInstallWait(
+  sync: Promise<AchievementsDelivery>
+): Promise<AchievementsDelivery> {
+  return pTimeout(sync, {
+    milliseconds: INSTALL_WAIT_MS,
+    fallback: () => computeDelivery(false),
+  });
 }
 
 // Startup only: no install is in flight yet, so strings without a record are orphans.

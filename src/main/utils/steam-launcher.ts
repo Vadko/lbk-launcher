@@ -7,12 +7,14 @@ import { getSteamExePath, getSteamPath } from '@/main/game-detector/steam';
 import { millenniumLaunchEnv } from '@/main/millennium-install/launch-env';
 import { steamTypeFromPath } from '@/main/plugin-host/support';
 import {
-  findSteamPids,
   isSteamElevated,
   isSteamRunning,
+  listSteamPids,
   waitForSteamGone,
   waitForSteamStart,
 } from '@/main/steam-process/lifecycle';
+import { ownSessionFilter } from '@/main/steam-process/list-windows';
+import { ownUid } from '@/main/steam-process/process-info';
 import { getRunningSteamGameId } from '@/main/steam-process/running-game';
 import { execFileOnHost, isFlatpak, spawnOnHost, system32 } from '@/main/utils/host-exec';
 import { findMacMillenniumWrapper } from '@/main/utils/millennium';
@@ -110,8 +112,8 @@ interface SteamOsControl {
 }
 
 async function pkill(signal: 'TERM' | 'KILL', name: string): Promise<void> {
-  const uid = process.getuid?.();
-  const userArgs = uid === undefined ? [] : ['-u', String(uid)];
+  const uid = ownUid();
+  const userArgs = uid === null ? [] : ['-u', String(uid)];
   try {
     await execFileOnHost('pkill', [`-${signal}`, '-x', ...userArgs, name]);
   } catch {
@@ -149,19 +151,16 @@ function launchSteamLinux(url?: string): boolean {
   );
 
   try {
+    const env = steam.millenniumEnv ? millenniumLaunchEnv() : {};
     try {
-      spawnOnHost(
-        steam.command,
-        [...steam.args, ...args],
-        steam.millenniumEnv ? millenniumLaunchEnv() : {}
-      );
+      spawnOnHost(steam.command, [...steam.args, ...args], env);
       return true;
     } catch (error) {
       // Without a known flavour xdg-open can still hand the URL to whatever Steam there is.
       if (steamType !== 'unknown' || !url) {
         throw error;
       }
-      spawnOnHost('xdg-open', [url]);
+      spawnOnHost('xdg-open', [url], env);
       return true;
     }
   } catch (error) {
@@ -236,10 +235,11 @@ const windowsControl: SteamOsControl = {
         }
       }
     }
-    await execFileAsync(system32('taskkill.exe'), ['/F', '/IM', 'steamwebhelper.exe'], {
-      timeout: EXEC_TIMEOUT_MS,
-      windowsHide: true,
-    }).catch(() => void 0);
+    await execFileAsync(
+      system32('taskkill.exe'),
+      ['/F', ...(await ownSessionFilter()), '/IM', 'steamwebhelper.exe'],
+      { timeout: EXEC_TIMEOUT_MS, windowsHide: true }
+    ).catch(() => void 0);
     return denied && isSteamRunning();
   },
   launch: openSteamUrl,
@@ -305,7 +305,11 @@ async function requestGracefulExit(): Promise<void> {
 
 async function shutdownSteam(): Promise<ShutdownResult> {
   // Must come first: `steam -shutdown` and steam://exit start Steam when it is not up.
-  const steamPids = await findSteamPids({ fresh: true });
+  const steamPids = await listSteamPids();
+  if (steamPids === null) {
+    console.warn('[Steam] Cannot list Steam processes, leaving Steam as it is');
+    return { ok: false, reason: 'unknown-state' };
+  }
   if (steamPids.length === 0) {
     console.log('[Steam] Steam is not running, skipping shutdown');
     return { ok: true };
@@ -339,8 +343,13 @@ async function shutdownSteam(): Promise<ShutdownResult> {
     console.warn('[Steam] A game started during shutdown, not force killing Steam');
     return { ok: false, reason: 'game-running' };
   }
+  const remaining = await listSteamPids();
+  if (remaining === null) {
+    console.warn('[Steam] Cannot list Steam processes, not force killing Steam');
+    return { ok: false, reason: 'unknown-state' };
+  }
   console.warn('[Steam] Steam did not exit gracefully, force killing...');
-  if (await osControl().forceKill(await findSteamPids({ fresh: true }))) {
+  if (await osControl().forceKill(remaining)) {
     console.warn('[Steam] Access denied while force killing Steam');
     return { ok: false, reason: 'access-denied' };
   }

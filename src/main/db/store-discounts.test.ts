@@ -17,6 +17,8 @@ const state = vi.hoisted(() => ({
   metadata: new Map<string, string>(),
   savedWatermarks: [] as string[],
   changed: vi.fn(),
+  // Runs between a page's query and its answer
+  whilePageInFlight: undefined as (() => void) | undefined,
 }));
 
 function sqlite(): DatabaseSync {
@@ -55,7 +57,11 @@ vi.mock('@/main/db/supabase-client', () => ({
           return builder;
         },
         order: () => builder,
-        limit: () => Promise.resolve({ data: state.pages.shift() ?? [], error: null }),
+        limit: () => {
+          const data = state.pages.shift() ?? [];
+          state.whilePageInFlight?.();
+          return Promise.resolve({ data, error: null });
+        },
       };
       return builder;
     },
@@ -115,6 +121,7 @@ beforeEach(() => {
   state.calls = [];
   state.metadata.clear();
   state.savedWatermarks = [];
+  state.whilePageInFlight = undefined;
   state.changed.mockReset();
   state.db = new DatabaseSync(':memory:');
   sqlite().exec(`
@@ -214,6 +221,48 @@ describe('syncStoreDiscounts', () => {
 
     expect(stored()).toEqual([]);
     expect(state.changed).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an ended discount', ['gog', 10, 0, null], []],
+    [
+      'a new percent',
+      ['gog', 10, 50, null],
+      [{ store: 'gog', steam_app_id: 10, discount_percent: 50, ends_at: null }],
+    ],
+  ])(
+    'keeps %s a broadcast sent while an older page was on its way',
+    async (_, tuple, gog) => {
+      const ends = future(3);
+      state.pages = [[feedRow(10, 35, null, undefined, 'gog'), feedRow(20, 40, ends)]];
+      state.whilePageInFlight = () => broadcast({ discounts: [tuple] });
+
+      await syncStoreDiscounts();
+
+      expect(stored()).toEqual([
+        ...gog,
+        {
+          store: 'steam',
+          steam_app_id: 20,
+          discount_percent: 40,
+          ends_at: Date.parse(ends),
+        },
+      ]);
+    }
+  );
+
+  it('applies those keys again on the next catch-up', async () => {
+    state.pages = [[feedRow(10, 35, null, undefined, 'gog')]];
+    state.whilePageInFlight = () => broadcast({ discounts: [['gog', 10, 0, null]] });
+    await syncStoreDiscounts();
+
+    state.whilePageInFlight = undefined;
+    state.pages = [[feedRow(10, 25, null, '2026-11-04T10:00:00Z', 'gog')]];
+    await syncStoreDiscounts();
+
+    expect(stored()).toEqual([
+      { store: 'gog', steam_app_id: 10, discount_percent: 25, ends_at: null },
+    ]);
   });
 
   it('sends nothing when every row is already stored as it is', async () => {

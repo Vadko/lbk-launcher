@@ -1,4 +1,8 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import pTimeout from 'p-timeout';
+
+// functions-js clears its timeout before it hands back the error, so only undici's 300 s would end a stalled body
+const BODY_TIMEOUT_MS = 5_000;
 
 /**
  * Helpers for working with supabase Edge Function errors.
@@ -26,9 +30,9 @@ export async function readFunctionsErrorBody(
     return null;
   }
   const response = error.context as Response;
-  try {
-    return { status: response.status, body: await response.json() };
-  } catch {
-    return { status: response.status, body: {} };
-  }
+  const body: Record<string, unknown> = await pTimeout(response.json(), {
+    milliseconds: BODY_TIMEOUT_MS,
+    fallback: () => ({}),
+  }).catch(() => ({}));
+  return { status: response.status, body };
 }

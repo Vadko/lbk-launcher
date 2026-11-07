@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { errorMessage } from '../../shared/errors';
 import type { ReviewResult } from '../../shared/game-reviews-api-types';
 import { getMachineId, IS_E2E } from '../tracking';
-import { failureCodeOf, reviewFailure } from './review-failure';
+import { httpFailure, reviewFailure } from './review-failure';
 import { getSupabaseClient } from './supabase-client';
 
 type ReviewEndpoint =
@@ -55,7 +55,7 @@ export async function callReviewFunction<T>(
       }
     );
     if (error) {
-      return { ok: false, failure: reviewFailure(await failureCodeOf(error), endpoint) };
+      return { ok: false, failure: await httpFailure(error, endpoint) };
     }
     const parsed = schema.safeParse(data);
     if (!parsed.success) {

@@ -7,6 +7,7 @@ vi.mock('@/main/db/supabase-client', () => ({
   getSupabaseClient: () => ({ functions: { invoke } }),
 }));
 vi.mock('@/main/tracking', () => ({ IS_E2E: false, getMachineId: () => 'machine-1' }));
+vi.mock('electron', () => ({ app: { getVersion: () => '2.24.0' } }));
 
 const { fetchGameReviews } = await import('./game-reviews-api');
 
@@ -45,7 +46,7 @@ describe('fetchGameReviews', () => {
     error.mockClear();
   });
 
-  it('asks reviews?action=list with the cursor and this machine', async () => {
+  it('asks reviews?action=list with the cursor, this version and this machine', async () => {
     invoke.mockResolvedValue(page([]));
 
     await fetchGameReviews({ gameId: GAME, cursor: 'c|id' });
@@ -54,7 +55,12 @@ describe('fetchGameReviews', () => {
       [
         'reviews?action=list',
         {
-          body: { gameId: GAME, cursor: 'c|id', machineId: MACHINE_ID },
+          body: {
+            gameId: GAME,
+            cursor: 'c|id',
+            version: '2.24.0',
+            machineId: MACHINE_ID,
+          },
           timeout: 15_000,
         },
       ],
@@ -67,7 +73,13 @@ describe('fetchGameReviews', () => {
     await fetchGameReviews({ gameId: GAME, cursor: null, focusId: FOCUS });
 
     expect(invoke.mock.calls.map(([, { body }]) => body)).toEqual([
-      { gameId: GAME, cursor: null, focusId: FOCUS, machineId: MACHINE_ID },
+      {
+        gameId: GAME,
+        cursor: null,
+        focusId: FOCUS,
+        version: '2.24.0',
+        machineId: MACHINE_ID,
+      },
     ]);
   });
 
@@ -77,7 +89,13 @@ describe('fetchGameReviews', () => {
     await fetchGameReviews({ gameId: GAME, cursor: null, type: 'error' });
 
     expect(invoke.mock.calls.map(([, { body }]) => body)).toEqual([
-      { gameId: GAME, cursor: null, type: 'error', machineId: MACHINE_ID },
+      {
+        gameId: GAME,
+        cursor: null,
+        type: 'error',
+        version: '2.24.0',
+        machineId: MACHINE_ID,
+      },
     ]);
   });
 

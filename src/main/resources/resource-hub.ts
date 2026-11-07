@@ -54,6 +54,27 @@ export function publishResource<K extends ResourceKey>(
   }
 }
 
+// A patch is not a read, so a failed key stays failed
+export function patchResource<K extends ResourceKey>(
+  key: K,
+  patch: (value: ResourceMap[K]) => ResourceMap[K]
+): void {
+  const value = hub.values[key];
+  if (value === undefined) {
+    return;
+  }
+  const next = patch(value);
+  if (next === value) {
+    return;
+  }
+  hub.values[key] = next;
+  if (hub.wanted.has(key)) {
+    const values: Partial<ResourceMap> = {};
+    pick(values, key);
+    hub.sink?.post({ values, failed: hub.failed.has(key) ? [key] : [] });
+  }
+}
+
 export function failResource(key: ResourceKey): void {
   if (hub.failed.has(key)) {
     return;

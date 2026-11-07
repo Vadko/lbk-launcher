@@ -1,5 +1,9 @@
 import type { ReviewFailure } from '@/shared/game-reviews-api-types';
-import type { GameReview, GameReviewEntry } from '@/shared/game-reviews-types';
+import type {
+  GameReview,
+  GameReviewEntry,
+  GameReviewReply,
+} from '@/shared/game-reviews-types';
 import type {
   ReviewThreadReplyView,
   ReviewThreadView,
@@ -93,8 +97,22 @@ function entryView<T extends GameReviewEntry>(
     : { ...shown, write: write.kind, isChecking: true };
 }
 
+// A new reply, or the one an edit carries while the page was asked for before that reply's answer
+function addedReply(write: ReviewWrite, fetchedAt: number): GameReviewReply | null {
+  if (write.kind === 'reply') {
+    return write.reply;
+  }
+  return write.unlisted && fetchedAt < write.unlisted.answeredAt
+    ? write.unlisted.reply
+    : null;
+}
+
 // A reply whose parent the view hides falls back to the first level until the pages come again
-function threadView(thread: GameReview, writes: ShownWrite[]): ReviewThreadView | null {
+function threadView(
+  thread: GameReview,
+  writes: ShownWrite[],
+  fetchedAt: number
+): ReviewThreadView | null {
   const own = writes.filter(({ write }) => write.reviewId === thread.id);
   if (own.length === 0) {
     return thread;
@@ -113,34 +131,33 @@ function threadView(thread: GameReview, writes: ShownWrite[]): ReviewThreadView 
     const shown = replyWrite ? entryView(reply, replyWrite) : reply;
     return shown ? [shown] : [];
   });
-  const added = own.flatMap((state) =>
-    state.write.kind === 'reply' &&
-    !thread.replies.some((reply) => reply.id === state.write.entryId)
-      ? (entryView(state.write.reply, state) ?? [])
-      : []
-  );
+  const added = own.flatMap((state) => {
+    const reply = addedReply(state.write, fetchedAt);
+    return reply && !thread.replies.some(({ id }) => id === reply.id)
+      ? (entryView(reply, state) ?? [])
+      : [];
+  });
   return { ...root, replies: [...replies, ...added] };
 }
 
-// An answered write shows until pages fetched after its answer replace it; untouched threads keep their identity
+// An answered write shows on a page asked for before its answer; untouched pages and threads keep their identity
 export function withReviewWrites(
   data: ReviewPages,
-  states: readonly ReviewWriteState[],
-  dataUpdatedAt: number
+  states: readonly ReviewWriteState[]
 ): ReviewViewPages {
-  const writes = states.filter(
-    (state): state is ShownWrite =>
-      state.write !== undefined &&
-      (state.answer === null || dataUpdatedAt <= state.answer.answeredAt)
-  );
-  if (writes.length === 0) {
-    return data;
-  }
-  return {
-    ...data,
-    pages: data.pages.map((page) => ({
-      ...page,
-      items: page.items.flatMap((thread) => threadView(thread, writes) ?? []),
-    })),
-  };
+  const writes = states.filter((state): state is ShownWrite => state.write !== undefined);
+  const pages = data.pages.map((page) => {
+    const shown = writes.filter(
+      ({ answer }) => answer === null || page.fetchedAt < answer.answeredAt
+    );
+    return shown.length === 0
+      ? page
+      : {
+          ...page,
+          items: page.items.flatMap(
+            (thread) => threadView(thread, shown, page.fetchedAt) ?? []
+          ),
+        };
+  });
+  return pages.every((page, i) => page === data.pages[i]) ? data : { ...data, pages };
 }

@@ -1,12 +1,9 @@
 import { t } from '@/shared/i18n/i18n';
-import type {
-  AchievementsDelivery,
-  MillenniumUnsupportedReason,
-  SteamBridgeStatus,
-} from '@/shared/plugin-host-types';
+import type { AchievementsDelivery, SteamBridgeStatus } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
 import type { ModalAction } from '../store/useModalStore';
-import { type OfferTarget, successOffer } from './pluginHostOffer';
+import { useResourcesStore } from '../store/useResourcesStore';
+import { deckyPluginDisabled, type OfferTarget, successOffer } from './pluginHostOffer';
 import { runSteamRestart } from './steamBridge';
 import { millenniumUnsupportedText } from './steamPluginHost';
 
@@ -16,7 +13,7 @@ export interface InstallSuccessInput {
   eglLaunchOptionsNotes?: string[];
   // Undefined when the achievements component was not installed.
   delivery: AchievementsDelivery | undefined;
-  // Fetched once, and only when needsBridgeStatus() asks for it.
+  // Fetched once, and only when needsBridgeStatus() asks for it; null falls back to the last status main pushed.
   status: SteamBridgeStatus | null;
   declined: { millennium: boolean; decky: boolean };
 }
@@ -26,21 +23,36 @@ interface InstallSuccessHandlers {
   open: (target: OfferTarget) => void;
 }
 
+// A failed fetch answers null, which would drop the reason LBK cannot install Millennium here.
+function bridgeStatus(input: InstallSuccessInput): SteamBridgeStatus | null {
+  return input.status ?? useResourcesStore.getState().values.steamBridgeStatus ?? null;
+}
+
+// With no status at all the reason is unknown, so the install is offered only when a status allows it.
+function millenniumInstallable(status: SteamBridgeStatus | null): boolean {
+  return status !== null && status.achievements.unsupportedReason === null;
+}
+
 const DELIVERY_TEXT: Record<
   AchievementsDelivery,
-  (reason: MillenniumUnsupportedReason | null) => string
+  (status: SteamBridgeStatus | null) => string | null
 > = {
-  'plugin-live': () => '',
-  'plugin-next-start': () => `\n\n${t('installSuccess.pluginNextStart')}`,
-  'needs-millennium': (reason) =>
-    reason === null
-      ? `\n\n${t('installSuccess.needsMillenniumInstallable')}`
-      : `\n\n${t('installSuccess.needsMillennium')}`,
-  'needs-decky-plugin': () => `\n\n${t('installSuccess.needsDeckyPlugin')}`,
-  'needs-decky': () => `\n\n${t('installSuccess.needsDecky')}`,
-  unavailable: (reason) =>
-    `\n\n${t('installSuccess.unavailable', { reason: millenniumUnsupportedText(reason) })}`,
-  disabled: () => `\n\n${t('installSuccess.disabled')}`,
+  'plugin-live': () => null,
+  'plugin-next-start': () => t('installSuccess.pluginNextStart'),
+  'needs-millennium': (status) =>
+    millenniumInstallable(status)
+      ? t('installSuccess.needsMillenniumInstallable')
+      : t('installSuccess.needsMillennium'),
+  'needs-decky-plugin': (status) =>
+    deckyPluginDisabled(status?.decky ?? null)
+      ? t('installSuccess.deckyPluginDisabled')
+      : t('installSuccess.needsDeckyPlugin'),
+  'needs-decky': () => t('installSuccess.needsDecky'),
+  unavailable: (status) =>
+    t('installSuccess.unavailable', {
+      reason: millenniumUnsupportedText(status?.achievements.unsupportedReason ?? null),
+    }),
+  disabled: () => t('installSuccess.disabled'),
 };
 
 function restartHelps(
@@ -50,10 +62,12 @@ function restartHelps(
 }
 
 // 'plugin-next-start' already asks for this restart, and the other deliveries have no plugin connected.
-function bridgeUpdatePending(input: InstallSuccessInput): boolean {
+function bridgeUpdatePending(
+  delivery: AchievementsDelivery | undefined,
+  status: SteamBridgeStatus | null
+): boolean {
   return (
-    input.delivery === 'plugin-live' &&
-    input.status?.millennium.plugin.updateAfterRestart === true
+    delivery === 'plugin-live' && status?.millennium.plugin.updateAfterRestart === true
   );
 }
 
@@ -64,47 +78,39 @@ export function needsBridgeStatus(
     restartHelps(input) ||
     input.delivery === 'plugin-live' ||
     input.delivery === 'needs-millennium' ||
+    input.delivery === 'needs-decky-plugin' ||
     input.delivery === 'unavailable'
   );
 }
 
-function unsupportedReason(
-  input: InstallSuccessInput
-): MillenniumUnsupportedReason | null {
-  return input.status?.achievements.unsupportedReason ?? null;
-}
-
 export function installSuccessMessage(base: string, input: InstallSuccessInput): string {
-  let message = base;
-  if (input.launchOptionsQueued) {
-    message += `\n\n${t('installSuccess.launchOptionsQueued')}`;
-  }
-  for (const note of input.eglLaunchOptionsNotes ?? []) {
-    message += `\n\n${note}`;
-  }
-  // Files are in place, but without its launch options the translation runs unmodded.
-  if (input.launchOptionsError) {
-    message += `\n\n${t('installSuccess.launchOptionsError', { error: input.launchOptionsError })}`;
-  }
-  if (input.delivery) {
-    message += DELIVERY_TEXT[input.delivery](unsupportedReason(input));
-  }
-  if (bridgeUpdatePending(input)) {
-    message += `\n\n${t('pluginEntries.bridgeUpdate')}`;
-  }
-  return message;
+  const status = bridgeStatus(input);
+  const deliveryText = input.delivery ? DELIVERY_TEXT[input.delivery](status) : null;
+  const paragraphs = [
+    base,
+    input.launchOptionsQueued ? t('installSuccess.launchOptionsQueued') : null,
+    ...(input.eglLaunchOptionsNotes ?? []),
+    // Files are in place, but without its launch options the translation runs unmodded.
+    input.launchOptionsError
+      ? t('installSuccess.launchOptionsError', { error: input.launchOptionsError })
+      : null,
+    deliveryText,
+    bridgeUpdatePending(input.delivery, status) ? t('pluginEntries.bridgeUpdate') : null,
+  ];
+  return paragraphs.filter((paragraph) => paragraph !== null).join('\n\n');
 }
 
 export function installSuccessActions(
   input: InstallSuccessInput,
   handlers: InstallSuccessHandlers
 ): ModalAction[] {
+  const status = bridgeStatus(input);
   const actions: ModalAction[] = [
     { label: t('installSuccess.ok'), onClick: () => undefined, variant: 'primary' },
   ];
   if (
-    (restartHelps(input) || bridgeUpdatePending(input)) &&
-    input.status?.canRestartSteam === true
+    (restartHelps(input) || bridgeUpdatePending(input.delivery, status)) &&
+    status?.canRestartSteam === true
   ) {
     actions.push({
       label: t('installSuccess.restartSteamNow'),
@@ -115,7 +121,8 @@ export function installSuccessActions(
   }
   const offer = input.delivery
     ? successOffer(input.delivery, {
-        millenniumInstallable: unsupportedReason(input) === null,
+        millenniumInstallable: millenniumInstallable(status),
+        deckyPluginDisabled: deckyPluginDisabled(status?.decky ?? null),
         declined: input.declined,
       })
     : null;

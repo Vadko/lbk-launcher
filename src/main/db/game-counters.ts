@@ -21,16 +21,19 @@ const PAGE_SIZE = 1000;
 
 type CounterRow = Database['public']['Functions']['get_game_counters']['Returns'][number];
 
+// A counter the server adds later rides at the end, so a shipped launcher keeps reading the ones it knows
 const broadcastSchema = z.object({
   counters: z.array(
-    z.tuple([
-      z.string(),
-      z.number(),
-      z.number().nullable(),
-      z.number().nullable(),
-      z.number(),
-      z.number(),
-    ])
+    z
+      .tuple([
+        z.string(),
+        z.number(),
+        z.number().nullable(),
+        z.number().nullable(),
+        z.number(),
+        z.number(),
+      ])
+      .rest(z.unknown())
   ),
 });
 

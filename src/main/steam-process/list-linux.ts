@@ -1,7 +1,7 @@
 import { promises as fsp } from 'node:fs';
 import { execFileOnHost, isFlatpak } from '@/main/utils/host-exec';
 import { errorMessage } from '@/shared/errors';
-import { groupSteamProcesses, type SteamProcesses } from './process-info';
+import { groupSteamProcesses, ownUid, type SteamProcesses } from './process-info';
 
 interface LinuxProcess {
   pid: number;
@@ -17,10 +17,18 @@ function readProcText(pid: string, file: string): Promise<string | null> {
   return fsp.readFile(`/proc/${pid}/${file}`, 'utf8').catch(() => null);
 }
 
-async function readProcStatusPpid(pid: string): Promise<number> {
-  const status = await readProcText(pid, 'status');
-  const match = status?.match(/^PPid:\s+(\d+)/m);
-  return match ? Number.parseInt(match[1], 10) : 0;
+// The first Uid field is the real uid.
+export function parseProcStatus(status: string): { ppid: number; uid: number | null } {
+  const ppid = /^PPid:\s+(\d+)/m.exec(status);
+  const uid = /^Uid:\s+(\d+)/m.exec(status);
+  return {
+    ppid: ppid ? Number.parseInt(ppid[1], 10) : 0,
+    uid: uid ? Number.parseInt(uid[1], 10) : null,
+  };
+}
+
+function isOwn(uid: number | null, own: number | null): boolean {
+  return own === null || uid === own;
 }
 
 // By executable (comm), like pgrep -x: wrapper scripts and look-alikes do not count.
@@ -31,6 +39,7 @@ async function scanProc(comms: ReadonlySet<string>): Promise<LinuxProcess[] | nu
   } catch {
     return null;
   }
+  const own = ownUid();
   const rows = await Promise.all(
     entries
       .filter((entry) => /^\d+$/.test(entry))
@@ -39,10 +48,14 @@ async function scanProc(comms: ReadonlySet<string>): Promise<LinuxProcess[] | nu
         if (!comm || !comms.has(comm)) {
           return null;
         }
+        const { ppid, uid } = parseProcStatus((await readProcText(pid, 'status')) ?? '');
+        if (!isOwn(uid, own)) {
+          return null;
+        }
         const cmdline = await readProcText(pid, 'cmdline');
         return {
           pid: Number.parseInt(pid, 10),
-          ppid: await readProcStatusPpid(pid),
+          ppid,
           comm,
           args: cmdline === null ? null : cmdline.replace(/\0+$/, '').replace(/\0/g, ' '),
         };
@@ -51,16 +64,16 @@ async function scanProc(comms: ReadonlySet<string>): Promise<LinuxProcess[] | nu
   return rows.filter((row): row is LinuxProcess => row !== null);
 }
 
-export function parseLinuxPsOutput(stdout: string): LinuxProcess[] {
+export function parseLinuxPsOutput(stdout: string, own: number | null): LinuxProcess[] {
   const rows: LinuxProcess[] = [];
   for (const line of stdout.split('\n')) {
-    const match = /^\s*(\d+)\s+(\d+)\s+(\S+)\s*(.*?)\s*$/.exec(line);
-    if (match) {
+    const match = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s*(.*?)\s*$/.exec(line);
+    if (match && isOwn(Number.parseInt(match[3], 10), own)) {
       rows.push({
         pid: Number.parseInt(match[1], 10),
         ppid: Number.parseInt(match[2], 10),
-        comm: match[3],
-        args: match[4],
+        comm: match[4],
+        args: match[5],
       });
     }
   }
@@ -72,16 +85,17 @@ async function listViaHostPs(comms: ReadonlySet<string>): Promise<LinuxProcess[]
   try {
     const { stdout } = await execFileOnHost(
       'ps',
-      ['-ww', '-eo', 'pid=,ppid=,comm=,args='],
+      ['-ww', '-eo', 'pid=,ppid=,ruid=,comm=,args='],
       5000
     );
-    return parseLinuxPsOutput(stdout).filter((row) => comms.has(row.comm));
+    return parseLinuxPsOutput(stdout, ownUid()).filter((row) => comms.has(row.comm));
   } catch (error) {
     console.warn('[HostPs] ps failed:', errorMessage(error));
     return null;
   }
 }
 
+// Only this user's processes.
 export function listLinuxProcesses(
   comms: ReadonlySet<string>
 ): Promise<LinuxProcess[] | null> {

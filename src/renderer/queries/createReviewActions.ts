@@ -3,6 +3,7 @@ import type { GameReviewReply, ReviewAuthorIdentity } from '@/shared/game-review
 import { useReviewAuthorStore } from '../store/useReviewAuthorStore';
 import { isOutcomeUnknown } from '../utils/isOutcomeUnknown';
 import { nextReplyTime } from '../utils/nextReplyTime';
+import { unlistedReply } from '../utils/unlistedReply';
 import { findReviewWrite, forgetReviewWrite } from './entryWrites';
 import { refreshGameReviews } from './refreshGameReviews';
 import type { ReviewThreadView } from './reviewViewTypes';
@@ -59,14 +60,18 @@ export function createReviewActions(
       });
       return true;
     },
-    edit: (thread: ReviewThreadView, entryId: string, text: string) =>
+    edit: (thread: ReviewThreadView, entryId: string, text: string) => {
+      const previous = findReviewWrite(queryClient, gameId, entryId)?.state;
+      const unlisted = unlistedReply(thread, entryId, previous);
       write({
         kind: 'edit',
         entryId,
         reviewId: thread.id,
         isPublic: thread.isPublic,
         text,
-      }),
+        ...(unlisted && { unlisted }),
+      });
+    },
     resend: (entryId: string) => {
       const variables = findReviewWrite(queryClient, gameId, entryId)?.state.variables;
       if (variables) {
@@ -74,10 +79,12 @@ export function createReviewActions(
       }
     },
     discard: (entryId: string) => {
-      const failure = findReviewWrite(queryClient, gameId, entryId)?.state.error?.failure;
+      const state = findReviewWrite(queryClient, gameId, entryId)?.state;
+      const failure = state?.error?.failure;
+      const carried = state?.variables?.kind === 'edit' && state.variables.unlisted;
       forgetReviewWrite(queryClient, gameId, entryId);
-      // The server may hold what was discarded, so the list asks it
-      if (failure && isOutcomeUnknown(failure)) {
+      // The server may hold what was discarded, and a reply the edit carried shows again only from the pages
+      if ((failure && isOutcomeUnknown(failure)) || carried) {
         refreshGameReviews(queryClient, gameId);
       }
     },

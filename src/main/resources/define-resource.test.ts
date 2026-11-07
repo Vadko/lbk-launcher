@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Game } from '@/shared/types';
+import type { WeeklyPicks } from '@/shared/weekly-picks-types';
 import type { ResourceTrigger } from './define-resource';
 
 const state = vi.hoisted(() => ({ catalogReady: true }));
@@ -27,6 +29,11 @@ function controlledRead<T>(value: T) {
   );
   return { read, finish: () => pending.shift()?.() };
 }
+
+const game = (id: string, likes: number) => ({ id, likes }) as Game;
+const picks = (...games: Game[]): WeeklyPicks => ({ title: null, games });
+const withCounters = (value: WeeklyPicks | null, games: readonly Game[]) =>
+  value && games.length > 0 ? { ...value, games } : value;
 
 let env: Awaited<ReturnType<typeof load>>;
 
@@ -266,5 +273,59 @@ describe('defineResource', () => {
     await settle();
 
     expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('lays the counters feed rows over the value held without reading it', async () => {
+    const read = vi.fn(() => picks(game('a', 1)));
+    env.defineResource('weeklyPicks', { read, on: [], withCounters });
+    env.session.receive({ subscribe: ['weeklyPicks'] });
+    await settle();
+
+    env.appEvents.emit('counters-changed', [game('a', 9)]);
+
+    expect(read).toHaveBeenCalledOnce();
+    expect(env.page.post).toHaveBeenLastCalledWith({
+      values: { weeklyPicks: picks(game('a', 9)) },
+      failed: [],
+    });
+  });
+
+  it('sends nothing when the patch keeps the value', async () => {
+    env.defineResource('weeklyPicks', {
+      read: () => picks(game('a', 1)),
+      on: [],
+      withCounters,
+    });
+    env.session.receive({ subscribe: ['weeklyPicks'] });
+    await settle();
+    env.page.post.mockClear();
+
+    env.appEvents.emit('counters-changed', []);
+
+    expect(env.page.post).not.toHaveBeenCalled();
+  });
+
+  it('keeps a failed key failed when it patches the last value', async () => {
+    const read = vi.fn(() => picks(game('a', 1)));
+    env.defineResource('weeklyPicks', {
+      read,
+      on: ['weekly-picks-changed'],
+      withCounters,
+    });
+    env.session.receive({ subscribe: ['weeklyPicks'] });
+    await settle();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    read.mockImplementationOnce(() => {
+      throw new Error('locked');
+    });
+    env.appEvents.emit('weekly-picks-changed');
+    await settle();
+
+    env.appEvents.emit('counters-changed', [game('a', 9)]);
+
+    expect(env.page.post).toHaveBeenLastCalledWith({
+      values: { weeklyPicks: picks(game('a', 9)) },
+      failed: ['weeklyPicks'],
+    });
   });
 });

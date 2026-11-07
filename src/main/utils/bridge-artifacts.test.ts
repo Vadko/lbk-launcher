@@ -304,6 +304,31 @@ describe('Decky bundle', () => {
     expect(cdp?.readyState).toBe(3);
   });
 
+  it('says Millennium runs the bridge once its copy takes over', async () => {
+    FakeSocket.instances = [];
+    vi.stubGlobal('WebSocket', FakeSocket);
+    vi.stubGlobal('fetch', () => Promise.resolve({ ok: false, json: () => null }));
+    const plugin = await loadPlugin('?takeover');
+    await settle();
+    const { content } = isRecord(plugin) ? plugin : {};
+    expect(render(content)).toContain(`>${t('deckyPlugin.waiting')}</div>`);
+    const onChange = vi.fn();
+    const unsubscribe = store?.subscribe(onChange);
+
+    // What a Millennium copy's start() does with the copy it finds.
+    const decky: unknown = Reflect.get(globalThis, '__LBK_BRIDGE__');
+    const takeOver = isRecord(decky) ? decky.dispose : undefined;
+    expect(takeOver).toBeTypeOf('function');
+    if (typeof takeOver === 'function') {
+      takeOver('millennium');
+    }
+    expect(onChange).toHaveBeenCalled();
+    expect(store?.getSnapshot()).toBe(t('deckyPlugin.viaMillennium'));
+    expect(FakeSocket.instances.find((s) => s.url === CDP_BROWSER)?.readyState).toBe(3);
+    unsubscribe?.();
+    dismount(plugin);
+  });
+
   it('stays idle next to a running Millennium copy and leaves it alone', async () => {
     const millennium = { host: 'millennium', dispose: vi.fn() };
     vi.stubGlobal('__LBK_BRIDGE__', millennium);

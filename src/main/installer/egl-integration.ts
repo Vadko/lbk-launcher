@@ -92,22 +92,27 @@ export function applyEglIntegration(
   if (target.platform !== 'epic') {
     return Promise.resolve({});
   }
-  const windowsAppId =
-    isWindows() && game.steam_launch_options_windows
-      ? getEpicManifestAppId(target.path)
-      : null;
-  if (windowsAppId && game.steam_launch_options_windows) {
-    return applyWindows(game.steam_launch_options_windows, target.path, windowsAppId);
+  const windowsOptions = isWindows() ? game.steam_launch_options_windows : null;
+  if (windowsOptions) {
+    const appId = getEpicManifestAppId(target.path);
+    return appId
+      ? applyWindows(windowsOptions, target.path, appId)
+      : Promise.resolve(notInEgl(target.path));
   }
-  if (isWindows() && game.steam_launch_options_windows) {
-    console.warn('[Installer] No EGL manifest for launch options:', target.path);
-  }
-  if (
-    isLinux() &&
-    game.steam_launch_options_linux &&
-    getEglInstallDirs().includes(target.path)
-  ) {
-    return Promise.resolve(applyLinux(game.steam_launch_options_linux, target.path));
+  const linuxOptions = isLinux() ? game.steam_launch_options_linux : null;
+  if (linuxOptions) {
+    // A Heroic or Lutris install has no EGL settings for the args to go into
+    return Promise.resolve(
+      getEglInstallDirs().includes(target.path)
+        ? applyLinux(linuxOptions, target.path)
+        : notInEgl(target.path)
+    );
   }
   return Promise.resolve({});
+}
+
+// Without its launch options the translation runs unmodded, so the install says so
+function notInEgl(gameDir: string): EglIntegrationResult {
+  console.warn('[Installer] No EGL install to take the launch options:', gameDir);
+  return { launchOptionsError: t('launchOptions.eglGameNotFound') };
 }

@@ -13,6 +13,11 @@ export interface SteamProcesses {
 
 export type SteamProcessKind = 'steam' | 'webhelper' | 'other';
 
+// Another logged-in user's Steam is not ours to count, shut down or kill; the uid is the same inside our Flatpak.
+export function ownUid(): number | null {
+  return process.getuid?.() ?? null;
+}
+
 // The crashpad handler is a detached Steam Helper that may outlive the client.
 function isCrashpadHandler(args: string | null): boolean {
   return (

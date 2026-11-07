@@ -13,6 +13,7 @@ import {
   readEnabledPlugins,
 } from './millennium';
 import { isWindows } from './platform';
+import { writeUserOnlyFile } from './user-only-file';
 
 type PluginDataFile = 'bridge.json' | 'achievements.json';
 
@@ -130,7 +131,13 @@ function writePluginTree(
     fs.writeFileSync(path.join(frontendDir, name), content);
   }
   for (const [file, content] of data) {
-    fs.writeFileSync(path.join(frontendDir, file), content, { mode: dataFileMode() });
+    const dataFile = path.join(frontendDir, file);
+    // Locked down here too: resyncBridgePluginData() leaves a copy with unchanged content as it is.
+    if (file === 'bridge.json') {
+      writeUserOnlyFile(dataFile, content);
+    } else {
+      fs.writeFileSync(dataFile, content, { mode: dataFileMode() });
+    }
   }
   // Written last: Millennium treats any folder with a plugin.json as a plugin.
   fs.writeFileSync(path.join(target, PLUGIN_JSON), bundle.pluginJson);

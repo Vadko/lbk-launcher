@@ -36,6 +36,7 @@ import {
 } from '../installer/errors';
 import { checkPlatformCompatibility, rerunInstaller } from '../installer/platform';
 import { resumeDownload } from '../installer/resume';
+import { answerRunInstaller, askRunInstaller } from '../installer/run-decisions';
 import { setInstalledSteamArtwork } from '../installer/steam-integration';
 import { removeComponents, uninstallTranslation } from '../installer/uninstall';
 import { applyLaunchOptionsNow } from '../steam-restart';
@@ -45,13 +46,6 @@ import { hasSteamArtwork } from '../utils/steam-artwork';
 import { readLastGameFolder, writeLastGameFolder } from '../utils/store-storage';
 import { getMainWindow, sendToRenderer } from '../window';
 import { createHandleOr, orEmpty, orFailure, orNull } from './handle-or';
-
-// Resolvers for run-installer confirmations awaiting a decision from the renderer,
-// keyed by game id (one pending install per game at a time).
-const pendingRunInstallerDecisions = new Map<
-  string,
-  (decision: RunInstallerDecision) => void
->();
 
 const handleOr = createHandleOr('Installer');
 
@@ -64,11 +58,7 @@ export function setupInstallerHandlers(): void {
   ipcMain.on(
     'installer:run-decision',
     (_, gameId: string, decision: RunInstallerDecision) => {
-      const resolve = pendingRunInstallerDecisions.get(gameId);
-      if (resolve) {
-        pendingRunInstallerDecisions.delete(gameId);
-        resolve(decision);
-      }
+      answerRunInstaller(gameId, decision);
     }
   );
 
@@ -91,9 +81,13 @@ export function setupInstallerHandlers(): void {
             getMainWindow()?.webContents.send('installation-status', game.id, status);
           },
           (request) =>
-            new Promise<RunInstallerDecision>((resolve) => {
-              pendingRunInstallerDecisions.set(request.gameId, resolve);
-              getMainWindow()?.webContents.send('installer:confirm-run', request);
+            askRunInstaller(request, () => {
+              const window = getMainWindow();
+              if (!window || window.isDestroyed()) {
+                return false;
+              }
+              window.webContents.send('installer:confirm-run', request);
+              return true;
             })
         );
 

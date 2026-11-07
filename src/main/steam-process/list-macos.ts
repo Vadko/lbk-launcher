@@ -2,6 +2,7 @@ import { execFileOnHost } from '@/main/utils/host-exec';
 import { errnoCode, errorMessage } from '@/shared/errors';
 import {
   groupSteamProcesses,
+  ownUid,
   type SteamProcesses,
   type SteamProcessKind,
 } from './process-info';
@@ -44,10 +45,11 @@ export function classifyMacProcess(args: string): SteamProcessKind {
 }
 
 // By executable (comm), not args: a shell whose command line mentions steam_osx is not Steam.
-async function macSteamPids(): Promise<number[] | null> {
+async function macSteamPids(uid: number | null): Promise<number[] | null> {
+  const user = uid === null ? [] : ['-u', String(uid)];
   let pids: number[];
   try {
-    const { stdout } = await execFileOnHost('pgrep', ['-x', 'steam_osx'], 5000);
+    const { stdout } = await execFileOnHost('pgrep', ['-x', ...user, 'steam_osx'], 5000);
     pids = stdout
       .split(/\s+/)
       .filter((s) => /^\d+$/.test(s))
@@ -77,23 +79,28 @@ async function macSteamPids(): Promise<number[] | null> {
   }
 }
 
-async function macProcessRows(): Promise<{ pid: number; ppid: number; args: string }[]> {
+async function macProcessRows(
+  uid: number | null
+): Promise<{ pid: number; ppid: number; args: string }[] | null> {
+  const select = uid === null ? ['-axww'] : ['-xww', '-U', String(uid)];
   try {
     const { stdout } = await execFileOnHost(
       'ps',
-      ['-axww', '-o', 'pid=,ppid=,args='],
+      [...select, '-o', 'pid=,ppid=,args='],
       5000
     );
     return parsePsOutput(stdout);
   } catch (error) {
     console.warn('[Steam] ps failed:', errorMessage(error));
-    return [];
+    return null;
   }
 }
 
+// Only this user's Steam; without the helpers' rows nothing can be said about Steam being gone.
 export async function listMacSteam(): Promise<SteamProcesses | null> {
-  const [pids, rows] = await Promise.all([macSteamPids(), macProcessRows()]);
-  if (pids === null) {
+  const uid = ownUid();
+  const [pids, rows] = await Promise.all([macSteamPids(uid), macProcessRows(uid)]);
+  if (pids === null || rows === null) {
     return null;
   }
   const byPid = new Map(rows.map((row) => [row.pid, row]));

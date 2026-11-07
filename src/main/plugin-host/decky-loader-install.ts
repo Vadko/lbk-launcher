@@ -97,7 +97,14 @@ function waitForDecky(): Promise<DeckyInfo | null> {
   );
 }
 
+// Run on a working Decky, the installer offers uninstall and wipe, so its guard never reads detectDecky()'s 30 s cache.
+async function deckyRunningNow(): Promise<boolean> {
+  resetDeckyDetectCache();
+  return (await detectDecky().catch(() => null))?.running === true;
+}
+
 async function runInstall(): Promise<DeckyLoaderInstallResult> {
+  resetHostFacts();
   const snapshot = await getHostSnapshot();
   if (snapshot.decky?.installed && snapshot.decky.running) {
     return { success: true };
@@ -130,6 +137,12 @@ async function runInstall(): Promise<DeckyLoaderInstallResult> {
       };
     }
 
+    if (await deckyRunningNow()) {
+      console.log(
+        '[Decky] Decky Loader came up during the download, not running the installer'
+      );
+      return { success: true };
+    }
     console.log(`[Decky] Running Decky installer ${DECKY_INSTALLER.version}`);
     const run = await runOnHost(script);
     const decky = await waitForDecky();

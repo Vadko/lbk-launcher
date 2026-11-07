@@ -17,6 +17,7 @@ import type { ResourceKey } from '@/shared/resources';
 import { defineResource, type ResourceDefinition } from './define-resource';
 import { setupResourcePort } from './resource-port';
 import { setting } from './triggers';
+import { homeInstalledWithCounters, weeklyPicksWithCounters } from './with-updated-games';
 
 const repo = () => GamesRepository.getInstance();
 const hideAi = () => readRendererSetting('hideAiTranslations', false);
@@ -57,15 +58,19 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
     read: () => new Set(getLikedGameIds()),
     on: ['likes-changed'],
   },
+  // A read rescans every store library, so new counters are patched in
   homeInstalled: {
     read: () => getHomeInstalledGames(hideAi()),
     on: ['catalog-changed', 'library-changed', hideAiChanged],
     afterCatalogSync: true,
+    withCounters: homeInstalledWithCounters,
   },
+  // The set's order does not follow the counters, so the pushed rows are enough
   weeklyPicks: {
     read: () => getWeeklyPicks(hideAi()),
     on: ['weekly-picks-changed', 'catalog-changed', hideAiChanged],
     afterCatalogSync: true,
+    withCounters: weeklyPicksWithCounters,
   },
   // Their owners publish every value they compute; a read runs only when nobody has published yet
   steamBridgeStatus: { read: getSteamBridgeStatus, on: [] },

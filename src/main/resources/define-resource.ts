@@ -4,10 +4,12 @@ import pTimeout from 'p-timeout';
 import { type AppEventName, appEvents } from '@/main/app-events';
 import { isCatalogReady } from '@/main/sync-status';
 import type { ResourceKey, ResourceMap } from '@/shared/resources';
+import type { Game } from '@/shared/types';
 import {
   failResource,
   getResource,
   isResourceWanted,
+  patchResource,
   publishResource,
 } from './resource-hub';
 
@@ -23,12 +25,14 @@ export interface ResourceDefinition<K extends ResourceKey> {
   on: ReadonlyArray<AppEventName | ResourceTrigger>;
   // Reads the local catalog, which the first sync is still writing
   afterCatalogSync?: boolean;
+  // Lays the counters feed's rows over the value held, for a list whose read costs more than a patch
+  withCounters?: (value: ResourceMap[K], games: readonly Game[]) => ResourceMap[K];
 }
 
 // Reads only while the page wants the key; a change nobody watches leaves it stale until a page subscribes
 export function defineResource<K extends ResourceKey>(
   key: K,
-  { read, on, afterCatalogSync = false }: ResourceDefinition<K>
+  { read, on, afterCatalogSync = false, withCounters }: ResourceDefinition<K>
 ): void {
   const state = { dirty: false, loaded: false, queued: false };
   const queue = pLimit(1);
@@ -89,6 +93,16 @@ export function defineResource<K extends ResourceKey>(
     appEvents.on('sync-status', () => {
       state.dirty = true;
       refresh();
+    });
+  }
+  if (withCounters) {
+    appEvents.on('counters-changed', (games) => {
+      // A throw here would skip the other listeners and land in the counters feed
+      try {
+        patchResource(key, (value) => withCounters(value, games));
+      } catch (error) {
+        console.error(`[Resources] Failed to publish ${key}:`, error);
+      }
     });
   }
   for (const trigger of on) {

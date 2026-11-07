@@ -25,6 +25,7 @@ import {
 import {
   buildSearchCondition,
   hasVisibleMatch,
+  prefixFirstOrder,
   type SearchCondition,
 } from './search-condition';
 
@@ -167,18 +168,13 @@ export class GamesRepository {
    */
   private buildOrderClause(
     sortOrder: SortOrderType,
-    searchQuery?: string
+    search: SearchCondition | null
   ): { sql: string; params: string[] } {
     const catalogOrder = this.buildCatalogOrder(sortOrder);
-    const prefix = searchQuery?.trim().toLowerCase();
-    if (!prefix) {
-      return { sql: catalogOrder, params: [] };
-    }
-    // Titles that start with the query come first: "The Room" before "Silent Hill 4: The Room"
-    return {
-      sql: `(substr(name_search, 1, length(?)) = ?) DESC, ${catalogOrder}`,
-      params: [prefix, prefix],
-    };
+    const prefixFirst = prefixFirstOrder(search);
+    return prefixFirst
+      ? { sql: `${prefixFirst.sql}, ${catalogOrder}`, params: prefixFirst.params }
+      : { sql: catalogOrder, params: [] };
   }
 
   private buildCatalogOrder(sortOrder: SortOrderType): string {
@@ -278,7 +274,7 @@ export class GamesRepository {
     }
 
     const whereClause = whereConditions.join(' AND ');
-    const order = this.buildOrderClause(sortOrder, searchQuery);
+    const order = this.buildOrderClause(sortOrder, search);
 
     // Author фільтр рахується у JS post-process, тому SQL LIMIT там урізав би рядки до фільтрації
     const canLimitInSql = limit !== undefined && authors.length === 0;
@@ -371,7 +367,7 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
-    const order = this.buildOrderClause(sortOrder, searchQuery);
+    const order = this.buildOrderClause(sortOrder, search);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
@@ -417,7 +413,7 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
-    const order = this.buildOrderClause(sortOrder, searchQuery);
+    const order = this.buildOrderClause(sortOrder, search);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
@@ -486,7 +482,7 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
-    const order = this.buildOrderClause(sortOrder, searchQuery);
+    const order = this.buildOrderClause(sortOrder, search);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
@@ -695,7 +691,7 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
-    const order = this.buildOrderClause(sortOrder, searchQuery);
+    const order = this.buildOrderClause(sortOrder, search);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games
@@ -747,7 +743,7 @@ export class GamesRepository {
       queryParams.push(...search.params);
     }
 
-    const order = this.buildOrderClause(sortOrder, searchQuery);
+    const order = this.buildOrderClause(sortOrder, search);
     const stmt = this.db.prepare(`
       SELECT *
       FROM games

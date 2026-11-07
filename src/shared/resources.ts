@@ -19,7 +19,7 @@ export interface ResourceMap {
   // Per Steam app id, the biggest discount first; games in the player's library of that store are left out
   storeDiscounts: ReadonlyMap<number, StoreDiscount[]>;
   likedGameIds: ReadonlySet<string>;
-  homeInstalled: { games: Game[]; installedPathsCount: number };
+  homeInstalled: { games: readonly Game[]; installedPathsCount: number };
   weeklyPicks: WeeklyPicks | null;
   steamBridgeStatus: SteamBridgeStatus;
   pluginHostState: PluginHostState;
@@ -45,7 +45,7 @@ const KEYS = {
 export const isResourceKey = (value: unknown): value is ResourceKey =>
   typeof value === 'string' && Object.hasOwn(KEYS, value);
 
-// A key in values is read again, so it is no longer failed; a failed key keeps its last value
+// A key in values is no longer failed unless failed names it too; a failed key keeps its last value
 export interface ResourceUpdate {
   values: Partial<ResourceMap>;
   failed: ResourceKey[];

@@ -222,6 +222,90 @@ describe('createReviewActions edits', () => {
   });
 });
 
+describe('createReviewActions edits of a reply the pages do not hold yet', () => {
+  async function answeredReply(actions: ReturnType<typeof seed>) {
+    await actions.sendReply(thread, 'hi', null);
+    await flush();
+    const id = sentIds()[0];
+    const view = shownThread(queryClient, id);
+    if (!view) {
+      throw new Error('The thread is not shown');
+    }
+    return { id, view };
+  }
+
+  it('keeps the reply shown with the edit checking', async () => {
+    const actions = seed(false);
+    const { id, view } = await answeredReply(actions);
+    const answer = deferAnswer(mocks.sendReviewEdit);
+
+    actions.edit(view, id, 'changed');
+    await flush();
+
+    expect(writesInCache()).toBe(1);
+    expect(shownEntry(queryClient, id)).toMatchObject({
+      text: 'hi',
+      pendingText: 'changed',
+      isChecking: true,
+    });
+    answer(published(id));
+    await flush();
+    expect(shownEntry(queryClient, id)).toMatchObject({
+      text: 'changed',
+      pendingText: null,
+    });
+  });
+
+  it('shows a failed edit of it with its resend, which keeps carrying the reply', async () => {
+    const actions = seed(false);
+    const { id, view } = await answeredReply(actions);
+    mocks.sendReviewEdit.mockResolvedValueOnce(rateLimit);
+
+    actions.edit(view, id, 'changed');
+    await flush();
+    expect(shownEntry(queryClient, id)).toMatchObject({
+      write: 'edit',
+      failure: { code: 'rate_limit' },
+    });
+
+    actions.resend(id);
+    await flush();
+    expect(shownEntry(queryClient, id)).toMatchObject({ text: 'changed' });
+  });
+
+  it('asks the list again once a failed edit of it is discarded', async () => {
+    const actions = seed(false);
+    const { id, view } = await answeredReply(actions);
+    mocks.sendReviewEdit.mockResolvedValueOnce(rateLimit);
+    actions.edit(view, id, 'changed');
+    await flush();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    actions.discard(id);
+    await flush();
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: REVIEWS_KEY });
+  });
+
+  it('carries the reply on to a second edit', async () => {
+    const actions = seed(false);
+    const { id, view } = await answeredReply(actions);
+    actions.edit(view, id, 'first');
+    await flush();
+    const answer = deferAnswer(mocks.sendReviewEdit);
+
+    actions.edit(shownThread(queryClient, id) ?? view, id, 'second');
+    await flush();
+
+    expect(shownEntry(queryClient, id)).toMatchObject({
+      text: 'first',
+      pendingText: 'second',
+      isChecking: true,
+    });
+    answer(published(id));
+  });
+});
+
 describe('createReviewActions answers', () => {
   it('keeps the answered reply shown while the refetch it asks for is out', async () => {
     const actions = seed(false);

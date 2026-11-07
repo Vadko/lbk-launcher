@@ -32,7 +32,26 @@ const withKnownStores = (rows: Discount[]): StoreDiscount[] =>
     return store ? [{ ...row, store }] : [];
   });
 
-function applyStoreDiscounts(rows: StoreDiscount[]): void {
+const discountKey = ({ store, steamAppId }: StoreDiscount) => `${store}:${steamAppId}`;
+
+// Keys a broadcast wrote during the running catch-up, whose pages may have been read before it
+const catchUp: { broadcastKeys?: Set<string> } = {};
+
+async function* guardingBroadcasts<T>(batches: AsyncIterable<T>): AsyncGenerator<T> {
+  catchUp.broadcastKeys = new Set();
+  try {
+    yield* batches;
+  } finally {
+    catchUp.broadcastKeys = undefined;
+  }
+}
+
+function applyStoreDiscounts(items: StoreDiscount[], live: boolean): void {
+  const keys = catchUp.broadcastKeys;
+  if (live) {
+    items.forEach((row) => keys?.add(discountKey(row)));
+  }
+  const rows = live || !keys ? items : items.filter((row) => !keys.has(discountKey(row)));
   const db = getDatabase();
   const now = Date.now();
   const upsert = db.prepare(`
@@ -112,7 +131,7 @@ const discounts = createDeltaStream({
       },
       (page) => page.length < PAGE_SIZE
     );
-    return withFinalWatermark(pages, since);
+    return guardingBroadcasts(withFinalWatermark(pages, since));
   },
   apply: applyStoreDiscounts,
   realtime: () => ({

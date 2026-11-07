@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/electron/main';
 import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
 import { join } from 'path';
 import { registerRoute } from '../lib/electron-router-dom';
+import { declinePendingRunInstallers } from './installer/run-decisions';
 import {
   applyLiquidGlass,
   isLiquidGlassSupported,
@@ -16,6 +17,10 @@ import { getIcon } from './utils/theme';
 
 let mainWindow: BrowserWindow | null = null;
 let liquidGlassId: number | null = null;
+// Set by the page's renderer-ready once its listeners are up; a push sent to a loading page is lost
+let isPageReady = false;
+// The latest push per channel that came while the page was not ready
+const heldForPage = new Map<string, unknown[]>();
 
 export async function createMainWindow(): Promise<BrowserWindow> {
   console.log('[Window] Creating main window...');
@@ -31,6 +36,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Check if liquid glass is supported and get user preference
   const isSupported = supportsMacOSLiquidGlass();
 
+  isPageReady = false;
   mainWindow = new BrowserWindow({
     name: 'main',
     windowStatePersistence: true,
@@ -89,7 +95,9 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   mainWindow.webContents.on('did-start-navigation', ({ isMainFrame, isSameDocument }) => {
     if (isMainFrame && !isSameDocument) {
+      isPageReady = false;
       stopReviewEvents();
+      declinePendingRunInstallers();
     }
   });
 
@@ -116,7 +124,9 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   );
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    isPageReady = false;
     stopReviewEvents();
+    declinePendingRunInstallers();
     console.error('[Window] Render process gone:', details);
     Sentry.captureMessage(`Render process gone: ${details.reason}`, {
       level: 'fatal',
@@ -128,7 +138,9 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   mainWindow.on('closed', async () => {
+    isPageReady = false;
     stopReviewEvents();
+    declinePendingRunInstallers();
     destroyCaptchaWindow();
     // Clean up liquid glass if it was applied
     if (liquidGlassId) {
@@ -206,6 +218,23 @@ export function sendToRenderer(channel: string, ...args: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, ...args);
   }
+}
+
+// For a push the page must not miss, such as a notification click that had to recreate or reload the window
+export function sendToReadyPage(channel: string, ...args: unknown[]): void {
+  if (isPageReady) {
+    sendToRenderer(channel, ...args);
+  } else {
+    heldForPage.set(channel, args);
+  }
+}
+
+export function markPageReady(): void {
+  isPageReady = true;
+  for (const [channel, args] of heldForPage) {
+    sendToRenderer(channel, ...args);
+  }
+  heldForPage.clear();
 }
 
 // IPC handler for toggling liquid glass

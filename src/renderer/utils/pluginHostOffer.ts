@@ -34,91 +34,44 @@ export interface OfferAction {
   external: boolean;
 }
 
-function offerAction(
-  key: string,
-  label: string,
-  icon: OfferIcon,
-  target: OfferTarget
-): OfferAction {
-  const external = target === 'millennium-site' || target === 'decky-site';
-  return { key, label, icon, target, external };
+type OfferActionSpec = Pick<OfferAction, 'key' | 'icon' | 'target'>;
+
+// Each name is also its label's key under `pluginOffer`.
+const OFFER_ACTIONS = {
+  installMillennium: { key: 'install', icon: 'download', target: 'millennium-install' },
+  repairMillennium: { key: 'repair', icon: 'repair', target: 'millennium-install' },
+  uninstallMillennium: {
+    key: 'uninstall',
+    icon: 'remove',
+    target: 'millennium-uninstall',
+  },
+  millenniumInfo: { key: 'site', icon: 'external', target: 'millennium-site' },
+  millenniumSite: { key: 'millennium-site', icon: 'external', target: 'millennium-site' },
+  installDeckyLoader: {
+    key: 'decky-loader-install',
+    icon: 'download',
+    target: 'decky-install',
+  },
+  installDeckyPlugin: { key: 'decky-install', icon: 'download', target: 'decky-install' },
+  updateDeckyPlugin: { key: 'decky-update', icon: 'update', target: 'decky-install' },
+  deckyInfo: { key: 'decky-site', icon: 'external', target: 'decky-site' },
+  openSettings: { key: 'settings', icon: 'settings', target: 'settings' },
+  restartSteam: { key: 'steam-restart', icon: 'restart', target: 'steam-restart' },
+} as const satisfies Record<string, OfferActionSpec>;
+
+function withLabel(spec: OfferActionSpec, label: string): OfferAction {
+  const external = spec.target === 'millennium-site' || spec.target === 'decky-site';
+  return { ...spec, label, external };
 }
 
-export const OFFER_ACTIONS = {
-  installMillennium: offerAction(
-    'install',
-    t('pluginOffer.installMillennium'),
-    'download',
-    'millennium-install'
-  ),
-  repairMillennium: offerAction(
-    'repair',
-    t('pluginOffer.repairMillennium'),
-    'repair',
-    'millennium-install'
-  ),
-  uninstallMillennium: offerAction(
-    'uninstall',
-    t('pluginOffer.uninstallMillennium'),
-    'remove',
-    'millennium-uninstall'
-  ),
-  millenniumInfo: offerAction(
-    'site',
-    t('pluginOffer.millenniumInfo'),
-    'external',
-    'millennium-site'
-  ),
-  millenniumSite: offerAction(
-    'millennium-site',
-    t('pluginOffer.millenniumSite'),
-    'external',
-    'millennium-site'
-  ),
-  installDeckyLoader: offerAction(
-    'decky-loader-install',
-    t('pluginOffer.installDeckyLoader'),
-    'download',
-    'decky-install'
-  ),
-  installDeckyPlugin: offerAction(
-    'decky-install',
-    t('pluginOffer.installDeckyPlugin'),
-    'download',
-    'decky-install'
-  ),
-  updateDeckyPlugin: offerAction(
-    'decky-update',
-    t('pluginOffer.updateDeckyPlugin'),
-    'update',
-    'decky-install'
-  ),
-  deckyInfo: offerAction(
-    'decky-site',
-    t('pluginOffer.deckyInfo'),
-    'external',
-    'decky-site'
-  ),
-  openSettings: offerAction(
-    'settings',
-    t('pluginOffer.openSettings'),
-    'settings',
-    'settings'
-  ),
-  restartSteam: offerAction(
-    'steam-restart',
-    t('pluginOffer.restartSteam'),
-    'restart',
-    'steam-restart'
-  ),
-};
+export function offerAction(name: keyof typeof OFFER_ACTIONS): OfferAction {
+  return withLabel(OFFER_ACTIONS[name], t(`pluginOffer.${name}`));
+}
 
 export function updateMillenniumAction(version: string): OfferAction {
-  return offerAction(
-    'update',
-    t('pluginOffer.updateMillennium', { version }),
-    'update',
-    'millennium-install'
+  return withLabel(
+    { key: 'update', icon: 'update', target: 'millennium-install' },
+    t('pluginOffer.updateMillennium', { version })
   );
 }
 
@@ -178,6 +131,11 @@ export function deckyOffer(host: PluginHostState): DeckyOffer {
     .exhaustive();
 }
 
+// Only Decky's own settings can enable it again, so this state gets no install offer.
+export function deckyPluginDisabled(decky: PluginHostState['decky']): boolean {
+  return decky?.plugin.installed === true && decky.plugin.disabled;
+}
+
 interface DeliveryNote {
   text: string;
   actions: OfferAction[];
@@ -186,7 +144,7 @@ interface DeliveryNote {
 // The install buttons ignore the "don't offer again" flags: next to a disabled checkbox they are the only way to enable it.
 const DELIVERY_NOTES: Record<
   AchievementsBadge['state'],
-  (badge: AchievementsBadge) => DeliveryNote | null
+  (badge: AchievementsBadge, pluginDisabled: boolean) => DeliveryNote | null
 > = {
   millennium: () => null,
   decky: () => null,
@@ -195,38 +153,45 @@ const DELIVERY_NOTES: Record<
     text: t('achievementsNote.needsMillennium'),
     actions:
       badge.unsupportedReason === null
-        ? [OFFER_ACTIONS.installMillennium, OFFER_ACTIONS.millenniumInfo]
-        : [OFFER_ACTIONS.millenniumInfo],
+        ? [offerAction('installMillennium'), offerAction('millenniumInfo')]
+        : [offerAction('millenniumInfo')],
   }),
-  'needs-decky-plugin': () => ({
-    text: t('achievementsNote.needsDeckyPlugin'),
-    actions: [OFFER_ACTIONS.installDeckyPlugin],
-  }),
+  'needs-decky-plugin': (_badge, pluginDisabled) =>
+    pluginDisabled
+      ? { text: t('achievementsNote.deckyPluginDisabled'), actions: [] }
+      : {
+          text: t('achievementsNote.needsDeckyPlugin'),
+          actions: [offerAction('installDeckyPlugin')],
+        },
   'needs-decky': () => ({
     text: t('achievementsNote.needsDecky'),
-    actions: [OFFER_ACTIONS.installDeckyLoader, OFFER_ACTIONS.deckyInfo],
+    actions: [offerAction('installDeckyLoader'), offerAction('deckyInfo')],
   }),
   'setting-off': (badge) => ({
     text: t('achievementsNote.settingOff', {
       detail: achievementsBadgeDetail(badge) ?? '',
     }),
-    actions: [OFFER_ACTIONS.openSettings],
+    actions: [offerAction('openSettings')],
   }),
   unsupported: (badge) => ({
     text: t('achievementsNote.unsupported', {
       detail: achievementsBadgeDetail(badge) ?? '',
     }),
     actions:
-      badge.unsupportedReason === 'millennium-v2' ? [OFFER_ACTIONS.millenniumSite] : [],
+      badge.unsupportedReason === 'millennium-v2' ? [offerAction('millenniumSite')] : [],
   }),
 };
 
-export function deliveryNote(badge: AchievementsBadge): DeliveryNote | null {
-  return DELIVERY_NOTES[badge.state](badge);
+export function deliveryNote(
+  badge: AchievementsBadge,
+  decky: PluginHostState['decky']
+): DeliveryNote | null {
+  return DELIVERY_NOTES[badge.state](badge, deckyPluginDisabled(decky));
 }
 
 interface SuccessOfferContext {
   millenniumInstallable: boolean;
+  deckyPluginDisabled: boolean;
   declined: { millennium: boolean; decky: boolean };
 }
 
@@ -239,14 +204,14 @@ const SUCCESS_OFFERS: Record<
   'plugin-next-start': () => null,
   'needs-millennium': ({ millenniumInstallable, declined }) =>
     !declined.millennium && millenniumInstallable
-      ? OFFER_ACTIONS.installMillennium
-      : OFFER_ACTIONS.millenniumInfo,
-  'needs-decky-plugin': ({ declined }) =>
-    declined.decky ? null : OFFER_ACTIONS.installDeckyPlugin,
+      ? offerAction('installMillennium')
+      : offerAction('millenniumInfo'),
+  'needs-decky-plugin': ({ deckyPluginDisabled, declined }) =>
+    declined.decky || deckyPluginDisabled ? null : offerAction('installDeckyPlugin'),
   'needs-decky': ({ declined }) =>
-    declined.decky ? OFFER_ACTIONS.deckyInfo : OFFER_ACTIONS.installDeckyLoader,
+    declined.decky ? offerAction('deckyInfo') : offerAction('installDeckyLoader'),
   unavailable: () => null,
-  disabled: () => OFFER_ACTIONS.openSettings,
+  disabled: () => offerAction('openSettings'),
 };
 
 export function successOffer(

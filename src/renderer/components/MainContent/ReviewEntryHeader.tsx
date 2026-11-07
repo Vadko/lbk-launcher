@@ -2,6 +2,7 @@ import { BugIcon, CornerDownRightIcon, LockIcon } from 'lucide-react';
 import React from 'react';
 import type { GameReviewAuthor } from '@/shared/game-reviews-types';
 import { t } from '@/shared/i18n/i18n';
+import { reviewAuthorName } from '../../utils/reviewAuthorName';
 import { Tooltip } from '../ui/Tooltip';
 import { ReviewModerationBadge } from './ReviewModerationBadge';
 import { PILL, TONE } from './reviewPill';
@@ -48,12 +49,8 @@ function formatReviewDate(iso: string): string {
   return `${day}, ${time}`;
 }
 
-function authorName(author: GameReviewAuthor): string {
-  return (
-    author.name ??
-    t(author.role === 'moderator' ? 'gameReviews.moderator' : 'gameReviews.you')
-  );
-}
+const authorName = ({ role, name }: GameReviewAuthor): string =>
+  reviewAuthorName(role, name) ?? t('gameReviews.you');
 
 export const ReviewEntryHeader: React.FC<ReviewEntryHeaderProps> = ({
   author,
@@ -78,7 +75,7 @@ export const ReviewEntryHeader: React.FC<ReviewEntryHeaderProps> = ({
       {author.isMine && author.name && (
         <span className={`${PILL} ${TONE.neutral}`}>{t('gameReviews.you')}</span>
       )}
-      {author.role === 'author' && (
+      {author.role === 'author' && author.name && (
         <span className={`${PILL} ${TONE.main}`}>
           {t('gameReviews.translationAuthor')}
         </span>

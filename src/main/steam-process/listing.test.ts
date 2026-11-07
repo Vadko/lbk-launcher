@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseLinuxPsOutput } from '@/main/steam-process/list-linux';
+import { parseLinuxPsOutput, parseProcStatus } from '@/main/steam-process/list-linux';
 import {
   classifyMacProcess,
   listMacSteam,
@@ -7,16 +7,22 @@ import {
 } from '@/main/steam-process/list-macos';
 import {
   parseTasklistCsv,
+  parseTasklistSession,
   parseWin32ProcessJson,
+  win32ProcessScript,
 } from '@/main/steam-process/list-windows';
 import { parseEnvSteamGameId, parseReaperAppId } from '@/main/steam-process/running-game';
 
-const hostExec = vi.hoisted(() => ({ outputs: new Map<string, string>() }));
+const hostExec = vi.hoisted(() => ({
+  outputs: new Map<string, string>(),
+  calls: [] as string[][],
+}));
 
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
 vi.mock('@/main/utils/host-exec', () => ({
   isFlatpak: () => false,
   execFileOnHost: (command: string, args: string[]) => {
+    hostExec.calls.push([command, ...args]);
     const stdout = hostExec.outputs.get(`${command} ${args[0]}`);
     return stdout === undefined
       ? Promise.reject(Object.assign(new Error('no match'), { code: 1 }))
@@ -54,6 +60,31 @@ describe('parseTasklistCsv', () => {
         'steam.exe'
       )
     ).toEqual([]);
+  });
+});
+
+describe('parseTasklistSession', () => {
+  const stdout = [
+    '"steam.exe","1234","Console","1","120,404 K"',
+    '"LBK Launcher.exe","4321","","2","88,000 K"',
+    '',
+  ].join('\r\n');
+
+  it.each([
+    ['our own row', stdout, 4321, 2],
+    ['another process only', stdout, 999, null],
+    ['the localized "no tasks" text', 'INFO: No tasks are running.\r\n', 4321, null],
+  ])('reads %s', (_label, text, pid, session) => {
+    expect(parseTasklistSession(text, pid)).toBe(session);
+  });
+});
+
+describe('win32ProcessScript', () => {
+  it.each([
+    ['our session only', 3, "OR Name='steamwebhelper.exe') AND SessionId=3\""],
+    ['every session when ours is unknown', null, "OR Name='steamwebhelper.exe')\""],
+  ])('lists %s', (_label, session, filter) => {
+    expect(win32ProcessScript(session)).toContain(filter);
   });
 });
 
@@ -114,13 +145,14 @@ describe('classifyMacProcess', () => {
 });
 
 describe('listMacSteam', () => {
-  it("counts steam_osx by executable and leaves out Millennium's launcher", async () => {
+  it("counts this user's steam_osx by executable and leaves out Millennium's launcher", async () => {
     const launcher =
       '/Users/u/Applications/Steam Millennium.app/Contents/MacOS/steam_osx';
+    hostExec.calls.length = 0;
     hostExec.outputs.set('pgrep -x', '100\n200\n');
     hostExec.outputs.set('ps -o', ` 100 ${launcher}\n 200 ${MAC_STEAM}/steam_osx\n`);
     hostExec.outputs.set(
-      'ps -axww',
+      'ps -xww',
       [
         `  100     1 ${launcher}`,
         `  200   100 ${MAC_STEAM}/steam_osx -devtools-port 60519`,
@@ -134,28 +166,70 @@ describe('listMacSteam', () => {
       ],
       webhelpers: [{ pid: 300, ppid: 200, args: `${MAC_HELPER} -nocrashdialog` }],
     });
+    const uid = String(process.getuid?.());
+    expect(hostExec.calls).toContainEqual(['pgrep', '-x', '-u', uid, 'steam_osx']);
+    expect(hostExec.calls).toContainEqual([
+      'ps',
+      '-xww',
+      '-U',
+      uid,
+      '-o',
+      'pid=,ppid=,args=',
+    ]);
+  });
+
+  it('reports no Steam when pgrep matches nothing, and a failed listing when ps fails', async () => {
+    hostExec.outputs.clear();
+    hostExec.outputs.set('ps -xww', `  300     1 ${MAC_HELPER} --type=crashpad-handler`);
+    expect(await listMacSteam()).toEqual({ steam: [], webhelpers: [] });
 
     hostExec.outputs.clear();
-    expect(await listMacSteam()).toEqual({ steam: [], webhelpers: [] });
+    expect(await listMacSteam()).toBeNull();
   });
 });
 
 describe('parseLinuxPsOutput', () => {
-  it('splits pid, ppid, comm and the full command line', () => {
-    const stdout = [
-      ' 2001     1 steam           /home/u/Steam/steam -srt-logger-opened',
-      ' 2004     1 kworker/0:1',
-      'garbage line',
-    ].join('\n');
-    expect(parseLinuxPsOutput(stdout)).toEqual([
-      {
-        pid: 2001,
-        ppid: 1,
-        comm: 'steam',
-        args: '/home/u/Steam/steam -srt-logger-opened',
-      },
+  const stdout = [
+    ' 2001     1  1000 steam           /home/u/Steam/steam -srt-logger-opened',
+    ' 2002     1  1001 steam           /home/b/Steam/steam',
+    ' 2004     1     0 kworker/0:1',
+    'garbage line',
+  ].join('\n');
+  const own = {
+    pid: 2001,
+    ppid: 1,
+    comm: 'steam',
+    args: '/home/u/Steam/steam -srt-logger-opened',
+  };
+
+  it("splits pid, ppid, comm and the full command line, keeping this user's rows", () => {
+    expect(parseLinuxPsOutput(stdout, 1000)).toEqual([own]);
+  });
+
+  it('keeps every row when the uid is unknown', () => {
+    expect(parseLinuxPsOutput(stdout, null)).toEqual([
+      own,
+      { pid: 2002, ppid: 1, comm: 'steam', args: '/home/b/Steam/steam' },
       { pid: 2004, ppid: 1, comm: 'kworker/0:1', args: '' },
     ]);
+  });
+});
+
+describe('parseProcStatus', () => {
+  it.each([
+    [
+      'a status file',
+      'Name:\tsteam\nPPid:\t1742\nUid:\t1000\t1000\t1000\t1000\n',
+      { ppid: 1742, uid: 1000 },
+    ],
+    [
+      'the real uid of a setuid process',
+      'PPid:\t1\nUid:\t1000\t0\t0\t0\n',
+      { ppid: 1, uid: 1000 },
+    ],
+    ['an unreadable status', '', { ppid: 0, uid: null }],
+  ])('reads %s', (_label, status, parsed) => {
+    expect(parseProcStatus(status)).toEqual(parsed);
   });
 });
 

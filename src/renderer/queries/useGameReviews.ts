@@ -36,11 +36,8 @@ export function useGameReviews(
     [fetchNextPage]
   );
 
-  const { data: pages, dataUpdatedAt } = query;
-  const data = useMemo(
-    () => pages && withReviewWrites(pages, writes, dataUpdatedAt),
-    [pages, writes, dataUpdatedAt]
-  );
+  const { data: pages } = query;
+  const data = useMemo(() => pages && withReviewWrites(pages, writes), [pages, writes]);
 
   return { query, data, loadNextPage };
 }

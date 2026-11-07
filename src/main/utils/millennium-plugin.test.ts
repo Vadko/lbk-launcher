@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { BRIDGE_VERSION } from '@lbk/bridge-core/contract';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as MillenniumModule from '@/main/utils/millennium';
+import type * as UserOnlyFileModule from '@/main/utils/user-only-file';
 
 const PACKAGE_DIR = path.resolve(__dirname, '../../../packages/lbk-bridge-millennium');
 const PLUGIN_INDEX = path.join(PACKAGE_DIR, '.millennium/Dist/index.js');
@@ -35,9 +36,14 @@ vi.mock('@/main/utils/millennium', async (importOriginal) => {
   return { ...actual, detectMillennium: () => fake.info };
 });
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
+vi.mock('@/main/utils/user-only-file', async (importOriginal) => {
+  const actual = await importOriginal<typeof UserOnlyFileModule>();
+  return { ...actual, writeUserOnlyFile: vi.fn(actual.writeUserOnlyFile) };
+});
 
 const plugin = await import('@/main/utils/millennium-plugin');
 const pluginData = await import('@/main/utils/plugin-data');
+const { writeUserOnlyFile } = await import('@/main/utils/user-only-file');
 
 describe('plugin install and data files', () => {
   let root: string;
@@ -153,9 +159,14 @@ describe('plugin install and data files', () => {
 
     pluginData.writeBridgePluginData('achievements.json', { v: 1, stamp: 's', apps: {} });
     fs.writeFileSync(installed('.millennium/Dist/index.js'), '// stale');
+    vi.mocked(writeUserOnlyFile).mockClear();
     expect(plugin.installOrUpdateMillenniumPlugin()).toEqual({ ok: true, changed: true });
     expect(fs.existsSync(bridge)).toBe(true);
     expect(fs.existsSync(installed('.millennium/Dist/achievements.json'))).toBe(true);
+    // The carried-over secret goes through the locked-down write; resync then leaves it as it is.
+    expect(vi.mocked(writeUserOnlyFile).mock.calls.map(([file]) => file)).toEqual([
+      path.join(`${installed()}.lbk-new`, '.millennium', 'Dist', 'bridge.json'),
+    ]);
   });
 
   it('edits enabledPlugins only while Steam is off', async () => {

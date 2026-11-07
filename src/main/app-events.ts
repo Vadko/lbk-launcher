@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import type { MillenniumApplyReport } from '@/main/millennium-install/apply';
 import type { SyncStatus } from '@/main/sync-status';
 import type { ResourceKey } from '@/shared/resources';
+import type { Game } from '@/shared/types';
 
 interface AppEventMap {
   'install-record-removed': [gameId: string];
@@ -16,7 +17,7 @@ interface AppEventMap {
   'catalog-changed': [];
   'library-changed': [];
   'installs-changed': [];
-  'counters-changed': [];
+  'counters-changed': [games: readonly Game[]];
   'store-discounts-changed': [];
   'weekly-picks-changed': [];
   'likes-changed': [];

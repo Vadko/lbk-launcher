@@ -16,6 +16,7 @@ import {
 import { getTopDialog } from '../utils/getTopDialog';
 import { isTextInput } from '../utils/isTextInput';
 import { isValidGamepad } from '../utils/isValidGamepad';
+import { type DialogFocusEntry, nextDialogFocus } from '../utils/nextDialogFocus';
 import { scrollBehavior } from '../utils/scrollBehavior';
 import { selectEntryAction } from '../utils/selectEntryAction';
 import { selectGamepadTarget } from '../utils/selectGamepadTarget';
@@ -192,6 +193,15 @@ const moveFocusTo = (el: HTMLElement, revealIn?: HTMLElement | null) => {
   } else {
     el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
+};
+
+// Focused, or only marked when it is a text field
+const getGamepadFocus = (): HTMLElement | null => {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) {
+    return active;
+  }
+  return document.querySelector<HTMLElement>('[data-gamepad-selected]');
 };
 
 const isSearchInput = (el: Element | null): el is HTMLInputElement =>
@@ -395,8 +405,7 @@ export function useGamepadModeNavigation(enabled = true) {
     let suppressDirection = false;
     let lastBWhileTyping = 0;
     let prevArea: Area | null = null;
-    let wasModalOpen = false;
-    let focusBeforeModal: HTMLElement | null = null;
+    let dialogStack: DialogFocusEntry[] = [];
     let dropdownTrigger: HTMLElement | null = null;
     // LB/RB onto a multi-translation card opens the picker — cancelling it must not move the strip
     let indexBeforeSwitch: { index: number; pathname: string } | null = null;
@@ -842,29 +851,38 @@ export function useGamepadModeNavigation(enabled = true) {
       return null;
     };
 
-    const trackModalFocus = (modalOpen: boolean) => {
-      if (modalOpen && !wasModalOpen) {
-        focusBeforeModal = document.activeElement as HTMLElement | null;
-        clearGamepadSelected();
-      } else if (!modalOpen && wasModalOpen) {
-        clearGamepadSelected();
-        if (indexBeforeSwitch?.pathname === pathnameRef.current) {
-          store().setFocusedGameIndex(indexBeforeSwitch.index);
-        }
-        indexBeforeSwitch = null;
-        const handedOver = store().takeEntryHandOver();
-        const entry = handedOver === null ? null : document.getElementById(handedOver);
-        if (entry) {
-          selectEntryAction(entry);
-        } else if (focusBeforeModal?.isConnected) {
-          focusBeforeModal.focus({ preventScroll: true });
-        } else {
-          // The opener left while the modal was up (a sent reply's composer); with no visible action, handleMainContent picks one on screen
-          getVisiblePrimaryAction()?.focus({ preventScroll: true });
-        }
-        focusBeforeModal = null;
+    const trackModalFocus = (top: HTMLElement | null) => {
+      const step = nextDialogFocus(dialogStack, top, getGamepadFocus());
+      dialogStack = step.stack;
+      const { change } = step;
+      if (change.kind === 'same') {
+        return;
       }
-      wasModalOpen = modalOpen;
+      clearGamepadSelected();
+      if (change.kind === 'returned') {
+        // Otherwise handleModal starts the dialog underneath from its first item
+        if (change.opener?.isConnected && top?.contains(change.opener)) {
+          selectGamepadTarget(change.opener);
+        }
+        return;
+      }
+      if (change.kind === 'opened') {
+        return;
+      }
+      if (indexBeforeSwitch?.pathname === pathnameRef.current) {
+        store().setFocusedGameIndex(indexBeforeSwitch.index);
+      }
+      indexBeforeSwitch = null;
+      const handedOver = store().takeEntryHandOver();
+      const entry = handedOver === null ? null : document.getElementById(handedOver);
+      if (entry) {
+        selectEntryAction(entry);
+      } else if (change.opener?.isConnected) {
+        selectGamepadTarget(change.opener);
+      } else {
+        // The opener left while the modal was up (a sent reply's composer); with no visible action, handleMainContent picks one on screen
+        getVisiblePrimaryAction()?.focus({ preventScroll: true });
+      }
     };
 
     const restoreDropdownTrigger = () => {
@@ -928,7 +946,7 @@ export function useGamepadModeNavigation(enabled = true) {
         indexBeforeSwitch = null;
       }
       const modal = getTopDialog();
-      trackModalFocus(!!modal);
+      trackModalFocus(modal);
       restoreDropdownTrigger();
 
       const isTyping = isTextInput(document.activeElement);

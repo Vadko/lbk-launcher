@@ -56,6 +56,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -125,24 +126,79 @@ describe('callReviewFunction', () => {
     [
       'a gateway 502 page',
       new Response('<html>Bad gateway</html>', { status: 502 }),
-      'unreachable',
+      { code: 'unreachable', kind: 'retry' },
     ],
-    ['a gateway 429', new Response('{"msg":"slow down"}', { status: 429 }), 'rate_limit'],
-    ['a missing function', new Response('Not found', { status: 404 }), 'bad_response'],
+    [
+      'a gateway 429',
+      new Response('{"msg":"slow down"}', { status: 429 }),
+      { code: 'rate_limit', kind: 'retry' },
+    ],
+    [
+      'a gateway 408',
+      new Response('Request timeout', { status: 408 }),
+      { code: 'unreachable', kind: 'retry' },
+    ],
+    [
+      'a missing function',
+      new Response('Not found', { status: 404 }),
+      { code: 'gateway_refused', kind: 'rejected' },
+    ],
     [
       'an unknown code',
       new Response('{"success":false,"error":"new_code"}', { status: 400 }),
-      'bad_response',
+      { code: 'refused', kind: 'rejected' },
     ],
-  ])('classifies %s by its status', async (_label, response, code) => {
+  ])('classifies %s by its status', async (_label, response, failure) => {
     state.invoke.mockResolvedValue({
       data: null,
       error: new FunctionsHttpError(response),
     });
 
-    const result = await reply();
+    expect(await reply()).toEqual({ ok: false, failure });
+  });
 
-    expect(result.ok ? null : result.failure.code).toBe(code);
+  it.each([
+    [
+      'a code newer than this build as a warning',
+      new Response('{"success":false,"error":"new_code"}', { status: 400 }),
+      'warn',
+      ['[Reviews] reviews?action=reply failed: refused', 'HTTP 400 new_code'],
+    ],
+    [
+      "the gateway's own 4xx as an error",
+      new Response('Not found', { status: 404 }),
+      'error',
+      ['[Reviews] reviews?action=reply failed: gateway_refused', 'HTTP 404'],
+    ],
+  ] as const)('logs %s', async (_label, response, level, line) => {
+    state.invoke.mockResolvedValue({
+      data: null,
+      error: new FunctionsHttpError(response),
+    });
+
+    await reply();
+
+    expect({ warn: warn.mock.calls, error: error.mock.calls }).toEqual({
+      warn: level === 'warn' ? [line] : [],
+      error: level === 'error' ? [line] : [],
+    });
+  });
+
+  it.each([
+    ['a 4xx', 409, { code: 'gateway_refused', kind: 'rejected' }],
+    ['a 5xx', 503, { code: 'unreachable', kind: 'retry' }],
+  ])('stops waiting for the stalled body of %s', async (_label, status, failure) => {
+    vi.useFakeTimers();
+    const stalled = new ReadableStream({ start: () => undefined });
+    state.invoke.mockResolvedValue({
+      data: null,
+      error: new FunctionsHttpError(new Response(stalled, { status })),
+    });
+
+    const result = reply();
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    await expect(result).resolves.toEqual({ ok: false, failure });
   });
 
   it.each([

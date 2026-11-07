@@ -33,6 +33,7 @@ const storedStringsSchema = z.object({
   format: z.literal(1),
   appid: z.number(),
   gameId: z.string(),
+  gamePath: z.string().optional().catch(undefined),
   archiveHash: z.string().nullable().catch(null),
   strings: z.record(z.string(), z.unknown()).transform(cleanStrings),
 });
@@ -51,7 +52,7 @@ function readStoredStrings(appId: number): StoredAchievementStrings | null {
 
 export function saveAchievementStrings(
   extracted: readonly ExtractedAchievementStrings[],
-  gameId: string,
+  owner: { gameId: string; gamePath: string },
   archiveHash: string | null
 ): number[] {
   const dir = getStringsDir();
@@ -59,7 +60,8 @@ export function saveAchievementStrings(
     const entry: StoredAchievementStrings = {
       format: 1,
       appid: appId,
-      gameId,
+      gameId: owner.gameId,
+      gamePath: owner.gamePath,
       archiveHash,
       strings,
     };
@@ -112,11 +114,20 @@ export function hasAchievementStrings(
   );
 }
 
-// Records also vanish outside the uninstall flow (game removed in Steam, stale cache); their strings go too.
+// Folder and parent both gone: the drive is only unmounted (SD card, external or network disk), and the library scan re-caches the record once it is back.
+function isOnMissingDrive(gamePath: string | undefined): boolean {
+  return (
+    gamePath !== undefined &&
+    !fs.existsSync(gamePath) &&
+    !fs.existsSync(path.dirname(gamePath))
+  );
+}
+
+// Records also vanish outside the uninstall flow (game removed in Steam, stale cache); their strings go too, unless only their drive is gone.
 export function removeStringsOwnedBy(gameIds: ReadonlySet<string>): boolean {
   let removed = false;
   for (const entry of listStoredStrings()) {
-    if (gameIds.has(entry.gameId)) {
+    if (gameIds.has(entry.gameId) && !isOnMissingDrive(entry.gamePath)) {
       removeStoredStrings(entry.appid, entry.gameId);
       removed = true;
     }

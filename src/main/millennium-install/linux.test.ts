@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  dropTakenOverRuntime,
   environHasRuntimePath,
   isI386Elf,
   isMillenniumLinkTarget,
@@ -12,6 +13,7 @@ import {
   planLinuxLinks,
   pruneRuntimeVersions,
   removeLinuxLinks,
+  removeUnusedRuntime,
   renderEnvironmentFile,
 } from './linux';
 
@@ -202,5 +204,84 @@ describe.skipIf(process.platform === 'win32')('pruneRuntimeVersions', () => {
 
     expect(fs.readdirSync(root).sort()).toEqual(['3.5.0', '3.6.0', 'current']);
     fs.rmSync(root, { recursive: true, force: true });
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('runtime cleanup at startup', () => {
+  let home: string | null = null;
+
+  afterEach(() => {
+    if (home) {
+      fs.rmSync(home, { recursive: true, force: true });
+      home = null;
+    }
+  });
+
+  function layout() {
+    home = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-runtime-'));
+    const runtimeRoot = path.posix.join(home, '.local/lib/lbk-millennium');
+    const linux = {
+      runtimeRoot,
+      current: path.posix.join(runtimeRoot, 'current'),
+      envFile: path.posix.join(home, '.config/environment.d/lbk-millennium.conf'),
+      steamHome: path.posix.join(home, '.steam/steam'),
+    };
+    fs.mkdirSync(path.posix.join(runtimeRoot, '3.5.0'), { recursive: true });
+    fs.writeFileSync(path.posix.join(runtimeRoot, '3.5.0/libmillennium_x86.so'), 'lib');
+    fs.symlinkSync(path.posix.join(runtimeRoot, '3.5.0'), linux.current);
+    fs.mkdirSync(path.posix.join(linux.steamHome, 'ubuntu12_32'), { recursive: true });
+    const xtst = path.posix.join(linux.steamHome, 'ubuntu12_32/libXtst.so.6');
+    const linkTo = (target: string) => fs.symlinkSync(target, xtst);
+    const official = path.posix.join(home, 'usr/lib/millennium');
+    fs.mkdirSync(official, { recursive: true });
+    fs.writeFileSync(path.posix.join(official, 'libmillennium_bootstrap_x86.so'), 'boot');
+    return { linux, linkTo, official };
+  }
+
+  const ours = (linux: { current: string }) =>
+    path.posix.join(linux.current, 'libmillennium_x86.so');
+
+  it.each([
+    ['nothing loads it', {}, false],
+    ['a Steam link points into it', { link: true }, true],
+    ['our env file is still there', { envFile: true }, true],
+    ['this session still loads it', { session: true }, true],
+  ])('without a record, keeps the runtime only while %s', (_label, use, kept) => {
+    const { linux, linkTo } = layout();
+    if ('link' in use) {
+      linkTo(path.posix.join(linux.current, 'libmillennium_bootstrap_x86.so'));
+    }
+    if ('envFile' in use) {
+      fs.mkdirSync(path.posix.dirname(linux.envFile), { recursive: true });
+      fs.writeFileSync(linux.envFile, renderEnvironmentFile(ours(linux)));
+    }
+    removeUnusedRuntime(
+      linux,
+      'session' in use ? ours(linux) : '/usr/lib/millennium/x.so'
+    );
+    expect(fs.existsSync(linux.runtimeRoot)).toBe(kept);
+  });
+
+  it.each([
+    ['drops env file and runtime once the session does not load it', undefined, false],
+    ['keeps the runtime this session still loads', 'ours', true],
+  ])('after a takeover, %s', (_label, session, kept) => {
+    const { linux, linkTo, official } = layout();
+    linkTo(path.posix.join(official, 'libmillennium_bootstrap_x86.so'));
+    fs.mkdirSync(path.posix.dirname(linux.envFile), { recursive: true });
+    fs.writeFileSync(linux.envFile, renderEnvironmentFile(ours(linux)));
+
+    expect(
+      dropTakenOverRuntime(linux, linux.envFile, session ? ours(linux) : undefined)
+    ).toBe(true);
+    expect(fs.existsSync(linux.envFile)).toBe(false);
+    expect(fs.existsSync(linux.runtimeRoot)).toBe(kept);
+  });
+
+  it('leaves a runtime whose links are still ours', () => {
+    const { linux, linkTo } = layout();
+    linkTo(path.posix.join(linux.current, 'libmillennium_bootstrap_x86.so'));
+    expect(dropTakenOverRuntime(linux, linux.envFile, undefined)).toBe(false);
+    expect(fs.existsSync(linux.runtimeRoot)).toBe(true);
   });
 });

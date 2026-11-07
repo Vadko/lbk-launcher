@@ -15,13 +15,23 @@ import { reviewWritesKey } from './gameReviewsQueryKey';
 import { refreshGameReviews } from './refreshGameReviews';
 import { sendReviewEdit, sendReviewReply } from './reviewsClient';
 
+// A reply only its answered write showed, since the pages were asked for before that answer
+export interface UnlistedReply {
+  reply: GameReviewReply;
+  answeredAt: number;
+}
+
 export type ReviewWrite = {
   // Client-made for a reply, so a resend after a lost answer cannot post twice
   entryId: string;
   // The thread the entry belongs to
   reviewId: string;
   isPublic: boolean;
-} & ({ kind: 'reply'; reply: GameReviewReply } | { kind: 'edit'; text: string });
+} & (
+  | { kind: 'reply'; reply: GameReviewReply }
+  // An edit forgets the reply write before it, so it carries the reply that write still showed
+  | { kind: 'edit'; text: string; unlisted?: UnlistedReply }
+);
 
 export interface ReviewAnswer {
   // Null when the server refused the write and stored nothing

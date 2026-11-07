@@ -298,6 +298,42 @@ describe('setEglWindowsLaunchArgs', () => {
     expect(mocks.store.has(PENDING_KEY)).toBe(false);
   });
 
+  it('keeps queued args while EGL left no signed-in account, and writes them once it does', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const file = setUpSettings(ini(REMEMBER_ME, ACCOUNT, 'X=1'));
+    eglRunning(true);
+    await setEglWindowsLaunchArgs(APP_ID, '-load-mods');
+
+    // The player signed out, and EGL saved the file without the account's section
+    fs.writeFileSync(file, ini(REMEMBER_ME, '[Launcher]', 'X=1'));
+    eglRunning(false);
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(mocks.store.get(PENDING_KEY)).toEqual({ [APP_ID]: '-load-mods' });
+
+    fs.writeFileSync(file, ini(REMEMBER_ME, ACCOUNT, 'X=1'));
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(fs.readFileSync(file, 'utf8')).toBe(WRITTEN);
+    expect(mocks.store.has(PENDING_KEY)).toBe(false);
+  });
+
+  it('stops polling while tasklist keeps failing, and keeps the args for the next start', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const file = setUpSettings(ini(REMEMBER_ME, ACCOUNT, 'X=1'));
+    mocks.execFile.mockImplementation((_file, _args, _options, callback) =>
+      callback(new Error('tasklist failed'))
+    );
+    await setEglWindowsLaunchArgs(APP_ID, '-load-mods');
+
+    await vi.advanceTimersByTimeAsync(8 * 15000);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(mocks.store.get(PENDING_KEY)).toEqual({ [APP_ID]: '-load-mods' });
+
+    eglRunning(false);
+    startPendingEglLaunchArgs();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fs.readFileSync(file, 'utf8')).toBe(WRITTEN);
+  });
+
   it('picks up args queued before LBK restarted', async () => {
     const file = setUpSettings(ini(REMEMBER_ME, ACCOUNT, 'X=1'));
     mocks.store.set(PENDING_KEY, { [APP_ID]: '-load-mods' });

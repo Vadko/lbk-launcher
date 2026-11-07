@@ -143,6 +143,26 @@ describe('launchEglGame', () => {
     expect(mocks.spawnOnHost).toHaveBeenCalledOnce();
   });
 
+  it.each([
+    ['launches through EGL without it', '/apps/EpicGamesLauncher.appimage', true],
+    ['fails with no EGL to hand the link to', undefined, false],
+  ])(
+    'when EGL has no Proton for the catalog env yet, %s',
+    async (_, appImage, launched) => {
+      mocks.getEglLaunchTarget.mockReturnValue(null);
+      mocks.listLinuxProcesses.mockResolvedValue(
+        appImage ? [{ pid: 2, ppid: 1, comm: 'EpicGamesLaunch', args: appImage }] : []
+      );
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      await expect(
+        launchEglGame(GAME_DIR, 'WINEDLLOVERRIDES="winhttp=n,b" %command%')
+      ).resolves.toBe(launched);
+
+      expect(mocks.spawnOnHost.mock.calls).toEqual(appImage ? [[appImage, [LINK]]] : []);
+    }
+  );
+
   it('fails when nothing can be launched or the launch does not spawn', async () => {
     mocks.getEglDeepLink.mockReturnValue(null);
     mocks.getEglLaunchTarget.mockReturnValue(null);

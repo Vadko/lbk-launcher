@@ -32,20 +32,28 @@ const NOTICES: Record<ModerationVerdict, (event: ReviewEvent) => Notice | null> 
   pending: () => null,
 };
 
-// The answer to the viewer's own write or post is still coming, or showed this very verdict
+// at is the server's clock and answeredAt this machine's, so a clock that lags still matches the answer's own event
+const CLOCK_SKEW_MS = 60_000;
+
+// The answer is still coming, or showed this verdict no earlier than the event: an older one predates a restore after a removal
 function isAnswered(
   queryClient: QueryClient,
-  { gameId, entryId }: ReviewEvent,
+  { gameId, entryId, at }: ReviewEvent,
   verdict: ModerationVerdict
 ): boolean {
-  const write = findReviewWrite(queryClient, gameId, entryId);
+  const shows = (shown: string | null, answeredAt: number) =>
+    shown === verdict && Date.parse(at) <= answeredAt + CLOCK_SKEW_MS;
+  const write = findReviewWrite(queryClient, gameId, entryId)?.state;
   if (write) {
-    return write.state.status === 'pending' || write.state.data?.verdict === verdict;
+    return (
+      write.status === 'pending' ||
+      (write.data !== undefined && shows(write.data.verdict, write.data.answeredAt))
+    );
   }
   const post = findFeedbackPost(queryClient, entryId)?.state;
   return (
     post?.status === 'pending' ||
-    (post?.data?.ok === true && post.data.outcome === verdict)
+    (post?.data?.ok === true && shows(post.data.outcome, post.data.answeredAt))
   );
 }
 

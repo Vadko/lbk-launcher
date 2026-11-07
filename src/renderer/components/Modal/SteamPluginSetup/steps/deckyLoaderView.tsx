@@ -15,14 +15,6 @@ import {
 } from '../SetupParts';
 import { closeFooter, setupView } from './setupView';
 
-const LOADER_OFFER_PARAGRAPHS = [
-  t('deckyLoader.offerIntro'),
-  t('deckyLoader.offerBenefits'),
-  t('deckyLoader.offerWithout'),
-  t('deckyLoader.offerInstaller'),
-  t('deckyLoader.offerCaveat'),
-];
-
 const RETRYABLE: ReadonlySet<LoaderFailure> = new Set([
   'not-installed',
   'not-running',
@@ -73,7 +65,15 @@ export function deckyLoaderView({
 
   switch (stage.kind) {
     case 'offer': {
-      const offer = stage.repair ? [t('deckyLoader.repair')] : LOADER_OFFER_PARAGRAPHS;
+      const offer = stage.repair
+        ? [t('deckyLoader.repair')]
+        : [
+            t('deckyLoader.offerIntro'),
+            t('deckyLoader.offerBenefits'),
+            t('deckyLoader.offerWithout'),
+            t('deckyLoader.offerInstaller'),
+            t('deckyLoader.offerCaveat'),
+          ];
       return setupView(
         t('deckySetup.title'),
         <SetupText

@@ -85,13 +85,13 @@ export const millenniumUninstallMachine = setup({
 }).createMachine({
   id: 'millenniumUninstall',
   initial: 'confirm',
-  context: {
+  context: () => ({
     purge: false,
     steamRunning: undefined,
     restart: 'now',
     text: t('millenniumUninstall.progress'),
     result: outcomeStep(null),
-  },
+  }),
   states: {
     confirm: {
       on: {
@@ -127,7 +127,7 @@ export const millenniumUninstallMachine = setup({
       },
     },
     uninstalling: {
-      entry: assign({ text: t('millenniumUninstall.progress') }),
+      entry: assign({ text: () => t('millenniumUninstall.progress') }),
       invoke: [
         { src: 'progress' },
         {

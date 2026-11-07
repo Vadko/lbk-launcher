@@ -8,6 +8,7 @@ import {
   listInstallationRecords,
   rewriteInstallationRecord,
   withAchievementsComponent,
+  withSteamArtworkChoice,
 } from './installation-info';
 
 const userData = vi.hoisted(() => ({ dir: '/user-data' }));
@@ -43,6 +44,28 @@ describe('withAchievementsComponent', () => {
     expect(withAchievementsComponent(base, null).components).toEqual({
       text: { installed: true, files: [] },
     });
+  });
+});
+
+describe('withSteamArtworkChoice', () => {
+  const earlier = (steamArtwork: boolean, gameId = 'g'): InstallationInfo => ({
+    ...base,
+    gameId,
+    steamArtwork,
+  });
+
+  it.each<[string, boolean | undefined, InstallationInfo | null, boolean | undefined]>([
+    ['the choice of a dialog that offered artwork', false, earlier(true), false],
+    ['the earlier choice when none was offered', undefined, earlier(false), false],
+    ['nothing when none was ever offered', undefined, null, undefined],
+    [
+      'nothing from another translation in the folder',
+      undefined,
+      earlier(false, 'h'),
+      undefined,
+    ],
+  ])('records %s', (_case, choice, existing, expected) => {
+    expect(withSteamArtworkChoice(base, choice, existing).steamArtwork).toBe(expected);
   });
 });
 
