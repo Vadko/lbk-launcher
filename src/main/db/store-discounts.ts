@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Database } from '../../lib/database.types';
 import type { DiscountStore, StoreDiscount } from '../../shared/types';
-import { sendToRenderer } from '../window';
+import { appEvents } from '../app-events';
 import { getDatabase } from './database';
 import { createDeltaStream } from './delta-stream';
 import { getSupabaseClient } from './supabase-client';
@@ -76,7 +76,7 @@ function applyStoreDiscounts(items: StoreDiscount[], live: boolean): void {
   )(rows);
 
   if (changed.length > 0) {
-    sendToRenderer('store-discounts-updated');
+    appEvents.emit('store-discounts-changed');
   }
 }
 

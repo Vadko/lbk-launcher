@@ -1,13 +1,12 @@
 import os from 'node:os';
 import { app, ipcMain } from 'electron';
+import { errorMessage } from '@/shared/errors';
 import { t } from '@/shared/i18n/i18n';
 import type { Game, GetGamesParams, SortOrderType } from '../../shared/types';
 import {
   fetchGames,
   fetchGamesByIds,
   fetchRecommendedGames,
-  fetchTagOptions,
-  fetchTeams,
   findGamesByInstallPaths,
   findGamesBySteamAppIds,
 } from '../api';
@@ -20,6 +19,7 @@ import {
   type ImpressionType,
   recordBannerImpression,
 } from '../db/banners-api';
+import { notifyCountersUpdated } from '../db/counters-updated';
 import { findDeepLinkGameId } from '../db/deep-link-game';
 import { GamesRepository } from '../db/games-repository';
 import { fetchTrendingGames } from '../db/supabase-sync-api';
@@ -47,7 +47,6 @@ import { getUplayGameId } from '../game-detector/uplay';
 import { refreshXboxRootsForGame, whenXboxRootsScanned } from '../game-detector/xbox';
 import { checkInstallation } from '../installer/cache';
 import { findProtons } from '../installer/proton';
-import { getLibraryMemberships } from '../library-memberships';
 import { checkStoreLibraries } from '../store-library-watcher';
 import {
   getMachineId,
@@ -73,7 +72,25 @@ import {
   setWorkshopSubscription,
 } from '../utils/steam-workshop';
 import { launchUplayGame } from '../utils/uplay-launcher';
-import { getMainWindow } from '../window';
+import { createHandleOr, orEmpty, orNull } from './handle-or';
+
+const handleOr = createHandleOr('Games');
+
+const noGames = () => ({ games: [], total: 0 });
+
+interface PromoImpression {
+  campaignId: string;
+  impressionType: ImpressionType;
+  gameSlug?: string;
+}
+
+// The page gets an absolute image URL and a link it can open as is
+const toBannerData = (banner: BannerData): BannerData => ({
+  id: banner.id,
+  type: banner.type,
+  image_path: buildBannerImageUrl(banner.image_path) || '',
+  link: banner.link || '',
+});
 
 export function setupGamesHandlers(): void {
   // Version
@@ -108,10 +125,7 @@ export function setupGamesHandlers(): void {
         try {
           const repo = GamesRepository.getInstance();
           repo.setSubscriptions(gameId, result.subscriptions);
-          const updatedGame = repo.getGameById(gameId);
-          if (updatedGame) {
-            getMainWindow()?.webContents.send('game-counters-updated', [updatedGame]);
-          }
+          notifyCountersUpdated(repo.getGamesByIds([gameId]));
         } catch (err) {
           console.error('[Games] Failed to update local subscriptions count:', err);
         }
@@ -141,16 +155,11 @@ export function setupGamesHandlers(): void {
   );
 
   // Detection: which Workshop translations are already installed when the cache is empty or reset
-  ipcMain.handle('list-installed-workshop-games', async () => {
-    try {
-      return await installedWorkshopGameIds(
-        GamesRepository.getInstance().getWorkshopTargets()
-      );
-    } catch (error) {
-      console.error('[Main] Listing installed Workshop games failed:', error);
-      return null;
-    }
-  });
+  handleOr(
+    'list-installed-workshop-games',
+    () => installedWorkshopGameIds(GamesRepository.getInstance().getWorkshopTargets()),
+    orNull
+  );
 
   ipcMain.handle(
     'is-workshop-item-downloaded',
@@ -181,153 +190,64 @@ export function setupGamesHandlers(): void {
     SyncManager.getInstance().isGameTombstoned(gameId)
   );
 
-  // Fetch games with pagination - SYNC now, because it's the local DB
-  ipcMain.handle('fetch-games', (_, params: GetGamesParams) => {
-    const timer = createTimer('IPC: fetch-games');
-    try {
-      const result = fetchGames(params);
-      timer.end();
-      return result;
-    } catch (error) {
-      timer.end();
-      console.error('Error fetching games:', error);
-      return { games: [], total: 0, hasMore: false };
-    }
-  });
-
-  // Fetch games by IDs - SYNC
-  ipcMain.handle(
-    'fetch-games-by-ids',
-    (
-      _,
-      gameIds: string[],
-      searchQuery?: string,
-      hideAiTranslations = false,
-      sortOrder: SortOrderType = 'name'
-    ) => {
-      try {
-        return fetchGamesByIds(
-          gameIds,
-          searchQuery,
-          hideAiTranslations,
-          false,
-          sortOrder
-        );
-      } catch (error) {
-        console.error('Error fetching games by IDs:', error);
-        return [];
-      }
-    }
+  handleOr(
+    'fetch-games',
+    (params: GetGamesParams) => fetchGames(params),
+    () => ({ games: [], total: 0, hasMore: false }),
+    { timed: true }
   );
 
-  ipcMain.handle('find-deep-link-game-id', (_, slug: string, team: string) => {
-    try {
-      return findDeepLinkGameId(slug, team);
-    } catch (error) {
-      console.error('[DeepLink] Error finding game:', error);
-      return null;
-    }
-  });
+  handleOr(
+    'fetch-games-by-ids',
+    (
+      gameIds: string[],
+      searchQuery?: string,
+      hideAiTranslations?: boolean,
+      sortOrder: SortOrderType = 'name'
+    ) => fetchGamesByIds(gameIds, searchQuery, hideAiTranslations, false, sortOrder),
+    orEmpty
+  );
 
-  // Fetch recommended games for game page (dynamically by Steam tag overlap)
-  ipcMain.handle('fetch-recommended-games', (_, gameId: string, limit = 3) => {
-    try {
-      return fetchRecommendedGames(gameId, limit);
-    } catch (error) {
-      console.error('Error fetching recommended games:', error);
-      return [];
-    }
-  });
+  handleOr(
+    'find-deep-link-game-id',
+    (slug: string, team: string) => findDeepLinkGameId(slug, team),
+    orNull
+  );
 
-  // Fetch Steam tag filter options - SYNC
-  ipcMain.handle('fetch-tag-options', () => {
-    try {
-      return fetchTagOptions();
-    } catch (error) {
-      console.error('Error fetching tag options:', error);
-      return [];
-    }
-  });
+  // Recommended by Steam tag overlap
+  handleOr(
+    'fetch-recommended-games',
+    (gameId: string, limit?: number, hideAiTranslations?: boolean) =>
+      fetchRecommendedGames(gameId, limit, hideAiTranslations),
+    orEmpty
+  );
 
-  // Fetch unique teams - SYNC
-  ipcMain.handle('fetch-teams', () => {
-    try {
-      return fetchTeams();
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-      return [];
-    }
-  });
-
-  // Slim catalog projection for renderer-side faceted filter counts - SYNC
-  ipcMain.handle('fetch-facet-rows', () => {
-    try {
-      return GamesRepository.getInstance().getFacetRows();
-    } catch (error) {
-      console.error('Error fetching facet rows:', error);
-      return null;
-    }
-  });
-
-  ipcMain.handle('fetch-search-match-ids', (_, searchQuery: string) => {
-    try {
-      return GamesRepository.getInstance().getSearchMatchIds(searchQuery);
-    } catch (error) {
-      console.error('Error fetching search match ids:', error);
-      return null;
-    }
-  });
+  handleOr(
+    'fetch-search-match-ids',
+    (searchQuery: string) => GamesRepository.getInstance().getSearchMatchIds(searchQuery),
+    orNull
+  );
 
   // Re-probes every store off the fingerprints; a change also emits store-library-changed
   ipcMain.handle('check-store-libraries', () => checkStoreLibraries());
 
-  // Store probes hit the disk, so the renderer calls this on library events, never per filter click
-  ipcMain.handle('get-library-memberships', async () => {
-    const timer = createTimer('IPC: get-library-memberships');
-    try {
-      return await getLibraryMemberships();
-    } catch (error) {
-      console.error('Error getting library memberships:', error);
-      return null;
-    } finally {
-      timer.end();
-    }
-  });
+  handleOr(
+    'fetch-trending-games',
+    (days?: number, limit?: number) => fetchTrendingGames(days, limit),
+    orEmpty
+  );
 
-  // Fetch trending games with download counts
-  ipcMain.handle('fetch-trending-games', async (_, days = 30, limit = 10) => {
-    try {
-      return await fetchTrendingGames(days, limit);
-    } catch (error) {
-      console.error('Error fetching trending games:', error);
-      return [];
-    }
-  });
+  handleOr('sync-kurin-games', syncKurinGames, orEmpty);
 
-  // Sync Kurin installed games data
-  ipcMain.handle('sync-kurin-games', async () => {
-    try {
-      return syncKurinGames();
-    } catch (error) {
-      console.error('Error sync kurin games:', error);
-      return [];
-    }
-  });
-
-  // Get all installed game paths from the system
-  ipcMain.handle('get-all-installed-game-paths', async () => {
-    const timer = createTimer('IPC: get-all-installed-game-paths');
-    try {
+  handleOr(
+    'get-all-installed-game-paths',
+    async () => {
       await whenXboxRootsScanned();
-      const result = getAllInstalledGamePaths();
-      timer.end();
-      return result;
-    } catch (error) {
-      timer.end();
-      console.error('Error getting installed game paths:', error);
-      return [];
-    }
-  });
+      return getAllInstalledGamePaths();
+    },
+    orEmpty,
+    { timed: true }
+  );
 
   // Which catalog games are installed on this system (single detection pass:
   // Steam by app id, then installdir; other platforms by folder name).
@@ -346,171 +266,102 @@ export function setupGamesHandlers(): void {
     }
   });
 
-  // Get all installed Protons
-  ipcMain.handle('get-available-protons', async () => {
-    try {
-      return findProtons();
-    } catch (error) {
-      console.error('Error getting available Protons:', error);
-      return [];
-    }
-  });
+  handleOr('get-available-protons', findProtons, orEmpty);
 
-  // Detect available platforms for a game
-  ipcMain.handle('detect-game-platforms', async (_, game: Game) => {
-    try {
+  handleOr(
+    'detect-game-platforms',
+    async (game: Game) => {
       await refreshXboxRootsForGame(game.install_paths);
       return detectGamePaths(game.install_paths || [], game.steam_app_id);
-    } catch (error) {
-      console.error('Error detecting game platforms:', error);
-      return [];
-    }
-  });
+    },
+    orEmpty
+  );
 
-  // Find games by install paths - SYNC
-  ipcMain.handle(
+  // Steam app-id matches are unioned in, as the sidebar badge (getDetectedGames) is app-id-authoritative
+  handleOr(
     'find-games-by-install-paths',
     (
-      _,
       installPaths: string[],
       searchQuery?: string,
-      hideAiTranslations = false,
+      hideAiTranslations?: boolean,
       sortOrder: SortOrderType = 'name'
-    ) => {
-      try {
-        // Union in Steam app-id matches so this stays consistent with the
-        // sidebar badge (getDetectedGames), which is app-id-authoritative.
-        return findGamesByInstallPaths(
-          installPaths,
-          searchQuery,
-          hideAiTranslations,
-          sortOrder,
-          getInstalledSteamAppIds()
-        );
-      } catch (error) {
-        console.error('Error finding games by install paths:', error);
-        return { games: [], total: 0 };
-      }
-    }
+    ) =>
+      findGamesByInstallPaths(
+        installPaths,
+        searchQuery,
+        hideAiTranslations,
+        sortOrder,
+        getInstalledSteamAppIds()
+      ),
+    noGames
   );
 
-  // Get Steam library App IDs (owned games, installed or not)
-  ipcMain.handle('get-steam-library-app-ids', async () => {
-    const timer = createTimer('IPC: get-steam-library-app-ids');
-    try {
-      const result = await getSteamLibraryAppIds();
-      timer.end();
-      return result;
-    } catch (error) {
-      timer.end();
-      console.error('Error getting Steam library App IDs:', error);
-      return [];
-    }
-  });
+  // Owned games, installed or not
+  handleOr('get-steam-library-app-ids', getSteamLibraryAppIds, orEmpty, { timed: true });
 
-  // Find games by Steam App IDs
-  ipcMain.handle(
+  handleOr(
     'find-games-by-steam-app-ids',
     (
-      _,
       steamAppIds: number[],
       searchQuery?: string,
-      hideAiTranslations = false,
+      hideAiTranslations?: boolean,
       sortOrder: SortOrderType = 'name'
-    ) => {
-      try {
-        return findGamesBySteamAppIds(
-          steamAppIds,
-          searchQuery,
-          hideAiTranslations,
-          sortOrder
-        );
-      } catch (error) {
-        console.error('Error finding games by Steam App IDs:', error);
-        return { games: [], total: 0 };
-      }
-    }
+    ) => findGamesBySteamAppIds(steamAppIds, searchQuery, hideAiTranslations, sortOrder),
+    noGames
   );
 
-  // Get GOG library
-  ipcMain.handle('get-gog-library', () => {
-    try {
-      return getGogLibrary();
-    } catch (error) {
-      console.error('Error getting GOG library:', error);
-      return [];
-    }
-  });
+  handleOr('get-gog-library', getGogLibrary, orEmpty);
 
-  // Find games by titles
-  ipcMain.handle(
+  handleOr(
     'find-games-by-titles',
     (
-      _,
       titles: string[],
       searchQuery?: string,
       hideAiTranslations?: boolean,
       sortOrder: SortOrderType = 'name'
-    ) => {
-      try {
-        const repo = GamesRepository.getInstance();
-        return repo.findGamesByTitles(titles, searchQuery, hideAiTranslations, sortOrder);
-      } catch (error) {
-        console.error('Error finding games by titles:', error);
-        return { games: [], total: 0 };
-      }
-    }
+    ) =>
+      GamesRepository.getInstance().findGamesByTitles(
+        titles,
+        searchQuery,
+        hideAiTranslations,
+        sortOrder
+      ),
+    noGames
   );
 
-  // Get Epic library
-  ipcMain.handle('get-epic-library', async () => {
-    try {
-      return getEpicLibrary();
-    } catch (error) {
-      console.error('Error getting Epic library:', error);
-      return [];
-    }
-  });
+  handleOr('get-epic-library', getEpicLibrary, orEmpty);
 
-  // Get Xbox installed game folder names (parsed from .GamingRoot)
-  ipcMain.handle('get-xbox-installed-paths', async () => {
-    try {
+  // Folder names parsed from .GamingRoot
+  handleOr(
+    'get-xbox-installed-paths',
+    async () => {
       await whenXboxRootsScanned();
       return getInstalledXboxGamePaths();
-    } catch (error) {
-      console.error('Error getting Xbox installed paths:', error);
-      return [];
-    }
-  });
+    },
+    orEmpty
+  );
 
-  // Find games by Xbox install folder names (matches against install_paths)
-  ipcMain.handle(
+  // Matched against install_paths
+  handleOr(
     'find-games-by-xbox-paths',
     (
-      _,
       folderNames: string[],
       searchQuery?: string,
       hideAiTranslations?: boolean,
       sortOrder: SortOrderType = 'name'
-    ) => {
-      try {
-        const repo = GamesRepository.getInstance();
-        return repo.findGamesByXboxPaths(
-          folderNames,
-          searchQuery,
-          hideAiTranslations,
-          sortOrder
-        );
-      } catch (error) {
-        console.error('Error finding games by Xbox paths:', error);
-        return { games: [], total: 0 };
-      }
-    }
+    ) =>
+      GamesRepository.getInstance().findGamesByXboxPaths(
+        folderNames,
+        searchQuery,
+        hideAiTranslations,
+        sortOrder
+      ),
+    noGames
   );
 
-  // Launch game
-  ipcMain.handle('launch-game', async (_, game: Game) => {
-    try {
+  handleOr(
+    'launch-game',
+    async (game: Game) => {
       console.log('[LaunchGame] Request to launch game:', game.name, '(', game.id, ')');
       console.log(
         '[LaunchGame] Game install paths:',
@@ -673,14 +524,9 @@ export function setupGamesHandlers(): void {
       await launchGameExecutable(gamePath.path);
 
       return { success: true };
-    } catch (error) {
-      console.error('[LaunchGame] Error launching game:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : t('launch.failed'),
-      };
-    }
-  });
+    },
+    (error) => ({ success: false, error: errorMessage(error, t('launch.failed')) })
+  );
 
   // Create/update the Steam collection with library games that have a translation
   ipcMain.handle('sync-steam-translated-collection', async () => {
@@ -698,118 +544,56 @@ export function setupGamesHandlers(): void {
   // Low level API functions are in: src/main/db/banners-api.ts
   // ---------------------------------------------------------------------------
 
-  // Fetch promo banner
-  ipcMain.handle('fetch-promo-banner', async (): Promise<BannerData | null> => {
-    try {
-      const machineId = getMachineId();
-      const promoBanner = await fetchGlobalBanner({ machineId: machineId || undefined });
+  handleOr(
+    'fetch-promo-banner',
+    async (): Promise<BannerData | null> => {
+      const promoBanner = await fetchGlobalBanner({
+        machineId: getMachineId() || undefined,
+      });
+      return promoBanner && toBannerData(promoBanner);
+    },
+    orNull
+  );
 
-      if (!promoBanner) {
-        return null;
-      }
-
-      // Convert API banner data to frontend format
-      const banner: BannerData = {
-        id: promoBanner.id,
-        type: promoBanner.type,
-        image_path: buildBannerImageUrl(promoBanner.image_path) || '',
-        link: promoBanner.link || '',
-      };
-
-      return banner;
-    } catch (error) {
-      console.error('[IPC] Error fetching promo banner:', error);
-      return null;
-    }
-  });
-
-  // Record banner impression
-  ipcMain.handle(
+  handleOr(
     'record-promo-banner-impression',
-    async (
-      _,
-      params: {
-        campaignId: string;
-        impressionType: ImpressionType;
-        gameSlug?: string;
-      }
-    ): Promise<boolean> => {
-      try {
-        const machineId = getMachineId();
-
-        return await recordBannerImpression({
-          campaignId: params.campaignId,
-          impressionType: params.impressionType,
-          machineId,
-          gameSlug: params.gameSlug,
-        });
-      } catch (error) {
-        console.error('[IPC] Error recording banner impression:', error);
-        return false;
-      }
-    }
+    ({ campaignId, impressionType, gameSlug }: PromoImpression) =>
+      recordBannerImpression({
+        campaignId,
+        impressionType,
+        gameSlug,
+        machineId: getMachineId(),
+      }),
+    () => false
   );
 
-  // Fetch banners for game
-  ipcMain.handle(
+  handleOr(
     'fetch-banners-for-game',
-    async (_, gameId: string, gameSlug: string): Promise<GameBannersResult> => {
-      try {
-        const machineId = getMachineId();
-        const result = await fetchBannersForGame({
-          gameId,
-          gameSlug,
-          machineId: machineId || undefined,
-        });
-
-        if (!result.banner) {
-          return {
-            banner: null,
-            isKuli: result.isKuli,
-          };
-        }
-
-        // Convert API banner data to frontend format
-        const banner: BannerData = {
-          id: result.banner.id,
-          type: result.banner.type,
-          image_path: buildBannerImageUrl(result.banner.image_path) || '',
-          link: result.banner.link || '',
-        };
-        return {
-          banner,
-          isKuli: result.isKuli,
-        };
-      } catch (error) {
-        console.error('[IPC] Error fetching banners for game:', error);
-        return {
-          banner: null,
-          isKuli: false,
-        };
-      }
-    }
+    async (gameId: string, gameSlug: string): Promise<GameBannersResult> => {
+      const result = await fetchBannersForGame({
+        gameId,
+        gameSlug,
+        machineId: getMachineId() || undefined,
+      });
+      return {
+        banner: result.banner && toBannerData(result.banner),
+        isKuli: result.isKuli,
+      };
+    },
+    () => ({ banner: null, isKuli: false })
   );
 
-  // Record banner impression for placement banners (view or click)
-  ipcMain.handle(
+  // Placement banners, viewed or clicked
+  handleOr(
     'record-banner-impression',
-    async (
-      _,
-      bannerId: string,
-      impressionType: ImpressionType = 'view'
-    ): Promise<boolean> => {
-      try {
-        const machineId = getMachineId();
-        await recordBannerImpression({
-          campaignId: bannerId,
-          impressionType,
-          machineId,
-        });
-        return true;
-      } catch (error) {
-        console.error('[IPC] Error recording banner impression:', error);
-        return false;
-      }
-    }
+    async (bannerId: string, impressionType: ImpressionType = 'view') => {
+      await recordBannerImpression({
+        campaignId: bannerId,
+        impressionType,
+        machineId: getMachineId(),
+      });
+      return true;
+    },
+    () => false
   );
 }

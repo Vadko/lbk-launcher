@@ -6,7 +6,7 @@ import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
-import { useFacetDataStore } from '../../store/useFacetDataStore';
+import { useSettledResource } from '../../hooks/useSettledResource';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
@@ -27,6 +27,7 @@ const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
 const NO_AUTHORS: string[] = [];
 const NO_TAGS: TagOption[] = [];
+const NO_OPTIONS = { teams: NO_AUTHORS, tags: NO_TAGS };
 
 interface SidebarProps {
   onOpenHistory: () => void;
@@ -149,12 +150,10 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       );
     }, [specialFilter, setSpecialFilter]);
 
-    const teams = useFacetDataStore((state) => state.teams);
-    const tagOptions = useFacetDataStore((state) => state.tags);
-    const authors = teams ?? NO_AUTHORS;
-    const authorsLoading = teams === null;
-    const tags = tagOptions ?? NO_TAGS;
-    const tagsLoading = tagOptions === null;
+    const catalogOptions = useSettledResource('catalogOptions', NO_OPTIONS);
+    const authors = catalogOptions?.teams ?? NO_AUTHORS;
+    const tags = catalogOptions?.tags ?? NO_TAGS;
+    const optionsLoading = catalogOptions === undefined;
 
     const {
       games: visibleGames,
@@ -388,11 +387,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
             selectedAuthors={selectedAuthors}
             onAuthorsChange={setSelectedAuthors}
             authors={authors}
-            authorsLoading={authorsLoading}
+            authorsLoading={optionsLoading}
             selectedTagIds={selectedTagIds}
             onTagsChange={setSelectedTagIds}
             tags={tags}
-            tagsLoading={tagsLoading}
+            tagsLoading={optionsLoading}
             facetData={facetData}
             searchQuery={debouncedSearchQuery}
           />
@@ -475,11 +474,11 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
           selectedAuthors={selectedAuthors}
           onAuthorsChange={setSelectedAuthors}
           authors={authors}
-          authorsLoading={authorsLoading}
+          authorsLoading={optionsLoading}
           selectedTagIds={selectedTagIds}
           onTagsChange={setSelectedTagIds}
           tags={tags}
-          tagsLoading={tagsLoading}
+          tagsLoading={optionsLoading}
           facetData={facetData}
           searchQuery={debouncedSearchQuery}
         />

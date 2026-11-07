@@ -1,34 +1,27 @@
 import { useEffect, useMemo } from 'react';
 import type { FacetRow, LibraryMemberships } from '../../shared/types';
-import { loadCatalogFacets } from '../store/facetDataBridge';
-import { useFacetDataStore } from '../store/useFacetDataStore';
-import { useStore } from '../store/useStore';
+import { useResource } from './useResource';
 
 export interface FacetData {
   rows: FacetRow[];
   libraries: LibraryMemberships;
-  installedTranslationIds: readonly string[];
+  installedTranslationIds: ReadonlySet<string>;
 }
 
 export function useFacetData(isModalOpen: boolean): FacetData | null {
-  const syncStatus = useStore((state) => state.syncStatus);
-  const isCatalogReady = syncStatus === 'ready' || syncStatus === 'error';
-  const rows = useFacetDataStore((state) => state.rows);
-  const libraries = useFacetDataStore((state) => state.libraries);
-  const installedTranslationIds = useFacetDataStore(
-    (state) => state.installedTranslationIds
-  );
+  const rows = useResource('facetRows');
+  const libraries = useResource('libraries');
+  const installedTranslationIds = useResource('installedTranslationIds');
 
   useEffect(() => {
-    if (!isModalOpen || !isCatalogReady) {
+    if (!isModalOpen) {
       return;
     }
-    loadCatalogFacets();
-    // Re-probes the stores in main; an actual change comes back as store-library-changed
+    // Re-probes the stores in main; an actual change comes back with the libraries
     window.electronAPI.checkStoreLibraries().catch((error) => {
       console.error('[useFacetData] Store library check failed:', error);
     });
-  }, [isModalOpen, isCatalogReady]);
+  }, [isModalOpen]);
 
   return useMemo(
     () =>

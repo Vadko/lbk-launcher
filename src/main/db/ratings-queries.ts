@@ -1,4 +1,4 @@
-import type { GameRatingItem, TeamRatingItem } from '../../shared/ratings-api-types';
+import type { GameRatingItem, TeamRatingItem } from '../../shared/ratings-types';
 import { getDatabase } from './database';
 import { VISIBLE_GAMES_SQL } from './db-queries';
 

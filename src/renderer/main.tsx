@@ -8,15 +8,11 @@ import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
 import { initEverInstalled } from './store/everInstalledBridge';
-import { initFacetData } from './store/facetDataBridge';
-import { initHomeInstalledGames } from './store/homeInstalledGamesBridge';
 import { initLikes } from './store/likesBridge';
-import { initRatings } from './store/ratingsBridge';
+import { initResources } from './store/resourcesBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
 import { initRunInstallerPrompts } from './store/runInstallerPromptBridge';
-import { initStoreDiscounts } from './store/storeDiscountsBridge';
 import { useSettingsStore } from './store/useSettingsStore';
-import { initWeeklyPicks } from './store/weeklyPicksBridge';
 import { initGlobalErrorHandlers } from './utils/global-error-handler';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/space-grotesk';
@@ -46,23 +42,11 @@ initGlobalErrorHandlers();
 // Bridge review events (IPC) into the notifications and the reviews cache — once, outside React.
 initReviewEvents();
 
-// Bridge the liked set (IPC) into the likes store — once, outside React.
+// Mirror what main pushes over the resources port into the resources store — once, outside React.
+initResources();
+
+// Feed the liked set from the resources store into the likes store — once, outside React.
 initLikes();
-
-// Bridge the catalog's ratings (IPC) into the ratings store — once, outside React.
-initRatings();
-
-// Bridge store discount and library changes (IPC) into the discounts store — once, outside React.
-initStoreDiscounts();
-
-// Bridge the weekly picks and catalog changes (IPC) into the weekly picks store — once, outside React.
-initWeeklyPicks();
-
-// Bridge the filters' catalog rows, options, store libraries and installed translations (IPC) into the facet data store — once, outside React.
-initFacetData();
-
-// Bridge the catalog games installed on this machine (IPC) into the home page's store — once, outside React.
-initHomeInstalledGames();
 
 // Copy every installed translation (files and Workshop) into the ever-installed store, for likes and reviews — once, outside React.
 initEverInstalled();

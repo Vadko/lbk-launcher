@@ -12,9 +12,8 @@ import type {
   ApplyPendingLaunchOptionsResult,
   SteamPluginHostAPI,
 } from './plugin-host-types';
-import type { RatingsAPI } from './ratings-api-types';
+import type { ResourcesAPI } from './resources';
 import type { UpdaterAPI } from './updater-api-types';
-import type { WeeklyPicksAPI } from './weekly-picks-types';
 
 export type Platform = Database['public']['Enums']['install_source'];
 export type BannerType = Database['public']['Enums']['banner_type'];
@@ -55,7 +54,7 @@ export type LibraryFilterType = Exclude<
   SpecialFilterType,
   'installed-translations' | 'favorite-translations'
 >;
-export type LibraryMemberships = Record<LibraryFilterType, string[]>;
+export type LibraryMemberships = Record<LibraryFilterType, ReadonlySet<string>>;
 
 export type LinkApp = 'telegram' | 'discord' | 'steam' | 'epic';
 
@@ -265,16 +264,11 @@ export type SteamCollectionSyncFailure =
 export interface ElectronAPI
   extends SteamPluginHostAPI,
     GameReviewsAPI,
-    RatingsAPI,
     InstallerAPI,
     UpdaterAPI,
-    WeeklyPicksAPI {
+    ResourcesAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
-  fetchTagOptions: () => Promise<TagOption[]>;
-  fetchTeams: () => Promise<string[]>;
-  fetchFacetRows: () => Promise<FacetRow[] | null>;
   fetchSearchMatchIds: (searchQuery: string) => Promise<string[] | null>;
-  getLibraryMemberships: () => Promise<LibraryMemberships | null>;
   checkStoreLibraries: () => Promise<boolean>;
   onStoreLibraryChanged: (callback: () => void) => () => void;
   fetchTrendingGames: (
@@ -335,8 +329,6 @@ export interface ElectronAPI
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;
-  getStoreDiscounts: () => Promise<StoreDiscount[]>;
-  onStoreDiscountsUpdated: (callback: () => void) => () => void;
   onGameRemoved: (callback: (gameId: string) => void) => () => void;
   isGameTombstoned: (gameId: string) => Promise<boolean>;
   onGameTombstoned: (callback: (gameId: string) => void) => () => void;
@@ -385,9 +377,7 @@ export interface ElectronAPI
   ) => Promise<{ success: boolean; error?: string }>;
   // Track support click events
   trackSupportClick: (gameId: string) => Promise<{ success: boolean; error?: string }>;
-  getLikedGameIds: () => Promise<string[]>;
   setLike: (gameId: string, liked: boolean) => Promise<string[]>;
-  onLikedGamesChanged: (callback: (gameIds: string[]) => void) => () => void;
   // Subscribe/unsubscribe from a Workshop translation without opening Steam
   setWorkshopSubscription: (
     gameId: string,

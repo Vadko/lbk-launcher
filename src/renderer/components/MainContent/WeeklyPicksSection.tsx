@@ -3,10 +3,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useStore } from '@/renderer/store/useStore';
-import { useWeeklyPicksStore } from '@/renderer/store/useWeeklyPicksStore';
 import { trackEvent } from '@/renderer/utils/analytics';
 import { t } from '@/shared/i18n/i18n';
 import { useIsTranslationInstalled } from '../../hooks/useInstalledTranslations';
+import { useSettledResource } from '../../hooks/useSettledResource';
 import { GameListItem } from '../Sidebar/GameListItem';
 import { Loader } from '../ui/Loader';
 
@@ -19,7 +19,7 @@ export const WeeklyPicksSection: React.FC = () => {
       isGameDetected: state.isGameDetected,
     }))
   );
-  const picks = useWeeklyPicksStore((state) => state.picks);
+  const picks = useSettledResource('weeklyPicks', null);
 
   if (picks === null || picks?.games.length === 0) {
     return null;

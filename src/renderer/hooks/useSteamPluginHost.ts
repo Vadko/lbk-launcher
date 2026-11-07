@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import type { PluginHostState } from '@/shared/plugin-host-types';
-import { useSteamPluginHostStore } from '../store/useSteamPluginHostStore';
+import { useResource } from './useResource';
 
+// Shows the last pushed state at once; main publishes what a revalidation reads
 export function useSteamPluginHost(enabled = true): PluginHostState | null {
-  const state = useSteamPluginHostStore((s) => s.state);
+  const state = useResource('pluginHostState') ?? null;
 
   useEffect(() => {
-    if (enabled && window.electronAPI) {
-      void useSteamPluginHostStore.getState().refresh();
+    if (enabled) {
+      window.electronAPI.getPluginHostState().catch((error: unknown) => {
+        console.warn('[SteamPluginHost] State fetch failed:', error);
+      });
     }
   }, [enabled]);
 

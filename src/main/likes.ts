@@ -1,12 +1,13 @@
 import { F } from '@mobily/ts-belt';
 import pLimit from 'p-limit';
 import { z } from 'zod';
+import { appEvents } from './app-events';
+import { notifyCountersUpdated } from './db/counters-updated';
 import { getDatabase } from './db/database';
 import { functionsErrorStatus } from './db/functions-error';
 import { GamesRepository } from './db/games-repository';
 import { getSupabaseClient } from './db/supabase-client';
 import { getMachineId, IS_E2E } from './tracking';
-import { sendToRenderer } from './window';
 
 interface MyLikeRow {
   liked: 0 | 1;
@@ -50,14 +51,11 @@ export function getLikedGameIds(): string[] {
 }
 
 function notifyRenderer(gameIds: string[]): void {
-  sendToRenderer('liked-games-changed', getLikedGameIds());
-  const games = GamesRepository.getInstance().getGamesByIds(gameIds);
-  if (games.length > 0) {
-    sendToRenderer('game-counters-updated', games);
-  }
+  appEvents.emit('likes-changed');
+  notifyCountersUpdated(GamesRepository.getInstance().getGamesByIds(gameIds));
 }
 
-// Always republishes, so a renderer that flipped its mirror ahead of a no-op or a failure is set back
+// The likes:set reply carries main's set, which settles the renderer's click; likes-changed refreshes the resource and the counts
 export function setLike(gameId: string, liked: boolean): void {
   try {
     if ((readRow(gameId)?.liked === 1) !== liked) {
@@ -215,5 +213,5 @@ async function replaceWithServerLikes(): Promise<void> {
     }
     db.prepare('DELETE FROM my_likes WHERE liked = 0 AND server_liked = 0').run();
   })();
-  sendToRenderer('liked-games-changed', getLikedGameIds());
+  appEvents.emit('likes-changed');
 }

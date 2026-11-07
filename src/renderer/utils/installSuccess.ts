@@ -2,7 +2,7 @@ import { t } from '@/shared/i18n/i18n';
 import type { AchievementsDelivery, SteamBridgeStatus } from '@/shared/plugin-host-types';
 import type { Game } from '@/shared/types';
 import type { ModalAction } from '../store/useModalStore';
-import { useSteamBridgeStatusStore } from '../store/useSteamBridgeStatusStore';
+import { useResourcesStore } from '../store/useResourcesStore';
 import { deckyPluginDisabled, type OfferTarget, successOffer } from './pluginHostOffer';
 import { runSteamRestart } from './steamBridge';
 import { millenniumUnsupportedText } from './steamPluginHost';
@@ -13,7 +13,7 @@ export interface InstallSuccessInput {
   eglLaunchOptionsNotes?: string[];
   // Undefined when the achievements component was not installed.
   delivery: AchievementsDelivery | undefined;
-  // Fetched once, and only when needsBridgeStatus() asks for it; null falls back to the store's last known status.
+  // Fetched once, and only when needsBridgeStatus() asks for it; null falls back to the last status main pushed.
   status: SteamBridgeStatus | null;
   declined: { millennium: boolean; decky: boolean };
 }
@@ -25,7 +25,7 @@ interface InstallSuccessHandlers {
 
 // A failed fetch answers null, which would drop the reason LBK cannot install Millennium here.
 function bridgeStatus(input: InstallSuccessInput): SteamBridgeStatus | null {
-  return input.status ?? useSteamBridgeStatusStore.getState().status;
+  return input.status ?? useResourcesStore.getState().values.steamBridgeStatus ?? null;
 }
 
 // With no status at all the reason is unknown, so the install is offered only when a status allows it.

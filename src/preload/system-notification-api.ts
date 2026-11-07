@@ -1,16 +1,7 @@
-import { ipcRenderer } from 'electron';
-import type {
-  GameLinkTarget,
-  SystemNotificationAPI,
-  SystemNotificationOptions,
-} from '../shared/game-link-target';
+import type { SystemNotificationAPI } from '../shared/game-link-target';
+import { invoke, listen } from './ipc';
 
 export const systemNotificationAPI: SystemNotificationAPI = {
-  showSystemNotification: (options: SystemNotificationOptions) =>
-    ipcRenderer.invoke('show-system-notification', options),
-  onNavigateToGame: (callback: (target: GameLinkTarget) => void) => {
-    const handler = (_: unknown, target: GameLinkTarget) => callback(target);
-    ipcRenderer.on('navigate-to-game', handler);
-    return () => ipcRenderer.removeListener('navigate-to-game', handler);
-  },
+  showSystemNotification: invoke('show-system-notification'),
+  onNavigateToGame: listen('navigate-to-game'),
 };

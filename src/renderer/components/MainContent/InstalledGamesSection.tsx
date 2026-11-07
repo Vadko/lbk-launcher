@@ -5,8 +5,8 @@ import { Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useIsTranslationInstalled } from '@/renderer/hooks/useInstalledTranslations';
+import { useSettledResource } from '@/renderer/hooks/useSettledResource';
 import { useGamepadModeStore } from '@/renderer/store/useGamepadModeStore';
-import { useHomeInstalledGamesStore } from '@/renderer/store/useHomeInstalledGamesStore';
 import { useSettingsStore } from '@/renderer/store/useSettingsStore';
 import { useStore } from '@/renderer/store/useStore';
 import { getGameGroupKey } from '@/shared/game-filters';
@@ -37,12 +37,11 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
     }))
   );
 
-  const installedGames = useHomeInstalledGamesStore((state) => state.games);
-  const installedPathsCount = useHomeInstalledGamesStore(
-    (state) => state.installedPathsCount
-  );
-  const allInstalledGames = installedGames ?? NO_GAMES;
-  const isLoading = installedGames === null;
+  // A failed read hides the section: the empty banner would tell the player nothing is installed
+  const homeInstalled = useSettledResource('homeInstalled', null);
+  const allInstalledGames = homeInstalled?.games ?? NO_GAMES;
+  const installedPathsCount = homeInstalled?.installedPathsCount ?? 0;
+  const isLoading = homeInstalled === undefined;
   const isInstalled = useIsTranslationInstalled();
 
   // One card per game, not per translation - two authors' translations are still one installed game
@@ -96,6 +95,10 @@ export const InstalledGamesSection: React.FC<InstalledGamesSectionProps> = ({
       useGamepadModeStore.getState().setNavigationArea('games');
     }
   };
+
+  if (homeInstalled === null) {
+    return null;
+  }
 
   // Show banner instead of section when no games with translations found
   if (!isLoading && allInstalledGames.length === 0) {

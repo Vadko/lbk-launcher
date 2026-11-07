@@ -17,7 +17,6 @@ import type {
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useModalStore } from '../store/useModalStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { useSteamBridgeStatusStore } from '../store/useSteamBridgeStatusStore';
 import { useStore } from '../store/useStore';
 import { useSubscriptionsStore } from '../store/useSubscriptionsStore';
 import { trackEvent } from '../utils/analytics';
@@ -332,7 +331,7 @@ export function useInstallation({
             eglLaunchOptionsNotes: result.eglLaunchOptionsNotes,
             delivery,
             status: needsBridgeStatus({ delivery, launchOptionsQueued })
-              ? await useSteamBridgeStatusStore.getState().refresh()
+              ? await window.electronAPI.getSteamBridgeStatus().catch(() => null)
               : null,
             declined: {
               millennium: settings.millenniumOfferDeclined,

@@ -1,3 +1,4 @@
+import { F } from '@mobily/ts-belt';
 import { useEffect, useMemo, useState } from 'react';
 import {
   buildFacetIndex,
@@ -9,6 +10,9 @@ import {
 } from '../../shared/facet-counts';
 import { useSettingsStore } from '../store/useSettingsStore';
 import type { FacetData } from './useFacetData';
+
+// A rename or a keyword edit keeps the facet rows equal, so main sends no new ones
+const CATALOG_EDIT_DEBOUNCE_MS = 300;
 
 interface UseFacetCountsParams {
   data: FacetData | null;
@@ -39,6 +43,24 @@ export function useFacetCounts({
     query: string;
     ids: ReadonlySet<string>;
   } | null>(null);
+  const [catalogEdits, setCatalogEdits] = useState(0);
+
+  useEffect(() => {
+    if (!query) {
+      return;
+    }
+    const edited = F.makeControlledDebounce(() => setCatalogEdits((count) => count + 1), {
+      delay: CATALOG_EDIT_DEBOUNCE_MS,
+      leading: false,
+    });
+    const offUpdated = window.electronAPI.onGameUpdated(() => edited.schedule());
+    const offRemoved = window.electronAPI.onGameRemoved(() => edited.schedule());
+    return () => {
+      edited.cancel();
+      offUpdated();
+      offRemoved();
+    };
+  }, [query]);
 
   useEffect(() => {
     if (!query) {
@@ -58,7 +80,7 @@ export function useFacetCounts({
     return () => {
       cancelled = true;
     };
-  }, [query, rows]);
+  }, [query, rows, catalogEdits]);
 
   const index = useMemo(
     () => (rows ? buildFacetIndex(rows, authors) : null),
@@ -70,13 +92,9 @@ export function useFacetCounts({
       return null;
     }
     const memberships: FacetScope['memberships'] = {
+      ...libraries,
       'favorite-translations': new Set(favoriteGameIds),
-      'installed-translations': new Set(installedTranslationIds),
-      'installed-games': new Set(libraries['installed-games']),
-      'available-in-steam': new Set(libraries['available-in-steam']),
-      'owned-gog-games': new Set(libraries['owned-gog-games']),
-      'owned-epic-games': new Set(libraries['owned-epic-games']),
-      'installed-xbox-games': new Set(libraries['installed-xbox-games']),
+      'installed-translations': installedTranslationIds,
     };
     return memberships;
   }, [libraries, installedTranslationIds, favoriteGameIds]);

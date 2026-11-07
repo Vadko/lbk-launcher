@@ -1,7 +1,7 @@
 import { A, O } from '@mobily/ts-belt';
 import { z } from 'zod';
 import type { WeeklyPicks } from '../../shared/weekly-picks-types';
-import { sendToRenderer } from '../window';
+import { appEvents } from '../app-events';
 import { getDatabase } from './database';
 import { createDeltaStream } from './delta-stream';
 import { GamesRepository } from './games-repository';
@@ -41,7 +41,7 @@ function applyWeeklyPicks([set]: PickSet[]): void {
     .run({ ...set, gameIds: JSON.stringify(set.gameIds) });
 
   if (changes > 0) {
-    sendToRenderer('weekly-picks-updated');
+    appEvents.emit('weekly-picks-changed');
   }
 }
 

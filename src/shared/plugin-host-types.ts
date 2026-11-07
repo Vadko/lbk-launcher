@@ -219,12 +219,6 @@ export interface SteamPluginHostAPI {
   getSteamBridgeStatus: () => Promise<SteamBridgeStatus | null>;
   // Clears the persisted "blocked" verdict and re-verifies.
   recheckSteamBridge: () => Promise<SteamBridgeStatus | null>;
-  onSteamBridgeStatusChanged: (
-    callback: (status: SteamBridgeStatus) => void
-  ) => () => void;
-  onSteamPendingActionsApplied: (
-    callback: (payload: { gameIds: string[] }) => void
-  ) => () => void;
   // Millennium / Decky plugin host
   getPluginHostState: () => Promise<PluginHostState | null>;
   // Download, verify and stage Millennium; touches nothing outside userData.
@@ -242,7 +236,6 @@ export interface SteamPluginHostAPI {
   installDeckyLoader: () => Promise<DeckyLoaderInstallResult>;
   saveDeckyPluginZip: () => Promise<{ success: boolean; path?: string; error?: string }>;
   onMillenniumProgress: (callback: (progress: MillenniumProgress) => void) => () => void;
-  onPluginHostStateChanged: (callback: (state: PluginHostState) => void) => () => void;
   /** Steam restart needed for the CEF port; fired from the Settings CEF toggle. */
   onSteamRestartRequired: (callback: () => void) => () => void;
   /** Create (true) or remove (false) Steam's `.cef-enable-remote-debugging` flag file. */

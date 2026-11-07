@@ -11,6 +11,8 @@ import type {
   InstallResult,
   RunInstallerDecision,
 } from '../../shared/types';
+import { appEvents } from '../app-events';
+import { notifyCountersUpdated } from '../db/counters-updated';
 import { GamesRepository } from '../db/games-repository';
 import { installTranslation } from '../installer';
 import {
@@ -39,11 +41,18 @@ import { setInstalledSteamArtwork } from '../installer/steam-integration';
 import { removeComponents, uninstallTranslation } from '../installer/uninstall';
 import { applyLaunchOptionsNow } from '../steam-restart';
 import { trackUninstall } from '../tracking';
-import { createTimer } from '../utils/logger';
 import { openExternalUrl } from '../utils/open-external';
 import { hasSteamArtwork } from '../utils/steam-artwork';
 import { readLastGameFolder, writeLastGameFolder } from '../utils/store-storage';
 import { getMainWindow, sendToRenderer } from '../window';
+import { createHandleOr, orEmpty, orFailure, orNull } from './handle-or';
+
+const handleOr = createHandleOr('Installer');
+
+const orFailureMessage = (error: unknown) => ({
+  success: false as const,
+  error: { message: errorMessage(error, t('common.unknownError')) },
+});
 
 export function setupInstallerHandlers(): void {
   ipcMain.on(
@@ -92,10 +101,7 @@ export function setupInstallerHandlers(): void {
           try {
             const repo = GamesRepository.getInstance();
             repo.incrementDownloads(game.id);
-            const updatedGame = repo.getGameById(game.id);
-            if (updatedGame) {
-              getMainWindow()?.webContents.send('game-counters-updated', [updatedGame]);
-            }
+            notifyCountersUpdated(repo.getGamesByIds([game.id]));
           } catch (err) {
             console.error('[Installer] Failed to update local downloads count:', err);
           }
@@ -129,80 +135,49 @@ export function setupInstallerHandlers(): void {
     }
   );
 
-  ipcMain.handle(
+  handleOr(
     'apply-pending-launch-options',
-    async (_, game: Game): Promise<ApplyPendingLaunchOptionsResult> => {
-      try {
-        return await applyLaunchOptionsNow(game);
-      } catch (error) {
-        console.error('[Installer] Applying pending launch options failed:', error);
-        return {
-          success: false,
-          error: errorMessage(error, t('common.unknownError')),
-        };
-      }
-    }
+    (game: Game): Promise<ApplyPendingLaunchOptionsResult> => applyLaunchOptionsNow(game),
+    orFailure
   );
 
-  ipcMain.handle('check-installation', async (_, game: Game) => {
-    const timer = createTimer(`IPC: check-installation (${game.name})`);
-    try {
-      const result = await checkInstallation(game);
-      timer.end();
-      return result;
-    } catch (error) {
-      timer.end();
-      console.error('Error checking installation:', error);
-      return null;
-    }
+  handleOr('check-installation', (game: Game) => checkInstallation(game), orNull, {
+    timed: true,
   });
 
-  ipcMain.handle('get-conflicting-translation', async (_, game: Game) => {
-    try {
-      return await getConflictingTranslation(game);
-    } catch (error) {
-      console.error('Error checking conflicting translation:', error);
-      return null;
-    }
-  });
+  handleOr(
+    'get-conflicting-translation',
+    (game: Game) => getConflictingTranslation(game),
+    orNull
+  );
 
-  ipcMain.handle('set-game-visibility', async (_, { gameId, hidden }) => {
-    try {
-      const repo = GamesRepository.getInstance();
-      const success = await repo.setGameVisibility(gameId, hidden);
+  handleOr(
+    'set-game-visibility',
+    ({ gameId, hidden }: { gameId: string; hidden: boolean }) => {
+      const success = GamesRepository.getInstance().setGameVisibility(gameId, hidden);
+      if (success) {
+        appEvents.emit('catalog-changed');
+      }
       return success;
-    } catch (error) {
-      console.error('[IPC] set-game-visibility failed:', error);
-      return false;
-    }
-  });
+    },
+    () => false
+  );
 
-  ipcMain.handle('get-all-installed-game-ids', async () => {
-    try {
-      return await getAllInstalledGameIds();
-    } catch (error) {
-      console.error('Error getting installed game IDs:', error);
-      return [];
-    }
-  });
+  handleOr('get-all-installed-game-ids', getAllInstalledGameIds, orEmpty);
 
   ipcMain.handle('open-external', async (_, url: string) => await openExternalUrl(url));
 
-  ipcMain.handle('show-item-in-folder', async (_, filePath: string) => {
-    try {
+  handleOr(
+    'show-item-in-folder',
+    (filePath: string) => {
       if (!fs.existsSync(filePath)) {
         return { success: false, error: t('installIpc.fileNotFound') };
       }
       shell.showItemInFolder(filePath);
       return { success: true };
-    } catch (error) {
-      console.error('Error showing item in folder:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : t('common.unknownError'),
-      };
-    }
-  });
+    },
+    orFailure
+  );
 
   ipcMain.handle('select-game-folder', async () => {
     const lastFolder = readLastGameFolder();
@@ -221,192 +196,128 @@ export function setupInstallerHandlers(): void {
     return result.filePaths[0];
   });
 
-  ipcMain.handle('uninstall-translation', async (_, game: Game) => {
-    try {
+  handleOr(
+    'uninstall-translation',
+    async (game: Game) => {
       await uninstallTranslation(game);
-
-      // Track uninstall for statistics
       trackUninstall(game.id).catch((err) => {
         console.error('[Installer] Failed to track uninstall:', err);
       });
-
-      // Note: cache invalidation and the installed-games-changed event
-      // happen automatically via InstallationWatcher when files change
-
+      // The installation watcher sees the record go and tells the renderer
       return { success: true };
-    } catch (error) {
-      console.error('Error uninstalling translation:', error);
-      return {
-        success: false,
-        error: {
-          message: error instanceof Error ? error.message : t('common.unknownError'),
-        },
-      };
-    }
-  });
-
-  ipcMain.handle(
-    'rerun-installer',
-    async (_, installerPath: string, protonPath?: string) => {
-      try {
-        await rerunInstaller(installerPath, protonPath);
-        return { success: true };
-      } catch (error) {
-        console.error('Error re-running installer:', error);
-        return {
-          success: false,
-          error: {
-            message: error instanceof Error ? error.message : t('common.unknownError'),
-          },
-        };
-      }
-    }
+    },
+    orFailureMessage
   );
 
-  ipcMain.handle('abort-download', async (_, reason?: string) => {
-    try {
+  handleOr(
+    'rerun-installer',
+    async (installerPath: string, protonPath?: string) => {
+      await rerunInstaller(installerPath, protonPath);
+      return { success: true };
+    },
+    orFailureMessage
+  );
+
+  handleOr(
+    'abort-download',
+    (reason?: string) => {
       abortCurrentDownload(reason);
       return { success: true };
-    } catch (error) {
-      console.error('Error aborting download:', error);
-      return { success: false };
-    }
-  });
+    },
+    () => ({ success: false })
+  );
 
-  ipcMain.handle('pause-download', async (_, gameId: string) => {
-    try {
+  handleOr(
+    'pause-download',
+    (gameId: string) => {
       const state = pauseCurrentDownload(gameId);
-      if (state) {
-        return { success: true, state };
-      }
-      return { success: false, error: t('installIpc.noActiveDownload') };
-    } catch (error) {
-      console.error('Error pausing download:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : t('common.unknownError'),
-      };
-    }
-  });
+      return state
+        ? { success: true, state }
+        : { success: false, error: t('installIpc.noActiveDownload') };
+    },
+    orFailure
+  );
 
-  ipcMain.handle('resume-download', async (_, gameId: string) => {
-    try {
+  handleOr(
+    'resume-download',
+    (gameId: string) => {
       const state = getPausedDownloadState(gameId);
       if (!state) {
         return { success: false, error: t('installIpc.noPausedDownload') };
       }
-
-      // Resume download in background
+      // Runs in the background, reporting through the progress and status pushes
       resumeDownload(
         state,
-        (downloadProgress) => {
-          getMainWindow()?.webContents.send(
-            'download-progress',
-            gameId,
-            downloadProgress
-          );
-        },
-        (status) => {
-          getMainWindow()?.webContents.send('installation-status', gameId, status);
-        }
+        (downloadProgress) =>
+          sendToRenderer('download-progress', gameId, downloadProgress),
+        (status) => sendToRenderer('installation-status', gameId, status)
       ).catch((error) => {
-        console.error('Error during resumed download:', error);
-        getMainWindow()?.webContents.send('installation-status', gameId, {
-          message: error instanceof Error ? error.message : t('download.failed'),
+        console.error('[Installer] Resumed download failed:', error);
+        sendToRenderer('installation-status', gameId, {
+          message: errorMessage(error, t('download.failed')),
           tone: 'error',
         });
       });
-
       return { success: true };
-    } catch (error) {
-      console.error('Error resuming download:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : t('common.unknownError'),
-      };
-    }
-  });
+    },
+    orFailure
+  );
 
-  ipcMain.handle('get-paused-download', async (_, gameId: string) => {
-    try {
-      return getPausedDownloadState(gameId);
-    } catch (error) {
-      console.error('Error getting paused download:', error);
-      return null;
-    }
-  });
+  handleOr(
+    'get-paused-download',
+    (gameId: string) => getPausedDownloadState(gameId),
+    orNull
+  );
 
-  ipcMain.handle('cancel-paused-download', async (_, gameId: string) => {
-    try {
+  handleOr(
+    'cancel-paused-download',
+    (gameId: string) => {
       const state = getPausedDownloadState(gameId);
-      if (state) {
-        // Clean up partial file
-        const partialPath = getPartialFilePath(state.outputPath);
-        if (fs.existsSync(partialPath)) {
-          fs.unlinkSync(partialPath);
-        }
+      const partialPath = state && getPartialFilePath(state.outputPath);
+      if (partialPath && fs.existsSync(partialPath)) {
+        fs.unlinkSync(partialPath);
       }
       clearPausedDownloadState(gameId);
       return { success: true };
-    } catch (error) {
-      console.error('Error cancelling paused download:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : t('common.unknownError'),
-      };
-    }
-  });
+    },
+    orFailure
+  );
 
-  ipcMain.handle('remove-orphaned-metadata', async (_, gameIds: string[]) => {
-    try {
+  handleOr(
+    'remove-orphaned-metadata',
+    async (gameIds: string[]) => {
       await removeOrphanedInstallationMetadata(gameIds);
       return { success: true };
-    } catch (error) {
-      console.error('Error removing orphaned metadata:', error);
-      return { success: false };
-    }
-  });
+    },
+    () => ({ success: false })
+  );
 
-  ipcMain.handle(
+  handleOr(
     'remove-components',
     async (
-      _,
       game: Game,
       componentsToRemove: { voice?: boolean; achievements?: boolean }
     ) => {
-      try {
-        await removeComponents(game, componentsToRemove);
-        return { success: true };
-      } catch (error) {
-        console.error('Error removing components:', error);
-        return {
-          success: false,
-          error: {
-            message: error instanceof Error ? error.message : t('common.unknownError'),
-          },
-        };
-      }
-    }
+      await removeComponents(game, componentsToRemove);
+      return { success: true };
+    },
+    orFailureMessage
   );
 
-  ipcMain.handle(
+  handleOr(
     'set-steam-artwork',
-    async (_, game: Game, enabled: boolean): Promise<SteamArtworkChangeResult> => {
-      try {
-        const result = await setInstalledSteamArtwork(game, enabled, (status) =>
-          sendToRenderer('installation-status', game.id, status)
+    async (game: Game, enabled: boolean): Promise<SteamArtworkChangeResult> => {
+      const result = await setInstalledSteamArtwork(game, enabled, (status) =>
+        sendToRenderer('installation-status', game.id, status)
+      );
+      if (!result.success) {
+        console.warn(
+          `[Installer] Steam artwork not changed for ${game.id}: ${result.error}`
         );
-        if (!result.success) {
-          console.warn(
-            `[Installer] Steam artwork not changed for ${game.id}: ${result.error}`
-          );
-        }
-        return result;
-      } catch (error) {
-        console.error('[Installer] Error changing Steam artwork:', error);
-        return { success: false, error: errorMessage(error) };
       }
-    }
+      return result;
+    },
+    (error): SteamArtworkChangeResult => ({ success: false, error: errorMessage(error) })
   );
 
   ipcMain.handle('is-steam-artwork-applied', (_, appId: number) =>
