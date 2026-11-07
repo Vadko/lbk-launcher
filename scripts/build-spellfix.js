@@ -94,8 +94,21 @@ function findMsvcEnv() {
   return { clExe, includePaths, libPaths, pathDirs };
 }
 
+// electron-builder packs this one dylib into both the x64 and the arm64 app
+const MAC_ARCHS = ['x86_64', 'arm64'];
+
+function hasAllMacArchs(outFile) {
+  try {
+    const archs = execSync(`lipo -archs "${outFile}"`, { encoding: 'utf8' }).trim().split(/\s+/);
+    return MAC_ARCHS.every((arch) => archs.includes(arch));
+  } catch {
+    return false;
+  }
+}
+
 function isUpToDate(outFile) {
   if (!existsSync(outFile)) return false;
+  if (process.platform === 'darwin' && !hasAllMacArchs(outFile)) return false;
   const srcMtime = statSync(SRC).mtimeMs;
   const outMtime = statSync(outFile).mtimeMs;
   return outMtime > srcMtime;
@@ -128,7 +141,8 @@ function build() {
   const cc = process.env.CC || 'cc';
 
   if (platform === 'darwin') {
-    cmd = `${cc} -dynamiclib -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
+    const archFlags = MAC_ARCHS.map((arch) => `-arch ${arch}`).join(' ');
+    cmd = `${cc} -dynamiclib -fPIC -O2 ${archFlags} -o "${outFile}" "${SRC}" -I "${headersDir}"`;
   } else if (platform === 'linux') {
     cmd = `${cc} -shared -fPIC -O2 -o "${outFile}" "${SRC}" -I "${headersDir}"`;
   } else if (platform === 'win32') {

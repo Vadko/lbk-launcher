@@ -52,7 +52,8 @@ interface DeckyBackend {
 
 export interface BridgeHandle {
   host?: string;
-  dispose?: () => void;
+  // `successor` is the host of the copy that takes over; copies built before it was added ignore it.
+  dispose?: (successor?: string) => void;
 }
 
 // Steam's SharedJSContext globals; every one is optional because Steam creates them lazily.

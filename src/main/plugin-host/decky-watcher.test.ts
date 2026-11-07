@@ -82,4 +82,23 @@ describe('watchDeckyPlugins', () => {
     await settle();
     expect(mocks.publishPluginHostState).toHaveBeenCalledTimes(1);
   });
+
+  it('retries a watch that failed because settings/ did not exist yet', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    fs.rmSync(path.join(root, 'settings'), { recursive: true });
+    watchDeckyPlugins();
+    // FSEvents replays the setup's own changes to a fresh watcher; let them pass.
+    await settle();
+    fs.mkdirSync(path.join(root, 'settings'));
+    mocks.publishPluginHostState.mockClear();
+
+    watchDeckyPlugins();
+    await watchReady();
+    fs.writeFileSync(
+      path.join(root, 'settings', 'loader.json'),
+      '{"disabled_plugins":["LBK Bridge"]}'
+    );
+    await settle();
+    expect(mocks.publishPluginHostState).toHaveBeenCalledTimes(1);
+  });
 });

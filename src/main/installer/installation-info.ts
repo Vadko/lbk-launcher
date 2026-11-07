@@ -28,6 +28,7 @@ const installationInfoSchema = z.looseObject({
   installerPath: z.string().optional(),
   installedFiles: z.array(z.string()).optional(),
   installedPlatform: z.enum(Constants.public.Enums.install_source).optional(),
+  steamArtwork: z.boolean().optional(),
   components: z
     .looseObject({
       text: componentSchema,
@@ -123,6 +124,17 @@ export function withAchievementsComponent(
     ...base,
     components: achievements ? { ...components, achievements } : components,
   };
+}
+
+// `choice` is set only by a dialog that offered artwork; otherwise the record keeps the earlier one, as it was.
+export function withSteamArtworkChoice(
+  record: InstallationInfo,
+  choice: boolean | undefined,
+  existing: InstallationInfo | null
+): InstallationInfo {
+  const steamArtwork =
+    choice ?? (existing?.gameId === record.gameId ? existing.steamArtwork : undefined);
+  return steamArtwork === undefined ? record : { ...record, steamArtwork };
 }
 
 // An install without the text leaves the installed text in place, so its files, backup and version stay recorded.

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import type { Game } from '../../shared/types';
 import type { WeeklyPicks } from '../../shared/weekly-picks-types';
 import { useWeeklyPicksStore } from './useWeeklyPicksStore';
 
@@ -21,5 +22,16 @@ describe('useWeeklyPicksStore', () => {
     useWeeklyPicksStore.getState().failRead();
 
     expect(useWeeklyPicksStore.getState().picks).toBeNull();
+  });
+
+  it.each([
+    ['still loading', undefined],
+    ['without a set', null],
+  ])('leaves pushed games alone while %s', (_, current) => {
+    useWeeklyPicksStore.setState({ picks: current });
+
+    useWeeklyPicksStore.getState().updateGames([{ id: 'a' } as Game]);
+
+    expect(useWeeklyPicksStore.getState().picks).toBe(current);
   });
 });

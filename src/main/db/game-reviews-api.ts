@@ -1,3 +1,4 @@
+import { app } from 'electron';
 import type {
   GameReviewsListInput,
   ReviewResult,
@@ -6,6 +7,7 @@ import { type GameReviewsPage, reviewsPageSchema } from '../../shared/game-revie
 import { callReviewFunction } from './review-request';
 import { withFocus } from './with-focus';
 
+// The version lets the server keep enum values this launcher cannot parse out of its page
 export function fetchGameReviews({
   gameId,
   cursor,
@@ -14,7 +16,7 @@ export function fetchGameReviews({
 }: GameReviewsListInput): Promise<ReviewResult<GameReviewsPage>> {
   return callReviewFunction(
     'reviews?action=list',
-    { gameId, cursor, focusId, type },
+    { gameId, cursor, focusId, type, version: app.getVersion() },
     reviewsPageSchema.transform(withFocus)
   );
 }

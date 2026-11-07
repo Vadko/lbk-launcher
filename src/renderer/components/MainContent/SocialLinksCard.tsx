@@ -135,26 +135,27 @@ const StoreButton: React.FC<StoreLinkProps> = (props) => {
   );
 };
 
-const WEBSITE_KINDS: (Omit<SocialLinkProps, 'open'> & {
+const WEBSITE_KINDS: (Omit<SocialLinkProps, 'open' | 'label'> & {
   match: string;
+  label: () => string;
   app?: LinkApp;
 })[] = [
   {
     match: 'steamcommunity.com/sharedfiles/filedetails',
-    label: t('gameLinks.steamGuide'),
+    label: () => t('gameLinks.steamGuide'),
     color: 'text-color-accent',
     icon: <BookIcon size={18} />,
     app: 'steam',
   },
   {
     match: 'github.com',
-    label: 'GitHub',
+    label: () => 'GitHub',
     color: 'text-text-main',
     icon: <GitHubIcon size={18} />,
   },
   {
     match: 'patreon.com',
-    label: 'Patreon',
+    label: () => 'Patreon',
     color: 'text-[#FF424D]',
     icon: <PatreonIcon size={18} />,
   },
@@ -166,7 +167,7 @@ function describeWebsite(url: string): SocialLinkProps {
   const app = kind?.app;
   return {
     icon: kind?.icon ?? <GlobeIcon size={18} />,
-    label: kind?.label ?? t('gameLinks.website'),
+    label: kind?.label() ?? t('gameLinks.website'),
     color: kind?.color ?? 'text-color-accent',
     open: () =>
       app

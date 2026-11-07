@@ -75,7 +75,9 @@ export type PendingTrigger =
   | 'restart-gap'
   | 'startup'
   | 'bridge-ready'
-  | 'manual';
+  | 'manual'
+  // A later pass over items whose files were locked.
+  | 'retry';
 
 const QUEUE_KEY = 'pending-steam-actions';
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;

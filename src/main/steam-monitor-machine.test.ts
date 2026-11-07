@@ -12,7 +12,7 @@ const DELAYS = { poll: 1000, idle: 5000, recheck: 3000 };
 
 let running: Actor<typeof steamMonitorMachine> | null = null;
 
-function start(opts: { running: boolean; polling?: boolean }) {
+function start(opts: { running: boolean | null; polling?: boolean }) {
   const steam = { running: opts.running };
   // Probes that a test holds open; empty means probes answer at once.
   const held: ((output: ProbeOutput) => void)[] = [];
@@ -82,6 +82,31 @@ afterEach(() => {
 });
 
 describe('steamMonitorMachine', () => {
+  it('takes a failed listing for neither an exit nor a start', async () => {
+    const h = start({ running: true });
+    await flush();
+    h.hold.next = true;
+    await vi.advanceTimersByTimeAsync(DELAYS.poll);
+    h.held[0]({ running: null, queued: true, candidate: null });
+    await flush();
+
+    expect(h.handleStopped).not.toHaveBeenCalled();
+    expect(h.fireStarted).not.toHaveBeenCalled();
+    expect(h.actor.getSnapshot().context.lastRunning).toBeNull();
+  });
+
+  it('runs queued work once a listing after a failed startup one finds Steam stopped', async () => {
+    const h = start({ running: null });
+    await flush();
+    expect(h.actor.getSnapshot().context.lastRunning).toBeNull();
+    h.hold.next = true;
+    await vi.advanceTimersByTimeAsync(DELAYS.poll);
+    h.held[0]({ running: false, queued: true, candidate: null });
+    await flush();
+
+    expect(h.handleStopped).toHaveBeenCalledTimes(1);
+  });
+
   it('handles an exit that a probe saw, then goes back to waiting', async () => {
     const h = start({ running: true });
     await flush();

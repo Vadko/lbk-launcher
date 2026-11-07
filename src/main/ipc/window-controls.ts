@@ -20,7 +20,7 @@ import { clearStore } from '../utils/store-storage';
 import { showSystemNotification } from '../utils/system-notification';
 import { parseSystemNotificationOptions } from '../utils/system-notification-options';
 import { getIcon } from '../utils/theme';
-import { getMainWindow, sendToRenderer, showMainWindow } from '../window';
+import { getMainWindow, sendToReadyPage, showMainWindow } from '../window';
 
 let tray: Tray | null = null;
 
@@ -108,7 +108,7 @@ export function setupWindowControls(): void {
     return showSystemNotification({
       title,
       body,
-      onClick: target ? () => sendToRenderer('navigate-to-game', target) : undefined,
+      onClick: target ? () => sendToReadyPage('navigate-to-game', target) : undefined,
     });
   });
 

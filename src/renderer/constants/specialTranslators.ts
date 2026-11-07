@@ -1,42 +1,40 @@
-import { t } from '@/shared/i18n/i18n';
-
 // List of special translators to highlight in the UI
 interface SpecialTranslator {
   name: string;
   team?: string;
-  description: string;
+  role: 'earlySupporter' | 'launcherTeam';
 }
 
 export const SPECIAL_TRANSLATORS: SpecialTranslator[] = [
   {
     name: 'Владислав',
     team: 'Sent_DeZ',
-    description: t('specialTranslators.earlySupporter'),
+    role: 'earlySupporter',
   },
   {
     name: 'Вена',
     team: 'Ліниві ШІ',
-    description: t('specialTranslators.earlySupporter'),
+    role: 'earlySupporter',
   },
   {
     name: 'Євгеній',
     team: 'kurasagi',
-    description: t('specialTranslators.earlySupporter'),
+    role: 'earlySupporter',
   },
   {
     name: 'Костянтин',
     team: 'Перекладач Патріотів (KostyanChek8)',
-    description: t('specialTranslators.earlySupporter'),
+    role: 'earlySupporter',
   },
   {
     name: 'GameGlobe Localization',
     team: 'GameGlobe Localization',
-    description: t('specialTranslators.launcherTeam'),
+    role: 'launcherTeam',
   },
   {
     name: 'Little Bit',
     team: 'Little Bit',
-    description: t('specialTranslators.launcherTeam'),
+    role: 'launcherTeam',
   },
 ];
 

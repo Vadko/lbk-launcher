@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PendingSteamAction } from '@/main/steam-pending-actions/queue';
 
 const store = vi.hoisted(() => new Map<string, unknown>());
+const steam = vi.hoisted(() => ({ stopped: true }));
 
 // Everything that reaches Steam, Electron or disk is stubbed; the store is an in-memory map.
 vi.mock('@/main/game-detector/steam', () => ({ getCurrentSteamAccountId: () => null }));
@@ -23,8 +24,9 @@ vi.mock('@/main/utils/steam-launch-options', () => ({
   writeSteamLaunchOptions: vi.fn(),
 }));
 vi.mock('@/main/steam-process/lifecycle', () => ({
-  isSteamRunning: () => Promise.resolve(false),
-  isSteamStopped: () => Promise.resolve(true),
+  isSteamRunning: () => Promise.resolve(!steam.stopped),
+  isSteamStopped: () => Promise.resolve(steam.stopped),
+  probeSteamRunning: () => Promise.resolve(!steam.stopped),
   waitForSteamGone: () => Promise.resolve(true),
 }));
 vi.mock('@/main/utils/store-storage', () => ({
@@ -42,6 +44,13 @@ const { applyQueuedMillenniumAction, millenniumQueueContext } = await import(
   '@/main/millennium-install/apply'
 );
 const { runPendingSteamActions } = await import('@/main/steam-pending-actions');
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.clearAllMocks();
+  store.clear();
+  steam.stopped = true;
+});
 
 function activate(): PendingSteamAction {
   return {
@@ -77,6 +86,76 @@ describe('runPendingSteamActions', () => {
 
     expect(applyQueuedMillenniumAction).toHaveBeenCalledTimes(1);
     expect(reports).toEqual([{ kind: 'activate', outcome: 'applied' }]);
+    expect(store.has('pending-steam-actions')).toBe(false);
+  });
+
+  it('retries a locked Millennium apply while Steam stays closed', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    store.set('pending-steam-actions', [activate()]);
+    vi.mocked(millenniumQueueContext).mockReturnValue({
+      pinTag: 'v3.5.0',
+      stagingReady: () => true,
+      recordPresent: true,
+    });
+    vi.mocked(applyQueuedMillenniumAction)
+      .mockResolvedValueOnce({
+        kind: 'activate',
+        outcome: 'retry',
+        reason: 'files-locked',
+      })
+      .mockResolvedValueOnce({ kind: 'activate', outcome: 'applied' });
+
+    await runPendingSteamActions('manual');
+    expect(store.get('pending-steam-actions')).toMatchObject([{ attempts: 1 }]);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(applyQueuedMillenniumAction).toHaveBeenCalledTimes(2);
+    expect(store.has('pending-steam-actions')).toBe(false);
+  });
+
+  it('stops retrying once Steam is back, keeping the item for its next exit', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    store.set('pending-steam-actions', [activate()]);
+    vi.mocked(millenniumQueueContext).mockReturnValue({
+      pinTag: 'v3.5.0',
+      stagingReady: () => true,
+      recordPresent: true,
+    });
+    vi.mocked(applyQueuedMillenniumAction).mockResolvedValue({
+      kind: 'activate',
+      outcome: 'retry',
+      reason: 'files-locked',
+    });
+
+    await runPendingSteamActions('steam-exit');
+    steam.stopped = false;
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(applyQueuedMillenniumAction).toHaveBeenCalledTimes(1);
+    expect(store.get('pending-steam-actions')).toMatchObject([{ attempts: 1 }]);
+  });
+
+  it('gives up after the attempts limit', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    store.set('pending-steam-actions', [activate()]);
+    vi.mocked(millenniumQueueContext).mockReturnValue({
+      pinTag: 'v3.5.0',
+      stagingReady: () => true,
+      recordPresent: true,
+    });
+    vi.mocked(applyQueuedMillenniumAction).mockResolvedValue({
+      kind: 'activate',
+      outcome: 'retry',
+      reason: 'files-locked',
+    });
+
+    await runPendingSteamActions('steam-exit');
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    expect(applyQueuedMillenniumAction).toHaveBeenCalledTimes(5);
     expect(store.has('pending-steam-actions')).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   window: null as FakeWindow | null,
   destroyCaptchaWindow: vi.fn(),
   stopReviewEvents: vi.fn(),
+  send: vi.fn(),
 }));
 
 vi.mock('electron', async () => {
@@ -14,6 +15,7 @@ vi.mock('electron', async () => {
   class BrowserWindow extends EventEmitter {
     readonly webContents = Object.assign(new EventEmitter(), {
       setWindowOpenHandler: vi.fn(),
+      send: state.send,
     });
 
     constructor() {
@@ -54,7 +56,7 @@ vi.mock('@/main/utils/theme', () => ({ getIcon: vi.fn() }));
 vi.spyOn(console, 'log').mockImplementation(() => undefined);
 vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-const { createMainWindow } = await import('./window');
+const { createMainWindow, markPageReady, sendToReadyPage } = await import('./window');
 
 const navigation = (isSameDocument: boolean) => ({ isMainFrame: true, isSameDocument });
 
@@ -99,5 +101,72 @@ describe('createMainWindow', () => {
     state.window?.webContents.emit('did-start-navigation', navigation(true));
 
     expect(state.stopReviewEvents).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendToReadyPage', () => {
+  const target = { gameId: 'g1' };
+
+  it('holds a push until the page says it is ready', () => {
+    sendToReadyPage('navigate-to-game', target);
+
+    expect(state.send).not.toHaveBeenCalled();
+    markPageReady();
+    expect(state.send.mock.calls).toEqual([['navigate-to-game', target]]);
+  });
+
+  it('sends the latest held push of a channel, once', () => {
+    sendToReadyPage('navigate-to-game', { gameId: 'old' });
+    sendToReadyPage('navigate-to-game', target);
+
+    markPageReady();
+    markPageReady();
+
+    expect(state.send.mock.calls).toEqual([['navigate-to-game', target]]);
+  });
+
+  it('sends at once to a ready page, across a navigation inside it', () => {
+    markPageReady();
+    state.window?.webContents.emit('did-start-navigation', navigation(true));
+
+    sendToReadyPage('navigate-to-game', target);
+
+    expect(state.send.mock.calls).toEqual([['navigate-to-game', target]]);
+  });
+
+  it.each<[string, (window: FakeWindow) => void]>([
+    [
+      'a reload',
+      (window) => window.webContents.emit('did-start-navigation', navigation(false)),
+    ],
+    [
+      'a crashed page',
+      (window) =>
+        window.webContents.emit('render-process-gone', {}, { reason: 'clean-exit' }),
+    ],
+  ])('holds a push again after %s, until the new page is ready', (_label, end) => {
+    markPageReady();
+    if (state.window) {
+      end(state.window);
+    }
+
+    sendToReadyPage('navigate-to-game', target);
+
+    expect(state.send).not.toHaveBeenCalled();
+    markPageReady();
+    expect(state.send.mock.calls).toEqual([['navigate-to-game', target]]);
+  });
+
+  // macOS keeps running without a window, and a notification click opens a new one
+  it('holds a click for the window it recreates after the last one closed', async () => {
+    markPageReady();
+    state.window?.emit('closed');
+    await createMainWindow();
+
+    sendToReadyPage('navigate-to-game', target);
+
+    expect(state.send).not.toHaveBeenCalled();
+    markPageReady();
+    expect(state.send.mock.calls).toEqual([['navigate-to-game', target]]);
   });
 });

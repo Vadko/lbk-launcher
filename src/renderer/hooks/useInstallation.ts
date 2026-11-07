@@ -97,7 +97,6 @@ export function useInstallation({
   const [pendingInstallOptions, setPendingInstallOptions] = useState<
     InstallOptions | undefined
   >();
-  const protonSelectionRef = useRef<string | undefined>(undefined);
   const [availablePlatforms, setAvailablePlatforms] = useState<GamePath[]>([]);
   const [steamArtworkApplied, setSteamArtworkApplied] = useState(false);
   const {
@@ -427,80 +426,6 @@ export function useInstallation({
     performInstallation,
     setInstallationProgress,
   ]);
-
-  // Listen for the main process asking whether to launch the freshly extracted
-  // installer/script now. It blocks the install promise until we respond.
-  useEffect(() => {
-    if (!window.electronAPI?.onRequestRunInstallerConfirm) {
-      return;
-    }
-
-    const unsubscribe = window.electronAPI.onRequestRunInstallerConfirm(
-      ({ gameId, installerPath, isExe, protons }) => {
-        const message = protons
-          ? isExe
-            ? t('runInstaller.exeProtonMessage')
-            : t('runInstaller.scriptProtonMessage')
-          : isExe
-            ? t('runInstaller.exeAskMessage')
-            : t('runInstaller.scriptAskMessage');
-
-        // «Ні» keeps protonPath too — «Перевстановити» and uninstall reuse it.
-        const show = (protonPath?: string) => {
-          showModal({
-            title: isExe ? t('runInstaller.exeTitle') : t('runInstaller.scriptTitle'),
-            message,
-            type: 'info',
-            mandatory: true,
-            selectConfig: protons
-              ? {
-                  options: protons.map((p) => ({ name: p.name, value: p.path })),
-                  selectedValue: protonPath,
-                  onSelectionChange: (value) => {
-                    protonSelectionRef.current = value;
-                    show(value);
-                  },
-                  placeholder: t('runInstaller.protonPlaceholder'),
-                }
-              : undefined,
-            actions: [
-              {
-                label: t('runInstaller.openFolder'),
-                onClick: () => window.electronAPI.showItemInFolder(installerPath),
-                variant: 'secondary',
-                keepOpen: true,
-              },
-              {
-                label: t('runInstaller.run'),
-                onClick: () =>
-                  window.electronAPI.respondRunInstaller(gameId, {
-                    run: true,
-                    protonPath,
-                  }),
-                variant: 'primary',
-              },
-              {
-                label: t('runInstaller.skip'),
-                onClick: () =>
-                  window.electronAPI.respondRunInstaller(gameId, {
-                    run: false,
-                    protonPath,
-                  }),
-                variant: 'secondary',
-              },
-            ],
-          });
-        };
-
-        show(
-          protons?.find((p) => p.path === protonSelectionRef.current)?.path ??
-            protons?.[0]?.path
-        );
-      }
-    );
-
-    return unsubscribe;
-  }, [showModal]);
 
   const handleConflictingTranslation = useCallback(
     async (conflict: ConflictingTranslation): Promise<boolean> =>

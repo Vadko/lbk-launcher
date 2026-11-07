@@ -8,7 +8,8 @@ export interface BridgeFacts {
 }
 
 export interface StartupOutput {
-  running: boolean;
+  // null when the listing failed.
+  running: boolean | null;
   candidate: boolean;
 }
 
@@ -18,7 +19,7 @@ export interface ProbeInput {
 }
 
 export interface ProbeOutput {
-  // null when nothing needed a process scan.
+  // null when nothing needed a process scan or the listing failed.
   running: boolean | null;
   queued: boolean;
   // Set when polling was not needed when the probe began, which also drops the running baseline.

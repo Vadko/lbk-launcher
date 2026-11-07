@@ -16,7 +16,7 @@ import type {
   RunInstallerDecision,
   RunInstallerRequest,
 } from '../shared/types';
-import { syncAchievementsToPlugin } from './achievements';
+import { deliveryWithinInstallWait, syncAchievementsToPlugin } from './achievements';
 import {
   commitAchievementStrings,
   type PreparedAchievements,
@@ -36,6 +36,7 @@ import { cleanupDownloadDir, copyDirectory, getAllFiles } from './installer/file
 import {
   keepInstalledText,
   withAchievementsComponent,
+  withSteamArtworkChoice,
 } from './installer/installation-info';
 import { resolveMacBundleTarget } from './installer/mac-bundle';
 import { resignMacBundles } from './installer/mac-codesign';
@@ -46,7 +47,7 @@ import {
   runInstaller,
 } from './installer/platform';
 import { findProtons } from './installer/proton';
-import { applySteamIntegration } from './installer/steam-integration';
+import { applySteamIntegration, offersSteamArtwork } from './installer/steam-integration';
 import { isCurrentSessionFirstLaunch } from './tracking';
 import { resolveGameBuildOs } from './utils/game-build';
 import { isLinux } from './utils/platform';
@@ -74,6 +75,7 @@ async function finishInstall(i: {
   const component = await commitAchievementStrings({
     extracted: i.achievements.extracted,
     gameId: i.game.id,
+    gamePath: i.gamePath.path,
     archiveHash: i.achievements.archiveHash,
     component: i.achievements.component,
     previous:
@@ -81,8 +83,13 @@ async function finishInstall(i: {
         ? { gameId: i.existingInfo.gameId, component: previous }
         : null,
   });
-  const info = i.record(component);
-  const delivery = component || previous ? await syncAchievementsToPlugin() : undefined;
+  const info = withSteamArtworkChoice(
+    i.record(component),
+    offersSteamArtwork(i.game, i.gamePath.platform) ? i.installSteamArtwork : undefined,
+    i.existingInfo
+  );
+  // Only the success modal needs its answer, so the plugin's reload runs alongside the rest.
+  const sync = component || previous ? syncAchievementsToPlugin() : undefined;
   await i.beforeSave?.(info);
   await saveInstallationInfo(i.gamePath.path, info);
   const steam = await applySteamIntegration(
@@ -92,7 +99,12 @@ async function finishInstall(i: {
     i.onStatus
   );
   const egl = await applyEglIntegration(i.game, i.gamePath);
-  return { ...steam, ...egl, achievementsDelivery: component ? delivery : undefined };
+  return {
+    ...steam,
+    ...egl,
+    achievementsDelivery:
+      component && sync ? await deliveryWithinInstallWait(sync) : undefined,
+  };
 }
 
 /**
@@ -416,12 +428,18 @@ export async function installTranslation(
           tone: 'waiting',
         });
       }
+      const lastProtonPath =
+        existingInfo?.gameId === game.id ? existingInfo.protonPath : undefined;
       const decision: RunInstallerDecision = onConfirmRunInstaller
         ? await onConfirmRunInstaller({
             gameId: game.id,
+            gameName: game.name,
             installerPath,
             isExe: isExeFile,
             protons: needsProton ? protons : undefined,
+            protonPath: needsProton
+              ? (protons.find((p) => p.path === lastProtonPath) ?? protons[0])?.path
+              : undefined,
           })
         : { run: true };
 

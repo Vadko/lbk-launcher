@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { GameReviewReply } from '@/shared/game-reviews-types';
 import type { ReviewWrite } from '../queries/reviewWrite';
 import type { ModerationVerdict } from './moderationVerdict';
+import type { ReviewPages } from './reviewCache';
 import { reviewPages, reviewReply, reviewThread } from './reviewPages.fixture';
 import { type ReviewWriteState, withReviewWrites } from './withReviewWrites';
 
 const ANSWERED_AT = Date.UTC(2026, 9, 22, 11);
-const BEFORE = ANSWERED_AT - 1;
 
 const ownReply = (id: string): GameReviewReply => ({
   ...reviewReply(id, 3),
@@ -45,6 +45,26 @@ const answered = (
   failure: null,
   answer: { verdict, refusal: null, answeredAt: ANSWERED_AT },
 });
+// The viewer's reply that only its answered write showed, edited before the pages held it
+const carryingEdit = (id: string, text = 'edited'): ReviewWrite => ({
+  kind: 'edit',
+  entryId: id,
+  reviewId: 't',
+  isPublic: true,
+  text,
+  unlisted: {
+    reply: { ...ownReply(id), moderation: 'published' },
+    answeredAt: ANSWERED_AT,
+  },
+});
+// The pages as asked for at the given times, one per page
+const askedAt = (pages: ReviewPages, ...times: number[]): ReviewPages => ({
+  ...pages,
+  pages: pages.pages.map((page, i) => ({
+    ...page,
+    fetchedAt: times[i] ?? page.fetchedAt,
+  })),
+});
 
 const pendingEntry = { ...reviewReply('r'), moderation: 'pending' as const };
 const data = reviewPages([
@@ -56,10 +76,10 @@ const dataWithPending = reviewPages([
   reviewThread('u'),
 ]);
 
-const view = (states: ReviewWriteState[], pages = data, updatedAt = BEFORE) =>
-  withReviewWrites(pages, states, updatedAt);
-const thread = (states: ReviewWriteState[], pages = data, updatedAt = BEFORE) =>
-  view(states, pages, updatedAt).pages[0].items.find((item) => item.id === 't');
+const view = (states: ReviewWriteState[], pages = data) =>
+  withReviewWrites(pages, states);
+const thread = (states: ReviewWriteState[], pages = data) =>
+  view(states, pages).pages[0].items.find((item) => item.id === 't');
 const entry = (id: string, states: ReviewWriteState[], pages = data) =>
   [thread(states, pages), ...(thread(states, pages)?.replies ?? [])].find(
     (item) => item?.id === id
@@ -98,12 +118,28 @@ describe('withReviewWrites', () => {
     expect(entry('n', [failed(replyWrite('n'))])).not.toHaveProperty('isChecking');
   });
 
-  it('shows an answered reply with its verdict until pages fetched after the answer', () => {
+  it('shows an answered reply with its verdict until pages asked for after the answer', () => {
     const states = [answered(replyWrite('n'), 'published')];
+    const refetched = askedAt(data, ANSWERED_AT);
 
     expect(entry('n', states)).toMatchObject({ moderation: 'published' });
     expect(entry('n', states)).not.toHaveProperty('isChecking');
-    expect(view(states, data, ANSWERED_AT + 1)).toBe(data);
+    expect(view(states, refetched)).toBe(refetched);
+  });
+
+  it('keeps an answered reply on its page while only a next page came after the answer', () => {
+    const pages = askedAt(
+      reviewPages([reviewThread('t')], [reviewThread('v')]),
+      ANSWERED_AT - 1,
+      ANSWERED_AT + 1
+    );
+
+    const shown = view([answered(replyWrite('n'), 'published')], pages);
+
+    expect(shown.pages[0].items[0].replies).toEqual([
+      expect.objectContaining({ id: 'n', moderation: 'published' }),
+    ]);
+    expect(shown.pages[1]).toBe(pages.pages[1]);
   });
 
   it.each([
@@ -180,6 +216,43 @@ describe('withReviewWrites', () => {
   it('leaves out a reply taken down on its edit', () => {
     expect(entry('r', [answered(editWrite('r', 'new'), 'removed')])).toBeUndefined();
     expect(entry('p', [answered(editWrite('r', 'new'), 'removed')])).toBeDefined();
+  });
+
+  it.each([
+    [
+      'still checking',
+      checking(carryingEdit('n')),
+      { text: 'n', pendingText: 'edited', write: 'edit', isChecking: true },
+    ],
+    [
+      'failed',
+      failed(carryingEdit('n')),
+      { pendingText: 'edited', write: 'edit', failure: { code: 'unreachable' } },
+    ],
+    [
+      'answered',
+      answered(carryingEdit('n'), 'published'),
+      { text: 'edited', pendingText: null },
+    ],
+  ])(
+    'keeps a reply only its forgotten write showed under an edit %s',
+    (_case, state, shown) => {
+      expect(entry('n', [state])).toMatchObject({ id: 'n', ...shown });
+    }
+  );
+
+  it('takes a carried reply from the page once the page holds it', () => {
+    const pages = reviewPages([reviewThread('t', [ownReply('n')])]);
+
+    const replies = thread([checking(carryingEdit('n'))], pages)?.replies ?? [];
+
+    expect(replies).toEqual([expect.objectContaining({ id: 'n', text: 'edited' })]);
+  });
+
+  it('drops a carried reply a page asked for after its answer leaves out', () => {
+    const pages = askedAt(data, ANSWERED_AT + 1);
+
+    expect(entry('n', [checking(carryingEdit('n'))], pages)).toBeUndefined();
   });
 
   it('leaves out a thread whose root was taken down on its edit', () => {

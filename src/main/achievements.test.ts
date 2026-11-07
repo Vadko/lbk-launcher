@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AchievementsBadge } from '@/shared/plugin-host-types';
+import type { AchievementsBadge, AchievementsDelivery } from '@/shared/plugin-host-types';
 import type { AchievementsComponent } from '@/shared/types';
 
 const state = vi.hoisted(() => ({
@@ -43,7 +43,11 @@ vi.mock('@/main/utils/store-storage', () => ({
   isCefDebuggingEnabledInSettings: () => state.settingOn,
 }));
 
-import { startAchievements, syncAchievementsToPlugin } from './achievements';
+import {
+  deliveryWithinInstallWait,
+  startAchievements,
+  syncAchievementsToPlugin,
+} from './achievements';
 import {
   commitAchievementStrings,
   isAchievementsComponentCurrent,
@@ -98,12 +102,16 @@ const statsDir = () => path.join(state.root, 'Steam', 'appcache', 'stats');
 const statsFile = (name: string) => path.join(statsDir(), name);
 const stringsFile = (appId: number) =>
   path.join(state.root, 'userData', 'achievement-strings', `${appId}.json`);
+const owner = (gameId: string, gamePath = path.join(state.root, 'Game')) => ({
+  gameId,
+  gamePath,
+});
 
 async function seedOurStrings(): Promise<void> {
   const dir = path.join(state.root, 'x');
   fs.mkdirSync(dir);
   fs.writeFileSync(path.join(dir, 'UserGameStatsSchema_400.bin'), OURS());
-  saveAchievementStrings(await readAchievementStringsFromDir(dir), 'game-a', null);
+  saveAchievementStrings(await readAchievementStringsFromDir(dir), owner('game-a'), null);
 }
 
 beforeEach(() => {
@@ -136,7 +144,7 @@ describe('achievement strings store', () => {
     );
     expect(extracted.map((e) => e.appId)).toEqual([400]);
 
-    expect(saveAchievementStrings(extracted, 'game-a', 'hash-1')).toEqual([400]);
+    expect(saveAchievementStrings(extracted, owner('game-a'), 'hash-1')).toEqual([400]);
     expect(hasAchievementStrings([400], 'game-a')).toBe(true);
     expect(hasAchievementStrings([400], 'game-b')).toBe(false);
     expect(hasAchievementStrings([400, 401], 'game-a')).toBe(false);
@@ -154,7 +162,7 @@ describe('achievement strings store', () => {
     beforeEach(() => {
       saveAchievementStrings(
         [{ appId: 400, strings: { A: { name: 'Cupcake' } } }],
-        'game-a',
+        owner('game-a'),
         'h'
       );
     });
@@ -283,13 +291,18 @@ describe('startup', () => {
     fs.writeFileSync(path.join(gamePath, '.lbk-translation.json'), JSON.stringify(info));
     saveAchievementStrings(
       [{ appId: 500, strings: { ACH: { name: 'Orphan' } } }],
-      'gone-game',
+      owner('gone-game'),
       'h2'
     );
     saveAchievementStrings(
       [{ appId: 700, strings: { ACH: { name: 'Own' } } }],
-      'game-a',
+      owner('game-a'),
       'h3'
+    );
+    saveAchievementStrings(
+      [{ appId: 800, strings: { ACH: { name: 'On the card' } } }],
+      owner('card-game', path.join(state.root, 'card', 'common', 'Card')),
+      'h4'
     );
 
     startAchievements();
@@ -314,6 +327,7 @@ describe('startup', () => {
     expect(fs.existsSync(statsFile(`${file}_backup`))).toBe(false);
     await vi.waitFor(() => expect(fs.existsSync(stringsFile(500))).toBe(false));
     expect(fs.existsSync(stringsFile(700))).toBe(true);
+    expect(fs.existsSync(stringsFile(800))).toBe(true);
 
     appEvents.emit('install-record-removed', 'game-a');
     expect(fs.existsSync(stringsFile(700))).toBe(false);
@@ -333,7 +347,7 @@ describe('commitAchievementStrings', () => {
 
     const result = await commitAchievementStrings({
       extracted: [{ appId: 600, strings: { ACH: { name: 'Victory' } } }],
-      gameId: 'game-b',
+      ...owner('game-b'),
       archiveHash: 'h',
       component,
       previous: null,
@@ -345,13 +359,13 @@ describe('commitAchievementStrings', () => {
   it('keeps the component and replaces the previous strings on success', async () => {
     saveAchievementStrings(
       [{ appId: 700, strings: { OLD: { name: 'Old' } } }],
-      'game-b',
+      owner('game-b'),
       'old'
     );
 
     const result = await commitAchievementStrings({
       extracted: [{ appId: 600, strings: { ACH: { name: 'Victory' } } }],
-      gameId: 'game-b',
+      ...owner('game-b'),
       archiveHash: 'h',
       component,
       previous: {
@@ -363,5 +377,31 @@ describe('commitAchievementStrings', () => {
     expect(result).toEqual(component);
     expect(fs.existsSync(stringsFile(600))).toBe(true);
     expect(fs.existsSync(stringsFile(700))).toBe(false);
+  });
+});
+
+describe('deliveryWithinInstallWait', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    state.badge = 'millennium';
+    state.pluginConnected = true;
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each<[string, number, AchievementsDelivery]>([
+    ['a reload that answers in time', 9_000, 'plugin-live'],
+    ['a reload still queued behind other plugin ops', 11_000, 'plugin-next-start'],
+  ])('reports %s', async (_case, answerAfterMs, delivery) => {
+    const answer = Promise.withResolvers<{ apps: number; coverage: object }>();
+    state.reload.mockImplementationOnce(() => answer.promise);
+    setTimeout(() => answer.resolve({ apps: 1, coverage: {} }), answerAfterMs);
+
+    const waited = deliveryWithinInstallWait(syncAchievementsToPlugin());
+    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(answerAfterMs);
+
+    expect(await waited).toBe(delivery);
   });
 });

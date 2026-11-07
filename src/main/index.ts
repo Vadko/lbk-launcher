@@ -153,7 +153,7 @@ import { trackPlaytime, trackSessionEnd, trackSessionStart } from './tracking';
 import { stopCaptchaWindow } from './turnstile/window';
 import { startPendingEglLaunchArgs } from './utils/egl-windows-settings';
 import { startSteamBridge } from './utils/steam-bridge-lifecycle';
-import { createMainWindow, getMainWindow, showMainWindow } from './window';
+import { createMainWindow, getMainWindow, markPageReady, showMainWindow } from './window';
 
 // Global managers
 let syncManager: SyncManager | null = null;
@@ -250,6 +250,7 @@ if (!gotTheLock) {
 
   // Flush a deep link buffered before the renderer's listener was registered.
   ipcMain.on('renderer-ready', () => {
+    markPageReady();
     if (pendingDeepLink) {
       handleDeepLink(pendingDeepLink);
       pendingDeepLink = null;

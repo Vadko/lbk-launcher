@@ -33,8 +33,17 @@ export function switchLayout(input: string): string | null {
   return switched === input ? null : switched;
 }
 
+export const APOSTROPHES = "'’ʼ‘ʻʹ′＇`´";
+const APOSTROPHE = new RegExp(`[${APOSTROPHES}]`, 'g');
+
 export function stripApostrophes(value: string): string {
-  return value.replace(/['’ʼ‘ʻʹ′＇`´]/g, '');
+  return value.replace(APOSTROPHE, '');
+}
+
+// The forms a query finds titles by: as typed and, unless told otherwise, transliterated
+export function queryForms(input: string, { transliterate = true } = {}): string[] {
+  const translit = transliterate ? getTransliteration(input) : null;
+  return translit ? [input, translit] : [input];
 }
 
 export function withStrippedVariant(value: string): string {
@@ -78,11 +87,10 @@ function buildFtsQuery(
   // The index is apostrophe-free, so the primary form is too. But we keep the
   // raw variant in OR: otherwise "heaven's" would stop matching "Heavenly Sword",
   // because the "s" would stick to the word and break the prefix match.
-  const translit = transliterate ? getTransliteration(input) : null;
-  const sources = [stripApostrophes(input), input];
-  if (translit) {
-    sources.push(stripApostrophes(translit), translit);
-  }
+  const sources = queryForms(input, { transliterate }).flatMap((form) => [
+    stripApostrophes(form),
+    form,
+  ]);
 
   const exprs: string[] = [];
   const seen = new Set<string>();

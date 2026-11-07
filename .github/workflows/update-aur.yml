@@ -24,11 +24,16 @@ jobs:
         id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ github.event.inputs.app_version }}
         run: |
-          if [ -n "${{ github.event.inputs.app_version }}" ]; then
-            TAG="${{ github.event.inputs.app_version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            TAG="$INPUT_VERSION"
           else
             TAG=$(gh api repos/Vadko/lbk-launcher/releases --jq 'first | .tag_name')
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Not a release tag: $TAG" >&2
+            exit 1
           fi
           VERSION="${TAG#v}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -38,11 +43,13 @@ jobs:
       - name: Download AppImage via gh CLI (supports draft releases)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
-          gh release download "${{ steps.release.outputs.tag }}" \
+          gh release download "$TAG" \
             --repo Vadko/lbk-launcher \
             --pattern "LBK-Launcher-linux.AppImage" \
-            --output "aur/LBK-Launcher-linux-${{ steps.release.outputs.version }}.AppImage"
+            --output "aur/LBK-Launcher-linux-${VERSION}.AppImage"
 
       - name: Update PKGBUILD version, checksums and .SRCINFO
         uses: docker://archlinux:base-devel
@@ -77,8 +84,8 @@ jobs:
       - name: Create PR with updated PKGBUILD
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
-          VERSION="${{ steps.release.outputs.version }}"
           BRANCH="aur/v${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

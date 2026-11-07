@@ -7,16 +7,18 @@ export const be = {
     hidden: 'Не будуць паказвацца ў Steam',
     millennium: 'Будуць паказвацца праз Millennium',
     decky: 'Будуць паказвацца праз Decky Loader',
-    afterRestart: 'З’явяцца пасля перазапуску Steam',
-    needsMillennium: 'Патрэбны Millennium',
-    needsDeckyPlugin: 'Патрэбны LBK Bridge для Decky Loader',
-    needsDecky: 'Патрэбны Decky Loader',
+    'after-restart': 'З’явяцца пасля перазапуску Steam',
+    'needs-millennium': 'Патрэбны Millennium',
+    'needs-decky-plugin': 'Патрэбны LBK Bridge для Decky Loader',
+    'needs-decky': 'Патрэбны Decky Loader',
   },
   achievementsNote: {
     needsMillennium:
       'Steam не чытае перакладзеныя назвы дасягненняў са звычайных файлаў гульні. Каб бачыць іх у бібліятэцы, апавяшчэннях і аверлэі Steam, усталюйце Millennium. Дасягненні ў інтэрфейсе самой гульні могуць застацца на мове распрацоўшчыка.',
     needsDeckyPlugin:
       'Steam не чытае перакладзеныя назвы дасягненняў са звычайных файлаў гульні. Каб бачыць іх у бібліятэцы, апавяшчэннях і аверлэі Steam, усталюйце плагін «LBK Bridge» для Decky Loader. Дасягненні ў інтэрфейсе самой гульні могуць застацца на мове распрацоўшчыка.',
+    deckyPluginDisabled:
+      'Steam не чытае перакладзеныя назвы дасягненняў са звычайных файлаў гульні. Іх паказвае плагін «LBK Bridge», але ён выключаны ў Decky Loader — уключыце яго ў наладах Decky. Дасягненні ў інтэрфейсе самой гульні могуць застацца на мове распрацоўшчыка.',
     needsDecky:
       'Steam не чытае перакладзеныя назвы дасягненняў са звычайных файлаў гульні. На Steam Deck іх паказвае плагін «LBK Bridge», якому патрэбны Decky Loader. Дасягненні ў інтэрфейсе самой гульні могуць застацца на мове распрацоўшчыка.',
     settingOff:
@@ -302,8 +304,8 @@ export const be = {
   filterBar: {
     filters: 'Фільтры',
     clearAll: 'Ачысціць усе фільтры',
-    showInstalled: 'Паказаць спампаваныя пераклады',
-    hideInstalled: 'Схаваць спампаваныя пераклады',
+    showInstalled: 'Паказаць усталяваныя пераклады',
+    hideInstalled: 'Схаваць усталяваныя пераклады',
     showFavorites: 'Паказаць абранае',
     hideFavorites: 'Схаваць абранае',
     sort: 'Сартаванне',
@@ -486,9 +488,9 @@ export const be = {
   gameSections: { aboutTranslation: 'Пра ўкраінізатар', aboutGame: 'Пра гульню' },
   gameStatus: {
     planned: 'Запланаваны',
-    inProgress: 'Ранні доступ',
+    'in-progress': 'Ранні доступ',
     completed: 'Завершаны',
-    techImprovement: 'Тэхнічныя паляпшэнні',
+    'tech-improvement': 'Тэхнічныя паляпшэнні',
   },
   gameTabs: {
     info: 'Інфа',
@@ -763,6 +765,8 @@ export const be = {
       'Пераклад дасягненняў захаваны. Каб бачыць яго ў Steam, патрэбны Millennium.',
     needsDeckyPlugin:
       'Пераклад дасягненняў захаваны. Каб бачыць яго ў Steam, усталюйце плагін «LBK Bridge» для Decky Loader.',
+    deckyPluginDisabled:
+      'Пераклад дасягненняў захаваны. Каб бачыць яго ў Steam, уключыце плагін «LBK Bridge» у наладах Decky Loader.',
     needsDecky:
       'Пераклад дасягненняў захаваны. На Steam Deck яго паказвае плагін «LBK Bridge» для Decky Loader — лаўнчар можа ўсталяваць Decky Loader сам.',
     unavailable:
@@ -807,6 +811,7 @@ export const be = {
     gameDirUnresolved: 'Не ўдалося вызначыць папку гульні для параметраў запуску',
     writeFailed: 'Не ўдалося запісаць параметры запуску',
     eglWriteFailed: 'не ўдалося змяніць налады гульні ў Epic Games Launcher',
+    eglGameNotFound: 'гульня не знойдзена сярод усталяваных праз Epic Games Launcher',
     eglNeedsShell:
       'яны працуюць толькі праз абалонку, праз якую іх запускае Steam, а Epic Games Launcher так не ўмее',
     eglQueued:
@@ -1091,8 +1096,10 @@ export const be = {
     deckyPlugin:
       'Плагін «LBK Bridge» для Decky Loader паказвае ў Steam перакладзеныя дасягненні.',
     deckyOutdated: 'Даступнае абнаўленне плагіна «LBK Bridge» для Decky Loader.',
-    pendingActivate: 'Millennium усталюецца, як толькі вы закрыеце Steam.',
-    pendingDeactivate: 'Millennium будзе выдалены, як толькі вы закрыеце Steam.',
+    pending: {
+      activate: 'Millennium усталюецца, як толькі вы закрыеце Steam.',
+      deactivate: 'Millennium будзе выдалены, як толькі вы закрыеце Steam.',
+    },
     installedVersion: 'Усталяваны Millennium {{version}}.',
     repair: 'Файлы Millennium у папцы Steam пашкоджаныя або выдаленыя.',
     update: 'Даступнае абнаўленне Millennium: {{version}}.',
@@ -1457,12 +1464,13 @@ export const be = {
     exeTitle: 'Запуск усталёўшчыка',
     scriptTitle: 'Запуск скрыпта',
     exeProtonMessage:
-      'Украінізатар спампаваны і распакаваны. Усталёўшчык для Windows будзе запушчаны праз выбраную версію Proton.\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
+      'Украінізатар для «{{name}}» спампаваны і распакаваны. Усталёўшчык для Windows будзе запушчаны праз выбраную версію Proton.\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
     scriptProtonMessage:
-      'Украінізатар спампаваны і распакаваны. Скрыпт для Windows будзе запушчаны праз выбраную версію Proton.\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
+      'Украінізатар для «{{name}}» спампаваны і распакаваны. Скрыпт для Windows будзе запушчаны праз выбраную версію Proton.\n\nШлях да папкі будзе скапіяваны ў буфер абмену.',
     exeAskMessage:
-      'Украінізатар спампаваны і распакаваны.\n\nЗапусціць усталёўшчык цяпер?',
-    scriptAskMessage: 'Украінізатар спампаваны і распакаваны.\n\nЗапусціць скрыпт цяпер?',
+      'Украінізатар для «{{name}}» спампаваны і распакаваны.\n\nЗапусціць усталёўшчык цяпер?',
+    scriptAskMessage:
+      'Украінізатар для «{{name}}» спампаваны і распакаваны.\n\nЗапусціць скрыпт цяпер?',
     protonPlaceholder: 'Выберыце версію Proton',
     openFolder: 'Адкрыць папку',
     run: 'Так, запусціць',
@@ -1705,9 +1713,9 @@ export const be = {
     restartedTitle: 'Steam перазапушчаны',
   },
   steamRestartFailure: {
-    launchFailed:
+    'launch-failed':
       'Steam закрыты, але запусціць яго зноў не ўдалося. Запусціце Steam уручную.',
-    accessDenied: {
+    'access-denied': {
       launchOptions:
         'Steam запушчаны ад імя адміністратара, таму лаўнчар не можа яго перазапусціць. Закрыйце Steam самастойна — параметры запуску ўжывуцца аўтаматычна.',
       plain:
@@ -1719,7 +1727,7 @@ export const be = {
       plain:
         'У гульнявым рэжыме лаўнчар не перазапускае Steam. Перазапусціце яго самастойна — напрыклад, перайдзіце ў рэжым працоўнага стала.',
     },
-    gameRunning: {
+    'game-running': {
       launchOptions:
         'Закрыйце гульню, каб перазапусціць Steam. Параметры запуску ўжывуцца, як толькі Steam будзе закрыты.',
       plain: 'Закрыйце гульню, каб перазапусціць Steam.',
@@ -1728,6 +1736,12 @@ export const be = {
       launchOptions:
         'Steam не закрыўся своечасова. Закрыйце яго ўручную — параметры запуску ўжывуцца аўтаматычна.',
       plain: 'Steam не закрыўся своечасова. Перазапусціце яго ўручную.',
+    },
+    'unknown-state': {
+      launchOptions:
+        'Не ўдалося праверыць, ці запушчаны Steam, таму лаўнчар яго не перазапускае. Закрыйце Steam самастойна — параметры запуску ўжывуцца аўтаматычна.',
+      plain:
+        'Не ўдалося праверыць, ці запушчаны Steam, таму лаўнчар яго не перазапускае. Перазапусціце Steam самастойна.',
     },
     generic: 'Не ўдалося перазапусціць Steam.',
   },

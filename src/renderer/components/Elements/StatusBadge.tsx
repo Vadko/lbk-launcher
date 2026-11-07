@@ -19,7 +19,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       textColor: 'text-color-main',
     },
     'in-progress': {
-      textLabel: t('gameStatus.inProgress'),
+      textLabel: t('gameStatus.in-progress'),
       capsuleColor: 'bg-[rgba(255,164,122,0.25)]',
       textColor: 'text-color-accent',
     },
@@ -29,7 +29,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       textColor: 'text-color-mixed',
     },
     'tech-improvement': {
-      textLabel: t('gameStatus.techImprovement'),
+      textLabel: t('gameStatus.tech-improvement'),
       capsuleColor: 'bg-[rgba(148,163,184,0.25)]',
       textColor: 'text-white',
     },

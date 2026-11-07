@@ -142,14 +142,15 @@ describe('sendFeedbackPost', () => {
   });
 
   it.each(['published', 'pending', 'removed'] as const)(
-    'hands back the server outcome %s',
+    'hands back the server outcome %s with the time it came',
     async (outcome) => {
       client.sendFeedback.mockResolvedValue({ ok: true, data: { id: POST, outcome } });
+      const before = Date.now();
 
-      expect(await sendFeedbackPost(first(), post([]))).toMatchObject({
-        ok: true,
-        outcome,
-      });
+      const result = await sendFeedbackPost(first(), post([]));
+
+      expect(result).toMatchObject({ ok: true, outcome });
+      expect(result.ok && result.answeredAt).toBeGreaterThanOrEqual(before);
     }
   );
 

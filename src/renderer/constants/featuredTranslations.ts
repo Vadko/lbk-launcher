@@ -1,22 +1,20 @@
-import { t } from '@/shared/i18n/i18n';
-
 // Featured translations to highlight in the UI with trophy badge
 interface FeaturedTranslation {
   gameSlug: string;
   team?: string; // If specified, only this team's translation is featured
-  description: string;
+  award: 'mostAnticipated2026' | 'bestText2025';
   year: number;
 }
 
 const FEATURED_TRANSLATIONS: FeaturedTranslation[] = [
   {
     gameSlug: 'persona_4_golden',
-    description: t('translationAwards.mostAnticipated2026'),
+    award: 'mostAnticipated2026',
     year: 2026,
   },
   {
     gameSlug: 'dispatch',
-    description: t('translationAwards.bestText2025'),
+    award: 'bestText2025',
     year: 2025,
   },
 ];

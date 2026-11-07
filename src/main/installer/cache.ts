@@ -1,14 +1,20 @@
+import { G } from '@mobily/ts-belt';
 import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { t } from '@/shared/i18n/i18n';
 import type { ConflictingTranslation, Game, InstallationInfo } from '../../shared/types';
+import { hasAchievementStrings } from '../achievements/strings-store';
 import { appEvents } from '../app-events';
 import { GamesRepository } from '../db/games-repository';
 import { getFirstAvailableGamePath } from '../game-detector';
 import { getWorkshopInstalledGameIds } from '../utils/store-storage';
-import { findInstallationInfoFile, INSTALLATION_INFO_FILE } from './installation-info';
+import {
+  findInstallationInfoFile,
+  INSTALLATION_INFO_FILE,
+  withAchievementsComponent,
+} from './installation-info';
 
 const mkdir = promisify(fs.mkdir);
 const readdir = promisify(fs.readdir);
@@ -71,6 +77,48 @@ export async function saveInstallationInfo(
   }
 }
 
+// Key fields and components only, to avoid unnecessary writes
+function isSameCachedRecord(
+  existing: InstallationInfo | null,
+  info: InstallationInfo
+): boolean {
+  return (
+    G.isObject(existing) &&
+    existing.gamePath === info.gamePath &&
+    existing.version === info.version &&
+    existing.gameId === info.gameId &&
+    existing.components?.voice?.installed === info.components?.voice?.installed &&
+    existing.components?.achievements?.installed ===
+      info.components?.achievements?.installed
+  );
+}
+
+// Strings deleted while the record was gone (another card in the slot) leave achievements not installed, so the install dialog offers them again.
+async function withoutLostAchievements(
+  info: InstallationInfo,
+  infoPath: string
+): Promise<InstallationInfo> {
+  const achievements = info.components?.achievements;
+  if (
+    !achievements?.installed ||
+    achievements.files.length > 0 ||
+    hasAchievementStrings(achievements.appIds ?? [], info.gameId)
+  ) {
+    return info;
+  }
+  const fixed = withAchievementsComponent(info, { installed: false, files: [] });
+  try {
+    await fs.promises.writeFile(infoPath, JSON.stringify(fixed, null, 2), 'utf-8');
+  } catch (error) {
+    console.warn(
+      '[Installer] Could not mark lost achievements in the game folder:',
+      error
+    );
+  }
+  console.log(`[Installer] Achievement strings of ${info.gameId} are gone`);
+  return fixed;
+}
+
 /**
  * Check if translation is installed and get installation info
  * Priority: Library paths (Steam, GOG, etc.) > Manual/cached paths
@@ -94,7 +142,7 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
       if (fs.existsSync(infoPath)) {
         // Read installation info from library path
         const infoContent = await fs.promises.readFile(infoPath, 'utf-8');
-        const info: InstallationInfo = JSON.parse(infoContent);
+        let info: InstallationInfo = JSON.parse(infoContent);
 
         // IMPORTANT: Verify that the installed translation matches this game
         // Multiple translations of the same game share the same install path,
@@ -122,32 +170,22 @@ export async function checkInstallation(game: Game): Promise<InstallationInfo | 
           await mkdir(installInfoDir, { recursive: true });
 
           // Check if cache already has the same data
-          let needsUpdate = true;
+          let existingInfo: InstallationInfo | null = null;
           if (fs.existsSync(cacheInfoPath)) {
             try {
-              const existingContent = await fs.promises.readFile(cacheInfoPath, 'utf-8');
-              const existingInfo = JSON.parse(existingContent);
-              // Compare key fields and components to avoid unnecessary writes
-              const sameComponents =
-                existingInfo.components?.voice?.installed ===
-                  info.components?.voice?.installed &&
-                existingInfo.components?.achievements?.installed ===
-                  info.components?.achievements?.installed;
-
-              if (
-                existingInfo.gamePath === info.gamePath &&
-                existingInfo.version === info.version &&
-                existingInfo.gameId === info.gameId &&
-                sameComponents
-              ) {
-                needsUpdate = false;
-              }
+              existingInfo = JSON.parse(
+                await fs.promises.readFile(cacheInfoPath, 'utf-8')
+              );
             } catch {
               // If we can't read existing, we need to update
             }
           }
 
-          if (needsUpdate) {
+          // Compared again after the fix: an unwritable game copy must not rewrite the cache on every watcher pass.
+          if (!isSameCachedRecord(existingInfo, info)) {
+            info = await withoutLostAchievements(info, infoPath);
+          }
+          if (!isSameCachedRecord(existingInfo, info)) {
             await fs.promises.writeFile(
               cacheInfoPath,
               JSON.stringify(info, null, 2),

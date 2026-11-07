@@ -5,7 +5,12 @@ export interface WeeklyPicks {
   games: readonly Game[];
 }
 
+export interface WeeklyPicksRead {
+  picks: WeeklyPicks | null;
+}
+
 export interface WeeklyPicksAPI {
-  getWeeklyPicks: (hideAiTranslations: boolean) => Promise<WeeklyPicks | null>;
+  // null when the read failed, which keeps the set already shown
+  getWeeklyPicks: (hideAiTranslations: boolean) => Promise<WeeklyPicksRead | null>;
   onWeeklyPicksUpdated: (callback: () => void) => () => void;
 }

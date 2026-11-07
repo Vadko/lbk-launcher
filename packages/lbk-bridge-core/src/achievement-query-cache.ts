@@ -254,8 +254,8 @@ export function hookAchievementQueries(
       (event.type === 'updated' &&
         (action === 'setState' || (action === 'success' && !restores.get(q)?.[0])));
     if (delivered && has(appid)) {
-      // Outside the dispatch that delivered the data; React Query notifies observers on a later task.
-      schedule(() => safely(() => update(q, false)));
+      // Outside the dispatch that delivered the data; React Query notifies observers on a later task. A dispose in between has reverted the text.
+      schedule(() => disposed || safely(() => update(q, false)));
     }
   });
 

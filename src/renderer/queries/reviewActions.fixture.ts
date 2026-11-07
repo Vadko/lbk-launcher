@@ -78,9 +78,7 @@ export function seedReviews(
     createdAt: new Date(Date.now() - 20 * MINUTE).toISOString(),
   };
   const thread = reviewThread('t', [own, old], isPublic);
-  queryClient.setQueryData<ReviewPages>(REVIEWS_KEY, reviewPages([thread]), {
-    updatedAt: Date.now() - MINUTE,
-  });
+  queryClient.setQueryData<ReviewPages>(REVIEWS_KEY, reviewPages([thread]));
   return thread;
 }
 
@@ -94,8 +92,7 @@ export function shownThread(
     const write = findReviewWrite(queryClient, 'g1', id);
     return write ? [reviewWriteState(write)] : [];
   });
-  const updatedAt = queryClient.getQueryState(REVIEWS_KEY)?.dataUpdatedAt ?? 0;
-  return data && withReviewWrites(data, states, updatedAt).pages[0]?.items[0];
+  return data && withReviewWrites(data, states).pages[0]?.items[0];
 }
 
 export function shownEntry(queryClient: QueryClient, id: string) {

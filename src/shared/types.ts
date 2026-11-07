@@ -115,6 +115,8 @@ export interface InstallationInfo {
   installerPath?: string; // Path to the installer executable (if used)
   installedFiles?: string[]; // Legacy: Relative paths of all installed files (kept for migration)
   installedPlatform?: Platform; // Platform on which the localization was installed (steam, epic, gog, etc.)
+  // The artwork box of the last install dialog that offered Steam artwork; absent until one did.
+  steamArtwork?: boolean;
   components?: {
     text: InstallationComponent;
     voice?: InstallationComponent;
@@ -142,9 +144,12 @@ export type InstallationStatusTone = 'error' | 'waiting' | 'retry';
 
 export interface RunInstallerRequest {
   gameId: string;
+  gameName: string;
   installerPath: string;
   isExe: boolean;
   protons?: Array<{ name: string; path: string }>;
+  // Preselected: the Proton this game's installer last ran with, else the first one.
+  protonPath?: string;
 }
 
 export interface RunInstallerDecision {

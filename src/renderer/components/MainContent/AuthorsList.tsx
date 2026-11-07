@@ -43,7 +43,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
           {author}
         </button>
         {isSpecial && specialInfo && (
-          <Tooltip content={specialInfo.description}>
+          <Tooltip content={t(`specialTranslators.${specialInfo.role}`)}>
             <StarIcon
               size={12}
               className="ml-1 fill-yellow-400 text-yellow-400 cursor-help inline-block"
@@ -104,7 +104,7 @@ export const AuthorsList: React.FC<AuthorsListProps> = ({ team, maxVisible = 3 }
                         {author}
                       </button>
                       {isSpecial && specialInfo && (
-                        <Tooltip content={specialInfo.description}>
+                        <Tooltip content={t(`specialTranslators.${specialInfo.role}`)}>
                           <StarIcon
                             size={12}
                             className="fill-yellow-400 text-yellow-400 cursor-help"

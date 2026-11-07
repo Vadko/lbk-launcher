@@ -1,7 +1,13 @@
 import * as path from 'node:path';
 import { getSteamPath } from '@/main/game-detector/steam';
 import { isLinux } from '@/main/utils/platform';
-import { LINUX_RUNTIME_LIB, RUNTIME_PATH_ENV } from './linux';
+import { LINUX_RUNTIME_LIB, linuxLinkPaths, RUNTIME_PATH_ENV } from './linux';
+import {
+  BOOTSTRAP_DEFAULT_RUNTIME,
+  linksReachRuntime,
+  reachesRuntime,
+  runtimeRoots,
+} from './linux-runtime-use';
 import { installPathsFor } from './paths';
 import { managedByFor, readInstallRecord, recordPathIn } from './record';
 
@@ -15,13 +21,23 @@ export function millenniumLaunchEnv(): Record<string, string> {
     return {};
   }
   const paths = installPathsFor('linux', steamPath);
-  const record = readInstallRecord(recordPathIn(paths.root));
-  if (
-    !paths.linux ||
-    record?.mode !== 'linux-user' ||
-    managedByFor(record, 'linux', steamPath) !== 'lbk'
-  ) {
+  if (!paths.linux) {
     return {};
   }
-  return { [RUNTIME_PATH_ENV]: path.posix.join(paths.linux.current, LINUX_RUNTIME_LIB) };
+  const record = readInstallRecord(recordPathIn(paths.root));
+  if (
+    record?.mode === 'linux-user' &&
+    managedByFor(record, 'linux', steamPath) === 'lbk'
+  ) {
+    return {
+      [RUNTIME_PATH_ENV]: path.posix.join(paths.linux.current, LINUX_RUNTIME_LIB),
+    };
+  }
+  const roots = runtimeRoots(paths.linux.runtimeRoot);
+  // Our install is gone but the session kept our path from login; another Millennium's bootstrap would load that.
+  const stale =
+    record === null &&
+    reachesRuntime(process.env[RUNTIME_PATH_ENV], roots) &&
+    !linksReachRuntime(linuxLinkPaths(paths.linux.steamHome), roots);
+  return stale ? { [RUNTIME_PATH_ENV]: BOOTSTRAP_DEFAULT_RUNTIME } : {};
 }

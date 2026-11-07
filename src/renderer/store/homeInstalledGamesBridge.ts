@@ -36,6 +36,8 @@ export function initHomeInstalledGames(): void {
   api.onGameRemoved(reload);
   api.onSteamLibraryChanged?.(reload);
   api.onStoreLibraryChanged(reload);
+  // The pushed rows are whole games, so the counters need no new library scan
+  api.onGameCountersUpdated(useHomeInstalledGamesStore.getState().updateGames);
   useStore.subscribe((state, prev) => {
     if (state.syncStatus !== prev.syncStatus) {
       load();

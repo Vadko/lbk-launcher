@@ -168,4 +168,21 @@ describe('the counters broadcast', () => {
     expect(counters()[0]).toMatchObject({ likes: 0, reviews: 0, error_reviews: 0 });
     expect(state.sent).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['one counter added later', ['game-1', 5, 1, 1, 3, 2, 9]],
+    ['two counters added later', ['game-1', 5, 1, 1, 3, 2, 9, null]],
+  ])('reads the counters it knows from a tuple with %s', (_case, tuple) => {
+    broadcast({ counters: [tuple] });
+
+    expect(counters()[0]).toEqual({
+      id: 'game-1',
+      likes: 5,
+      downloads: 1,
+      subscriptions: 1,
+      reviews: 3,
+      error_reviews: 2,
+    });
+    expect(state.sent).toHaveBeenCalledWith('game-counters-updated', ['game-1']);
+  });
 });

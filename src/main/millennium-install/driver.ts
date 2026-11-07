@@ -81,6 +81,6 @@ export interface MillenniumOsDriver {
     target: InstallTarget,
     bridge: BridgeVerdict
   ): Promise<MillenniumInstallResult>;
-  // Startup only; true when it changed what is installed.
-  startupMaintenance(target: InstalledTarget, activationQueued: boolean): boolean;
+  // Startup only, record or not; true when the recorded install is gone and the record goes with it.
+  startupMaintenance(target: InstallTarget, activationQueued: boolean): boolean;
 }

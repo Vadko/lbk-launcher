@@ -7,11 +7,13 @@ import { I18nextProvider } from 'react-i18next';
 import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
+import { initEverInstalled } from './store/everInstalledBridge';
 import { initFacetData } from './store/facetDataBridge';
 import { initHomeInstalledGames } from './store/homeInstalledGamesBridge';
 import { initLikes } from './store/likesBridge';
 import { initRatings } from './store/ratingsBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
+import { initRunInstallerPrompts } from './store/runInstallerPromptBridge';
 import { initStoreDiscounts } from './store/storeDiscountsBridge';
 import { useSettingsStore } from './store/useSettingsStore';
 import { initWeeklyPicks } from './store/weeklyPicksBridge';
@@ -61,6 +63,12 @@ initFacetData();
 
 // Bridge the catalog games installed on this machine (IPC) into the home page's store — once, outside React.
 initHomeInstalledGames();
+
+// Copy every installed translation (files and Workshop) into the ever-installed store, for likes and reviews — once, outside React.
+initEverInstalled();
+
+// Bridge main's run-installer prompts (IPC) into the global modal — once, outside React, so no page leaves one unanswered.
+initRunInstallerPrompts();
 
 console.log('[Renderer] Starting React application...');
 

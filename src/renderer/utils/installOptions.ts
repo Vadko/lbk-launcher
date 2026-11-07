@@ -25,7 +25,7 @@ interface AchievementsOptionInput {
 export interface AchievementsOptionState {
   checking: boolean;
   canToggle: boolean;
-  // What the installer receives: a locked box keeps the installed state, since false deletes installed strings.
+  // What the installer receives: a locked box, also one without an archive, keeps the installed state, since false deletes installed strings.
   install: boolean;
   wants: boolean;
   willDownload: boolean;
@@ -45,12 +45,30 @@ export function achievementsOptionState({
   return {
     checking: hasArchive && badge === null,
     canToggle,
-    install: hasArchive && (canToggle ? checked : installed),
+    install: canToggle ? checked : installed,
     wants,
     willDownload: wants && !installed,
     willReinstall: wants && installed && isReinstall,
     willRemove: canToggle && !checked && installed,
   };
+}
+
+interface SteamArtworkStartInput {
+  isReinstall: boolean;
+  // The record's choice from the last dialog that offered artwork
+  chosen: boolean | undefined;
+  applied: boolean;
+  byDefault: boolean;
+}
+
+// Without a choice of the player's (no artwork was offered yet), the artwork on disk or the setting decides.
+export function steamArtworkStartsChecked({
+  isReinstall,
+  chosen,
+  applied,
+  byDefault,
+}: SteamArtworkStartInput): boolean {
+  return isReinstall ? (chosen ?? (applied || byDefault)) : byDefault;
 }
 
 // Sums size strings like "150.00 MB"; 'N/A' when there is nothing to sum.

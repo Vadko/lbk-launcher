@@ -5,9 +5,11 @@ import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 import { generateSearchableString, withStrippedVariant } from '../../shared/search-utils';
 import { VISIBLE_GAMES_SQL } from './db-queries';
-import { buildSearchCondition } from './search-condition';
+import { buildSearchCondition, prefixFirstOrder } from './search-condition';
 
-const CATALOG: { name: string; keywords?: string; hide?: boolean }[] = [
+type Catalog = { name: string; keywords?: string; hide?: boolean }[];
+
+const CATALOG: Catalog = [
   { name: 'Elden Ring' },
   { name: 'Reigns' },
   { name: 'Hogwarts Legacy' },
@@ -39,14 +41,24 @@ const spellfixPath = join(
   `spellfix.${process.platform === 'darwin' ? 'dylib' : process.platform === 'win32' ? 'dll' : 'so'}`
 );
 
-function catalogDb(withSpellfix: boolean): Database.Database {
+// Each title's prefix form sits behind another title that also matches, so only the ranking puts it first
+const RANKED_CATALOG: Catalog = [
+  { name: 'Silent Hill 4: The Room' },
+  { name: 'The Room' },
+  { name: "AC: Assassin's Creed" },
+  { name: "Assassin's Creed Mirage" },
+  { name: 'Anomaly Stalker' },
+  { name: 'Stalker Legends' },
+];
+
+function catalogDb(withSpellfix: boolean, catalog = CATALOG): Database.Database {
   const db = new Database(':memory:');
   db.exec(`
     CREATE TABLE games (id TEXT PRIMARY KEY, name TEXT, name_search TEXT, approved INTEGER,
       hide INTEGER, user_unlocked INTEGER DEFAULT 0);
     CREATE VIRTUAL TABLE games_fts USING fts5(game_id UNINDEXED, name_search, search_keywords, tokenize='unicode61');
   `);
-  CATALOG.forEach((game, i) => {
+  catalog.forEach((game, i) => {
     const nameSearch = generateSearchableString(game.name);
     db.prepare('INSERT INTO games VALUES (?, ?, ?, 1, ?, 0)').run(
       String(i),
@@ -63,9 +75,9 @@ function catalogDb(withSpellfix: boolean): Database.Database {
   if (withSpellfix) {
     db.loadExtension(spellfixPath.replace(/\.(dylib|so|dll)$/, ''));
     db.exec('CREATE VIRTUAL TABLE spellfix_words USING spellfix1');
-    const words = CATALOG.filter((game) => !game.hide).flatMap((game) =>
-      game.name.toLowerCase().split(/\s+/)
-    );
+    const words = catalog
+      .filter((game) => !game.hide)
+      .flatMap((game) => game.name.toLowerCase().split(/\s+/));
     for (const word of new Set(words.map((w) => w.replace(/[^a-zа-яіїєґ0-9]/gi, '')))) {
       if (word.length >= 3) {
         db.prepare('INSERT INTO spellfix_words(word) VALUES (?)').run(word);
@@ -86,6 +98,18 @@ function search(db: Database.Database, query: string, typoFallback: boolean): st
   ).map((row) => row.name);
 }
 
+function ranked(db: Database.Database, query: string, typoFallback: boolean): string[] {
+  const condition = buildSearchCondition(db, query, typoFallback);
+  const order = prefixFirstOrder(condition);
+  return (
+    db
+      .prepare(
+        `SELECT name FROM games WHERE ${VISIBLE_GAMES_SQL} AND ${condition?.sql} ORDER BY ${order?.sql}, name`
+      )
+      .all(...(condition?.params ?? []), ...(order?.params ?? [])) as { name: string }[]
+  ).map((row) => row.name);
+}
+
 describe('buildSearchCondition', () => {
   const db = catalogDb(false);
 
@@ -99,8 +123,47 @@ describe('buildSearchCondition', () => {
     ['a number missing from the catalog', 'fallout 4', ['Fallout 76']],
     ['a number in keywords', 'witcher 3', ['Відьмак 3: Дикий гін']],
     ['a number with no real word', 'S.T.A.L.K.E.R. 2', []],
+    ['a lone LIKE wildcard', '%', []],
+    ['a lone LIKE single-char wildcard', '_', []],
+    ['a LIKE wildcard between letters', 'a%b', []],
   ])('%s: %s', (_, query, expected) => {
     expect(search(db, query, false)).toEqual(expected);
+  });
+});
+
+describe('prefixFirstOrder', () => {
+  const db = catalogDb(false, RANKED_CATALOG);
+
+  it('ranks nothing without a search', () => {
+    expect(prefixFirstOrder(buildSearchCondition(db, ' ', false))).toBeNull();
+  });
+
+  it.each([
+    ['as typed', 'the room', ['The Room', 'Silent Hill 4: The Room']],
+    ['the other keyboard layout', 'еру кщщь', ['The Room', 'Silent Hill 4: The Room']],
+    [
+      'without the apostrophe',
+      'assassins creed',
+      ["Assassin's Creed Mirage", "AC: Assassin's Creed"],
+    ],
+    ['transliterated', 'сталкер', ['Stalker Legends', 'Anomaly Stalker']],
+  ])('puts titles starting with the query first, %s: %s', (_, query, expected) => {
+    expect(ranked(db, query, false)).toEqual(expected);
+  });
+});
+
+describe.runIf(existsSync(spellfixPath))('prefixFirstOrder after a typo', () => {
+  const db = catalogDb(true, RANKED_CATALOG);
+
+  it.each([
+    ['a corrected word', 'the rom', ['The Room', 'Silent Hill 4: The Room']],
+    [
+      'a corrected apostrophe title',
+      'asassins creed',
+      ["Assassin's Creed Mirage", "AC: Assassin's Creed"],
+    ],
+  ])('ranks by the corrected query, %s: %s', (_, query, expected) => {
+    expect(ranked(db, query, true)).toEqual(expected);
   });
 });
 

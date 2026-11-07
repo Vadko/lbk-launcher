@@ -26,6 +26,8 @@ export const GlobalModal: React.FC = () => {
 
   return (
     <Modal
+      // Another flow's modal opens as a dialog of its own, not as new text in the one just answered
+      key={config.key}
       isOpen={isOpen}
       onClose={config.mandatory ? () => undefined : closeModal}
       title={config.title}

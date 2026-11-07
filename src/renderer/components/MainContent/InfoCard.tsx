@@ -94,7 +94,7 @@ export const InfoCard: React.FC<InfoCardProps> = ({ game }) => {
         </h3>
         <div className="flex items-center gap-2">
           {featuredInfo && (
-            <Tooltip content={featuredInfo.description} align="left">
+            <Tooltip content={t(`translationAwards.${featuredInfo.award}`)} align="left">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 rounded-sm text-amber-400 text-xs cursor-help">
                 <AwardIcon size={12} />
                 <span>{t('gameInfo.award')}</span>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { t } from '@/shared/i18n/i18n';
 import type { AchievementsBadge, AchievementsDelivery } from '@/shared/plugin-host-types';
 import { deckyState, pluginHostState, steamBridgeStatus } from './pluginHost.fixture';
 import { pluginHostEntries } from './pluginHostEntries';
@@ -6,7 +7,7 @@ import {
   deckyOffer,
   deliveryNote,
   millenniumOffer,
-  OFFER_ACTIONS,
+  offerAction,
   successOffer,
 } from './pluginHostOffer';
 
@@ -68,25 +69,51 @@ describe('deliveryNote', () => {
   it.each(['millennium', 'decky', 'after-restart'] as const)(
     'stays silent for %s, where the strings will reach Steam',
     (state) => {
-      expect(deliveryNote(badge(state))).toBeNull();
+      expect(deliveryNote(badge(state), null)).toBeNull();
     }
   );
 
   it('offers the Millennium install only where LBK can install it', () => {
-    expect(deliveryNote(badge('needs-millennium'))?.actions).toEqual([
-      OFFER_ACTIONS.installMillennium,
-      OFFER_ACTIONS.millenniumInfo,
+    expect(deliveryNote(badge('needs-millennium'), null)?.actions).toEqual([
+      offerAction('installMillennium'),
+      offerAction('millenniumInfo'),
     ]);
-    expect(deliveryNote(badge('needs-millennium', 'no-release'))?.actions).toEqual([
-      OFFER_ACTIONS.millenniumInfo,
+    expect(deliveryNote(badge('needs-millennium', 'no-release'), null)?.actions).toEqual([
+      offerAction('millenniumInfo'),
     ]);
   });
 
+  it.each([
+    [
+      'asks to enable a disabled plugin, with nothing to install',
+      deckyState({ disabled: true }),
+      { text: t('achievementsNote.deckyPluginDisabled'), actions: [] },
+    ],
+    [
+      'offers the install of a missing plugin',
+      deckyState({ installed: false }),
+      {
+        text: t('achievementsNote.needsDeckyPlugin'),
+        actions: [offerAction('installDeckyPlugin')],
+      },
+    ],
+    [
+      'offers the install while the Decky state is unknown',
+      null,
+      {
+        text: t('achievementsNote.needsDeckyPlugin'),
+        actions: [offerAction('installDeckyPlugin')],
+      },
+    ],
+  ])('for a needed Decky plugin, %s', (_label, decky, expected) => {
+    expect(deliveryNote(badge('needs-decky-plugin'), decky)).toEqual(expected);
+  });
+
   it('links the Millennium site only for an outdated Millennium', () => {
-    expect(deliveryNote(badge('unsupported', 'millennium-v2'))?.actions).toEqual([
-      OFFER_ACTIONS.millenniumSite,
+    expect(deliveryNote(badge('unsupported', 'millennium-v2'), null)?.actions).toEqual([
+      offerAction('millenniumSite'),
     ]);
-    expect(deliveryNote(badge('unsupported', 'arch'))?.actions).toEqual([]);
+    expect(deliveryNote(badge('unsupported', 'arch'), null)?.actions).toEqual([]);
   });
 });
 
@@ -94,8 +121,11 @@ describe('successOffer', () => {
   const offer = (
     delivery: AchievementsDelivery,
     declined = { millennium: false, decky: false },
-    millenniumInstallable = true
-  ) => successOffer(delivery, { millenniumInstallable, declined })?.key ?? null;
+    millenniumInstallable = true,
+    deckyPluginDisabled = false
+  ) =>
+    successOffer(delivery, { millenniumInstallable, deckyPluginDisabled, declined })
+      ?.key ?? null;
 
   it.each([
     ['plugin-live', null],
@@ -115,6 +145,25 @@ describe('successOffer', () => {
     expect(offer('needs-decky-plugin', declined)).toBeNull();
     expect(offer('needs-decky', declined)).toBe('decky-site');
     expect(offer('needs-millennium', undefined, false)).toBe('site');
+  });
+
+  it('offers nothing for a disabled Decky plugin, which only Decky can enable', () => {
+    expect(offer('needs-decky-plugin', undefined, true, true)).toBeNull();
+  });
+});
+
+describe('offerAction', () => {
+  it.each([
+    ['installMillennium', 'install', false],
+    ['millenniumInfo', 'site', true],
+    ['deckyInfo', 'decky-site', true],
+    ['restartSteam', 'steam-restart', false],
+  ] as const)('labels %s from its own key', (name, key, external) => {
+    expect(offerAction(name)).toMatchObject({
+      key,
+      label: t(`pluginOffer.${name}`),
+      external,
+    });
   });
 });
 

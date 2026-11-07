@@ -21,6 +21,8 @@ const PENDING_KEY = 'pending-egl-launch-args';
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 const UTF16LE_BOM = Buffer.from([0xff, 0xfe]);
 const MAX_WRITE_ATTEMPTS = 5;
+// Two minutes of failed process checks stops the poll; the queue then waits for LBK's next start
+const MAX_UNKNOWN_CHECKS = 8;
 const ESCAPED: Record<string, string> = {
   '\\': '\\\\',
   '"': '\\"',
@@ -124,7 +126,6 @@ function writeLaunchArgs(file: string, appId: string, argsText: string): boolean
   const ini = decodeIni(buffer);
   const next = withEglLaunchArgs(ini.text, appId, argsText);
   if (next === null) {
-    console.warn('[EGL] No account section to write launch args for:', appId);
     return false;
   }
   // EGL is not running here, so an in-place write cannot race it when Windows refuses the rename
@@ -134,17 +135,18 @@ function writeLaunchArgs(file: string, appId: string, argsText: string): boolean
   return true;
 }
 
-async function isEglRunning(): Promise<boolean> {
+type EglState = 'running' | 'stopped' | 'unknown';
+
+async function eglState(): Promise<EglState> {
   try {
     const { stdout } = await execFileAsync(
       system32('tasklist.exe'),
       ['/FI', `IMAGENAME eq ${EGL_IMAGE}`, '/FO', 'CSV', '/NH'],
       { timeout: 10000, windowsHide: true }
     );
-    return parseTasklistCsv(stdout, EGL_IMAGE).length > 0;
+    return parseTasklistCsv(stdout, EGL_IMAGE).length > 0 ? 'running' : 'stopped';
   } catch {
-    // Unknown counts as running: EGL would overwrite the edit
-    return true;
+    return 'unknown';
   }
 }
 
@@ -163,15 +165,26 @@ function writePending(pending: Record<string, string>): void {
   writeStoreValue(PENDING_KEY, pending);
 }
 
+const hasPending = () => Object.keys(readPending()).length > 0;
+
 const edits = pLimit(1);
 const watcher: { running?: Promise<unknown> } = {};
 const failedWrites = new Map<string, number>();
+const missedWrites = new Set<string>();
 
-function writeOrRetry(file: string, appId: string, argsText: string): boolean {
+function keepAfterWrite(file: string, appId: string, argsText: string): boolean {
   try {
-    writeLaunchArgs(file, appId, argsText);
-    failedWrites.delete(appId);
-    return false;
+    if (writeLaunchArgs(file, appId, argsText)) {
+      failedWrites.delete(appId);
+      missedWrites.delete(appId);
+      return false;
+    }
+    // No file or account section while signed out: EGL writes them back after the next sign-in, so the entry stays queued
+    if (!missedWrites.has(appId)) {
+      missedWrites.add(appId);
+      console.warn('[EGL] No signed-in account for queued launch args yet:', appId);
+    }
+    return true;
   } catch (error) {
     const attempts = (failedWrites.get(appId) ?? 0) + 1;
     failedWrites.set(appId, attempts);
@@ -184,30 +197,49 @@ function writeOrRetry(file: string, appId: string, argsText: string): boolean {
 }
 
 // EGL reads the file only when it starts and writes its own copy back on launch, game exit and quit
-export function flushEglLaunchArgs(): Promise<void> {
-  return edits(async () => {
-    const file = getSettingsPath();
-    if (!file || Object.keys(readPending()).length === 0 || (await isEglRunning())) {
-      return;
-    }
+async function flushPending(): Promise<EglState | undefined> {
+  const file = getSettingsPath();
+  if (!file || !hasPending()) {
+    return undefined;
+  }
+  const state = await eglState();
+  if (state === 'stopped') {
     writePending(
       Object.fromEntries(
         Object.entries(readPending()).filter(([appId, argsText]) =>
-          writeOrRetry(file, appId, argsText)
+          keepAfterWrite(file, appId, argsText)
         )
       )
     );
+  }
+  return state;
+}
+
+export function flushEglLaunchArgs(): Promise<void> {
+  return edits(async () => {
+    await flushPending();
   });
 }
 
-function watchEglExit(): void {
-  watcher.running ??= pWaitFor(
+async function pollUntilFlushed(): Promise<void> {
+  let unknownChecks = 0;
+  await pWaitFor(
     async () => {
-      await flushEglLaunchArgs();
-      return Object.keys(readPending()).length === 0;
+      const state = await edits(flushPending);
+      unknownChecks = state === 'unknown' ? unknownChecks + 1 : 0;
+      return state === undefined || !hasPending() || unknownChecks >= MAX_UNKNOWN_CHECKS;
     },
     { interval: POLL_MS }
-  )
+  );
+  if (unknownChecks >= MAX_UNKNOWN_CHECKS) {
+    console.warn(
+      '[EGL] tasklist keeps failing, queued launch args wait for the next start'
+    );
+  }
+}
+
+function watchEglExit(): void {
+  watcher.running ??= pollUntilFlushed()
     .catch((error: unknown) => {
       console.warn('[EGL] Launch args queue stopped:', error);
     })
@@ -236,7 +268,8 @@ export function setEglWindowsLaunchArgs(
       return 'failed';
     }
     const pending = readPending();
-    if (await isEglRunning()) {
+    // Unknown counts as running: EGL would overwrite the edit
+    if ((await eglState()) !== 'stopped') {
       writePending({ ...pending, [appId]: argsText });
       watchEglExit();
       return 'queued';
@@ -245,6 +278,10 @@ export function setEglWindowsLaunchArgs(
     writePending(
       Object.fromEntries(Object.entries(pending).filter(([id]) => id !== appId))
     );
-    return writeLaunchArgs(file, appId, argsText) ? 'written' : 'failed';
+    if (writeLaunchArgs(file, appId, argsText)) {
+      return 'written';
+    }
+    console.warn('[EGL] No account section to write launch args for:', appId);
+    return 'failed';
   });
 }

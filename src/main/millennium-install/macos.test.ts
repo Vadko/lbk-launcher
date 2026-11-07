@@ -1,10 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MAC_RUNTIME_ITEMS,
+  macDriver,
   parseHwArm64,
   planMacWrapperLayout,
   verifyMacManifest,
 } from './macos';
+import { millenniumInstallPaths } from './paths';
 
 vi.mock('@/main/game-detector/steam', () => ({ getSteamPath: () => null }));
 
@@ -77,5 +82,55 @@ describe('planMacWrapperLayout', () => {
       link: '/a/Steam Millennium.app/Contents/Resources/millennium-assets',
     });
     expect(layout.links).toHaveLength(MAC_RUNTIME_ITEMS.length + 1);
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('macDriver.remove', () => {
+  let dir: string | null = null;
+
+  afterEach(() => {
+    if (dir) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      dir = null;
+    }
+  });
+
+  it("deletes only the wrapper in this user's Applications, whatever the record names", () => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lbk-mac-remove-'));
+    const home = path.posix.join(dir, 'home');
+    const elsewhere = path.posix.join(dir, 'Volumes/X/Applications/Steam Millennium.app');
+    const paths = millenniumInstallPaths({
+      os: 'macos',
+      home,
+      steamPath: path.posix.join(home, 'Library/Application Support/Steam'),
+      env: {},
+      insideFlatpak: false,
+    });
+    const own = paths.macos?.appBundle ?? '';
+    for (const app of [own, elsewhere]) {
+      fs.mkdirSync(path.posix.join(app, 'Contents/MacOS'), { recursive: true });
+    }
+
+    macDriver.remove(
+      {
+        steamPath: path.posix.join(home, 'Library/Application Support/Steam'),
+        paths,
+        record: {
+          format: 1,
+          os: 'macos',
+          mode: 'macos-wrapper',
+          tag: 'lbk.5',
+          version: '3.5.0',
+          activatedAt: '2026-10-15T00:00:00.000Z',
+          steamPath: path.posix.join(home, 'Library/Application Support/Steam'),
+          xtstBackups: [],
+          appBundle: elsewhere,
+        },
+      },
+      false
+    );
+
+    expect(fs.existsSync(own)).toBe(false);
+    expect(fs.existsSync(elsewhere)).toBe(true);
   });
 });

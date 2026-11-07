@@ -20,7 +20,8 @@ const DEFAULT_CEF_PORT = 8080;
 const CEF_HOSTS = ['127.0.0.1', '::1'] as const;
 const STEAM_USER_AGENT_MARKER = 'Valve Steam Client';
 const TARGET_TITLE = 'SharedJSContext';
-const TARGET_URL_PREFIX = 'https://steamloopback.host/index.html';
+const TARGET_ORIGIN = 'https://steamloopback.host';
+const TARGET_PATH = '/index.html';
 const CEF_PROBE_TIMEOUT_MS = 1500;
 const CEF_CONNECT_TIMEOUT_MS = 8000;
 const CEF_EVAL_TIMEOUT_MS = 15000;
@@ -146,6 +147,15 @@ export function jsLiteral(value: unknown): string {
   return json.replace(/[<>\u2028\u2029]/g, (char) => CODE_ESCAPES[char]);
 }
 
+// Origin first, since any web page in Steam's browser can take the title; on Steam's own origin it still counts, as Decky finds Game Mode's shared context on /routes/ too.
+export function isSharedJsContext(target: { title: string; url: string }): boolean {
+  const url = URL.parse(target.url);
+  return (
+    url?.origin === TARGET_ORIGIN &&
+    (url.pathname === TARGET_PATH || target.title === TARGET_TITLE)
+  );
+}
+
 async function evaluateAt<T>(
   endpoint: CefEndpoint,
   expression: string,
@@ -157,9 +167,7 @@ async function evaluateAt<T>(
       port: endpoint.port,
       // No first-target fallback: during startup races that would run the ops in a Steam window page.
       target: (targets) => {
-        const target =
-          targets.find((t) => t.title === TARGET_TITLE) ??
-          targets.find((t) => t.url.startsWith(TARGET_URL_PREFIX));
+        const target = targets.find(isSharedJsContext);
         if (!target) {
           throw new Error('SharedJSContext not ready');
         }

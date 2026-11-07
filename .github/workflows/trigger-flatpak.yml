@@ -16,11 +16,16 @@ jobs:
         id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
           else
             TAG=$(gh api repos/Vadko/littlebit-launcher/releases/latest --jq '.tag_name')
+          fi
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Not a release tag: $TAG" >&2
+            exit 1
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Resolved tag: $TAG"
@@ -28,8 +33,8 @@ jobs:
       - name: Trigger Flatpak repo build
         env:
           GH_TOKEN: ${{ secrets.FLATPAK_DISPATCH_TOKEN }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
-          TAG="${{ steps.resolve.outputs.tag }}"
           echo "Triggering Flatpak build for tag: $TAG"
           jq -n --arg tag "$TAG" '{"event_type":"new-release","client_payload":{"tag":$tag}}' | \
             gh api repos/Vadko/lbk-flatpak/dispatches --method POST --input -
