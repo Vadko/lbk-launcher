@@ -45,6 +45,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
     <Tooltip content={canRate ? null : t('gameLike.needsInstall')}>
       <Button
         variant="secondary"
+        width="narrow"
         icon={
           <span ref={iconRef} className="inline-flex">
             <ThumbsUpIcon
@@ -56,7 +57,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
         onClick={handleClick}
         disabled={!canRate}
         data-gamepad-action
-        className="px-4! gap-1!"
+        className="gap-1!"
         title={
           canRate ? (isLiked ? t('gameLike.unlike') : t('gameLike.like')) : undefined
         }

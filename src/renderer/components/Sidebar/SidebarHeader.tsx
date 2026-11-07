@@ -1,4 +1,3 @@
-import logo from '@resources/logo.svg';
 import {
   BookOpenTextIcon,
   HomeIcon,
@@ -9,6 +8,7 @@ import {
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
+import { SidebarLogo } from './SidebarLogo';
 
 interface SidebarHeaderProps {
   isCompact?: boolean;
@@ -23,11 +23,9 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = React.memo(
           isCompact ? '' : 'border-b p-3 pl-4 border-border'
         }`}
       >
-        <img
-          src={logo}
-          alt="LBK logo"
-          className={isCompact ? 'w-16 h-8 object-cover' : 'w-20 h-14  object-cover'}
-          draggable={false}
+        <SidebarLogo
+          className={`cursor-pointer pointer-events-auto ${isCompact ? 'w-16 h-8' : 'w-20 h-14'}`}
+          onClick={() => navigate('/')}
         />
         {!isCompact && (
           <div className="flex items-center gap-1">

@@ -181,7 +181,6 @@ export const SettingsModal: React.FC = () => {
   } = useActionPhase();
 
   const [isTogglingSteamCef, setIsTogglingSteamCef] = useState(false);
-  const [isTogglingSteamArtwork, setIsTogglingSteamArtwork] = useState(false);
   const {
     phase: logsFolderPhase,
     isPending: isOpeningLogsFolder,
@@ -217,23 +216,6 @@ export const SettingsModal: React.FC = () => {
       toggleSteamCefDebugging();
     } finally {
       setIsTogglingSteamCef(false);
-    }
-  };
-
-  const handleToggleSteamCustomArtwork = async () => {
-    if (isTogglingSteamArtwork) {
-      return;
-    }
-    const newValue = !steamCustomArtworkEnabled;
-    toggleSteamCustomArtwork();
-    setIsTogglingSteamArtwork(true);
-    try {
-      await window.electronAPI.setSteamCustomArtwork(newValue);
-    } catch (error) {
-      console.error('[Settings] Steam custom artwork toggle failed:', error);
-      toggleSteamCustomArtwork();
-    } finally {
-      setIsTogglingSteamArtwork(false);
     }
   };
 
@@ -447,8 +429,7 @@ export const SettingsModal: React.FC = () => {
     setIsPrivacyModalOpen(false);
   }, []);
 
-  const handleOpenSendLogsModal = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent button click from triggering parent button
+  const handleOpenSendLogsModal = useCallback(() => {
     setIsSendLogsModalOpen(true);
   }, []);
 
@@ -484,6 +465,44 @@ export const SettingsModal: React.FC = () => {
               </p>
             </div>
           </a>
+
+          {/* Logging */}
+          <div className="flex gap-2 p-4 rounded-xl bg-glass border border-border">
+            <div className="flex flex-1 gap-3 items-center">
+              <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-yellow-500 to-orange-500 flex items-center justify-center shrink-0">
+                <AppActionIcon
+                  phase={logsFolderPhase}
+                  icon={FolderOpen}
+                  size={20}
+                  className="text-text-dark"
+                  inheritColor
+                />
+              </div>
+              <div className="flex-1 text-left">
+                <h4 className="text-sm font-semibold text-text-main">
+                  {t('settings.logs.title')}
+                </h4>
+                <p className="text-xs text-text-muted">
+                  {t('settings.logs.description')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handleOpenLogsFolder}
+              aria-busy={isOpeningLogsFolder}
+              className="aria-busy:opacity-60 aria-busy:cursor-wait"
+            >
+              {t('settings.logs.open')}
+            </Button>
+            <Button
+              onClick={handleOpenSendLogsModal}
+              variant="secondary"
+              className="shrink-0 border-color-accent! text-color-accent!"
+            >
+              {t('settings.logs.send')}
+            </Button>
+          </div>
 
           <SettingItem
             id="performance-mode"
@@ -534,8 +553,7 @@ export const SettingsModal: React.FC = () => {
             title={t('settings.steamArtwork.title')}
             description={t('settings.steamArtwork.description')}
             enabled={steamCustomArtworkEnabled}
-            onChange={handleToggleSteamCustomArtwork}
-            disabled={isTogglingSteamArtwork}
+            onChange={toggleSteamCustomArtwork}
           />
 
           <SettingItem
@@ -816,36 +834,6 @@ export const SettingsModal: React.FC = () => {
             </div>
           )}
 
-          {/* Logging */}
-          <button
-            onClick={handleOpenLogsFolder}
-            aria-busy={isOpeningLogsFolder}
-            className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300 aria-busy:opacity-60 aria-busy:cursor-wait"
-          >
-            <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-yellow-500 to-orange-500 flex items-center justify-center shrink-0">
-              <AppActionIcon
-                phase={logsFolderPhase}
-                icon={FolderOpen}
-                size={20}
-                className="text-white"
-                inheritColor
-              />
-            </div>
-            <div className="flex-1 text-left">
-              <h4 className="text-sm font-semibold text-text-main">
-                {t('settings.logs.title')}
-              </h4>
-              <p className="text-xs text-text-muted">{t('settings.logs.description')}</p>
-            </div>
-            <Button
-              onClick={handleOpenSendLogsModal}
-              variant="secondary"
-              className="shrink-0 border-color-accent! text-color-accent!"
-            >
-              {t('settings.logs.send')}
-            </Button>
-          </button>
-
           <div className="flex flex-col gap-2 p-4 rounded-xl bg-glass border border-border">
             <h4 className="text-sm font-semibold text-text-main">
               {t('settings.unlock.title')}
@@ -880,7 +868,7 @@ export const SettingsModal: React.FC = () => {
             className="w-full flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
           >
             <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-main to-color-accent flex items-center justify-center shrink-0">
-              <SparklesIcon size={20} className="text-white" />
+              <SparklesIcon size={20} className="text-text-dark" />
             </div>
             <div className="flex-1 text-left">
               <h4 className="text-sm font-semibold text-text-main">
@@ -899,7 +887,7 @@ export const SettingsModal: React.FC = () => {
               className="flex items-center gap-3 p-4 rounded-xl bg-glass border border-border hover:bg-glass-hover hover:border-border-hover transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-linear-to-br/srgb from-color-accent to-color-main flex items-center justify-center shrink-0">
-                <FileTextIcon size={20} className="text-white" />
+                <FileTextIcon size={20} className="text-text-dark" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-semibold text-text-main">

@@ -87,6 +87,7 @@ export function WorkshopInstallButton({
         <Tooltip content={hint}>
           <Button
             variant="primary"
+            width="narrow"
             icon={
               <AppActionIcon
                 phase={installPhase}
@@ -109,6 +110,7 @@ export function WorkshopInstallButton({
       <Button
         variant="secondary"
         icon={<ExternalLinkIcon size={20} />}
+        width="narrow"
         onClick={() =>
           void window.electronAPI.openAppLink('steam', workshopPageUrl(workshopId))
         }
@@ -120,6 +122,7 @@ export function WorkshopInstallButton({
       {installed && (
         <Button
           variant="secondary"
+          width="narrow"
           icon={<AppActionIcon phase={removePhase} icon={Trash2} size={20} />}
           onClick={() => void handleRemove()}
           aria-busy={removePhase === 'pending'}

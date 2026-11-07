@@ -23,7 +23,6 @@ import { writeFileAtomic } from '@/main/utils/atomic-write';
 import { sha256, sha256FileSync } from '@/main/utils/hash';
 import { getSteamBridge, type SteamBridge } from '@/main/utils/steam-bridge';
 import { jsLiteral } from '@/main/utils/steam-cef';
-import { readRendererSetting } from '@/main/utils/store-storage';
 import { getMainWindow } from '@/main/window';
 import { errnoCode } from '@/shared/errors';
 
@@ -56,8 +55,8 @@ interface SteamArtworkParams {
   updatedAt?: string | null;
 }
 
-type ApplyMode =
-  | 'noop' // disabled, no sources, or nothing could be prepared
+export type ApplyMode =
+  | 'noop' // no sources, or nothing could be prepared
   | 'cef' // pushed live through the Steam bridge (CDP or plugin)
   | 'file'; // written to grid/, visible after Steam restarts
 
@@ -76,11 +75,6 @@ interface ArtworkRecordEntry {
 interface ArtworkRecord {
   written: ArtworkRecordEntry[];
   backups: Record<string, string>;
-}
-
-/** User opt-out from the Settings modal. */
-function isSteamArtworkEnabledInSettings(): boolean {
-  return readRendererSetting('steamCustomArtworkEnabled', true);
 }
 
 // ---------------------------------------------------------------------------
@@ -111,6 +105,14 @@ function readRecord(appId: number): ArtworkRecord | null {
   } catch {
     return null;
   }
+}
+
+// Anything to revert counts: a run whose every slot failed may still have moved the user's own files aside.
+export function hasSteamArtwork(appId: number): boolean {
+  const record = readRecord(appId);
+  return (
+    !!record && (record.written.length > 0 || Object.keys(record.backups).length > 0)
+  );
 }
 
 function writeRecord(appId: number, record: ArtworkRecord): void {
@@ -394,10 +396,6 @@ export async function applyArtworkSlot(
 export async function applySteamArtwork(
   params: SteamArtworkParams
 ): Promise<SteamArtworkResult> {
-  if (!isSteamArtworkEnabledInSettings()) {
-    return { mode: 'noop', installed: [], reason: 'Disabled in settings' };
-  }
-
   const sources: Array<[ArtworkSlot, string | null]> = [
     [HEADER_SLOT, params.capsulePath],
     [HERO_SLOT, params.bannerPath],
@@ -489,19 +487,21 @@ export async function applySteamArtwork(
   return { mode, installed };
 }
 
+export type RevertMode = 'none' | 'cef' | 'file' | 'failed';
+
 /**
  * Undo `applySteamArtwork` — remove the files we wrote, restore what the user
  * had before. A no-op when we never touched this app.
  */
-export async function removeSteamArtwork(appId: number): Promise<boolean> {
+export async function removeSteamArtwork(appId: number): Promise<RevertMode> {
   const record = readRecord(appId);
   if (!record) {
-    return false;
+    return 'none';
   }
 
   const gridDir = getSteamGridPath();
   if (!gridDir) {
-    return false;
+    return 'failed';
   }
 
   const bridge = await getSteamBridge();
@@ -557,34 +557,10 @@ export async function removeSteamArtwork(appId: number): Promise<boolean> {
   if (restoreFailed) {
     // Keep the record — it's the only thing pointing at the surviving backups.
     console.warn(`[SteamArtwork] App ${appId} partially reverted, keeping record`);
-    return false;
+    return 'failed';
   }
 
   deleteRecord(appId);
   console.log(`[SteamArtwork] App ${appId} artwork reverted`);
-  return true;
-}
-
-/** Revert every app we've touched — used when the setting is switched off. */
-export async function removeAllSteamArtwork(): Promise<number> {
-  let entries: string[];
-  try {
-    entries = fs.readdirSync(getArtworkStateDir());
-  } catch {
-    return 0; // Nothing was ever installed.
-  }
-
-  let reverted = 0;
-  for (const fileName of entries) {
-    const match = fileName.match(/^(\d+)\.json$/);
-    if (!match) {
-      continue;
-    }
-    if (await removeSteamArtwork(Number(match[1]))) {
-      reverted++;
-    }
-  }
-
-  console.log(`[SteamArtwork] Reverted artwork for ${reverted} app(s)`);
-  return reverted;
+  return bridge ? 'cef' : 'file';
 }

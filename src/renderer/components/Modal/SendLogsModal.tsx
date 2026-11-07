@@ -5,6 +5,7 @@ import { t } from '@/shared/i18n/i18n';
 import { trackEvent } from '../../utils/analytics';
 import { AppActionIcon } from '../ui/AppActionIcon';
 import { AppNumberFlow } from '../ui/AppNumberFlow';
+import { Button } from '../ui/Button';
 import { Modal } from './Modal';
 
 interface SendLogsModalProps {
@@ -78,16 +79,17 @@ export const SendLogsModal: React.FC<SendLogsModalProps> = ({
       classNames="max-w-[520px]!"
       footer={
         <div className="grid gap-4">
-          <button
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             data-gamepad-confirm
             data-gamepad-modal-item
             aria-busy={isPending}
-            className="w-full py-3 rounded-xl font-bold text-base transition-opacity flex items-center justify-center gap-2 text-text-dark bg-color-main hover:opacity-90 aria-busy:opacity-60 aria-busy:cursor-wait"
+            className="w-full aria-busy:opacity-60 aria-busy:cursor-wait"
           >
             <AppActionIcon phase={phase} icon={Send} size={18} inheritColor />
             {t('sendLogs.submit')}
-          </button>
+          </Button>
           <p className="text-xs text-text-muted">{t('sendLogs.consent')}</p>
         </div>
       }

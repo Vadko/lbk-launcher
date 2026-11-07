@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { A } from '@mobily/ts-belt';
 import { app } from 'electron';
 import { z } from 'zod';
 import { Constants } from '@/lib/database.types';
@@ -121,5 +122,25 @@ export function withAchievementsComponent(
   return {
     ...base,
     components: achievements ? { ...components, achievements } : components,
+  };
+}
+
+// An install without the text leaves the installed text in place, so its files, backup and version stay recorded.
+export function keepInstalledText(
+  record: InstallationInfo,
+  existing: InstallationInfo
+): InstallationInfo {
+  const text = existing.components?.text ??
+    record.components?.text ?? { installed: false, files: [] };
+  const voice = record.components?.voice ?? existing.components?.voice;
+  return {
+    ...existing,
+    ...record,
+    version: existing.version,
+    hasBackup: !!(existing.hasBackup || record.hasBackup),
+    installedFiles: [
+      ...A.uniq([...(existing.installedFiles ?? []), ...(record.installedFiles ?? [])]),
+    ],
+    components: { ...record.components, text, ...(voice ? { voice } : {}) },
   };
 }

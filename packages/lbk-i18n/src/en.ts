@@ -598,6 +598,10 @@ export const en = {
     removeFailed: 'Could not remove components',
     removedTitle: 'Components removed',
     removedMessage: 'The selected components have been removed.',
+    artworkTitle: 'Artwork updated',
+    artworkMessage_on: 'The game’s Ukrainian artwork is now in your Steam library.',
+    artworkMessage_off: 'The game’s original artwork is back in your Steam library.',
+    artworkAfterSteamStart: 'You will see the change the next time Steam starts.',
   },
   installConflict: {
     title: 'Another localization is already installed',
@@ -659,6 +663,9 @@ export const en = {
     backupDescription:
       'Save the original game files. Recommended so you can restore them later.',
     backupSize: 'Estimated size: {{size}}',
+    steamArtworkTitle: 'Ukrainian artwork in Steam',
+    steamArtworkDescription:
+      'Replaces the game’s banner, logo and horizontal artwork in the Steam library. Uncheck it to bring this game’s original artwork back.',
     textTitle: 'Text localization',
     installed: 'installed',
     textDescription: 'Ukrainian translation of in-game text.',
@@ -709,6 +716,10 @@ export const en = {
   installSteamIntegration: {
     launchOptions: 'Setting Steam launch options...',
     artwork: 'Installing Ukrainian Steam artwork...',
+    artworkRevert: 'Restoring the original Steam artwork...',
+    artworkNotSteam: 'Steam artwork can only be changed for a game installed from Steam.',
+    artworkFailed:
+      'Could not change the artwork in your Steam library. Make sure you are signed in to Steam and try again.',
   },
   installSteps: {
     licenseOnlyManual:
@@ -1200,7 +1211,7 @@ export const en = {
     steamArtwork: {
       title: 'Ukrainian artwork in Steam',
       description:
-        'Replace the game’s banner, logo and horizontal artwork in the Steam library with Ukrainian versions from the patch. Vertical artwork stays unchanged. Original artwork is restored when you uninstall the patch or disable this setting',
+        'Offer by default to replace the game’s banner, logo and horizontal artwork in the Steam library with Ukrainian versions from the patch. You can change this per game in the install options. Vertical artwork stays unchanged. Original artwork is restored when you uninstall the patch',
     },
     adultGames: {
       title: 'Show games with pornographic content',
@@ -1309,8 +1320,9 @@ export const en = {
       promoPlaceholder: 'Select a mode',
     },
     logs: {
-      title: 'Open logs folder',
-      description: 'View saved log files',
+      title: 'Logs',
+      description: 'View or send log files',
+      open: 'Open folder',
       send: 'Send file',
     },
     unlock: {
@@ -1326,6 +1338,7 @@ export const en = {
         'Special thanks to the translators who have helped test the launcher from the start and continue to shape what it is today:',
     },
     bridgeCard: {
+      title: 'Steam integration',
       steamElevated:
         'Steam is running as administrator, so the launcher cannot restart it.',
       restart: 'Restart Steam',

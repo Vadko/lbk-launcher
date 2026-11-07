@@ -6,6 +6,7 @@ import type {
 import type { Database } from '../lib/database.types';
 import type { DeepLinkTarget } from './game-link-target';
 import type { GameReviewsAPI } from './game-reviews-api-types';
+import type { InstallerAPI } from './installer-api-types';
 import type {
   AchievementsDelivery,
   ApplyPendingLaunchOptionsResult,
@@ -186,6 +187,7 @@ export interface InstallOptions {
   installText: boolean;
   installVoice: boolean;
   installAchievements: boolean;
+  installSteamArtwork: boolean;
   platform: Platform | 'auto';
 }
 
@@ -259,6 +261,7 @@ export interface ElectronAPI
   extends SteamPluginHostAPI,
     GameReviewsAPI,
     RatingsAPI,
+    InstallerAPI,
     UpdaterAPI,
     WeeklyPicksAPI {
   fetchGames: (params?: GetGamesParams) => Promise<GetGamesResult>;
@@ -317,45 +320,13 @@ export interface ElectronAPI
     sortOrder?: SortOrderType
   ) => Promise<GetGamesResult>;
   detectGamePlatforms: (game: Game) => Promise<GamePath[]>;
-  installTranslation: (
-    game: Game,
-    options: InstallOptions,
-    customGamePath?: string
-  ) => Promise<InstallResult>;
-  uninstallTranslation: (game: Game) => Promise<InstallResult>;
-  rerunInstaller: (installerPath: string, protonPath?: string) => Promise<InstallResult>;
   showItemInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
-  /** Main blocks until `respondRunInstaller` answers with the same gameId. */
-  onRequestRunInstallerConfirm: (
-    callback: (request: RunInstallerRequest) => void
-  ) => () => void;
-  respondRunInstaller: (gameId: string, decision: RunInstallerDecision) => void;
-  abortDownload: (reason?: string) => Promise<{ success: boolean }>;
-  pauseDownload: (
-    gameId: string
-  ) => Promise<{ success: boolean; state?: PausedDownloadState; error?: string }>;
-  resumeDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
-  getPausedDownload: (gameId: string) => Promise<PausedDownloadState | null>;
-  cancelPausedDownload: (gameId: string) => Promise<{ success: boolean; error?: string }>;
-  checkInstallation: (game: Game) => Promise<InstallationInfo | null>;
-  getConflictingTranslation: (game: Game) => Promise<ConflictingTranslation | null>;
   setGameVisibility: (gameId: string, hidden: boolean) => Promise<boolean>;
   getAllInstalledGameIds: () => Promise<string[]>;
   removeOrphanedMetadata: (gameIds: string[]) => Promise<{ success: boolean }>;
-  removeComponents: (
-    game: Game,
-    componentsToRemove: { voice?: boolean; achievements?: boolean }
-  ) => Promise<InstallResult>;
-  checkPlatformCompatibility: (game: Game) => Promise<string | null>;
   fetchNewsFeed: (filter: NewsFeedFilter, before?: string) => Promise<NewsFeedItem[]>;
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
   selectGameFolder: () => Promise<string | null>;
-  onDownloadProgress: (
-    callback: (gameId: string, progress: DownloadProgress) => void
-  ) => () => void;
-  onInstallationStatus: (
-    callback: (gameId: string, status: InstallationStatus) => void
-  ) => () => void;
   // Real-time updates (managed automatically in the main process)
   onGameUpdated: (callback: (game: Game) => void) => () => void;
   onGameCountersUpdated: (callback: (games: Game[]) => void) => () => void;

@@ -329,7 +329,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 <>
                   <div className="flex justify-between mb-4">
                     <Button
-                      variant="glass"
+                      variant="secondary"
                       onClick={markAllNotificationsAsRead}
                       disabled={notifications.filter((n) => !n.read).length === 0}
                       className="text-sm px-4 py-2"
@@ -339,7 +339,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       {t('notificationCenter.markAllRead')}
                     </Button>
                     <Button
-                      variant="glass"
+                      variant="secondary"
                       onClick={() => setShowConfirmClear(true)}
                       className="text-sm px-4 py-2"
                       data-gamepad-skip={showConfirmClear || undefined}
@@ -435,7 +435,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                 </p>
                 <div className="flex gap-3">
                   <Button
-                    variant="glass"
+                    variant="secondary"
                     onClick={() => setShowConfirmClear(false)}
                     data-gamepad-cancel
                     data-gamepad-modal-item

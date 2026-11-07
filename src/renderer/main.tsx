@@ -7,6 +7,8 @@ import { I18nextProvider } from 'react-i18next';
 import { i18n } from '@/shared/i18n/i18n';
 import { App } from './App';
 import { queryClient } from './queries/queryClient';
+import { initFacetData } from './store/facetDataBridge';
+import { initHomeInstalledGames } from './store/homeInstalledGamesBridge';
 import { initLikes } from './store/likesBridge';
 import { initRatings } from './store/ratingsBridge';
 import { initReviewEvents } from './store/reviewEventsBridge';
@@ -53,6 +55,12 @@ initStoreDiscounts();
 
 // Bridge the weekly picks and catalog changes (IPC) into the weekly picks store — once, outside React.
 initWeeklyPicks();
+
+// Bridge the filters' catalog rows, options, store libraries and installed translations (IPC) into the facet data store — once, outside React.
+initFacetData();
+
+// Bridge the catalog games installed on this machine (IPC) into the home page's store — once, outside React.
+initHomeInstalledGames();
 
 console.log('[Renderer] Starting React application...');
 

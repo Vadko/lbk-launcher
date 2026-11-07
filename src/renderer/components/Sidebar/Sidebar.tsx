@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -7,7 +6,7 @@ import type { Game, TagOption } from '@/shared/types';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useFacetData } from '../../hooks/useFacetData';
 import { useGames } from '../../hooks/useGames';
-import { useSyncAwareQuery } from '../../queries/useSyncAwareQuery';
+import { useFacetDataStore } from '../../store/useFacetDataStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useStore } from '../../store/useStore';
 import { useSubscriptionsStore } from '../../store/useSubscriptionsStore';
@@ -26,9 +25,6 @@ import type { GameGroup } from './types';
 
 const MIN_SIDEBAR_WIDTH = 280;
 const MAX_SIDEBAR_WIDTH = 500;
-const FILTERS_RELOAD_DEBOUNCE = 300;
-const TEAMS_KEY = ['teams'];
-const TAG_OPTIONS_KEY = ['tag-options'];
 const NO_AUTHORS: string[] = [];
 const NO_TAGS: TagOption[] = [];
 
@@ -153,31 +149,12 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(
       );
     }, [specialFilter, setSpecialFilter]);
 
-    const queryClient = useQueryClient();
-    const { data: authors = NO_AUTHORS, isPending: authorsLoading } = useSyncAwareQuery({
-      queryKey: TEAMS_KEY,
-      queryFn: () => window.electronAPI.fetchTeams(),
-    });
-    const { data: tags = NO_TAGS, isPending: tagsLoading } = useSyncAwareQuery({
-      queryKey: TAG_OPTIONS_KEY,
-      queryFn: () => window.electronAPI.fetchTagOptions(),
-    });
-
-    // A bulk catalog update broadcasts many games back-to-back; re-read the filters once it settles
-    useEffect(() => {
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const unsubscribe = window.electronAPI.onGameUpdated(() => {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          void queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
-          void queryClient.invalidateQueries({ queryKey: TAG_OPTIONS_KEY });
-        }, FILTERS_RELOAD_DEBOUNCE);
-      });
-      return () => {
-        unsubscribe();
-        clearTimeout(timer);
-      };
-    }, [queryClient]);
+    const teams = useFacetDataStore((state) => state.teams);
+    const tagOptions = useFacetDataStore((state) => state.tags);
+    const authors = teams ?? NO_AUTHORS;
+    const authorsLoading = teams === null;
+    const tags = tagOptions ?? NO_TAGS;
+    const tagsLoading = tagOptions === null;
 
     const {
       games: visibleGames,

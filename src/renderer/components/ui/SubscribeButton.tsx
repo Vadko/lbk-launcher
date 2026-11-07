@@ -9,7 +9,7 @@ interface SubscribeButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElem
   gameId: string;
   gameName: string;
   gameStatus: string;
-  variant?: 'primary' | 'secondary' | 'glass' | 'amber';
+  variant?: 'primary' | 'secondary' | 'amber';
   className?: string;
 }
 
