@@ -5,111 +5,72 @@ import { type AppEventName, appEvents } from '@/main/app-events';
 import { isCatalogReady } from '@/main/sync-status';
 import type { ResourceKey, ResourceMap } from '@/shared/resources';
 import type { Game } from '@/shared/types';
-import {
-  failResource,
-  getResource,
-  isResourceWanted,
-  patchResource,
-  publishResource,
-} from './resource-hub';
+import { failResource, patchResource, publishResource } from './resource-hub';
 
 // A burst of events (a bulk edit broadcasts every game) gets one read once it goes quiet
 const EVENT_DEBOUNCE_MS = 300;
-// A read that never settles would otherwise hold the queue for the rest of the session
+// A read that never settles is abandoned, not stopped, so the next one may start beside it
 const READ_TIMEOUT_MS = 30_000;
-
-export type ResourceTrigger = (fire: () => void) => unknown;
 
 export interface ResourceDefinition<K extends ResourceKey> {
   read: () => ResourceMap[K] | Promise<ResourceMap[K]>;
-  on: ReadonlyArray<AppEventName | ResourceTrigger>;
+  on: readonly AppEventName[];
   // Reads the local catalog, which the first sync is still writing
   afterCatalogSync?: boolean;
   // Lays the counters feed's rows over the value held, for a list whose read costs more than a patch
   withCounters?: (value: ResourceMap[K], games: readonly Game[]) => ResourceMap[K];
 }
 
-// Reads only while the page wants the key; a change nobody watches leaves it stale until a page subscribes
+// Nothing is read before the page first asks for the key; from then on it stays current, page or no page
 export function defineResource<K extends ResourceKey>(
   key: K,
   { read, on, afterCatalogSync = false, withCounters }: ResourceDefinition<K>
 ): void {
-  const state = { dirty: false, loaded: false, queued: false };
-  const queue = pLimit(1);
-  const canRead = () => isResourceWanted(key) && (!afterCatalogSync || isCatalogReady());
-  // A value its owner published before the page asked needs no read of its own
-  const isStale = () => state.dirty || (!state.loaded && getResource(key) === undefined);
-
-  const readOnce = async (): Promise<void> => {
-    state.queued = false;
-    if (!isStale() || !canRead()) {
-      return;
-    }
-    state.dirty = false;
-    state.loaded = true;
-    let value: ResourceMap[K];
+  const reads = pLimit(1);
+  const readAndPublish = async (): Promise<void> => {
     try {
-      value = await pTimeout(Promise.resolve().then(read), {
+      const value = await pTimeout(Promise.resolve().then(read), {
         milliseconds: READ_TIMEOUT_MS,
       });
+      publishResource(key, value);
     } catch (error) {
-      state.dirty = true;
       console.error(`[Resources] Failed to read ${key}:`, error);
       failResource(key);
-      return;
     }
-    // Outside the try: a throw while sending is not a failed read of this key
-    publishResource(key, value);
   };
-
-  // One read at a time and at most one waiting behind it
-  const schedule = (): void => {
-    if (state.queued) {
-      return;
-    }
-    state.queued = true;
-    queue(readOnce).catch((error: unknown) => {
-      console.error(`[Resources] Failed to publish ${key}:`, error);
-    });
-  };
+  // One read runs and one waits behind it; a request while one waits is absorbed by it
   const refresh = (): void => {
-    if (isStale() && canRead()) {
-      schedule();
+    if (reads.pendingCount === 0 && (!afterCatalogSync || isCatalogReady())) {
+      void reads(readAndPublish);
     }
   };
-  const refreshLater = F.debounce(refresh, EVENT_DEBOUNCE_MS);
-  const fire = (): void => {
-    state.dirty = true;
-    refreshLater();
-  };
+  const refreshSoon = F.debounce(refresh, EVENT_DEBOUNCE_MS);
 
+  const start = F.once(() => {
+    for (const event of on) {
+      appEvents.on(event, refreshSoon);
+    }
+    if (afterCatalogSync) {
+      // The sync rewrote the catalog without per-game events, and the page waits on this read
+      appEvents.on('sync-status', refresh);
+    }
+    if (withCounters) {
+      appEvents.on('counters-changed', (games) => {
+        // A throw would skip the other listeners and land in the counters feed, so a full read stands in
+        try {
+          patchResource(key, (value) => withCounters(value, games));
+        } catch (error) {
+          console.error(`[Resources] Failed to patch ${key}:`, error);
+          refresh();
+        }
+      });
+    }
+  });
+  // A new page reads every key once more; an unchanged value sends nothing
   appEvents.on('resource-wanted', (wanted) => {
     if (wanted === key) {
+      start();
       refresh();
     }
   });
-  if (afterCatalogSync) {
-    // The sync rewrote the catalog without per-game events, and the page waits on this read
-    appEvents.on('sync-status', () => {
-      state.dirty = true;
-      refresh();
-    });
-  }
-  if (withCounters) {
-    appEvents.on('counters-changed', (games) => {
-      // A throw here would skip the other listeners and land in the counters feed
-      try {
-        patchResource(key, (value) => withCounters(value, games));
-      } catch (error) {
-        console.error(`[Resources] Failed to publish ${key}:`, error);
-      }
-    });
-  }
-  for (const trigger of on) {
-    if (typeof trigger === 'string') {
-      appEvents.on(trigger, fire);
-    } else {
-      trigger(fire);
-    }
-  }
 }

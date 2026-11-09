@@ -9,19 +9,14 @@ import { getLikedGameIds } from '@/main/likes';
 import { getPluginHostState } from '@/main/plugin-host/state';
 import { getStoreDiscountsByApp } from '@/main/store-discounts-by-app';
 import { getSteamBridgeStatus } from '@/main/utils/steam-bridge';
-import {
-  onWorkshopInstallsChanged,
-  readRendererSetting,
-} from '@/main/utils/store-storage';
+import { readRendererSetting } from '@/main/utils/store-storage';
 import type { ResourceKey } from '@/shared/resources';
 import { defineResource, type ResourceDefinition } from './define-resource';
 import { setupResourcePort } from './resource-port';
-import { setting } from './triggers';
 import { homeInstalledWithCounters, weeklyPicksWithCounters } from './with-updated-games';
 
 const repo = () => GamesRepository.getInstance();
 const hideAi = () => readRendererSetting('hideAiTranslations', false);
-const hideAiChanged = setting('hideAiTranslations');
 
 const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   facetRows: {
@@ -42,11 +37,11 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   },
   installedTranslationIds: {
     read: getLocallyInstalledGameIds,
-    on: ['installs-changed', onWorkshopInstallsChanged],
+    on: ['installs-changed', 'workshop-installs-changed'],
   },
   ratings: {
     read: () => ({ teams: getTeamsRating(hideAi()), games: getGamesRating(hideAi()) }),
-    on: ['counters-changed', 'catalog-changed', hideAiChanged],
+    on: ['counters-changed', 'catalog-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
   },
   // The table and last run's catalog are read at once; any catalog change can change the GOG and Epic title matches
@@ -61,18 +56,18 @@ const DEFINITIONS: { [K in ResourceKey]: ResourceDefinition<K> } = {
   // A read rescans every store library, so new counters are patched in
   homeInstalled: {
     read: () => getHomeInstalledGames(hideAi()),
-    on: ['catalog-changed', 'library-changed', hideAiChanged],
+    on: ['catalog-changed', 'library-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
     withCounters: homeInstalledWithCounters,
   },
   // The set's order does not follow the counters, so the pushed rows are enough
   weeklyPicks: {
     read: () => getWeeklyPicks(hideAi()),
-    on: ['weekly-picks-changed', 'catalog-changed', hideAiChanged],
+    on: ['weekly-picks-changed', 'catalog-changed', 'hide-ai-changed'],
     afterCatalogSync: true,
     withCounters: weeklyPicksWithCounters,
   },
-  // Their owners publish every value they compute; a read runs only when nobody has published yet
+  // Their owners publish every value they compute; the page's subscribe reads it once more
   steamBridgeStatus: { read: getSteamBridgeStatus, on: [] },
   // steamRunning and canRestartSteam follow Steam, which the owner does not republish for
   pluginHostState: { read: getPluginHostState, on: ['steam-started', 'steam-exited'] },

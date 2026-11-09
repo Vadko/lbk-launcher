@@ -21,6 +21,8 @@ interface AppEventMap {
   'store-discounts-changed': [];
   'weekly-picks-changed': [];
   'likes-changed': [];
+  'workshop-installs-changed': [];
+  'hide-ai-changed': [];
   'resource-wanted': [key: ResourceKey];
   error: [error: unknown];
 }

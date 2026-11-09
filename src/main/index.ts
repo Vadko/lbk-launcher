@@ -8,7 +8,6 @@ import { sentryMainV10Baseline } from './utils/sentry-baseline';
 import {
   isCrashDiagnosticsEnabled,
   onRendererSettingsChanged,
-  onWorkshopInstallsChanged,
   setupStoreStorageHandlers,
 } from './utils/store-storage';
 
@@ -97,6 +96,7 @@ if (isLinux()) {
 }
 
 import { startAchievements } from './achievements';
+import { appEvents } from './app-events';
 import { checkForUpdates, setupAutoUpdater, stopUpdateCheck } from './auto-updater';
 import { setupChangelogHandlers } from './changelog';
 import { closeDatabase, initDatabase } from './db/database';
@@ -393,7 +393,7 @@ if (!gotTheLock) {
           console.error('[Main] Failed to process pending deletions:', err);
         });
       });
-      onWorkshopInstallsChanged(() => {
+      appEvents.on('workshop-installs-changed', () => {
         syncManager?.processPendingDeletions().catch((err) => {
           console.error('[Main] Failed to process pending deletions:', err);
         });

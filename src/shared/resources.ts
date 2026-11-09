@@ -27,28 +27,10 @@ export interface ResourceMap {
 
 export type ResourceKey = keyof ResourceMap;
 
-// satisfies makes a key missing here, or one ResourceMap does not have, a compile error
-const KEYS = {
-  facetRows: true,
-  catalogOptions: true,
-  libraries: true,
-  installedTranslationIds: true,
-  ratings: true,
-  storeDiscounts: true,
-  likedGameIds: true,
-  homeInstalled: true,
-  weeklyPicks: true,
-  steamBridgeStatus: true,
-  pluginHostState: true,
-} satisfies Record<ResourceKey, true>;
-
-export const isResourceKey = (value: unknown): value is ResourceKey =>
-  typeof value === 'string' && Object.hasOwn(KEYS, value);
-
-// A key in values is no longer failed unless failed names it too; a failed key keeps its last value
+// values holds what changed; failed names every key whose last read failed, which keeps its last value
 export interface ResourceUpdate {
   values: Partial<ResourceMap>;
-  failed: ResourceKey[];
+  failed: readonly ResourceKey[];
 }
 
 export interface ResourceSubscribe {

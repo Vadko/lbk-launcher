@@ -10,10 +10,7 @@ export function setupResourcePort(): void {
       return;
     }
     const { port1, port2 } = new MessageChannelMain();
-    const session = openResourceSession({
-      post: (update) => port1.postMessage(update),
-      close: () => port1.close(),
-    });
+    const session = openResourceSession(port1);
     port1.on('message', ({ data }) => session.receive(data));
     port1.on('close', session.end);
     port1.start();
