@@ -33,21 +33,19 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       return;
     }
     setIsToggling(true);
-    try {
-      await (isPaused ? onResume() : onPause());
-    } catch (error) {
-      console.error('[DownloadProgressCard] pause/resume failed:', error);
-      showModal({
-        title: t('common.error'),
-        message:
-          error instanceof Error
-            ? error.message
-            : t('downloadProgress.pauseResumeFailed'),
-        type: 'error',
-      });
-    } finally {
-      setIsToggling(false);
-    }
+    await (isPaused ? onResume() : onPause())
+      .catch((error: unknown) => {
+        console.error('[DownloadProgressCard] pause/resume failed:', error);
+        showModal({
+          title: t('common.error'),
+          message:
+            error instanceof Error
+              ? error.message
+              : t('downloadProgress.pauseResumeFailed'),
+          type: 'error',
+        });
+      })
+      .finally(() => setIsToggling(false));
   };
 
   const handleCancel = async () => {
@@ -55,19 +53,17 @@ export const DownloadProgressCard: React.FC<DownloadProgressCardProps> = ({
       return;
     }
     setIsCancelling(true);
-    try {
-      await onCancel();
-    } catch (error) {
-      console.error('[DownloadProgressCard] cancel failed:', error);
-      showModal({
-        title: t('common.error'),
-        message:
-          error instanceof Error ? error.message : t('downloadProgress.cancelFailed'),
-        type: 'error',
-      });
-    } finally {
-      setIsCancelling(false);
-    }
+    await onCancel()
+      .catch((error: unknown) => {
+        console.error('[DownloadProgressCard] cancel failed:', error);
+        showModal({
+          title: t('common.error'),
+          message:
+            error instanceof Error ? error.message : t('downloadProgress.cancelFailed'),
+          type: 'error',
+        });
+      })
+      .finally(() => setIsCancelling(false));
   };
 
   return (

@@ -10,7 +10,7 @@ import {
   SparklesIcon,
   Trash2Icon,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useActionPhase } from '@/renderer/hooks/useActionPhase';
 import { useModalStore } from '@/renderer/store/useModalStore';
 import { t } from '@/shared/i18n/i18n';
@@ -37,14 +37,23 @@ import { SelectDropdown } from '../ui/SelectDropdown';
 import { Switch } from '../ui/Switch';
 import { SteamBridgeStatusCard } from './SteamBridgeStatusCard';
 
-const SettingItem = React.memo<{
+interface SettingItemProps {
   id: string;
   title: string;
   description: string;
   enabled: boolean;
   onChange: () => void;
   disabled?: boolean;
-}>(({ id, title, description, enabled, onChange, disabled = false }) => (
+}
+
+const SettingItem: React.FC<SettingItemProps> = ({
+  id,
+  title,
+  description,
+  enabled,
+  onChange,
+  disabled = false,
+}) => (
   <div className="flex items-center justify-between p-4 rounded-xl bg-glass border border-border">
     <div className="flex-1 pr-4">
       <h4 className="text-sm font-semibold text-text-main mb-1">{title}</h4>
@@ -57,9 +66,7 @@ const SettingItem = React.memo<{
       disabled={disabled}
     />
   </div>
-));
-
-SettingItem.displayName = 'SettingItem';
+);
 
 const STEAM_ACTION_ERRORS: Record<
   SteamCollectionSyncFailure,
@@ -209,17 +216,16 @@ export const SettingsModal: React.FC = () => {
     toggleSteamCefDebugging();
 
     setIsTogglingSteamCef(true);
-    try {
-      await window.electronAPI.setSteamCefDebugging(newValue);
-    } catch (error) {
-      console.error('[Settings] Steam CEF debugging toggle failed:', error);
-      toggleSteamCefDebugging();
-    } finally {
-      setIsTogglingSteamCef(false);
-    }
+    await window.electronAPI
+      .setSteamCefDebugging(newValue)
+      .catch((error: unknown) => {
+        console.error('[Settings] Steam CEF debugging toggle failed:', error);
+        toggleSteamCefDebugging();
+      })
+      .finally(() => setIsTogglingSteamCef(false));
   };
 
-  const handleSyncSteamCollection = useCallback(async () => {
+  const handleSyncSteamCollection = async () => {
     if (isSyncingSteamCollection) {
       return;
     }
@@ -255,9 +261,9 @@ export const SettingsModal: React.FC = () => {
         type: 'error',
       });
     }
-  }, [showModal, isSyncingSteamCollection, runSteamCollectionSync]);
+  };
 
-  const handleAddLbkToSteamLibrary = useCallback(async () => {
+  const handleAddLbkToSteamLibrary = async () => {
     if (isTogglingLbkShortcut) {
       return;
     }
@@ -290,9 +296,9 @@ export const SettingsModal: React.FC = () => {
         type: 'error',
       });
     }
-  }, [showModal, isTogglingLbkShortcut, runLbkShortcut]);
+  };
 
-  const handleKurinSync = useCallback(async () => {
+  const handleKurinSync = async () => {
     if (isSyncingKurin) {
       return;
     }
@@ -310,9 +316,9 @@ export const SettingsModal: React.FC = () => {
       return;
     }
     kurinSyncResultRef.current = syncedGameNames;
-  }, [showModal, isSyncingKurin, runKurinSync]);
+  };
 
-  const showKurinSyncResult = useCallback((synced: string[]) => {
+  const showKurinSyncResult = (synced: string[]) => {
     useModalStore.getState().showModal({
       title: t('settings.kurin.doneTitle'),
       message:
@@ -321,7 +327,7 @@ export const SettingsModal: React.FC = () => {
           : t('settings.kurin.none'),
       type: 'info',
     });
-  }, []);
+  };
 
   useEffect(() => {
     const synced = kurinSyncResultRef.current;
@@ -331,7 +337,7 @@ export const SettingsModal: React.FC = () => {
     kurinSyncResultRef.current = null;
     closeSettingsModal();
     showKurinSyncResult(synced);
-  }, [isKurinSyncBusy, closeSettingsModal, showKurinSyncResult]);
+  }, [isKurinSyncBusy, closeSettingsModal]);
 
   useEffect(
     () => () => {
@@ -342,10 +348,10 @@ export const SettingsModal: React.FC = () => {
       kurinSyncResultRef.current = null;
       showKurinSyncResult(synced);
     },
-    [showKurinSyncResult]
+    []
   );
 
-  const handleClearCacheOnly = useCallback(() => {
+  const handleClearCacheOnly = () => {
     showModal({
       title: t('settings.clearCache.title'),
       message: t('settings.clearCache.confirmMessage'),
@@ -358,9 +364,9 @@ export const SettingsModal: React.FC = () => {
         },
       ],
     });
-  }, [showModal]);
+  };
 
-  const handleClearAllData = useCallback(() => {
+  const handleClearAllData = () => {
     showModal({
       title: t('settings.clearAll.title'),
       message: t('settings.clearAll.confirmMessage'),
@@ -373,9 +379,9 @@ export const SettingsModal: React.FC = () => {
         },
       ],
     });
-  }, [showModal]);
+  };
 
-  const handleOpenLogsFolder = useCallback(async () => {
+  const handleOpenLogsFolder = async () => {
     if (isOpeningLogsFolder) {
       return;
     }
@@ -389,9 +395,9 @@ export const SettingsModal: React.FC = () => {
     } catch (error) {
       console.error('[Settings] Opening logs folder failed:', error);
     }
-  }, [isOpeningLogsFolder, runOpenLogsFolder]);
+  };
 
-  const handleUnlockTranslation = useCallback(async () => {
+  const handleUnlockTranslation = async () => {
     const translationId = unhideTranslationInputRef.current?.value;
     if (!translationId || isUnlockingTranslation) {
       return;
@@ -407,35 +413,35 @@ export const SettingsModal: React.FC = () => {
     } catch (error) {
       console.error('[Settings] Unlocking hidden translation failed:', error);
     }
-  }, [isUnlockingTranslation, runUnlockTranslation]);
+  };
 
-  const handleOpenTermsModal = useCallback(() => {
+  const handleOpenTermsModal = () => {
     setIsTermsModalOpen(true);
-  }, []);
+  };
 
-  const handleCloseTermsModal = useCallback(() => {
+  const handleCloseTermsModal = () => {
     setIsTermsModalOpen(false);
-  }, []);
+  };
 
-  const handleOpenPrivacyModal = useCallback(() => {
+  const handleOpenPrivacyModal = () => {
     setIsPrivacyModalOpen(true);
-  }, []);
+  };
 
-  const handleOpenChangelogModal = useCallback(() => {
+  const handleOpenChangelogModal = () => {
     useChangelogStore.getState().openModal();
-  }, []);
+  };
 
-  const handleClosePrivacyModal = useCallback(() => {
+  const handleClosePrivacyModal = () => {
     setIsPrivacyModalOpen(false);
-  }, []);
+  };
 
-  const handleOpenSendLogsModal = useCallback(() => {
+  const handleOpenSendLogsModal = () => {
     setIsSendLogsModalOpen(true);
-  }, []);
+  };
 
-  const handleCloseSendLogsModal = useCallback(() => {
+  const handleCloseSendLogsModal = () => {
     setIsSendLogsModalOpen(false);
-  }, []);
+  };
 
   return (
     <>

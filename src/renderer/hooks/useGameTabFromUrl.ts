@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { GameTab } from '../components/MainContent/GameTabs';
 import { type ReviewFocus, readReviewLink } from '../utils/readReviewLink';
@@ -18,7 +18,7 @@ export function useGameTabFromUrl(
   const { gameId } = useParams<{ gameId: string }>();
   const { search, key } = useLocation();
   const navigate = useNavigate();
-  const link = useMemo(() => readReviewLink(search), [search]);
+  const link = readReviewLink(search);
   const isLinkReady =
     link !== null && selectedGameId !== undefined && selectedGameId === gameId;
 
@@ -48,14 +48,8 @@ export function useGameTabFromUrl(
   }, [isTabOnlyLink, clearLink, onTabOnlyLink]);
 
   const linkFocus = isLinkReady ? link.focus : null;
-  const focus = useMemo<ReviewFocus | null>(
-    () => linkFocus && { ...linkFocus, key },
-    [linkFocus, key]
-  );
-  const setTab = useCallback(
-    (tab: GameTab) => setState((current) => ({ ...current, tab })),
-    []
-  );
+  const focus: ReviewFocus | null = linkFocus && { ...linkFocus, key };
+  const setTab = (tab: GameTab) => setState((current) => ({ ...current, tab }));
 
   return { tab: next.tab, setTab, focus, clearFocus: clearLink };
 }

@@ -13,10 +13,10 @@ import { Loader } from '../ui/Loader';
 export const WeeklyPicksSection: React.FC = () => {
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
-  const { gamesWithUpdates, isGameDetected } = useStore(
+  const { gamesWithUpdates, detectedGames } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
-      isGameDetected: state.isGameDetected,
+      detectedGames: state.detectedGames,
     }))
   );
   const picks = useResource('weeklyPicks');
@@ -72,7 +72,7 @@ export const WeeklyPicksSection: React.FC = () => {
                   isSelected={false}
                   isCardStyle={true}
                   hasUpdate={gamesWithUpdates.has(game.id)}
-                  isGameDetected={isGameDetected(game.id)}
+                  isGameDetected={detectedGames.has(game.id)}
                   isInstalled={isInstalled(game.id)}
                   isTranslationAvailable={
                     game.status !== 'planned' && game.status !== 'tech-improvement'

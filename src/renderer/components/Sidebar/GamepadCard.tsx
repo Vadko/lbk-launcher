@@ -35,7 +35,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
   const [bannerGameId, setBannerGameId] = useState<string | null>(null);
   const imageSettled = useDeferredImage(imageDeferred, game.id);
   const showAdultGames = useSettingsStore((state) => state.showAdultGames);
-  const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
+  const isFavorite = useSettingsStore((state) => state.isFavoriteGame(game.id));
   const isTranslationAvailable =
     game.status !== 'planned' && game.status !== 'tech-improvement';
 
@@ -137,7 +137,7 @@ export const GamepadCard: React.FC<GamepadCardProps> = ({
             aiType={game.ai}
             floatPosition="compact"
             isTranslationAvailable={isTranslationAvailable}
-            isFavorite={isFavoriteGame(game.id)}
+            isFavorite={isFavorite}
           />
         )}
         {/* Game name and team */}

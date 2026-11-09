@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 /**
  * List composition key: changes whenever the result set does (search/filters/sorting).
@@ -10,11 +10,9 @@ export function useListCompositionKey(
   scrollRef: React.RefObject<HTMLElement | null>,
   axis: 'vertical' | 'horizontal'
 ): string {
-  const compositionKey = useMemo(() => {
-    const first = items[0]?.key ?? '';
-    const last = items[items.length - 1]?.key ?? '';
-    return `${items.length}_${first}_${last}`;
-  }, [items]);
+  const first = items[0]?.key ?? '';
+  const last = items[items.length - 1]?.key ?? '';
+  const compositionKey = `${items.length}_${first}_${last}`;
 
   useEffect(() => {
     scrollRef.current?.scrollTo(axis === 'vertical' ? { top: 0 } : { left: 0 });

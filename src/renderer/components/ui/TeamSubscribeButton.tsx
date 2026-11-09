@@ -21,9 +21,8 @@ export const TeamSubscribeButton: React.FC<TeamSubscribeButtonProps> = ({
   multipleAuthors,
   ...rest
 }) => {
-  const { isSubscribedToTeam, subscribeToTeam, unsubscribeFromTeam } =
-    useSubscriptionsStore();
-  const subscribed = isSubscribedToTeam(teamName);
+  const { subscribeToTeam, unsubscribeFromTeam } = useSubscriptionsStore();
+  const subscribed = useSubscriptionsStore((state) => state.isSubscribedToTeam(teamName));
   const isMultiple = multipleAuthors ?? teamName.includes(',');
   const labelContext = showTeamName ? 'team' : isMultiple ? 'multiple' : 'single';
 

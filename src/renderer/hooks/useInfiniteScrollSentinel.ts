@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface Options {
   hasNextPage: boolean;
@@ -14,21 +14,18 @@ export function useInfiniteScrollSentinel({
 }: Options) {
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const attachSentinel = useCallback(
-    (node: HTMLDivElement | null) => {
-      observerRef.current?.disconnect();
-      if (!node) {
-        return;
+  const attachSentinel = (node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    if (!node) {
+      return;
+    }
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasNextPage && !isBusy) {
+        fetchNextPage();
       }
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isBusy) {
-          fetchNextPage();
-        }
-      });
-      observerRef.current.observe(node);
-    },
-    [fetchNextPage, hasNextPage, isBusy]
-  );
+    });
+    observerRef.current.observe(node);
+  };
 
   useEffect(() => () => observerRef.current?.disconnect(), []);
 

@@ -27,10 +27,10 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
   const isInstalled = useIsTranslationInstalled();
   const navigate = useNavigate();
 
-  const { gamesWithUpdates, isGameDetected } = useStore(
+  const { gamesWithUpdates, detectedGames } = useStore(
     useShallow((state) => ({
       gamesWithUpdates: state.gamesWithUpdates,
-      isGameDetected: state.isGameDetected,
+      detectedGames: state.detectedGames,
     }))
   );
   const { data: trendingGames, isLoading } = useTrendingGames(30);
@@ -94,7 +94,7 @@ export const TrendGamesSection: React.FC<GamesSectionProps> = ({
                   isCardStyle={true}
                   showDownloadCounter={showDownloadCounter}
                   hasUpdate={gamesWithUpdates.has(game.id)}
-                  isGameDetected={isGameDetected(game.id)}
+                  isGameDetected={detectedGames.has(game.id)}
                   isInstalled={isInstalled(game.id)}
                   isTranslationAvailable={
                     game.status !== 'planned' && game.status !== 'tech-improvement'

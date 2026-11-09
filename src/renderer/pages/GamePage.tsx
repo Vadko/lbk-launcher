@@ -9,7 +9,7 @@ import {
   Trash2Icon,
   UsersIcon,
 } from 'lucide-react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { BannerData } from '@/main/db/banners-api';
@@ -91,8 +91,6 @@ export const GamePage: React.FC = () => {
     selectedGame,
     setSelectedGame,
     checkInstallationStatus,
-    isCheckingInstallationStatus,
-    isGameDetected,
     installedTranslations,
   } = useStore();
 
@@ -120,6 +118,7 @@ export const GamePage: React.FC = () => {
     setFeedbackOpens((count) => count + 1);
   };
   const isTombstoned = useGameTombstone(gameId);
+  const isGamepadMode = useGamepadModeStore((state) => state.isGamepadMode);
 
   useEffect(() => {
     resetLaunch();
@@ -129,10 +128,14 @@ export const GamePage: React.FC = () => {
     ? installedTranslations.get(selectedGame.id)
     : undefined;
 
-  const isCheckingInstallation =
-    !installationInfo && !!selectedGame && isCheckingInstallationStatus(selectedGame.id);
+  const isCheckingStatus = useStore(
+    (state) => !!selectedGame && state.isCheckingInstallationStatus(selectedGame.id)
+  );
+  const isCheckingInstallation = !installationInfo && isCheckingStatus;
 
-  const isGameInstalledOnSystem = selectedGame ? isGameDetected(selectedGame.id) : false;
+  const isGameInstalledOnSystem = useStore(
+    (state) => !!selectedGame && state.isGameDetected(selectedGame.id)
+  );
   const isTranslationInstalled = useIsTranslationInstalledForGame(selectedGame?.id);
   const hasEverInstalledTranslation = useHasEverInstalledTranslation(selectedGame?.id);
   const canLeaveFeedback = isTranslationInstalled || hasEverInstalledTranslation;
@@ -214,11 +217,11 @@ export const GamePage: React.FC = () => {
   const { panelRef, showPanel } = useTabPanelScroll();
   // A link to the tab alone scrolls once the list has rendered, since a loading list is too short to reach
   const [revealReviews, setRevealReviews] = useState(false);
-  const requestReviewsReveal = useCallback(() => setRevealReviews(true), []);
-  const handleReviewsRevealed = useCallback(() => {
+  const requestReviewsReveal = () => setRevealReviews(true);
+  const handleReviewsRevealed = () => {
     setRevealReviews(false);
     showPanel();
-  }, [showPanel]);
+  };
   const { tab, setTab, focus, clearFocus } = useGameTabFromUrl(
     selectedGameId,
     requestReviewsReveal
@@ -244,69 +247,61 @@ export const GamePage: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
-  const bannerInfo = useMemo((): BannerInfo => {
-    if (!selectedGame || (!banners && !bannersFailed)) {
-      return EMPTY_BANNER_INFO;
-    }
-
-    const type =
-      banners?.banner?.type ??
-      (banners?.isKuli ? 'narrow' : null) ??
-      (selectedGame.support_url ? 'small_square' : null) ??
-      null;
-
-    return {
-      data: banners?.banner || null,
-      isKuli: banners?.isKuli || false,
-      support_url: selectedGame.support_url || null,
-      placementType: type,
-    };
-  }, [selectedGame, banners, bannersFailed]);
+  const bannerInfo: BannerInfo =
+    !selectedGame || (!banners && !bannersFailed)
+      ? EMPTY_BANNER_INFO
+      : {
+          data: banners?.banner || null,
+          isKuli: banners?.isKuli || false,
+          support_url: selectedGame.support_url || null,
+          placementType:
+            banners?.banner?.type ??
+            (banners?.isKuli ? 'narrow' : null) ??
+            (selectedGame.support_url ? 'small_square' : null) ??
+            null,
+        };
 
   // Record banner impression: Mixpanel + Supabase together
-  const trackBannerImpression = useCallback(
-    (action: 'view' | 'click') => {
-      const banner = bannerInfo?.data;
-      const content = banner?.id ? 'ads' : bannerInfo?.isKuli ? 'kuli' : 'support';
+  const trackBannerImpression = (action: 'view' | 'click') => {
+    const banner = bannerInfo?.data;
+    const content = banner?.id ? 'ads' : bannerInfo?.isKuli ? 'kuli' : 'support';
 
-      trackEvent('ads-placement', {
-        ...(banner?.id ? { 'Banner Id': banner.id } : {}),
-        Content: content,
-        Type: bannerInfo?.placementType ?? 'unknown',
-        'Game Name': selectedGame?.name ?? '',
-        'Game Id': selectedGame?.id ?? '',
-        Action: action,
-      });
+    trackEvent('ads-placement', {
+      ...(banner?.id ? { 'Banner Id': banner.id } : {}),
+      Content: content,
+      Type: bannerInfo?.placementType ?? 'unknown',
+      'Game Name': selectedGame?.name ?? '',
+      'Game Id': selectedGame?.id ?? '',
+      Action: action,
+    });
 
-      if (banner?.id) {
-        window.electronAPI?.recordBannerImpression?.(banner.id, action);
-      }
-    },
-    [bannerInfo, selectedGame]
-  );
+    if (banner?.id) {
+      window.electronAPI?.recordBannerImpression?.(banner.id, action);
+    }
+  };
 
-  const handleBannerView = useCallback(() => {
+  const handleBannerView = () => {
     trackBannerImpression('view');
-  }, [trackBannerImpression]);
+  };
 
-  const handleBannerClick = useCallback(() => {
+  const handleBannerClick = () => {
     trackBannerImpression('click');
-  }, [trackBannerImpression]);
+  };
 
   // Callback for first install - show subscription modal
   const selectedGameTeam = selectedGame?.team;
-  const handleFirstInstallComplete = useCallback(() => {
+  const handleFirstInstallComplete = () => {
     if (selectedGameTeam && selectedGameId && !isGamePrompted(selectedGameId)) {
       setShowAuthorSubscriptionModal(true);
     }
-  }, [selectedGameTeam, selectedGameId, isGamePrompted]);
+  };
 
-  const handleCloseAuthorSubscriptionModal = useCallback(() => {
+  const handleCloseAuthorSubscriptionModal = () => {
     setShowAuthorSubscriptionModal(false);
     if (selectedGameId) {
       markGameAsPrompted(selectedGameId);
     }
-  }, [selectedGameId, markGameAsPrompted]);
+  };
 
   // Use installation hook
   const {
@@ -379,7 +374,7 @@ export const GamePage: React.FC = () => {
     };
   }, [selectedGame, isInstalling, isPaused, isWaitingForNetwork]);
 
-  const handleSupport = useCallback(() => {
+  const handleSupport = () => {
     if (!selectedGame?.support_url) {
       return;
     }
@@ -394,9 +389,9 @@ export const GamePage: React.FC = () => {
     } else {
       window.open(selectedGame.support_url, '_blank');
     }
-  }, [selectedGame]);
+  };
 
-  const handleLaunchGame = useCallback(async () => {
+  const handleLaunchGame = async () => {
     if (
       !selectedGame ||
       isLaunching ||
@@ -427,14 +422,7 @@ export const GamePage: React.FC = () => {
         type: 'error',
       });
     }
-  }, [
-    selectedGame,
-    isLaunching,
-    runLaunch,
-    isGameInstalledOnSystem,
-    isTranslationInstalled,
-    showModal,
-  ]);
+  };
   // Steam handles Workshop installs: we have neither an archive nor an install to disk
   const isWorkshop = selectedGame?.kind === 'workshop';
 
@@ -519,7 +507,7 @@ export const GamePage: React.FC = () => {
 
       <div
         data-gamepad-main-content
-        className={`flex-1 overflow-y-auto px-8 custom-scrollbar grid gap-6 ${useGamepadModeStore.getState().isGamepadMode && 'py-6'}`}
+        className={`flex-1 overflow-y-auto px-8 custom-scrollbar grid gap-6 ${isGamepadMode ? 'py-6' : ''}`}
       >
         <LayoutGroup>
           <GameHero game={selectedGame} />

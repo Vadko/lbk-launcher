@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { useEverInstalledStore } from '../store/useEverInstalledStore';
 import { useStore } from '../store/useStore';
 import { useWorkshopInstallsStore } from '../store/useWorkshopInstallsStore';
@@ -7,10 +6,7 @@ export function useIsTranslationInstalled(): (gameId: string) => boolean {
   const fileBased = useStore((state) => state.installedTranslations);
   const workshop = useWorkshopInstallsStore((state) => state.installedAt);
 
-  return useCallback(
-    (gameId: string) => fileBased.has(gameId) || Boolean(workshop[gameId]),
-    [fileBased, workshop]
-  );
+  return (gameId: string) => fileBased.has(gameId) || Boolean(workshop[gameId]);
 }
 
 // Stricter than the list predicate: a failed install doesn't count

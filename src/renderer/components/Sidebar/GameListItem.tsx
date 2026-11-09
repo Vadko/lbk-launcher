@@ -51,12 +51,11 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
     const [erroredUrl, setErroredUrl] = useState<string | null>(null);
     const imageSettled = useDeferredImage(imageDeferred, game.id);
     const showAdultGames = useSettingsStore((state) => state.showAdultGames);
-    const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
+    const isFavorite = useSettingsStore((state) => state.isFavoriteGame(game.id));
     const toggleFavoriteGame = useSettingsStore((state) => state.toggleFavoriteGame);
 
     // Check if this is an adult game that should be blurred
     const isAdultBlurred = game.is_adult && !showAdultGames;
-    const [isFavorite, setIsFavorite] = useState(isFavoriteGame(game.id));
 
     const averageProgress = Math.round(
       (game.translation_progress + game.editing_progress) / 2
@@ -97,7 +96,6 @@ export const GameListItem: React.FC<GameListItemProps> = React.memo(
 
     const handleToggleFavorite = (e: React.MouseEvent) => {
       e.stopPropagation();
-      setIsFavorite((prev) => !prev);
       toggleFavoriteGame(game.id, game.name);
     };
 

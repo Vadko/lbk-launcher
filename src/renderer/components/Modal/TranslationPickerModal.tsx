@@ -33,7 +33,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
   const isInstalled = useIsTranslationInstalled();
   const isGamepadMode = useGamepadModeStore((s) => s.isGamepadMode);
   const setNavigationArea = useGamepadModeStore((s) => s.setNavigationArea);
-  const isFavoriteGame = useSettingsStore((state) => state.isFavoriteGame);
+  const favoriteGameIds = useSettingsStore((state) => state.favoriteGameIds);
 
   const handleSelect = (game: Game) => {
     // Navigate to the selected game's page instead of setSelectedGame
@@ -155,7 +155,7 @@ export const TranslationPickerModal: React.FC<TranslationPickerModalProps> = ({
                           isInstalled={installed}
                           aiType={game.ai}
                           isTranslationAvailable={isTranslationAvailable}
-                          isFavorite={isFavoriteGame(game.id)}
+                          isFavorite={favoriteGameIds.includes(game.id)}
                         />
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">

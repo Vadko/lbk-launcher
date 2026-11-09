@@ -1,6 +1,6 @@
 import { useAnimate } from 'framer-motion';
 import { ThumbsUpIcon } from 'lucide-react';
-import React, { useCallback } from 'react';
+import type React from 'react';
 import {
   useHasEverInstalledTranslation,
   useIsTranslationInstalledForGame,
@@ -25,7 +25,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
   const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
   const [iconRef, animateIcon] = useAnimate<HTMLSpanElement>();
 
-  const handleClick = useCallback(() => {
+  const handleClick = () => {
     if (!canRate) {
       return;
     }
@@ -39,7 +39,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ gameId, likes }) => {
         { duration: 0.5, ease: 'easeOut' }
       );
     }
-  }, [gameId, canRate, animationsEnabled, animateIcon, iconRef]);
+  };
 
   return (
     <Tooltip content={canRate ? null : t('gameLike.needsInstall')}>

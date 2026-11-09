@@ -80,27 +80,21 @@ export default function Gallery({
     }
   }, [isVertical, thumbEmblaApi]);
 
-  const onThumbClick = useCallback(
-    (index: number) => {
-      if (!mainEmblaApi || !thumbEmblaApi) {
-        return;
-      }
-      mainEmblaApi.scrollTo(index);
-    },
-    [mainEmblaApi, thumbEmblaApi]
-  );
+  const onThumbClick = (index: number) => {
+    if (!mainEmblaApi || !thumbEmblaApi) {
+      return;
+    }
+    mainEmblaApi.scrollTo(index);
+  };
 
-  const subscribeToSelection = useCallback(
-    (onChange: () => void) => {
-      mainEmblaApi?.on('select', onChange);
-      mainEmblaApi?.on('reInit', onChange);
-      return () => {
-        mainEmblaApi?.off('select', onChange);
-        mainEmblaApi?.off('reInit', onChange);
-      };
-    },
-    [mainEmblaApi]
-  );
+  const subscribeToSelection = (onChange: () => void) => {
+    mainEmblaApi?.on('select', onChange);
+    mainEmblaApi?.on('reInit', onChange);
+    return () => {
+      mainEmblaApi?.off('select', onChange);
+      mainEmblaApi?.off('reInit', onChange);
+    };
+  };
 
   const selectedIndex = useSyncExternalStore(
     subscribeToSelection,
@@ -127,6 +121,7 @@ export default function Gallery({
   const openFullscreen = (index: number) => setFullscreenIndex(index);
   const closeFullscreen = () => setFullscreenIndex(null);
 
+  // Without useCallback the compiler leaves this unmemoized, and the gamepad loop below restarts on every step
   const stepFullscreenSlide = useCallback(
     (direction: -1 | 1) => {
       if (slidesUrls.length === 0) {

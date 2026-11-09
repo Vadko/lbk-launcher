@@ -22,131 +22,130 @@ interface SidebarFooterProps {
   isCompact?: boolean;
 }
 
-export const SidebarFooter: React.FC<SidebarFooterProps> = React.memo(
-  ({ onOpenHistory, onOpenSettings, unreadCount, isCompact = false }) => {
-    const navigate = useNavigate();
-    const { uiSoundsEnabled, toggleUiSounds } = useSettingsStore();
-    const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
-    const [badgeRef, animateBadge] = useAnimate<HTMLSpanElement>();
-    const prevUnreadCount = useRef(0);
+export const SidebarFooter: React.FC<SidebarFooterProps> = ({
+  onOpenHistory,
+  onOpenSettings,
+  unreadCount,
+  isCompact = false,
+}) => {
+  const navigate = useNavigate();
+  const { uiSoundsEnabled, toggleUiSounds } = useSettingsStore();
+  const animationsEnabled = useSettingsStore((state) => state.animationsEnabled);
+  const [badgeRef, animateBadge] = useAnimate<HTMLSpanElement>();
+  const prevUnreadCount = useRef(0);
 
-    useEffect(() => {
-      if (
-        animationsEnabled &&
-        unreadCount > prevUnreadCount.current &&
-        badgeRef.current
-      ) {
-        animateBadge(
-          badgeRef.current,
-          { opacity: [1, 0.5, 1] },
-          { duration: 2, repeat: 2, ease: [0.4, 0, 0.6, 1] }
-        );
-      }
-      prevUnreadCount.current = unreadCount;
-    }, [unreadCount, animationsEnabled, animateBadge, badgeRef]);
+  useEffect(() => {
+    if (animationsEnabled && unreadCount > prevUnreadCount.current && badgeRef.current) {
+      animateBadge(
+        badgeRef.current,
+        { opacity: [1, 0.5, 1] },
+        { duration: 2, repeat: 2, ease: [0.4, 0, 0.6, 1] }
+      );
+    }
+    prevUnreadCount.current = unreadCount;
+  }, [unreadCount, animationsEnabled, animateBadge, badgeRef]);
 
-    return (
-      <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
-        {isCompact && (
-          <>
-            <button
-              onClick={() => navigate('/site/guides&tools')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title={t('sidebarNav.guides')}
-            >
-              <BookOpenTextIcon size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/site/donaters')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title={t('sidebarNav.donators')}
-            >
-              <MedalIcon size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/ratings')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title={t('sidebarNav.ratings')}
-            >
-              <TrophyIcon size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/news')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title={t('sidebarNav.news')}
-            >
-              <NewspaperIcon size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title={t('sidebarNav.home')}
-            >
-              <HomeIcon size={20} className="mx-auto text-text-muted" />
-            </button>
-            <button
-              onClick={toggleUiSounds}
-              data-nav-group="sidebar-actions"
-              data-gamepad-header-item
-              className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
-              title={
-                uiSoundsEnabled ? t('sidebarNav.uiSoundsOff') : t('sidebarNav.uiSoundsOn')
-              }
-            >
-              <AppActionIcon
-                phase="idle"
-                icon={uiSoundsEnabled ? Volume2 : VolumeX}
-                size={20}
-                className={`text-text-muted transition-opacity ${uiSoundsEnabled ? '' : 'opacity-50'}`}
-              />
-            </button>
-          </>
+  return (
+    <div className={`flex gap-2 ${isCompact ? '' : 'pt-3 border-t border-border p-4'}`}>
+      {isCompact && (
+        <>
+          <button
+            onClick={() => navigate('/site/guides&tools')}
+            data-nav-group="sidebar-actions"
+            data-gamepad-header-item
+            className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+            title={t('sidebarNav.guides')}
+          >
+            <BookOpenTextIcon size={20} className="mx-auto text-text-muted" />
+          </button>
+          <button
+            onClick={() => navigate('/site/donaters')}
+            data-nav-group="sidebar-actions"
+            data-gamepad-header-item
+            className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+            title={t('sidebarNav.donators')}
+          >
+            <MedalIcon size={20} className="mx-auto text-text-muted" />
+          </button>
+          <button
+            onClick={() => navigate('/ratings')}
+            data-nav-group="sidebar-actions"
+            data-gamepad-header-item
+            className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+            title={t('sidebarNav.ratings')}
+          >
+            <TrophyIcon size={20} className="mx-auto text-text-muted" />
+          </button>
+          <button
+            onClick={() => navigate('/news')}
+            data-nav-group="sidebar-actions"
+            data-gamepad-header-item
+            className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+            title={t('sidebarNav.news')}
+          >
+            <NewspaperIcon size={20} className="mx-auto text-text-muted" />
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            data-nav-group="sidebar-actions"
+            data-gamepad-header-item
+            className="p-2 glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+            title={t('sidebarNav.home')}
+          >
+            <HomeIcon size={20} className="mx-auto text-text-muted" />
+          </button>
+          <button
+            onClick={toggleUiSounds}
+            data-nav-group="sidebar-actions"
+            data-gamepad-header-item
+            className="p-2 flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300"
+            title={
+              uiSoundsEnabled ? t('sidebarNav.uiSoundsOff') : t('sidebarNav.uiSoundsOn')
+            }
+          >
+            <AppActionIcon
+              phase="idle"
+              icon={uiSoundsEnabled ? Volume2 : VolumeX}
+              size={20}
+              className={`text-text-muted transition-opacity ${uiSoundsEnabled ? '' : 'opacity-50'}`}
+            />
+          </button>
+        </>
+      )}
+      <button
+        onClick={onOpenHistory}
+        data-nav-group="sidebar-actions"
+        data-gamepad-header-item={isCompact ? true : undefined}
+        className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+        title={t('sidebarNav.notifications')}
+      >
+        <AppActionIcon
+          phase="idle"
+          icon={unreadCount > 0 ? BellRing : Bell}
+          size={20}
+          className="text-text-muted"
+        />
+        {unreadCount > 0 && (
+          <span
+            ref={badgeRef}
+            className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center"
+          >
+            <AppNumberFlow
+              value={Math.min(unreadCount, 9)}
+              suffix={unreadCount > 9 ? '+' : undefined}
+            />
+          </span>
         )}
-        <button
-          onClick={onOpenHistory}
-          data-nav-group="sidebar-actions"
-          data-gamepad-header-item={isCompact ? true : undefined}
-          className={`relative flex items-center justify-center glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
-          title={t('sidebarNav.notifications')}
-        >
-          <AppActionIcon
-            phase="idle"
-            icon={unreadCount > 0 ? BellRing : Bell}
-            size={20}
-            className="text-text-muted"
-          />
-          {unreadCount > 0 && (
-            <span
-              ref={badgeRef}
-              className="absolute top-1 right-1 min-w-[18px] px-1 h-4 bg-color-accent text-text-dark text-[10px] font-bold rounded-full flex items-center justify-center"
-            >
-              <AppNumberFlow
-                value={Math.min(unreadCount, 9)}
-                suffix={unreadCount > 9 ? '+' : undefined}
-              />
-            </span>
-          )}
-        </button>
-        <button
-          onClick={onOpenSettings}
-          data-nav-group="sidebar-actions"
-          data-gamepad-header-item={isCompact ? true : undefined}
-          className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
-          title={t('sidebarNav.settings')}
-        >
-          <SettingsIcon size={20} className="mx-auto text-text-muted" />
-        </button>
-      </div>
-    );
-  }
-);
+      </button>
+      <button
+        onClick={onOpenSettings}
+        data-nav-group="sidebar-actions"
+        data-gamepad-header-item={isCompact ? true : undefined}
+        className={`glass-button rounded-xl hover:bg-glass-hover transition-all duration-300 ${isCompact ? 'p-2' : 'flex-1 p-3'}`}
+        title={t('sidebarNav.settings')}
+      >
+        <SettingsIcon size={20} className="mx-auto text-text-muted" />
+      </button>
+    </div>
+  );
+};

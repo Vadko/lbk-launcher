@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReviewThreadView } from '../queries/reviewViewTypes';
 import type { ReviewFocus } from '../utils/readReviewLink';
 import { reviewFocusTarget } from '../utils/reviewFocusTarget';
@@ -42,12 +42,12 @@ export function useReviewFocus({
   }, [isEnded, onHandled]);
 
   const isEntryShown = target?.isEntryShown ?? false;
-  const onFocused = useCallback(() => {
+  const onFocused = () => {
     if (focus !== null) {
       setOutcome({ focus, notice: isEntryShown ? null : missing });
     }
     onHandled();
-  }, [focus, isEntryShown, missing, onHandled]);
+  };
 
   return {
     threadId: target?.threadId ?? null,

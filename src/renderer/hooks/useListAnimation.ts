@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useEffect, useReducer } from 'react';
 import { useStore } from '../store/useStore';
 
 type EaseArray = [number, number, number, number];
@@ -103,34 +103,30 @@ export function useListAnimation({
    * Get framer-motion props for an item.
    * Returns null if the item should render as a plain div.
    */
-  const getAnimationProps = useCallback(
-    (key: string, index: number): AnimationProps | null => {
-      if (skipAll) {
-        return null;
-      }
+  const getAnimationProps = (key: string, index: number): AnimationProps | null => {
+    if (skipAll) {
+      return null;
+    }
 
-      if (isInitialAppear) {
-        const delay =
-          index < staggerCount ? 0.3 + index * 0.05 : 0.3 + staggerCount * 0.05;
-        return {
-          initial: offset,
-          animate: target,
-          transition: { duration: 0.4, delay, ease: EASE_OUT_EXPO },
-        };
-      }
-
-      if (!listChanged && state.prevKeys.has(key)) {
-        return null;
-      }
-
+    if (isInitialAppear) {
+      const delay = index < staggerCount ? 0.3 + index * 0.05 : 0.3 + staggerCount * 0.05;
       return {
         initial: offset,
         animate: target,
-        transition: { duration: 0.35, ease: EASE_OUT_EXPO },
+        transition: { duration: 0.4, delay, ease: EASE_OUT_EXPO },
       };
-    },
-    [skipAll, isInitialAppear, staggerCount, offset, target, listChanged, state.prevKeys]
-  );
+    }
+
+    if (!listChanged && state.prevKeys.has(key)) {
+      return null;
+    }
+
+    return {
+      initial: offset,
+      animate: target,
+      transition: { duration: 0.35, ease: EASE_OUT_EXPO },
+    };
+  };
 
   return { getAnimationProps };
 }

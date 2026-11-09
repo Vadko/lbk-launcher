@@ -1,6 +1,6 @@
 import { NumberFlowGroup } from '@number-flow/react';
 import { EyeIcon } from 'lucide-react';
-import React, { useCallback, useDeferredValue, useMemo, useState } from 'react';
+import React, { useDeferredValue, useState } from 'react';
 import type { OptionCount } from '@/shared/game-counter';
 import { t } from '@/shared/i18n/i18n';
 import type {
@@ -109,24 +109,14 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     }
   }
 
-  const stagedSelection = useMemo(
-    () => ({
-      statuses: stagedStatuses,
-      contentTypes: stagedContentTypes,
-      translationTypes: stagedTranslationTypes,
-      specialFilter: stagedSpecialFilter,
-      authors: stagedAuthors,
-      tagIds: stagedTagIds,
-    }),
-    [
-      stagedStatuses,
-      stagedContentTypes,
-      stagedTranslationTypes,
-      stagedSpecialFilter,
-      stagedAuthors,
-      stagedTagIds,
-    ]
-  );
+  const stagedSelection = {
+    statuses: stagedStatuses,
+    contentTypes: stagedContentTypes,
+    translationTypes: stagedTranslationTypes,
+    specialFilter: stagedSpecialFilter,
+    authors: stagedAuthors,
+    tagIds: stagedTagIds,
+  };
 
   const facets = useFacetCounts({
     data: facetData,
@@ -144,7 +134,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
   const counts = isFreshOpen ? liveCounts : deferredCounts;
   const globalCounts = facets?.globalCounts;
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     if (stagedStatuses !== selectedStatuses) {
       onStatusesChange(stagedStatuses);
     }
@@ -164,27 +154,7 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
       onTagsChange(stagedTagIds);
     }
     onClose();
-  }, [
-    stagedStatuses,
-    selectedStatuses,
-    onStatusesChange,
-    stagedContentTypes,
-    selectedContentTypes,
-    onContentTypesChange,
-    stagedTranslationTypes,
-    selectedTranslationTypes,
-    onTranslationTypesChange,
-    stagedSpecialFilter,
-    specialFilter,
-    onSpecialFilterChange,
-    stagedAuthors,
-    selectedAuthors,
-    onAuthorsChange,
-    stagedTagIds,
-    selectedTagIds,
-    onTagsChange,
-    onClose,
-  ]);
+  };
 
   const toggleStatus = (value: string) => {
     setStagedStatuses((prev) =>
@@ -211,106 +181,86 @@ export const FiltersModal: React.FC<FiltersModalProps> = ({
     setStagedSpecialFilter((prev) => (prev === filter ? null : filter));
   };
 
-  const toggleAuthor = useCallback((id: string | number) => {
+  const toggleAuthor = (id: string | number) => {
     const author = id as string;
     setStagedAuthors((prev) =>
       prev.includes(author) ? prev.filter((a) => a !== author) : [...prev, author]
     );
-  }, []);
+  };
 
-  const toggleTag = useCallback((id: string | number) => {
+  const toggleTag = (id: string | number) => {
     const tagId = id as number;
     setStagedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((item) => item !== tagId) : [...prev, tagId]
     );
-  }, []);
+  };
 
-  const authorItems = useMemo(
-    () =>
-      authors.map((author) => ({
-        id: author,
-        label: author,
-        ...(counts && (counts.authors.get(author) ?? NO_GAMES)),
-      })),
-    [authors, counts]
-  );
+  const authorItems = authors.map((author) => ({
+    id: author,
+    label: author,
+    ...(counts && (counts.authors.get(author) ?? NO_GAMES)),
+  }));
 
-  const tagItems = useMemo(
-    () =>
-      tags.map((tag) => ({
-        id: tag.tagid,
-        label: tag.name,
-        ...(counts ? (counts.tags.get(tag.tagid) ?? NO_GAMES) : { count: tag.count }),
-      })),
-    [tags, counts]
-  );
+  const tagItems = tags.map((tag) => ({
+    id: tag.tagid,
+    label: tag.name,
+    ...(counts ? (counts.tags.get(tag.tagid) ?? NO_GAMES) : { count: tag.count }),
+  }));
 
-  const chips = useMemo(() => {
-    const result: { key: string; label: string; onRemove: () => void }[] = [];
+  const chips: { key: string; label: string; onRemove: () => void }[] = [];
 
-    for (const status of stagedStatuses) {
-      const option = STATUS_OPTIONS.find((o) => o === status);
-      const label = option ? t(`filterOptions.status.${option}`) : status;
-      result.push({
-        key: `status-${status}`,
-        label,
-        onRemove: () => setStagedStatuses((prev) => prev.filter((s) => s !== status)),
-      });
-    }
+  for (const status of stagedStatuses) {
+    const option = STATUS_OPTIONS.find((o) => o === status);
+    const label = option ? t(`filterOptions.status.${option}`) : status;
+    chips.push({
+      key: `status-${status}`,
+      label,
+      onRemove: () => setStagedStatuses((prev) => prev.filter((s) => s !== status)),
+    });
+  }
 
-    for (const type of stagedContentTypes) {
-      result.push({
-        key: `content-${type}`,
-        label: t(`filterOptions.contentType.${type}`),
-        onRemove: () =>
-          setStagedContentTypes((prev) => prev.filter((item) => item !== type)),
-      });
-    }
+  for (const type of stagedContentTypes) {
+    chips.push({
+      key: `content-${type}`,
+      label: t(`filterOptions.contentType.${type}`),
+      onRemove: () =>
+        setStagedContentTypes((prev) => prev.filter((item) => item !== type)),
+    });
+  }
 
-    for (const type of stagedTranslationTypes) {
-      result.push({
-        key: `translation-${type}`,
-        label: t(`filterOptions.translationType.${type}`),
-        onRemove: () =>
-          setStagedTranslationTypes((prev) => prev.filter((item) => item !== type)),
-      });
-    }
+  for (const type of stagedTranslationTypes) {
+    chips.push({
+      key: `translation-${type}`,
+      label: t(`filterOptions.translationType.${type}`),
+      onRemove: () =>
+        setStagedTranslationTypes((prev) => prev.filter((item) => item !== type)),
+    });
+  }
 
-    if (stagedSpecialFilter) {
-      result.push({
-        key: `special-${stagedSpecialFilter}`,
-        label: t(`filterOptions.library.${stagedSpecialFilter}`),
-        onRemove: () => setStagedSpecialFilter(null),
-      });
-    }
+  if (stagedSpecialFilter) {
+    chips.push({
+      key: `special-${stagedSpecialFilter}`,
+      label: t(`filterOptions.library.${stagedSpecialFilter}`),
+      onRemove: () => setStagedSpecialFilter(null),
+    });
+  }
 
-    for (const author of stagedAuthors) {
-      result.push({
-        key: `author-${author}`,
-        label: author,
-        onRemove: () => setStagedAuthors((prev) => prev.filter((a) => a !== author)),
-      });
-    }
+  for (const author of stagedAuthors) {
+    chips.push({
+      key: `author-${author}`,
+      label: author,
+      onRemove: () => setStagedAuthors((prev) => prev.filter((a) => a !== author)),
+    });
+  }
 
-    for (const tagId of stagedTagIds) {
-      const label = tags.find((tag) => tag.tagid === tagId)?.name ?? String(tagId);
-      result.push({
-        key: `tag-${tagId}`,
-        label,
-        onRemove: () => setStagedTagIds((prev) => prev.filter((item) => item !== tagId)),
-      });
-    }
-
-    return result;
-  }, [
-    stagedStatuses,
-    stagedContentTypes,
-    stagedTranslationTypes,
-    stagedSpecialFilter,
-    stagedAuthors,
-    stagedTagIds,
-    tags,
-  ]);
+  for (const tagId of stagedTagIds) {
+    const label = tags.find((tag) => tag.tagid === tagId)?.name ?? String(tagId);
+    chips.push({
+      key: `tag-${tagId}`,
+      label,
+      onRemove: () => setStagedTagIds((prev) => prev.filter((item) => item !== tagId)),
+    });
+  }
 
   const visibleContentTypeOptions = CONTENT_TYPE_OPTIONS.filter(
     (option) =>

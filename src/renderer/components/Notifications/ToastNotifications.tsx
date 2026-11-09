@@ -10,7 +10,7 @@ import {
   TrendingUpIcon,
   XIcon,
 } from 'lucide-react';
-import React, { useCallback } from 'react';
+import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '@/shared/i18n/i18n';
 import type { ToastNotification } from '../../store/subscriptions/types';
@@ -94,26 +94,23 @@ export const ToastNotifications: React.FC = () => {
   const dismissToast = useSubscriptionsStore((state) => state.dismissToast);
   const setSpecialFilter = useSettingsStore((state) => state.setSpecialFilter);
 
-  const handleToastClick = useCallback(
-    (toast: ToastNotification) => {
-      if (toast.type === 'app-update') {
-        useChangelogStore.getState().openModal();
-        dismissToast(toast.id);
-        return;
-      }
-
-      // For first favorite notification, apply the favorites filter
-      if (toast.type === 'first-favorite') {
-        setSpecialFilter('favorite-translations');
-        dismissToast(toast.id);
-        return;
-      }
-
-      navigate(gameLink(toast));
+  const handleToastClick = (toast: ToastNotification) => {
+    if (toast.type === 'app-update') {
+      useChangelogStore.getState().openModal();
       dismissToast(toast.id);
-    },
-    [navigate, dismissToast, setSpecialFilter]
-  );
+      return;
+    }
+
+    // For first favorite notification, apply the favorites filter
+    if (toast.type === 'first-favorite') {
+      setSpecialFilter('favorite-translations');
+      dismissToast(toast.id);
+      return;
+    }
+
+    navigate(gameLink(toast));
+    dismissToast(toast.id);
+  };
 
   if (toasts.length === 0) {
     return null;
